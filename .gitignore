@@ -87,3 +87,5 @@ Thumbs.db
 
 # Things specific to this project #
 ###################################
+/.cache
+*,cover

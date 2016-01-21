@@ -11,7 +11,7 @@ ROOT = dirname(realpath(__file__))
 
 REQUIRES = ['ruamel.yaml >= 0.10.13']
 
-TEST_REQUIRES = ['coverage', 'flake8', 'pytest', 'yapf']
+TEST_REQUIRES = ['coverage', 'flake8', 'pytest', 'pytest-cov', 'yapf']
 
 
 def _atomic_replace(path, contents, encoding):
@@ -38,7 +38,9 @@ class AllTestsCommand(TestCommand):
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        self.pytest_args = []
+        self.pytest_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"),
+                            '--cov=project', '--cov-report=term-missing',
+                            '--cov-report=annotate']
         self.pyfiles = None
         self.failed = []
 

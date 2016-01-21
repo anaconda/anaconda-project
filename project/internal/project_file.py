@@ -3,6 +3,7 @@
 # module. Remember the project file is intended to go into source
 # control.
 import ruamel.yaml as ryaml
+import codecs
 
 
 class YamlFile(object):
@@ -11,8 +12,13 @@ class YamlFile(object):
         self.load()
 
     def load(self):
-        self.yaml = ryaml.safe_load(self.filename,
-                                    Loader=ryaml.RoundTripLoader)
+        # using RoundTripLoader incorporates safe_load
+        # (we don't load code)
+        assert issubclass(ryaml.RoundTripLoader,
+                          ryaml.constructor.SafeConstructor)
+        with codecs.open(self.filename, 'r', 'utf-8') as file:
+            contents = file.read()
+            self.yaml = ryaml.load(contents, Loader=ryaml.RoundTripLoader)
 
     def save(self):
         ryaml.dump(self.yaml, Dumper=ryaml.RoundTripDumper, end='')
@@ -46,12 +52,12 @@ class YamlFile(object):
         existing = self._ensure_section(section_path)
         existing[key] = value
 
-    def get_value(self, section_path, key, default):
+    def get_value(self, section_path, key, default=None):
         existing = self._get_section_or_none(section_path)
         if existing is None:
             return default
         else:
-            existing.get(key, default)
+            return existing.get(key, default)
 
 
 class ProjectFile(YamlFile):
