@@ -11,7 +11,8 @@ class YamlFile(object):
         self.load()
 
     def load(self):
-        self.yaml = ryaml.safe_load(self.filename, Loader=yaml.RoundTripLoader)
+        self.yaml = ryaml.safe_load(self.filename,
+                                    Loader=ryaml.RoundTripLoader)
 
     def save(self):
         ryaml.dump(self.yaml, Dumper=ryaml.RoundTripDumper, end='')
