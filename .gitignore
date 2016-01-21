@@ -85,7 +85,11 @@ Icon?
 ehthumbs.db
 Thumbs.db
 
-# Things specific to this project #
-###################################
+# pytest-cov #
+##############
 /.cache
 *,cover
+htmlcov
+
+# Things specific to this project #
+###################################
