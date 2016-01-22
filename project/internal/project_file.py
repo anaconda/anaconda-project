@@ -78,6 +78,17 @@ class YamlFile(object):
             return existing.get(key, default)
 
 
+PROJECT_FILENAME = "project.yaml"
+
+
 class ProjectFile(YamlFile):
     def __init__(self, filename):
         super(ProjectFile, self).__init__(filename)
+
+    @classmethod
+    def ensure_for_directory(cls, directory):
+        path = os.path.join(directory, PROJECT_FILENAME)
+        if not os.path.exists(path):
+            with codecs.open(path, 'w', 'utf-8') as file:
+                file.write("# Anaconda project file\n")
+        return ProjectFile(path)

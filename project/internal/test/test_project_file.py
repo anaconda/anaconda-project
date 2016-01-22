@@ -1,5 +1,10 @@
-from project.internal.project_file import YamlFile
-from project.internal.test.tmpfile_utils import with_file_contents
+from project.internal.project_file import (ProjectFile, YamlFile,
+                                           PROJECT_FILENAME)
+from project.internal.test.tmpfile_utils import (with_file_contents,
+                                                 with_directory_contents)
+
+import codecs
+import os
 
 
 def test_read_yaml_file_and_get_value():
@@ -104,3 +109,28 @@ a:
         print(open(filename, 'r').read())
 
     with_file_contents(original_content, add_section)
+
+
+def test_create_missing_project_file():
+    def create_file(dirname):
+        filename = os.path.join(dirname, PROJECT_FILENAME)
+        assert not os.path.exists(filename)
+        project_file = ProjectFile.ensure_for_directory(dirname)
+        assert project_file is not None
+        assert os.path.exists(filename)
+        with codecs.open(filename, 'r', 'utf-8') as file:
+            contents = file.read()
+            assert "# Anaconda project file\n" == contents
+
+    with_directory_contents(dict(), create_file)
+
+
+def test_use_existing_project_file():
+    def check_file(dirname):
+        filename = os.path.join(dirname, PROJECT_FILENAME)
+        assert os.path.exists(filename)
+        project_file = ProjectFile.ensure_for_directory(dirname)
+        value = project_file.get_value("a", "b")
+        assert "c" == value
+
+    with_directory_contents({PROJECT_FILENAME: "a:\n  b: c"}, check_file)
