@@ -4,6 +4,23 @@
 # control.
 import ruamel.yaml as ryaml
 import codecs
+import os
+
+
+def _atomic_replace(path, contents, encoding='utf-8'):
+    tmp = path + ".tmp"
+    try:
+        with codecs.open(tmp, 'w', encoding) as file:
+            file.write(contents)
+            file.flush()
+            file.close()
+        # on windows this may not work, we will see
+        os.rename(tmp, path)
+    finally:
+        try:
+            os.remove(tmp)
+        except (IOError, OSError):
+            pass
 
 
 class YamlFile(object):
@@ -21,7 +38,8 @@ class YamlFile(object):
             self.yaml = ryaml.load(contents, Loader=ryaml.RoundTripLoader)
 
     def save(self):
-        ryaml.dump(self.yaml, Dumper=ryaml.RoundTripDumper, end='')
+        contents = ryaml.dump(self.yaml, Dumper=ryaml.RoundTripDumper)
+        _atomic_replace(self.filename, contents)
 
     def _get_section_or_none(self, section_path):
         pieces = section_path.split(".")

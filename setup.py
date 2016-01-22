@@ -9,7 +9,9 @@ from setuptools.command.test import test as TestCommand
 
 ROOT = dirname(realpath(__file__))
 
-REQUIRES = ['ruamel.yaml >= 0.10.13']
+# ruamel.yaml has a Py3 bug when saving files,
+# fixed in 0.10.14
+REQUIRES = ['ruamel.yaml >= 0.10.14']
 
 TEST_REQUIRES = ['coverage', 'flake8', 'pytest', 'pytest-cov', 'yapf']
 
