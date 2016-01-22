@@ -1,7 +1,5 @@
-from project.internal.project_file import (ProjectFile, YamlFile,
-                                           PROJECT_FILENAME)
-from project.internal.test.tmpfile_utils import (with_file_contents,
-                                                 with_directory_contents)
+from project.internal.project_file import ProjectFile, YamlFile, PROJECT_FILENAME
+from project.internal.test.tmpfile_utils import with_file_contents, with_directory_contents
 
 import codecs
 import os

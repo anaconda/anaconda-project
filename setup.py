@@ -40,9 +40,8 @@ class AllTestsCommand(TestCommand):
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        self.pytest_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"),
-                            '--cov=project', '--cov-report=term-missing',
-                            '--cov-report=html']
+        self.pytest_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=project',
+                            '--cov-report=term-missing', '--cov-report=html']
         self.pyfiles = None
         self.failed = []
 
@@ -62,8 +61,15 @@ class AllTestsCommand(TestCommand):
 
     def _format_file(self, path):
         from yapf.yapflib.yapf_api import FormatFile
+        config = """{
+column_limit : 120
+}"""
 
-        (contents, encoding, changed) = FormatFile(path)
+        # It might be tempting to use the "inplace" option to
+        # FormatFile, but it doesn't do an atomic replace, which
+        # is dangerous, so don't use it unless you submit a fix to
+        # yapf.
+        (contents, encoding, changed) = FormatFile(path, style_config=config)
 
         if changed:
             _atomic_replace(path, contents, encoding)
@@ -78,16 +84,16 @@ class AllTestsCommand(TestCommand):
 
     def _flake8(self):
         from flake8.engine import get_style_guide
-        flake8_style = get_style_guide(
-            paths=self._py_files(),
-            ignore=[
-                'E401'  # multiple imports on one line
-            ])
+        flake8_style = get_style_guide(paths=self._py_files(),
+                                       max_line_length=120,
+                                       ignore=[
+                                           'E126',  # complains about this list's indentation
+                                           'E401'  # multiple imports on one line
+                                       ])
         print("running flake8...")
         report = flake8_style.check_files()
         if report.total_errors > 0:
-            print(str(report.total_errors) +
-                  " flake8 errors, see above to fix them")
+            print(str(report.total_errors) + " flake8 errors, see above to fix them")
             self.failed.append('flake8')
         else:
             print("flake8 passed!")

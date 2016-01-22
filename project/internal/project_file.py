@@ -31,8 +31,7 @@ class YamlFile(object):
     def load(self):
         # using RoundTripLoader incorporates safe_load
         # (we don't load code)
-        assert issubclass(ryaml.RoundTripLoader,
-                          ryaml.constructor.SafeConstructor)
+        assert issubclass(ryaml.RoundTripLoader, ryaml.constructor.SafeConstructor)
         with codecs.open(self.filename, 'r', 'utf-8') as file:
             contents = file.read()
             self.yaml = ryaml.load(contents, Loader=ryaml.RoundTripLoader)
