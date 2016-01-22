@@ -2,7 +2,9 @@ from project.internal.project_file import ProjectFile, YamlFile, PROJECT_FILENAM
 from project.internal.test.tmpfile_utils import with_file_contents, with_directory_contents
 
 import codecs
+import errno
 import os
+import pytest
 
 
 def test_read_yaml_file_and_get_value():
@@ -39,6 +41,26 @@ def test_read_yaml_file_and_get_default_due_to_missing_section():
 a:
   b: c
 """, check_abc)
+
+
+def test_read_missing_yaml_file_and_get_default_due_to_missing_section():
+    def check_missing(dirname):
+        yaml = YamlFile(os.path.join(dirname, "nope.yaml"))
+        value = yaml.get_value("z", "b", "default")
+        assert "default" == value
+
+    with_directory_contents(dict(), check_missing)
+
+
+def test_read_yaml_file_that_is_a_directory():
+    def check_read_directory(dirname):
+        filename = os.path.join(dirname, "dir.yaml")
+        os.makedirs(filename)
+        with pytest.raises(IOError) as excinfo:
+            YamlFile(filename)
+        assert errno.EISDIR == excinfo.value.errno
+
+    with_directory_contents(dict(), check_read_directory)
 
 
 def test_read_yaml_file_and_change_value():
@@ -81,6 +103,35 @@ a:
     with_file_contents(original_content, change_abc)
 
 
+def test_read_missing_yaml_file_and_set_value():
+    def set_abc(dirname):
+        filename = os.path.join(dirname, "foo.yaml")
+        assert not os.path.exists(filename)
+        yaml = YamlFile(filename)
+        value = yaml.get_value("a", "b")
+        assert value is None
+        yaml.set_value("a", "b", 42)
+        yaml.save()
+        assert os.path.exists(filename)
+
+        import codecs
+        with codecs.open(filename, 'r', 'utf-8') as file:
+            changed = file.read()
+            expected = """
+# Anaconda project file
+a:
+  b: 42
+""" [1:]
+
+            assert expected == changed
+
+        yaml2 = YamlFile(filename)
+        value2 = yaml2.get_value("a", "b")
+        assert 42 == value2
+
+    with_directory_contents(dict(), set_abc)
+
+
 def test_read_yaml_file_and_add_section():
     original_content = """
 a:
@@ -118,7 +169,10 @@ def test_create_missing_project_file():
         assert os.path.exists(filename)
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
-            assert "# Anaconda project file\n" == contents
+            # this is sort of annoying that the default empty file
+            # has {} in it, but in our real usage we should only
+            # save the file if we set something in it probably.
+            assert "# Anaconda project file\n{}\n" == contents
 
     with_directory_contents(dict(), create_file)
 
@@ -132,3 +186,15 @@ def test_use_existing_project_file():
         assert "c" == value
 
     with_directory_contents({PROJECT_FILENAME: "a:\n  b: c"}, check_file)
+
+
+def test_load_directory_without_project_file():
+    def read_missing_file(dirname):
+        filename = os.path.join(dirname, PROJECT_FILENAME)
+        assert not os.path.exists(filename)
+        project_file = ProjectFile.load_for_directory(dirname)
+        assert project_file is not None
+        assert not os.path.exists(filename)
+        assert project_file.get_value("a", "b") is None
+
+    with_directory_contents(dict(), read_missing_file)

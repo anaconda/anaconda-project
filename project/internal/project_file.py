@@ -4,6 +4,7 @@
 # control.
 import ruamel.yaml as ryaml
 import codecs
+import errno
 import os
 
 
@@ -32,9 +33,19 @@ class YamlFile(object):
         # using RoundTripLoader incorporates safe_load
         # (we don't load code)
         assert issubclass(ryaml.RoundTripLoader, ryaml.constructor.SafeConstructor)
-        with codecs.open(self.filename, 'r', 'utf-8') as file:
-            contents = file.read()
+        try:
+            with codecs.open(self.filename, 'r', 'utf-8') as file:
+                contents = file.read()
             self.yaml = ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+        except IOError as e:
+            if e.errno == errno.ENOENT:
+                # ruamel.yaml returns None if you load an empty file,
+                # so we have to build this ourselves
+                from ruamel.yaml.comments import CommentedMap
+                self.yaml = CommentedMap()
+                self.yaml.yaml_set_start_comment("Anaconda project file")
+            else:
+                raise e
 
     def save(self):
         contents = ryaml.dump(self.yaml, Dumper=ryaml.RoundTripDumper)
@@ -87,7 +98,12 @@ class ProjectFile(YamlFile):
     @classmethod
     def ensure_for_directory(cls, directory):
         path = os.path.join(directory, PROJECT_FILENAME)
+        project_file = ProjectFile(path)
         if not os.path.exists(path):
-            with codecs.open(path, 'w', 'utf-8') as file:
-                file.write("# Anaconda project file\n")
+            project_file.save()
+        return project_file
+
+    @classmethod
+    def load_for_directory(cls, directory):
+        path = os.path.join(directory, PROJECT_FILENAME)
         return ProjectFile(path)
