@@ -1,0 +1,2 @@
+[pep257]
+match_dir=(?!test).*

@@ -13,7 +13,7 @@ ROOT = dirname(realpath(__file__))
 # fixed in 0.10.14
 REQUIRES = ['ruamel.yaml >= 0.10.14']
 
-TEST_REQUIRES = ['coverage', 'flake8', 'pytest', 'pytest-cov', 'yapf']
+TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf']
 
 
 def _atomic_replace(path, contents, encoding):
@@ -98,6 +98,26 @@ column_limit : 120
         else:
             print("flake8 passed!")
 
+    def _pep257(self):
+        from pep257 import run_pep257, NO_VIOLATIONS_RETURN_CODE, VIOLATIONS_RETURN_CODE, INVALID_OPTIONS_RETURN_CODE
+        # hack alert (replacing argv temporarily because pep257 looks at it)
+        old_argv = sys.argv
+        try:
+            sys.argv = ['pep257', os.path.join(ROOT, 'project')]
+            code = run_pep257()
+        finally:
+            sys.argv = old_argv
+        if code == INVALID_OPTIONS_RETURN_CODE:
+            print("pep257 found invalid configuration.")
+            self.failed.append('pep257')
+        elif code == VIOLATIONS_RETURN_CODE:
+            print("pep257 reported some violations.")
+            self.failed.append('pep257')
+        elif code == NO_VIOLATIONS_RETURN_CODE:
+            print("pep257 says docstrings look good.")
+        else:
+            raise RuntimeError("unexpected code from pep257: " + str(code))
+
     def _pytest(self):
         import pytest
         errno = pytest.main(self.pytest_args)
@@ -109,6 +129,7 @@ column_limit : 120
         self._yapf()
         self._flake8()
         self._pytest()
+        self._pep257()
         if len(self.failed) > 0:
             print("Failures in: " + repr(self.failed))
             sys.exit(1)
