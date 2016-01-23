@@ -40,7 +40,7 @@ class AllTestsCommand(TestCommand):
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        self.pytest_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=project',
+        self.pytest_args = ['-v', '--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=project',
                             '--cov-report=term-missing', '--cov-report=html']
         self.pyfiles = None
         self.failed = []
