@@ -63,6 +63,7 @@
 .coverage
 # ipython files
 **/.ipynb_checkpoints
+__pycache__
 
 # Logs and databases #
 ######################

@@ -9,9 +9,16 @@ from setuptools.command.test import test as TestCommand
 
 ROOT = dirname(realpath(__file__))
 
-# ruamel.yaml has a Py3 bug when saving files,
-# fixed in 0.10.14
-REQUIRES = ['ruamel.yaml >= 0.10.14']
+PY2 = sys.version_info[0] == 2
+
+# ruamel.yaml has a Py3 bug when saving files, fixed in 0.10.14;
+# Py2 conda only has 0.10.13.  this hack can go away when
+# everything is on 0.10.14 anyway.
+if PY2:
+    RUAMEL_VERSION = "0.10.13"
+else:
+    RUAMEL_VERSION = "0.10.14"
+REQUIRES = ['ruamel.yaml >= ' + RUAMEL_VERSION]
 
 TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf']
 
@@ -40,7 +47,8 @@ class AllTestsCommand(TestCommand):
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        self.pytest_args = ['-v', '--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=project',
+        # -rw turns on printing warnings
+        self.pytest_args = ['-v', '-rw', '--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=project',
                             '--cov-report=term-missing', '--cov-report=html']
         self.pyfiles = None
         self.failed = []
@@ -58,6 +66,19 @@ class AllTestsCommand(TestCommand):
                         pyfiles.append(os.path.join(root, f))
             self.pyfiles = pyfiles
         return self.pyfiles
+
+    def _add_missing_init_py(self):
+        root_modules = ['project']
+        for srcdir in root_modules:
+            for root, dirs, files in os.walk(os.path.join(ROOT, srcdir)):
+                dirs[:] = [d for d in dirs if not (d[0] == '.' or d[0] == '__pycache__')]
+                for d in dirs:
+                    init_py = os.path.join(root, d, "__init__.py")
+                    if not os.path.exists(init_py):
+                        import codecs
+                        print("Creating " + init_py)
+                        with codecs.open(init_py, 'w', 'utf-8') as handle:
+                            handle.flush()
 
     def _format_file(self, path):
         from yapf.yapflib.yapf_api import FormatFile
@@ -126,6 +147,7 @@ column_limit : 120
             self.failed.append('pytest')
 
     def run_tests(self):
+        self._add_missing_init_py()
         self._yapf()
         self._flake8()
         self._pytest()
