@@ -1,3 +1,3 @@
 [pep257]
 # missing docstrings not a problem in 'internal'
-ignore=D100,D101,D102,D103,D104,D105
+add-ignore=D100,D101,D102,D103,D104,D105
