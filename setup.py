@@ -18,7 +18,7 @@ if PY2:
     RUAMEL_VERSION = "0.10.13"
 else:
     RUAMEL_VERSION = "0.10.14"
-REQUIRES = ['ruamel.yaml >= ' + RUAMEL_VERSION]
+REQUIRES = ['ruamel.yaml >= ' + RUAMEL_VERSION, 'tornado >= 4.3']
 
 TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf']
 

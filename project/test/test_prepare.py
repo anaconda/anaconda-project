@@ -4,7 +4,7 @@ import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.project_file import PROJECT_FILENAME
-from project.prepare import prepare, unprepare
+from project.prepare import prepare, unprepare, UI_MODE_BROWSER
 from project.project import Project
 from project.plugins.requirement import RequirementRegistry
 
@@ -84,3 +84,48 @@ def test_prepare_some_env_var_not_set():
 runtime:
   FOO: {}
 """}, prepare_some_env_var)
+
+
+def test_prepare_with_browser(monkeypatch):
+    from tornado.ioloop import IOLoop
+    io_loop = IOLoop()
+
+    http_results = {}
+
+    def mock_open_new_tab(url):
+        from project.internal.test.http_utils import http_get_async, http_post_async
+        from tornado import gen
+
+        @gen.coroutine
+        def do_http():
+            http_results['get'] = yield http_get_async(url)
+            http_results['post'] = yield http_post_async(url, body="")
+
+        io_loop.add_callback(do_http)
+
+    monkeypatch.setattr('webbrowser.open_new_tab', mock_open_new_tab)
+
+    def prepare_with_browser(dirname):
+        requirement_registry = RequirementRegistry()
+        project = Project(dirname, requirement_registry)
+        environ = dict(BAR='bar')
+        result = prepare(project, environ=environ, io_loop=io_loop, ui_mode=UI_MODE_BROWSER)
+        assert not result
+        assert dict(BAR='bar') == environ
+
+        # wait for the results of the POST to come back,
+        # awesome hack-tacular
+        while 'post' not in http_results:
+            io_loop.call_later(0.01, lambda: io_loop.stop())
+            io_loop.start()
+
+        assert 'get' in http_results
+        assert 'post' in http_results
+
+        assert 200 == http_results['get'].code
+        assert 200 == http_results['post'].code
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  FOO: {}
+"""}, prepare_with_browser)

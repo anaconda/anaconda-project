@@ -6,11 +6,11 @@ import os
 import sys
 
 from project.plugins.requirement import RequirementRegistry
-from project.prepare import prepare
+from project.prepare import prepare, UI_MODE_NOT_INTERACTIVE
 from project.project import Project
 
 
-def activate(dirname):
+def activate(dirname, ui_mode):
     """Prepare project and return lines to be sourced.
 
     Future direction: should also activate the proper conda env.
@@ -21,7 +21,7 @@ def activate(dirname):
     requirement_registry = RequirementRegistry()
     environ = deepcopy(os.environ)
     project = Project(dirname, requirement_registry)
-    result = prepare(project, environ=environ)
+    result = prepare(project, ui_mode=ui_mode, environ=environ)
     if not result:
         return None
 
@@ -40,7 +40,7 @@ def main(argv):
     else:
         dirname = "."
     dirname = os.path.abspath(dirname)
-    result = activate(dirname)
+    result = activate(dirname, ui_mode=UI_MODE_NOT_INTERACTIVE)
     if result is None:
         sys.exit(1)
     else:

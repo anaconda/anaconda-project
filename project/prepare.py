@@ -7,8 +7,11 @@ import os
 import subprocess
 import sys
 
+from tornado.ioloop import IOLoop
+
 from project.plugins.provider import ProvideContext, ProviderRegistry
 from project.internal.local_state_file import LocalStateFile
+from project.internal.prepare_ui import NotInteractivePrepareUI, BrowserPrepareUI
 
 UI_MODE_TEXT = "text"
 UI_MODE_BROWSER = "browser"
@@ -17,7 +20,16 @@ UI_MODE_NOT_INTERACTIVE = "not_interactive"
 _all_ui_modes = (UI_MODE_TEXT, UI_MODE_BROWSER, UI_MODE_NOT_INTERACTIVE)
 
 
-def prepare(project, ui_mode=UI_MODE_BROWSER, io_loop=None, show_url=None, environ=None):
+def _should_we_prepare(ui_mode, io_loop):
+    if ui_mode == UI_MODE_NOT_INTERACTIVE:
+        ui = NotInteractivePrepareUI()
+    elif ui_mode == UI_MODE_BROWSER:
+        ui = BrowserPrepareUI()
+
+    return ui.should_we_prepare(io_loop)
+
+
+def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=None, environ=None):
     """Perform all steps needed to get a project ready to execute.
 
     This may need to ask the user questions, may start services,
@@ -41,6 +53,9 @@ def prepare(project, ui_mode=UI_MODE_BROWSER, io_loop=None, show_url=None, envir
     if environ is None:
         environ = os.environ
 
+    if io_loop is None:
+        io_loop = IOLoop()
+
     # we modify a copy, which 1) makes all our changes atomic and
     # 2) minimizes memory leaks on systems that use putenv() (it
     # appears we must use deepcopy or we still modify os.environ
@@ -58,6 +73,11 @@ def prepare(project, ui_mode=UI_MODE_BROWSER, io_loop=None, show_url=None, envir
             plan.append((provider, requirement))
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
+
+    # wait for the UI if any (for now just ignore whether
+    # _should_we_prepare() returns False because we are going to
+    # change this anyway to be more real)
+    _should_we_prepare(ui_mode, io_loop)
 
     for (provider, requirement) in plan:
         why_not = requirement.why_not_provided(environ_copy)

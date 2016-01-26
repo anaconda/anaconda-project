@@ -5,6 +5,7 @@ import pytest
 from project.commands.activate import activate, main
 from project.internal.project_file import PROJECT_FILENAME
 from project.internal.test.tmpfile_utils import with_directory_contents
+from project.prepare import UI_MODE_NOT_INTERACTIVE
 
 
 def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
@@ -25,7 +26,7 @@ def test_activate(monkeypatch):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def activate_redis_url(dirname):
-        result = activate(dirname)
+        result = activate(dirname, UI_MODE_NOT_INTERACTIVE)
         assert can_connect_args['port'] == 6379
         assert result is not None
         assert ['export REDIS_URL=redis://localhost:6379'] == result
