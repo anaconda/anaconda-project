@@ -71,7 +71,7 @@ class AllTestsCommand(TestCommand):
         root_modules = ['project']
         for srcdir in root_modules:
             for root, dirs, files in os.walk(os.path.join(ROOT, srcdir)):
-                dirs[:] = [d for d in dirs if not (d[0] == '.' or d[0] == '__pycache__')]
+                dirs[:] = [d for d in dirs if not (d[0] == '.' or d == '__pycache__')]
                 for d in dirs:
                     init_py = os.path.join(root, d, "__init__.py")
                     if not os.path.exists(init_py):
