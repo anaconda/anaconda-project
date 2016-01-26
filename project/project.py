@@ -19,6 +19,7 @@ class Project(object):
             directory_path (str): path to the project directory
             requirement_registry (RequirementRegistry): where to look up Requirement instances
         """
+        self.directory_path = directory_path
         self.project_file = ProjectFile.load_for_directory(directory_path, requirement_registry)
 
     @property

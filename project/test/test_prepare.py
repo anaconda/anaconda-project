@@ -1,8 +1,10 @@
+from __future__ import absolute_import
+
 import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.project_file import PROJECT_FILENAME
-from project.prepare import prepare
+from project.prepare import prepare, unprepare
 from project.project import Project
 from project.plugins.requirement import RequirementRegistry
 
@@ -31,6 +33,16 @@ def test_prepare_bad_ui_mode():
     with_directory_contents(dict(), prepare_bad_ui_mode)
 
 
+def test_unprepare_empty_directory():
+    def unprepare_empty(dirname):
+        requirement_registry = RequirementRegistry()
+        project = Project(dirname, requirement_registry)
+        result = unprepare(project)
+        assert result is None
+
+    with_directory_contents(dict(), unprepare_empty)
+
+
 def test_default_to_system_environ():
     def prepare_system_environ(dirname):
         requirement_registry = RequirementRegistry()
@@ -42,56 +54,6 @@ def test_default_to_system_environ():
         # value from the project file and set it
 
     with_directory_contents(dict(), prepare_system_environ)
-
-
-def _monkeypatch_can_connect_to_socket(monkeypatch):
-    can_connect_args = dict()
-
-    def mock_can_connect_to_socket(host, port, timeout_seconds=0.5):
-        can_connect_args['host'] = host
-        can_connect_args['port'] = port
-        can_connect_args['timeout_seconds'] = timeout_seconds
-        return True
-
-    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
-
-    return can_connect_args
-
-
-def test_prepare_redis_url_with_dict_in_runtime_section(monkeypatch):
-    can_connect_args = _monkeypatch_can_connect_to_socket(monkeypatch)
-
-    def prepare_redis_url(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
-        environ = dict()
-        result = prepare(project, environ=environ)
-        assert result
-        assert dict(REDIS_URL="redis://localhost:6379") == environ
-        assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
-
-    with_directory_contents({PROJECT_FILENAME: """
-runtime:
-  REDIS_URL: {}
-"""}, prepare_redis_url)
-
-
-def test_prepare_redis_url_with_list_in_runtime_section(monkeypatch):
-    can_connect_args = _monkeypatch_can_connect_to_socket(monkeypatch)
-
-    def prepare_redis_url(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
-        environ = dict()
-        result = prepare(project, environ=environ)
-        assert result
-        assert dict(REDIS_URL="redis://localhost:6379") == environ
-        assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
-
-    with_directory_contents({PROJECT_FILENAME: """
-runtime:
-  - REDIS_URL
-"""}, prepare_redis_url)
 
 
 def test_prepare_some_env_var_already_set():

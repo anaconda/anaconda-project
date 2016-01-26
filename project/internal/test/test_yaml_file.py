@@ -30,6 +30,15 @@ a:
 """, check_abc)
 
 
+def test_read_empty_yaml_file_and_get_default():
+    def check_empty(filename):
+        yaml = YamlFile(filename)
+        value = yaml.get_value("a", "z", "default")
+        assert "default" == value
+
+    with_file_contents("", check_empty)
+
+
 def test_read_yaml_file_and_get_list_valued_section():
     def get_list_value(filename):
         yaml = YamlFile(filename)
@@ -128,7 +137,7 @@ def test_read_missing_yaml_file_and_set_value():
         with codecs.open(filename, 'r', 'utf-8') as file:
             changed = file.read()
             expected = """
-# Anaconda project file
+# yaml file
 a:
   b: 42
 """ [1:]
@@ -168,3 +177,64 @@ a:
         print(open(filename, 'r').read())
 
     with_file_contents(original_content, add_section)
+
+
+def test_multiple_saves_ignored_if_not_dirty():
+    def check_dirty_handling(dirname):
+        filename = os.path.join(dirname, "foo.yaml")
+        assert not os.path.exists(filename)
+        yaml = YamlFile(filename)
+        yaml.set_value("a", "b", 42)
+        yaml.save()
+        assert os.path.exists(filename)
+        time1 = os.path.getmtime(filename)
+
+        yaml.save()
+        assert time1 == os.path.getmtime(filename)
+        yaml.save()
+        assert time1 == os.path.getmtime(filename)
+
+        yaml.set_value("a", "b", 43)
+        assert time1 == os.path.getmtime(filename)
+        yaml.save()
+        # OS mtime resolution might leave these equal
+        assert time1 <= os.path.getmtime(filename)
+
+    with_directory_contents(dict(), check_dirty_handling)
+
+
+def test_save_ignored_if_not_dirty_after_load():
+    def check_dirty_handling(dirname):
+        filename = os.path.join(dirname, "foo.yaml")
+        assert not os.path.exists(filename)
+        yaml = YamlFile(filename)
+        yaml.set_value("a", "b", 42)
+        yaml.save()
+        assert os.path.exists(filename)
+        time1 = os.path.getmtime(filename)
+
+        yaml2 = YamlFile(filename)
+        assert time1 == os.path.getmtime(filename)
+        yaml2.save()
+        assert time1 == os.path.getmtime(filename)
+
+    with_directory_contents(dict(), check_dirty_handling)
+
+
+def test_throw_if_cannot_create_directory(monkeypatch):
+    def mock_makedirs(path, mode=0):
+        raise IOError("this is not EEXIST")
+
+    monkeypatch.setattr("os.makedirs", mock_makedirs)
+
+    def check_throw_if_cannot_create(dirname):
+        subdir = "bar"
+        filename = os.path.join(dirname, subdir, "foo.yaml")
+
+        yaml = YamlFile(filename)
+        yaml.set_value("a", "b", 42)
+        with pytest.raises(IOError) as excinfo:
+            yaml.save()
+        assert "this is not EEXIST" in repr(excinfo.value)
+
+    with_directory_contents(dict(), check_throw_if_cannot_create)

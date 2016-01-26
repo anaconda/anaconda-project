@@ -17,7 +17,12 @@ class TmpDir(object):
 def with_directory_contents(contents, func):
     with (TmpDir(prefix="project-test-tmpdir-")) as dirname:
         for filename, file_content in contents.items():
-            f = open(os.path.join(dirname, filename), 'w')
+            path = os.path.join(dirname, filename)
+            try:
+                os.makedirs(os.path.dirname(path))
+            except IOError:
+                pass
+            f = open(path, 'w')
             f.write(file_content)
             f.flush()
         func(dirname)

@@ -29,6 +29,7 @@ def _atomic_replace(path, contents, encoding='utf-8'):
 class YamlFile(object):
     def __init__(self, filename):
         self.filename = filename
+        self._dirty = False
         self.load()
 
     def load(self):
@@ -39,19 +40,39 @@ class YamlFile(object):
             with codecs.open(self.filename, 'r', 'utf-8') as file:
                 contents = file.read()
             self.yaml = ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+            self._dirty = False
         except IOError as e:
             if e.errno == errno.ENOENT:
-                # ruamel.yaml returns None if you load an empty file,
-                # so we have to build this ourselves
-                from ruamel.yaml.comments import CommentedMap
-                self.yaml = CommentedMap()
-                self.yaml.yaml_set_start_comment("Anaconda project file")
+                self.yaml = None
             else:
                 raise e
 
+        if self.yaml is None:
+            # ruamel.yaml returns None if you load an empty file,
+            # so we have to build this ourselves
+            from ruamel.yaml.comments import CommentedMap
+            self.yaml = CommentedMap()
+            self.yaml.yaml_set_start_comment(self._default_comment())
+            self._dirty = True
+
+    def _default_comment(self):
+        return "yaml file"
+
     def save(self):
+        if not self._dirty:
+            return
+
         contents = ryaml.dump(self.yaml, Dumper=ryaml.RoundTripDumper)
+        if not os.path.isfile(self.filename):
+            # might have to make the directory
+            dirname = os.path.dirname(self.filename)
+            try:
+                os.makedirs(dirname)
+            except IOError as e:
+                if e.errno != errno.EEXIST:
+                    raise e
         _atomic_replace(self.filename, contents)
+        self._dirty = False
 
     def _get_section_or_none(self, section_path):
         pieces = section_path.split(".")
@@ -69,6 +90,7 @@ class YamlFile(object):
         for p in pieces:
             if p not in current:
                 current[p] = dict()
+                self._dirty = True
 
             current = current[p]
         return current
@@ -77,10 +99,12 @@ class YamlFile(object):
         existing = self._ensure_section(section_path)
         for k, v in values.items():
             existing[k] = v
+            self._dirty = True
 
     def set_value(self, section_path, key, value):
         existing = self._ensure_section(section_path)
         existing[key] = value
+        self._dirty = True
 
     def get_value(self, section_path, key=None, default=None):
         existing = self._get_section_or_none(section_path)

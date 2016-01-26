@@ -2,6 +2,9 @@
 from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
+from copy import deepcopy
+import errno
+import os
 
 from project.internal.metaclass import with_metaclass
 
@@ -33,14 +36,84 @@ class ProviderRegistry(object):
         """
         # future goal will be to un-hardcode this of course
         if service == 'redis':
-            from .providers.redis import DefaultRedisProvider
-            return [DefaultRedisProvider()]
+            from .providers.redis import DefaultRedisProvider, ProjectScopedRedisProvider
+            return [DefaultRedisProvider(), ProjectScopedRedisProvider()]
         else:
             return []
 
 
+class ProvideContext(object):
+    """A context passed to ``Provider.provide()`` representing state that can be modified."""
+
+    def __init__(self, environ, local_state_file):
+        """Create a ProvideContext.
+
+        Args:
+            environ (dict): environment variables to be read and modified
+            local_state_file (LocalStateFile): to store any created state
+        """
+        self.environ = environ
+        self._local_state_file = local_state_file
+        self._logs = []
+        self._errors = []
+
+    def ensure_work_directory(self, relative_name):
+        """Create a project-scoped work directory with the given name.
+
+        Args:
+            relative_name (str): name to distinguish this dir from other work directories
+        """
+        path = os.path.join(os.path.dirname(self._local_state_file.filename), "run", relative_name)
+        try:
+            os.makedirs(path)
+        except IOError as e:
+            if e.errno != errno.EEXIST:
+                raise e
+        return path
+
+    def transform_service_run_state(self, service_name, func):
+        """Run a function which takes and potentially modifies the state of a service.
+
+        If the function modifies the state it's given, the new state will be saved
+        and passed in next time.
+
+        Args:
+            service_name (str): the name of the service, should be
+                specific enough to uniquely identify the provider
+            func (function): function to run, passing it the current state
+
+        Returns:
+            Whatever ``func`` returns.
+        """
+        old_state = self._local_state_file.get_service_run_state(service_name)
+        modified = deepcopy(old_state)
+        result = func(modified)
+        if modified != old_state:
+            self._local_state_file.set_service_run_state(service_name, modified)
+            self._local_state_file.save()
+        return result
+
+    def append_log(self, message):
+        """Add extra log information that may help debug errors."""
+        self._logs.append(message)
+
+    def append_error(self, error):
+        """Add a fatal error message (that blocked the provide() from succeeding)."""
+        self._errors.append(error)
+
+    @property
+    def errors(self):
+        """Get any fatal errors that occurred during provide()."""
+        return self._errors
+
+    @property
+    def logs(self):
+        """Get any debug logs that occurred during provide()."""
+        return self._logs
+
+
 class Provider(with_metaclass(ABCMeta)):
-    """Instances can take some action to meet a Requirement."""
+    """A Provider can take some action to meet a Requirement."""
 
     @property
     @abstractmethod
@@ -49,7 +122,7 @@ class Provider(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @abstractmethod
-    def provide(self, requirement, environ):
+    def provide(self, requirement, context):
         """Execute the provider, fulfilling the requirement.
 
         The implementation should read and modify the passed-in
@@ -58,7 +131,7 @@ class Provider(with_metaclass(ABCMeta)):
 
         Args:
             requirement (Requirement): requirement we want to meet
-            environ (dict): dict from str to str, representing environment variables
+            context (ProvideContext): context containing project state
 
         """
         pass  # pragma: no cover
@@ -72,7 +145,7 @@ class EnvVarProvider(Provider):
         """Override superclass with our title."""
         return "Manually set environment variable"
 
-    def provide(self, requirement, environ):
+    def provide(self, requirement, context):
         """Override superclass to do nothing (future: read env var from saved state)."""
         # future: we should be able to read the env var from
         # project state. For now, assume someone set it

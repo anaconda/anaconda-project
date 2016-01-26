@@ -9,6 +9,13 @@ PROJECT_FILENAME = "project.yml"
 
 
 class ProjectFile(YamlFile):
+    """Represents the project.yml file.
+
+    This class is internal because everyone needs to use a singleton instance,
+    if code loads the file itself it doesn't know when to reload because
+    some other code made changes.
+    """
+
     @classmethod
     def ensure_for_directory(cls, directory, requirement_registry):
         path = os.path.join(directory, PROJECT_FILENAME)
@@ -59,6 +66,9 @@ class ProjectFile(YamlFile):
 
         self._requirements = requirements
         self._problems = problems
+
+    def _default_comment(self):
+        return "Anaconda project file"
 
     @property
     def requirements(self):

@@ -2,10 +2,13 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+from copy import copy
 import os
+import subprocess
 import sys
 
-from project.plugins.provider import ProviderRegistry
+from project.plugins.provider import ProvideContext, ProviderRegistry
+from project.internal.local_state_file import LocalStateFile
 
 UI_MODE_TEXT = "text"
 UI_MODE_BROWSER = "browser"
@@ -38,6 +41,10 @@ def prepare(project, ui_mode=UI_MODE_BROWSER, io_loop=None, show_url=None, envir
     if environ is None:
         environ = os.environ
 
+    # we modify a copy, which 1) makes all our changes atomic and
+    # 2) minimizes memory leaks on systems that use putenv()
+    environ_copy = copy(environ)
+
     provider_registry = ProviderRegistry()
 
     # the plan is a list of (provider, requirement) in order we should run it.
@@ -45,18 +52,67 @@ def prepare(project, ui_mode=UI_MODE_BROWSER, io_loop=None, show_url=None, envir
     plan = []
     for requirement in project.requirements:
         providers = requirement.find_providers(provider_registry)
-        plan.append((providers[0], requirement))
+        for provider in providers:
+            plan.append((provider, requirement))
+
+    local_state = LocalStateFile.load_for_directory(project.directory_path)
 
     for (provider, requirement) in plan:
-        provider.provide(requirement, environ)
+        why_not = requirement.why_not_provided(environ_copy)
+        if why_not is None:
+            continue
+        context = ProvideContext(environ_copy, local_state)
+        provider.provide(requirement, context)
+        if context.errors:
+            for log in context.logs:
+                print(log, file=sys.stdout)
+            # be sure we print all these before the errors
+            sys.stdout.flush()
+        # now print the errors
+        for error in context.errors:
+            print(error, file=sys.stderr)
 
     failed = False
     for requirement in project.requirements:
-        why_not = requirement.why_not_provided(environ)
+        why_not = requirement.why_not_provided(environ_copy)
         if why_not is not None:
             print("missing requirement to run this project: {requirement.title}".format(requirement=requirement),
                   file=sys.stderr)
             print("  {why_not}".format(why_not=why_not), file=sys.stderr)
             failed = True
 
-    return not failed
+    if failed:
+        return False
+    else:
+        for key in environ_copy:
+            environ[key] = environ_copy[key]
+        return True
+
+
+def unprepare(project, io_loop=None):
+    """Attempt to clean up project-scoped resources allocated by prepare().
+
+    This will retain any user configuration choices about how to
+    provide requirements, but it stops project-scoped services.
+    Global system services or other services potentially shared
+    among projects will not be stopped.
+
+    Args:
+        project (Project): the project
+        io_loop (IOLoop): tornado IOLoop to use, None for default
+
+    """
+    local_state = LocalStateFile.load_for_directory(project.directory_path)
+
+    run_states = local_state.get_all_service_run_states()
+    for service_name in copy(run_states):
+        state = run_states[service_name]
+        if 'shutdown_commands' in state:
+            commands = state['shutdown_commands']
+            for command in commands:
+                print("Running " + repr(command))
+                code = subprocess.call(command)
+                print("  exited with " + str(code))
+        # clear out the run state once we try to shut it down
+        local_state.set_service_run_state(service_name, dict())
+        local_state.save()
