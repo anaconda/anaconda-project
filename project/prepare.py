@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from copy import copy
+from copy import copy, deepcopy
 import os
 import subprocess
 import sys
@@ -42,8 +42,10 @@ def prepare(project, ui_mode=UI_MODE_BROWSER, io_loop=None, show_url=None, envir
         environ = os.environ
 
     # we modify a copy, which 1) makes all our changes atomic and
-    # 2) minimizes memory leaks on systems that use putenv()
-    environ_copy = copy(environ)
+    # 2) minimizes memory leaks on systems that use putenv() (it
+    # appears we must use deepcopy or we still modify os.environ
+    # somehow)
+    environ_copy = deepcopy(environ)
 
     provider_registry = ProviderRegistry()
 
@@ -84,8 +86,9 @@ def prepare(project, ui_mode=UI_MODE_BROWSER, io_loop=None, show_url=None, envir
     if failed:
         return False
     else:
-        for key in environ_copy:
-            environ[key] = environ_copy[key]
+        for key, value in environ_copy.items():
+            if key not in environ or environ[key] != value:
+                environ[key] = value
         return True
 
 
