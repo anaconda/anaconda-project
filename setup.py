@@ -147,10 +147,15 @@ column_limit : 120
 
     def _pytest(self):
         import pytest
-        errno = pytest.main(self.pytest_args)
-        if errno != 0:
-            print("pytest failed, code {errno}".format(errno=errno))
-            self.failed.append('pytest')
+        from pytest_cov.plugin import CoverageError
+        try:
+            errno = pytest.main(self.pytest_args)
+            if errno != 0:
+                print("pytest failed, code {errno}".format(errno=errno))
+                self.failed.append('pytest')
+        except CoverageError as e:
+            print("Test coverage failure: " + str(e))
+            self.failed.append('pytest-coverage')
 
     def run_tests(self):
         self._add_missing_init_py()
