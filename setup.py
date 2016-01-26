@@ -86,11 +86,17 @@ class AllTestsCommand(TestCommand):
 column_limit : 120
 }"""
 
-        # It might be tempting to use the "inplace" option to
-        # FormatFile, but it doesn't do an atomic replace, which
-        # is dangerous, so don't use it unless you submit a fix to
-        # yapf.
-        (contents, encoding, changed) = FormatFile(path, style_config=config)
+        try:
+            # It might be tempting to use the "inplace" option to
+            # FormatFile, but it doesn't do an atomic replace, which
+            # is dangerous, so don't use it unless you submit a fix to
+            # yapf.
+            (contents, encoding, changed) = FormatFile(path, style_config=config)
+        except Exception as e:
+            error = "yapf crashed on {path}: {error}".format(path=path, error=e)
+            print(error, file=sys.stderr)
+            self.failed.append(error)
+            return
 
         if changed:
             _atomic_replace(path, contents, encoding)
