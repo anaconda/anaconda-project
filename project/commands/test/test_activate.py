@@ -112,4 +112,4 @@ runtime:
 
     out, err = capsys.readouterr()
     assert "missing requirement" in err
-    assert "All ports between 6380 and 6450 were in use" in err
+    assert "All ports from 6380 to 6449 were in use" in err

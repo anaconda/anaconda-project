@@ -8,7 +8,6 @@ LOCAL_STATE_DIRECTORY = ".anaconda"
 LOCAL_STATE_FILENAME = "project-local.yml"
 
 SERVICE_RUN_STATES_SECTION = "service_run_states"
-PROVIDER_CONFIGS_SECTION = "providers"
 
 
 class LocalStateFile(YamlFile):
@@ -43,15 +42,3 @@ class LocalStateFile(YamlFile):
 
     def get_all_service_run_states(self):
         return self.get_value(SERVICE_RUN_STATES_SECTION, default=dict())
-
-    @classmethod
-    def _provider_config_section(cls, requirement_key):
-        return PROVIDER_CONFIGS_SECTION + "." + requirement_key
-
-    def set_provider_config(self, requirement_key, provider_key, config):
-        if not isinstance(config, dict):
-            raise ValueError("provider config should be a dict")
-        self.set_value(self._provider_config_section(requirement_key), provider_key, config)
-
-    def get_provider_config(self, requirement_key, provider_key):
-        return self.get_value(self._provider_config_section(requirement_key), provider_key, default=dict())

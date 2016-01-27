@@ -135,6 +135,11 @@ class Provider(with_metaclass(ABCMeta)):
         return self.__class__.__name__
 
     @abstractmethod
+    def read_config(self, local_state_file, requirement):
+        """Read a config dict from the local state file for the given requirement."""
+        pass  # pragma: no cover
+
+    @abstractmethod
     def provide(self, requirement, context):
         """Execute the provider, fulfilling the requirement.
 
@@ -158,9 +163,38 @@ class EnvVarProvider(Provider):
         """Override superclass with our title."""
         return "Manually set environment variable"
 
+    def read_config(self, local_state_file, requirement):
+        """Override superclass to read env var value."""
+        config = dict()
+        value = local_state_file.get_value("variables", requirement.env_var, default=None)
+        if value is not None:
+            config['value'] = value
+        return config
+
     def provide(self, requirement, context):
-        """Override superclass to do nothing (future: read env var from saved state)."""
-        # future: we should be able to read the env var from
-        # project state. For now, assume someone set it
-        # when launching the app.
-        pass
+        """Override superclass to use configured env var (or already-set env var)."""
+        # We prefer the values in this order:
+        #  - value set in project-local state overrides everything
+        #    (otherwise the UI for configuring the value would end
+        #    up ignored)
+        #  - then anything already set in the environment wins, so you
+        #    can override on the command line like `FOO=bar myapp`
+        #  - then the project.yml default value
+        if 'value' in context.config:
+            # .anaconda/project-local.yml
+            #
+            # variables:
+            #   REDIS_URL: "redis://example.com:1234"
+            context.environ[requirement.env_var] = context.config['value']
+        elif requirement.env_var in context.environ:
+            # nothing to do here
+            pass
+        elif 'default' in requirement.options:
+            # project.yml
+            #
+            # runtime:
+            #   REDIS_URL:
+            #     default: "redis://example.com:1234"
+            context.environ[requirement.env_var] = requirement.options['default']
+        else:
+            pass

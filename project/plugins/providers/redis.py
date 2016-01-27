@@ -1,8 +1,11 @@
 """Redis-related providers."""
+from __future__ import print_function
+
 import codecs
 import errno
 import os
 import subprocess
+import sys
 
 from project.plugins.provider import Provider
 import project.plugins.network_util as network_util
@@ -15,6 +18,10 @@ class DefaultRedisProvider(Provider):
     def title(self):
         """Override superclass to provide our title."""
         return "Default Redis port on localhost"
+
+    def read_config(self, local_state, requirement):
+        """Override superclass to return empty config."""
+        return dict()
 
     def provide(self, requirement, context):
         """Override superclass to set the requirement's env var to the default Redis localhost URL."""
@@ -29,6 +36,46 @@ class ProjectScopedRedisProvider(Provider):
     def title(self):
         """Override superclass to provide our title."""
         return "Run a dedicated redis-server process for this project."
+
+    @classmethod
+    def _parse_port_range(cls, s):
+        pieces = s.split("-")
+        if len(pieces) != 2:
+            return None
+        try:
+            lower = int(pieces[0].strip())
+            upper = int(pieces[1].strip())
+        except ValueError:
+            return None
+        if lower <= 0 or upper <= 0:
+            return None
+        if lower > upper:
+            return None
+        return (lower, upper)
+
+    def read_config(self, local_state, requirement):
+        """Override superclass to return our config."""
+        # providers:
+        #   ProjectScopedRedisProvider:
+        #     REDIS_URL:
+        #       port_range: 6380-6449
+        config = dict()
+        section = "runtime.%s.providers.%s" % (requirement.env_var, self.config_key)
+        default_lower_port = 6380  # one above 6379 default Redis
+        default_upper_port = 6449  # entirely arbitrary
+        default_port_range = "%d-%d" % (default_lower_port, default_upper_port)
+        port_range_string = local_state.get_value(section, "port_range", default=default_port_range)
+        parsed_port_range = self._parse_port_range(port_range_string)
+        if parsed_port_range is None:
+            print("Invalid port_range '%s', should be like '%s'" % (port_range_string, default_port_range),
+                  file=sys.stderr)
+            config['lower_port'] = default_lower_port
+            config['upper_port'] = default_upper_port
+        else:
+            config['lower_port'] = parsed_port_range[0]
+            config['upper_port'] = parsed_port_range[1]
+
+        return config
 
     def provide(self, requirement, context):
         """Override superclass to start a project-scoped redis-server.
@@ -63,15 +110,17 @@ class ProjectScopedRedisProvider(Provider):
             # it. This is a pretty huge hack and a race condition,
             # but Redis doesn't as far as I know have "let the OS
             # pick the port" mode.
-            port = 6380
-            UPPER_BOUND_PORT = 6450  # entirely arbitrary
-            while port < UPPER_BOUND_PORT:
+            LOWER_PORT = context.config['lower_port']
+            UPPER_PORT = context.config['upper_port']
+            port = LOWER_PORT
+            while port <= UPPER_PORT:
                 if not network_util.can_connect_to_socket(host='localhost', port=port):
                     break
                 port += 1
-            if port == UPPER_BOUND_PORT:
-                context.append_error(("All ports between 6380 and {upper} were in use, " +
-                                      "could not start redis-server on one of them.").format(upper=UPPER_BOUND_PORT))
+            if port > UPPER_PORT:
+                context.append_error(("All ports from {lower} to {upper} were in use, " +
+                                      "could not start redis-server on one of them.").format(lower=LOWER_PORT,
+                                                                                             upper=UPPER_PORT))
                 return None
 
             # be sure we don't get confused by an old log file

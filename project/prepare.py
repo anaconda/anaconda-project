@@ -83,7 +83,7 @@ def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=Non
         why_not = requirement.why_not_provided(environ_copy)
         if why_not is None:
             continue
-        config = local_state.get_provider_config(requirement.config_key, provider.config_key)
+        config = provider.read_config(local_state, requirement)
         context = ProvideContext(environ_copy, local_state, config)
         provider.provide(requirement, context)
         if context.errors:

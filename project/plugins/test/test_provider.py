@@ -3,9 +3,12 @@ from __future__ import absolute_import
 import os
 import pytest
 
-from project.internal.local_state_file import LocalStateFile
+from project.internal.local_state_file import LocalStateFile, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
+from project.internal.project_file import PROJECT_FILENAME
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.plugins.provider import ProvideContext, ProviderRegistry, EnvVarProvider
+from project.plugins.requirement import EnvVarRequirement, RequirementRegistry
+from project.project import Project
 
 
 def test_find_by_env_var():
@@ -13,18 +16,105 @@ def test_find_by_env_var():
     found = registry.find_by_env_var(requirement=None, env_var="FOO")
     assert 1 == len(found)
     assert isinstance(found[0], EnvVarProvider)
+    assert "EnvVarProvider" == found[0].config_key
 
 
-def test_env_var_provider():
+def test_env_var_provider_title():
+    provider = EnvVarProvider()
+    assert "Manually set environment variable" == provider.title
+
+
+def _load_env_var_requirement(dirname, env_var):
+    requirement_registry = RequirementRegistry()
+    project = Project(dirname, requirement_registry)
+    for requirement in project.requirements:
+        if isinstance(requirement, EnvVarRequirement) and requirement.env_var == env_var:
+            return requirement
+    raise RuntimeError("No requirement for %s was in the project file, only %r" % (env_var, project.requirements))
+
+
+def test_env_var_provider_with_no_value():
     def check_env_var_provider(dirname):
         provider = EnvVarProvider()
-        assert "Manually set environment variable" == provider.title
+        requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config={})
-        # just check this doesn't throw or anything, for now
-        provider.provide(requirement=None, context=context)
+        config = provider.read_config(local_state_file, requirement)
+        assert dict() == config
+        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
 
-    with_directory_contents(dict(), check_env_var_provider)
+        provider.provide(requirement, context=context)
+        assert 'FOO' not in context.environ
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  - FOO
+"""}, check_env_var_provider)
+
+
+def test_env_var_provider_with_default_value_in_project_file():
+    def check_env_var_provider(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO")
+        assert dict(default='from_default') == requirement.options
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config = provider.read_config(local_state_file, requirement)
+        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO' in context.environ
+        assert 'from_default' == context.environ['FOO']
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  FOO:
+    default: from_default
+"""}, check_env_var_provider)
+
+
+def test_env_var_provider_with_value_set_in_environment():
+    def check_env_var_provider(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO")
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config = provider.read_config(local_state_file, requirement)
+        assert dict() == config
+        context = ProvideContext(environ=dict(FOO='from_environ'), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO' in context.environ
+        assert 'from_environ' == context.environ['FOO']
+
+    # set a default to be sure we prefer 'environ' instead
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  FOO:
+    default: from_default
+"""}, check_env_var_provider)
+
+
+def test_env_var_provider_with_value_set_in_local_state():
+    def check_env_var_provider(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO")
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config = provider.read_config(local_state_file, requirement)
+        assert dict(value="from_local_state") == config
+        # set an environ to be sure we override it with local state
+        context = ProvideContext(environ=dict(FOO='from_environ'), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO' in context.environ
+        assert 'from_local_state' == context.environ['FOO']
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  FOO:
+    default: from_default
+    """,
+         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+variables:
+  FOO: from_local_state
+"""}, check_env_var_provider)
 
 
 def test_fail_to_find_by_service():

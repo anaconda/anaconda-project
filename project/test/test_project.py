@@ -28,3 +28,17 @@ def test_problem_in_project_file():
 runtime:
   42
 """}, check_problem)
+
+
+def test_single_env_var_requirement_with_options():
+    def check_some_env_var(dirname):
+        requirement_registry = RequirementRegistry()
+        project = Project(dirname, requirement_registry)
+        assert 1 == len(project.requirements)
+        assert "FOO" == project.requirements[0].env_var
+        assert dict(default="hello") == project.requirements[0].options
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+    FOO: { default: "hello" }
+"""}, check_some_env_var)

@@ -5,10 +5,11 @@ import os
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.project_file import PROJECT_FILENAME
+from project.internal.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
 from project.internal.local_state_file import LocalStateFile
 from project.prepare import prepare, unprepare
 from project.project import Project
-from project.plugins.requirement import RequirementRegistry
+from project.plugins.requirement import EnvVarRequirement, RequirementRegistry
 from project.plugins.provider import ProviderRegistry
 from project.plugins.providers.redis import DefaultRedisProvider, ProjectScopedRedisProvider
 
@@ -21,6 +22,84 @@ def test_find_by_service_redis():
     assert "Default Redis port on localhost" == found[0].title
     assert isinstance(found[1], ProjectScopedRedisProvider)
     assert "Run a dedicated redis-server process for this project." == found[1].title
+
+
+def test_reading_default_config():
+    def read_config(dirname):
+        local_state = LocalStateFile.load_for_directory(dirname)
+        requirement = EnvVarRequirement("REDIS_URL")
+        provider = ProjectScopedRedisProvider()
+        config = provider.read_config(local_state, requirement)
+        assert 6380 == config['lower_port']
+        assert 6449 == config['upper_port']
+
+    with_directory_contents(dict(), read_config)
+
+
+def test_reading_valid_config():
+    def read_config(dirname):
+        local_state = LocalStateFile.load_for_directory(dirname)
+        requirement = EnvVarRequirement("REDIS_URL")
+        provider = ProjectScopedRedisProvider()
+        config = provider.read_config(local_state, requirement)
+        assert 7389 == config['lower_port']
+        assert 7421 == config['upper_port']
+
+    with_directory_contents(
+        {
+            LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+runtime:
+  REDIS_URL:
+    providers:
+      ProjectScopedRedisProvider:
+        port_range: 7389-7421
+         """
+        }, read_config)
+
+
+def _read_invalid_port_range(capsys, port_range):
+    def read_config(dirname):
+        local_state = LocalStateFile.load_for_directory(dirname)
+        requirement = EnvVarRequirement("REDIS_URL")
+        provider = ProjectScopedRedisProvider()
+        config = provider.read_config(local_state, requirement)
+        # revert to defaults
+        assert 6380 == config['lower_port']
+        assert 6449 == config['upper_port']
+        # should have printed an error
+        out, err = capsys.readouterr()
+        assert ("Invalid port_range '%s', should be like '6380-6449'\n" % (port_range)) == err
+
+    with_directory_contents(
+        {
+            LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+runtime:
+  REDIS_URL:
+    providers:
+      ProjectScopedRedisProvider:
+        port_range: %s
+         """ % port_range
+        }, read_config)
+
+
+def test_garbage_port_range(capsys):
+    _read_invalid_port_range(capsys, "abcdefg")
+
+
+def test_backward_port_range(capsys):
+    _read_invalid_port_range(capsys, "100-99")
+
+
+def test_non_integer_port_range(capsys):
+    _read_invalid_port_range(capsys, "A-Z")
+
+
+def test_zero_lower_port(capsys):
+    _read_invalid_port_range(capsys, "0-1")
+
+
+def test_zero_upper_port(capsys):
+    _read_invalid_port_range(capsys, "1-0")
 
 
 def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
@@ -232,7 +311,38 @@ runtime:
 """}, start_local_redis)
 
     out, err = capsys.readouterr()
-    assert "All ports between 6380 and 6450 were in use, could not start redis-server on one of them." in err
+    assert "All ports from 6380 to 6449 were in use, could not start redis-server on one of them." in err
+    assert "REDIS_URL" in err
+    assert "missing requirement" in err
+    assert "" == out
+
+
+def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
+    can_connect_args_list = _monkeypatch_can_connect_to_socket_always_succeeds_on_nonstandard(monkeypatch)
+
+    def start_local_redis(dirname):
+        requirement_registry = RequirementRegistry()
+        project = Project(dirname, requirement_registry)
+        environ = dict()
+        result = prepare(project, environ=environ)
+        assert not result
+        assert 35 == len(can_connect_args_list)
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  REDIS_URL: {}
+    """,
+         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+runtime:
+  REDIS_URL:
+    providers:
+      ProjectScopedRedisProvider:
+        port_range: 7389-7421
+"""}, start_local_redis)
+
+    out, err = capsys.readouterr()
+    assert "All ports from 7389 to 7421 were in use, could not start redis-server on one of them." in err
     assert "REDIS_URL" in err
     assert "missing requirement" in err
     assert "" == out
