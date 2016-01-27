@@ -20,7 +20,7 @@ def test_env_var_provider():
         provider = EnvVarProvider()
         assert "Manually set environment variable" == provider.title
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        context = ProvideContext(environ=dict(), local_state_file=local_state_file)
+        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config={})
         # just check this doesn't throw or anything, for now
         provider.provide(requirement=None, context=context)
 
@@ -37,7 +37,7 @@ def test_provide_context_properties():
     def check_provide_contents(dirname):
         environ = dict(foo='bar')
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file)
+        context = ProvideContext(environ=environ, local_state_file=local_state_file, config=dict(foo=42))
         assert dict(foo='bar') == context.environ
         assert [] == context.errors
         context.append_error("foo")
@@ -49,6 +49,8 @@ def test_provide_context_properties():
         context.append_log("bar")
         assert ["foo", "bar"] == context.logs
 
+        assert dict(foo=42) == context.config
+
     with_directory_contents(dict(), check_provide_contents)
 
 
@@ -56,7 +58,7 @@ def test_provide_context_ensure_work_directory():
     def check_provide_contents(dirname):
         environ = dict()
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file)
+        context = ProvideContext(environ=environ, local_state_file=local_state_file, config={})
         workpath = context.ensure_work_directory("foo")
         assert os.path.isdir(workpath)
         parent = os.path.dirname(workpath)
@@ -81,7 +83,7 @@ def test_provide_context_ensure_work_directory_cannot_create(monkeypatch):
     def check_provide_contents(dirname):
         environ = dict()
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file)
+        context = ProvideContext(environ=environ, local_state_file=local_state_file, config={})
         with pytest.raises(IOError) as excinfo:
             context.ensure_work_directory("foo")
         assert "this is not EEXIST" in repr(excinfo.value)
@@ -94,7 +96,7 @@ def test_provide_context_transform_service_run_state():
         environ = dict()
         local_state_file = LocalStateFile.load_for_directory(dirname)
         local_state_file.set_service_run_state("myservice", dict(port=42))
-        context = ProvideContext(environ=environ, local_state_file=local_state_file)
+        context = ProvideContext(environ=environ, local_state_file=local_state_file, config={})
 
         def transform_it(state):
             assert 42 == state['port']

@@ -46,6 +46,12 @@ class Requirement(with_metaclass(ABCMeta)):
         """Human-readable title of the requirement."""
         pass  # pragma: no cover
 
+    @property
+    @abstractmethod
+    def config_key(self):
+        """When we store config for this requirement, we use this as the key."""
+        pass  # pragma: no cover
+
     @abstractmethod
     def why_not_provided(self, environ):
         """Return why the requirement hasn't been met, or None if it was been.
@@ -75,6 +81,11 @@ class EnvVarRequirement(Requirement):
     @property
     def title(self):
         """Override superclass title."""
+        return self.env_var
+
+    @property
+    def config_key(self):
+        """Override superclass config key."""
         return self.env_var
 
     def why_not_provided(self, environ):

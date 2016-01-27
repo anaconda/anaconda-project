@@ -45,17 +45,20 @@ class ProviderRegistry(object):
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""
 
-    def __init__(self, environ, local_state_file):
+    def __init__(self, environ, local_state_file, config):
         """Create a ProvideContext.
 
         Args:
             environ (dict): environment variables to be read and modified
             local_state_file (LocalStateFile): to store any created state
+            config (dict): configuration for the provider
         """
         self.environ = environ
         self._local_state_file = local_state_file
         self._logs = []
         self._errors = []
+        # defensive copy so we don't modify what was passed in
+        self._config = deepcopy(config)
 
     def ensure_work_directory(self, relative_name):
         """Create a project-scoped work directory with the given name.
@@ -111,6 +114,11 @@ class ProvideContext(object):
         """Get any debug logs that occurred during provide()."""
         return self._logs
 
+    @property
+    def config(self):
+        """Get the configuration dict for the provider."""
+        return self._config
+
 
 class Provider(with_metaclass(ABCMeta)):
     """A Provider can take some action to meet a Requirement."""
@@ -120,6 +128,11 @@ class Provider(with_metaclass(ABCMeta)):
     def title(self):
         """Human-friendly title of the provider."""
         pass  # pragma: no cover
+
+    @property
+    def config_key(self):
+        """When we store config for this provider, we use this as the key."""
+        return self.__class__.__name__
 
     @abstractmethod
     def provide(self, requirement, context):

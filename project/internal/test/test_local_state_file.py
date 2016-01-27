@@ -1,5 +1,5 @@
 from project.internal.local_state_file import (LocalStateFile, LOCAL_STATE_FILENAME, LOCAL_STATE_DIRECTORY,
-                                               SERVICE_RUN_STATES_SECTION)
+                                               SERVICE_RUN_STATES_SECTION, PROVIDER_CONFIGS_SECTION)
 from project.internal.test.tmpfile_utils import with_directory_contents
 
 import codecs
@@ -94,5 +94,36 @@ def test_run_state_must_be_dict():
         with pytest.raises(ValueError) as excinfo:
             local_state_file.set_service_run_state("foo", 42)
         assert "service state should be a dict" in repr(excinfo.value)
+
+    with_directory_contents(dict(), check_cannot_use_non_dict)
+
+
+def test_modify_provider_config():
+    def check_file(dirname):
+        filename = os.path.join(dirname, LOCAL_STATE_FILENAME_WITH_DIR)
+        assert os.path.exists(filename)
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config = local_state_file.get_provider_config("foo", "bar")
+        assert dict(baz=42) == config
+        local_state_file.set_provider_config("foo", "bar", dict(baz=43))
+        local_state_file.save()
+        changed = local_state_file.get_provider_config("foo", "bar")
+        assert dict(baz=43) == changed
+
+        # and we can reload it from scratch
+        local_state_file2 = LocalStateFile.load_for_directory(dirname)
+        changed2 = local_state_file2.get_provider_config("foo", "bar")
+        assert dict(baz=43) == changed2
+
+    sample_config = PROVIDER_CONFIGS_SECTION + ":\n  foo: { bar: { baz: 42 } }\n"
+    with_directory_contents({LOCAL_STATE_FILENAME_WITH_DIR: sample_config}, check_file)
+
+
+def test_provider_config_must_be_dict():
+    def check_cannot_use_non_dict(dirname):
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        with pytest.raises(ValueError) as excinfo:
+            local_state_file.set_provider_config("foo", "bar", 42)
+        assert "provider config should be a dict" in repr(excinfo.value)
 
     with_directory_contents(dict(), check_cannot_use_non_dict)
