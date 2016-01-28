@@ -3,10 +3,10 @@ from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
-import errno
 import os
 
 from project.internal.metaclass import with_metaclass
+from project.internal.makedirs import makedirs_ok_if_exists
 
 
 class ProviderRegistry(object):
@@ -67,11 +67,7 @@ class ProvideContext(object):
             relative_name (str): name to distinguish this dir from other work directories
         """
         path = os.path.join(os.path.dirname(self._local_state_file.filename), "run", relative_name)
-        try:
-            os.makedirs(path)
-        except IOError as e:
-            if e.errno != errno.EEXIST:
-                raise e
+        makedirs_ok_if_exists(path)
         return path
 
     def transform_service_run_state(self, service_name, func):

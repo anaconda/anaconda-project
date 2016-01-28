@@ -15,7 +15,7 @@ def _http_fetch(request, host=None):
     if response.error:
         raise response.error
     else:
-        return response
+        raise gen.Return(response)
 
 
 def http_get_async(url, host=None):

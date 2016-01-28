@@ -147,7 +147,9 @@ class ProjectScopedRedisProvider(Provider):
             # be sure we don't get confused by an old log file
             try:
                 os.remove(logfile)
-            except IOError:
+            except IOError:  # pragma: no cover (py3 only)
+                pass
+            except OSError:  # pragma: no cover (py2 only)
                 pass
 
             command = ['redis-server', '--pidfile', pidfile, '--logfile', logfile, '--daemonize', 'yes', '--port',

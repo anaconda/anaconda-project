@@ -126,7 +126,9 @@ class UIApplication(Application):
     def parse_form_name(self, name):
         pieces = name.split(".")
         if len(pieces) < 3:
-            print("not enough pieces in " + repr(pieces), file=sys.stderr)
+            # this map on "pieces" is so py2 and py3 render it the same way,
+            # so the unit tests can be the same on both
+            print("not enough pieces in " + repr(list(map(lambda s: str(s), pieces))), file=sys.stderr)
             return None
         req_id = pieces[0]
         provider_key = pieces[1]

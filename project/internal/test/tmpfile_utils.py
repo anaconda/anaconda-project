@@ -2,6 +2,8 @@ import tempfile
 import shutil
 import os.path
 
+from project.internal.makedirs import makedirs_ok_if_exists
+
 
 class TmpDir(object):
     def __init__(self, prefix):
@@ -18,10 +20,7 @@ def with_directory_contents(contents, func):
     with (TmpDir(prefix="project-test-tmpdir-")) as dirname:
         for filename, file_content in contents.items():
             path = os.path.join(dirname, filename)
-            try:
-                os.makedirs(os.path.dirname(path))
-            except IOError:
-                pass
+            makedirs_ok_if_exists(os.path.dirname(path))
             f = open(path, 'w')
             f.write(file_content)
             f.flush()

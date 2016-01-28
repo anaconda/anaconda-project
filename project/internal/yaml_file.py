@@ -9,6 +9,8 @@ import codecs
 import errno
 import os
 
+from project.internal.makedirs import makedirs_ok_if_exists
+
 
 def _atomic_replace(path, contents, encoding='utf-8'):
     tmp = path + ".tmp"
@@ -66,11 +68,7 @@ class YamlFile(object):
         if not os.path.isfile(self.filename):
             # might have to make the directory
             dirname = os.path.dirname(self.filename)
-            try:
-                os.makedirs(dirname)
-            except IOError as e:
-                if e.errno != errno.EEXIST:
-                    raise e
+            makedirs_ok_if_exists(dirname)
         _atomic_replace(self.filename, contents)
         self._dirty = False
 
