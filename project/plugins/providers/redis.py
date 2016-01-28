@@ -53,6 +53,9 @@ class ProjectScopedRedisProvider(Provider):
             return None
         return (lower, upper)
 
+    def _section(self, requirement):
+        return "runtime.%s.providers.%s" % (requirement.env_var, self.config_key)
+
     def read_config(self, local_state, requirement):
         """Override superclass to return our config."""
         # providers:
@@ -60,7 +63,7 @@ class ProjectScopedRedisProvider(Provider):
         #     REDIS_URL:
         #       port_range: 6380-6449
         config = dict()
-        section = "runtime.%s.providers.%s" % (requirement.env_var, self.config_key)
+        section = self._section(requirement)
         default_lower_port = 6380  # one above 6379 default Redis
         default_upper_port = 6449  # entirely arbitrary
         default_port_range = "%d-%d" % (default_lower_port, default_upper_port)
@@ -76,6 +79,24 @@ class ProjectScopedRedisProvider(Provider):
             config['upper_port'] = parsed_port_range[1]
 
         return config
+
+    def set_config_value_from_string(self, local_state_file, requirement, name, value_string):
+        """Override superclass to set our config values."""
+        config = self.read_config(local_state_file, requirement)
+        section = self._section(requirement)
+        if name == "lower_port":
+            local_state_file.set_value(section, 'port_range', "%s-%s" % (value_string, config['upper_port']))
+        elif name == "upper_port":
+            local_state_file.set_value(section, 'port_range', "%s-%s" % (config['lower_port'], value_string))
+
+    def config_html(self, requirement):
+        """Override superclass to provide our config html."""
+        return """
+<form>
+  <label>First port to try: <input type="text" name="lower_port"/></label>
+  <label>Last port to try: <input type="text" name="upper_port"/></label>
+</form>
+"""
 
     def provide(self, requirement, context):
         """Override superclass to start a project-scoped redis-server.

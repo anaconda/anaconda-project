@@ -102,6 +102,24 @@ def test_zero_upper_port(capsys):
     _read_invalid_port_range(capsys, "1-0")
 
 
+def test_set_config_value_from_string():
+    def set_config(dirname):
+        local_state = LocalStateFile.load_for_directory(dirname)
+        requirement = EnvVarRequirement("REDIS_URL")
+        provider = ProjectScopedRedisProvider()
+        provider.set_config_value_from_string(local_state, requirement, "lower_port", 6001)
+        config = provider.read_config(local_state, requirement)
+        assert config['lower_port'] == 6001
+        assert config['upper_port'] == 6449
+
+        provider.set_config_value_from_string(local_state, requirement, "upper_port", 6700)
+        config2 = provider.read_config(local_state, requirement)
+        assert config2['lower_port'] == 6001
+        assert config2['upper_port'] == 6700
+
+    with_directory_contents(dict(), set_config)
+
+
 def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
     can_connect_args = dict()
 

@@ -1,10 +1,14 @@
 from __future__ import absolute_import, print_function
 
 import socket
+import sys
+import uuid
 
 from tornado.httpserver import HTTPServer
 from tornado.netutil import bind_sockets
 from tornado.web import Application, RequestHandler
+
+from project.internal.plugin_html import cleanup_and_scope_form, html_tag
 
 
 class UIServerEvent(object):
@@ -23,7 +27,25 @@ class PrepareViewHandler(RequestHandler):
         super(PrepareViewHandler, self).__init__(application, *args, **kwargs)
 
     def get(self, *args, **kwargs):
-        # future: we will use some sort of template thing here
+        prepare_context = self.application.prepare_context
+
+        config_html = ""
+
+        config_html = config_html + "<ul>"
+        for (requirement, providers) in prepare_context.requirements_and_providers:
+            config_html = config_html + "<li>"
+            config_html = config_html + html_tag("h3", requirement.title)
+            for provider in providers:
+                config = provider.read_config(prepare_context.local_state_file, requirement)
+                raw_html = provider.config_html(requirement)
+                if raw_html is not None:
+                    prefix = self.application.form_prefix(requirement, provider)
+                    cleaned_html = cleanup_and_scope_form(raw_html, prefix, config)
+                    config_html = config_html + "\n" + cleaned_html
+
+            config_html = config_html + "</li>"
+        config_html = config_html + "</ul>"
+
         page = """
 <!DOCTYPE html>
 <html lang="en">
@@ -33,18 +55,31 @@ class PrepareViewHandler(RequestHandler):
   </head>
   <body>
      <div>
-         <form action="/" method="post">
+         <form action="/" method="post" enctype="multipart/form-data">
             <input type="submit" value="Setup everything"></input>
+            %s
          </form>
      </div>
   </body>
 </html>
-"""
+""" % (config_html)
 
         self.set_header("Content-Type", 'text/html')
         self.write(page)
 
     def post(self, *args, **kwargs):
+        prepare_context = self.application.prepare_context
+
+        for name in self.request.body_arguments:
+            parsed = self.application.parse_form_name(name)
+            if parsed is not None:
+                (requirement, provider, unscoped_name) = parsed
+                value_string = self.get_body_argument(name)
+                provider.set_config_value_from_string(prepare_context.local_state_file, requirement, unscoped_name,
+                                                      value_string)
+
+        prepare_context.local_state_file.save()
+
         page = """
 <!DOCTYPE html>
 <html lang="en">
@@ -67,22 +102,55 @@ class PrepareViewHandler(RequestHandler):
 
 
 class UIApplication(Application):
-    def __init__(self, event_handler, io_loop, **kwargs):
+    def __init__(self, prepare_context, event_handler, **kwargs):
         self._event_handler = event_handler
-        self.io_loop = io_loop
+        self.io_loop = prepare_context.io_loop
+        self.prepare_context = prepare_context
+
+        self._requirements_by_id = {}
+        self._ids_by_requirement = {}
+        for (requirement, providers) in prepare_context.requirements_and_providers:
+            req_id = str(uuid.uuid4())
+            self._requirements_by_id[req_id] = requirement
+            self._ids_by_requirement[requirement] = req_id
+
         patterns = [(r'/?', PrepareViewHandler)]
         super(UIApplication, self).__init__(patterns, **kwargs)
 
     def emit_event(self, event):
         self.io_loop.add_callback(lambda: self._event_handler(event))
 
+    def form_prefix(self, requirement, provider):
+        return "%s.%s." % (self._ids_by_requirement[requirement], provider.config_key)
+
+    def parse_form_name(self, name):
+        pieces = name.split(".")
+        if len(pieces) < 3:
+            print("not enough pieces in " + repr(pieces), file=sys.stderr)
+            return None
+        req_id = pieces[0]
+        provider_key = pieces[1]
+        unscoped_name = ".".join(pieces[2:])
+        if req_id not in self._requirements_by_id:
+            print(req_id + " not a known requirement id", file=sys.stderr)
+            return None
+        requirement = self._requirements_by_id[req_id]
+        for (req, providers) in self.prepare_context.requirements_and_providers:
+            if req is requirement:
+                for provider in providers:
+                    if provider_key == provider.config_key:
+                        return (requirement, provider, unscoped_name)
+        print("did not find provider " + provider_key, file=sys.stderr)
+        return None
+
 
 class UIServer(object):
-    def __init__(self, event_handler, io_loop):
+    def __init__(self, prepare_context, event_handler):
         assert event_handler is not None
+        io_loop = prepare_context.io_loop
         assert io_loop is not None
 
-        self._application = UIApplication(event_handler, io_loop)
+        self._application = UIApplication(prepare_context, event_handler)
         self._http = HTTPServer(self._application, io_loop=io_loop)
 
         # these would throw OSError on failure

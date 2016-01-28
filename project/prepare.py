@@ -11,7 +11,7 @@ from tornado.ioloop import IOLoop
 
 from project.plugins.provider import ProvideContext, ProviderRegistry
 from project.internal.local_state_file import LocalStateFile
-from project.internal.prepare_ui import NotInteractivePrepareUI, BrowserPrepareUI
+from project.internal.prepare_ui import NotInteractivePrepareUI, BrowserPrepareUI, ConfigurePrepareContext
 
 UI_MODE_TEXT = "text"
 UI_MODE_BROWSER = "browser"
@@ -20,13 +20,13 @@ UI_MODE_NOT_INTERACTIVE = "not_interactive"
 _all_ui_modes = (UI_MODE_TEXT, UI_MODE_BROWSER, UI_MODE_NOT_INTERACTIVE)
 
 
-def _should_we_prepare(ui_mode, io_loop):
+def _configure_prepare(ui_mode, context):
     if ui_mode == UI_MODE_NOT_INTERACTIVE:
         ui = NotInteractivePrepareUI()
     elif ui_mode == UI_MODE_BROWSER:
         ui = BrowserPrepareUI()
 
-    return ui.should_we_prepare(io_loop)
+    ui.configure_prepare(context)
 
 
 def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=None, environ=None):
@@ -53,8 +53,11 @@ def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=Non
     if environ is None:
         environ = os.environ
 
+    old_current_loop = None
     if io_loop is None:
+        old_current_loop = IOLoop.current()
         io_loop = IOLoop()
+        io_loop.make_current()
 
     # we modify a copy, which 1) makes all our changes atomic and
     # 2) minimizes memory leaks on systems that use putenv() (it
@@ -64,20 +67,29 @@ def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=Non
 
     provider_registry = ProviderRegistry()
 
-    # the plan is a list of (provider, requirement) in order we should run it.
-    # our algorithm to decide on this will be getting more complicated.
-    plan = []
+    requirements_and_providers = []
     for requirement in project.requirements:
         providers = requirement.find_providers(provider_registry)
-        for provider in providers:
-            plan.append((provider, requirement))
+        requirements_and_providers.append((requirement, providers))
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
-    # wait for the UI if any (for now just ignore whether
-    # _should_we_prepare() returns False because we are going to
-    # change this anyway to be more real)
-    _should_we_prepare(ui_mode, io_loop)
+    configure_context = ConfigurePrepareContext(io_loop=io_loop,
+                                                local_state_file=local_state,
+                                                requirements_and_providers=requirements_and_providers)
+
+    # wait for the configure UI if any
+    _configure_prepare(ui_mode, configure_context)
+
+    # the plan is a list of (provider, requirement) in order we
+    # should run it.  our algorithm to decide on this will be
+    # getting more complicated for example we should be able to
+    # ignore any disabled providers, or prefer certain providers,
+    # etc.
+    plan = []
+    for (requirement, providers) in requirements_and_providers:
+        for provider in providers:
+            plan.append((provider, requirement))
 
     for (provider, requirement) in plan:
         why_not = requirement.why_not_provided(environ_copy)
@@ -103,6 +115,9 @@ def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=Non
                   file=sys.stderr)
             print("  {why_not}".format(why_not=why_not), file=sys.stderr)
             failed = True
+
+    if old_current_loop is not None:
+        old_current_loop.make_current()
 
     if failed:
         return False

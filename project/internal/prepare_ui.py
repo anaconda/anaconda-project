@@ -5,14 +5,21 @@ from abc import ABCMeta, abstractmethod
 from project.internal.metaclass import with_metaclass
 
 
+class ConfigurePrepareContext(object):
+    def __init__(self, io_loop, local_state_file, requirements_and_providers):
+        self.io_loop = io_loop
+        self.local_state_file = local_state_file
+        self.requirements_and_providers = requirements_and_providers
+
+
 class PrepareUI(with_metaclass(ABCMeta)):
     @abstractmethod
-    def should_we_prepare(self, io_loop):
+    def configure_prepare(self, context):
         pass  # pragma: no cover
 
 
 class NotInteractivePrepareUI(PrepareUI):
-    def should_we_prepare(self, io_loop):
+    def configure_prepare(self, context):
         return True
 
 
@@ -20,7 +27,7 @@ class BrowserPrepareUI(PrepareUI):
     def __init__(self):
         self._server = None
 
-    def should_we_prepare(self, io_loop):
+    def configure_prepare(self, context):
         from project.internal.ui_server import UIServer, UIServerDoneEvent
         import webbrowser
 
@@ -29,16 +36,14 @@ class BrowserPrepareUI(PrepareUI):
         def event_handler(event):
             if isinstance(event, UIServerDoneEvent):
                 assert event.should_we_prepare
-                io_loop.stop()
+                context.io_loop.stop()
 
-        self._server = UIServer(event_handler=event_handler, io_loop=io_loop)
+        self._server = UIServer(context, event_handler=event_handler)
         try:
             print("# Click the button at {url} to continue...".format(url=self._server.url))
             webbrowser.open_new_tab(self._server.url)
 
-            io_loop.start()
-
-            print("# ...continuing to prepare the project")
+            context.io_loop.start()
         finally:
             self._server.unlisten()
             self._server = None

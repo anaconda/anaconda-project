@@ -6,7 +6,7 @@ import pytest
 from project.internal.local_state_file import LocalStateFile, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
 from project.internal.project_file import PROJECT_FILENAME
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.plugins.provider import ProvideContext, ProviderRegistry, EnvVarProvider
+from project.plugins.provider import Provider, ProvideContext, ProviderRegistry, EnvVarProvider
 from project.plugins.requirement import EnvVarRequirement, RequirementRegistry
 from project.project import Project
 
@@ -22,6 +22,24 @@ def test_find_by_env_var():
 def test_env_var_provider_title():
     provider = EnvVarProvider()
     assert "Manually set environment variable" == provider.title
+
+
+def test_provider_default_method_implementations():
+    class UselessProvider(Provider):
+        @property
+        def title(self):
+            return ""
+
+        def read_config(self, local_state, requirement):
+            return dict()
+
+        def provide(self, requirement, context):
+            pass
+
+    provider = UselessProvider()
+    # this method is supposed to do nothing by default (ignore
+    # unknown names, in particular)
+    provider.set_config_value_from_string(local_state_file=None, requirement=None, name=None, value_string=None)
 
 
 def _load_env_var_requirement(dirname, env_var):

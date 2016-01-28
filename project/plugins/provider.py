@@ -139,6 +139,33 @@ class Provider(with_metaclass(ABCMeta)):
         """Read a config dict from the local state file for the given requirement."""
         pass  # pragma: no cover
 
+    def set_config_value_from_string(self, local_state_file, requirement, name, value_string):
+        """Set a config value in the state file (should not save the file)."""
+        pass  # silently ignore unknown config values
+
+    def config_html(self, requirement):
+        """Get an HTML string for configuring the provider.
+
+        The HTML string must contain a single <form> tag. Any
+        <input>, <textarea>, and <select> elements should have
+        their name attribute set to match the dict keys used in
+        ``read_config()``'s result.  The <form> should not have a
+        submit button, since it will be merged with other
+        forms. The initial state of all the form fields will be
+        auto-populated from the values in ``read_config()``.  When
+        the form is submitted, any changes made by the user will
+        be set back using ``set_config_value_from_string()``.
+
+        This is simple to use, but for now not very flexible; if you need
+        more flexibility let us know and we can figure out what API
+        to add in future versions.
+
+        Returns:
+            An HTML string or None if there's nothing to configure.
+
+        """
+        return None
+
     @abstractmethod
     def provide(self, requirement, context):
         """Execute the provider, fulfilling the requirement.
@@ -170,6 +197,19 @@ class EnvVarProvider(Provider):
         if value is not None:
             config['value'] = value
         return config
+
+    def set_config_value_from_string(self, local_state_file, requirement, name, value_string):
+        """Override superclass to set env var value."""
+        if name == "value":
+            local_state_file.set_value("variables", requirement.env_var, value_string)
+
+    def config_html(self, requirement):
+        """Override superclass to provide our config html."""
+        return """
+<form>
+  <label>Value: <input type="text" name="value"/></label>
+</form>
+"""
 
     def provide(self, requirement, context):
         """Override superclass to use configured env var (or already-set env var)."""
