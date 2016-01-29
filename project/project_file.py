@@ -24,28 +24,6 @@ class ProjectFile(YamlFile):
     """
 
     @classmethod
-    def ensure_for_directory(cls, directory, requirement_registry):
-        """Load the project file from the given directory, forcing it to exist.
-
-        This function saves the file immediately.
-
-        TODO: get rid of this function. also the .exists is not
-        necessary below because save() is a no-op if not dirty.
-
-        Args:
-            directory (str): path to the project directory
-            requirement_registry (RequirementRegistry): for looking up Requirement instances
-
-        Returns:
-            a new ``ProjectFile``
-        """
-        path = os.path.join(directory, PROJECT_FILENAME)
-        project_file = ProjectFile(path, requirement_registry)
-        if not os.path.exists(path):
-            project_file.save()
-        return project_file
-
-    @classmethod
     def load_for_directory(cls, directory, requirement_registry):
         """Load the project file from the given directory, even if it doesn't exist.
 

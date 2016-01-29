@@ -10,8 +10,10 @@ def test_create_missing_project_file():
     def create_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert not os.path.exists(filename)
-        project_file = ProjectFile.ensure_for_directory(dirname, RequirementRegistry())
+        project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
         assert project_file is not None
+        assert not os.path.exists(filename)
+        project_file.save()
         assert os.path.exists(filename)
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
@@ -27,7 +29,7 @@ def test_use_existing_project_file():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project_file = ProjectFile.ensure_for_directory(dirname, RequirementRegistry())
+        project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
         value = project_file.get_value("a", "b")
         assert "c" == value
 
