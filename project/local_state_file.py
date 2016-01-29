@@ -69,7 +69,7 @@ class LocalStateFile(YamlFile):
         """
         if not isinstance(state, dict):
             raise ValueError("service state should be a dict")
-        self.set_value(SERVICE_RUN_STATES_SECTION, service_name, state)
+        self.set_value([SERVICE_RUN_STATES_SECTION, service_name], state)
 
     def get_service_run_state(self, service_name):
         """Get the running instance state for a service.
@@ -80,7 +80,7 @@ class LocalStateFile(YamlFile):
         Returns:
             The state dict (empty dict if no state was saved)
         """
-        return self.get_value(SERVICE_RUN_STATES_SECTION, service_name, default=dict())
+        return self.get_value([SERVICE_RUN_STATES_SECTION, service_name], default=dict())
 
     def get_all_service_run_states(self):
         """Get all saved service run states.

@@ -11,7 +11,14 @@ def test_read_yaml_file_and_get_value():
         yaml = YamlFile(filename)
         assert not yaml.corrupted
         assert yaml.corrupted_error_message is None
-        value = yaml.get_value("a", "b")
+        # try getting with a list of keys
+        value = yaml.get_value(["a", "b"])
+        assert "c" == value
+        # get a single string as the path
+        value = yaml.get_value("a")
+        assert dict(b="c") == value
+        # get with a tuple to show we aren't list-specific
+        value = yaml.get_value(("a", "b"))
         assert "c" == value
 
     with_file_contents("""
@@ -23,7 +30,7 @@ a:
 def test_read_yaml_file_and_get_default():
     def check_abc(filename):
         yaml = YamlFile(filename)
-        value = yaml.get_value("a", "z", "default")
+        value = yaml.get_value(["a", "z"], "default")
         assert "default" == value
 
     with_file_contents("""
@@ -35,7 +42,7 @@ a:
 def test_read_empty_yaml_file_and_get_default():
     def check_empty(filename):
         yaml = YamlFile(filename)
-        value = yaml.get_value("a", "z", "default")
+        value = yaml.get_value(["a", "z"], "default")
         assert "default" == value
 
     with_file_contents("", check_empty)
@@ -55,7 +62,7 @@ a: [1,2,3]
 def test_read_yaml_file_and_get_default_due_to_missing_section():
     def check_abc(filename):
         yaml = YamlFile(filename)
-        value = yaml.get_value("z", "b", "default")
+        value = yaml.get_value(["z", "b"], "default")
         assert "default" == value
 
     with_file_contents("""
@@ -64,10 +71,35 @@ a:
 """, check_abc)
 
 
+def test_read_yaml_file_and_get_default_due_to_non_dict_section():
+    def check_a(filename):
+        yaml = YamlFile(filename)
+        value = yaml.get_value(["a", "b"], "default")
+        assert "default" == value
+
+    with_file_contents("""
+a: 42
+""", check_a)
+
+
+def test_invalid_path():
+    def check_bad_path(filename):
+        yaml = YamlFile(filename)
+        assert not yaml.corrupted
+        with pytest.raises(ValueError) as excinfo:
+            yaml.get_value(42)
+        assert "YAML file path must be a string or an iterable of strings" in repr(excinfo.value)
+
+    with_file_contents("""
+a:
+  b: c
+""", check_bad_path)
+
+
 def test_read_missing_yaml_file_and_get_default_due_to_missing_section():
     def check_missing(dirname):
         yaml = YamlFile(os.path.join(dirname, "nope.yaml"))
-        value = yaml.get_value("z", "b", "default")
+        value = yaml.get_value(["z", "b"], "default")
         assert "default" == value
 
     with_directory_contents(dict(), check_missing)
@@ -107,9 +139,9 @@ a:
 
     def change_abc(filename):
         yaml = YamlFile(filename)
-        value = yaml.get_value("a", "b")
+        value = yaml.get_value(["a", "b"])
         assert original_value == value
-        yaml.set_value("a", "b", changed_value)
+        yaml.set_value(["a", "b"], changed_value)
         yaml.save()
 
         import codecs
@@ -118,7 +150,7 @@ a:
             assert changed_content == changed
 
         yaml2 = YamlFile(filename)
-        value2 = yaml2.get_value("a", "b")
+        value2 = yaml2.get_value(["a", "b"])
         assert changed_value == value2
 
     with_file_contents(original_content, change_abc)
@@ -129,9 +161,9 @@ def test_read_missing_yaml_file_and_set_value():
         filename = os.path.join(dirname, "foo.yaml")
         assert not os.path.exists(filename)
         yaml = YamlFile(filename)
-        value = yaml.get_value("a", "b")
+        value = yaml.get_value(["a", "b"])
         assert value is None
-        yaml.set_value("a", "b", 42)
+        yaml.set_value(["a", "b"], 42)
         yaml.save()
         assert os.path.exists(filename)
 
@@ -147,7 +179,7 @@ a:
             assert expected == changed
 
         yaml2 = YamlFile(filename)
-        value2 = yaml2.get_value("a", "b")
+        value2 = yaml2.get_value(["a", "b"])
         assert 42 == value2
 
     with_directory_contents(dict(), set_abc)
@@ -161,19 +193,19 @@ a:
 
     def add_section(filename):
         yaml = YamlFile(filename)
-        value = yaml.get_value("a", "b")
+        value = yaml.get_value(["a", "b"])
         assert "c" == value
-        yaml.set_values("x.y", dict(z=42, q="rs"))
+        yaml.set_values(["x", "y"], dict(z=42, q="rs"))
         yaml.save()
 
         yaml2 = YamlFile(filename)
-        value2 = yaml2.get_value("a", "b")
+        value2 = yaml2.get_value(["a", "b"])
         assert "c" == value2
 
-        added_value = yaml2.get_value("x.y", "z")
+        added_value = yaml2.get_value(["x", "y", "z"])
         assert 42 == added_value
 
-        added_value_2 = yaml2.get_value("x.y", "q")
+        added_value_2 = yaml2.get_value(["x", "y", "q"])
         assert "rs" == added_value_2
 
         print(open(filename, 'r').read())
@@ -211,7 +243,7 @@ foo:
             assert expected == changed
 
         yaml2 = YamlFile(filename)
-        value2 = yaml2.get_value("foo", "bar")
+        value2 = yaml2.get_value(["foo", "bar"])
         assert 42 == value2
 
     with_directory_contents(dict(), transform_test)
@@ -253,7 +285,7 @@ def test_multiple_saves_ignored_if_not_dirty():
         filename = os.path.join(dirname, "foo.yaml")
         assert not os.path.exists(filename)
         yaml = YamlFile(filename)
-        yaml.set_value("a", "b", 42)
+        yaml.set_value(["a", "b"], 42)
         yaml.save()
         assert os.path.exists(filename)
         time1 = os.path.getmtime(filename)
@@ -263,7 +295,7 @@ def test_multiple_saves_ignored_if_not_dirty():
         yaml.save()
         assert time1 == os.path.getmtime(filename)
 
-        yaml.set_value("a", "b", 43)
+        yaml.set_value(["a", "b"], 43)
         assert time1 == os.path.getmtime(filename)
         yaml.save()
         # OS mtime resolution might leave these equal
@@ -277,7 +309,7 @@ def test_save_ignored_if_not_dirty_after_load():
         filename = os.path.join(dirname, "foo.yaml")
         assert not os.path.exists(filename)
         yaml = YamlFile(filename)
-        yaml.set_value("a", "b", 42)
+        yaml.set_value(["a", "b"], 42)
         yaml.save()
         assert os.path.exists(filename)
         time1 = os.path.getmtime(filename)
@@ -301,7 +333,7 @@ def test_throw_if_cannot_create_directory(monkeypatch):
         filename = os.path.join(dirname, subdir, "foo.yaml")
 
         yaml = YamlFile(filename)
-        yaml.set_value("a", "b", 42)
+        yaml.set_value(["a", "b"], 42)
         with pytest.raises(IOError) as excinfo:
             yaml.save()
         assert "this is not EEXIST" in repr(excinfo.value)
@@ -320,7 +352,7 @@ def test_read_corrupted_yaml_file():
             yaml.set_values("foo", dict())
         assert "Cannot modify corrupted" in repr(excinfo.value)
         with pytest.raises(ValueError) as excinfo:
-            yaml.set_value("foo", "bar", 42)
+            yaml.set_value(["foo", "bar"], 42)
         assert "Cannot modify corrupted" in repr(excinfo.value)
         with pytest.raises(ValueError) as excinfo:
             yaml.save()
@@ -339,7 +371,7 @@ def test_read_corrupted_yaml_file():
         # the file should appear empty if you try to get anything,
         # but it shouldn't throw
         assert yaml._yaml is not None
-        assert yaml.get_value("a", "b") is None
+        assert yaml.get_value(["a", "b"]) is None
 
     with_file_contents("""
 ^

@@ -53,7 +53,7 @@ def test_ui_server_with_form():
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
 
-        value = local_state_file.get_value('variables', 'FOO')
+        value = local_state_file.get_value(['variables', 'FOO'])
         assert value is None
 
         requirement = EnvVarRequirement("FOO")
@@ -81,7 +81,7 @@ def test_ui_server_with_form():
         assert len(events) == 1
         assert isinstance(events[0], UIServerDoneEvent)
 
-        value = local_state_file.get_value('variables', 'FOO')
+        value = local_state_file.get_value(['variables', 'FOO'])
         assert 'bloop' == value
 
     with_directory_contents(dict(), do_test)

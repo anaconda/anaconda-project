@@ -189,7 +189,7 @@ class EnvVarProvider(Provider):
     def read_config(self, local_state_file, requirement):
         """Override superclass to read env var value."""
         config = dict()
-        value = local_state_file.get_value("variables", requirement.env_var, default=None)
+        value = local_state_file.get_value(["variables", requirement.env_var], default=None)
         if value is not None:
             config['value'] = value
         return config
@@ -197,7 +197,7 @@ class EnvVarProvider(Provider):
     def set_config_value_from_string(self, local_state_file, requirement, name, value_string):
         """Override superclass to set env var value."""
         if name == "value":
-            local_state_file.set_value("variables", requirement.env_var, value_string)
+            local_state_file.set_value(["variables", requirement.env_var], value_string)
 
     def config_html(self, requirement):
         """Override superclass to provide our config html."""

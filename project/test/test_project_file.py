@@ -30,7 +30,7 @@ def test_use_existing_project_file():
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
         project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
-        value = project_file.get_value("a", "b")
+        value = project_file.get_value(["a", "b"])
         assert "c" == value
 
     with_directory_contents({PROJECT_FILENAME: "a:\n  b: c"}, check_file)
@@ -43,7 +43,7 @@ def test_load_directory_without_project_file():
         project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
         assert project_file is not None
         assert not os.path.exists(filename)
-        assert project_file.get_value("a", "b") is None
+        assert project_file.get_value(["a", "b"]) is None
 
     with_directory_contents(dict(), read_missing_file)
 

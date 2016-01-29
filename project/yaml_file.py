@@ -172,76 +172,87 @@ class YamlFile(object):
         if result is not True:
             self._dirty = True
 
-    def _get_section_or_none(self, section_path):
-        pieces = section_path.split(".")
+    @classmethod
+    def _path(cls, path):
+        if isinstance(path, str):
+            return (path, )
+        else:
+            try:
+                return list(element for element in path)
+            except TypeError:
+                raise ValueError("YAML file path must be a string or an iterable of strings")
+
+    def _get_dict_or_none(self, pieces):
         current = self._yaml
         for p in pieces:
-            if p in current:
+            if p in current and isinstance(current[p], dict):
                 current = current[p]
             else:
                 return None
         return current
 
-    def _ensure_section(self, section_path):
+    def _ensure_dicts_at_path(self, pieces):
         self._throw_if_corrupted()
 
-        pieces = section_path.split(".")
         current = self._yaml
         for p in pieces:
-            if p not in current:
+            if p not in current or not isinstance(current[p], dict):
                 current[p] = dict()
                 self._dirty = True
 
             current = current[p]
         return current
 
-    def set_values(self, section_path, values):
-        """Set a dict of values at the given dot-separated path.
+    def set_values(self, path, values):
+        """Set a dict of values at the path.
+
+        The ``path`` can be a single key, or a list; if it's a
+        list, then each element becomes a key inside the previous
+        element.
 
         This method does not save the file, call ``save()`` to do that.
 
         Args:
-            section_path (str): dot-separated string where each segment is a dictionary key
-            values (dict): this dict is the value of the last key in ``section_path``
+            path (str or list of str): single key, or list of nested keys
+            values (dict): this dict is the value of the last key in ``path``
+
         """
         self._throw_if_corrupted()
 
-        existing = self._ensure_section(section_path)
+        existing = self._ensure_dicts_at_path(self._path(path))
         for k, v in values.items():
             existing[k] = v
             self._dirty = True
 
-    def set_value(self, section_path, key, value):
-        """Set a single value in the given section.
+    def set_value(self, path, value):
+        """Set a single value at the given path.
 
         This method does not save the file, call ``save()`` to do that.
 
         Args:
-            section_path (str): dot-separated string where each segment is a dictionary key
-            key (str): the key within the section
+            path (str or list of str): single key, or list of nested keys
             value: any YAML-compatible value type
         """
         self._throw_if_corrupted()
 
-        existing = self._ensure_section(section_path)
-        existing[key] = value
+        path = self._path(path)
+        existing = self._ensure_dicts_at_path(path[:-1])
+        existing[path[-1]] = value
         self._dirty = True
 
-    def get_value(self, section_path, key=None, default=None):
-        """Get a single value from the given section.
+    def get_value(self, path, default=None):
+        """Get a single value from the YAML file.
 
         Args:
-            section_path (str): dot-separated string where each segment is a dictionary key
-            key (str): the key within the section
+            path (str or list of str): single key, or list of nested keys
             default: any YAML-compatible value type
 
         Returns:
             the value from the file or the provided default
         """
-        existing = self._get_section_or_none(section_path)
+        path = self._path(path)
+        existing = self._get_dict_or_none(path[:-1])
         if existing is None:
             return default
-        elif key is None:
-            return existing
         else:
-            return existing.get(key, default)
+            return existing.get(path[-1], default)
