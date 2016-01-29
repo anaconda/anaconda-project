@@ -181,6 +181,73 @@ a:
     with_file_contents(original_content, add_section)
 
 
+def test_transform_yaml():
+    def transform_test(dirname):
+        filename = os.path.join(dirname, "foo.yaml")
+        assert not os.path.exists(filename)
+        yaml = YamlFile(filename)
+        # save so we aren't dirty due to nonexistent file
+        yaml.save()
+        assert os.path.exists(filename)
+
+        def transformer(tree):
+            tree['foo'] = dict()
+            tree['foo']['bar'] = 42
+
+        assert not yaml._dirty
+        yaml.transform_yaml(transformer)
+        assert yaml._dirty
+        yaml.save()
+
+        import codecs
+        with codecs.open(filename, 'r', 'utf-8') as file:
+            changed = file.read()
+            expected = """
+# yaml file
+foo:
+  bar: 42
+""" [1:]
+
+            assert expected == changed
+
+        yaml2 = YamlFile(filename)
+        value2 = yaml2.get_value("foo", "bar")
+        assert 42 == value2
+
+    with_directory_contents(dict(), transform_test)
+
+
+def test_transform_yaml_does_nothing():
+    def transform_test(dirname):
+        filename = os.path.join(dirname, "foo.yaml")
+        assert not os.path.exists(filename)
+        yaml = YamlFile(filename)
+        # save so we aren't dirty due to nonexistent file
+        yaml.save()
+        assert os.path.exists(filename)
+
+        def transformer(tree):
+            # return True means don't make changes after all
+            return True
+
+        assert not yaml._dirty
+        yaml.transform_yaml(transformer)
+        assert not yaml._dirty
+        yaml.save()
+
+        import codecs
+        with codecs.open(filename, 'r', 'utf-8') as file:
+            changed = file.read()
+            expected = """
+# yaml file
+{}
+""" [1:]
+
+            assert expected == changed
+
+    with_directory_contents(dict(), transform_test)
+
+
 def test_multiple_saves_ignored_if_not_dirty():
     def check_dirty_handling(dirname):
         filename = os.path.join(dirname, "foo.yaml")
@@ -261,10 +328,17 @@ def test_read_corrupted_yaml_file():
         with pytest.raises(ValueError) as excinfo:
             yaml.save()
         assert "Cannot modify corrupted" in repr(excinfo.value)
+        with pytest.raises(ValueError) as excinfo:
+
+            def make_changes(yaml):
+                return False
+
+            yaml.transform_yaml(make_changes)
+        assert "Cannot modify corrupted" in repr(excinfo.value)
 
         # the file should appear empty if you try to get anything,
         # but it shouldn't throw
-        assert yaml.yaml is not None
+        assert yaml._yaml is not None
         assert yaml.get_value("a", "b") is None
 
     with_file_contents("""

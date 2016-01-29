@@ -76,24 +76,24 @@ class YamlFile(object):
         try:
             with codecs.open(self.filename, 'r', 'utf-8') as file:
                 contents = file.read()
-            self.yaml = ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+            self._yaml = ryaml.load(contents, Loader=ryaml.RoundTripLoader)
             self._dirty = False
         except IOError as e:
             if e.errno == errno.ENOENT:
-                self.yaml = None
+                self._yaml = None
             else:
                 raise e
         except YAMLError as e:
             self._corrupted = True
             self._corrupted_error_message = str(e)
-            self.yaml = None
+            self._yaml = None
 
-        if self.yaml is None:
+        if self._yaml is None:
             # ruamel.yaml returns None if you load an empty file,
             # so we have to build this ourselves
             from ruamel.yaml.comments import CommentedMap
-            self.yaml = CommentedMap()
-            self.yaml.yaml_set_start_comment(self._default_comment())
+            self._yaml = CommentedMap()
+            self._yaml.yaml_set_start_comment(self._default_comment())
             self._dirty = True
 
     def _default_comment(self):
@@ -140,7 +140,7 @@ class YamlFile(object):
         if not self._dirty:
             return
 
-        contents = ryaml.dump(self.yaml, Dumper=ryaml.RoundTripDumper)
+        contents = ryaml.dump(self._yaml, Dumper=ryaml.RoundTripDumper)
         if not os.path.isfile(self.filename):
             # might have to make the directory
             dirname = os.path.dirname(self.filename)
@@ -148,9 +148,31 @@ class YamlFile(object):
         _atomic_replace(self.filename, contents)
         self._dirty = False
 
+    def transform_yaml(self, transformer):
+        """Modify the YAML parse tree.
+
+        This allows you to modify the YAML parse tree directly;
+        the transformer function receives the parse tree. It
+        should return True to block marking the ``YamlFile``
+        dirty, that is, return True if the transformer didn't make
+        any changes after all. Return False or None if changes
+        were made.
+
+        Args:
+            transformer (function): takes 1 parameter (the yaml tree) and returns True if it was NOT modified
+        Returns:
+            None
+
+        """
+        self._throw_if_corrupted()
+
+        result = transformer(self._yaml)
+        if result is not True:
+            self._dirty = True
+
     def _get_section_or_none(self, section_path):
         pieces = section_path.split(".")
-        current = self.yaml
+        current = self._yaml
         for p in pieces:
             if p in current:
                 current = current[p]
@@ -162,7 +184,7 @@ class YamlFile(object):
         self._throw_if_corrupted()
 
         pieces = section_path.split(".")
-        current = self.yaml
+        current = self._yaml
         for p in pieces:
             if p not in current:
                 current[p] = dict()
