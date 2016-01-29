@@ -8,7 +8,7 @@ from project.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
 from project.local_state_file import LocalStateFile
 from project.plugins.provider import ProviderRegistry
 from project.plugins.providers.redis import DefaultRedisProvider, ProjectScopedRedisProvider
-from project.plugins.requirement import EnvVarRequirement, RequirementRegistry
+from project.plugins.requirement import EnvVarRequirement
 from project.prepare import prepare, unprepare
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
@@ -138,8 +138,7 @@ def test_prepare_redis_url_with_dict_in_runtime_section(monkeypatch):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def prepare_redis_url(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict()
         result = prepare(project, environ=environ)
         assert result
@@ -156,8 +155,7 @@ def test_prepare_redis_url_with_list_in_runtime_section(monkeypatch):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def prepare_redis_url(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict()
         result = prepare(project, environ=environ)
         assert result
@@ -198,8 +196,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
                                                                                         real_can_connect_to_socket)
 
     def start_local_redis(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict()
         result = prepare(project, environ=environ)
         assert result
@@ -243,8 +240,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
                                                                                         real_can_connect_to_socket)
 
     def start_local_redis(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict()
         result = prepare(project, environ=environ)
         assert result
@@ -316,8 +312,7 @@ def test_fail_to_prepare_local_redis_server_no_port_available(monkeypatch, capsy
     can_connect_args_list = _monkeypatch_can_connect_to_socket_always_succeeds_on_nonstandard(monkeypatch)
 
     def start_local_redis(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict()
         result = prepare(project, environ=environ)
         assert not result
@@ -339,8 +334,7 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
     can_connect_args_list = _monkeypatch_can_connect_to_socket_always_succeeds_on_nonstandard(monkeypatch)
 
     def start_local_redis(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict()
         result = prepare(project, environ=environ)
         assert not result
@@ -407,8 +401,7 @@ sys.exit(1)
 
         monkeypatch.setattr("subprocess.Popen", mock_Popen)
 
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict()
         result = prepare(project, environ=environ)
         assert not result

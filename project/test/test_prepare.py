@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.plugins.requirement import RequirementRegistry
 from project.prepare import prepare, unprepare, UI_MODE_BROWSER
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
@@ -11,8 +10,7 @@ from project.project_file import PROJECT_FILENAME
 
 def test_prepare_empty_directory():
     def prepare_empty(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict()
         result = prepare(project, environ=environ)
         assert result
@@ -24,8 +22,7 @@ def test_prepare_empty_directory():
 def test_prepare_bad_ui_mode():
     def prepare_bad_ui_mode(dirname):
         with pytest.raises(ValueError) as excinfo:
-            requirement_registry = RequirementRegistry()
-            project = Project(dirname, requirement_registry)
+            project = Project(dirname)
             environ = dict()
             prepare(project, ui_mode="BAD_UI_MODE", environ=environ)
         assert "invalid UI mode" in repr(excinfo.value)
@@ -35,8 +32,7 @@ def test_prepare_bad_ui_mode():
 
 def test_unprepare_empty_directory():
     def unprepare_empty(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         result = unprepare(project)
         assert result is None
 
@@ -45,8 +41,7 @@ def test_unprepare_empty_directory():
 
 def test_default_to_system_environ():
     def prepare_system_environ(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         prepare(project)
         # we should really improve this test to check that we
         # really put something in os.environ, but for now
@@ -58,8 +53,7 @@ def test_default_to_system_environ():
 
 def test_prepare_some_env_var_already_set():
     def prepare_some_env_var(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict(FOO='bar')
         result = prepare(project, environ=environ)
         assert result
@@ -73,8 +67,7 @@ runtime:
 
 def test_prepare_some_env_var_not_set():
     def prepare_some_env_var(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict(BAR='bar')
         result = prepare(project, environ=environ)
         assert not result
@@ -106,8 +99,7 @@ def test_prepare_with_browser(monkeypatch):
     monkeypatch.setattr('webbrowser.open_new_tab', mock_open_new_tab)
 
     def prepare_with_browser(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
+        project = Project(dirname)
         environ = dict(BAR='bar')
         result = prepare(project, environ=environ, io_loop=io_loop, ui_mode=UI_MODE_BROWSER)
         assert not result

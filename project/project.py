@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 from project.project_file import ProjectFile
+from project.plugins.requirement import RequirementRegistry
 
 
 class Project(object):
@@ -12,13 +13,15 @@ class Project(object):
     the project directory or global user configuration.
     """
 
-    def __init__(self, directory_path, requirement_registry):
+    def __init__(self, directory_path, requirement_registry=None):
         """Construct a Project with the given directory and requirements registry.
 
         Args:
             directory_path (str): path to the project directory
-            requirement_registry (RequirementRegistry): where to look up Requirement instances
+            requirement_registry (RequirementRegistry): where to look up Requirement instances, None for default
         """
+        if requirement_registry is None:
+            requirement_registry = RequirementRegistry()
         self.directory_path = directory_path
         self.project_file = ProjectFile.load_for_directory(directory_path, requirement_registry)
 

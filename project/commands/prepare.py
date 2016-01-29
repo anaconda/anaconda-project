@@ -4,7 +4,6 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 
-from project.plugins.requirement import RequirementRegistry
 from project.prepare import prepare, UI_MODE_BROWSER
 from project.project import Project
 
@@ -15,8 +14,7 @@ def prepare_command(dirname, ui_mode):
     Returns:
         True on success.
     """
-    requirement_registry = RequirementRegistry()
-    project = Project(dirname, requirement_registry)
+    project = Project(dirname)
     return prepare(project, ui_mode=ui_mode)
 
 

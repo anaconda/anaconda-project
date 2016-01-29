@@ -7,7 +7,7 @@ import pytest
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.local_state_file import LocalStateFile, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
 from project.plugins.provider import Provider, ProvideContext, ProviderRegistry, EnvVarProvider
-from project.plugins.requirement import EnvVarRequirement, RequirementRegistry
+from project.plugins.requirement import EnvVarRequirement
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
 
@@ -44,8 +44,7 @@ def test_provider_default_method_implementations():
 
 
 def _load_env_var_requirement(dirname, env_var):
-    requirement_registry = RequirementRegistry()
-    project = Project(dirname, requirement_registry)
+    project = Project(dirname)
     for requirement in project.requirements:
         if isinstance(requirement, EnvVarRequirement) and requirement.env_var == env_var:
             return requirement

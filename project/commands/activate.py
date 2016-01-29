@@ -5,7 +5,6 @@ from copy import deepcopy
 import os
 import sys
 
-from project.plugins.requirement import RequirementRegistry
 from project.prepare import prepare, UI_MODE_NOT_INTERACTIVE
 from project.project import Project
 
@@ -18,9 +17,8 @@ def activate(dirname, ui_mode):
     Returns:
         None on failure or a list of lines to print.
     """
-    requirement_registry = RequirementRegistry()
     environ = deepcopy(os.environ)
-    project = Project(dirname, requirement_registry)
+    project = Project(dirname)
     result = prepare(project, ui_mode=ui_mode, environ=environ)
     if not result:
         return None
