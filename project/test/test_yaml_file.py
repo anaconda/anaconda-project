@@ -195,7 +195,7 @@ a:
         yaml = YamlFile(filename)
         value = yaml.get_value(["a", "b"])
         assert "c" == value
-        yaml.set_values(["x", "y"], dict(z=42, q="rs"))
+        yaml.set_value(["x", "y"], dict(z=42, q="rs"))
         yaml.save()
 
         yaml2 = YamlFile(filename)
@@ -349,17 +349,13 @@ def test_read_corrupted_yaml_file():
 
         # it should raise an exception if you try to modify
         with pytest.raises(ValueError) as excinfo:
-            yaml.set_values("foo", dict())
-        assert "Cannot modify corrupted" in repr(excinfo.value)
-        with pytest.raises(ValueError) as excinfo:
             yaml.set_value(["foo", "bar"], 42)
         assert "Cannot modify corrupted" in repr(excinfo.value)
+
         with pytest.raises(ValueError) as excinfo:
             yaml.save()
         assert "Cannot modify corrupted" in repr(excinfo.value)
-        with pytest.raises(ValueError) as excinfo:
-            yaml.save()
-        assert "Cannot modify corrupted" in repr(excinfo.value)
+
         with pytest.raises(ValueError) as excinfo:
 
             def make_changes(yaml):

@@ -203,29 +203,10 @@ class YamlFile(object):
             current = current[p]
         return current
 
-    def set_values(self, path, values):
-        """Set a dict of values at the path.
-
-        The ``path`` can be a single key, or a list; if it's a
-        list, then each element becomes a key inside the previous
-        element.
-
-        This method does not save the file, call ``save()`` to do that.
-
-        Args:
-            path (str or list of str): single key, or list of nested keys
-            values (dict): this dict is the value of the last key in ``path``
-
-        """
-        self._throw_if_corrupted()
-
-        existing = self._ensure_dicts_at_path(self._path(path))
-        for k, v in values.items():
-            existing[k] = v
-            self._dirty = True
-
     def set_value(self, path, value):
         """Set a single value at the given path.
+
+        Overwrites any existing value at the path.
 
         This method does not save the file, call ``save()`` to do that.
 
