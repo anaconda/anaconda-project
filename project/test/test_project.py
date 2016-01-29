@@ -1,7 +1,7 @@
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.internal.project_file import PROJECT_FILENAME
 from project.plugins.requirement import RequirementRegistry
 from project.project import Project
+from project.project_file import PROJECT_FILENAME
 
 
 def test_single_env_var_requirement():

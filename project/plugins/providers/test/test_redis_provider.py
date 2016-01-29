@@ -4,14 +4,14 @@ import codecs
 import os
 
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.internal.project_file import PROJECT_FILENAME
-from project.internal.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
-from project.internal.local_state_file import LocalStateFile
-from project.prepare import prepare, unprepare
-from project.project import Project
-from project.plugins.requirement import EnvVarRequirement, RequirementRegistry
+from project.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
+from project.local_state_file import LocalStateFile
 from project.plugins.provider import ProviderRegistry
 from project.plugins.providers.redis import DefaultRedisProvider, ProjectScopedRedisProvider
+from project.plugins.requirement import EnvVarRequirement, RequirementRegistry
+from project.prepare import prepare, unprepare
+from project.project import Project
+from project.project_file import PROJECT_FILENAME
 
 
 def test_find_by_service_redis():

@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import os
 
-from .yaml_file import YamlFile
+from project.yaml_file import YamlFile
 
 LOCAL_STATE_DIRECTORY = ".anaconda"
 LOCAL_STATE_FILENAME = "project-local.yml"

@@ -1,20 +1,17 @@
 from __future__ import absolute_import, print_function
 
+from bs4 import BeautifulSoup
 from tornado.ioloop import IOLoop
 
-from bs4 import BeautifulSoup
-
-from project.internal.prepare_ui import ConfigurePrepareContext
-from project.internal.ui_server import UIServer, UIServerDoneEvent
-from project.internal.local_state_file import LocalStateFile
 from project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
-
+from project.internal.prepare_ui import ConfigurePrepareContext
 from project.internal.test.http_utils import http_get, http_post
-from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.test.multipart import MultipartEncoder
-
-from project.plugins.requirement import EnvVarRequirement
+from project.internal.test.tmpfile_utils import with_directory_contents
+from project.internal.ui_server import UIServer, UIServerDoneEvent
+from project.local_state_file import LocalStateFile
 from project.plugins.provider import EnvVarProvider
+from project.plugins.requirement import EnvVarRequirement
 
 
 def test_ui_server_empty():

@@ -1,9 +1,10 @@
-from project.internal.yaml_file import YamlFile
-from project.internal.test.tmpfile_utils import with_file_contents, with_directory_contents
-
 import errno
 import os
+
 import pytest
+
+from project.internal.test.tmpfile_utils import with_file_contents, with_directory_contents
+from project.yaml_file import YamlFile
 
 
 def test_read_yaml_file_and_get_value():

@@ -1,7 +1,7 @@
 """Project class representing a project directory."""
 from __future__ import absolute_import
 
-from project.internal.project_file import ProjectFile
+from project.project_file import ProjectFile
 
 
 class Project(object):

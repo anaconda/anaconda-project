@@ -1,9 +1,9 @@
-from project.internal.project_file import ProjectFile, PROJECT_FILENAME
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.plugins.requirement import RequirementRegistry, EnvVarRequirement
-
 import codecs
 import os
+
+from project.internal.test.tmpfile_utils import with_directory_contents
+from project.plugins.requirement import RequirementRegistry, EnvVarRequirement
+from project.project_file import ProjectFile, PROJECT_FILENAME
 
 
 def test_create_missing_project_file():

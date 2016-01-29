@@ -3,9 +3,9 @@ from __future__ import absolute_import, print_function
 import pytest
 
 from project.commands.prepare import prepare_command, main
-from project.internal.project_file import PROJECT_FILENAME
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE
+from project.project_file import PROJECT_FILENAME
 
 
 def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):

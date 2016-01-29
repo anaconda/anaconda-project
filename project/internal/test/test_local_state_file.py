@@ -1,10 +1,11 @@
-from project.internal.local_state_file import (LocalStateFile, LOCAL_STATE_FILENAME, LOCAL_STATE_DIRECTORY,
-                                               SERVICE_RUN_STATES_SECTION)
-from project.internal.test.tmpfile_utils import with_directory_contents
-
 import codecs
 import os
+
 import pytest
+
+from project.internal.test.tmpfile_utils import with_directory_contents
+from project.local_state_file import (LocalStateFile, LOCAL_STATE_FILENAME, LOCAL_STATE_DIRECTORY,
+                                      SERVICE_RUN_STATES_SECTION)
 
 LOCAL_STATE_FILENAME_WITH_DIR = os.path.join(LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME)
 

@@ -1,14 +1,15 @@
 from __future__ import absolute_import
 
 import os
+
 import pytest
 
-from project.internal.local_state_file import LocalStateFile, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
-from project.internal.project_file import PROJECT_FILENAME
 from project.internal.test.tmpfile_utils import with_directory_contents
+from project.local_state_file import LocalStateFile, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
 from project.plugins.provider import Provider, ProvideContext, ProviderRegistry, EnvVarProvider
 from project.plugins.requirement import EnvVarRequirement, RequirementRegistry
 from project.project import Project
+from project.project_file import PROJECT_FILENAME
 
 
 def test_find_by_env_var():

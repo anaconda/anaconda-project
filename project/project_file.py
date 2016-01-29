@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import os
 
-from .yaml_file import YamlFile
+from project.yaml_file import YamlFile
 
 # use .yml not .yaml to make Windows happy
 PROJECT_FILENAME = "project.yml"

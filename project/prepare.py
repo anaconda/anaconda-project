@@ -2,16 +2,16 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-from copy import copy, deepcopy
 import os
 import subprocess
 import sys
+from copy import copy, deepcopy
 
 from tornado.ioloop import IOLoop
 
-from project.plugins.provider import ProvideContext, ProviderRegistry
-from project.internal.local_state_file import LocalStateFile
 from project.internal.prepare_ui import NotInteractivePrepareUI, BrowserPrepareUI, ConfigurePrepareContext
+from project.local_state_file import LocalStateFile
+from project.plugins.provider import ProvideContext, ProviderRegistry
 
 UI_MODE_TEXT = "text"
 UI_MODE_BROWSER = "browser"
