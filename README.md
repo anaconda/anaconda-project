@@ -47,6 +47,12 @@ When Anaconda Project launches a service, it will often configure
 that service to place its state (such as logs and pid files) in a
 directory underneath `.anaconda/run/`
 
+## `PROJECTDIR/conda.recipe/meta.yaml`
+
+Defined by conda, we look in here for info we didn't find in
+project.yml to keep people from having to keep the two files in
+sync: http://conda.pydata.org/docs/building/meta-yaml.html
+
 # `project.yml` Schema
 
 * `runtime`: Defines runtime requirements, which are provided to
@@ -55,6 +61,10 @@ directory underneath `.anaconda/run/`
   variable names as keys and options affecting those variables.
   All the listed environment variables have to be set, one way or
   another, before running the project.
+* `package`: Some fields in `conda.recipe/meta.yml` can be set
+  here instead, if you either don't have a conda recipe or
+  want to override it for Anaconda Project purposes.
+  Fields we look at right now: `name`, `version`
 
 # `project-local.yml` Schema
 
