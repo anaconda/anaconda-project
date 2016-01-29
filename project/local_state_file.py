@@ -61,6 +61,8 @@ class LocalStateFile(YamlFile):
         ``shutdown_commands`` and then delete the entire service
         run state dict.
 
+        This method does not save the file, call ``save()`` to do that.
+
         Args:
             service_name (str): some sort of unique name for the service
             state (dict): state for the running service process

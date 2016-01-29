@@ -158,6 +158,8 @@ class YamlFile(object):
         any changes after all. Return False or None if changes
         were made.
 
+        This method does not save the file, call ``save()`` to do that.
+
         Args:
             transformer (function): takes 1 parameter (the yaml tree) and returns True if it was NOT modified
         Returns:
@@ -196,6 +198,8 @@ class YamlFile(object):
     def set_values(self, section_path, values):
         """Set a dict of values at the given dot-separated path.
 
+        This method does not save the file, call ``save()`` to do that.
+
         Args:
             section_path (str): dot-separated string where each segment is a dictionary key
             values (dict): this dict is the value of the last key in ``section_path``
@@ -209,6 +213,8 @@ class YamlFile(object):
 
     def set_value(self, section_path, key, value):
         """Set a single value in the given section.
+
+        This method does not save the file, call ``save()`` to do that.
 
         Args:
             section_path (str): dot-separated string where each segment is a dictionary key
