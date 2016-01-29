@@ -6,6 +6,7 @@ from __future__ import absolute_import
 # module. Remember the project file is intended to go into source
 # control.
 import ruamel.yaml as ryaml
+from ruamel.yaml.error import YAMLError
 import codecs
 import errno
 import os
@@ -41,9 +42,14 @@ class YamlFile(object):
     def __init__(self, filename):
         """Load a YamlFile with the given filename.
 
-        Raises an exception if the file is corrupt, but if the
-        file is missing this succeeds (then creates the file if
-        and when you call ``save()``).
+        Raises an exception on an IOError, but if the file is
+        missing this succeeds (then creates the file if and when
+        you call ``save()``).
+
+        If the file has syntax problems, this sets the
+        ``corrupted`` and ``corrupted_error_message`` properties,
+        and attempts to modify the file will raise an
+        exception.
 
         """
         self.filename = filename
@@ -53,9 +59,17 @@ class YamlFile(object):
     def load(self):
         """Reload the file from disk, discarding any unsaved changes.
 
+        If the file has syntax problems, this sets the
+        ``corrupted`` and ``corrupted_error_message`` properties,
+        and attempts to modify the file will raise an
+        exception.
+
         Returns:
             None
         """
+        self._corrupted = False
+        self._corrupted_error_message = None
+
         # using RoundTripLoader incorporates safe_load
         # (we don't load code)
         assert issubclass(ryaml.RoundTripLoader, ryaml.constructor.SafeConstructor)
@@ -69,6 +83,10 @@ class YamlFile(object):
                 self.yaml = None
             else:
                 raise e
+        except YAMLError as e:
+            self._corrupted = True
+            self._corrupted_error_message = str(e)
+            self.yaml = None
 
         if self.yaml is None:
             # ruamel.yaml returns None if you load an empty file,
@@ -81,6 +99,34 @@ class YamlFile(object):
     def _default_comment(self):
         return "yaml file"
 
+    def _throw_if_corrupted(self):
+        if self._corrupted:
+            raise ValueError("Cannot modify corrupted YAML file %s\n%s" %
+                             (self.filename, self._corrupted_error_message))
+
+    @property
+    def corrupted(self):
+        """Get whether the file is corrupted.
+
+        A corrupted file has a syntax error so we can't modify and save it.
+        See ``corrupted_error_message`` for what's wrong with it.
+
+        Returns:
+            True if file is corrupted.
+        """
+        return self._corrupted
+
+    @property
+    def corrupted_error_message(self):
+        """Get the error message if file is corrupted, or None if it isn't.
+
+        Use this to display the problem if the file is corrupted.
+
+        Returns:
+            Corruption message or None.
+        """
+        return self._corrupted_error_message
+
     def save(self):
         """Write the file to disk, only if any changes have been made.
 
@@ -89,6 +135,8 @@ class YamlFile(object):
         Returns:
             None
         """
+        self._throw_if_corrupted()
+
         if not self._dirty:
             return
 
@@ -111,6 +159,8 @@ class YamlFile(object):
         return current
 
     def _ensure_section(self, section_path):
+        self._throw_if_corrupted()
+
         pieces = section_path.split(".")
         current = self.yaml
         for p in pieces:
@@ -128,6 +178,8 @@ class YamlFile(object):
             section_path (str): dot-separated string where each segment is a dictionary key
             values (dict): this dict is the value of the last key in ``section_path``
         """
+        self._throw_if_corrupted()
+
         existing = self._ensure_section(section_path)
         for k, v in values.items():
             existing[k] = v
@@ -141,6 +193,8 @@ class YamlFile(object):
             key (str): the key within the section
             value: any YAML-compatible value type
         """
+        self._throw_if_corrupted()
+
         existing = self._ensure_section(section_path)
         existing[key] = value
         self._dirty = True

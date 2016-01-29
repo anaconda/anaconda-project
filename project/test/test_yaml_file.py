@@ -1,15 +1,16 @@
+from project.yaml_file import YamlFile
+from project.internal.test.tmpfile_utils import with_file_contents, with_directory_contents
+
 import errno
 import os
-
 import pytest
-
-from project.internal.test.tmpfile_utils import with_file_contents, with_directory_contents
-from project.yaml_file import YamlFile
 
 
 def test_read_yaml_file_and_get_value():
     def check_abc(filename):
         yaml = YamlFile(filename)
+        assert not yaml.corrupted
+        assert yaml.corrupted_error_message is None
         value = yaml.get_value("a", "b")
         assert "c" == value
 
@@ -239,3 +240,35 @@ def test_throw_if_cannot_create_directory(monkeypatch):
         assert "this is not EEXIST" in repr(excinfo.value)
 
     with_directory_contents(dict(), check_throw_if_cannot_create)
+
+
+def test_read_corrupted_yaml_file():
+    def check_corrupted(filename):
+        yaml = YamlFile(filename)
+        assert yaml.corrupted
+        assert "mapping values are not allowed here" in yaml.corrupted_error_message
+
+        # it should raise an exception if you try to modify
+        with pytest.raises(ValueError) as excinfo:
+            yaml.set_values("foo", dict())
+        assert "Cannot modify corrupted" in repr(excinfo.value)
+        with pytest.raises(ValueError) as excinfo:
+            yaml.set_value("foo", "bar", 42)
+        assert "Cannot modify corrupted" in repr(excinfo.value)
+        with pytest.raises(ValueError) as excinfo:
+            yaml.save()
+        assert "Cannot modify corrupted" in repr(excinfo.value)
+        with pytest.raises(ValueError) as excinfo:
+            yaml.save()
+        assert "Cannot modify corrupted" in repr(excinfo.value)
+
+        # the file should appear empty if you try to get anything,
+        # but it shouldn't throw
+        assert yaml.yaml is not None
+        assert yaml.get_value("a", "b") is None
+
+    with_file_contents("""
+^
+a:
+  b: c
+""", check_corrupted)

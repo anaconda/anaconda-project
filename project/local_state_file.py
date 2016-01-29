@@ -30,8 +30,10 @@ class LocalStateFile(YamlFile):
         ``LocalStateFile`` will be empty. It won't actually be
         created on disk unless you call ``save()``.
 
-        If the local state file has syntax problems, this raises
-        an exception from the YAML parser.
+        If the local state file has syntax problems, the
+        ``corrupted`` and ``corrupted_error_message`` properties
+        will be set and attempts to modify or save the file will
+        raise an exception.
 
         Args:
             directory (str): path to the project directory

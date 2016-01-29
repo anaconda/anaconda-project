@@ -31,10 +31,12 @@ class ProjectFile(YamlFile):
         ``ProjectFile`` will be empty. It won't actually be
         created on disk unless you call ``save()``.
 
-        If the project file has syntax problems, this raises
-        an exception from the YAML parser. If the project file
-        has semantic problems, the ``problems`` property will be
-        set describing them.
+        If the file has syntax problems, this sets the
+        ``corrupted`` and ``corrupted_error_message`` properties,
+        and attempts to modify the file will raise an
+        exception. If the project file has semantic problems, the
+        ``problems`` property will be set describing them, and the
+        file can be modified.
 
         Args:
             directory (str): path to the project directory
@@ -54,16 +56,19 @@ class ProjectFile(YamlFile):
 
         It's easier to use ``ProjectFile.load_for_directory()`` in most cases.
 
-        If the project file has syntax problems, this raises
-        an exception from the YAML parser. If the project file
-        has semantic problems, the ``problems`` property will be
-        set describing them.
+        If the file has syntax problems, this sets the
+        ``corrupted`` and ``corrupted_error_message`` properties,
+        and attempts to modify the file will raise an
+        exception. If the project file has semantic problems, the
+        ``problems`` property will be set describing them, and the
+        file can be modified.
 
         Args:
             filename (str): path to the project file
             requirement_registry (RequirementRegistry): for
                 looking up Requirement instances based on the config in
                 the project file
+
         """
         self.requirement_registry = requirement_registry
         super(ProjectFile, self).__init__(filename)
@@ -113,5 +118,9 @@ class ProjectFile(YamlFile):
 
     @property
     def problems(self):
-        """List of error message strings describing problems with the project configuration."""
+        """List of error message strings describing problems with the project configuration.
+
+        This will include semantic problems; syntax problems that keep us from loading
+        and modifying the file will be in the ``corrupted_error_message`` instead.
+        """
         return self._problems
