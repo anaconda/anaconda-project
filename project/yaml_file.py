@@ -1,3 +1,4 @@
+"""YAML file loading and manipulation."""
 from __future__ import absolute_import
 
 # ruamel.yaml supports round-trip preserving dict ordering,
@@ -29,12 +30,32 @@ def _atomic_replace(path, contents, encoding='utf-8'):
 
 
 class YamlFile(object):
+    """Abstract YAML file, base class for ``ProjectFile`` and ``LocalStateFile``.
+
+    Be careful with creating your own instance of this class,
+    because you have to think about when other code might load or
+    save in a way that conflicts with your loads and saves.
+
+    """
+
     def __init__(self, filename):
+        """Load a YamlFile with the given filename.
+
+        Raises an exception if the file is corrupt, but if the
+        file is missing this succeeds (then creates the file if
+        and when you call ``save()``).
+
+        """
         self.filename = filename
         self._dirty = False
         self.load()
 
     def load(self):
+        """Reload the file from disk, discarding any unsaved changes.
+
+        Returns:
+            None
+        """
         # using RoundTripLoader incorporates safe_load
         # (we don't load code)
         assert issubclass(ryaml.RoundTripLoader, ryaml.constructor.SafeConstructor)
@@ -61,6 +82,13 @@ class YamlFile(object):
         return "yaml file"
 
     def save(self):
+        """Write the file to disk, only if any changes have been made.
+
+        Raises ``IOError`` if it fails for some reason.
+
+        Returns:
+            None
+        """
         if not self._dirty:
             return
 
@@ -94,17 +122,40 @@ class YamlFile(object):
         return current
 
     def set_values(self, section_path, values):
+        """Set a dict of values at the given dot-separated path.
+
+        Args:
+            section_path (str): dot-separated string where each segment is a dictionary key
+            values (dict): this dict is the value of the last key in ``section_path``
+        """
         existing = self._ensure_section(section_path)
         for k, v in values.items():
             existing[k] = v
             self._dirty = True
 
     def set_value(self, section_path, key, value):
+        """Set a single value in the given section.
+
+        Args:
+            section_path (str): dot-separated string where each segment is a dictionary key
+            key (str): the key within the section
+            value: any YAML-compatible value type
+        """
         existing = self._ensure_section(section_path)
         existing[key] = value
         self._dirty = True
 
     def get_value(self, section_path, key=None, default=None):
+        """Get a single value from the given section.
+
+        Args:
+            section_path (str): dot-separated string where each segment is a dictionary key
+            key (str): the key within the section
+            default: any YAML-compatible value type
+
+        Returns:
+            the value from the file or the provided default
+        """
         existing = self._get_section_or_none(section_path)
         if existing is None:
             return default
