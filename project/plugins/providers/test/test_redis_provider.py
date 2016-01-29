@@ -202,7 +202,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert result
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        state = local_state_file.get_service_run_state("project_scoped_redis")
+        state = local_state_file.get_service_run_state("ProjectScopedRedisProvider")
         assert 'port' in state
         port = state['port']
 
@@ -223,7 +223,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert not real_can_connect_to_socket(host='localhost', port=port)
 
         local_state_file.load()
-        assert dict() == local_state_file.get_service_run_state("project_scoped_redis")
+        assert dict() == local_state_file.get_service_run_state("ProjectScopedRedisProvider")
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -246,7 +246,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert result
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        state = local_state_file.get_service_run_state("project_scoped_redis")
+        state = local_state_file.get_service_run_state("ProjectScopedRedisProvider")
         assert 'port' in state
         port = state['port']
 
@@ -284,7 +284,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert not real_can_connect_to_socket(host='localhost', port=port)
 
         local_state_file.load()
-        assert dict() == local_state_file.get_service_run_state("project_scoped_redis")
+        assert dict() == local_state_file.get_service_run_state("ProjectScopedRedisProvider")
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:

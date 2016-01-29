@@ -192,6 +192,6 @@ class ProjectScopedRedisProvider(Provider):
 
                 return url
 
-        url = context.transform_service_run_state("project_scoped_redis", ensure_redis)
+        url = context.transform_service_run_state(self.config_key, ensure_redis)
         if url is not None:
             context.environ[requirement.env_var] = url
