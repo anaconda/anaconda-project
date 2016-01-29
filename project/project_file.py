@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import os
 
 from project.yaml_file import YamlFile
+from project.plugins.requirement import RequirementRegistry
 
 # use .yml not .yaml to make Windows happy
 PROJECT_FILENAME = "project.yml"
@@ -24,7 +25,7 @@ class ProjectFile(YamlFile):
     """
 
     @classmethod
-    def load_for_directory(cls, directory, requirement_registry):
+    def load_for_directory(cls, directory, requirement_registry=None):
         """Load the project file from the given directory, even if it doesn't exist.
 
         If the directory has no project file, the loaded
@@ -42,7 +43,7 @@ class ProjectFile(YamlFile):
             directory (str): path to the project directory
             requirement_registry (RequirementRegistry): for
                 looking up Requirement instances based on the config
-                in the file
+                in the file, None for default
 
         Returns:
             a new ``ProjectFile``
@@ -51,7 +52,7 @@ class ProjectFile(YamlFile):
         path = os.path.join(directory, PROJECT_FILENAME)
         return ProjectFile(path, requirement_registry)
 
-    def __init__(self, filename, requirement_registry):
+    def __init__(self, filename, requirement_registry=None):
         """Construct a ``ProjectFile`` with the given filename and requirement registry.
 
         It's easier to use ``ProjectFile.load_for_directory()`` in most cases.
@@ -67,9 +68,11 @@ class ProjectFile(YamlFile):
             filename (str): path to the project file
             requirement_registry (RequirementRegistry): for
                 looking up Requirement instances based on the config in
-                the project file
+                the project file, None for default
 
         """
+        if requirement_registry is None:
+            requirement_registry = RequirementRegistry()
         self.requirement_registry = requirement_registry
         super(ProjectFile, self).__init__(filename)
 

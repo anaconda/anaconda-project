@@ -2,7 +2,7 @@ import codecs
 import os
 
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.plugins.requirement import RequirementRegistry, EnvVarRequirement
+from project.plugins.requirement import EnvVarRequirement
 from project.project_file import ProjectFile, PROJECT_FILENAME
 
 
@@ -10,7 +10,7 @@ def test_create_missing_project_file():
     def create_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert not os.path.exists(filename)
-        project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
+        project_file = ProjectFile.load_for_directory(dirname)
         assert project_file is not None
         assert not os.path.exists(filename)
         project_file.save()
@@ -29,7 +29,7 @@ def test_use_existing_project_file():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
+        project_file = ProjectFile.load_for_directory(dirname)
         value = project_file.get_value(["a", "b"])
         assert "c" == value
 
@@ -40,7 +40,7 @@ def test_load_directory_without_project_file():
     def read_missing_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert not os.path.exists(filename)
-        project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
+        project_file = ProjectFile.load_for_directory(dirname)
         assert project_file is not None
         assert not os.path.exists(filename)
         assert project_file.get_value(["a", "b"]) is None
@@ -52,7 +52,7 @@ def test_load_list_of_runtime_requirements():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
+        project_file = ProjectFile.load_for_directory(dirname)
         assert [] == project_file.problems
         requirements = project_file.requirements
         assert 2 == len(requirements)
@@ -69,7 +69,7 @@ def test_load_dict_of_runtime_requirements():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
+        project_file = ProjectFile.load_for_directory(dirname)
         assert [] == project_file.problems
         requirements = project_file.requirements
         assert 2 == len(requirements)
@@ -88,7 +88,7 @@ def test_non_string_runtime_requirements():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
+        project_file = ProjectFile.load_for_directory(dirname)
         assert 2 == len(project_file.problems)
         assert 0 == len(project_file.requirements)
         assert "42 is not a string" in project_file.problems[0]
@@ -101,7 +101,7 @@ def test_bad_runtime_requirements_options():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
+        project_file = ProjectFile.load_for_directory(dirname)
         assert 2 == len(project_file.problems)
         assert 0 == len(project_file.requirements)
         assert "key FOO with value 42; the value must be a dict" in project_file.problems[0]
@@ -114,7 +114,7 @@ def test_runtime_requirements_not_a_collection():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project_file = ProjectFile.load_for_directory(dirname, RequirementRegistry())
+        project_file = ProjectFile.load_for_directory(dirname)
         assert 1 == len(project_file.problems)
         assert 0 == len(project_file.requirements)
         assert "runtime section contains wrong value type 42" in project_file.problems[0]
