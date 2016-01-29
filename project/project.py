@@ -22,8 +22,18 @@ class Project(object):
         """
         if requirement_registry is None:
             requirement_registry = RequirementRegistry()
-        self.directory_path = directory_path
-        self.project_file = ProjectFile.load_for_directory(directory_path, requirement_registry)
+        self._directory_path = directory_path
+        self._project_file = ProjectFile.load_for_directory(directory_path, requirement_registry)
+
+    @property
+    def directory_path(self):
+        """Get path to the project directory."""
+        return self._directory_path
+
+    @property
+    def project_file(self):
+        """Get the ``ProjectFile`` for this project."""
+        return self._project_file
 
     @property
     def requirements(self):

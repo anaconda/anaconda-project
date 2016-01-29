@@ -1,7 +1,20 @@
+from __future__ import absolute_import, print_function
+
+import os
+
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.plugins.requirement import RequirementRegistry
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
+
+
+def test_properties():
+    def check_properties(dirname):
+        project = Project(dirname)
+        assert dirname == project.directory_path
+        assert dirname == os.path.dirname(project.project_file.filename)
+
+    with_directory_contents(dict(), check_properties)
 
 
 def test_single_env_var_requirement():
