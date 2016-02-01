@@ -58,15 +58,6 @@ def test_conda_create_no_packages():
     with_directory_contents(dict(), do_test)
 
 
-def test_conda_create_no_prefix():
-    def do_test(dirname):
-        with pytest.raises(TypeError) as excinfo:
-            conda_api.create(pkgs=['python'])
-        assert 'must specify either an environment name or a path' in repr(excinfo.value)
-
-    with_directory_contents(dict(), do_test)
-
-
 def test_conda_create_bad_package():
     def do_test(dirname):
         envdir = os.path.join(dirname, "myenv")

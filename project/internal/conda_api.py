@@ -45,22 +45,15 @@ def info():
     return _call_and_parse(['info', '--json'])
 
 
-def create(name=None, prefix=None, pkgs=None):
+def create(prefix, pkgs=None):
     """Create an environment either by name or path with a specified set of packages."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to ' 'install into new environment')
 
     cmd_list = ['create', '--yes', '--quiet']
-    if name:
-        ref = name
-        search = [os.path.join(d, name) for d in info()['envs_dirs']]
-        cmd_list = ['create', '--yes', '--quiet', '--name', name]
-    elif prefix:
-        ref = prefix
-        search = [prefix]
-        cmd_list = ['create', '--yes', '--quiet', '--prefix', prefix]
-    else:
-        raise TypeError('must specify either an environment name or a path ' 'for new environment')
+    ref = prefix
+    search = [prefix]
+    cmd_list = ['create', '--yes', '--quiet', '--prefix', prefix]
 
     if any(os.path.exists(prefix) for prefix in search):
         raise CondaEnvExistsError('Conda environment [%s] already exists' % ref)
@@ -72,18 +65,13 @@ def create(name=None, prefix=None, pkgs=None):
     return out
 
 
-def install(name=None, prefix=None, pkgs=None):
+def install(prefix, pkgs=None):
     """Install packages into an environment either by name or path with a specified set of packages."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to ' 'install into existing environment')
 
     cmd_list = ['install', '--yes', '--quiet']
-    if name:
-        cmd_list.extend(['--name', name])
-    elif prefix:
-        cmd_list.extend(['--prefix', prefix])
-    else:  # just install into the current environment, whatever that is
-        pass
+    cmd_list.extend(['--prefix', prefix])
 
     cmd_list.extend(pkgs)
     (out, err) = _call_conda(cmd_list)
