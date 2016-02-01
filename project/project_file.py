@@ -5,7 +5,6 @@ import os
 
 from project.yaml_file import YamlFile
 from project.project_meta_common import _ProjectMetaCommon
-from project.plugins.requirement import RequirementRegistry
 
 # use .yml not .yaml to make Windows happy
 PROJECT_FILENAME = "project.yml"
@@ -26,7 +25,7 @@ class ProjectFile(YamlFile, _ProjectMetaCommon):
     """
 
     @classmethod
-    def load_for_directory(cls, directory, requirement_registry=None):
+    def load_for_directory(cls, directory):
         """Load the project file from the given directory, even if it doesn't exist.
 
         If the directory has no project file, the loaded
@@ -36,24 +35,21 @@ class ProjectFile(YamlFile, _ProjectMetaCommon):
         If the file has syntax problems, this sets the
         ``corrupted`` and ``corrupted_error_message`` properties,
         and attempts to modify the file will raise an
-        exception. If the project file has semantic problems, the
-        ``problems`` property will be set describing them, and the
-        file can be modified.
+        exception. If the project file has semantic problems, they
+        are not detected by this class but are reported by the
+        ``Project`` class.
 
         Args:
             directory (str): path to the project directory
-            requirement_registry (RequirementRegistry): for
-                looking up Requirement instances based on the config
-                in the file, None for default
 
         Returns:
             a new ``ProjectFile``
 
         """
         path = os.path.join(directory, PROJECT_FILENAME)
-        return ProjectFile(path, requirement_registry)
+        return ProjectFile(path)
 
-    def __init__(self, filename, requirement_registry=None):
+    def __init__(self, filename):
         """Construct a ``ProjectFile`` with the given filename and requirement registry.
 
         It's easier to use ``ProjectFile.load_for_directory()`` in most cases.
@@ -61,70 +57,15 @@ class ProjectFile(YamlFile, _ProjectMetaCommon):
         If the file has syntax problems, this sets the
         ``corrupted`` and ``corrupted_error_message`` properties,
         and attempts to modify the file will raise an
-        exception. If the project file has semantic problems, the
-        ``problems`` property will be set describing them, and the
-        file can be modified.
+        exception. If the project file has semantic problems, they
+        are not detected by this class but are reported by the
+        ``Project`` class.
 
         Args:
             filename (str): path to the project file
-            requirement_registry (RequirementRegistry): for
-                looking up Requirement instances based on the config in
-                the project file, None for default
 
         """
-        if requirement_registry is None:
-            requirement_registry = RequirementRegistry()
-        self.requirement_registry = requirement_registry
         super(ProjectFile, self).__init__(filename)
-
-    def load(self):
-        """Extend superclass to also initialize ``requirements`` and ``problems`` properties."""
-        super(ProjectFile, self).load()
-        requirements = []
-        problems = []
-        runtime = self.get_value("runtime")
-        # runtime: section can contain a list of var names
-        # or a dict from var names to options
-        if isinstance(runtime, dict):
-            for key in runtime.keys():
-                options = runtime[key]
-                if isinstance(options, dict):
-                    requirement = self.requirement_registry.find_by_env_var(key, options)
-                    requirements.append(requirement)
-                else:
-                    problems.append(("runtime section has key {key} with value {options}; the value " +
-                                     "must be a dict of options, instead.").format(key=key,
-                                                                                   options=options))
-        elif isinstance(runtime, list):
-            for item in runtime:
-                if isinstance(item, str):
-                    requirement = self.requirement_registry.find_by_env_var(item, options=dict())
-                    requirements.append(requirement)
-                else:
-                    problems.append(
-                        "runtime section should contain environment variable names, {item} is not a string".format(
-                            item=item))
-        else:
-            problems.append(
-                "runtime section contains wrong value type {runtime}, should be dict or list of requirements".format(
-                    runtime=runtime))
-
-        self._requirements = requirements
-        self._problems = problems
 
     def _default_comment(self):
         return "Anaconda project file"
-
-    @property
-    def requirements(self):
-        """``Requirement`` instances describing this project's configured requirements."""
-        return self._requirements
-
-    @property
-    def problems(self):
-        """List of error message strings describing problems with the project configuration.
-
-        This will include semantic problems; syntax problems that keep us from loading
-        and modifying the file will be in the ``corrupted_error_message`` instead.
-        """
-        return self._problems

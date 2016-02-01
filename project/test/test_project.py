@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 import os
 
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.plugins.requirement import RequirementRegistry
+from project.plugins.requirement import RequirementRegistry, EnvVarRequirement
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
 from project.conda_meta_file import META_DIRECTORY, META_FILENAME
@@ -74,7 +74,7 @@ def test_override_requirement_registry():
     def check_override_requirement_registry(dirname):
         requirement_registry = RequirementRegistry()
         project = Project(dirname, requirement_registry)
-        assert project.project_file.requirement_registry is requirement_registry
+        assert project._config_cache.requirement_registry is requirement_registry
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -142,3 +142,99 @@ package:
   name: foo
   version: 1.2.3
     """}, check_name_and_version)
+
+
+def test_load_list_of_runtime_requirements():
+    def check_file(dirname):
+        filename = os.path.join(dirname, PROJECT_FILENAME)
+        assert os.path.exists(filename)
+        project = Project(dirname)
+        assert [] == project.problems
+        requirements = project.requirements
+        assert 2 == len(requirements)
+        assert isinstance(requirements[0], EnvVarRequirement)
+        assert 'FOO' == requirements[0].env_var
+        assert isinstance(requirements[1], EnvVarRequirement)
+        assert 'BAR' == requirements[1].env_var
+        assert len(project.problems) == 0
+
+    with_directory_contents({PROJECT_FILENAME: "runtime:\n  - FOO\n  - BAR\n"}, check_file)
+
+
+def test_load_dict_of_runtime_requirements():
+    def check_file(dirname):
+        filename = os.path.join(dirname, PROJECT_FILENAME)
+        assert os.path.exists(filename)
+        project = Project(dirname)
+        assert [] == project.problems
+        requirements = project.requirements
+        assert 2 == len(requirements)
+        assert isinstance(requirements[0], EnvVarRequirement)
+        assert 'FOO' == requirements[0].env_var
+        assert dict(a=1) == requirements[0].options
+        assert isinstance(requirements[1], EnvVarRequirement)
+        assert 'BAR' == requirements[1].env_var
+        assert dict(b=2) == requirements[1].options
+        assert len(project.problems) == 0
+
+    with_directory_contents({PROJECT_FILENAME: "runtime:\n  FOO: { a: 1 }\n  BAR: { b: 2 }\n"}, check_file)
+
+
+def test_non_string_runtime_requirements():
+    def check_file(dirname):
+        filename = os.path.join(dirname, PROJECT_FILENAME)
+        assert os.path.exists(filename)
+        project = Project(dirname)
+        assert 2 == len(project.problems)
+        assert 0 == len(project.requirements)
+        assert "42 is not a string" in project.problems[0]
+        assert "43 is not a string" in project.problems[1]
+
+    with_directory_contents({PROJECT_FILENAME: "runtime:\n  - 42\n  - 43\n"}, check_file)
+
+
+def test_bad_runtime_requirements_options():
+    def check_file(dirname):
+        filename = os.path.join(dirname, PROJECT_FILENAME)
+        assert os.path.exists(filename)
+        project = Project(dirname)
+        assert 2 == len(project.problems)
+        assert 0 == len(project.requirements)
+        assert "key FOO with value 42; the value must be a dict" in project.problems[0]
+        assert "key BAR with value baz; the value must be a dict" in project.problems[1]
+
+    with_directory_contents({PROJECT_FILENAME: "runtime:\n  FOO: 42\n  BAR: baz\n"}, check_file)
+
+
+def test_runtime_requirements_not_a_collection():
+    def check_file(dirname):
+        filename = os.path.join(dirname, PROJECT_FILENAME)
+        assert os.path.exists(filename)
+        project = Project(dirname)
+        assert 1 == len(project.problems)
+        assert 0 == len(project.requirements)
+        assert "runtime section contains wrong value type 42" in project.problems[0]
+
+    with_directory_contents({PROJECT_FILENAME: "runtime:\n  42\n"}, check_file)
+
+
+def test_corrupted_project_file_and_meta_file():
+    def check_problem(dirname):
+        project = Project(dirname)
+        assert 0 == len(project.requirements)
+        assert 2 == len(project.problems)
+        assert 'project.yml has a syntax error that needs to be fixed by hand' in project.problems[0]
+        assert 'meta.yaml has a syntax error that needs to be fixed by hand' in project.problems[1]
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+^
+runtime:
+  FOO
+""",
+         META_DIRECTORY + "/" + META_FILENAME: """
+^
+package:
+  name: foo
+  version: 1.2.3
+"""}, check_problem)
