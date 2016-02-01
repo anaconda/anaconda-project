@@ -11,6 +11,7 @@ def test_read_yaml_file_and_get_value():
         yaml = YamlFile(filename)
         assert not yaml.corrupted
         assert yaml.corrupted_error_message is None
+        assert yaml.change_count == 1
         # try getting with a list of keys
         value = yaml.get_value(["a", "b"])
         assert "c" == value
@@ -139,6 +140,7 @@ a:
 
     def change_abc(filename):
         yaml = YamlFile(filename)
+        assert yaml.change_count == 1
         value = yaml.get_value(["a", "b"])
         assert original_value == value
         yaml.set_value(["a", "b"], changed_value)
@@ -150,6 +152,7 @@ a:
             assert changed_content == changed
 
         yaml2 = YamlFile(filename)
+        assert yaml2.change_count == 1
         value2 = yaml2.get_value(["a", "b"])
         assert changed_value == value2
 
@@ -196,7 +199,9 @@ a:
         value = yaml.get_value(["a", "b"])
         assert "c" == value
         yaml.set_value(["x", "y"], dict(z=42, q="rs"))
+        assert yaml.change_count == 1
         yaml.save()
+        assert yaml.change_count == 2
 
         yaml2 = YamlFile(filename)
         value2 = yaml2.get_value(["a", "b"])
@@ -218,9 +223,11 @@ def test_transform_yaml():
         filename = os.path.join(dirname, "foo.yaml")
         assert not os.path.exists(filename)
         yaml = YamlFile(filename)
+        assert yaml.change_count == 1
         # save so we aren't dirty due to nonexistent file
         yaml.save()
         assert os.path.exists(filename)
+        assert yaml.change_count == 2
 
         def transformer(tree):
             tree['foo'] = dict()
@@ -230,6 +237,7 @@ def test_transform_yaml():
         yaml.transform_yaml(transformer)
         assert yaml._dirty
         yaml.save()
+        assert yaml.change_count == 3
 
         import codecs
         with codecs.open(filename, 'r', 'utf-8') as file:
@@ -254,8 +262,10 @@ def test_transform_yaml_does_nothing():
         filename = os.path.join(dirname, "foo.yaml")
         assert not os.path.exists(filename)
         yaml = YamlFile(filename)
+        assert yaml.change_count == 1
         # save so we aren't dirty due to nonexistent file
         yaml.save()
+        assert yaml.change_count == 2
         assert os.path.exists(filename)
 
         def transformer(tree):
@@ -266,6 +276,7 @@ def test_transform_yaml_does_nothing():
         yaml.transform_yaml(transformer)
         assert not yaml._dirty
         yaml.save()
+        assert yaml.change_count == 2
 
         import codecs
         with codecs.open(filename, 'r', 'utf-8') as file:
@@ -285,21 +296,27 @@ def test_multiple_saves_ignored_if_not_dirty():
         filename = os.path.join(dirname, "foo.yaml")
         assert not os.path.exists(filename)
         yaml = YamlFile(filename)
+        assert yaml.change_count == 1
         yaml.set_value(["a", "b"], 42)
         yaml.save()
+        assert yaml.change_count == 2
         assert os.path.exists(filename)
         time1 = os.path.getmtime(filename)
 
         yaml.save()
         assert time1 == os.path.getmtime(filename)
+        assert yaml.change_count == 2
         yaml.save()
         assert time1 == os.path.getmtime(filename)
+        assert yaml.change_count == 2
 
         yaml.set_value(["a", "b"], 43)
         assert time1 == os.path.getmtime(filename)
+        assert yaml.change_count == 2
         yaml.save()
         # OS mtime resolution might leave these equal
         assert time1 <= os.path.getmtime(filename)
+        assert yaml.change_count == 3
 
     with_directory_contents(dict(), check_dirty_handling)
 
@@ -316,8 +333,10 @@ def test_save_ignored_if_not_dirty_after_load():
 
         yaml2 = YamlFile(filename)
         assert time1 == os.path.getmtime(filename)
+        assert yaml2.change_count == 1
         yaml2.save()
         assert time1 == os.path.getmtime(filename)
+        assert yaml2.change_count == 1
 
     with_directory_contents(dict(), check_dirty_handling)
 

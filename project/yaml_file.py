@@ -54,6 +54,7 @@ class YamlFile(object):
         """
         self.filename = filename
         self._dirty = False
+        self._change_count = 0
         self.load()
 
     def load(self):
@@ -69,6 +70,7 @@ class YamlFile(object):
         """
         self._corrupted = False
         self._corrupted_error_message = None
+        self._change_count = self._change_count + 1
 
         # using RoundTripLoader incorporates safe_load
         # (we don't load code)
@@ -127,6 +129,16 @@ class YamlFile(object):
         """
         return self._corrupted_error_message
 
+    @property
+    def change_count(self):
+        """Get the number of times we've resynced with the file on disk (reloaded or saved changes).
+
+        This is used for cache invalidation. If a cached value becomes invalid whenever
+        ``change_count`` increments, then the cached value will be recomputed whenever
+        we save new changes or reload the file.
+        """
+        return self._change_count
+
     def save(self):
         """Write the file to disk, only if any changes have been made.
 
@@ -146,6 +158,7 @@ class YamlFile(object):
             dirname = os.path.dirname(self.filename)
             makedirs_ok_if_exists(dirname)
         _atomic_replace(self.filename, contents)
+        self._change_count = self._change_count + 1
         self._dirty = False
 
     def transform_yaml(self, transformer):
