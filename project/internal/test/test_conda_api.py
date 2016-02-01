@@ -7,8 +7,6 @@ import project.internal.conda_api as conda_api
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 
-conda_api.set_root_prefix()
-
 
 def test_conda_info():
     json = conda_api.info()

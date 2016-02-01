@@ -1,9 +1,7 @@
 from __future__ import absolute_import, division, unicode_literals
-from os.path import join
 from subprocess import Popen, PIPE
 import json
 import os
-import sys
 
 
 class CondaError(Exception):
@@ -18,19 +16,9 @@ class CondaEnvExistsError(CondaError):
     pass
 
 
-def _call_conda(extra_args, abspath=True):
-    # call conda with the list of extra arguments, and return the tuple
-    # stdout, stderr
-    if abspath:
-        if sys.platform == 'win32':
-            python = join(ROOT_PREFIX, 'python.exe')
-            conda = join(ROOT_PREFIX, 'Scripts', 'conda-script.py')
-        else:
-            python = join(ROOT_PREFIX, 'bin/python')
-            conda = join(ROOT_PREFIX, 'bin/conda')
-        cmd_list = [python, conda]
-    else:  # just use whatever conda is on the path
-        cmd_list = ['conda']
+def _call_conda(extra_args):
+    # just use whatever conda is on the path
+    cmd_list = ['conda']
 
     cmd_list.extend(extra_args)
 
@@ -41,35 +29,20 @@ def _call_conda(extra_args, abspath=True):
     return p.communicate()
 
 
-def _call_and_parse(extra_args, abspath=True):
-    stdout, stderr = _call_conda(extra_args, abspath=abspath)
+def _call_and_parse(extra_args):
+    stdout, stderr = _call_conda(extra_args)
     if stderr.decode().strip():
         raise Exception('conda %r:\nSTDERR:\n%s\nEND' % (extra_args, stderr.decode()))
     return json.loads(stdout.decode())
 
 
-def set_root_prefix(prefix=None):
-    """Set the prefix to the root environment (default is /opt/anaconda).
-
-    This function should only be called once (right after importing conda_api).
-    """
-    global ROOT_PREFIX
-
-    if prefix:
-        ROOT_PREFIX = prefix
-    else:
-        # find some conda instance, and then use info to get 'root_prefix'
-        info = _call_and_parse(['info', '--json'], abspath=False)
-        ROOT_PREFIX = info['root_prefix']
-
-
-def info(abspath=True):
+def info():
     """Return a dictionary with configuration information.
 
     No guarantee is made about which keys exist.  Therefore this function
     should only be used for testing and debugging.
     """
-    return _call_and_parse(['info', '--json'], abspath=abspath)
+    return _call_and_parse(['info', '--json'])
 
 
 def create(name=None, prefix=None, pkgs=None):
