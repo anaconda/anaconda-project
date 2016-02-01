@@ -1,5 +1,5 @@
 from __future__ import absolute_import, division, unicode_literals
-from subprocess import Popen, PIPE
+import subprocess
 import json
 import os
 
@@ -23,9 +23,9 @@ def _call_conda(extra_args):
     cmd_list.extend(extra_args)
 
     try:
-        p = Popen(cmd_list, stdout=PIPE, stderr=PIPE)
-    except OSError:
-        raise CondaError("failed to run: %r" % (" ".join(cmd_list)))
+        p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except OSError as e:
+        raise CondaError("failed to run: %r: %r" % (" ".join(cmd_list), repr(e)))
     (out, err) = p.communicate()
     errstr = err.decode().strip()
     if errstr:
