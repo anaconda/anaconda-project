@@ -28,7 +28,15 @@ class RequirementRegistry(object):
 
 
 class Requirement(with_metaclass(ABCMeta)):
-    """Describes a requirement of the project (from the project config)."""
+    """Describes a requirement of the project (from the project config).
+
+    Note that this is not specifically a package requirement;
+    this class is more general, it can be a requirement for any
+    condition at all (that a service is running, that a file
+    exists, or even that a package is intalled - anything you can
+    think of).
+
+    """
 
     def __init__(self, options):
         """Construct a Requirement.
