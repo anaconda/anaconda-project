@@ -25,15 +25,17 @@ def _call_conda(extra_args):
     try:
         p = Popen(cmd_list, stdout=PIPE, stderr=PIPE)
     except OSError:
-        raise Exception("could not invoke %r\n" % extra_args)
-    return p.communicate()
+        raise CondaError("failed to run: %r" % (" ".join(cmd_list)))
+    (out, err) = p.communicate()
+    errstr = err.decode().strip()
+    if errstr:
+        raise CondaError('%s: %s' % (" ".join(cmd_list), errstr))
+    return out
 
 
-def _call_and_parse(extra_args):
-    stdout, stderr = _call_conda(extra_args)
-    if stderr.decode().strip():
-        raise Exception('conda %r:\nSTDERR:\n%s\nEND' % (extra_args, stderr.decode()))
-    return json.loads(stdout.decode())
+def _call_and_parse_json(extra_args):
+    out = _call_conda(extra_args)
+    return json.loads(out.decode())
 
 
 def info():
@@ -42,7 +44,7 @@ def info():
     No guarantee is made about which keys exist.  Therefore this function
     should only be used for testing and debugging.
     """
-    return _call_and_parse(['info', '--json'])
+    return _call_and_parse_json(['info', '--json'])
 
 
 def create(prefix, pkgs=None):
@@ -59,10 +61,7 @@ def create(prefix, pkgs=None):
         raise CondaEnvExistsError('Conda environment [%s] already exists' % ref)
 
     cmd_list.extend(pkgs)
-    (out, err) = _call_conda(cmd_list)
-    if err.decode().strip():
-        raise CondaError('conda %s: %s' % (" ".join(cmd_list), err.decode()))
-    return out
+    return _call_conda(cmd_list)
 
 
 def install(prefix, pkgs=None):
@@ -74,7 +73,4 @@ def install(prefix, pkgs=None):
     cmd_list.extend(['--prefix', prefix])
 
     cmd_list.extend(pkgs)
-    (out, err) = _call_conda(cmd_list)
-    if err.decode().strip():
-        raise CondaError('conda %s: %s' % (" ".join(cmd_list), err.decode()))
-    return out
+    return _call_conda(cmd_list)
