@@ -4,13 +4,14 @@ from __future__ import absolute_import
 import os
 
 from project.yaml_file import YamlFile
+from project.project_meta_common import _ProjectMetaCommon
 from project.plugins.requirement import RequirementRegistry
 
 # use .yml not .yaml to make Windows happy
 PROJECT_FILENAME = "project.yml"
 
 
-class ProjectFile(YamlFile):
+class ProjectFile(YamlFile, _ProjectMetaCommon):
     """Represents the ``project.yml`` file which describes the project across machines/users.
 
     State that's specific to a machine/user/checkout/deployment
@@ -127,23 +128,3 @@ class ProjectFile(YamlFile):
         and modifying the file will be in the ``corrupted_error_message`` instead.
         """
         return self._problems
-
-    @property
-    def name(self):
-        """Get the "package: name" field from the file."""
-        return self.get_value(['package', 'name'], default=None)
-
-    @name.setter
-    def name(self, value):
-        """Set the "package: name" field in the file."""
-        self.set_value(['package', 'name'], value)
-
-    @property
-    def version(self):
-        """Get the "package: version" field from the file."""
-        return self.get_value(['package', 'version'], default=None)
-
-    @version.setter
-    def version(self, value):
-        """Set the "package: version" field in the file."""
-        return self.set_value(['package', 'version'], value)

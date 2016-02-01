@@ -52,22 +52,23 @@ class Project(object):
         """List of strings describing problems with the project configuration."""
         return self.project_file.problems
 
+    def _search_project_then_meta(self, attr, fallback):
+        project_value = getattr(self.project_file, attr)
+        if project_value is not None:
+            return project_value
+
+        meta_value = getattr(self.conda_meta_file, attr)
+        if meta_value is not None:
+            return meta_value
+
+        return fallback
+
     @property
     def name(self):
         """Get the "package: name" field from either project.yml or meta.yaml."""
-        if self.project_file.name is not None:
-            return self.project_file.name
-        elif self.conda_meta_file.name is not None:
-            return self.conda_meta_file.name
-        else:
-            return self._directory_basename
+        return self._search_project_then_meta('name', fallback=self._directory_basename)
 
     @property
     def version(self):
         """Get the "package: version" field from either project.yml or meta.yaml."""
-        if self.project_file.version is not None:
-            return self.project_file.version
-        elif self.conda_meta_file.version is not None:
-            return self.conda_meta_file.version
-        else:
-            return "unknown"
+        return self._search_project_then_meta('version', fallback="unknown")
