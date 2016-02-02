@@ -29,7 +29,7 @@ def test_activate(monkeypatch):
         result = activate(dirname, UI_MODE_NOT_INTERACTIVE)
         assert can_connect_args['port'] == 6379
         assert result is not None
-        assert ['export REDIS_URL=redis://localhost:6379'] == result
+        assert ['export PROJECT_DIR=' + dirname, 'export REDIS_URL=redis://localhost:6379'] == result
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -53,7 +53,8 @@ runtime:
     assert can_connect_args['port'] == 6379
 
     out, err = capsys.readouterr()
-    assert "export REDIS_URL=redis://localhost:6379\n" == out
+
+    assert "export REDIS_URL=redis://localhost:6379\n" in out
     assert "" == err
 
 
@@ -82,7 +83,8 @@ runtime:
     assert can_connect_args['port'] == 6379
 
     out, err = capsys.readouterr()
-    assert "export REDIS_URL=redis://localhost:6379\n" == out
+    assert "export PROJECT_DIR" in out
+    assert "export REDIS_URL=redis://localhost:6379\n" in out
     assert "" == err
 
 

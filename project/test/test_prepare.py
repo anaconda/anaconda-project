@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import os
 import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
@@ -14,7 +15,7 @@ def test_prepare_empty_directory():
         environ = dict()
         result = prepare(project, environ=environ)
         assert result
-        assert len(environ) == 0
+        assert dict(PROJECT_DIR=project.directory_path) == environ
 
     with_directory_contents(dict(), prepare_empty)
 
@@ -43,10 +44,7 @@ def test_default_to_system_environ():
     def prepare_system_environ(dirname):
         project = Project(dirname)
         prepare(project)
-        # we should really improve this test to check that we
-        # really put something in os.environ, but for now
-        # we don't have the capability to load a default
-        # value from the project file and set it
+        assert project.directory_path == os.environ['PROJECT_DIR']
 
     with_directory_contents(dict(), prepare_system_environ)
 
@@ -57,7 +55,7 @@ def test_prepare_some_env_var_already_set():
         environ = dict(FOO='bar')
         result = prepare(project, environ=environ)
         assert result
-        assert dict(FOO='bar') == environ
+        assert dict(FOO='bar', PROJECT_DIR=project.directory_path) == environ
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:

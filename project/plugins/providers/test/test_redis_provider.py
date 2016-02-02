@@ -142,7 +142,7 @@ def test_prepare_redis_url_with_dict_in_runtime_section(monkeypatch):
         environ = dict()
         result = prepare(project, environ=environ)
         assert result
-        assert dict(REDIS_URL="redis://localhost:6379") == environ
+        assert dict(REDIS_URL="redis://localhost:6379", PROJECT_DIR=project.directory_path) == environ
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
     with_directory_contents({PROJECT_FILENAME: """
@@ -159,7 +159,7 @@ def test_prepare_redis_url_with_list_in_runtime_section(monkeypatch):
         environ = dict()
         result = prepare(project, environ=environ)
         assert result
-        assert dict(REDIS_URL="redis://localhost:6379") == environ
+        assert dict(REDIS_URL="redis://localhost:6379", PROJECT_DIR=project.directory_path) == environ
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
     with_directory_contents({PROJECT_FILENAME: """
@@ -206,7 +206,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert 'port' in state
         port = state['port']
 
-        assert dict(REDIS_URL=("redis://localhost:" + str(port))) == environ
+        assert dict(REDIS_URL=("redis://localhost:" + str(port)), PROJECT_DIR=project.directory_path) == environ
         assert len(can_connect_args_list) >= 2
 
         pidfile = os.path.join(dirname, ".anaconda/run/project_scoped_redis/redis.pid")
@@ -250,7 +250,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert 'port' in state
         port = state['port']
 
-        assert dict(REDIS_URL=("redis://localhost:" + str(port))) == environ
+        assert dict(REDIS_URL=("redis://localhost:" + str(port)), PROJECT_DIR=project.directory_path) == environ
         assert len(can_connect_args_list) >= 2
 
         pidfile = os.path.join(dirname, ".anaconda/run/project_scoped_redis/redis.pid")
@@ -269,7 +269,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert result2
 
         # port should be the same, and set in the environment
-        assert dict(REDIS_URL=("redis://localhost:" + str(port))) == environ2
+        assert dict(REDIS_URL=("redis://localhost:" + str(port)), PROJECT_DIR=project.directory_path) == environ2
 
         # no new pid file
         assert pidfile_mtime == os.path.getmtime(pidfile)

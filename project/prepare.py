@@ -61,9 +61,13 @@ def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=Non
 
     # we modify a copy, which 1) makes all our changes atomic and
     # 2) minimizes memory leaks on systems that use putenv() (it
-    # appears we must use deepcopy or we still modify os.environ
-    # somehow)
+    # appears we must use deepcopy (vs plain copy) or we still
+    # modify os.environ somehow)
     environ_copy = deepcopy(environ)
+
+    # many requirements and providers might need this, plus
+    # it's useful for scripts to find their source tree.
+    environ_copy['PROJECT_DIR'] = project.directory_path
 
     provider_registry = ProviderRegistry()
 

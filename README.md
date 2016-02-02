@@ -85,3 +85,10 @@ sync: http://conda.pydata.org/docs/building/meta-yaml.html
   `runtime: VAR_NAME` in the project.yml, this setting in
   project-local.yml holds a dict of options for that provider.
   This is used to save local configuration of the provider.
+
+# Environment Variables Anaconda Project cares about
+
+* `PROJECT_DIR` will be set to the root directory of the project
+  we're in
+* Currently bundled modules understand how to provide:
+   - `REDIS_URL`

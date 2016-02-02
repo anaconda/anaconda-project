@@ -24,7 +24,11 @@ def activate(dirname, ui_mode):
         return None
 
     result = []
-    for key, value in environ.items():
+    # sort so we have deterministic output order for tests
+    sorted_keys = list(environ.keys())
+    sorted_keys.sort()
+    for key in sorted_keys:
+        value = environ[key]
         if key not in os.environ or os.environ[key] != value:
             result.append("export {key}={value}".format(key=key, value=value))
     return result
