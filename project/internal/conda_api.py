@@ -73,13 +73,10 @@ def create(prefix, pkgs=None):
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to ' 'install into new environment')
 
-    cmd_list = ['create', '--yes', '--quiet']
-    ref = prefix
-    search = [prefix]
-    cmd_list = ['create', '--yes', '--quiet', '--prefix', prefix]
+    if os.path.exists(prefix):
+        raise CondaEnvExistsError('Conda environment [%s] already exists' % prefix)
 
-    if any(os.path.exists(prefix) for prefix in search):
-        raise CondaEnvExistsError('Conda environment [%s] already exists' % ref)
+    cmd_list = ['create', '--yes', '--quiet', '--prefix', prefix]
 
     cmd_list.extend(pkgs)
     return _call_conda(cmd_list)
