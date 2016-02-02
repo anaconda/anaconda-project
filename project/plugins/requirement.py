@@ -23,6 +23,9 @@ class RequirementRegistry(object):
         if env_var == 'REDIS_URL':
             from .requirements.redis import DefaultRedisRequirement
             return DefaultRedisRequirement(env_var=env_var, options=options)
+        elif env_var == 'CONDA_DEFAULT_ENV':
+            from .requirements.conda_env import CondaEnvRequirement
+            return CondaEnvRequirement(env_var=env_var, options=options)
         else:
             return EnvVarRequirement(env_var=env_var, options=options)
 

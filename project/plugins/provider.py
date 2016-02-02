@@ -41,6 +41,22 @@ class ProviderRegistry(object):
         else:
             return []
 
+    def find_by_class_name(self, class_name):
+        """Look up a provider by class name.
+
+        Args:
+            class_name (str): name of the provider class
+
+        Returns:
+            an instance of the passed-in class name or None if not found
+        """
+        # future goal will be to un-hardcode this of course
+        if class_name == 'ProjectScopedCondaEnvProvider':
+            from .providers.conda_env import ProjectScopedCondaEnvProvider
+            return ProjectScopedCondaEnvProvider()
+        else:
+            return None
+
 
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""

@@ -47,6 +47,27 @@ def info():
     return _call_and_parse_json(['info', '--json'])
 
 
+def resolve_env_to_prefix(name_or_prefix):
+    """Convert an env name or path into a canonical prefix path.
+
+    Returns:
+        Absolute path of prefix or None if it isn't found.
+    """
+    if os.path.isabs(name_or_prefix):
+        return name_or_prefix
+
+    json = info()
+    root_prefix = json.get('root_prefix', None)
+    if name_or_prefix == 'root':
+        return root_prefix
+
+    envs = json.get('envs', [])
+    for prefix in envs:
+        if os.path.basename(prefix) == name_or_prefix:
+            return prefix
+    return None
+
+
 def create(prefix, pkgs=None):
     """Create an environment either by name or path with a specified set of packages."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):

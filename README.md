@@ -92,3 +92,4 @@ sync: http://conda.pydata.org/docs/building/meta-yaml.html
   we're in
 * Currently bundled modules understand how to provide:
    - `REDIS_URL`
+   - `CONDA_DEFAULT_ENV`

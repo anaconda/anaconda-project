@@ -25,6 +25,19 @@ def test_env_var_provider_title():
     assert "Manually set environment variable" == provider.title
 
 
+def test_find_by_class_name():
+    registry = ProviderRegistry()
+    found = registry.find_by_class_name(class_name="ProjectScopedCondaEnvProvider")
+    assert found is not None
+    assert found.__class__.__name__ == "ProjectScopedCondaEnvProvider"
+
+
+def test_find_by_class_name_not_found():
+    registry = ProviderRegistry()
+    found = registry.find_by_class_name(class_name="NotAThing")
+    assert found is None
+
+
 def test_provider_default_method_implementations():
     class UselessProvider(Provider):
         @property

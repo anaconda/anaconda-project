@@ -95,3 +95,23 @@ def test_conda_invoke_fails(monkeypatch):
         assert 'conda info' in repr(excinfo.value)
 
     with_directory_contents(dict(), do_test)
+
+
+def test_resolve_root_prefix():
+    prefix = conda_api.resolve_env_to_prefix('root')
+    assert prefix is not None
+    assert os.path.isdir(prefix)
+
+
+def test_resolve_named_env(monkeypatch):
+    def mock_info():
+        return {'root_prefix': '/foo', 'envs': ['/foo/envs/bar']}
+
+    monkeypatch.setattr('project.internal.conda_api.info', mock_info)
+    prefix = conda_api.resolve_env_to_prefix('bar')
+    assert "/foo/envs/bar" == prefix
+
+
+def test_resolve_env_prefix_from_dirname():
+    prefix = conda_api.resolve_env_to_prefix('/foo/bar')
+    assert "/foo/bar" == prefix
