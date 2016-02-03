@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, unicode_literals
+import errno
 import subprocess
 import json
 import os
@@ -92,3 +93,21 @@ def install(prefix, pkgs=None):
 
     cmd_list.extend(pkgs)
     return _call_conda(cmd_list)
+
+
+def installed(prefix):
+    """Get a dict of package names to (name, version, build) tuples."""
+    meta_dir = os.path.join(prefix, 'conda-meta')
+    try:
+        full_names = set(fn[:-5] for fn in os.listdir(meta_dir) if fn.endswith('.json'))
+    except OSError as e:
+        if e.errno == errno.ENOENT:
+            full_names = set()
+        else:
+            raise CondaError(str(e))
+    result = dict()
+    for full_name in full_names:
+        pieces = full_name.rsplit('-', 2)
+        if len(pieces) == 3:
+            result[pieces[0]] = tuple(pieces)
+    return result

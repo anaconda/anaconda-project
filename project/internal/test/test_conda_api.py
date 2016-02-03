@@ -115,3 +115,53 @@ def test_resolve_named_env(monkeypatch):
 def test_resolve_env_prefix_from_dirname():
     prefix = conda_api.resolve_env_to_prefix('/foo/bar')
     assert "/foo/bar" == prefix
+
+
+def test_installed():
+    def check_installed(dirname):
+        expected = {
+            'numexpr': ('numexpr', '2.4.4', 'np110py27_0'),
+            'portaudio': ('portaudio', '19', '0'),
+            'unittest2': ('unittest2', '0.5.1', 'py27_1'),
+            'websocket': ('websocket', '0.2.1', 'py27_0'),
+            'ipython-notebook': ('ipython-notebook', '4.0.4', 'py27_0')
+        }
+
+        installed = conda_api.installed(dirname)
+        assert expected == installed
+
+    files = {
+        'conda-meta/websocket-0.2.1-py27_0.json': "",
+        'conda-meta/unittest2-0.5.1-py27_1.json': "",
+        'conda-meta/portaudio-19-0.json': "",
+        'conda-meta/numexpr-2.4.4-np110py27_0.json': "",
+        # note that this has a hyphen in package name
+        'conda-meta/ipython-notebook-4.0.4-py27_0.json': "",
+        'conda-meta/not-a-json-file.txt': "",
+        'conda-meta/json_file_without_proper_name_structure.json': ""
+    }
+
+    with_directory_contents(files, check_installed)
+
+
+def test_installed_on_nonexistent_prefix():
+    installed = conda_api.installed("/this/does/not/exist")
+    assert dict() == installed
+
+
+def test_installed_no_conda_meta():
+    def check_installed(dirname):
+        installed = conda_api.installed(dirname)
+        assert dict() == installed
+
+    with_directory_contents(dict(), check_installed)
+
+
+def test_installed_cannot_list_dir(monkeypatch):
+    def mock_listdir(dirname):
+        raise OSError("cannot list this")
+
+    monkeypatch.setattr("os.listdir", mock_listdir)
+    with pytest.raises(conda_api.CondaError) as excinfo:
+        conda_api.installed("/this/does/not/exist")
+    assert 'cannot list this' in repr(excinfo.value)
