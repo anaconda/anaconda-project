@@ -153,7 +153,15 @@ def test_get_package_requirements_from_project_and_meta_files():
         # note that the current algorithm is that we do not
         # de-duplicate; testing that specifically so we'll
         # notice if it changes.
-        assert ["foo", "hello >= 1.0", "world", "foo", "bar"] == project.requirements_run
+        assert ["foo", "bar", "foo", "hello >= 1.0", "world"] == project.requirements_run
+
+        # find CondaEnvRequirement
+        conda_env_req = None
+        for r in project.requirements:
+            if hasattr(r, 'conda_package_specs'):
+                assert conda_env_req is None  # only one
+                conda_env_req = r
+        assert ["foo", "bar", "foo", "hello >= 1.0", "world"] == conda_env_req.conda_package_specs
 
     with_directory_contents(
         {PROJECT_FILENAME: """
@@ -169,6 +177,31 @@ requirements:
     - foo
     - bar
 """}, check_get_packages)
+
+
+def test_use_env_options_when_packages_also_specified():
+    def check_use_env_options(dirname):
+        project = Project(dirname)
+        assert ["foo"] == project.requirements_run
+
+        # find CondaEnvRequirement
+        conda_env_req = None
+        for r in project.requirements:
+            if hasattr(r, 'conda_package_specs'):
+                assert conda_env_req is None  # only one
+                conda_env_req = r
+        assert ["foo"] == conda_env_req.conda_package_specs
+        assert dict(project_scoped=False) == conda_env_req.options
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  CONDA_DEFAULT_ENV : { project_scoped: false }
+
+requirements:
+  run:
+    - foo
+"""}, check_use_env_options)
 
 
 def test_get_package_requirements_from_empty_project_and_meta_files():

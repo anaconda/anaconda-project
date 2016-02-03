@@ -1,3 +1,5 @@
+from __future__ import absolute_import, print_function
+
 from project.plugins.requirement import RequirementRegistry
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 
@@ -56,3 +58,13 @@ def test_when_need_not_be_project_scoped(monkeypatch):
         assert why_not is None
 
     with_directory_contents(dict(), check_when_need_not_be_project_scoped)
+
+
+def test_missing_package():
+    def check_missing_package(dirname):
+        requirement = CondaEnvRequirement(options=dict(project_scoped=False),
+                                          conda_package_specs=['boguspackage', 'boguspackage2'])
+        why_not = requirement.why_not_provided(dict(CONDA_DEFAULT_ENV="root", PROJECT_DIR=dirname))
+        assert "Conda environment is missing packages: boguspackage, boguspackage2" == why_not
+
+    with_directory_contents(dict(), check_missing_package)

@@ -6,6 +6,7 @@ import os
 from project.project_file import ProjectFile
 from project.conda_meta_file import CondaMetaFile
 from project.plugins.requirement import RequirementRegistry
+from project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
 class _ConfigCache(object):
@@ -36,8 +37,11 @@ class _ConfigCache(object):
                             (conda_meta_file.filename, conda_meta_file.corrupted_error_message))
 
         if not (project_file.corrupted or conda_meta_file.corrupted):
+            # future: we could un-hardcode this so plugins can add stuff here
             self._update_runtime(requirements, problems, project_file)
-            self._validate_package_requirements(problems, project_file, conda_meta_file)
+            # this MUST be after we _update_runtime since we may get CondaEnvRequirement
+            # options in the runtime section
+            self._update_conda_env_requirements(requirements, problems, project_file, conda_meta_file)
 
         self.requirements = requirements
         self.problems = problems
@@ -73,8 +77,10 @@ class _ConfigCache(object):
                 "runtime section contains wrong value type {runtime}, should be dict or list of requirements".format(
                     runtime=runtime))
 
-    def _validate_package_requirements(self, problems, project_file, conda_meta_file):
-        def validate(yaml_file):
+    def _update_conda_env_requirements(self, requirements, problems, project_file, conda_meta_file):
+        packages = []
+
+        def load_from(yaml_file):
             found = yaml_file.requirements_run
             if not isinstance(found, (list, tuple)):
                 problems.append("%s: requirements: run: value should be a list of strings, not '%r'" %
@@ -85,9 +91,29 @@ class _ConfigCache(object):
                         problems.append("%s: requirements: run: value should be a string not '%r'" %
                                         (yaml_file.filename, item))
                         # future: validate MatchSpec
+                    else:
+                        packages.append(item)
 
-        validate(project_file)
-        validate(conda_meta_file)
+        load_from(conda_meta_file)
+        load_from(project_file)
+
+        # for the getter on Project
+        self.requirements_run = list(packages)
+
+        if problems or not packages:
+            return
+
+        # use existing CondaEnvRequirement if it was created via env var
+        env_requirement = None
+        for r in requirements:
+            if isinstance(r, CondaEnvRequirement):
+                env_requirement = r
+
+        if env_requirement is None:
+            env_requirement = CondaEnvRequirement(conda_package_specs=packages)
+            requirements.append(env_requirement)
+        else:
+            env_requirement.conda_package_specs.extend(packages)
 
 
 class Project(object):
@@ -156,11 +182,6 @@ class Project(object):
 
         return fallback
 
-    def _combine_project_then_meta_lists(self, attr):
-        project_value = getattr(self.project_file, attr, [])
-        meta_value = getattr(self.conda_meta_file, attr, [])
-        return project_value + meta_value
-
     @property
     def name(self):
         """Get the "package: name" field from either project.yml or meta.yaml."""
@@ -180,4 +201,4 @@ class Project(object):
         http://conda.pydata.org/docs/spec.html#build-version-spec
         and the ``conda.resolve.MatchSpec`` class).
         """
-        return self._combine_project_then_meta_lists('requirements_run')
+        return self._updated_cache().requirements_run
