@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Setup script."""
 
 from __future__ import print_function
@@ -166,6 +167,8 @@ column_limit : 120
         if len(self.failed) > 0:
             print("Failures in: " + repr(self.failed))
             sys.exit(1)
+        else:
+            print("All tests passed! 💯 🌟")
 
 setup(
     name='conda-project-prototype',
