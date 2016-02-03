@@ -5,6 +5,11 @@ from copy import deepcopy
 import os
 import sys
 
+try:
+    from shlex import quote  # pragma: no cover (py3 only)
+except ImportError:  # pragma: no cover (py2 only)
+    from pipes import quote
+
 from project.prepare import prepare, UI_MODE_NOT_INTERACTIVE
 from project.project import Project
 
@@ -30,7 +35,7 @@ def activate(dirname, ui_mode):
     for key in sorted_keys:
         value = environ[key]
         if key not in os.environ or os.environ[key] != value:
-            result.append("export {key}={value}".format(key=key, value=value))
+            result.append("export {key}={value}".format(key=key, value=quote(value)))
     return result
 
 

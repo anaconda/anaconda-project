@@ -6,6 +6,7 @@ from project.commands.activate import activate, main
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE
 from project.project_file import PROJECT_FILENAME
+from project.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
 
 
 def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
@@ -35,6 +36,25 @@ def test_activate(monkeypatch):
 runtime:
   REDIS_URL: {}
 """}, activate_redis_url)
+
+
+def test_activate_quoting(monkeypatch):
+    def activate_foo(dirname):
+        result = activate(dirname, UI_MODE_NOT_INTERACTIVE)
+        assert result is not None
+        assert ["export FOO='$! boo'", 'export PROJECT_DIR=' + dirname] == result
+
+    with_directory_contents(
+        {
+            PROJECT_FILENAME: """
+runtime:
+  FOO: {}
+    """,
+            LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+variables:
+  FOO: $! boo
+"""
+        }, activate_foo)
 
 
 def test_main(monkeypatch, capsys):
