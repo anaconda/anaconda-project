@@ -24,3 +24,8 @@ class _ProjectMetaCommon(object):
     def version(self, value):
         """Set the "package: version" field in the file."""
         return self.set_value(['package', 'version'], value)
+
+    @property
+    def requirements_run(self):
+        """Get runtime requirements as a list of strings."""
+        return self.get_value(['requirements', 'run'], default=[])

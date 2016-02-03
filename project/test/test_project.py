@@ -17,6 +17,7 @@ def test_properties():
         assert dirname == os.path.dirname(os.path.dirname(project.conda_meta_file.filename))
         assert project.name == os.path.basename(dirname)
         assert project.version == "unknown"
+        assert project.problems == []
 
     with_directory_contents(dict(), check_properties)
 
@@ -29,6 +30,7 @@ def test_ignore_trailing_slash_on_dirname():
         assert dirname == os.path.dirname(os.path.dirname(project.conda_meta_file.filename))
         assert project.name == os.path.basename(dirname)
         assert project.version == "unknown"
+        assert project.problems == []
 
     with_directory_contents(dict(), check_properties)
 
@@ -38,6 +40,7 @@ def test_single_env_var_requirement():
         project = Project(dirname)
         assert 1 == len(project.requirements)
         assert "FOO" == project.requirements[0].env_var
+        assert [] == project.problems
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -142,6 +145,59 @@ package:
   name: foo
   version: 1.2.3
     """}, check_name_and_version)
+
+
+def test_get_package_requirements_from_project_and_meta_files():
+    def check_get_packages(dirname):
+        project = Project(dirname)
+        # note that the current algorithm is that we do not
+        # de-duplicate; testing that specifically so we'll
+        # notice if it changes.
+        assert ["foo", "hello >= 1.0", "world", "foo", "bar"] == project.requirements_run
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+requirements:
+  run:
+    - foo
+    - hello >= 1.0
+    - world
+    """,
+         META_DIRECTORY + "/" + META_FILENAME: """
+requirements:
+  run:
+    - foo
+    - bar
+"""}, check_get_packages)
+
+
+def test_get_package_requirements_from_empty_project_and_meta_files():
+    def check_get_packages(dirname):
+        project = Project(dirname)
+        assert [] == project.requirements_run
+
+    with_directory_contents({PROJECT_FILENAME: "", META_DIRECTORY + "/" + META_FILENAME: ""}, check_get_packages)
+
+
+def test_complain_about_broken_package_requirements():
+    def check_get_packages(dirname):
+        project = Project(dirname)
+        assert 2 == len(project.problems)
+        "should be a list of strings not 'CommentedMap" in project.problems[0]
+        "should be a string not '42'" in project.problems[1]
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+requirements:
+  run:
+    foo: bar
+    """,
+         META_DIRECTORY + "/" + META_FILENAME: """
+requirements:
+  run:
+    - 42
+    - bar
+"""}, check_get_packages)
 
 
 def test_load_list_of_runtime_requirements():

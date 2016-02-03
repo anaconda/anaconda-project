@@ -37,6 +37,7 @@ class _ConfigCache(object):
 
         if not (project_file.corrupted or conda_meta_file.corrupted):
             self._update_runtime(requirements, problems, project_file)
+            self._validate_package_requirements(problems, project_file, conda_meta_file)
 
         self.requirements = requirements
         self.problems = problems
@@ -44,8 +45,11 @@ class _ConfigCache(object):
     def _update_runtime(self, requirements, problems, project_file):
         runtime = project_file.get_value("runtime")
         # runtime: section can contain a list of var names
-        # or a dict from var names to options
-        if isinstance(runtime, dict):
+        # or a dict from var names to options. it can also
+        # be missing
+        if runtime is None:
+            pass
+        elif isinstance(runtime, dict):
             for key in runtime.keys():
                 options = runtime[key]
                 if isinstance(options, dict):
@@ -68,6 +72,22 @@ class _ConfigCache(object):
             problems.append(
                 "runtime section contains wrong value type {runtime}, should be dict or list of requirements".format(
                     runtime=runtime))
+
+    def _validate_package_requirements(self, problems, project_file, conda_meta_file):
+        def validate(yaml_file):
+            found = yaml_file.requirements_run
+            if not isinstance(found, (list, tuple)):
+                problems.append("%s: requirements: run: value should be a list of strings, not '%r'" %
+                                (yaml_file.filename, found))
+            else:
+                for item in found:
+                    if not isinstance(item, str):
+                        problems.append("%s: requirements: run: value should be a string not '%r'" %
+                                        (yaml_file.filename, item))
+                        # future: validate MatchSpec
+
+        validate(project_file)
+        validate(conda_meta_file)
 
 
 class Project(object):
@@ -136,6 +156,11 @@ class Project(object):
 
         return fallback
 
+    def _combine_project_then_meta_lists(self, attr):
+        project_value = getattr(self.project_file, attr, [])
+        meta_value = getattr(self.conda_meta_file, attr, [])
+        return project_value + meta_value
+
     @property
     def name(self):
         """Get the "package: name" field from either project.yml or meta.yaml."""
@@ -145,3 +170,14 @@ class Project(object):
     def version(self):
         """Get the "package: version" field from either project.yml or meta.yaml."""
         return self._search_project_then_meta('version', fallback="unknown")
+
+    @property
+    def requirements_run(self):
+        """Get the combined "requirements: run" lists from both project.yml and meta.yaml.
+
+        The returned list is a list of strings in conda "match
+        specification" format (see
+        http://conda.pydata.org/docs/spec.html#build-version-spec
+        and the ``conda.resolve.MatchSpec`` class).
+        """
+        return self._combine_project_then_meta_lists('requirements_run')
