@@ -26,8 +26,9 @@ TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf']
 
 def _atomic_replace(path, contents, encoding):
     import codecs
+    import uuid
 
-    tmp = path + ".tmp"
+    tmp = path + "tmp-" + str(uuid.uuid4())
     try:
         with codecs.open(tmp, 'w', encoding) as file:
             file.write(contents)

@@ -10,12 +10,13 @@ from ruamel.yaml.error import YAMLError
 import codecs
 import errno
 import os
+import uuid
 
 from project.internal.makedirs import makedirs_ok_if_exists
 
 
 def _atomic_replace(path, contents, encoding='utf-8'):
-    tmp = path + ".tmp"
+    tmp = path + ".tmp-" + str(uuid.uuid4())
     try:
         with codecs.open(tmp, 'w', encoding) as file:
             file.write(contents)
