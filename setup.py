@@ -48,8 +48,8 @@ class AllTestsCommand(TestCommand):
     def initialize_options(self):
         TestCommand.initialize_options(self)
         # -rw turns on printing warnings
-        self.pytest_args = ['-v', '-rw', '--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=project',
-                            '--cov-report=term-missing', '--cov-report=html']
+        self.pytest_args = ['-v', '-rw', '--durations=10', '--cov-config', os.path.join(ROOT, ".coveragerc"),
+                            '--cov=project', '--cov-report=term-missing', '--cov-report=html']
         self.pyfiles = None
         self.failed = []
 
