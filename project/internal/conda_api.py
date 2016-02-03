@@ -111,3 +111,30 @@ def installed(prefix):
         if len(pieces) == 3:
             result[pieces[0]] = tuple(pieces)
     return result
+
+
+def _is_conda_bindir(path):
+    if not (path.endswith("/bin") or path.endswith("/bin/")):
+        return False
+    possible_prefix = os.path.dirname(path)
+    conda_meta = os.path.join(possible_prefix, "conda-meta")
+    return os.path.isdir(conda_meta)
+
+
+def set_conda_env_in_path(path, prefix):
+    """Remove any existing conda envs in the given path string, then add the given one.
+
+    Args:
+        path (str): value of the PATH environment variable
+        prefix (str): the environment prefix, or None to remove all conda bindirs
+    Returns:
+        the new PATH value
+    """
+    elements = path.split(os.pathsep)
+    new_elements = []
+    if prefix is not None:
+        new_elements.append(os.path.join(prefix, "bin"))
+    for element in elements:
+        if element != "" and not _is_conda_bindir(element):
+            new_elements.append(element)
+    return os.pathsep.join(new_elements)

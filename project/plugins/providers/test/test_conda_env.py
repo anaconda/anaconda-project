@@ -22,11 +22,15 @@ def test_find_by_class_name_conda_env():
 def test_prepare_project_scoped_env():
     def prepare_project_scoped_env(dirname):
         project = Project(dirname)
-        environ = dict(PROJECT_DIR=dirname)
+        fake_old_path = "foo" + os.pathsep + "bar"
+        environ = dict(PROJECT_DIR=dirname, PATH=fake_old_path)
         result = prepare(project, environ=environ)
         assert result
         expected_env = os.path.join(dirname, ".envs/default")
-        assert dict(CONDA_DEFAULT_ENV=expected_env, PROJECT_DIR=project.directory_path) == environ
+        expected_new_path = os.path.join(expected_env, "bin") + os.pathsep + "foo" + os.pathsep + "bar"
+        assert dict(CONDA_DEFAULT_ENV=expected_env,
+                    PROJECT_DIR=project.directory_path,
+                    PATH=expected_new_path) == environ
         assert os.path.exists(os.path.join(expected_env, "conda-meta"))
         conda_meta_mtime = os.path.getmtime(os.path.join(expected_env, "conda-meta"))
 
@@ -38,10 +42,12 @@ def test_prepare_project_scoped_env():
         assert 'numpy' not in installed
 
         # Prepare it again should no-op (use the already-existing environment)
-        environ = dict(PROJECT_DIR=dirname)
+        environ = dict(PROJECT_DIR=dirname, PATH=fake_old_path)
         result = prepare(project, environ=environ)
         assert result
-        assert dict(CONDA_DEFAULT_ENV=expected_env, PROJECT_DIR=project.directory_path) == environ
+        assert dict(CONDA_DEFAULT_ENV=expected_env,
+                    PROJECT_DIR=project.directory_path,
+                    PATH=expected_new_path) == environ
         assert conda_meta_mtime == os.path.getmtime(os.path.join(expected_env, "conda-meta"))
 
     with_directory_contents({PROJECT_FILENAME: """

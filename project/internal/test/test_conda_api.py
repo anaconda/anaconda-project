@@ -165,3 +165,43 @@ def test_installed_cannot_list_dir(monkeypatch):
     with pytest.raises(conda_api.CondaError) as excinfo:
         conda_api.installed("/this/does/not/exist")
     assert 'cannot list this' in repr(excinfo.value)
+
+
+def test_set_conda_env_in_path(monkeypatch):
+    def check_conda_env_in_path(dirname):
+        env1 = os.path.join(dirname, "env1")
+        os.makedirs(os.path.join(env1, "conda-meta"))
+        env1bin = os.path.join(env1, "bin")
+        os.makedirs(env1bin)
+        env2 = os.path.join(dirname, "env2")
+        os.makedirs(os.path.join(env2, "conda-meta"))
+        env2bin = os.path.join(env2, "bin")
+        os.makedirs(env2bin)
+        notenv = os.path.join(dirname, "notenv")
+        notenvbin = os.path.join(notenv, "bin")
+        os.makedirs(notenvbin)
+
+        # add env to empty path
+        path = conda_api.set_conda_env_in_path("", env1)
+        assert env1bin == path
+        # add env that's already there
+        path = conda_api.set_conda_env_in_path(env1bin, env1)
+        assert env1bin == path
+        # we can set a non-env because we don't waste time checking it
+        path = conda_api.set_conda_env_in_path("", notenv)
+        assert notenvbin == path
+        # add an env to a non-env
+        path = conda_api.set_conda_env_in_path(notenvbin, env1)
+        assert (env1bin + os.pathsep + notenvbin) == path
+        # add an env to another env
+        path = conda_api.set_conda_env_in_path(env1bin, env2)
+        assert env2bin == path
+        # replace an env that wasn't at the front
+        path = conda_api.set_conda_env_in_path(notenvbin + os.pathsep + env2bin, env1)
+        assert (env1bin + os.pathsep + notenvbin) == path
+        # keep a bunch of random stuff
+        random_stuff = "foo:bar:/baz/boo"
+        path = conda_api.set_conda_env_in_path(random_stuff, env1)
+        assert (env1bin + os.pathsep + random_stuff) == path
+
+    with_directory_contents(dict(), check_conda_env_in_path)

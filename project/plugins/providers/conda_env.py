@@ -55,7 +55,10 @@ class ProjectScopedCondaEnvProvider(Provider):
                     prefix = None
 
         if prefix is not None:
-            # future: we need to "activate" the environment by setting
-            # PATH and all the things the regular conda env activate sets,
-            # not only the CONDA_DEFAULT_ENV var.
             context.environ[requirement.env_var] = prefix
+            path = context.environ.get("PATH", "")
+            context.environ["PATH"] = conda_api.set_conda_env_in_path(path, prefix)
+            # Some stuff can only be done when a shell is launched:
+            #  - we can't set PS1 because it shouldn't be exported.
+            #  - we can't run conda activate scripts because they are sourced.
+            # We can do these in the output of our activate command, but not here.
