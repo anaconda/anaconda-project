@@ -79,6 +79,9 @@ class Requirement(with_metaclass(ABCMeta)):
         """List all possible providers from the registry."""
         pass  # pragma: no cover
 
+# suffixes that change the default for the "encrypted" option
+_secret_suffixes = ('_PASSWORD', '_ENCRYPTED', '_SECRET_KEY', '_SECRET')
+
 
 class EnvVarRequirement(Requirement):
     """A requirement that a certain environment variable be set."""
@@ -92,6 +95,14 @@ class EnvVarRequirement(Requirement):
     def title(self):
         """Override superclass title."""
         return self.env_var
+
+    @property
+    def encrypted(self):
+        """Get whether this is a password-type value we should encrypt when possible."""
+        if 'encrypted' in self.options:
+            return self.options['encrypted']
+        else:
+            return any(self.env_var.endswith(suffix) for suffix in _secret_suffixes)
 
     def why_not_provided(self, environ):
         """Override superclass to check that the env var is set."""

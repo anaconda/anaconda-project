@@ -7,3 +7,18 @@ def test_find_by_env_var_unknown():
     assert found is not None
     assert isinstance(found, EnvVarRequirement)
     assert found.env_var == 'FOO'
+
+
+def test_autoguess_encrypted_option():
+    assert not EnvVarRequirement(env_var='FOO').encrypted
+    assert EnvVarRequirement(env_var='FOO', options=dict(encrypted=True)).encrypted
+
+    assert EnvVarRequirement(env_var='FOO_PASSWORD').encrypted
+    assert EnvVarRequirement(env_var='FOO_SECRET').encrypted
+    assert EnvVarRequirement(env_var='FOO_SECRET_KEY').encrypted
+    assert EnvVarRequirement(env_var='FOO_ENCRYPTED').encrypted
+
+    assert not EnvVarRequirement(env_var='FOO_PASSWORD', options=dict(encrypted=False)).encrypted
+    assert not EnvVarRequirement(env_var='FOO_SECRET', options=dict(encrypted=False)).encrypted
+    assert not EnvVarRequirement(env_var='FOO_SECRET_KEY', options=dict(encrypted=False)).encrypted
+    assert not EnvVarRequirement(env_var='FOO_ENCRYPTED', options=dict(encrypted=False)).encrypted
