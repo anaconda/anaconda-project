@@ -6,7 +6,7 @@ import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.local_state_file import LocalStateFile, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
-from project.plugins.provider import Provider, ProvideContext, ProviderRegistry, EnvVarProvider
+from project.plugins.provider import Provider, ProvideContext, ProviderRegistry, EnvVarProvider, ProviderConfigContext
 from project.plugins.requirement import EnvVarRequirement
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
@@ -44,7 +44,7 @@ def test_provider_default_method_implementations():
         def title(self):
             return ""
 
-        def read_config(self, local_state, requirement):
+        def read_config(self, context):
             return dict()
 
         def provide(self, requirement, context):
@@ -53,7 +53,7 @@ def test_provider_default_method_implementations():
     provider = UselessProvider()
     # this method is supposed to do nothing by default (ignore
     # unknown names, in particular)
-    provider.set_config_value_from_string(local_state_file=None, requirement=None, name=None, value_string=None)
+    provider.set_config_value_from_string(context=None, name=None, value_string=None)
 
 
 def _load_env_var_requirement(dirname, env_var):
@@ -69,7 +69,8 @@ def test_env_var_provider_with_no_value():
         provider = EnvVarProvider()
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        config = provider.read_config(local_state_file, requirement)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
         assert dict() == config
         context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
 
@@ -88,7 +89,8 @@ def test_env_var_provider_with_default_value_in_project_file():
         requirement = _load_env_var_requirement(dirname, "FOO")
         assert dict(default='from_default') == requirement.options
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        config = provider.read_config(local_state_file, requirement)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
         context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
         provider.provide(requirement, context=context)
         assert 'FOO' in context.environ
@@ -107,7 +109,8 @@ def test_env_var_provider_with_value_set_in_environment():
         provider = EnvVarProvider()
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        config = provider.read_config(local_state_file, requirement)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
         assert dict() == config
         context = ProvideContext(environ=dict(FOO='from_environ'), local_state_file=local_state_file, config=config)
         provider.provide(requirement, context=context)
@@ -128,7 +131,8 @@ def test_env_var_provider_with_value_set_in_local_state():
         provider = EnvVarProvider()
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        config = provider.read_config(local_state_file, requirement)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
         assert dict(value="from_local_state") == config
         # set an environ to be sure we override it with local state
         context = ProvideContext(environ=dict(FOO='from_environ'), local_state_file=local_state_file, config=config)

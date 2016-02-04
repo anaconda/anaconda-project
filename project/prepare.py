@@ -11,7 +11,7 @@ from tornado.ioloop import IOLoop
 
 from project.internal.prepare_ui import NotInteractivePrepareUI, BrowserPrepareUI, ConfigurePrepareContext
 from project.local_state_file import LocalStateFile
-from project.plugins.provider import ProvideContext, ProviderRegistry
+from project.plugins.provider import ProvideContext, ProviderRegistry, ProviderConfigContext
 
 UI_MODE_TEXT = "text"
 UI_MODE_BROWSER = "browser"
@@ -79,6 +79,7 @@ def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=Non
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
     configure_context = ConfigurePrepareContext(io_loop=io_loop,
+                                                environ=environ_copy,
                                                 local_state_file=local_state,
                                                 requirements_and_providers=requirements_and_providers)
 
@@ -99,7 +100,8 @@ def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=Non
         why_not = requirement.why_not_provided(environ_copy)
         if why_not is None:
             continue
-        config = provider.read_config(local_state, requirement)
+        config_context = ProviderConfigContext(environ_copy, local_state, requirement)
+        config = provider.read_config(config_context)
         context = ProvideContext(environ_copy, local_state, config)
         provider.provide(requirement, context)
         if context.errors:

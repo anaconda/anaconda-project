@@ -6,8 +6,9 @@ from project.internal.metaclass import with_metaclass
 
 
 class ConfigurePrepareContext(object):
-    def __init__(self, io_loop, local_state_file, requirements_and_providers):
+    def __init__(self, io_loop, environ, local_state_file, requirements_and_providers):
         self.io_loop = io_loop
+        self.environ = environ
         self.local_state_file = local_state_file
         self.requirements_and_providers = requirements_and_providers
 

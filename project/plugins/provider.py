@@ -58,6 +58,16 @@ class ProviderRegistry(object):
             return None
 
 
+class ProviderConfigContext(object):
+    """A context passed to config-related methods on Provider."""
+
+    def __init__(self, environ, local_state_file, requirement):
+        """Construct a ProviderConfigContext."""
+        self.environ = environ
+        self.local_state_file = local_state_file
+        self.requirement = requirement
+
+
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""
 
@@ -147,11 +157,11 @@ class Provider(with_metaclass(ABCMeta)):
         return self.__class__.__name__
 
     @abstractmethod
-    def read_config(self, local_state_file, requirement):
+    def read_config(self, context):
         """Read a config dict from the local state file for the given requirement."""
         pass  # pragma: no cover
 
-    def set_config_value_from_string(self, local_state_file, requirement, name, value_string):
+    def set_config_value_from_string(self, context, name, value_string):
         """Set a config value in the state file (should not save the file)."""
         pass  # silently ignore unknown config values
 
@@ -202,18 +212,18 @@ class EnvVarProvider(Provider):
         """Override superclass with our title."""
         return "Manually set environment variable"
 
-    def read_config(self, local_state_file, requirement):
+    def read_config(self, context):
         """Override superclass to read env var value."""
         config = dict()
-        value = local_state_file.get_value(["variables", requirement.env_var], default=None)
+        value = context.local_state_file.get_value(["variables", context.requirement.env_var], default=None)
         if value is not None:
             config['value'] = value
         return config
 
-    def set_config_value_from_string(self, local_state_file, requirement, name, value_string):
+    def set_config_value_from_string(self, context, name, value_string):
         """Override superclass to set env var value."""
         if name == "value":
-            local_state_file.set_value(["variables", requirement.env_var], value_string)
+            context.local_state_file.set_value(["variables", context.requirement.env_var], value_string)
 
     def config_html(self, requirement):
         """Override superclass to provide our config html."""

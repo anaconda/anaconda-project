@@ -8,6 +8,8 @@ from tornado.httpserver import HTTPServer
 from tornado.netutil import bind_sockets
 from tornado.web import Application, RequestHandler
 
+from project.plugins.provider import ProviderConfigContext
+
 from project.internal.plugin_html import cleanup_and_scope_form, html_tag
 
 
@@ -36,7 +38,9 @@ class PrepareViewHandler(RequestHandler):
             config_html = config_html + "<li>"
             config_html = config_html + html_tag("h3", requirement.title)
             for provider in providers:
-                config = provider.read_config(prepare_context.local_state_file, requirement)
+                config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
+                                                       requirement)
+                config = provider.read_config(config_context)
                 raw_html = provider.config_html(requirement)
                 if raw_html is not None:
                     prefix = self.application.form_prefix(requirement, provider)
@@ -75,8 +79,9 @@ class PrepareViewHandler(RequestHandler):
             if parsed is not None:
                 (requirement, provider, unscoped_name) = parsed
                 value_string = self.get_body_argument(name)
-                provider.set_config_value_from_string(prepare_context.local_state_file, requirement, unscoped_name,
-                                                      value_string)
+                config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
+                                                       requirement)
+                provider.set_config_value_from_string(config_context, unscoped_name, value_string)
 
         prepare_context.local_state_file.save()
 

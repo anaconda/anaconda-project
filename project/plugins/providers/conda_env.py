@@ -15,7 +15,7 @@ class ProjectScopedCondaEnvProvider(Provider):
         """Override superclass to provide our title."""
         return "Conda environment inside the project directory"
 
-    def read_config(self, local_state, requirement):
+    def read_config(self, context):
         """Override superclass to return empty config."""
         return dict()
 
