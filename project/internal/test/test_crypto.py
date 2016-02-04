@@ -27,14 +27,10 @@ def _modified_package(original, json_modifier):
     return crypto._b64encode(json.dumps(loaded).encode('utf-8'))
 
 
-def _mangled_package(original, iv=None, cipher=None, message=None):
+def _mangled_package(original, **kwargs):
     def json_modifier(loaded):
-        if iv is not None:
-            loaded['iv'] = iv
-        if cipher is not None:
-            loaded['cipher'] = cipher
-        if message is not None:
-            loaded['message'] = message
+        for key in kwargs:
+            loaded[key] = kwargs[key]
 
     return _modified_package(original, json_modifier)
 
@@ -88,6 +84,14 @@ def test_missing_iv():
 
 def test_bad_iv():
     _check_package_mangled_field('iv', 'NOPE', 'bad iv length in json')
+
+
+def test_missing_salt():
+    _check_package_missing_field('salt', 'bad salt in json')
+
+
+def test_bad_salt():
+    _check_package_mangled_field('salt', 'NOPE1', 'base64 decoding error')
 
 
 def test_bad_iv_base64():

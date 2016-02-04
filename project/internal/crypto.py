@@ -7,6 +7,8 @@ import json
 from Crypto.Cipher import AES
 from Crypto import Random
 
+import bcrypt
+
 
 class CryptoError(Exception):
     pass
@@ -25,20 +27,24 @@ def _b64encode(s):
     return base64.b64encode(s).decode('ascii')
 
 
-def _key_from_secret(secret):
+def _key_from_secret(secret, salt):
+    # we bcrypt to make it hard to brute-force-attack
+    bcrypted = bcrypt.hashpw(secret.encode('utf-8'), salt)
+    # then we sha256 to force the length to 32 bytes
     m = hashlib.sha256()
-    m.update(secret.encode('utf-8'))
+    m.update(bcrypted)
     key = m.digest()
     assert len(key) == 32
     return key
 
 
 def encrypt_bytes(message, secret):
-    key = _key_from_secret(secret)
+    salt = bcrypt.gensalt()
+    key = _key_from_secret(secret, salt)
     iv = Random.new().read(AES.block_size)
     cipher = AES.new(key, AES.MODE_CFB, iv)
     encrypted = cipher.encrypt(message)
-    dumped = json.dumps(dict(iv=_b64encode(iv), cipher='AES-CFB', message=_b64encode(encrypted)))
+    dumped = json.dumps(dict(iv=_b64encode(iv), cipher='AES-CFB', salt=_b64encode(salt), message=_b64encode(encrypted)))
     single_string = _b64encode(dumped.encode('utf-8'))
     return single_string
 
@@ -61,12 +67,17 @@ def decrypt_bytes(package, secret):
     if len(iv) != AES.block_size:
         raise CryptoError("bad iv length in json")
 
+    if 'salt' not in loaded:
+        raise CryptoError("bad salt in json")
+
+    salt = _b64decode(loaded['salt'])
+
     if 'message' not in loaded:
         raise CryptoError("no message in json")
 
     message = _b64decode(loaded['message'])
 
-    key = _key_from_secret(secret)
+    key = _key_from_secret(secret, salt)
     cipher = AES.new(key, AES.MODE_CFB, iv)
     decrypted = cipher.decrypt(message)
     return decrypted
