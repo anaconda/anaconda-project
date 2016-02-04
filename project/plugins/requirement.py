@@ -21,8 +21,8 @@ class RequirementRegistry(object):
         """
         # future goal will be to un-hardcode this
         if env_var == 'REDIS_URL':
-            from .requirements.redis import DefaultRedisRequirement
-            return DefaultRedisRequirement(env_var=env_var, options=options)
+            from .requirements.redis import RedisRequirement
+            return RedisRequirement(env_var=env_var, options=options)
         elif env_var == 'CONDA_DEFAULT_ENV':
             from .requirements.conda_env import CondaEnvRequirement
             return CondaEnvRequirement(env_var=env_var, options=options)

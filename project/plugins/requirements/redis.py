@@ -5,12 +5,12 @@ from project.plugins.requirement import EnvVarRequirement
 import project.plugins.network_util as network_util
 
 
-class DefaultRedisRequirement(EnvVarRequirement):
+class RedisRequirement(EnvVarRequirement):
     """A requirement for REDIS_URL (or another specified env var) to point to a running Redis."""
 
     def __init__(self, env_var="REDIS_URL", options=None):
         """Extend superclass to default to REDIS_URL."""
-        super(DefaultRedisRequirement, self).__init__(env_var=env_var, options=options)
+        super(RedisRequirement, self).__init__(env_var=env_var, options=options)
 
     def find_providers(self, registry):
         """Override superclass to find by service name 'redis'."""
@@ -18,7 +18,7 @@ class DefaultRedisRequirement(EnvVarRequirement):
 
     def why_not_provided(self, environ):
         """Extend superclass to check the URL syntax and that we can connect to it."""
-        why_not = super(DefaultRedisRequirement, self).why_not_provided(environ)
+        why_not = super(RedisRequirement, self).why_not_provided(environ)
         if why_not is not None:
             return why_not
         url = environ[self.env_var]
