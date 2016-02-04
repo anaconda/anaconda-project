@@ -26,6 +26,9 @@ class RequirementRegistry(object):
         elif env_var == 'CONDA_DEFAULT_ENV':
             from .requirements.conda_env import CondaEnvRequirement
             return CondaEnvRequirement(env_var=env_var, options=options)
+        elif env_var == 'ANACONDA_MASTER_PASSWORD':
+            from .requirements.master_password import MasterPasswordRequirement
+            return MasterPasswordRequirement(options=options)
         else:
             return EnvVarRequirement(env_var=env_var, options=options)
 
