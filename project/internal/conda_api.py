@@ -114,6 +114,7 @@ def installed(prefix):
 
 
 def _is_conda_bindir(path):
+    # TODO: I think Windows uses Scripts
     if not (path.endswith("/bin") or path.endswith("/bin/")):
         return False
     possible_prefix = os.path.dirname(path)
@@ -133,6 +134,7 @@ def set_conda_env_in_path(path, prefix):
     elements = path.split(os.pathsep)
     new_elements = []
     if prefix is not None:
+        # TODO: I think Windows uses Scripts
         new_elements.append(os.path.join(prefix, "bin"))
     for element in elements:
         if element != "" and not _is_conda_bindir(element):
