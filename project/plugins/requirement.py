@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
+from copy import deepcopy
 
 from project.internal.metaclass import with_metaclass
 
@@ -51,8 +52,9 @@ class Requirement(with_metaclass(ABCMeta)):
             options (dict): dict of requirement options from the project config
         """
         if options is None:
-            options = dict()
-        self.options = options
+            self.options = dict()
+        else:
+            self.options = deepcopy(options)
 
     @property
     @abstractmethod
