@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+from abc import ABCMeta, abstractmethod
 import os
 import subprocess
 import sys
@@ -9,6 +10,7 @@ from copy import copy, deepcopy
 
 from tornado.ioloop import IOLoop
 
+from project.internal.metaclass import with_metaclass
 from project.internal.prepare_ui import NotInteractivePrepareUI, BrowserPrepareUI, ConfigurePrepareContext
 from project.local_state_file import LocalStateFile
 from project.plugins.provider import ProvideContext, ProviderRegistry, ProviderConfigContext
@@ -20,6 +22,41 @@ UI_MODE_NOT_INTERACTIVE = "not_interactive"
 _all_ui_modes = (UI_MODE_TEXT, UI_MODE_BROWSER, UI_MODE_NOT_INTERACTIVE)
 
 
+class PrepareStage(with_metaclass(ABCMeta)):
+    """A step in the project preparation process."""
+
+    _failed = False
+
+    @property
+    @abstractmethod
+    def description_of_action(self):
+        """Get a user-visible description of what happens if this step is executed."""
+        pass  # pragma: no cover
+
+    @abstractmethod
+    def execute(self):
+        """Run this step and return a new stage, or None if we are done or failed."""
+        pass  # pragma: no cover
+
+    @property
+    def failed(self):
+        """True if there was a failure during ``execute()``."""
+        return self._failed
+
+
+class _ContinuationPrepareStage(PrepareStage):
+    def __init__(self, description, continuation):
+        self._description = description
+        self._continuation = continuation
+
+    @property
+    def description_of_action(self):
+        return self._description
+
+    def execute(self):
+        return self._continuation(self)
+
+
 def _configure_prepare(ui_mode, context):
     if ui_mode == UI_MODE_NOT_INTERACTIVE:
         ui = NotInteractivePrepareUI()
@@ -29,12 +66,18 @@ def _configure_prepare(ui_mode, context):
     ui.configure_prepare(context)
 
 
-def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=None, environ=None):
-    """Perform all steps needed to get a project ready to execute.
+def prepare_in_stages(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=None, environ=None):
+    """Get a chain of all steps needed to get a project ready to execute.
 
-    This may need to ask the user questions, may start services,
-    run scripts, load configuration, install packages... it can do
-    anything. Expect side effects.
+    This function does not immediately do anything; it returns a
+    ``PrepareStage`` object which can be executed. Executing each
+    stage may return a new stage, or may return ``None``. If a
+    stage returns ``None``, preparation is done and the ``failed``
+    property of the stage indicates whether it failed.
+
+    Executing a stage may ask the user questions, may start
+    services, run scripts, load configuration, install
+    packages... it can do anything. Expect side effects.
 
     Args:
         project (Project): the project
@@ -44,7 +87,7 @@ def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=Non
         environ (dict): the environment to prepare (None to use os.environ)
 
     Returns:
-        True if successful.
+        The first ``PrepareStage`` in the chain of steps.
 
     """
     if ui_mode not in _all_ui_modes:
@@ -78,60 +121,95 @@ def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=Non
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
-    configure_context = ConfigurePrepareContext(io_loop=io_loop,
-                                                environ=environ_copy,
-                                                local_state_file=local_state,
-                                                requirements_and_providers=requirements_and_providers)
+    def configure_stage(stage):
+        configure_context = ConfigurePrepareContext(io_loop=io_loop,
+                                                    environ=environ_copy,
+                                                    local_state_file=local_state,
+                                                    requirements_and_providers=requirements_and_providers)
 
-    # wait for the configure UI if any
-    _configure_prepare(ui_mode, configure_context)
+        # wait for the configure UI if any
+        _configure_prepare(ui_mode, configure_context)
 
-    # the plan is a list of (provider, requirement) in order we
-    # should run it.  our algorithm to decide on this will be
-    # getting more complicated for example we should be able to
-    # ignore any disabled providers, or prefer certain providers,
-    # etc.
-    plan = []
-    for (requirement, providers) in requirements_and_providers:
-        for provider in providers:
-            plan.append((provider, requirement))
+        return _ContinuationPrepareStage("Set up project requirements.", provide_stage)
 
-    for (provider, requirement) in plan:
-        why_not = requirement.why_not_provided(environ_copy)
-        if why_not is None:
-            continue
-        config_context = ProviderConfigContext(environ_copy, local_state, requirement)
-        config = provider.read_config(config_context)
-        context = ProvideContext(environ_copy, local_state, config)
-        provider.provide(requirement, context)
-        if context.errors:
-            for log in context.logs:
-                print(log, file=sys.stdout)
-            # be sure we print all these before the errors
-            sys.stdout.flush()
-        # now print the errors
-        for error in context.errors:
-            print(error, file=sys.stderr)
+    def provide_stage(stage):
+        # the plan is a list of (provider, requirement) in order we
+        # should run it.  our algorithm to decide on this will be
+        # getting more complicated for example we should be able to
+        # ignore any disabled providers, or prefer certain providers,
+        # etc.
+        plan = []
+        for (requirement, providers) in requirements_and_providers:
+            for provider in providers:
+                plan.append((provider, requirement))
 
-    failed = False
-    for requirement in project.requirements:
-        why_not = requirement.why_not_provided(environ_copy)
-        if why_not is not None:
-            print("missing requirement to run this project: {requirement.title}".format(requirement=requirement),
-                  file=sys.stderr)
-            print("  {why_not}".format(why_not=why_not), file=sys.stderr)
-            failed = True
+        for (provider, requirement) in plan:
+            why_not = requirement.why_not_provided(environ_copy)
+            if why_not is None:
+                continue
+            config_context = ProviderConfigContext(environ_copy, local_state, requirement)
+            config = provider.read_config(config_context)
+            context = ProvideContext(environ_copy, local_state, config)
+            provider.provide(requirement, context)
+            if context.errors:
+                for log in context.logs:
+                    print(log, file=sys.stdout)
+                # be sure we print all these before the errors
+                sys.stdout.flush()
+            # now print the errors
+            for error in context.errors:
+                print(error, file=sys.stderr)
 
-    if old_current_loop is not None:
-        old_current_loop.make_current()
+        stage._failed = False
+        for requirement in project.requirements:
+            why_not = requirement.why_not_provided(environ_copy)
+            if why_not is not None:
+                print("missing requirement to run this project: {requirement.title}".format(requirement=requirement),
+                      file=sys.stderr)
+                print("  {why_not}".format(why_not=why_not), file=sys.stderr)
+                stage._failed = True
 
-    if failed:
-        return False
-    else:
-        for key, value in environ_copy.items():
-            if key not in environ or environ[key] != value:
-                environ[key] = value
-        return True
+        if old_current_loop is not None:
+            old_current_loop.make_current()
+
+        if not stage.failed:
+            for key, value in environ_copy.items():
+                if key not in environ or environ[key] != value:
+                    environ[key] = value
+
+        return None
+
+    return _ContinuationPrepareStage("Customize how project requirements will be met.", configure_stage)
+
+
+def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=None, environ=None):
+    """Perform all steps needed to get a project ready to execute.
+
+    This may need to ask the user questions, may start services,
+    run scripts, load configuration, install packages... it can do
+    anything. Expect side effects.
+
+    Args:
+        project (Project): the project
+        ui_mode (str): one of ``UI_MODE_TEXT``, ``UI_MODE_BROWSER``, ``UI_MODE_NOT_INTERACTIVE``
+        io_loop (IOLoop): tornado IOLoop to use, None for default
+        show_url (function): takes a URL and displays it in a browser somehow, None for default
+        environ (dict): the environment to prepare (None to use os.environ)
+
+    Returns:
+        True if successful.
+
+    """
+    stage = prepare_in_stages(project, ui_mode, io_loop, show_url, environ)
+    while stage is not None:
+        # this is a little hack to get code coverage since we will only use
+        # the description later after refactoring the UI
+        stage.description_of_action
+        next_stage = stage.execute()
+        if stage.failed:
+            return False
+        stage = next_stage
+    return True
 
 
 def unprepare(project, io_loop=None):
