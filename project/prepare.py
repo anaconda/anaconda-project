@@ -34,7 +34,7 @@ class PrepareStage(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @abstractmethod
-    def execute(self):
+    def execute(self, ui):
         """Run this step and return a new stage, or None if we are done or failed."""
         pass  # pragma: no cover
 
@@ -53,20 +53,11 @@ class _ContinuationPrepareStage(PrepareStage):
     def description_of_action(self):
         return self._description
 
-    def execute(self):
-        return self._continuation(self)
+    def execute(self, ui):
+        return self._continuation(self, ui)
 
 
-def _configure_prepare(ui_mode, context):
-    if ui_mode == UI_MODE_NOT_INTERACTIVE:
-        ui = NotInteractivePrepareUI()
-    elif ui_mode == UI_MODE_BROWSER:
-        ui = BrowserPrepareUI()
-
-    ui.configure_prepare(context)
-
-
-def prepare_in_stages(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=None, environ=None):
+def prepare_in_stages(project, environ=None):
     """Get a chain of all steps needed to get a project ready to execute.
 
     This function does not immediately do anything; it returns a
@@ -81,26 +72,14 @@ def prepare_in_stages(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, sh
 
     Args:
         project (Project): the project
-        ui_mode (str): one of ``UI_MODE_TEXT``, ``UI_MODE_BROWSER``, ``UI_MODE_NOT_INTERACTIVE``
-        io_loop (IOLoop): tornado IOLoop to use, None for default
-        show_url (function): takes a URL and displays it in a browser somehow, None for default
         environ (dict): the environment to prepare (None to use os.environ)
 
     Returns:
         The first ``PrepareStage`` in the chain of steps.
 
     """
-    if ui_mode not in _all_ui_modes:
-        raise ValueError("invalid UI mode " + ui_mode)
-
     if environ is None:
         environ = os.environ
-
-    old_current_loop = None
-    if io_loop is None:
-        old_current_loop = IOLoop.current()
-        io_loop = IOLoop()
-        io_loop.make_current()
 
     # we modify a copy, which 1) makes all our changes atomic and
     # 2) minimizes memory leaks on systems that use putenv() (it
@@ -121,18 +100,17 @@ def prepare_in_stages(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, sh
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
-    def configure_stage(stage):
-        configure_context = ConfigurePrepareContext(io_loop=io_loop,
-                                                    environ=environ_copy,
+    def configure_stage(stage, ui):
+        configure_context = ConfigurePrepareContext(environ=environ_copy,
                                                     local_state_file=local_state,
                                                     requirements_and_providers=requirements_and_providers)
 
         # wait for the configure UI if any
-        _configure_prepare(ui_mode, configure_context)
+        ui.configure(configure_context)
 
         return _ContinuationPrepareStage("Set up project requirements.", provide_stage)
 
-    def provide_stage(stage):
+    def provide_stage(stage, ui):
         # the plan is a list of (provider, requirement) in order we
         # should run it.  our algorithm to decide on this will be
         # getting more complicated for example we should be able to
@@ -169,9 +147,6 @@ def prepare_in_stages(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, sh
                 print("  {why_not}".format(why_not=why_not), file=sys.stderr)
                 stage._failed = True
 
-        if old_current_loop is not None:
-            old_current_loop.make_current()
-
         if not stage.failed:
             for key, value in environ_copy.items():
                 if key not in environ or environ[key] != value:
@@ -182,7 +157,12 @@ def prepare_in_stages(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, sh
     return _ContinuationPrepareStage("Customize how project requirements will be met.", configure_stage)
 
 
-def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=None, environ=None):
+def _default_show_url(url):
+    import webbrowser
+    webbrowser.open_new_tab(url)
+
+
+def prepare(project, environ=None, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=None):
     """Perform all steps needed to get a project ready to execute.
 
     This may need to ask the user questions, may start services,
@@ -191,24 +171,47 @@ def prepare(project, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=Non
 
     Args:
         project (Project): the project
+        environ (dict): the environment to prepare (None to use os.environ)
         ui_mode (str): one of ``UI_MODE_TEXT``, ``UI_MODE_BROWSER``, ``UI_MODE_NOT_INTERACTIVE``
         io_loop (IOLoop): tornado IOLoop to use, None for default
         show_url (function): takes a URL and displays it in a browser somehow, None for default
-        environ (dict): the environment to prepare (None to use os.environ)
 
     Returns:
         True if successful.
 
     """
-    stage = prepare_in_stages(project, ui_mode, io_loop, show_url, environ)
-    while stage is not None:
-        # this is a little hack to get code coverage since we will only use
-        # the description later after refactoring the UI
-        stage.description_of_action
-        next_stage = stage.execute()
-        if stage.failed:
-            return False
-        stage = next_stage
+    if ui_mode not in _all_ui_modes:
+        raise ValueError("invalid UI mode " + ui_mode)
+
+    old_current_loop = None
+    try:
+        if io_loop is None:
+            old_current_loop = IOLoop.current()
+            io_loop = IOLoop()
+            io_loop.make_current()
+
+        if show_url is None:
+            show_url = _default_show_url
+
+        if ui_mode == UI_MODE_NOT_INTERACTIVE:
+            ui = NotInteractivePrepareUI()
+        elif ui_mode == UI_MODE_BROWSER:
+            ui = BrowserPrepareUI(io_loop=io_loop, show_url=show_url)
+
+        stage = prepare_in_stages(project, environ)
+        while stage is not None:
+            # this is a little hack to get code coverage since we will only use
+            # the description later after refactoring the UI
+            stage.description_of_action
+            next_stage = stage.execute(ui)
+            if stage.failed:
+                return False
+            stage = next_stage
+
+    finally:
+        if old_current_loop is not None:
+            old_current_loop.make_current()
+
     return True
 
 

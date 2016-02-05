@@ -25,8 +25,8 @@ def test_ui_server_empty():
             events.append(event)
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        context = ConfigurePrepareContext(io_loop, dict(), local_state_file, [])
-        server = UIServer(context, event_handler)
+        context = ConfigurePrepareContext(dict(), local_state_file, [])
+        server = UIServer(context, event_handler, io_loop)
 
         get_response = http_get(io_loop, server.url)
         print(repr(get_response))
@@ -58,8 +58,8 @@ def test_ui_server_with_form():
 
         requirement = EnvVarRequirement("FOO")
         provider = EnvVarProvider()
-        context = ConfigurePrepareContext(io_loop, dict(), local_state_file, [(requirement, [provider])])
-        server = UIServer(context, event_handler)
+        context = ConfigurePrepareContext(dict(), local_state_file, [(requirement, [provider])])
+        server = UIServer(context, event_handler, io_loop)
 
         get_response = http_get(io_loop, server.url)
         print(repr(get_response))
@@ -101,8 +101,8 @@ def _ui_server_bad_form_name_test(capsys, name_template, expected_err):
 
         requirement = EnvVarRequirement("FOO")
         provider = EnvVarProvider()
-        context = ConfigurePrepareContext(io_loop, dict(), local_state_file, [(requirement, [provider])])
-        server = UIServer(context, event_handler)
+        context = ConfigurePrepareContext(dict(), local_state_file, [(requirement, [provider])])
+        server = UIServer(context, event_handler, io_loop)
 
         req_id = list(server._application._requirements_by_id.keys())[0]
         if '%s' in name_template:

@@ -107,9 +107,9 @@ class PrepareViewHandler(RequestHandler):
 
 
 class UIApplication(Application):
-    def __init__(self, prepare_context, event_handler, **kwargs):
+    def __init__(self, prepare_context, event_handler, io_loop, **kwargs):
         self._event_handler = event_handler
-        self.io_loop = prepare_context.io_loop
+        self.io_loop = io_loop
         self.prepare_context = prepare_context
 
         self._requirements_by_id = {}
@@ -152,12 +152,11 @@ class UIApplication(Application):
 
 
 class UIServer(object):
-    def __init__(self, prepare_context, event_handler):
+    def __init__(self, prepare_context, event_handler, io_loop):
         assert event_handler is not None
-        io_loop = prepare_context.io_loop
         assert io_loop is not None
 
-        self._application = UIApplication(prepare_context, event_handler)
+        self._application = UIApplication(prepare_context, event_handler, io_loop)
         self._http = HTTPServer(self._application, io_loop=io_loop)
 
         # these would throw OSError on failure
