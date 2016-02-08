@@ -44,7 +44,7 @@ def toposort(nodes, get_next_nodes):
     return list(result)
 
 
-def toposort_from_dependency_info(nodes, get_node_key, get_dependency_keys):
+def toposort_from_dependency_info(nodes, get_node_key, get_dependency_keys, can_ignore_dependency=None):
     """Sort list of nodes that depend on other nodes in dependency-first order.
 
     All dependencies must be in the list of nodes.
@@ -54,7 +54,7 @@ def toposort_from_dependency_info(nodes, get_node_key, get_dependency_keys):
     Args:
         nodes (iterable): iterable of some kind of node
         get_node_key (function): get identifier for a node
-        get_dependency_keys (function): get list of node identifiers a node depends on
+        get_dependency_keys (function): get iterable of node identifiers a node depends on
 
     Returns:
         new sorted list of nodes
@@ -73,7 +73,9 @@ def toposort_from_dependency_info(nodes, get_node_key, get_dependency_keys):
         dep_keys = get_dependency_keys(node)
         for dep_key in dep_keys:
             if dep_key not in nodes_by_key:
-                raise ValueError("Dependency %r was not in the list of nodes %r" % (dep_key, nodes))
-            node_depended_on_by[dep_key].add(node)
+                if can_ignore_dependency is None or not can_ignore_dependency(dep_key):
+                    raise ValueError("Dependency %r was not in the list of nodes %r" % (dep_key, nodes))
+            else:
+                node_depended_on_by[dep_key].add(node)
 
     return toposort(nodes, lambda n: node_depended_on_by[get_node_key(n)])
