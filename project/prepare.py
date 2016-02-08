@@ -25,12 +25,16 @@ _all_ui_modes = (UI_MODE_TEXT, UI_MODE_BROWSER, UI_MODE_NOT_INTERACTIVE)
 class PrepareStage(with_metaclass(ABCMeta)):
     """A step in the project preparation process."""
 
-    _failed = False
-
     @property
     @abstractmethod
     def description_of_action(self):
         """Get a user-visible description of what happens if this step is executed."""
+        pass  # pragma: no cover
+
+    @property
+    @abstractmethod
+    def failed(self):
+        """True if there was a failure during ``execute()``."""
         pass  # pragma: no cover
 
     @abstractmethod
@@ -38,23 +42,112 @@ class PrepareStage(with_metaclass(ABCMeta)):
         """Run this step and return a new stage, or None if we are done or failed."""
         pass  # pragma: no cover
 
-    @property
-    def failed(self):
-        """True if there was a failure during ``execute()``."""
-        return self._failed
 
+class _FunctionPrepareStage(PrepareStage):
+    """A stage chain where the description and the execute function are passed in to the constructor."""
 
-class _ContinuationPrepareStage(PrepareStage):
-    def __init__(self, description, continuation):
+    def __init__(self, description, execute):
+        self._failed = False
         self._description = description
-        self._continuation = continuation
+        self._execute = execute
 
     @property
     def description_of_action(self):
         return self._description
 
+    @property
+    def failed(self):
+        return self._failed
+
     def execute(self, ui):
-        return self._continuation(self, ui)
+        return self._execute(self, ui)
+
+
+class _AndThenPrepareStage(PrepareStage):
+    """A stage chain which runs an ``and_then`` function after it executes successfully."""
+
+    def __init__(self, stage, and_then):
+        self._stage = stage
+        self._and_then = and_then
+
+    @property
+    def description_of_action(self):
+        return self._stage.description_of_action
+
+    @property
+    def failed(self):
+        return self._stage.failed
+
+    def execute(self, ui):
+        next = self._stage.execute(ui)
+        if next is None:
+            if self._stage.failed:
+                return None
+            else:
+                return self._and_then()
+        else:
+            return _AndThenPrepareStage(next, self._and_then)
+
+
+def _after_stage_success(stage, and_then):
+    """Run and_then function after stage executes successfully.
+
+    and_then may return another stage, or None.
+    """
+    return _AndThenPrepareStage(stage, and_then)
+
+
+def _process_requirements_and_providers(project, environ, local_state, requirements_and_providers):
+    def configure_stage(stage, ui):
+        configure_context = ConfigurePrepareContext(environ=environ,
+                                                    local_state_file=local_state,
+                                                    requirements_and_providers=requirements_and_providers)
+
+        # wait for the configure UI if any
+        ui.configure(configure_context)
+
+        return _FunctionPrepareStage("Set up project requirements.", provide_stage)
+
+    def provide_stage(stage, ui):
+        # the plan is a list of (provider, requirement) in order we
+        # should run it.  our algorithm to decide on this will be
+        # getting more complicated for example we should be able to
+        # ignore any disabled providers, or prefer certain providers,
+        # etc.
+        plan = []
+        for (requirement, providers) in requirements_and_providers:
+            for provider in providers:
+                plan.append((provider, requirement))
+
+        for (provider, requirement) in plan:
+            why_not = requirement.why_not_provided(environ)
+            if why_not is None:
+                continue
+            config_context = ProviderConfigContext(environ, local_state, requirement)
+            config = provider.read_config(config_context)
+            context = ProvideContext(environ, local_state, config)
+            provider.provide(requirement, context)
+            if context.errors:
+                for log in context.logs:
+                    print(log, file=sys.stdout)
+                # be sure we print all these before the errors
+                sys.stdout.flush()
+            # now print the errors
+            for error in context.errors:
+                print(error, file=sys.stderr)
+
+        stage._failed = False
+        for requirement in project.requirements:
+            why_not = requirement.why_not_provided(environ)
+            if why_not is not None:
+                print("missing requirement to run this project: {requirement.title}".format(requirement=requirement),
+                      file=sys.stderr)
+                print("  {why_not}".format(why_not=why_not), file=sys.stderr)
+                stage._failed = True
+
+        return None
+
+    return _FunctionPrepareStage("Customize how project requirements will be met.", configure_stage)
 
 
 def prepare_in_stages(project, environ=None):
@@ -100,61 +193,15 @@ def prepare_in_stages(project, environ=None):
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
-    def configure_stage(stage, ui):
-        configure_context = ConfigurePrepareContext(environ=environ_copy,
-                                                    local_state_file=local_state,
-                                                    requirements_and_providers=requirements_and_providers)
+    first_stage = _process_requirements_and_providers(project, environ_copy, local_state, requirements_and_providers)
 
-        # wait for the configure UI if any
-        ui.configure(configure_context)
-
-        return _ContinuationPrepareStage("Set up project requirements.", provide_stage)
-
-    def provide_stage(stage, ui):
-        # the plan is a list of (provider, requirement) in order we
-        # should run it.  our algorithm to decide on this will be
-        # getting more complicated for example we should be able to
-        # ignore any disabled providers, or prefer certain providers,
-        # etc.
-        plan = []
-        for (requirement, providers) in requirements_and_providers:
-            for provider in providers:
-                plan.append((provider, requirement))
-
-        for (provider, requirement) in plan:
-            why_not = requirement.why_not_provided(environ_copy)
-            if why_not is None:
-                continue
-            config_context = ProviderConfigContext(environ_copy, local_state, requirement)
-            config = provider.read_config(config_context)
-            context = ProvideContext(environ_copy, local_state, config)
-            provider.provide(requirement, context)
-            if context.errors:
-                for log in context.logs:
-                    print(log, file=sys.stdout)
-                # be sure we print all these before the errors
-                sys.stdout.flush()
-            # now print the errors
-            for error in context.errors:
-                print(error, file=sys.stderr)
-
-        stage._failed = False
-        for requirement in project.requirements:
-            why_not = requirement.why_not_provided(environ_copy)
-            if why_not is not None:
-                print("missing requirement to run this project: {requirement.title}".format(requirement=requirement),
-                      file=sys.stderr)
-                print("  {why_not}".format(why_not=why_not), file=sys.stderr)
-                stage._failed = True
-
-        if not stage.failed:
-            for key, value in environ_copy.items():
-                if key not in environ or environ[key] != value:
-                    environ[key] = value
-
+    def set_vars():
+        for key, value in environ_copy.items():
+            if key not in environ or environ[key] != value:
+                environ[key] = value
         return None
 
-    return _ContinuationPrepareStage("Customize how project requirements will be met.", configure_stage)
+    return _after_stage_success(first_stage, set_vars)
 
 
 def _default_show_url(url):
