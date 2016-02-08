@@ -91,6 +91,10 @@ class EnvVarRequirement(Requirement):
         super(EnvVarRequirement, self).__init__(options)
         self.env_var = env_var
 
+    def __repr__(self):
+        """Custom repr of EnvVarRequirement."""
+        return "%s(env_var='%s')" % (self.__class__.__name__, self.env_var)
+
     @property
     def title(self):
         """Override superclass title."""

@@ -7,6 +7,7 @@ def test_find_by_env_var_unknown():
     assert found is not None
     assert isinstance(found, EnvVarRequirement)
     assert found.env_var == 'FOO'
+    assert "EnvVarRequirement(env_var='FOO')" == repr(found)
 
 
 def test_autoguess_encrypted_option():
