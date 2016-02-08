@@ -152,6 +152,11 @@ class Project(object):
         return self._project_file
 
     @property
+    def requirement_registry(self):
+        """Get the ``RequirementRegistry`` for this project."""
+        return self._config_cache.requirement_registry
+
+    @property
     def conda_meta_file(self):
         """Get the ``CondaMetaFile`` for this project."""
         return self._conda_meta_file

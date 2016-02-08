@@ -7,6 +7,7 @@ import os
 
 from project.internal.metaclass import with_metaclass
 from project.internal.makedirs import makedirs_ok_if_exists
+from project.internal.crypto import encrypt_string, decrypt_string
 
 
 class ProviderRegistry(object):
@@ -156,6 +157,26 @@ class Provider(with_metaclass(ABCMeta)):
         """When we store config for this provider, we use this as the key."""
         return self.__class__.__name__
 
+    def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
+        """Get a list of unset environment variable names that must be set before configuring this provider.
+
+        Args:
+            requirement (Requirement): requirement instance we are providing for
+            environ (dict): current environment variable dict
+            local_state_file (LocalStateFile): local state file
+        """
+        return ()
+
+    def missing_env_vars_to_provide(self, requirement, environ, local_state_file):
+        """Get a list of unset environment variable names that must be set before calling provide().
+
+        Args:
+            requirement (Requirement): requirement instance we are providing for
+            environ (dict): current environment variable dict
+            local_state_file (LocalStateFile): local state file
+        """
+        return ()
+
     @abstractmethod
     def read_config(self, context):
         """Read a config dict from the local state file for the given requirement."""
@@ -212,26 +233,89 @@ class EnvVarProvider(Provider):
         """Override superclass with our title."""
         return "Manually set environment variable"
 
+    def _local_state_override(self, requirement, local_state_file):
+        return local_state_file.get_value(["variables", requirement.env_var], default=None)
+
+    def _key_from_value(cls, value):
+        if isinstance(value, dict) and 'key' in value:
+            return value['key']
+        else:
+            return None
+
+    def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
+        """Override superclass to require encryption key variable if this env var is encrypted."""
+        # we need the master password to either read from local
+        # state file, or save a new value to the local state file,
+        # but we do NOT need it if the env var is already set
+        # (which is likely to happen in a production-server-type
+        # deployment)
+        local_override = self._local_state_override(requirement, local_state_file)
+        local_override_key = self._key_from_value(local_override)
+        if local_override_key is not None:
+            return (local_override_key, )
+        elif requirement.encrypted and requirement.env_var not in environ:
+            # default key - we'll need this to save the encrypted value
+            return ('ANACONDA_MASTER_PASSWORD', )
+        else:
+            return ()
+
+    def missing_env_vars_to_provide(self, requirement, environ, local_state_file):
+        """Override superclass to require encryption key variable if this env var is encrypted."""
+        local_override = self._local_state_override(requirement, local_state_file)
+        local_override_key = self._key_from_value(local_override)
+        if local_override_key is not None:
+            return (local_override_key, )
+        elif requirement.env_var in environ:
+            # nothing to decrypt
+            return ()
+        else:
+            default_key = self._key_from_value(requirement.options.get('default', None))
+            if default_key is not None:
+                return (default_key, )
+            else:
+                return ()
+
     def read_config(self, context):
         """Override superclass to read env var value."""
         config = dict()
-        value = context.local_state_file.get_value(["variables", context.requirement.env_var], default=None)
+        value = self._local_state_override(context.requirement, context.local_state_file)
+        key = self._key_from_value(value)
         if value is not None:
+            if key is not None:
+                # TODO: we need to deal with missing 'encrypted'
+                # or with a bad password in some way
+                encrypted = value['encrypted']
+                value = decrypt_string(encrypted, context.environ[key])
             config['value'] = value
         return config
 
     def set_config_value_from_string(self, context, name, value_string):
         """Override superclass to set env var value."""
         if name == "value":
-            context.local_state_file.set_value(["variables", context.requirement.env_var], value_string)
+
+            local_override_value = self._local_state_override(context.requirement, context.local_state_file)
+
+            key = self._key_from_value(local_override_value)
+            if key is None and context.requirement.encrypted:
+                key = 'ANACONDA_MASTER_PASSWORD'
+
+            if key is not None:
+                value = dict(key=key, encrypted=encrypt_string(value_string, context.environ[key]))
+            else:
+                value = value_string
+            context.local_state_file.set_value(["variables", context.requirement.env_var], value)
 
     def config_html(self, requirement):
         """Override superclass to provide our config html."""
+        if requirement.encrypted:
+            input_type = 'password'
+        else:
+            input_type = 'text'
         return """
 <form>
-  <label>Value: <input type="text" name="value"/></label>
+  <label>Value: <input type="{input_type}" name="value"/></label>
 </form>
-"""
+""".format(input_type=input_type)
 
     def provide(self, requirement, context):
         """Override superclass to use configured env var (or already-set env var)."""
@@ -257,6 +341,16 @@ class EnvVarProvider(Provider):
             # runtime:
             #   REDIS_URL:
             #     default: "redis://example.com:1234"
-            context.environ[requirement.env_var] = requirement.options['default']
+            value = requirement.options['default']
+            default_key = self._key_from_value(value)
+            if default_key is not None:
+                if 'encrypted' not in value:
+                    context.append_error("No 'encrypted' field in the default value of %s" % (requirement.env_var))
+                    return
+                value = decrypt_string(value['encrypted'], context.environ[default_key])
+            if isinstance(value, str):
+                context.environ[requirement.env_var] = value
+            else:
+                context.append_error("Value of '%s' should be a string not %r" % (requirement.env_var, value))
         else:
             pass

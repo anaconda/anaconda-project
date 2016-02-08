@@ -10,6 +10,12 @@ class MasterPasswordRequirement(EnvVarRequirement):
         """Extend superclass to always use ANACONDA_MASTER_PASSWORD."""
         super(MasterPasswordRequirement, self).__init__(env_var='ANACONDA_MASTER_PASSWORD', options=options)
 
+    @property
+    def encrypted(self):
+        """Override superclass to never encrypt ANACONDA_MASTER_PASSWORD which would be circular."""
+        # TODO we do want to use a password input field though... override config_html ?
+        return False
+
     def find_providers(self, registry):
         """Override superclass to list no providers."""
         # EnvVarProvider will let you put the master password in

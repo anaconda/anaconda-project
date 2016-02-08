@@ -12,6 +12,7 @@ from tornado.ioloop import IOLoop
 
 from project.internal.metaclass import with_metaclass
 from project.internal.prepare_ui import NotInteractivePrepareUI, BrowserPrepareUI, ConfigurePrepareContext
+from project.internal.toposort import toposort_from_dependency_info
 from project.local_state_file import LocalStateFile
 from project.plugins.provider import ProvideContext, ProviderRegistry, ProviderConfigContext
 
@@ -94,10 +95,36 @@ def _after_stage_success(stage, and_then):
 
     and_then may return another stage, or None.
     """
+    assert stage is not None
     return _AndThenPrepareStage(stage, and_then)
 
 
-def _process_requirements_and_providers(project, environ, local_state, requirements_and_providers):
+def _sort_requirements_and_providers(environ, local_state, requirements_and_providers, missing_vars_getter):
+    def get_node_key(requirement_and_providers):
+        # If we add a Requirement that isn't an EnvVarRequirement,
+        # we can simply return the requirement object here as its
+        # own key I believe. But for now that doesn't happen.
+        assert hasattr(requirement_and_providers[0], 'env_var')
+        return requirement_and_providers[0].env_var
+
+    def get_dependency_keys(requirement_and_providers):
+        config_keys = set()
+        for provider in requirement_and_providers[1]:
+            for env_var in missing_vars_getter(provider, requirement_and_providers[0], environ, local_state):
+                config_keys.add(env_var)
+        return config_keys
+
+    def can_ignore_dependency_on_key(key):
+        # if a key is already in the environment, we don't have to
+        # worry about it existing as a node in the graph we are
+        # topsorting
+        return key in environ
+
+    return toposort_from_dependency_info(requirements_and_providers, get_node_key, get_dependency_keys,
+                                         can_ignore_dependency_on_key)
+
+
+def _configure_and_provide(project, environ, local_state, requirements_and_providers):
     def configure_stage(stage, ui):
         configure_context = ConfigurePrepareContext(environ=environ,
                                                     local_state_file=local_state,
@@ -110,12 +137,19 @@ def _process_requirements_and_providers(project, environ, local_state, requireme
 
     def provide_stage(stage, ui):
         # the plan is a list of (provider, requirement) in order we
-        # should run it.  our algorithm to decide on this will be
+        # should run it.  our algorithm to decide on this may be
         # getting more complicated for example we should be able to
         # ignore any disabled providers, or prefer certain providers,
         # etc.
+
+        def get_missing_to_provide(provider, requirement, environ, local_state):
+            return provider.missing_env_vars_to_provide(requirement, environ, local_state)
+
+        sorted = _sort_requirements_and_providers(environ, local_state, requirements_and_providers,
+                                                  get_missing_to_provide)
+
         plan = []
-        for (requirement, providers) in requirements_and_providers:
+        for (requirement, providers) in sorted:
             for provider in providers:
                 plan.append((provider, requirement))
 
@@ -137,7 +171,7 @@ def _process_requirements_and_providers(project, environ, local_state, requireme
                 print(error, file=sys.stderr)
 
         stage._failed = False
-        for requirement in project.requirements:
+        for (requirement, providers) in requirements_and_providers:
             why_not = requirement.why_not_provided(environ)
             if why_not is not None:
                 print("missing requirement to run this project: {requirement.title}".format(requirement=requirement),
@@ -148,6 +182,96 @@ def _process_requirements_and_providers(project, environ, local_state, requireme
         return None
 
     return _FunctionPrepareStage("Customize how project requirements will be met.", configure_stage)
+
+
+def _partition_first_group_to_configure(environ, local_state, requirements_and_providers):
+    def get_missing_to_configure(provider, requirement, environ, local_state):
+        return provider.missing_env_vars_to_configure(requirement, environ, local_state)
+
+    sorted = _sort_requirements_and_providers(environ, local_state, requirements_and_providers,
+                                              get_missing_to_configure)
+
+    # We want "head" to be everything up to but not including the
+    # first requirement that's missing needed env vars. head
+    # should then include the requirement that supplies the
+    # missing env var.
+
+    head = []
+    tail = []
+
+    sorted.reverse()  # to efficiently pop
+    while sorted:
+        requirement_and_providers = sorted.pop()
+
+        missing_vars = False
+        for provider in requirement_and_providers[1]:
+            if len(provider.missing_env_vars_to_configure(requirement_and_providers[0], environ, local_state)) > 0:
+                missing_vars = True
+
+        if missing_vars:
+            tail.append(requirement_and_providers)
+            break
+        else:
+            head.append(requirement_and_providers)
+
+    sorted.reverse()  # put it back in order
+    tail.extend(sorted)
+
+    return (head, tail)
+
+
+def _process_requirements_and_providers(project, environ, local_state, requirements_and_providers):
+    (initial, remaining) = _partition_first_group_to_configure(environ, local_state, requirements_and_providers)
+
+    # a surprising thing here is that the "stages" from
+    # _configure_and_provide() can be user-visible, so we always
+    # want at least one (even when all the lists are empty), but
+    # we don't want to pointlessly create two by splitting off an
+    # empty list when we already have a list. So we want two
+    # _configure_and_provide() only if there are two non-empty lists,
+    # but we always want at least one _configure_and_provide()
+
+    def _stages_for(requirements_and_providers):
+        return _configure_and_provide(project, environ, local_state, requirements_and_providers)
+
+    if len(initial) > 0 and len(remaining) > 0:
+
+        def process_remaining():
+            return _process_requirements_and_providers(project, environ, local_state, remaining)
+
+        return _after_stage_success(_stages_for(initial), process_remaining)
+    elif len(initial) > 0:
+        return _stages_for(initial)
+    else:
+        return _stages_for(remaining)
+
+
+def _add_missing_env_var_requirements(project, provider_registry, environ, local_state, requirements_and_providers):
+    by_env_var = dict()
+    for (requirement, providers) in requirements_and_providers:
+        # if we add requirements with no env_var, change this to
+        # skip those requirements here
+        assert hasattr(requirement, 'env_var')
+        by_env_var[requirement.env_var] = requirement
+
+    needed_env_vars = set()
+    for (requirement, providers) in requirements_and_providers:
+        for provider in providers:
+            needed_env_vars.update(provider.missing_env_vars_to_configure(requirement, environ, local_state))
+            needed_env_vars.update(provider.missing_env_vars_to_provide(requirement, environ, local_state))
+
+    created_anything = False
+
+    for env_var in needed_env_vars:
+        if env_var not in by_env_var:
+            created_anything = True
+            requirement = project.requirement_registry.find_by_env_var(env_var, options=dict())
+            providers = requirement.find_providers(provider_registry)
+            requirements_and_providers.append((requirement, tuple(providers)))
+
+    if created_anything:
+        # run the whole above again to find any transitive requirements of the new providers
+        _add_missing_env_var_requirements(project, provider_registry, environ, local_state, requirements_and_providers)
 
 
 def prepare_in_stages(project, environ=None):
@@ -189,9 +313,11 @@ def prepare_in_stages(project, environ=None):
     requirements_and_providers = []
     for requirement in project.requirements:
         providers = requirement.find_providers(provider_registry)
-        requirements_and_providers.append((requirement, providers))
+        requirements_and_providers.append((requirement, tuple(providers)))
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
+
+    _add_missing_env_var_requirements(project, provider_registry, environ, local_state, requirements_and_providers)
 
     first_stage = _process_requirements_and_providers(project, environ_copy, local_state, requirements_and_providers)
 

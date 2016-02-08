@@ -9,6 +9,7 @@ def test_find_by_env_var_master_password():
     assert found is not None
     assert isinstance(found, MasterPasswordRequirement)
     assert found.env_var == 'ANACONDA_MASTER_PASSWORD'
+    assert not found.encrypted
 
 
 def test_master_password_not_set():

@@ -5,11 +5,12 @@ import os
 import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
+from project.internal.crypto import encrypt_string
 from project.local_state_file import LocalStateFile, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
 from project.plugins.provider import Provider, ProvideContext, ProviderRegistry, EnvVarProvider, ProviderConfigContext
 from project.plugins.requirement import EnvVarRequirement
 from project.project import Project
-from project.project_file import PROJECT_FILENAME
+from project.project_file import ProjectFile, PROJECT_FILENAME
 
 
 def test_find_by_env_var():
@@ -104,6 +105,83 @@ runtime:
 """}, check_env_var_provider)
 
 
+def test_env_var_provider_with_encrypted_default_value_in_project_file():
+    def check_env_var_provider(dirname):
+        # Save a default value which is encrypted and the key is in var MASTER
+        project_file = ProjectFile.load_for_directory(dirname)
+        secret = "boo"
+        encrypted = encrypt_string("from_default", secret)
+        project_file.set_value(['runtime', 'FOO_SECRET'], dict(default=dict(key='MASTER', encrypted=encrypted)))
+        project_file.save()
+
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO_SECRET")
+        assert requirement.encrypted
+        assert dict(default=dict(key='MASTER', encrypted=encrypted)) == requirement.options
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        assert ('ANACONDA_MASTER_PASSWORD', ) == provider.missing_env_vars_to_configure(
+            requirement, config_context.environ, local_state_file)
+        assert ('MASTER', ) == provider.missing_env_vars_to_provide(requirement, config_context.environ,
+                                                                    local_state_file)
+        config = provider.read_config(config_context)
+        context = ProvideContext(environ=dict(MASTER=secret), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO_SECRET' in context.environ
+        assert 'from_default' == context.environ['FOO_SECRET']
+
+    with_directory_contents(dict(), check_env_var_provider)
+
+
+def test_env_var_provider_with_encrypted_default_value_in_project_file_for_non_encrypted_requirement():
+    def check_env_var_provider(dirname):
+        # Save a default value which is encrypted and the key is in var MASTER
+        project_file = ProjectFile.load_for_directory(dirname)
+        secret = "boo"
+        encrypted = encrypt_string("from_default", secret)
+        project_file.set_value(['runtime', 'FOO'], dict(default=dict(key='MASTER', encrypted=encrypted)))
+        project_file.save()
+
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO")
+        assert not requirement.encrypted  # this is the point of this test
+        assert dict(default=dict(key='MASTER', encrypted=encrypted)) == requirement.options
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
+        context = ProvideContext(environ=dict(MASTER=secret), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO' in context.environ
+        assert 'from_default' == context.environ['FOO']
+
+    with_directory_contents(dict(), check_env_var_provider)
+
+
+def test_env_var_provider_with_unencrypted_default_value_in_project_file_for_encrypted_requirement():
+    # the idea here is that if you want to put an unencrypted
+    # password in the file, we aren't going to be annoying and
+    # stop you.
+    def check_env_var_provider(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO_SECRET")
+        assert requirement.encrypted
+        assert dict(default='from_default') == requirement.options
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
+        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO_SECRET' in context.environ
+        assert 'from_default' == context.environ['FOO_SECRET']
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  FOO_SECRET:
+    default: from_default
+"""}, check_env_var_provider)
+
+
 def test_env_var_provider_with_value_set_in_environment():
     def check_env_var_provider(dirname):
         provider = EnvVarProvider()
@@ -149,6 +227,81 @@ runtime:
          LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
 variables:
   FOO: from_local_state
+"""}, check_env_var_provider)
+
+
+def test_env_var_provider_with_encrypted_default_value_in_local_state():
+    def check_env_var_provider(dirname):
+        # Save a default value which is encrypted and the key is in var MASTER
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        secret = "boo"
+        encrypted = encrypt_string("from_local_state", secret)
+        local_state_file.set_value(['variables', 'FOO_SECRET'], dict(key='MASTER', encrypted=encrypted))
+        local_state_file.save()
+
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO_SECRET")
+        assert requirement.encrypted
+        assert dict(default='from_default') == requirement.options
+        config_context = ProviderConfigContext(dict(MASTER=secret), local_state_file, requirement)
+        assert ('MASTER', ) == provider.missing_env_vars_to_configure(requirement, config_context.environ,
+                                                                      local_state_file)
+        assert ('MASTER', ) == provider.missing_env_vars_to_provide(requirement, config_context.environ,
+                                                                    local_state_file)
+        config = provider.read_config(config_context)
+        context = ProvideContext(environ=config_context.environ, local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO_SECRET' in context.environ
+        assert 'from_local_state' == context.environ['FOO_SECRET']
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  FOO_SECRET:
+    default: from_default
+"""}, check_env_var_provider)
+
+
+def test_env_var_provider_with_missing_encrypted_field_in_project_file():
+    def check_env_var_provider(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO")
+        assert dict(default=dict(key='MASTER_PASSWORD')) == requirement.options
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
+        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO' not in context.environ
+        assert ["No 'encrypted' field in the default value of FOO"] == context.errors
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  FOO:
+    default: { key: 'MASTER_PASSWORD' }
+"""}, check_env_var_provider)
+
+
+def test_env_var_provider_with_missing_key_field_in_project_file():
+    def check_env_var_provider(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO")
+        assert dict(default=dict(encrypted='abcdefg')) == requirement.options
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
+        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO' not in context.environ
+        assert 1 == len(context.errors)
+        assert "Value of 'FOO' should be a string" in context.errors[0]
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  FOO:
+    default: { encrypted: 'abcdefg' }
 """}, check_env_var_provider)
 
 
