@@ -1,5 +1,6 @@
 from __future__ import absolute_import, print_function
 
+import collections
 import socket
 import sys
 import uuid
@@ -74,14 +75,19 @@ class PrepareViewHandler(RequestHandler):
     def post(self, *args, **kwargs):
         prepare_context = self.application.prepare_context
 
+        configs = collections.defaultdict(lambda: dict())
         for name in self.request.body_arguments:
             parsed = self.application.parse_form_name(name)
             if parsed is not None:
                 (requirement, provider, unscoped_name) = parsed
                 value_string = self.get_body_argument(name)
+                values = configs[(requirement, provider)]
+                values[unscoped_name] = value_string
+        for ((requirement, provider), values) in configs.items():
+            for (key, value) in values.items():
                 config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
                                                        requirement)
-                provider.set_config_value_from_string(config_context, unscoped_name, value_string)
+                provider.set_config_value_from_string(config_context, key, value)
 
         prepare_context.local_state_file.save()
 
