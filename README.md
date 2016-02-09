@@ -35,11 +35,9 @@ someone else.
 
 ## `PROJECTDIR/.anaconda/project-local.yml`
 
-A project source directory can contain a `project.yml`
-file. `project.yml` contains items which are constant across
-machines and users; that is, it's intended to go in source control
-or to be distributed when you hand the project directory to
-someone else.
+This file contains state that is NOT shared across machines and
+users; it's scoped to the project directory and wouldn't go in
+source control.
 
 ## `PROJECTDIR/.anaconda/run/SERVICE_NAME`
 
@@ -65,6 +63,9 @@ sync: http://conda.pydata.org/docs/building/meta-yaml.html
   here instead, if you either don't have a conda recipe or
   want to override it for Anaconda Project purposes.
   Fields we look at right now: `name`, `version`
+* `app`: the `entry` field means the same thing as in `meta.yaml`,
+  we use it from either file.
+* `requirements`: the `run` requirements can be in here or in `meta.yaml`
 
 # `project-local.yml` Schema
 
