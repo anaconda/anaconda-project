@@ -100,3 +100,26 @@ def test_bad_iv_base64():
 
 def test_missing_message():
     _check_package_missing_field('message', 'no message in json')
+
+
+def test_long_secret_matters():
+    message = "Hello World"
+
+    def check_secret_length(count):
+        secret = "a" * count
+        assert len(secret) == count
+        encrypted = crypto.encrypt_string(message, secret)
+        decrypted_ok = crypto.decrypt_string(encrypted, secret)
+        decrypted_not_ok = crypto.decrypt_string(encrypted, secret + "a")
+        assert message == decrypted_ok
+        assert message != decrypted_not_ok
+
+    check_secret_length(1)
+    check_secret_length(32)
+    check_secret_length(64)
+    check_secret_length(71)
+    # some bcrypt implementations including the one we are using ignore after byte 72.
+    # our code has to work around this.
+    check_secret_length(72)
+    check_secret_length(128)
+    check_secret_length(256)

@@ -28,8 +28,15 @@ def _b64encode(s):
 
 
 def _key_from_secret(secret, salt):
-    # we bcrypt to make it hard to brute-force-attack
-    bcrypted = bcrypt.hashpw(secret.encode('utf-8'), salt)
+    # we bcrypt to make it hard to brute-force-attack. We have to bcrypt
+    # every 72 bytes because it ignores bytes after the first 72.
+    encoded_secret = secret.encode('utf-8')
+    bcrypted = "".encode("utf-8")
+    while len(encoded_secret) > 0:
+        (head, tail) = (encoded_secret[:72], encoded_secret[72:])
+        encoded_secret = tail
+        bcrypted = bcrypted + bcrypt.hashpw(head, salt)
+
     # then we sha256 to force the length to 32 bytes
     m = hashlib.sha256()
     m.update(bcrypted)
