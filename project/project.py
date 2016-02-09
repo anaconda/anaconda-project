@@ -3,6 +3,8 @@ from __future__ import absolute_import
 
 import os
 
+from distutils.spawn import find_executable
+
 from project.project_file import ProjectFile
 from project.conda_meta_file import CondaMetaFile
 from project.plugins.requirement import RequirementRegistry
@@ -42,6 +44,7 @@ class _ConfigCache(object):
             # this MUST be after we _update_runtime since we may get CondaEnvRequirement
             # options in the runtime section
             self._update_conda_env_requirements(requirements, problems, project_file, conda_meta_file)
+            self._update_launch_argv(problems, project_file, conda_meta_file)
 
         self.requirements = requirements
         self.problems = problems
@@ -114,6 +117,28 @@ class _ConfigCache(object):
             requirements.append(env_requirement)
         else:
             env_requirement.conda_package_specs.extend(packages)
+
+    def _update_launch_argv(self, problems, project_file, conda_meta_file):
+        def load_from(yaml_file):
+            app_entry = yaml_file.app_entry
+            if app_entry is not None and not isinstance(app_entry, str):
+                problems.append("%s: app: entry: should be a string not '%r'" % (yaml_file.filename, app_entry))
+                return None
+            else:
+                return app_entry
+
+        app_entry = load_from(project_file)
+        if app_entry is None:
+            app_entry = load_from(conda_meta_file)
+
+        if app_entry is None:
+            self.launch_argv = None
+        else:
+            # conda.misc uses plain split and not shlex or
+            # anything like that, we need to match its
+            # interpretation
+            parsed = app_entry.split()
+            self.launch_argv = tuple(parsed)
 
 
 class Project(object):
@@ -207,3 +232,45 @@ class Project(object):
         and the ``conda.resolve.MatchSpec`` class).
         """
         return self._updated_cache().requirements_run
+
+    @property
+    def launch_argv(self):
+        """Get the argv to run the project or None.
+
+        This argv is not "ready to use" because it has to be
+        resolved against a set of environment variables and a
+        conda environment. The ``prepare()`` API can do this for
+        you.
+
+        Returns:
+            iterable of strings or None if no launch command configured
+        """
+        return self._updated_cache().launch_argv
+
+    def launch_argv_for_environment(self, environ):
+        """Get a usable argv with the executable path made absolute and prefix substituted.
+
+        Args:
+            environ (dict): the environment
+        Returns:
+            argv as list of strings
+        """
+        # see conda.misc::launch for what we're copying
+        for name in ('CONDA_DEFAULT_ENV', 'PATH', 'PROJECT_DIR'):
+            if name not in environ:
+                raise ValueError("To get a runnable command for the app, %s must be set." % (name))
+
+        prefix = None  # fetch this lazily only if needed
+        args = []
+        for arg in self.launch_argv:
+            if '${PREFIX}' in arg:
+                if prefix is None:
+                    import project.internal.conda_api as conda_api
+                    prefix = conda_api.resolve_env_to_prefix(environ['CONDA_DEFAULT_ENV'])
+                    arg = arg.replace('${PREFIX}', prefix)
+            args.append(arg)
+
+        # always look in the project directory
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        args[0] = find_executable(args[0], path)
+        return args

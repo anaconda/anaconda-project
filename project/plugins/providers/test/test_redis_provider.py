@@ -141,10 +141,9 @@ def test_prepare_redis_url_with_dict_in_runtime_section(monkeypatch):
 
     def prepare_redis_url(dirname):
         project = Project(dirname)
-        environ = dict()
-        result = prepare(project, environ=environ)
+        result = prepare(project, environ=dict())
         assert result
-        assert dict(REDIS_URL="redis://localhost:6379", PROJECT_DIR=project.directory_path) == environ
+        assert dict(REDIS_URL="redis://localhost:6379", PROJECT_DIR=project.directory_path) == result.environ
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
     with_directory_contents({PROJECT_FILENAME: """
@@ -158,10 +157,9 @@ def test_prepare_redis_url_with_list_in_runtime_section(monkeypatch):
 
     def prepare_redis_url(dirname):
         project = Project(dirname)
-        environ = dict()
-        result = prepare(project, environ=environ)
+        result = prepare(project, environ=dict())
         assert result
-        assert dict(REDIS_URL="redis://localhost:6379", PROJECT_DIR=project.directory_path) == environ
+        assert dict(REDIS_URL="redis://localhost:6379", PROJECT_DIR=project.directory_path) == result.environ
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
     with_directory_contents({PROJECT_FILENAME: """
@@ -199,8 +197,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
 
     def start_local_redis(dirname):
         project = Project(dirname)
-        environ = dict()
-        result = prepare(project, environ=environ)
+        result = prepare(project, environ=dict())
         assert result
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
@@ -208,7 +205,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert 'port' in state
         port = state['port']
 
-        assert dict(REDIS_URL=("redis://localhost:" + str(port)), PROJECT_DIR=project.directory_path) == environ
+        assert dict(REDIS_URL=("redis://localhost:" + str(port)), PROJECT_DIR=project.directory_path) == result.environ
         assert len(can_connect_args_list) >= 2
 
         pidfile = os.path.join(dirname, ".anaconda/run/project_scoped_redis/redis.pid")
@@ -243,8 +240,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
 
     def start_local_redis(dirname):
         project = Project(dirname)
-        environ = dict()
-        result = prepare(project, environ=environ)
+        result = prepare(project, environ=dict())
         assert result
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
@@ -252,7 +248,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert 'port' in state
         port = state['port']
 
-        assert dict(REDIS_URL=("redis://localhost:" + str(port)), PROJECT_DIR=project.directory_path) == environ
+        assert dict(REDIS_URL=("redis://localhost:" + str(port)), PROJECT_DIR=project.directory_path) == result.environ
         assert len(can_connect_args_list) >= 2
 
         pidfile = os.path.join(dirname, ".anaconda/run/project_scoped_redis/redis.pid")
@@ -266,12 +262,11 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         pidfile_mtime = os.path.getmtime(pidfile)
         with codecs.open(pidfile, 'r', 'utf-8') as file:
             pidfile_content = file.read()
-        environ2 = dict()
-        result2 = prepare(project, environ=environ2)
+        result2 = prepare(project, environ=dict())
         assert result2
 
         # port should be the same, and set in the environment
-        assert dict(REDIS_URL=("redis://localhost:" + str(port)), PROJECT_DIR=project.directory_path) == environ2
+        assert dict(REDIS_URL=("redis://localhost:" + str(port)), PROJECT_DIR=project.directory_path) == result2.environ
 
         # no new pid file
         assert pidfile_mtime == os.path.getmtime(pidfile)
@@ -315,8 +310,7 @@ def test_fail_to_prepare_local_redis_server_no_port_available(monkeypatch, capsy
 
     def start_local_redis(dirname):
         project = Project(dirname)
-        environ = dict()
-        result = prepare(project, environ=environ)
+        result = prepare(project, environ=dict())
         assert not result
         assert 72 == len(can_connect_args_list)
 
@@ -337,8 +331,7 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
 
     def start_local_redis(dirname):
         project = Project(dirname)
-        environ = dict()
-        result = prepare(project, environ=environ)
+        result = prepare(project, environ=dict())
         assert not result
         assert 35 == len(can_connect_args_list)
 
@@ -404,8 +397,7 @@ sys.exit(1)
         monkeypatch.setattr("subprocess.Popen", mock_Popen)
 
         project = Project(dirname)
-        environ = dict()
-        result = prepare(project, environ=environ)
+        result = prepare(project, environ=dict())
         assert not result
 
     with_directory_contents({PROJECT_FILENAME: """

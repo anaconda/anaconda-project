@@ -1,11 +1,15 @@
 from __future__ import absolute_import
 
+from copy import deepcopy
 import os
 import pytest
+import stat
+import subprocess
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.crypto import decrypt_string
-from project.prepare import prepare, unprepare, UI_MODE_BROWSER
+from project.internal.prepare_ui import NotInteractivePrepareUI
+from project.prepare import prepare, unprepare, UI_MODE_BROWSER, prepare_in_stages, _after_stage_success
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
 from project.local_state_file import LocalStateFile
@@ -17,7 +21,8 @@ def test_prepare_empty_directory():
         environ = dict()
         result = prepare(project, environ=environ)
         assert result
-        assert dict(PROJECT_DIR=project.directory_path) == environ
+        assert dict(PROJECT_DIR=project.directory_path) == result.environ
+        assert dict() == environ
 
     with_directory_contents(dict(), prepare_empty)
 
@@ -45,8 +50,14 @@ def test_unprepare_empty_directory():
 def test_default_to_system_environ():
     def prepare_system_environ(dirname):
         project = Project(dirname)
-        prepare(project)
-        assert project.directory_path == os.environ['PROJECT_DIR']
+        os_environ_copy = deepcopy(os.environ)
+        result = prepare(project)
+        assert project.directory_path == result.environ['PROJECT_DIR']
+        # os.environ wasn't modified
+        assert os_environ_copy == os.environ
+        # result.environ inherits everything in os.environ
+        for key in os_environ_copy:
+            assert result.environ[key] == os.environ[key]
 
     with_directory_contents(dict(), prepare_system_environ)
 
@@ -57,7 +68,8 @@ def test_prepare_some_env_var_already_set():
         environ = dict(FOO='bar')
         result = prepare(project, environ=environ)
         assert result
-        assert dict(FOO='bar', PROJECT_DIR=project.directory_path) == environ
+        assert dict(FOO='bar', PROJECT_DIR=project.directory_path) == result.environ
+        assert dict(FOO='bar') == environ
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -77,6 +89,95 @@ def test_prepare_some_env_var_not_set():
 runtime:
   FOO: {}
 """}, prepare_some_env_var)
+
+
+def test_prepare_with_app_entry():
+    def prepare_with_app_entry(dirname):
+        os.chmod(os.path.join(dirname, "echo.py"), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+
+        project = Project(dirname)
+        environ = deepcopy(os.environ)
+        environ['FOO'] = 'bar'
+        environ['CONDA_DEFAULT_ENV'] = '/someplace'
+        result = prepare(project, environ=environ)
+        assert result
+
+        command = result.command_exec_info
+        assert 'FOO' in command.env
+        assert command.cwd == project.directory_path
+        assert command.args == ['%s/echo.py' % dirname, '/someplace', 'foo', 'bar']
+        p = command.popen(stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (out, err) = p.communicate()
+        assert out.decode() == ("['%s/echo.py', '/someplace', 'foo', 'bar']\n" % dirname)
+        assert err.decode() == ""
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  FOO: {}
+
+app:
+  entry: echo.py ${PREFIX} foo bar
+""",
+         "echo.py": """#!/usr/bin/env python
+from __future__ import print_function
+import sys
+print(repr(sys.argv))
+"""}, prepare_with_app_entry)
+
+
+def test_update_environ():
+    def prepare_then_update_environ(dirname):
+        project = Project(dirname)
+        environ = dict(FOO='bar')
+        result = prepare(project, environ=environ)
+        assert result
+
+        other = dict(BAR='baz')
+        result.update_environ(other)
+        assert dict(FOO='bar', BAR='baz', PROJECT_DIR=dirname) == other
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  FOO: {}
+"""}, prepare_then_update_environ)
+
+
+def test_attempt_to_grab_result_early():
+    def early_result_grab(dirname):
+        project = Project(dirname)
+        first_stage = prepare_in_stages(project)
+        with pytest.raises(RuntimeError) as excinfo:
+            first_stage.result
+        assert "result property isn't available" in repr(excinfo.value)
+
+    with_directory_contents(dict(), early_result_grab)
+
+
+def test_skip_after_success_function_when_stage_fails():
+    def check_no_after_success_on_failed(dirname):
+        project = Project(dirname)
+        first_stage = prepare_in_stages(project, environ=dict())
+
+        def after():
+            raise RuntimeError("should not have been called")
+
+        stage = _after_stage_success(first_stage, after)
+        while stage is not None:
+            next_stage = stage.execute(NotInteractivePrepareUI())
+            result = stage.result
+            if result.failed:
+                assert stage.failed
+                break
+            else:
+                assert not stage.failed
+            stage = next_stage
+        assert result.failed
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  FOO: {}
+"""}, check_no_after_success_on_failed)
 
 
 def test_prepare_with_browser(monkeypatch):
@@ -199,7 +300,10 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
         environ = dict(ANACONDA_MASTER_PASSWORD='bar')
         result = prepare(project, environ=environ, io_loop=io_loop, ui_mode=UI_MODE_BROWSER)
         assert result
-        assert dict(ANACONDA_MASTER_PASSWORD='bar', FOO_PASSWORD='bloop', PROJECT_DIR=project.directory_path) == environ
+        assert dict(ANACONDA_MASTER_PASSWORD='bar',
+                    FOO_PASSWORD='bloop',
+                    PROJECT_DIR=project.directory_path) == result.environ
+        assert dict(ANACONDA_MASTER_PASSWORD='bar') == environ
 
         # wait for the results of the POST to come back,
         # awesome hack-tacular

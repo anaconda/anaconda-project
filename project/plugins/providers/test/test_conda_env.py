@@ -30,7 +30,7 @@ def test_prepare_project_scoped_env():
         expected_new_path = os.path.join(expected_env, "bin") + os.pathsep + "foo" + os.pathsep + "bar"
         assert dict(CONDA_DEFAULT_ENV=expected_env,
                     PROJECT_DIR=project.directory_path,
-                    PATH=expected_new_path) == environ
+                    PATH=expected_new_path) == result.environ
         assert os.path.exists(os.path.join(expected_env, "conda-meta"))
         conda_meta_mtime = os.path.getmtime(os.path.join(expected_env, "conda-meta"))
 
@@ -47,7 +47,7 @@ def test_prepare_project_scoped_env():
         assert result
         assert dict(CONDA_DEFAULT_ENV=expected_env,
                     PROJECT_DIR=project.directory_path,
-                    PATH=expected_new_path) == environ
+                    PATH=expected_new_path) == result.environ
         assert conda_meta_mtime == os.path.getmtime(os.path.join(expected_env, "conda-meta"))
 
     with_directory_contents({PROJECT_FILENAME: """
@@ -80,7 +80,7 @@ def test_prepare_in_root_env():
         environ = dict(PROJECT_DIR=dirname, CONDA_DEFAULT_ENV='root')
         result = prepare(project, environ=environ)
         assert result
-        assert dict(CONDA_DEFAULT_ENV='root', PROJECT_DIR=project.directory_path) == environ
+        assert dict(CONDA_DEFAULT_ENV='root', PROJECT_DIR=project.directory_path) == result.environ
 
     with_directory_contents(
         {PROJECT_FILENAME: """
@@ -96,7 +96,7 @@ def test_prepare_project_scoped_env_with_packages():
         result = prepare(project, environ=environ)
         assert result
 
-        prefix = environ['CONDA_DEFAULT_ENV']
+        prefix = result.environ['CONDA_DEFAULT_ENV']
         installed = conda_api.installed(prefix)
 
         assert 'ipython' in installed
@@ -111,7 +111,7 @@ def test_prepare_project_scoped_env_with_packages():
         result = prepare(project, environ=environ)
         assert result
 
-        prefix = environ['CONDA_DEFAULT_ENV']
+        prefix = result.environ['CONDA_DEFAULT_ENV']
         installed = conda_api.installed(prefix)
 
         assert 'ipython' in installed

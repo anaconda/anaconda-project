@@ -1,7 +1,6 @@
 """The ``activate`` command which prepares a project to run and prints commands to source in your shell."""
 from __future__ import absolute_import, print_function
 
-from copy import deepcopy
 import os
 import sys
 
@@ -22,21 +21,21 @@ def activate(dirname, ui_mode):
     Returns:
         None on failure or a list of lines to print.
     """
-    environ = deepcopy(os.environ)
     project = Project(dirname)
-    result = prepare(project, ui_mode=ui_mode, environ=environ)
-    if not result:
+    result = prepare(project, ui_mode=ui_mode)
+    if result.failed:
+        result.print_output()
         return None
 
-    result = []
+    exports = []
     # sort so we have deterministic output order for tests
-    sorted_keys = list(environ.keys())
+    sorted_keys = list(result.environ.keys())
     sorted_keys.sort()
     for key in sorted_keys:
-        value = environ[key]
+        value = result.environ[key]
         if key not in os.environ or os.environ[key] != value:
-            result.append("export {key}={value}".format(key=key, value=quote(value)))
-    return result
+            exports.append("export {key}={value}".format(key=key, value=quote(value)))
+    return exports
 
 
 def main(argv):

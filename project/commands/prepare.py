@@ -15,7 +15,12 @@ def prepare_command(dirname, ui_mode):
         True on success.
     """
     project = Project(dirname)
-    return prepare(project, ui_mode=ui_mode)
+    result = prepare(project, ui_mode=ui_mode)
+
+    if result.failed:
+        result.print_output()
+
+    return result
 
 
 def main(argv):

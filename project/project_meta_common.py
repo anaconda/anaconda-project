@@ -29,3 +29,18 @@ class _ProjectMetaCommon(object):
     def requirements_run(self):
         """Get runtime requirements as a list of strings."""
         return self.get_value(['requirements', 'run'], default=[])
+
+    @property
+    def app_entry(self):
+        """Get the argv to run the app as a string.
+
+        Conda parses this by splitting on whitespace, then
+        replacing the string "${PREFIX}" inside each arg with the
+        environment prefix, then replacing "argv[0]" with the full
+        path. See conda/misc.py::launch().
+
+        Returns:
+            None if not found
+
+        """
+        return self.get_value(['app', 'entry'], default=None)

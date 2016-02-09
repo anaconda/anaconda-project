@@ -1,6 +1,11 @@
 from __future__ import absolute_import, print_function
 
+from copy import deepcopy
 import os
+import stat
+import subprocess
+
+import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.plugins.requirement import RequirementRegistry, EnvVarRequirement
@@ -327,3 +332,106 @@ package:
   name: foo
   version: 1.2.3
 """}, check_problem)
+
+
+def test_non_string_in_app_entry():
+    def check_app_entry(dirname):
+        project = Project(dirname)
+        assert 1 == len(project.problems)
+        assert "should be a string not '42'" in project.problems[0]
+
+    with_directory_contents({PROJECT_FILENAME: "app:\n entry: 42\n"}, check_app_entry)
+
+
+def test_launch_argv_from_project_file():
+    def check_launch_argv(dirname):
+        project = Project(dirname)
+        assert project.launch_argv == ('foo', 'bar', '${PREFIX}')
+
+    with_directory_contents({PROJECT_FILENAME: """
+app:
+  entry: foo bar ${PREFIX}
+"""}, check_launch_argv)
+
+
+def test_launch_argv_from_meta_file():
+    def check_launch_argv(dirname):
+        project = Project(dirname)
+        assert project.launch_argv == ('foo', 'bar', '${PREFIX}')
+
+    with_directory_contents(
+        {META_DIRECTORY + "/" + META_FILENAME: """
+app:
+  entry: foo bar ${PREFIX}
+"""}, check_launch_argv)
+
+
+def _launch_argv_for_environment(environ, expected_output):
+    def check_echo_output(dirname):
+        if 'CONDA_DEFAULT_ENV' not in environ:
+            environ['CONDA_DEFAULT_ENV'] = 'root'
+        if 'PROJECT_DIR' not in environ:
+            environ['PROJECT_DIR'] = dirname
+        if 'PATH' not in environ:
+            environ['PATH'] = os.environ['PATH']
+        os.chmod(os.path.join(dirname, "echo.py"), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+        project = Project(dirname)
+        argv = project.launch_argv_for_environment(environ)
+        output = subprocess.check_output(argv).decode()
+        assert output == expected_output.format(dirname=dirname)
+
+    with_directory_contents(
+        {
+            PROJECT_FILENAME: """
+app:
+  entry: echo.py ${PREFIX}/blah foo bar
+""",
+            "echo.py": """#!/usr/bin/env python
+from __future__ import print_function
+import sys
+print(repr(sys.argv))
+"""
+        }, check_echo_output)
+
+
+def test_launch_command_in_project_dir():
+    import project.internal.conda_api as conda_api
+    prefix = conda_api.resolve_env_to_prefix('root')
+    _launch_argv_for_environment(dict(), "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix)
+
+
+def test_launch_command_in_project_dir_with_conda_env():
+    _launch_argv_for_environment(
+        dict(CONDA_DEFAULT_ENV='/someplace'),
+        "['{dirname}/echo.py', '/someplace/blah', 'foo', 'bar']\n")
+
+
+def test_launch_command_is_on_system_path():
+    def check_python_version_output(dirname):
+        environ = dict(CONDA_DEFAULT_ENV='root', PATH=os.environ['PATH'], PROJECT_DIR=dirname)
+        project = Project(dirname)
+        argv = project.launch_argv_for_environment(environ)
+        output = subprocess.check_output(argv, stderr=subprocess.STDOUT).decode()
+        assert output.startswith("Python")
+
+    with_directory_contents({PROJECT_FILENAME: """
+app:
+  entry: python --version
+"""}, check_python_version_output)
+
+
+def test_launch_command_stuff_missing_from_environment():
+    def check_launch_with_stuff_missing(dirname):
+        project = Project(dirname)
+        environ = dict(CONDA_DEFAULT_ENV='root', PATH=os.environ['PATH'], PROJECT_DIR=dirname)
+        for key in environ:
+            environ_copy = deepcopy(environ)
+            del environ_copy[key]
+            with pytest.raises(ValueError) as excinfo:
+                project.launch_argv_for_environment(environ_copy)
+            assert ('%s must be set' % key) in repr(excinfo.value)
+
+    with_directory_contents({PROJECT_FILENAME: """
+app:
+  entry: foo
+"""}, check_launch_with_stuff_missing)

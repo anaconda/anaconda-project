@@ -23,6 +23,151 @@ UI_MODE_NOT_INTERACTIVE = "not_interactive"
 _all_ui_modes = (UI_MODE_TEXT, UI_MODE_BROWSER, UI_MODE_NOT_INTERACTIVE)
 
 
+def _update_environ(dest, src):
+    """Overwrite ``environ`` with any additions from the prepared environ.
+
+    Does not remove any variables from ``environ``.
+    """
+    # updating os.environ can be a memory leak, so we only update
+    # those values that actually changed.
+    for key, value in src.items():
+        if key not in dest or dest[key] != value:
+            dest[key] = value
+
+
+class CommandExecInfo(object):
+    """Class describing an executable command."""
+
+    def __init__(self, cwd, args, env):
+        """Construct an CommandExecInfo."""
+        self._cwd = cwd
+        self._args = args
+        self._env = env
+
+    @property
+    def cwd(self):
+        """Working directory to run the command in."""
+        return self._cwd
+
+    @property
+    def args(self):
+        """Command line argument vector to run the command."""
+        return self._args
+
+    @property
+    def env(self):
+        """Environment to run the command in."""
+        return self._env
+
+    def popen(self, **kwargs):
+        """Convenience method runs the command using Popen.
+
+        Args:
+            kwargs: passed through to Popen
+
+        Returns:
+            Popen instance
+        """
+        import subprocess
+
+        return subprocess.Popen(args=self._args, env=self._env, cwd=self._cwd, **kwargs)
+
+
+class PrepareResult(with_metaclass(ABCMeta)):
+    """Abstract class describing the result of preparing the project to run."""
+
+    def __init__(self, logs):
+        """Construct an abstract PrepareResult."""
+        self._logs = logs
+
+    def __bool__(self):
+        """True if we were successful."""
+        return not self.failed
+
+    def __nonzero__(self):
+        """True if we were successful."""
+        return self.__bool__()  # pragma: no cover (py2 only)
+
+    @property
+    @abstractmethod
+    def failed(self):
+        """True if we failed to prepare the project to run."""
+        pass  # pragma: no cover
+
+    @property
+    def logs(self):
+        """Get lines of debug log output.
+
+        Does not include errors in case of failure. This is the
+        "stdout" logs only.
+        """
+        return self._logs
+
+    def print_output(self):
+        """Print logs and errors to stdout and stderr."""
+        for log in self.logs:
+            print(log, file=sys.stdout)
+            # be sure we print all these before the errors
+            sys.stdout.flush()
+
+
+class PrepareSuccess(PrepareResult):
+    """Class describing the successful result of preparing the project to run."""
+
+    def __init__(self, logs, command_exec_info, environ):
+        """Construct a PrepareSuccess indicating a successful prepare stage."""
+        super(PrepareSuccess, self).__init__(logs)
+        self._command_exec_info = command_exec_info
+        self._environ = environ
+
+    @property
+    def failed(self):
+        """Get False for PrepareSuccess."""
+        return False
+
+    @property
+    def command_exec_info(self):
+        """``CommandExecInfo`` instance if available, None if not."""
+        return self._command_exec_info
+
+    @property
+    def environ(self):
+        """Computed environment variables for the project."""
+        return self._environ
+
+    def update_environ(self, environ):
+        """Overwrite ``environ`` with any additions from the prepared environ.
+
+        Does not remove any variables from ``environ``.
+        """
+        _update_environ(environ, self._environ)
+
+
+class PrepareFailure(PrepareResult):
+    """Class describing the failed result of preparing the project to run."""
+
+    def __init__(self, logs, errors):
+        """Construct a PrepareFailure indicating a failed prepare stage."""
+        super(PrepareFailure, self).__init__(logs)
+        self._errors = errors
+
+    @property
+    def failed(self):
+        """Get True for PrepareFailure."""
+        return True
+
+    @property
+    def errors(self):
+        """Get lines of error output."""
+        return self._errors
+
+    def print_output(self):
+        """Override superclass to also print errors."""
+        super(PrepareFailure, self).print_output()
+        for error in self.errors:
+            print(error, file=sys.stderr)
+
+
 class PrepareStage(with_metaclass(ABCMeta)):
     """A step in the project preparation process."""
 
@@ -43,12 +188,18 @@ class PrepareStage(with_metaclass(ABCMeta)):
         """Run this step and return a new stage, or None if we are done or failed."""
         pass  # pragma: no cover
 
+    @property
+    @abstractmethod
+    def result(self):
+        """The ``PrepareResult`` (only available if ``execute()`` returned None)."""
+        pass  # pragma: no cover
+
 
 class _FunctionPrepareStage(PrepareStage):
     """A stage chain where the description and the execute function are passed in to the constructor."""
 
     def __init__(self, description, execute):
-        self._failed = False
+        self._result = None
         self._description = description
         self._execute = execute
 
@@ -58,10 +209,16 @@ class _FunctionPrepareStage(PrepareStage):
 
     @property
     def failed(self):
-        return self._failed
+        return self.result.failed
 
     def execute(self, ui):
         return self._execute(self, ui)
+
+    @property
+    def result(self):
+        if self._result is None:
+            raise RuntimeError("result property isn't available until execute() returns None")
+        return self._result
 
 
 class _AndThenPrepareStage(PrepareStage):
@@ -88,6 +245,10 @@ class _AndThenPrepareStage(PrepareStage):
                 return self._and_then()
         else:
             return _AndThenPrepareStage(next, self._and_then)
+
+    @property
+    def result(self):
+        return self._stage.result
 
 
 def _after_stage_success(stage, and_then):
@@ -133,6 +294,8 @@ def _configure_and_provide(project, environ, local_state, requirements_and_provi
         # wait for the configure UI if any
         ui.configure(configure_context)
 
+        stage._result = PrepareSuccess(logs=(), command_exec_info=None, environ=environ)
+
         return _FunctionPrepareStage("Set up project requirements.", provide_stage)
 
     def provide_stage(stage, ui):
@@ -153,6 +316,9 @@ def _configure_and_provide(project, environ, local_state, requirements_and_provi
             for provider in providers:
                 plan.append((provider, requirement))
 
+        logs = []
+        errors = []
+
         for (provider, requirement) in plan:
             why_not = requirement.why_not_provided(environ)
             if why_not is None:
@@ -161,24 +327,34 @@ def _configure_and_provide(project, environ, local_state, requirements_and_provi
             config = provider.read_config(config_context)
             context = ProvideContext(environ, local_state, config)
             provider.provide(requirement, context)
-            if context.errors:
-                for log in context.logs:
-                    print(log, file=sys.stdout)
-                # be sure we print all these before the errors
-                sys.stdout.flush()
-            # now print the errors
-            for error in context.errors:
-                print(error, file=sys.stderr)
+            logs.extend(context.logs)
+            errors.extend(context.errors)
 
-        stage._failed = False
+        failed = False
         for (requirement, providers) in requirements_and_providers:
             why_not = requirement.why_not_provided(environ)
             if why_not is not None:
-                print("missing requirement to run this project: {requirement.title}".format(requirement=requirement),
-                      file=sys.stderr)
-                print("  {why_not}".format(why_not=why_not), file=sys.stderr)
-                stage._failed = True
+                errors.append("missing requirement to run this project: {requirement.title}"
+                              .format(requirement=requirement))
+                errors.append("  {why_not}".format(why_not=why_not))
+                failed = True
 
+        if failed:
+            stage._result = PrepareFailure(logs=logs, errors=errors)
+        else:
+            exec_info = None
+            if project.launch_argv is not None:
+                argv = project.launch_argv_for_environment(environ)
+                # conda.misc.launch() uses the home directory
+                # instead of the project directory as cwd when
+                # running an installed package, but for our
+                # purposes where we know we have a project dir
+                # that's user-interesting, project directory seems
+                # more useful. This way apps can for example find
+                # sample data files relative to the project
+                # directory.
+                exec_info = CommandExecInfo(cwd=project.directory_path, args=argv, env=environ)
+            stage._result = PrepareSuccess(logs=logs, command_exec_info=exec_info, environ=environ)
         return None
 
     return _FunctionPrepareStage("Customize how project requirements will be met.", configure_stage)
@@ -289,7 +465,7 @@ def prepare_in_stages(project, environ=None):
 
     Args:
         project (Project): the project
-        environ (dict): the environment to prepare (None to use os.environ)
+        environ (dict): the environment to start from (None to use os.environ)
 
     Returns:
         The first ``PrepareStage`` in the chain of steps.
@@ -321,13 +497,7 @@ def prepare_in_stages(project, environ=None):
 
     first_stage = _process_requirements_and_providers(project, environ_copy, local_state, requirements_and_providers)
 
-    def set_vars():
-        for key, value in environ_copy.items():
-            if key not in environ or environ[key] != value:
-                environ[key] = value
-        return None
-
-    return _after_stage_success(first_stage, set_vars)
+    return first_stage
 
 
 def _default_show_url(url):
@@ -350,7 +520,7 @@ def prepare(project, environ=None, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None
         show_url (function): takes a URL and displays it in a browser somehow, None for default
 
     Returns:
-        True if successful.
+        a ``PrepareResult`` instance
 
     """
     if ui_mode not in _all_ui_modes:
@@ -371,21 +541,26 @@ def prepare(project, environ=None, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None
         elif ui_mode == UI_MODE_BROWSER:
             ui = BrowserPrepareUI(io_loop=io_loop, show_url=show_url)
 
+        result = None
         stage = prepare_in_stages(project, environ)
         while stage is not None:
             # this is a little hack to get code coverage since we will only use
             # the description later after refactoring the UI
             stage.description_of_action
             next_stage = stage.execute(ui)
-            if stage.failed:
-                return False
+            result = stage.result
+            if result.failed:
+                break
             stage = next_stage
 
     finally:
         if old_current_loop is not None:
             old_current_loop.make_current()
 
-    return True
+    if result.failed:
+        result.print_output()
+
+    return result
 
 
 def unprepare(project, io_loop=None):
