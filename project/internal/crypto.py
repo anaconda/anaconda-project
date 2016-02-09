@@ -14,6 +14,10 @@ class CryptoError(Exception):
     pass
 
 
+class CryptoKeyError(CryptoError):
+    pass
+
+
 def _b64decode(s):
     try:
         return base64.b64decode(s)
@@ -27,6 +31,13 @@ def _b64encode(s):
     return base64.b64encode(s).decode('ascii')
 
 
+def _sha256(message):
+    m = hashlib.sha256()
+    m.update(message)
+    hash = m.digest()
+    return hash
+
+
 def _key_from_secret(secret, salt):
     # we bcrypt to make it hard to brute-force-attack. We have to bcrypt
     # every 72 bytes because it ignores bytes after the first 72.
@@ -38,9 +49,7 @@ def _key_from_secret(secret, salt):
         bcrypted = bcrypted + bcrypt.hashpw(head, salt)
 
     # then we sha256 to force the length to 32 bytes
-    m = hashlib.sha256()
-    m.update(bcrypted)
-    key = m.digest()
+    key = _sha256(bcrypted)
     assert len(key) == 32
     return key
 
@@ -50,7 +59,7 @@ def encrypt_bytes(message, secret):
     key = _key_from_secret(secret, salt)
     iv = Random.new().read(AES.block_size)
     cipher = AES.new(key, AES.MODE_CFB, iv)
-    encrypted = cipher.encrypt(message)
+    encrypted = cipher.encrypt(_sha256(message) + message)
     dumped = json.dumps(dict(iv=_b64encode(iv), cipher='AES-CFB', salt=_b64encode(salt), message=_b64encode(encrypted)))
     single_string = _b64encode(dumped.encode('utf-8'))
     return single_string
@@ -87,6 +96,16 @@ def decrypt_bytes(package, secret):
     key = _key_from_secret(secret, salt)
     cipher = AES.new(key, AES.MODE_CFB, iv)
     decrypted = cipher.decrypt(message)
+
+    if len(decrypted) < 32:
+        raise CryptoError("encrypted data was corrupted")
+
+    checksum = decrypted[:32]
+    decrypted = decrypted[32:]
+
+    if checksum != _sha256(decrypted):
+        raise CryptoKeyError("incorrect pass phrase")
+
     return decrypted
 
 
@@ -99,9 +118,4 @@ def decrypt_string(package, secret):
     try:
         return decrypted.decode('utf-8')
     except UnicodeDecodeError:
-        # bad UTF-8 in encrypted message, probably means wrong
-        # secret...  return an empty string for this rather than
-        # raising, since we can't consistently raise when the
-        # secret is wrong (sometimes we might happen to get valid
-        # utf-8)
-        return ""
+        raise CryptoError("invalid Unicode string in encrypted data")

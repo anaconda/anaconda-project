@@ -16,8 +16,17 @@ def test_round_trip():
 def test_wrong_secret_fails():
     message = "Hello World"
     encrypted = crypto.encrypt_string(message, "bar")
-    decrypted = crypto.decrypt_string(encrypted, "foo")
-    assert message != decrypted
+    with pytest.raises(crypto.CryptoKeyError) as excinfo:
+        crypto.decrypt_string(encrypted, "foo")
+    assert 'incorrect pass phrase' in repr(excinfo.value)
+
+
+def test_bad_unicode():
+    message = "Hello World"
+    encrypted = crypto.encrypt_bytes(message.encode("utf-16"), "bar")
+    with pytest.raises(crypto.CryptoError) as excinfo:
+        crypto.decrypt_string(encrypted, "bar")
+    assert 'invalid Unicode' in repr(excinfo.value)
 
 
 def _modified_package(original, json_modifier):
@@ -102,6 +111,10 @@ def test_missing_message():
     _check_package_missing_field('message', 'no message in json')
 
 
+def test_short_message():
+    _check_package_mangled_field('message', '', 'encrypted data was corrupted')
+
+
 def test_long_secret_matters():
     message = "Hello World"
 
@@ -110,9 +123,10 @@ def test_long_secret_matters():
         assert len(secret) == count
         encrypted = crypto.encrypt_string(message, secret)
         decrypted_ok = crypto.decrypt_string(encrypted, secret)
-        decrypted_not_ok = crypto.decrypt_string(encrypted, secret + "a")
         assert message == decrypted_ok
-        assert message != decrypted_not_ok
+        with pytest.raises(crypto.CryptoKeyError) as excinfo:
+            crypto.decrypt_string(encrypted, secret + "a")
+        assert 'incorrect pass phrase' in repr(excinfo.value)
 
     check_secret_length(1)
     check_secret_length(32)
