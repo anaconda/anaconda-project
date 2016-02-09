@@ -24,6 +24,7 @@ def with_directory_contents(contents, func):
             f = open(path, 'w')
             f.write(file_content)
             f.flush()
+            f.close()
         func(dirname)
 
 
