@@ -45,4 +45,4 @@ class CondaMetaFile(YamlFile, _ProjectMetaCommon):
         return CondaMetaFile(path)
 
     def _default_comment(self):
-        return "Conda meta.yml file"
+        return "Conda meta.yaml file"
