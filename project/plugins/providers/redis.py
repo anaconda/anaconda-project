@@ -80,14 +80,18 @@ class ProjectScopedRedisProvider(Provider):
 
         return config
 
-    def set_config_value_from_string(self, context, name, value_string):
+    def set_config_values_as_strings(self, context, values):
         """Override superclass to set our config values."""
         config = self.read_config(context)
         section = self._section(context.requirement)
-        if name == "lower_port":
-            context.local_state_file.set_value(section + ['port_range'], "%s-%s" % (value_string, config['upper_port']))
-        elif name == "upper_port":
-            context.local_state_file.set_value(section + ['port_range'], "%s-%s" % (config['lower_port'], value_string))
+        upper_port = config['upper_port']
+        lower_port = config['lower_port']
+        if 'lower_port' in values:
+            lower_port = values['lower_port']
+        if 'upper_port' in values:
+            upper_port = values['upper_port']
+
+        context.local_state_file.set_value(section + ['port_range'], "%s-%s" % (lower_port, upper_port))
 
     def config_html(self, requirement):
         """Override superclass to provide our config html."""

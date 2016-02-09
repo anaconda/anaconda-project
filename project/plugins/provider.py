@@ -182,8 +182,13 @@ class Provider(with_metaclass(ABCMeta)):
         """Read a config dict from the local state file for the given requirement."""
         pass  # pragma: no cover
 
-    def set_config_value_from_string(self, context, name, value_string):
-        """Set a config value in the state file (should not save the file)."""
+    def set_config_values_as_strings(self, context, values):
+        """Set some config values in the state file (should not save the file).
+
+        Args:
+            context (ProviderConfigContext): context
+            values (dict): dict from string to string
+        """
         pass  # silently ignore unknown config values
 
     def config_html(self, requirement):
@@ -197,7 +202,7 @@ class Provider(with_metaclass(ABCMeta)):
         forms. The initial state of all the form fields will be
         auto-populated from the values in ``read_config()``.  When
         the form is submitted, any changes made by the user will
-        be set back using ``set_config_value_from_string()``.
+        be set back using ``set_config_values_as_strings()``.
 
         This is simple to use, but for now not very flexible; if you need
         more flexibility let us know and we can figure out what API
@@ -289,9 +294,11 @@ class EnvVarProvider(Provider):
             config['value'] = value
         return config
 
-    def set_config_value_from_string(self, context, name, value_string):
+    def set_config_values_as_strings(self, context, values):
         """Override superclass to set env var value."""
-        if name == "value":
+        if 'value' in values:
+
+            value_string = values['value']
 
             local_override_value = self._local_state_override(context.requirement, context.local_state_file)
 

@@ -54,7 +54,7 @@ def test_provider_default_method_implementations():
     provider = UselessProvider()
     # this method is supposed to do nothing by default (ignore
     # unknown names, in particular)
-    provider.set_config_value_from_string(context=None, name=None, value_string=None)
+    provider.set_config_values_as_strings(context=None, values=dict())
 
 
 def _load_env_var_requirement(dirname, env_var):
