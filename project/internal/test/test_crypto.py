@@ -128,12 +128,7 @@ def test_long_secret_matters():
             crypto.decrypt_string(encrypted, secret + "a")
         assert 'incorrect pass phrase' in repr(excinfo.value)
 
-    check_secret_length(1)
-    check_secret_length(32)
-    check_secret_length(64)
-    check_secret_length(71)
     # some bcrypt implementations including the one we are using ignore after byte 72.
     # our code has to work around this.
     check_secret_length(72)
-    check_secret_length(128)
     check_secret_length(256)
