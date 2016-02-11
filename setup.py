@@ -171,22 +171,21 @@ column_limit : 120
         else:
             print("All tests passed! 💯 🌟")
 
-setup(
-    name='conda-project-prototype',
-    version="0.1",
-    author="Continuum Analytics",
-    author_email='info@continuum.io',
-    url='http://github.com/Anaconda-Server/conda-project',
-    description='Project support for Anaconda',
-    license='New BSD',
-    zip_safe=False,
-    install_requires=REQUIRES,
-    tests_require=TEST_REQUIRES,
-    cmdclass=dict(test=AllTestsCommand),
-    scripts=[
-    ],
-    packages=[
-        'project',
-        'project.internal'
-    ]
-)
+
+setup(name='conda-project-prototype',
+      version="0.1",
+      author="Continuum Analytics",
+      author_email='info@continuum.io',
+      url='http://github.com/Anaconda-Server/conda-project',
+      description='Project support for Anaconda',
+      license='New BSD',
+      zip_safe=False,
+      install_requires=REQUIRES,
+      tests_require=TEST_REQUIRES,
+      cmdclass=dict(test=AllTestsCommand),
+      scripts=[
+          'bin/anaconda-project'
+      ],
+      packages=[
+          'project', 'project.internal'
+      ])
