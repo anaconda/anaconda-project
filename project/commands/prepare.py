@@ -12,13 +12,10 @@ def prepare_command(dirname, ui_mode):
     """Configure the project to run.
 
     Returns:
-        True on success.
+        Prepare result (can be treated as True on success).
     """
     project = Project(dirname)
     result = prepare(project, ui_mode=ui_mode)
-
-    if result.failed:
-        result.print_output()
 
     return result
 
