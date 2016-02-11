@@ -72,6 +72,22 @@ class CommandExecInfo(object):
 
         return subprocess.Popen(args=self._args, env=self._env, cwd=self._cwd, **kwargs)
 
+    def execvpe(self):
+        """Convenience method exec's the command replacing the current process.
+
+        Returns:
+            Does not return. May raise an OSError though.
+        """
+        try:
+            old_dir = os.getcwd()
+            os.chdir(self._cwd)
+            sys.stderr.flush()
+            sys.stdout.flush()
+            os.execvpe(self._args[0], self._args, self._env)
+        finally:
+            # avoid side effect if exec fails (or is mocked in tests)
+            os.chdir(old_dir)
+
 
 class PrepareResult(with_metaclass(ABCMeta)):
     """Abstract class describing the result of preparing the project to run."""
