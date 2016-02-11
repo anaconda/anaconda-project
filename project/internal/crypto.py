@@ -9,6 +9,17 @@ from Crypto import Random
 
 import bcrypt
 
+# bcrypt module doesn't use bytes after the first 72
+_BCRYPT_SIGNIFICANT_BYTES = 72
+
+# SHA256 generates a hash of this many bytes
+_SHA256_HASH_LENGTH = 32
+
+# AES-256 needs a key this long
+_AES256_KEY_LENGTH = 32
+
+assert _AES256_KEY_LENGTH in AES.key_size
+
 
 class CryptoError(Exception):
     pass
@@ -44,13 +55,14 @@ def _key_from_secret(secret, salt):
     encoded_secret = secret.encode('utf-8')
     bcrypted = "".encode("utf-8")
     while len(encoded_secret) > 0:
-        (head, tail) = (encoded_secret[:72], encoded_secret[72:])
+        (head, tail) = (encoded_secret[:_BCRYPT_SIGNIFICANT_BYTES], encoded_secret[_BCRYPT_SIGNIFICANT_BYTES:])
         encoded_secret = tail
         bcrypted = bcrypted + bcrypt.hashpw(head, salt)
 
-    # then we sha256 to force the length to 32 bytes
+    # then we sha256 to force the length to _AES_KEY_LENGTH bytes
     key = _sha256(bcrypted)
-    assert len(key) == 32
+    assert len(key) == _AES256_KEY_LENGTH
+    assert len(key) == _SHA256_HASH_LENGTH
     return key
 
 
@@ -97,11 +109,11 @@ def decrypt_bytes(package, secret):
     cipher = AES.new(key, AES.MODE_CFB, iv)
     decrypted = cipher.decrypt(message)
 
-    if len(decrypted) < 32:
+    if len(decrypted) < _SHA256_HASH_LENGTH:
         raise CryptoError("encrypted data was corrupted")
 
-    checksum = decrypted[:32]
-    decrypted = decrypted[32:]
+    checksum = decrypted[:_SHA256_HASH_LENGTH]
+    decrypted = decrypted[_SHA256_HASH_LENGTH:]
 
     if checksum != _sha256(decrypted):
         raise CryptoKeyError("incorrect pass phrase")
