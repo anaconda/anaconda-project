@@ -270,7 +270,15 @@ class Project(object):
                     arg = arg.replace('${PREFIX}', prefix)
             args.append(arg)
 
-        # always look in the project directory
+        # always look in the project directory. This is a little
+        # odd because we don't add PROJECT_DIR to PATH for child
+        # processes - maybe we should?
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        args[0] = find_executable(args[0], path)
+        executable = find_executable(args[0], path)
+        if executable is not None:
+            # if the executable is in cwd, for some reason find_executable does not
+            # return the full path to it, just a relative path.
+            args[0] = os.path.abspath(executable)
+        # if we didn't find args[0] on the path, we leave it as-is
+        # and wait for it to fail when we later try to run it.
         return args

@@ -366,7 +366,7 @@ app:
 """}, check_launch_argv)
 
 
-def _launch_argv_for_environment(environ, expected_output):
+def _launch_argv_for_environment(environ, expected_output, chdir=False):
     def check_echo_output(dirname):
         if 'CONDA_DEFAULT_ENV' not in environ:
             environ['CONDA_DEFAULT_ENV'] = 'root'
@@ -375,10 +375,18 @@ def _launch_argv_for_environment(environ, expected_output):
         if 'PATH' not in environ:
             environ['PATH'] = os.environ['PATH']
         os.chmod(os.path.join(dirname, "echo.py"), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-        project = Project(dirname)
-        argv = project.launch_argv_for_environment(environ)
-        output = subprocess.check_output(argv).decode()
-        assert output == expected_output.format(dirname=dirname)
+        old_dir = None
+        if chdir:
+            old_dir = os.getcwd()
+            os.chdir(dirname)
+        try:
+            project = Project(dirname)
+            argv = project.launch_argv_for_environment(environ)
+            output = subprocess.check_output(argv).decode()
+            assert output == expected_output.format(dirname=dirname)
+        finally:
+            if old_dir is not None:
+                os.chdir(old_dir)
 
     with_directory_contents(
         {
@@ -400,6 +408,12 @@ def test_launch_command_in_project_dir():
     _launch_argv_for_environment(dict(), "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix)
 
 
+def test_launch_command_in_project_dir_and_cwd_is_project_dir():
+    import project.internal.conda_api as conda_api
+    prefix = conda_api.resolve_env_to_prefix('root')
+    _launch_argv_for_environment(dict(), "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix, chdir=True)
+
+
 def test_launch_command_in_project_dir_with_conda_env():
     _launch_argv_for_environment(
         dict(CONDA_DEFAULT_ENV='/someplace'),
@@ -418,6 +432,23 @@ def test_launch_command_is_on_system_path():
 app:
   entry: python --version
 """}, check_python_version_output)
+
+
+def test_launch_command_does_not_exist():
+    def check_error_on_nonexistent_path(dirname):
+        environ = dict(CONDA_DEFAULT_ENV='root', PATH=os.environ['PATH'], PROJECT_DIR=dirname)
+        project = Project(dirname)
+        argv = project.launch_argv_for_environment(environ)
+        assert argv[0] == 'this-command-does-not-exist'
+        with pytest.raises(FileNotFoundError) as excinfo:
+            subprocess.check_output(argv, stderr=subprocess.STDOUT).decode()
+        assert 'this-command-does-not-exist' in repr(excinfo.value)
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+app:
+  entry: this-command-does-not-exist
+"""}, check_error_on_nonexistent_path)
 
 
 def test_launch_command_stuff_missing_from_environment():
