@@ -67,7 +67,17 @@ def _key_from_secret(secret, salt):
     while len(encoded_secret) > 0:
         (head, tail) = (encoded_secret[:_BCRYPT_SIGNIFICANT_BYTES], encoded_secret[_BCRYPT_SIGNIFICANT_BYTES:])
         encoded_secret = tail
-        bcrypted = bcrypted + bcrypt.hashpw(head, salt)
+        try:
+            hashed = bcrypt.hashpw(head, salt)
+        except ValueError as e:
+            # e.g. a garbage salt string
+            raise CryptoError("bcrypt error: " + str(e))
+        # the bcrypt metadata+salt prefix doesn't add entropy so leave it out of here
+        # (the salt has the bcrypt prefix, number of rounds, and the salt itself in it)
+        assert hashed.startswith(salt)
+        unprefixed = hashed[len(salt):]
+        assert (salt + unprefixed) == hashed
+        bcrypted = bcrypted + unprefixed
 
     # then we sha256 to force the length to _AES_KEY_LENGTH bytes.
     # of course someone trying to decrypt could guess these keys
@@ -87,7 +97,7 @@ def encrypt_bytes(message, secret):
     encrypted = cipher.encrypt(_sha256(message) + message)
     dumped = json.dumps(dict(iv=_b64encode(iv),
                              cipher='AES-256-CFB',
-                             salt=_b64encode(salt),
+                             salt=salt.decode('ascii'),
                              message=_b64encode(encrypted)))
     single_string = _b64encode(dumped.encode('utf-8'))
     return single_string
@@ -114,7 +124,10 @@ def decrypt_bytes(package, secret):
     if 'salt' not in loaded:
         raise CryptoError("bad salt in json")
 
-    salt = _b64decode(loaded['salt'])
+    try:
+        salt = loaded['salt'].encode('ascii')
+    except ValueError:
+        raise CryptoError("salt in json not valid ascii")
 
     if 'message' not in loaded:
         raise CryptoError("no message in json")

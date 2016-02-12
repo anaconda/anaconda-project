@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function
 
 import json
@@ -99,8 +100,24 @@ def test_missing_salt():
     _check_package_missing_field('salt', 'bad salt in json')
 
 
-def test_bad_salt():
-    _check_package_mangled_field('salt', 'NOPE1', 'base64 decoding error')
+def test_nonsense_salt():
+    _check_package_mangled_field('salt', 'NOPE1', 'bcrypt error')
+
+
+def test_wrong_bcrypt_algorithm_in_salt():
+    _check_package_mangled_field('salt', '$2c$12$Ksvojv.81hG0Hs9.4WUglu', 'bcrypt error')
+
+
+def test_wrong_bcrypt_rounds_in_salt():
+    _check_package_mangled_field('salt', '$2b$14$Ksvojv.81hG0Hs9.4WUglu', 'incorrect pass phrase')
+
+
+def test_wrong_random_data_in_salt():
+    _check_package_mangled_field('salt', '$2b$12$Ksvojv.81hG0Hs9.4WUglu', 'incorrect pass phrase')
+
+
+def test_salt_not_valid_ascii():
+    _check_package_mangled_field('salt', '☠', 'salt in json not valid ascii')
 
 
 def test_bad_iv_base64():
