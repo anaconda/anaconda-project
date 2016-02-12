@@ -72,7 +72,10 @@ def encrypt_bytes(message, secret):
     iv = Random.new().read(AES.block_size)
     cipher = AES.new(key, AES.MODE_CFB, iv)
     encrypted = cipher.encrypt(_sha256(message) + message)
-    dumped = json.dumps(dict(iv=_b64encode(iv), cipher='AES-CFB', salt=_b64encode(salt), message=_b64encode(encrypted)))
+    dumped = json.dumps(dict(iv=_b64encode(iv),
+                             cipher='AES-256-CFB',
+                             salt=_b64encode(salt),
+                             message=_b64encode(encrypted)))
     single_string = _b64encode(dumped.encode('utf-8'))
     return single_string
 
@@ -84,7 +87,7 @@ def decrypt_bytes(package, secret):
     except ValueError as e:
         raise CryptoError("encrypted package had bad json: " + str(e))
 
-    if 'cipher' not in loaded or loaded['cipher'] != 'AES-CFB':
+    if 'cipher' not in loaded or loaded['cipher'] != 'AES-256-CFB':
         raise CryptoError("bad cipher in json")
 
     if 'iv' not in loaded:
