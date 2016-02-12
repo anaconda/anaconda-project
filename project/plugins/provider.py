@@ -355,9 +355,10 @@ class EnvVarProvider(Provider):
                     context.append_error("No 'encrypted' field in the default value of %s" % (requirement.env_var))
                     return
                 value = decrypt_string(value['encrypted'], context.environ[default_key])
-            if isinstance(value, str):
-                context.environ[requirement.env_var] = value
-            else:
+            if isinstance(value, dict) or isinstance(value, list):
                 context.append_error("Value of '%s' should be a string not %r" % (requirement.env_var, value))
+            else:
+                value = str(value)  # convert number, bool, null to a string
+                context.environ[requirement.env_var] = value
         else:
             pass

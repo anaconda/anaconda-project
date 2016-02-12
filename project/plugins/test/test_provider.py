@@ -305,6 +305,49 @@ runtime:
 """}, check_env_var_provider)
 
 
+def test_env_var_provider_with_list_valued_default_project_file():
+    def check_env_var_provider_with_list_default(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO")
+        assert dict(default=[]) == requirement.options
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
+        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO' not in context.environ
+        assert 1 == len(context.errors)
+        assert "Value of 'FOO' should be a string" in context.errors[0]
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  FOO:
+    default: []
+"""}, check_env_var_provider_with_list_default)
+
+
+def test_env_var_provider_with_number_valued_default_project_file():
+    def check_env_var_provider_with_number_default(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO")
+        assert dict(default=42) == requirement.options
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
+        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'FOO' in context.environ
+        assert 0 == len(context.errors)
+        assert context.environ['FOO'] == "42"
+        assert isinstance(context.environ['FOO'], str)
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  FOO:
+    default: 42
+"""}, check_env_var_provider_with_number_default)
+
+
 def test_fail_to_find_by_service():
     registry = ProviderRegistry()
     found = registry.find_by_service(requirement=None, service="nope")
