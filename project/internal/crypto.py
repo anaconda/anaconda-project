@@ -42,6 +42,16 @@ def _b64encode(s):
     return base64.b64encode(s).decode('ascii')
 
 
+# note that this is a hash and not a MAC.
+# http://doctrina.org/Cryptographic-Hash-Vs-MAC:What-You-Need-To-Know.html
+# This is believed to be OK in our two uses because if an attacker
+# finds two messages that have the same hash, it doesn't matter as
+# far as we know.
+#  - we use it to compress the output of bcrypt
+#  - the ciphertext includes a checksum of the plaintext. Since the hash
+#    is encrypted with the secret key, it's effectively from a trusted source.
+#    And we are only using it to say "password incorrect" or "password correct"
+#    anyhow.
 def _sha256(message):
     m = hashlib.sha256()
     m.update(message)
@@ -59,7 +69,10 @@ def _key_from_secret(secret, salt):
         encoded_secret = tail
         bcrypted = bcrypted + bcrypt.hashpw(head, salt)
 
-    # then we sha256 to force the length to _AES_KEY_LENGTH bytes
+    # then we sha256 to force the length to _AES_KEY_LENGTH bytes.
+    # of course someone trying to decrypt could guess these keys
+    # directly bypassing the bcrypt, but since they are 32 bytes
+    # long it shouldn't be easy.
     key = _sha256(bcrypted)
     assert len(key) == _AES256_KEY_LENGTH
     assert len(key) == _SHA256_HASH_LENGTH
@@ -110,7 +123,30 @@ def decrypt_bytes(package, secret):
 
     key = _key_from_secret(secret, salt)
     cipher = AES.new(key, AES.MODE_CFB, iv)
+
     decrypted = cipher.decrypt(message)
+
+    # In the right situation, we can reveal information by
+    # integrity-checking (via cryptographic hash or Unicode
+    # validation or other means) the encrypted message. An example
+    # cited by
+    # http://www.thoughtcrime.org/blog/the-cryptographic-doom-principle/
+    # is the "Vaudenay attack" which depends on the attacker being
+    # able to tell whether we failed in cipher.decrypt() above due
+    # to bad padding, or below when integrity-checking.
+    #
+    # But even if we didn't have a checksum, we would probably get
+    # invalid UTF-8 most of the time on a bad message, which (I
+    # think...)  reveals the same information.
+    #
+    # We are hoping that doesn't matter in this case because our
+    # attacker would have the full ciphertext (bits on disk) but
+    # would not be talking to a computer program that has the
+    # secret key, instead they would be brute-forcing the
+    # key. They can make their own version of this code that does
+    # whatever they want it to. So it isn't an issue for this code
+    # to reveal information ... this code only has the secret when
+    # a user has just typed it in.
 
     if len(decrypted) < _SHA256_HASH_LENGTH:
         raise CryptoError("encrypted data was corrupted")
