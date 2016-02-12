@@ -132,6 +132,40 @@ def test_short_message():
     _check_package_mangled_field('message', '', 'encrypted data was corrupted')
 
 
+def test_changing_one_byte_in_message():
+    def check_change_one_byte_by(n):
+        def change_one_byte(json):
+            message = bytearray(crypto._b64decode(json['message']))
+            changed = message[3] + n
+            if changed > 255:
+                changed = changed - 256
+            message[3] = changed
+            json['message'] = crypto._b64encode(message)
+
+        _check_modified_package(lambda p: _modified_package(p, change_one_byte), 'incorrect pass phrase')
+
+    check_change_one_byte_by(1)
+    check_change_one_byte_by(2)
+    check_change_one_byte_by(3)
+    check_change_one_byte_by(4)
+    check_change_one_byte_by(5)
+    check_change_one_byte_by(6)
+    check_change_one_byte_by(7)
+
+
+def test_deleting_bytes_from_message():
+    def check_delete_bytes(n):
+        def delete_bytes(json):
+            message = crypto._b64decode(json['message'])[:-n]
+            json['message'] = crypto._b64encode(message)
+
+        _check_modified_package(lambda p: _modified_package(p, delete_bytes), 'incorrect pass phrase')
+
+    check_delete_bytes(1)
+    check_delete_bytes(2)
+    check_delete_bytes(3)
+
+
 def test_long_secret_matters():
     message = "Hello World"
 
