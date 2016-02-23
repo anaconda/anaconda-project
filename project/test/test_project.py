@@ -436,13 +436,19 @@ app:
 
 def test_launch_command_does_not_exist():
     def check_error_on_nonexistent_path(dirname):
+        import errno
         environ = dict(CONDA_DEFAULT_ENV='root', PATH=os.environ['PATH'], PROJECT_DIR=dirname)
         project = Project(dirname)
         argv = project.launch_argv_for_environment(environ)
         assert argv[0] == 'this-command-does-not-exist'
+        try:
+            FileNotFoundError
+        except NameError:
+            # python 2
+            FileNotFoundError = OSError
         with pytest.raises(FileNotFoundError) as excinfo:
             subprocess.check_output(argv, stderr=subprocess.STDOUT).decode()
-        assert 'this-command-does-not-exist' in repr(excinfo.value)
+        assert excinfo.value.errno == errno.ENOENT
 
     with_directory_contents(
         {PROJECT_FILENAME: """
