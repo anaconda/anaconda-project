@@ -579,7 +579,7 @@ def prepare(project, environ=None, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None
     return result
 
 
-def unprepare(project, io_loop=None):
+def unprepare(project):
     """Attempt to clean up project-scoped resources allocated by prepare().
 
     This will retain any user configuration choices about how to
@@ -589,7 +589,6 @@ def unprepare(project, io_loop=None):
 
     Args:
         project (Project): the project
-        io_loop (IOLoop): tornado IOLoop to use, None for default
 
     """
     local_state = LocalStateFile.load_for_directory(project.directory_path)
