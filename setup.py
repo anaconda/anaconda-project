@@ -49,7 +49,11 @@ class AllTestsCommand(TestCommand):
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        # -rw turns on printing warnings
+        # -rw turns on printing warnings. To see stack trace from
+        # KeyboardInterrupt, add --fulltrace but it also makes the
+        # traces huge by showing source code for each frame, so not
+        # adding it by default.
+        # To see stdout "live" instead of capturing it, use -s.
         self.pytest_args = ['-v', '-rw', '--durations=10', '--cov-config', os.path.join(ROOT, ".coveragerc"),
                             '--cov=project', '--cov-report=term-missing', '--cov-report=html']
         self.pyfiles = None
