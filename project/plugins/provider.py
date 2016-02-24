@@ -55,6 +55,9 @@ class ProviderRegistry(object):
         if class_name == 'ProjectScopedCondaEnvProvider':
             from .providers.conda_env import ProjectScopedCondaEnvProvider
             return ProjectScopedCondaEnvProvider()
+        elif class_name == 'MasterPasswordProvider':
+            from .providers.master_password import MasterPasswordProvider
+            return MasterPasswordProvider()
         else:
             return None
 
@@ -257,7 +260,10 @@ class EnvVarProvider(Provider):
         local_override = self._local_state_override(requirement, local_state_file)
         local_override_key = self._key_from_value(local_override)
         if local_override_key is not None:
-            return (local_override_key, )
+            if local_override_key not in environ:
+                return (local_override_key, )
+            else:
+                return ()
         elif requirement.encrypted and requirement.env_var not in environ:
             # default key - we'll need this to save the encrypted value
             return ('ANACONDA_MASTER_PASSWORD', )
@@ -269,7 +275,10 @@ class EnvVarProvider(Provider):
         local_override = self._local_state_override(requirement, local_state_file)
         local_override_key = self._key_from_value(local_override)
         if local_override_key is not None:
-            return (local_override_key, )
+            if local_override_key not in environ:
+                return (local_override_key, )
+            else:
+                return ()
         elif requirement.env_var in environ:
             # nothing to decrypt
             return ()

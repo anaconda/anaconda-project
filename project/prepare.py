@@ -326,7 +326,7 @@ def _sort_requirements_and_providers(environ, local_state, requirements_and_prov
     def can_ignore_dependency_on_key(key):
         # if a key is already in the environment, we don't have to
         # worry about it existing as a node in the graph we are
-        # topsorting
+        # toposorting
         return key in environ
 
     return toposort_from_dependency_info(requirements_and_providers, get_node_key, get_dependency_keys,
@@ -419,12 +419,11 @@ def _partition_first_group_to_configure(environ, local_state, requirements_and_p
     while sorted:
         requirement_and_providers = sorted.pop()
 
-        missing_vars = False
+        missing_vars = []
         for provider in requirement_and_providers[1]:
-            if len(provider.missing_env_vars_to_configure(requirement_and_providers[0], environ, local_state)) > 0:
-                missing_vars = True
+            missing_vars = provider.missing_env_vars_to_configure(requirement_and_providers[0], environ, local_state)
 
-        if missing_vars:
+        if len(missing_vars) > 0:
             tail.append(requirement_and_providers)
             break
         else:

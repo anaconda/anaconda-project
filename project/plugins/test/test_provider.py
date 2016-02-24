@@ -243,11 +243,12 @@ def test_env_var_provider_with_encrypted_default_value_in_local_state():
         requirement = _load_env_var_requirement(dirname, "FOO_SECRET")
         assert requirement.encrypted
         assert dict(default='from_default') == requirement.options
+        assert ('MASTER', ) == provider.missing_env_vars_to_configure(requirement, dict(), local_state_file)
+        assert ('MASTER', ) == provider.missing_env_vars_to_provide(requirement, dict(), local_state_file)
+
         config_context = ProviderConfigContext(dict(MASTER=secret), local_state_file, requirement)
-        assert ('MASTER', ) == provider.missing_env_vars_to_configure(requirement, config_context.environ,
-                                                                      local_state_file)
-        assert ('MASTER', ) == provider.missing_env_vars_to_provide(requirement, config_context.environ,
-                                                                    local_state_file)
+        assert () == provider.missing_env_vars_to_configure(requirement, config_context.environ, local_state_file)
+        assert () == provider.missing_env_vars_to_provide(requirement, config_context.environ, local_state_file)
         config = provider.read_config(config_context)
         context = ProvideContext(environ=config_context.environ, local_state_file=local_state_file, config=config)
         provider.provide(requirement, context=context)

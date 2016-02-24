@@ -11,15 +11,15 @@ class MasterPasswordRequirement(EnvVarRequirement):
         super(MasterPasswordRequirement, self).__init__(env_var='ANACONDA_MASTER_PASSWORD', options=options)
 
     @property
+    def title(self):
+        """Override superclass title."""
+        return "Anaconda master password"
+
+    @property
     def encrypted(self):
         """Override superclass to never encrypt ANACONDA_MASTER_PASSWORD which would be circular."""
-        # TODO we do want to use a password input field though... override config_html ?
         return False
 
     def find_providers(self, registry):
-        """Override superclass to list no providers."""
-        # EnvVarProvider will let you put the master password in
-        # the config file, which we want to disallow. By having no
-        # providers, it has to be set in the environment up front.
-        # future: add a provider that uses the keyring library
-        return []
+        """Override superclass to list master password providers."""
+        return [registry.find_by_class_name('MasterPasswordProvider')]
