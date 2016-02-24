@@ -8,10 +8,8 @@ import subprocess
 import sys
 from copy import copy, deepcopy
 
-from tornado.ioloop import IOLoop
-
 from project.internal.metaclass import with_metaclass
-from project.internal.prepare_ui import NotInteractivePrepareUI, BrowserPrepareUI, ConfigurePrepareContext
+from project.internal.prepare_ui import prepare_not_interactive, prepare_browser
 from project.internal.toposort import toposort_from_dependency_info
 from project.local_state_file import LocalStateFile
 from project.plugins.provider import ProvideContext, ProviderRegistry, ProviderConfigContext
@@ -184,6 +182,16 @@ class PrepareFailure(PrepareResult):
             print(error, file=sys.stderr)
 
 
+class ConfigurePrepareContext(object):
+    """Information needed to configure a stage."""
+
+    def __init__(self, environ, local_state_file, requirements_and_providers):
+        """Construct a ConfigurePrepareContext."""
+        self.environ = environ
+        self.local_state_file = local_state_file
+        self.requirements_and_providers = requirements_and_providers
+
+
 class PrepareStage(with_metaclass(ABCMeta)):
     """A step in the project preparation process."""
 
@@ -200,7 +208,18 @@ class PrepareStage(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @abstractmethod
-    def execute(self, ui):
+    def configure(self):
+        """Get a ``ConfigurePrepareContext`` or None if no configuration is needed.
+
+        Configuration should be done before execute().
+
+        Returns:
+          a ``ConfigurePrepareContext`` or None
+        """
+        pass  # pragma: no cover
+
+    @abstractmethod
+    def execute(self):
         """Run this step and return a new stage, or None if we are done or failed."""
         pass  # pragma: no cover
 
@@ -214,10 +233,14 @@ class PrepareStage(with_metaclass(ABCMeta)):
 class _FunctionPrepareStage(PrepareStage):
     """A stage chain where the description and the execute function are passed in to the constructor."""
 
-    def __init__(self, description, execute):
+    def __init__(self, description, execute, config_context=None):
         self._result = None
         self._description = description
         self._execute = execute
+        self._config_context = config_context
+
+    # def __repr__(self):
+    #    return "_FunctionPrepareStage(%r)" % (self._description)
 
     @property
     def description_of_action(self):
@@ -227,8 +250,11 @@ class _FunctionPrepareStage(PrepareStage):
     def failed(self):
         return self.result.failed
 
-    def execute(self, ui):
-        return self._execute(self, ui)
+    def configure(self):
+        return self._config_context
+
+    def execute(self):
+        return self._execute(self)
 
     @property
     def result(self):
@@ -244,6 +270,9 @@ class _AndThenPrepareStage(PrepareStage):
         self._stage = stage
         self._and_then = and_then
 
+    # def __repr__(self):
+    #    return "_AndThenPrepareStage(%r, %r)" % (self._stage, self._and_then)
+
     @property
     def description_of_action(self):
         return self._stage.description_of_action
@@ -252,8 +281,11 @@ class _AndThenPrepareStage(PrepareStage):
     def failed(self):
         return self._stage.failed
 
-    def execute(self, ui):
-        next = self._stage.execute(ui)
+    def configure(self):
+        return self._stage.configure()
+
+    def execute(self):
+        next = self._stage.execute()
         if next is None:
             if self._stage.failed:
                 return None
@@ -302,19 +334,7 @@ def _sort_requirements_and_providers(environ, local_state, requirements_and_prov
 
 
 def _configure_and_provide(project, environ, local_state, requirements_and_providers):
-    def configure_stage(stage, ui):
-        configure_context = ConfigurePrepareContext(environ=environ,
-                                                    local_state_file=local_state,
-                                                    requirements_and_providers=requirements_and_providers)
-
-        # wait for the configure UI if any
-        ui.configure(configure_context)
-
-        stage._result = PrepareSuccess(logs=(), command_exec_info=None, environ=environ)
-
-        return _FunctionPrepareStage("Set up project requirements.", provide_stage)
-
-    def provide_stage(stage, ui):
+    def provide_stage(stage):
         # the plan is a list of (provider, requirement) in order we
         # should run it.  our algorithm to decide on this may be
         # getting more complicated for example we should be able to
@@ -373,7 +393,11 @@ def _configure_and_provide(project, environ, local_state, requirements_and_provi
             stage._result = PrepareSuccess(logs=logs, command_exec_info=exec_info, environ=environ)
         return None
 
-    return _FunctionPrepareStage("Customize how project requirements will be met.", configure_stage)
+    configure_context = ConfigurePrepareContext(environ=environ,
+                                                local_state_file=local_state,
+                                                requirements_and_providers=requirements_and_providers)
+
+    return _FunctionPrepareStage("Set up project.", provide_stage, configure_context)
 
 
 def _partition_first_group_to_configure(environ, local_state, requirements_and_providers):
@@ -516,11 +540,6 @@ def prepare_in_stages(project, environ=None):
     return first_stage
 
 
-def _default_show_url(url):
-    import webbrowser
-    webbrowser.open_new_tab(url)
-
-
 def prepare(project, environ=None, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=None):
     """Perform all steps needed to get a project ready to execute.
 
@@ -542,36 +561,13 @@ def prepare(project, environ=None, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None
     if ui_mode not in _all_ui_modes:
         raise ValueError("invalid UI mode " + ui_mode)
 
-    old_current_loop = None
-    try:
-        if io_loop is None:
-            old_current_loop = IOLoop.current()
-            io_loop = IOLoop()
-            io_loop.make_current()
+    stage = prepare_in_stages(project, environ)
 
-        if show_url is None:
-            show_url = _default_show_url
-
-        if ui_mode == UI_MODE_NOT_INTERACTIVE:
-            ui = NotInteractivePrepareUI()
-        elif ui_mode == UI_MODE_BROWSER:
-            ui = BrowserPrepareUI(io_loop=io_loop, show_url=show_url)
-
-        result = None
-        stage = prepare_in_stages(project, environ)
-        while stage is not None:
-            # this is a little hack to get code coverage since we will only use
-            # the description later after refactoring the UI
-            stage.description_of_action
-            next_stage = stage.execute(ui)
-            result = stage.result
-            if result.failed:
-                break
-            stage = next_stage
-
-    finally:
-        if old_current_loop is not None:
-            old_current_loop.make_current()
+    if ui_mode == UI_MODE_NOT_INTERACTIVE:
+        result = prepare_not_interactive(stage)
+    elif ui_mode == UI_MODE_BROWSER:
+        result = prepare_browser(stage, io_loop=io_loop, show_url=show_url)
+    # TODO: UI_MODE_TEXT
 
     if result.failed:
         result.print_output()

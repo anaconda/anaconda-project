@@ -289,34 +289,39 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
             if get_response.code != 200:
                 raise Exception("got a bad http response " + repr(get_response))
 
-            http_results['post_click_submit'] = yield http_post_async(url, body="")
+            http_results['post_click_submit'] = post_response = yield http_post_async(url, body="")
+
+            assert 200 == post_response.code
+            assert '</form>' in str(post_response.body)
+            assert 'FOO_PASSWORD' in str(post_response.body)
+
+            fill_in_password(url, post_response)
 
         io_loop.add_callback(do_http)
 
-    def fill_in_password(url):
-        from project.internal.test.http_utils import http_get_async, http_post_async
+    def fill_in_password(url, first_response):
+        from project.internal.test.http_utils import http_post_async
         from project.internal.test.multipart import MultipartEncoder
         from project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
         from tornado import gen
         from bs4 import BeautifulSoup
 
+        if first_response.code != 200:
+            raise Exception("got a bad http response " + repr(first_response))
+
+        # set the FOO_PASSWORD field
+        soup = BeautifulSoup(first_response.body, _BEAUTIFUL_SOUP_BACKEND)
+        password_fields = soup.find_all("input", attrs={'type': 'password'})
+        if len(password_fields) == 0:
+            print("No password fields in " + repr(soup))
+            raise Exception("password field not found")
+        else:
+            field = password_fields[0]
+
+        assert 'name' in field.attrs
+
         @gen.coroutine
         def do_http():
-            http_results['get_fill_in_password'] = get_response = yield http_get_async(url)
-
-            if get_response.code != 200:
-                raise Exception("got a bad http response " + repr(get_response))
-
-            # set the FOO_PASSWORD field
-            soup = BeautifulSoup(get_response.body, _BEAUTIFUL_SOUP_BACKEND)
-            password_fields = soup.find_all("input", attrs={'type': 'password'})
-            if len(password_fields) == 0:
-                print("No password fields in " + repr(soup))
-                raise Exception("password field not found")
-            else:
-                field = password_fields[0]
-
-            assert 'name' in field.attrs
 
             encoder = MultipartEncoder({field['name']: 'bloop'})
             body = encoder.to_string()
@@ -327,16 +332,7 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
         io_loop.add_callback(do_http)
 
     def mock_open_new_tab(url):
-        if 'get_click_submit' in http_results:
-            # hack to be sure the POST finishes
-            from tornado.ioloop import IOLoop
-            io_loop = IOLoop.current()
-            while 'post_click_submit' in http_results:
-                io_loop.call_later(0.01, lambda: io_loop.stop())
-                io_loop.start()
-            return fill_in_password(url)
-        else:
-            return click_submit(url)
+        return click_submit(url)
 
     monkeypatch.setattr('webbrowser.open_new_tab', mock_open_new_tab)
 
@@ -358,12 +354,10 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
 
         assert 'get_click_submit' in http_results
         assert 'post_click_submit' in http_results
-        assert 'get_fill_in_password' in http_results
         assert 'post_fill_in_password' in http_results
 
         assert 200 == http_results['get_click_submit'].code
         assert 200 == http_results['post_click_submit'].code
-        assert 200 == http_results['get_fill_in_password'].code
         assert 200 == http_results['post_fill_in_password'].code
 
         local_state_file = LocalStateFile.load_for_directory(project.directory_path)

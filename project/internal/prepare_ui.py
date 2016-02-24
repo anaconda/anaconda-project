@@ -1,54 +1,54 @@
 from __future__ import absolute_import, print_function
 
-from abc import ABCMeta, abstractmethod
 
-from project.internal.metaclass import with_metaclass
-
-
-class ConfigurePrepareContext(object):
-    def __init__(self, environ, local_state_file, requirements_and_providers):
-        self.environ = environ
-        self.local_state_file = local_state_file
-        self.requirements_and_providers = requirements_and_providers
-
-
-class PrepareUI(with_metaclass(ABCMeta)):
-    @abstractmethod
-    def configure(self, context):
-        pass  # pragma: no cover
+def prepare_not_interactive(stage):
+    result = None
+    while stage is not None:
+        next_stage = stage.execute()
+        result = stage.result
+        if result.failed:
+            break
+        stage = next_stage
+    return result
 
 
-class NotInteractivePrepareUI(PrepareUI):
-    def configure(self, context):
-        return True
+def _default_show_url(url):
+    import webbrowser
+    webbrowser.open_new_tab(url)
 
 
-class BrowserPrepareUI(PrepareUI):
-    def __init__(self, io_loop, show_url):
-        assert show_url is not None
-        assert io_loop is not None
-        self._server = None
-        self._io_loop = io_loop
-        self._show_url = show_url
+def prepare_browser(stage, io_loop, show_url):
+    from tornado.ioloop import IOLoop
+    from project.internal.ui_server import UIServer, UIServerDoneEvent
 
-    def configure(self, context):
-        from project.internal.ui_server import UIServer, UIServerDoneEvent
+    result_holder = {}
+    old_current_loop = None
+    try:
+        old_current_loop = IOLoop.current()
+        if io_loop is None:
+            io_loop = IOLoop()
+        io_loop.make_current()
 
-        assert self._server is None
+        if show_url is None:
+            show_url = _default_show_url
 
         def event_handler(event):
             if isinstance(event, UIServerDoneEvent):
-                assert event.should_we_prepare
-                self._io_loop.stop()
+                result_holder['result'] = event.result
+                io_loop.stop()
 
-        self._server = UIServer(context, event_handler=event_handler, io_loop=self._io_loop)
+        server = UIServer(stage, event_handler=event_handler, io_loop=io_loop)
         try:
-            print("# Click the button at {url} to continue...".format(url=self._server.url))
-            self._show_url(self._server.url)
+            print("# Configure the project at {url} to continue...".format(url=server.url))
+            show_url(server.url)
 
-            self._io_loop.start()
+            print("starting io loop")
+            io_loop.start()
         finally:
-            self._server.unlisten()
-            self._server = None
+            server.unlisten()
+    finally:
+        if old_current_loop is not None:
+            old_current_loop.make_current()
 
-        return True
+    assert 'result' in result_holder
+    return result_holder['result']

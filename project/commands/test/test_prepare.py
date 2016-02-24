@@ -74,7 +74,7 @@ runtime:
     assert can_connect_args['port'] == 6379
 
     out, err = capsys.readouterr()
-    assert "# Click the button at " in out
+    assert "# Configure the project at " in out
     assert "" == err
 
 
@@ -104,7 +104,7 @@ runtime:
     assert can_connect_args['port'] == 6379
 
     out, err = capsys.readouterr()
-    assert "# Click the button at " in out
+    assert "# Configure the project at " in out
     assert "" == err
 
 

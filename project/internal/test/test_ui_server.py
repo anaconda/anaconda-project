@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from tornado.ioloop import IOLoop
 
 from project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
-from project.internal.prepare_ui import ConfigurePrepareContext
+from project.prepare import ConfigurePrepareContext, _FunctionPrepareStage, PrepareSuccess
 from project.internal.test.http_utils import http_get, http_post
 from project.internal.test.multipart import MultipartEncoder
 from project.internal.test.tmpfile_utils import with_directory_contents
@@ -12,6 +12,14 @@ from project.internal.ui_server import UIServer, UIServerDoneEvent
 from project.local_state_file import LocalStateFile
 from project.plugins.provider import EnvVarProvider
 from project.plugins.requirement import EnvVarRequirement
+
+
+def _no_op_prepare(config_context):
+    def _do_nothing(stage):
+        stage._result = PrepareSuccess(logs=[], command_exec_info=None, environ=dict())
+        return None
+
+    return _FunctionPrepareStage("Do Nothing", _do_nothing, config_context)
 
 
 def test_ui_server_empty():
@@ -26,7 +34,7 @@ def test_ui_server_empty():
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
         context = ConfigurePrepareContext(dict(), local_state_file, [])
-        server = UIServer(context, event_handler, io_loop)
+        server = UIServer(_no_op_prepare(context), event_handler, io_loop)
 
         get_response = http_get(io_loop, server.url)
         print(repr(get_response))
@@ -59,7 +67,7 @@ def test_ui_server_with_form():
         requirement = EnvVarRequirement("FOO")
         provider = EnvVarProvider()
         context = ConfigurePrepareContext(dict(), local_state_file, [(requirement, [provider])])
-        server = UIServer(context, event_handler, io_loop)
+        server = UIServer(_no_op_prepare(context), event_handler, io_loop)
 
         get_response = http_get(io_loop, server.url)
         print(repr(get_response))
@@ -102,7 +110,11 @@ def _ui_server_bad_form_name_test(capsys, name_template, expected_err):
         requirement = EnvVarRequirement("FOO")
         provider = EnvVarProvider()
         context = ConfigurePrepareContext(dict(), local_state_file, [(requirement, [provider])])
-        server = UIServer(context, event_handler, io_loop)
+        server = UIServer(_no_op_prepare(context), event_handler, io_loop)
+
+        # do a get so that _requirements_by_id below exists
+        get_response = http_get(io_loop, server.url)
+        assert 200 == get_response.code
 
         req_id = list(server._application._requirements_by_id.keys())[0]
         if '%s' in name_template:
