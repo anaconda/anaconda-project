@@ -8,8 +8,8 @@ import subprocess
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.crypto import decrypt_string
-from project.internal.prepare_ui import NotInteractivePrepareUI
-from project.prepare import prepare, unprepare, UI_MODE_BROWSER, prepare_in_stages, _after_stage_success
+from project.prepare import (prepare, unprepare, UI_MODE_BROWSER, prepare_in_stages, PrepareSuccess, PrepareFailure,
+                             _after_stage_success, _FunctionPrepareStage)
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
 from project.local_state_file import LocalStateFile
@@ -154,30 +154,75 @@ def test_attempt_to_grab_result_early():
     with_directory_contents(dict(), early_result_grab)
 
 
-def test_skip_after_success_function_when_stage_fails():
-    def check_no_after_success_on_failed(dirname):
-        project = Project(dirname)
-        first_stage = prepare_in_stages(project, environ=dict())
+def test_skip_after_success_function_when_second_stage_fails():
+    state = {'state': 'start'}
 
-        def after():
-            raise RuntimeError("should not have been called")
+    def do_first(stage):
+        assert state['state'] == 'start'
+        state['state'] = 'first'
+        stage._result = PrepareSuccess(logs=[], command_exec_info=None, environ=dict())
 
-        stage = _after_stage_success(first_stage, after)
-        while stage is not None:
-            next_stage = stage.execute(NotInteractivePrepareUI())
-            result = stage.result
-            if result.failed:
-                assert stage.failed
-                break
-            else:
-                assert not stage.failed
-            stage = next_stage
-        assert result.failed
+        def last(stage):
+            assert state['state'] == 'first'
+            state['state'] = 'second'
+            stage._result = PrepareFailure(logs=[], errors=[])
+            return None
 
-    with_directory_contents({PROJECT_FILENAME: """
-runtime:
-  FOO: {}
-"""}, check_no_after_success_on_failed)
+        return _FunctionPrepareStage("second", last)
+
+    first_stage = _FunctionPrepareStage("first", do_first)
+
+    def after():
+        raise RuntimeError("should not have been called")
+
+    stage = _after_stage_success(first_stage, after)
+    while stage is not None:
+        next_stage = stage.execute()
+        result = stage.result
+        if result.failed:
+            assert stage.failed
+            break
+        else:
+            assert not stage.failed
+        stage = next_stage
+    assert result.failed
+    assert state['state'] == 'second'
+
+
+def test_run_after_success_function_when_second_stage_succeeds():
+    state = {'state': 'start'}
+
+    def do_first(stage):
+        assert state['state'] == 'start'
+        state['state'] = 'first'
+        stage._result = PrepareSuccess(logs=[], command_exec_info=None, environ=dict())
+
+        def last(stage):
+            assert state['state'] == 'first'
+            state['state'] = 'second'
+            stage._result = PrepareSuccess(logs=[], command_exec_info=None, environ=dict())
+            return None
+
+        return _FunctionPrepareStage("second", last)
+
+    first_stage = _FunctionPrepareStage("first", do_first)
+
+    def after():
+        assert state['state'] == 'second'
+        state['state'] = 'after'
+
+    stage = _after_stage_success(first_stage, after)
+    while stage is not None:
+        next_stage = stage.execute()
+        result = stage.result
+        if result.failed:
+            assert stage.failed
+            break
+        else:
+            assert not stage.failed
+        stage = next_stage
+    assert not result.failed
+    assert state['state'] == 'after'
 
 
 def test_prepare_with_browser(monkeypatch):
