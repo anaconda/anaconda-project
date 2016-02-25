@@ -254,6 +254,10 @@ class PrepareStage(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
 
+# This is defined to keep the same requirements from old_statuses
+# in the refreshed list, even if they are missing from
+# rechecked_statuses, and it does not add any new requirements
+# from rechecked_statuses to the refreshed list.
 def _refresh_status_list(old_statuses, rechecked_statuses):
     new_by_req = dict()
     for status in rechecked_statuses:
@@ -342,7 +346,7 @@ class _AndThenPrepareStage(PrepareStage):
             if self._stage.failed:
                 return None
             else:
-                return self._and_then()
+                return self._and_then(self._stage.statuses_after_execute)
         else:
             return _AndThenPrepareStage(next, self._and_then)
 
@@ -362,7 +366,8 @@ class _AndThenPrepareStage(PrepareStage):
 def _after_stage_success(stage, and_then):
     """Run and_then function after stage executes successfully.
 
-    and_then may return another stage, or None.
+    and_then may return another stage, or None. It takes
+    the current list of updated statuses as a parameter.
     """
     assert stage is not None
     return _AndThenPrepareStage(stage, and_then)
@@ -512,13 +517,10 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
 
     if len(initial) > 0 and len(remaining) > 0:
 
-        def process_remaining():
-            # we have to update all of our statuses now
-            updated = []
-            for status in remaining:
-                updated.append(status.recheck(environ))
-            return _process_requirement_statuses(project, environ, local_state, updated,
-                                                 _refresh_status_list(all_statuses, updated))
+        def process_remaining(updated_all_statuses):
+            # get the new status for each remaining requirement
+            updated = _refresh_status_list(remaining, updated_all_statuses)
+            return _process_requirement_statuses(project, environ, local_state, updated, updated_all_statuses)
 
         return _after_stage_success(_stages_for(initial), process_remaining)
     elif len(initial) > 0:

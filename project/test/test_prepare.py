@@ -183,7 +183,7 @@ def test_skip_after_success_function_when_second_stage_fails():
 
     first_stage = _FunctionPrepareStage("first", [], do_first)
 
-    def after():
+    def after(updated_statuses):
         raise RuntimeError("should not have been called")
 
     stage = _after_stage_success(first_stage, after)
@@ -218,7 +218,7 @@ def test_run_after_success_function_when_second_stage_succeeds():
 
     first_stage = _FunctionPrepareStage("first", [], do_first)
 
-    def after():
+    def after(updated_statuses):
         assert state['state'] == 'second'
         state['state'] = 'after'
 
