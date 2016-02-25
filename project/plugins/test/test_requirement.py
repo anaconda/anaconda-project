@@ -1,3 +1,4 @@
+from project.plugins.provider import ProviderRegistry
 from project.plugins.requirement import RequirementRegistry, EnvVarRequirement
 
 
@@ -23,3 +24,10 @@ def test_autoguess_encrypted_option():
     assert not EnvVarRequirement(env_var='FOO_SECRET', options=dict(encrypted=False)).encrypted
     assert not EnvVarRequirement(env_var='FOO_SECRET_KEY', options=dict(encrypted=False)).encrypted
     assert not EnvVarRequirement(env_var='FOO_ENCRYPTED', options=dict(encrypted=False)).encrypted
+
+
+def test_empty_variable_treated_as_unset():
+    requirement = EnvVarRequirement(env_var='FOO')
+    status = requirement.check_status(dict(FOO=''), ProviderRegistry())
+    assert not status
+    assert "Environment variable FOO is not set." == status.status_description

@@ -322,7 +322,7 @@ def test_fail_to_prepare_local_redis_server_no_port_available(monkeypatch, capsy
         project = Project(dirname)
         result = prepare(project, environ=dict())
         assert not result
-        assert 72 == len(can_connect_args_list)
+        assert 71 == len(can_connect_args_list)
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -343,7 +343,7 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
         project = Project(dirname)
         result = prepare(project, environ=dict())
         assert not result
-        assert 35 == len(can_connect_args_list)
+        assert 34 == len(can_connect_args_list)
 
     with_directory_contents(
         {PROJECT_FILENAME: """

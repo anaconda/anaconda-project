@@ -1,3 +1,4 @@
+from project.plugins.provider import ProviderRegistry
 from project.plugins.requirement import RequirementRegistry
 from project.plugins.requirements.redis import RedisRequirement
 
@@ -12,14 +13,16 @@ def test_find_by_env_var_redis():
 
 def test_redis_url_not_set():
     requirement = RedisRequirement()
-    why_not = requirement.why_not_provided(dict())
-    assert "Environment variable REDIS_URL is not set" == why_not
+    status = requirement.check_status(dict(), ProviderRegistry())
+    assert not status
+    assert "Environment variable REDIS_URL is not set." == status.status_description
 
 
 def test_redis_url_bad_scheme():
     requirement = RedisRequirement()
-    why_not = requirement.why_not_provided(dict(REDIS_URL="http://example.com/"))
-    assert "REDIS_URL value 'http://example.com/' does not have 'redis:' scheme" == why_not
+    status = requirement.check_status(dict(REDIS_URL="http://example.com/"), ProviderRegistry())
+    assert not status
+    assert "REDIS_URL value 'http://example.com/' does not have 'redis:' scheme." == status.status_description
 
 
 def _monkeypatch_can_connect_to_socket_fails(monkeypatch):
@@ -39,6 +42,8 @@ def _monkeypatch_can_connect_to_socket_fails(monkeypatch):
 def test_redis_url_cannot_connect(monkeypatch):
     requirement = RedisRequirement()
     can_connect_args = _monkeypatch_can_connect_to_socket_fails(monkeypatch)
-    why_not = requirement.why_not_provided(dict(REDIS_URL="redis://example.com:1234/"))
+    status = requirement.check_status(dict(REDIS_URL="redis://example.com:1234/"), ProviderRegistry())
     assert dict(host='example.com', port=1234, timeout_seconds=0.5) == can_connect_args
-    assert "Cannot connect to redis://example.com:1234/ (from REDIS_URL)" == why_not
+    assert not status
+    expected = "Cannot connect to redis://example.com:1234/ (from REDIS_URL environment variable)."
+    assert expected == status.status_description

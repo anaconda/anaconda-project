@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function
 
 import collections
@@ -83,16 +84,21 @@ class PrepareViewHandler(RequestHandler):
                 self.application.refresh_form_ids(prepare_context)
 
                 config_html = config_html + "<ul>"
-                for (requirement, providers) in prepare_context.requirements_and_providers:
+                for status in prepare_context.statuses:
                     config_html = config_html + "<li>"
-                    config_html = config_html + html_tag("h3", requirement.title)
-                    for provider in providers:
+                    if status.has_been_provided:
+                        check = '<span style="color: green;">✓</span> '
+                    else:
+                        check = '<span style="color: red;">✗</span> '
+                    config_html = config_html + html_tag("h3", status.requirement.title).replace('<h3>', '<h3>' + check)
+                    config_html = config_html + html_tag("p", status.status_description)
+                    for provider in status.possible_providers:
                         config_context = ProviderConfigContext(prepare_context.environ,
-                                                               prepare_context.local_state_file, requirement)
+                                                               prepare_context.local_state_file, status.requirement)
                         config = provider.read_config(config_context)
-                        raw_html = provider.config_html(requirement)
+                        raw_html = provider.config_html(status.requirement)
                         if raw_html is not None:
-                            prefix = self.application.form_prefix(requirement, provider)
+                            prefix = self.application.form_prefix(status.requirement, provider)
                             cleaned_html = cleanup_and_scope_form(raw_html, prefix, config)
                             config_html = config_html + "\n" + cleaned_html
 
@@ -158,10 +164,10 @@ class UIApplication(Application):
         old_ids_by_requirement = self._ids_by_requirement
         self._requirements_by_id = {}
         self._ids_by_requirement = {}
-        for (requirement, providers) in prepare_context.requirements_and_providers:
-            req_id = old_ids_by_requirement.get(requirement, str(uuid.uuid4()))
-            self._requirements_by_id[req_id] = requirement
-            self._ids_by_requirement[requirement] = req_id
+        for status in prepare_context.statuses:
+            req_id = old_ids_by_requirement.get(status.requirement, str(uuid.uuid4()))
+            self._requirements_by_id[req_id] = status.requirement
+            self._ids_by_requirement[status.requirement] = req_id
 
     def form_prefix(self, requirement, provider):
         return "%s.%s." % (self._ids_by_requirement[requirement], provider.config_key)
@@ -180,9 +186,9 @@ class UIApplication(Application):
             print(req_id + " not a known requirement id", file=sys.stderr)
             return None
         requirement = self._requirements_by_id[req_id]
-        for (req, providers) in prepare_context.requirements_and_providers:
-            if req is requirement:
-                for provider in providers:
+        for status in prepare_context.statuses:
+            if status.requirement is requirement:
+                for provider in status.possible_providers:
                     if provider_key == provider.config_key:
                         return (requirement, provider, unscoped_name)
         print("did not find provider " + provider_key, file=sys.stderr)

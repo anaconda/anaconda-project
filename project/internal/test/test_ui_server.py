@@ -10,7 +10,7 @@ from project.internal.test.multipart import MultipartEncoder
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.ui_server import UIServer, UIServerDoneEvent
 from project.local_state_file import LocalStateFile
-from project.plugins.provider import EnvVarProvider
+from project.plugins.provider import ProviderRegistry
 from project.plugins.requirement import EnvVarRequirement
 
 
@@ -65,8 +65,8 @@ def test_ui_server_with_form():
         assert value is None
 
         requirement = EnvVarRequirement("FOO")
-        provider = EnvVarProvider()
-        context = ConfigurePrepareContext(dict(), local_state_file, [(requirement, [provider])])
+        status = requirement.check_status(dict(), ProviderRegistry())
+        context = ConfigurePrepareContext(dict(), local_state_file, [status])
         server = UIServer(_no_op_prepare(context), event_handler, io_loop)
 
         get_response = http_get(io_loop, server.url)
@@ -108,8 +108,8 @@ def _ui_server_bad_form_name_test(capsys, name_template, expected_err):
         local_state_file = LocalStateFile.load_for_directory(dirname)
 
         requirement = EnvVarRequirement("FOO")
-        provider = EnvVarProvider()
-        context = ConfigurePrepareContext(dict(), local_state_file, [(requirement, [provider])])
+        status = requirement.check_status(dict(), ProviderRegistry())
+        context = ConfigurePrepareContext(dict(), local_state_file, [status])
         server = UIServer(_no_op_prepare(context), event_handler, io_loop)
 
         # do a get so that _requirements_by_id below exists

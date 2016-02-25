@@ -15,13 +15,15 @@ def test_find_by_env_var_master_password():
 
 def test_master_password_not_set():
     requirement = MasterPasswordRequirement()
-    why_not = requirement.why_not_provided(dict())
-    assert "Environment variable ANACONDA_MASTER_PASSWORD is not set" == why_not
+    status = requirement.check_status(dict(), ProviderRegistry())
+    assert not status
+    expected = "Anaconda master password isn't set as the ANACONDA_MASTER_PASSWORD environment variable."
+    assert expected == status.status_description
 
 
 def test_master_password_providers():
     registry = ProviderRegistry()
     requirement = MasterPasswordRequirement()
-    providers = requirement.find_providers(registry)
-    len(providers) == 1
-    assert isinstance(providers[0], MasterPasswordProvider)
+    status = requirement.check_status(dict(), registry)
+    len(status.possible_providers) == 1
+    assert isinstance(status.possible_providers[0], MasterPasswordProvider)

@@ -1,7 +1,7 @@
 """Conda-env-related requirements."""
 from __future__ import absolute_import, print_function
 
-from project.plugins.requirement import EnvVarRequirement
+from project.plugins.requirement import EnvVarRequirement, RequirementStatus
 import project.internal.conda_api as conda_api
 from project.internal.directory_contains import directory_contains_subdirectory
 
@@ -22,8 +22,7 @@ class CondaEnvRequirement(EnvVarRequirement):
             conda_package_specs = list()
         self.conda_package_specs = conda_package_specs
 
-    def find_providers(self, registry):
-        """Override superclass to find a provider of conda environments."""
+    def _find_providers(self, registry):
         if self.must_be_project_scoped:
             provider = registry.find_by_class_name('ProjectScopedCondaEnvProvider')
             assert provider is not None
@@ -31,16 +30,14 @@ class CondaEnvRequirement(EnvVarRequirement):
         else:
             return registry.find_by_env_var(self, self.env_var)
 
-    def why_not_provided(self, environ):
-        """Extend superclass to check that the Conda env exists and looks plausible."""
-        why_not = super(CondaEnvRequirement, self).why_not_provided(environ)
-        if why_not is not None:
-            return why_not
-        name_or_prefix = environ[self.env_var]
+    def _why_not_provided(self, environ):
+        name_or_prefix = self._get_value_of_env_var(environ)
+        if name_or_prefix is None:
+            return "A Conda environment hasn't been activated for this project (%s is unset)." % (self.env_var)
 
         prefix = conda_api.resolve_env_to_prefix(name_or_prefix)
         if prefix is None:
-            return "Conda environment %s='%s' does not seem to exist." % (self.env_var, name_or_prefix)
+            return "Conda environment %s='%s' does not exist yet." % (self.env_var, name_or_prefix)
 
         if self.must_be_project_scoped:
             if 'PROJECT_DIR' not in environ:
@@ -52,7 +49,8 @@ class CondaEnvRequirement(EnvVarRequirement):
             # starting point.
             project_dir = environ['PROJECT_DIR']
             if not directory_contains_subdirectory(project_dir, prefix):
-                return "Conda environment at '%s' is not inside project at '%s'" % (prefix, project_dir)
+                return ("Conda environment at '%s' is not inside project at '%s', " +
+                        "this project requires a project-scoped environment.") % (prefix, project_dir)
 
         if len(self.conda_package_specs) == 0:
             return None
@@ -70,6 +68,24 @@ class CondaEnvRequirement(EnvVarRequirement):
             return "Conda environment is missing packages: %s" % (", ".join(sorted))
 
         return None
+
+    def check_status(self, environ, registry):
+        """Override superclass to get our status."""
+        why_not_provided = self._why_not_provided(environ)
+        providers = self._find_providers(registry)
+        if why_not_provided is None:
+            return RequirementStatus(
+                self,
+                registry,
+                has_been_provided=True,
+                status_description=("Using Conda environment %s" % self._get_value_of_env_var(environ)),
+                possible_providers=providers)
+        else:
+            return RequirementStatus(self,
+                                     registry,
+                                     has_been_provided=False,
+                                     status_description=why_not_provided,
+                                     possible_providers=providers)
 
     @property
     def must_be_project_scoped(self):

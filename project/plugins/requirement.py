@@ -34,6 +34,60 @@ class RequirementRegistry(object):
             return EnvVarRequirement(env_var=env_var, options=options)
 
 
+class RequirementStatus(with_metaclass(ABCMeta)):
+    """Abstract class describing the status of a requirement.
+
+    Values of this class are immutable; to get updated status, you
+    would call ``check_status`` again on a requirement to get a
+    new status.
+
+    """
+
+    def __init__(self, requirement, provider_registry, has_been_provided, status_description, possible_providers):
+        """Construct an abstract RequirementStatus."""
+        self._requirement = requirement
+        self._provider_registry = provider_registry
+        self._has_been_provided = has_been_provided
+        self._status_description = status_description
+        self._possible_providers = tuple(possible_providers)
+
+    def __bool__(self):
+        """True if the requirement is met."""
+        return self.has_been_provided
+
+    def __nonzero__(self):
+        """True if the requirement is met."""
+        return self.__bool__()  # pragma: no cover (py2 only)
+
+    @property
+    def requirement(self):
+        """Get the requirement we are the status of."""
+        return self._requirement
+
+    @property
+    def has_been_provided(self):
+        """Get True if the requirement has been met."""
+        return self._has_been_provided
+
+    @property
+    def status_description(self):
+        """Get a description of how the requirement has been met (or why it hasn't been)."""
+        return self._status_description
+
+    @property
+    def possible_providers(self):
+        """Get a tuple of providers that could provide this requirement."""
+        return self._possible_providers
+
+    def recheck(self, environ):
+        """Get a new ``RequirementStatus`` reflecting the current state.
+
+        This calls ``Requirement.check_status()`` which can do network and filesystem IO,
+        so be cautious about where you call it.
+        """
+        return self.requirement.check_status(environ, self._provider_registry)
+
+
 class Requirement(with_metaclass(ABCMeta)):
     """Describes a requirement of the project (from the project config).
 
@@ -63,21 +117,23 @@ class Requirement(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @abstractmethod
-    def why_not_provided(self, environ):
-        """Return why the requirement hasn't been met, or None if it was been.
+    def check_status(self, environ, registry):
+        """Check on the requirement and return a ``RequirementStatus`` with the current status.
+
+        This may attempt to talk to servers, check that files
+        exist on disk, and other work of that nature to verify the
+        requirement's status, so be careful about when and how
+        often this gets called.
 
         Args:
             environ (dict): use this rather than the system environment directly
+            registry (ProviderRegistry): get possible providers from here
 
         Returns:
-            Error message string or None
-        """
-        pass  # pragma: no cover
+            a ``RequirementStatus``
 
-    @abstractmethod
-    def find_providers(self, registry):
-        """List all possible providers from the registry."""
-        pass  # pragma: no cover
+        """
+        pass  # pragma: no cover (abstract method)
 
 # suffixes that change the default for the "encrypted" option
 _secret_suffixes = ('_PASSWORD', '_ENCRYPTED', '_SECRET_KEY', '_SECRET')
@@ -108,14 +164,41 @@ class EnvVarRequirement(Requirement):
         else:
             return any(self.env_var.endswith(suffix) for suffix in _secret_suffixes)
 
-    def why_not_provided(self, environ):
-        """Override superclass to check that the env var is set."""
+    def _get_value_of_env_var(self, environ):
+        """A "protected" method for subtypes to use."""
         value = environ.get(self.env_var, None)
-        if value is not None and value != "":
-            return None
-        else:
-            return "Environment variable {env_var} is not set".format(env_var=self.env_var)
+        if value == "":  # do we really want this, maybe empty string is a valid value sometimes?
+            value = None
+        return value
 
-    def find_providers(self, registry):
-        """Override superclass to look for providers that handle this env var."""
-        return registry.find_by_env_var(self, self.env_var)
+    def _unset_message(self):
+        """A "protected" method for subtypes to use."""
+        return "Environment variable {env_var} is not set.".format(env_var=self.env_var)
+
+    def _set_message(self, environ):
+        """A "protected" method for subtypes to use."""
+        if self.encrypted:
+            # don't include the value if it's an encrypted variable.
+            return "Environment variable {env_var} is set.".format(env_var=self.env_var)
+        else:
+            return "Environment variable {env_var} set to '{value}'".format(env_var=self.env_var,
+                                                                            value=self._get_value_of_env_var(environ))
+
+    def check_status(self, environ, registry):
+        """Override superclass to get our status."""
+        value = self._get_value_of_env_var(environ)
+
+        possible_providers = registry.find_by_env_var(self, self.env_var)
+
+        if value is None:
+            return RequirementStatus(self,
+                                     registry,
+                                     has_been_provided=False,
+                                     status_description=self._unset_message(),
+                                     possible_providers=possible_providers)
+        else:
+            return RequirementStatus(self,
+                                     registry,
+                                     has_been_provided=True,
+                                     status_description=self._set_message(environ),
+                                     possible_providers=possible_providers)
