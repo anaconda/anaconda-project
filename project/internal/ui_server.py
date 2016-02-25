@@ -55,7 +55,7 @@ class PrepareViewHandler(RequestHandler):
 
     def _html_for_status_list(self, statuses, with_config, prepare_context=None):
         html = "<ul>"
-        for status in statuses:
+        for status in sorted(statuses, key=lambda status: status.requirement.title):
             html = html + "<li>"
             if status.has_been_provided:
                 check = '<span style="color: green;">✓</span> '
