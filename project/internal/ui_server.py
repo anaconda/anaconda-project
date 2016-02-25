@@ -53,7 +53,37 @@ class PrepareViewHandler(RequestHandler):
 </html>
 """ % (content)
 
-    def _result_page(self, result):
+    def _html_for_status_list(self, statuses, with_config, prepare_context=None):
+        html = "<ul>"
+        for status in statuses:
+            html = html + "<li>"
+            if status.has_been_provided:
+                check = '<span style="color: green;">✓</span> '
+            else:
+                check = '<span style="color: red;">✗</span> '
+            html = html + html_tag("h3", status.requirement.title).replace('<h3>', '<h3>' + check)
+            html = html + html_tag("p", status.status_description)
+            if with_config:
+                for provider in status.possible_providers:
+                    config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
+                                                           status.requirement)
+                    config = provider.read_config(config_context)
+                    raw_html = provider.config_html(status.requirement)
+                    if raw_html is not None:
+                        prefix = self.application.form_prefix(status.requirement, provider)
+                        cleaned_html = cleanup_and_scope_form(raw_html, prefix, config)
+                        html = html + "\n" + cleaned_html
+
+            html = html + "</li>"
+        html = html + "</ul>"
+
+        return html
+
+    def _result_page(self, result, latest_statuses):
+        # TODO: clean this up, we should show the usual status
+        # list with errors embedded and possibly config html to
+        # fix them, rather than showing just textual errors free
+        # of context.
         if result.failed:
             error_html = """
 <p>Something didn't work...</p>
@@ -66,14 +96,15 @@ class PrepareViewHandler(RequestHandler):
 
             return self._outer_page(error_html)
         else:
+            status_list_html = self._html_for_status_list(latest_statuses, with_config=False)
             return self._outer_page("""
 <div>Done! Close this window now if you like.</div>
-""")
+""" + status_list_html)
 
     def get(self, *args, **kwargs):
         if self.application.prepare_stage is None:
             self.application.emit_event(UIServerDoneEvent(result=self.application.last_stage_result))
-            page = self._result_page(self.application.last_stage_result)
+            page = self._result_page(self.application.last_stage_result, self.application.latest_statuses)
         else:
             prepare_context = self.application.prepare_stage.configure()
 
@@ -83,27 +114,11 @@ class PrepareViewHandler(RequestHandler):
 
                 self.application.refresh_form_ids(prepare_context)
 
-                config_html = config_html + "<ul>"
-                for status in prepare_context.statuses:
-                    config_html = config_html + "<li>"
-                    if status.has_been_provided:
-                        check = '<span style="color: green;">✓</span> '
-                    else:
-                        check = '<span style="color: red;">✗</span> '
-                    config_html = config_html + html_tag("h3", status.requirement.title).replace('<h3>', '<h3>' + check)
-                    config_html = config_html + html_tag("p", status.status_description)
-                    for provider in status.possible_providers:
-                        config_context = ProviderConfigContext(prepare_context.environ,
-                                                               prepare_context.local_state_file, status.requirement)
-                        config = provider.read_config(config_context)
-                        raw_html = provider.config_html(status.requirement)
-                        if raw_html is not None:
-                            prefix = self.application.form_prefix(status.requirement, provider)
-                            cleaned_html = cleanup_and_scope_form(raw_html, prefix, config)
-                            config_html = config_html + "\n" + cleaned_html
+                status_list_html = self._html_for_status_list(prepare_context.statuses,
+                                                              with_config=True,
+                                                              prepare_context=prepare_context)
 
-                    config_html = config_html + "</li>"
-                config_html = config_html + "</ul>"
+                config_html = config_html + status_list_html
 
             page = self._outer_page("""
 <div>
@@ -137,8 +152,11 @@ class PrepareViewHandler(RequestHandler):
             prepare_context.local_state_file.save()
 
         next_stage = self.application.prepare_stage.execute()
+        self.application.latest_statuses = self.application.prepare_stage.statuses_after_execute
         if next_stage is None:
             self.application.last_stage_result = self.application.prepare_stage.result
+        else:
+            self.application.latest_statuses = next_stage.statuses_before_execute
         self.application.prepare_stage = next_stage
 
         return self.get(*args, **kwargs)
@@ -150,6 +168,7 @@ class UIApplication(Application):
         self.io_loop = io_loop
         self.prepare_stage = prepare_stage
         self.last_stage_result = None
+        self.latest_statuses = prepare_stage.statuses_before_execute
 
         self._requirements_by_id = {}
         self._ids_by_requirement = {}

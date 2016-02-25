@@ -232,13 +232,48 @@ class PrepareStage(with_metaclass(ABCMeta)):
         """The ``PrepareResult`` (only available if ``execute()`` returned None)."""
         pass  # pragma: no cover
 
+    @property
+    @abstractmethod
+    def statuses_before_execute(self):
+        """``RequirementStatus`` list before execution.
+
+        This list includes all known requirements and their statuses, while the list
+        in the ``configure()`` context only includes those that should be configured
+        prior to this stage's execution.
+        """
+        pass  # pragma: no cover
+
+    @property
+    @abstractmethod
+    def statuses_after_execute(self):
+        """``RequirementStatus`` list after execution.
+
+        This list includes all known requirements and their statuses, as changed
+        by ``execute()``. This property cannot be read prior to ``execute()``.
+        """
+        pass  # pragma: no cover
+
+
+def _refresh_status_list(old_statuses, rechecked_statuses):
+    new_by_req = dict()
+    for status in rechecked_statuses:
+        new_by_req[status.requirement] = status
+    updated = []
+    for status in old_statuses:
+        updated.append(new_by_req.get(status.requirement, status))
+    return updated
+
 
 class _FunctionPrepareStage(PrepareStage):
     """A stage chain where the description and the execute function are passed in to the constructor."""
 
-    def __init__(self, description, execute, config_context=None):
+    def __init__(self, description, statuses, execute, config_context=None):
+        # the execute function is supposed to set these two (via accessor)
         self._result = None
+        self._statuses_after_execute = None
+
         self._description = description
+        self._statuses_before_execute = statuses
         self._execute = execute
         self._config_context = config_context
 
@@ -264,6 +299,20 @@ class _FunctionPrepareStage(PrepareStage):
         if self._result is None:
             raise RuntimeError("result property isn't available until execute() returns None")
         return self._result
+
+    @property
+    def statuses_before_execute(self):
+        return self._statuses_before_execute
+
+    @property
+    def statuses_after_execute(self):
+        if self._statuses_after_execute is None:
+            raise RuntimeError("statuses_after_execute isn't available until after execute()")
+        return self._statuses_after_execute
+
+    def set_result(self, result, rechecked_statuses):
+        self._statuses_after_execute = _refresh_status_list(self._statuses_before_execute, rechecked_statuses)
+        self._result = result
 
 
 class _AndThenPrepareStage(PrepareStage):
@@ -301,6 +350,14 @@ class _AndThenPrepareStage(PrepareStage):
     def result(self):
         return self._stage.result
 
+    @property
+    def statuses_before_execute(self):
+        return self._stage.statuses_before_execute
+
+    @property
+    def statuses_after_execute(self):
+        return self._stage.statuses_after_execute
+
 
 def _after_stage_success(stage, and_then):
     """Run and_then function after stage executes successfully.
@@ -335,7 +392,7 @@ def _sort_statuses(environ, local_state, statuses, missing_vars_getter):
     return toposort_from_dependency_info(statuses, get_node_key, get_dependency_keys, can_ignore_dependency_on_key)
 
 
-def _configure_and_provide(project, environ, local_state, statuses):
+def _configure_and_provide(project, environ, local_state, statuses, all_statuses):
     def provide_stage(stage):
         # the plan is a list of (provider, requirement) in order we
         # should run it.  our algorithm to decide on this may be
@@ -383,7 +440,7 @@ def _configure_and_provide(project, environ, local_state, statuses):
                 failed = True
 
         if failed:
-            stage._result = PrepareFailure(logs=logs, errors=errors)
+            stage.set_result(PrepareFailure(logs=logs, errors=errors), rechecked)
         else:
             exec_info = None
             if project.launch_argv is not None:
@@ -397,12 +454,12 @@ def _configure_and_provide(project, environ, local_state, statuses):
                 # sample data files relative to the project
                 # directory.
                 exec_info = CommandExecInfo(cwd=project.directory_path, args=argv, env=environ)
-            stage._result = PrepareSuccess(logs=logs, command_exec_info=exec_info, environ=environ)
+            stage.set_result(PrepareSuccess(logs=logs, command_exec_info=exec_info, environ=environ), rechecked)
         return None
 
     configure_context = ConfigurePrepareContext(environ=environ, local_state_file=local_state, statuses=statuses)
 
-    return _FunctionPrepareStage("Set up project.", provide_stage, configure_context)
+    return _FunctionPrepareStage("Set up project.", all_statuses, provide_stage, configure_context)
 
 
 def _partition_first_group_to_configure(environ, local_state, statuses):
@@ -439,8 +496,8 @@ def _partition_first_group_to_configure(environ, local_state, statuses):
     return (head, tail)
 
 
-def _process_requirement_statuses(project, environ, local_state, statuses):
-    (initial, remaining) = _partition_first_group_to_configure(environ, local_state, statuses)
+def _process_requirement_statuses(project, environ, local_state, current_statuses, all_statuses):
+    (initial, remaining) = _partition_first_group_to_configure(environ, local_state, current_statuses)
 
     # a surprising thing here is that the "stages" from
     # _configure_and_provide() can be user-visible, so we always
@@ -451,7 +508,7 @@ def _process_requirement_statuses(project, environ, local_state, statuses):
     # but we always want at least one _configure_and_provide()
 
     def _stages_for(statuses):
-        return _configure_and_provide(project, environ, local_state, statuses)
+        return _configure_and_provide(project, environ, local_state, statuses, all_statuses)
 
     if len(initial) > 0 and len(remaining) > 0:
 
@@ -460,7 +517,8 @@ def _process_requirement_statuses(project, environ, local_state, statuses):
             updated = []
             for status in remaining:
                 updated.append(status.recheck(environ))
-            return _process_requirement_statuses(project, environ, local_state, updated)
+            return _process_requirement_statuses(project, environ, local_state, updated,
+                                                 _refresh_status_list(all_statuses, updated))
 
         return _after_stage_success(_stages_for(initial), process_remaining)
     elif len(initial) > 0:
@@ -539,7 +597,7 @@ def prepare_in_stages(project, environ=None):
 
     _add_missing_env_var_requirements(project, environ, local_state, statuses)
 
-    first_stage = _process_requirement_statuses(project, environ_copy, local_state, statuses)
+    first_stage = _process_requirement_statuses(project, environ_copy, local_state, statuses, statuses)
 
     return first_stage
 

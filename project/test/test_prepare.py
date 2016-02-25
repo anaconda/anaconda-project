@@ -154,23 +154,34 @@ def test_attempt_to_grab_result_early():
     with_directory_contents(dict(), early_result_grab)
 
 
+def test_attempt_to_grab_statuses_early():
+    def early_status_grab(dirname):
+        project = Project(dirname)
+        first_stage = prepare_in_stages(project)
+        with pytest.raises(RuntimeError) as excinfo:
+            first_stage.statuses_after_execute
+        assert "statuses_after_execute isn't available" in repr(excinfo.value)
+
+    with_directory_contents(dict(), early_status_grab)
+
+
 def test_skip_after_success_function_when_second_stage_fails():
     state = {'state': 'start'}
 
     def do_first(stage):
         assert state['state'] == 'start'
         state['state'] = 'first'
-        stage._result = PrepareSuccess(logs=[], command_exec_info=None, environ=dict())
+        stage.set_result(PrepareSuccess(logs=[], command_exec_info=None, environ=dict()), [])
 
         def last(stage):
             assert state['state'] == 'first'
             state['state'] = 'second'
-            stage._result = PrepareFailure(logs=[], errors=[])
+            stage.set_result(PrepareFailure(logs=[], errors=[]), [])
             return None
 
-        return _FunctionPrepareStage("second", last)
+        return _FunctionPrepareStage("second", [], last)
 
-    first_stage = _FunctionPrepareStage("first", do_first)
+    first_stage = _FunctionPrepareStage("first", [], do_first)
 
     def after():
         raise RuntimeError("should not have been called")
@@ -195,17 +206,17 @@ def test_run_after_success_function_when_second_stage_succeeds():
     def do_first(stage):
         assert state['state'] == 'start'
         state['state'] = 'first'
-        stage._result = PrepareSuccess(logs=[], command_exec_info=None, environ=dict())
+        stage.set_result(PrepareSuccess(logs=[], command_exec_info=None, environ=dict()), [])
 
         def last(stage):
             assert state['state'] == 'first'
             state['state'] = 'second'
-            stage._result = PrepareSuccess(logs=[], command_exec_info=None, environ=dict())
+            stage.set_result(PrepareSuccess(logs=[], command_exec_info=None, environ=dict()), [])
             return None
 
-        return _FunctionPrepareStage("second", last)
+        return _FunctionPrepareStage("second", [], last)
 
-    first_stage = _FunctionPrepareStage("first", do_first)
+    first_stage = _FunctionPrepareStage("first", [], do_first)
 
     def after():
         assert state['state'] == 'second'
@@ -359,6 +370,10 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
         assert 200 == http_results['get_click_submit'].code
         assert 200 == http_results['post_click_submit'].code
         assert 200 == http_results['post_fill_in_password'].code
+
+        final_done_html = str(http_results['post_fill_in_password'].body)
+        assert "Done!" in final_done_html
+        assert "Environment variable FOO_PASSWORD is set." in final_done_html
 
         local_state_file = LocalStateFile.load_for_directory(project.directory_path)
         foo_password = local_state_file.get_value(['variables', 'FOO_PASSWORD'])

@@ -16,10 +16,10 @@ from project.plugins.registry import PluginRegistry
 
 def _no_op_prepare(config_context):
     def _do_nothing(stage):
-        stage._result = PrepareSuccess(logs=[], command_exec_info=None, environ=dict())
+        stage.set_result(PrepareSuccess(logs=[], command_exec_info=None, environ=dict()), [])
         return None
 
-    return _FunctionPrepareStage("Do Nothing", _do_nothing, config_context)
+    return _FunctionPrepareStage("Do Nothing", [], _do_nothing, config_context)
 
 
 def test_ui_server_empty():
