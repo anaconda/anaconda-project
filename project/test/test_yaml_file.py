@@ -393,3 +393,63 @@ def test_read_corrupted_yaml_file():
 a:
   b: c
 """, check_corrupted)
+
+
+def test_roundtrip_yaml_file_preserving_order_and_comments():
+    original_content = """
+# comment in front of a
+a:
+  x: y
+  # comment in front of z
+  z: q
+
+b:
+  i: j
+
+  # whitespace in front of this comment in front of k
+  k: l
+
+c:
+  # comment before a list item
+  - foo
+  - bar # comment after a list item
+
+d:
+  hello: world
+  foo: bar
+
+e:
+  woot: woot
+  # comment at the end of e
+
+# comment in column 0 at the end
+# this one is a block comment
+# which continues several lines
+
+
+"""
+
+    def check_roundtrip(filename):
+        yaml = YamlFile(filename)
+        yaml._dirty = True
+        yaml.save()
+        new_content = open(filename, 'r').read()
+        print("the re-saved version of the file was:")
+        print(new_content)
+        assert original_content != new_content
+
+        # We don't require that the YAML backend preserves every
+        # formatting detail, but it can't reorder things or lose
+        # comments because if it did users would be annoyed.
+        # Minor whitespace changes are OK, though ideally we'd
+        # avoid even those.
+        def canonicalize(content):
+            if content.startswith("\n"):
+                content = content[1:]
+            return content.replace(" ", "").replace("\n\n", "\n")
+
+        original_canon = canonicalize(original_content)
+        new_canon = canonicalize(new_content)
+        assert original_canon == new_canon
+
+    with_file_contents(original_content, check_roundtrip)
