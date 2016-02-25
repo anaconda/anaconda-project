@@ -6,7 +6,8 @@ import os
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
 from project.local_state_file import LocalStateFile
-from project.plugins.provider import ProviderRegistry, ProviderConfigContext
+from project.plugins.registry import PluginRegistry
+from project.plugins.provider import ProviderConfigContext
 from project.plugins.providers.redis import DefaultRedisProvider, ProjectScopedRedisProvider
 from project.plugins.requirement import EnvVarRequirement
 from project.prepare import prepare, unprepare
@@ -14,9 +15,13 @@ from project.project import Project
 from project.project_file import PROJECT_FILENAME
 
 
+def _redis_requirement():
+    return EnvVarRequirement(registry=PluginRegistry(), env_var="REDIS_URL")
+
+
 def test_find_by_service_redis():
-    registry = ProviderRegistry()
-    found = registry.find_by_service(requirement=None, service="redis")
+    registry = PluginRegistry()
+    found = registry.find_providers_by_service(requirement=None, service="redis")
     assert 2 == len(found)
     assert isinstance(found[0], DefaultRedisProvider)
     assert "Default Redis port on localhost" == found[0].title
@@ -27,7 +32,7 @@ def test_find_by_service_redis():
 def test_reading_default_config():
     def read_config(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        requirement = EnvVarRequirement("REDIS_URL")
+        requirement = _redis_requirement()
         provider = ProjectScopedRedisProvider()
         config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
         assert 6380 == config['lower_port']
@@ -39,7 +44,7 @@ def test_reading_default_config():
 def test_reading_valid_config():
     def read_config(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        requirement = EnvVarRequirement("REDIS_URL")
+        requirement = _redis_requirement()
         provider = ProjectScopedRedisProvider()
         config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
         assert 7389 == config['lower_port']
@@ -60,7 +65,7 @@ runtime:
 def _read_invalid_port_range(capsys, port_range):
     def read_config(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        requirement = EnvVarRequirement("REDIS_URL")
+        requirement = _redis_requirement()
         provider = ProjectScopedRedisProvider()
         config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
         # revert to defaults
@@ -105,7 +110,7 @@ def test_zero_upper_port(capsys):
 def test_set_config_values_as_strings():
     def set_config(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        requirement = EnvVarRequirement("REDIS_URL")
+        requirement = _redis_requirement()
         provider = ProjectScopedRedisProvider()
         provider.set_config_values_as_strings(
             ProviderConfigContext(dict(), local_state, requirement),

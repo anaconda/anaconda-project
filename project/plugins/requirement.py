@@ -7,33 +7,6 @@ from copy import deepcopy
 from project.internal.metaclass import with_metaclass
 
 
-class RequirementRegistry(object):
-    """Allows creating Requirement instances based on project config."""
-
-    def find_by_env_var(self, env_var, options):
-        """Create a requirement instance given an environment variable name.
-
-        Args:
-            env_var (str): environment variable name
-            options (dict): options from the project file for this requirement
-
-        Returns:
-            instance of Requirement
-        """
-        # future goal will be to un-hardcode this
-        if env_var == 'REDIS_URL':
-            from .requirements.redis import RedisRequirement
-            return RedisRequirement(env_var=env_var, options=options)
-        elif env_var == 'CONDA_DEFAULT_ENV':
-            from .requirements.conda_env import CondaEnvRequirement
-            return CondaEnvRequirement(env_var=env_var, options=options)
-        elif env_var == 'ANACONDA_MASTER_PASSWORD':
-            from .requirements.master_password import MasterPasswordRequirement
-            return MasterPasswordRequirement(options=options)
-        else:
-            return EnvVarRequirement(env_var=env_var, options=options)
-
-
 class RequirementStatus(with_metaclass(ABCMeta)):
     """Abstract class describing the status of a requirement.
 
@@ -43,10 +16,9 @@ class RequirementStatus(with_metaclass(ABCMeta)):
 
     """
 
-    def __init__(self, requirement, provider_registry, has_been_provided, status_description, possible_providers):
+    def __init__(self, requirement, has_been_provided, status_description, possible_providers):
         """Construct an abstract RequirementStatus."""
         self._requirement = requirement
-        self._provider_registry = provider_registry
         self._has_been_provided = has_been_provided
         self._status_description = status_description
         self._possible_providers = tuple(possible_providers)
@@ -85,7 +57,7 @@ class RequirementStatus(with_metaclass(ABCMeta)):
         This calls ``Requirement.check_status()`` which can do network and filesystem IO,
         so be cautious about where you call it.
         """
-        return self.requirement.check_status(environ, self._provider_registry)
+        return self.requirement.check_status(environ)
 
 
 class Requirement(with_metaclass(ABCMeta)):
@@ -99,12 +71,15 @@ class Requirement(with_metaclass(ABCMeta)):
 
     """
 
-    def __init__(self, options):
+    def __init__(self, registry, options):
         """Construct a Requirement.
 
         Args:
+            registry (PluginRegistry): the plugin registry we came from
             options (dict): dict of requirement options from the project config
         """
+        self.registry = registry
+
         if options is None:
             self.options = dict()
         else:
@@ -117,7 +92,7 @@ class Requirement(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @abstractmethod
-    def check_status(self, environ, registry):
+    def check_status(self, environ):
         """Check on the requirement and return a ``RequirementStatus`` with the current status.
 
         This may attempt to talk to servers, check that files
@@ -127,7 +102,6 @@ class Requirement(with_metaclass(ABCMeta)):
 
         Args:
             environ (dict): use this rather than the system environment directly
-            registry (ProviderRegistry): get possible providers from here
 
         Returns:
             a ``RequirementStatus``
@@ -142,9 +116,9 @@ _secret_suffixes = ('_PASSWORD', '_ENCRYPTED', '_SECRET_KEY', '_SECRET')
 class EnvVarRequirement(Requirement):
     """A requirement that a certain environment variable be set."""
 
-    def __init__(self, env_var, options=None):
+    def __init__(self, registry, env_var, options=None):
         """Construct an EnvVarRequirement for the given ``env_var`` with the given options."""
-        super(EnvVarRequirement, self).__init__(options)
+        super(EnvVarRequirement, self).__init__(registry, options)
         self.env_var = env_var
 
     def __repr__(self):
@@ -184,21 +158,19 @@ class EnvVarRequirement(Requirement):
             return "Environment variable {env_var} set to '{value}'".format(env_var=self.env_var,
                                                                             value=self._get_value_of_env_var(environ))
 
-    def check_status(self, environ, registry):
+    def check_status(self, environ):
         """Override superclass to get our status."""
         value = self._get_value_of_env_var(environ)
 
-        possible_providers = registry.find_by_env_var(self, self.env_var)
+        possible_providers = self.registry.find_providers_by_env_var(self, self.env_var)
 
         if value is None:
             return RequirementStatus(self,
-                                     registry,
                                      has_been_provided=False,
                                      status_description=self._unset_message(),
                                      possible_providers=possible_providers)
         else:
             return RequirementStatus(self,
-                                     registry,
                                      has_been_provided=True,
                                      status_description=self._set_message(environ),
                                      possible_providers=possible_providers)

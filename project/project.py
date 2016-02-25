@@ -7,15 +7,15 @@ from distutils.spawn import find_executable
 
 from project.project_file import ProjectFile
 from project.conda_meta_file import CondaMetaFile
-from project.plugins.requirement import RequirementRegistry
+from project.plugins.registry import PluginRegistry
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
 class _ConfigCache(object):
-    def __init__(self, requirement_registry):
-        if requirement_registry is None:
-            requirement_registry = RequirementRegistry()
-        self.requirement_registry = requirement_registry
+    def __init__(self, registry):
+        if registry is None:
+            registry = PluginRegistry()
+        self.registry = registry
 
         self.project_file_count = 0
         self.conda_meta_file_count = 0
@@ -60,7 +60,7 @@ class _ConfigCache(object):
             for key in runtime.keys():
                 options = runtime[key]
                 if isinstance(options, dict):
-                    requirement = self.requirement_registry.find_by_env_var(key, options)
+                    requirement = self.registry.find_requirement_by_env_var(key, options)
                     requirements.append(requirement)
                 else:
                     problems.append(("runtime section has key {key} with value {options}; the value " +
@@ -69,7 +69,7 @@ class _ConfigCache(object):
         elif isinstance(runtime, list):
             for item in runtime:
                 if isinstance(item, str):
-                    requirement = self.requirement_registry.find_by_env_var(item, options=dict())
+                    requirement = self.registry.find_requirement_by_env_var(item, options=dict())
                     requirements.append(requirement)
                 else:
                     problems.append(
@@ -113,7 +113,7 @@ class _ConfigCache(object):
                 env_requirement = r
 
         if env_requirement is None:
-            env_requirement = CondaEnvRequirement(conda_package_specs=packages)
+            env_requirement = CondaEnvRequirement(registry=self.registry, conda_package_specs=packages)
             requirements.append(env_requirement)
         else:
             env_requirement.conda_package_specs.extend(packages)
@@ -149,18 +149,18 @@ class Project(object):
     the project directory or global user configuration.
     """
 
-    def __init__(self, directory_path, requirement_registry=None):
-        """Construct a Project with the given directory and requirements registry.
+    def __init__(self, directory_path, plugin_registry=None):
+        """Construct a Project with the given directory and plugin registry.
 
         Args:
             directory_path (str): path to the project directory
-            requirement_registry (RequirementRegistry): where to look up Requirement instances, None for default
+            plugin_registry (PluginRegistry): where to look up Requirement and Provider instances, None for default
         """
         self._directory_path = os.path.realpath(directory_path)
         self._project_file = ProjectFile.load_for_directory(directory_path)
         self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
-        self._config_cache = _ConfigCache(requirement_registry)
+        self._config_cache = _ConfigCache(plugin_registry)
 
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._conda_meta_file)
@@ -177,9 +177,9 @@ class Project(object):
         return self._project_file
 
     @property
-    def requirement_registry(self):
-        """Get the ``RequirementRegistry`` for this project."""
-        return self._config_cache.requirement_registry
+    def plugin_registry(self):
+        """Get the ``PluginRegistry`` for this project."""
+        return self._config_cache.registry
 
     @property
     def conda_meta_file(self):

@@ -10,8 +10,8 @@ from project.internal.test.multipart import MultipartEncoder
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.ui_server import UIServer, UIServerDoneEvent
 from project.local_state_file import LocalStateFile
-from project.plugins.provider import ProviderRegistry
 from project.plugins.requirement import EnvVarRequirement
+from project.plugins.registry import PluginRegistry
 
 
 def _no_op_prepare(config_context):
@@ -64,8 +64,8 @@ def test_ui_server_with_form():
         value = local_state_file.get_value(['variables', 'FOO'])
         assert value is None
 
-        requirement = EnvVarRequirement("FOO")
-        status = requirement.check_status(dict(), ProviderRegistry())
+        requirement = EnvVarRequirement(registry=PluginRegistry(), env_var="FOO")
+        status = requirement.check_status(dict())
         context = ConfigurePrepareContext(dict(), local_state_file, [status])
         server = UIServer(_no_op_prepare(context), event_handler, io_loop)
 
@@ -107,8 +107,8 @@ def _ui_server_bad_form_name_test(capsys, name_template, expected_err):
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
 
-        requirement = EnvVarRequirement("FOO")
-        status = requirement.check_status(dict(), ProviderRegistry())
+        requirement = EnvVarRequirement(registry=PluginRegistry(), env_var="FOO")
+        status = requirement.check_status(dict())
         context = ConfigurePrepareContext(dict(), local_state_file, [status])
         server = UIServer(_no_op_prepare(context), event_handler, io_loop)
 

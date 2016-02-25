@@ -10,58 +10,6 @@ from project.internal.makedirs import makedirs_ok_if_exists
 from project.internal.crypto import encrypt_string, decrypt_string
 
 
-class ProviderRegistry(object):
-    """Allows looking up providers that can fulfill requirements."""
-
-    def find_by_env_var(self, requirement, env_var):
-        """Look up a provider for the given requirement which needs the given env_var.
-
-        Args:
-            requirement (Requirement): the requirement we want to provide
-            env_var (str): name of the environment variable the requirement wants
-
-        Returns:
-            list of Provider
-        """
-        return [EnvVarProvider()]
-
-    def find_by_service(self, requirement, service):
-        """Look up a provider for the given requirement by service name.
-
-        Args:
-            requirement (Requirement): the requirement we want to provide
-            service (str): conventional name of the service the requirement wants
-
-        Returns:
-            list of Provider
-        """
-        # future goal will be to un-hardcode this of course
-        if service == 'redis':
-            from .providers.redis import DefaultRedisProvider, ProjectScopedRedisProvider
-            return [DefaultRedisProvider(), ProjectScopedRedisProvider()]
-        else:
-            return []
-
-    def find_by_class_name(self, class_name):
-        """Look up a provider by class name.
-
-        Args:
-            class_name (str): name of the provider class
-
-        Returns:
-            an instance of the passed-in class name or None if not found
-        """
-        # future goal will be to un-hardcode this of course
-        if class_name == 'ProjectScopedCondaEnvProvider':
-            from .providers.conda_env import ProjectScopedCondaEnvProvider
-            return ProjectScopedCondaEnvProvider()
-        elif class_name == 'MasterPasswordProvider':
-            from .providers.master_password import MasterPasswordProvider
-            return MasterPasswordProvider()
-        else:
-            return None
-
-
 class ProviderConfigContext(object):
     """A context passed to config-related methods on Provider."""
 

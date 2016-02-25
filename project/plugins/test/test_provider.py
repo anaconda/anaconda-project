@@ -7,15 +7,16 @@ import pytest
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.crypto import encrypt_string
 from project.local_state_file import LocalStateFile, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
-from project.plugins.provider import Provider, ProvideContext, ProviderRegistry, EnvVarProvider, ProviderConfigContext
+from project.plugins.provider import Provider, ProvideContext, EnvVarProvider, ProviderConfigContext
+from project.plugins.registry import PluginRegistry
 from project.plugins.requirement import EnvVarRequirement
 from project.project import Project
 from project.project_file import ProjectFile, PROJECT_FILENAME
 
 
-def test_find_by_env_var():
-    registry = ProviderRegistry()
-    found = registry.find_by_env_var(requirement=None, env_var="FOO")
+def test_find_providers_by_env_var():
+    registry = PluginRegistry()
+    found = registry.find_providers_by_env_var(requirement=None, env_var="FOO")
     assert 1 == len(found)
     assert isinstance(found[0], EnvVarProvider)
     assert "EnvVarProvider" == found[0].config_key
@@ -26,16 +27,16 @@ def test_env_var_provider_title():
     assert "Manually set environment variable" == provider.title
 
 
-def test_find_by_class_name():
-    registry = ProviderRegistry()
-    found = registry.find_by_class_name(class_name="ProjectScopedCondaEnvProvider")
+def test_find_provider_by_class_name():
+    registry = PluginRegistry()
+    found = registry.find_provider_by_class_name(class_name="ProjectScopedCondaEnvProvider")
     assert found is not None
     assert found.__class__.__name__ == "ProjectScopedCondaEnvProvider"
 
 
-def test_find_by_class_name_not_found():
-    registry = ProviderRegistry()
-    found = registry.find_by_class_name(class_name="NotAThing")
+def test_find_provider_by_class_name_not_found():
+    registry = PluginRegistry()
+    found = registry.find_provider_by_class_name(class_name="NotAThing")
     assert found is None
 
 
@@ -349,9 +350,9 @@ runtime:
 """}, check_env_var_provider_with_number_default)
 
 
-def test_fail_to_find_by_service():
-    registry = ProviderRegistry()
-    found = registry.find_by_service(requirement=None, service="nope")
+def test_fail_to_find_providers_by_service():
+    registry = PluginRegistry()
+    found = registry.find_providers_by_service(requirement=None, service="nope")
     assert 0 == len(found)
 
 

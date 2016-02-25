@@ -8,12 +8,12 @@ import project.plugins.network_util as network_util
 class RedisRequirement(EnvVarRequirement):
     """A requirement for REDIS_URL (or another specified env var) to point to a running Redis."""
 
-    def __init__(self, env_var="REDIS_URL", options=None):
+    def __init__(self, registry, env_var="REDIS_URL", options=None):
         """Extend superclass to default to REDIS_URL."""
-        super(RedisRequirement, self).__init__(env_var=env_var, options=options)
+        super(RedisRequirement, self).__init__(registry=registry, env_var=env_var, options=options)
 
-    def _find_providers(self, registry):
-        return registry.find_by_service(self, 'redis')
+    def _find_providers(self):
+        return self.registry.find_providers_by_service(self, 'redis')
 
     def _why_not_provided(self, environ):
         url = self._get_value_of_env_var(environ)
@@ -31,20 +31,18 @@ class RedisRequirement(EnvVarRequirement):
             return "Cannot connect to {url} (from {env_var} environment variable).".format(url=url,
                                                                                            env_var=self.env_var)
 
-    def check_status(self, environ, registry):
+    def check_status(self, environ):
         """Override superclass to get our status."""
         why_not_provided = self._why_not_provided(environ)
-        providers = self._find_providers(registry)
+        providers = self._find_providers()
         if why_not_provided is None:
             return RequirementStatus(
                 self,
-                registry,
                 has_been_provided=True,
                 status_description=("Using Redis server at %s" % self._get_value_of_env_var(environ)),
                 possible_providers=providers)
         else:
             return RequirementStatus(self,
-                                     registry,
                                      has_been_provided=False,
                                      status_description=why_not_provided,
                                      possible_providers=providers)

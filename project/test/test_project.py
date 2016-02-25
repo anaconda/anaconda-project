@@ -8,7 +8,8 @@ import subprocess
 import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.plugins.requirement import RequirementRegistry, EnvVarRequirement
+from project.plugins.registry import PluginRegistry
+from project.plugins.requirement import EnvVarRequirement
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
 from project.conda_meta_file import META_DIRECTORY, META_FILENAME
@@ -78,16 +79,16 @@ runtime:
 """}, check_some_env_var)
 
 
-def test_override_requirement_registry():
-    def check_override_requirement_registry(dirname):
-        requirement_registry = RequirementRegistry()
-        project = Project(dirname, requirement_registry)
-        assert project._config_cache.requirement_registry is requirement_registry
+def test_override_plugin_registry():
+    def check_override_plugin_registry(dirname):
+        registry = PluginRegistry()
+        project = Project(dirname, registry)
+        assert project._config_cache.registry is registry
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
   FOO: {}
-"""}, check_override_requirement_registry)
+"""}, check_override_plugin_registry)
 
 
 def test_get_name_and_version_from_conda_meta_yaml():

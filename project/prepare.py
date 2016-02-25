@@ -12,7 +12,7 @@ from project.internal.metaclass import with_metaclass
 from project.internal.prepare_ui import prepare_not_interactive, prepare_browser
 from project.internal.toposort import toposort_from_dependency_info
 from project.local_state_file import LocalStateFile
-from project.plugins.provider import ProvideContext, ProviderRegistry, ProviderConfigContext
+from project.plugins.provider import ProvideContext, ProviderConfigContext
 
 UI_MODE_TEXT = "text"
 UI_MODE_BROWSER = "browser"
@@ -469,7 +469,7 @@ def _process_requirement_statuses(project, environ, local_state, statuses):
         return _stages_for(remaining)
 
 
-def _add_missing_env_var_requirements(project, provider_registry, environ, local_state, statuses):
+def _add_missing_env_var_requirements(project, environ, local_state, statuses):
     by_env_var = dict()
     for status in statuses:
         # if we add requirements with no env_var, change this to
@@ -488,12 +488,12 @@ def _add_missing_env_var_requirements(project, provider_registry, environ, local
     for env_var in needed_env_vars:
         if env_var not in by_env_var:
             created_anything = True
-            requirement = project.requirement_registry.find_by_env_var(env_var, options=dict())
-            statuses.append(requirement.check_status(environ, provider_registry))
+            requirement = project.plugin_registry.find_requirement_by_env_var(env_var, options=dict())
+            statuses.append(requirement.check_status(environ))
 
     if created_anything:
         # run the whole above again to find any transitive requirements of the new providers
-        _add_missing_env_var_requirements(project, provider_registry, environ, local_state, statuses)
+        _add_missing_env_var_requirements(project, environ, local_state, statuses)
 
 
 def prepare_in_stages(project, environ=None):
@@ -530,16 +530,14 @@ def prepare_in_stages(project, environ=None):
     # it's useful for scripts to find their source tree.
     environ_copy['PROJECT_DIR'] = project.directory_path
 
-    provider_registry = ProviderRegistry()
-
     statuses = []
     for requirement in project.requirements:
-        status = requirement.check_status(environ_copy, provider_registry)
+        status = requirement.check_status(environ_copy)
         statuses.append(status)
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
-    _add_missing_env_var_requirements(project, provider_registry, environ, local_state, statuses)
+    _add_missing_env_var_requirements(project, environ, local_state, statuses)
 
     first_stage = _process_requirement_statuses(project, environ_copy, local_state, statuses)
 

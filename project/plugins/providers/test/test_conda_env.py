@@ -7,13 +7,13 @@ from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import prepare
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
-from project.plugins.provider import ProviderRegistry
+from project.plugins.registry import PluginRegistry
 from project.plugins.providers.conda_env import ProjectScopedCondaEnvProvider
 
 
 def test_find_by_class_name_conda_env():
-    registry = ProviderRegistry()
-    found = registry.find_by_class_name(class_name="ProjectScopedCondaEnvProvider")
+    registry = PluginRegistry()
+    found = registry.find_provider_by_class_name(class_name="ProjectScopedCondaEnvProvider")
     assert found is not None
     assert isinstance(found, ProjectScopedCondaEnvProvider)
     assert "Conda environment inside the project directory" == found.title

@@ -2,7 +2,8 @@ from __future__ import absolute_import, print_function
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.local_state_file import LocalStateFile
-from project.plugins.provider import ProvideContext, ProviderRegistry, ProviderConfigContext
+from project.plugins.provider import ProvideContext, ProviderConfigContext
+from project.plugins.registry import PluginRegistry
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
 from project.plugins.requirements.master_password import MasterPasswordRequirement
@@ -15,8 +16,8 @@ def test_master_password_provider_title():
 
 
 def test_find_by_class_name():
-    registry = ProviderRegistry()
-    found = registry.find_by_class_name(class_name="MasterPasswordProvider")
+    registry = PluginRegistry()
+    found = registry.find_provider_by_class_name(class_name="MasterPasswordProvider")
     assert found is not None
     assert found.__class__.__name__ == "MasterPasswordProvider"
 
