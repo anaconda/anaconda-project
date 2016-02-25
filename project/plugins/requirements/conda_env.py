@@ -42,7 +42,7 @@ class CondaEnvRequirement(EnvVarRequirement):
 
         if self.must_be_project_scoped:
             if 'PROJECT_DIR' not in environ:
-                return "PROJECT_DIR not set, so cannot find a project-scoped Conda environment."
+                return "PROJECT_DIR isn't set, so cannot find or create a dedicated Conda environment."
             # "inside the project directory" is a kind of rough
             # proxy for "environment dedicated to this project,"
             # we could define "project-scoped" in some more
@@ -50,8 +50,8 @@ class CondaEnvRequirement(EnvVarRequirement):
             # starting point.
             project_dir = environ['PROJECT_DIR']
             if not directory_contains_subdirectory(project_dir, prefix):
-                return ("Conda environment at '%s' is not inside project at '%s', " +
-                        "this project requires a project-scoped environment.") % (prefix, project_dir)
+                return ("This project needs a dedicated Conda environment inside %s, " +
+                        "the current environment (in %s) isn't dedicated to this project.") % (project_dir, prefix)
 
         if len(self.conda_package_specs) == 0:
             return None

@@ -35,7 +35,7 @@ def test_project_dir_not_set(monkeypatch):
     monkeypatch.setattr('project.internal.conda_api.resolve_env_to_prefix', mock_resolve_env_to_prefix)
     requirement = CondaEnvRequirement(registry=PluginRegistry(), options=dict(project_scoped=True))
     status = requirement.check_status(dict(CONDA_DEFAULT_ENV="root"))
-    assert "PROJECT_DIR not set, so cannot find a project-scoped Conda environment." == status.status_description
+    assert "PROJECT_DIR isn't set, so cannot find or create a dedicated Conda environment." == status.status_description
 
 
 def test_error_when_not_project_scoped_and_must_be(monkeypatch):
@@ -47,8 +47,8 @@ def test_error_when_not_project_scoped_and_must_be(monkeypatch):
     def check_when_not_project_scoped(dirname):
         requirement = CondaEnvRequirement(registry=PluginRegistry(), options=dict(project_scoped=True))
         status = requirement.check_status(dict(CONDA_DEFAULT_ENV="root", PROJECT_DIR=dirname))
-        expected = ("Conda environment at '%s' is not inside project at '%s', " +
-                    "this project requires a project-scoped environment.") % ("/foo", dirname)
+        expected = ("This project needs a dedicated Conda environment inside %s, " +
+                    "the current environment (in %s) isn't dedicated to this project.") % (dirname, "/foo")
         assert expected == status.status_description
 
     with_directory_contents(dict(), check_when_not_project_scoped)
