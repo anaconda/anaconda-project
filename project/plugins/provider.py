@@ -277,7 +277,7 @@ class EnvVarProvider(Provider):
             input_type = 'text'
         return """
 <form>
-  <label>Value: <input type="{input_type}" name="value"/></label>
+  <label>Use this value: <input type="{input_type}" name="value"/></label>
 </form>
 """.format(input_type=input_type)
 

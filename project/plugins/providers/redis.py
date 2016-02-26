@@ -97,8 +97,8 @@ class ProjectScopedRedisProvider(Provider):
         """Override superclass to provide our config html."""
         return """
 <form>
-  <label>First port to try: <input type="text" name="lower_port"/></label>
-  <label>Last port to try: <input type="text" name="upper_port"/></label>
+  Start a project-dedicated redis-server, using a port between <input type="text" name="lower_port"/>
+  and <input type="text" name="upper_port"/>
 </form>
 """
 
