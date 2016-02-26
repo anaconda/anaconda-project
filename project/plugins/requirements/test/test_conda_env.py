@@ -28,6 +28,33 @@ def test_conda_default_env_is_bogus():
     assert expected == status.status_description
 
 
+def test_conda_fails_while_looking_up_env(monkeypatch):
+    def get_fail_command(extra_args):
+        return ["bash", "-c", "echo FAILURE 1>&2 && false"]
+
+    monkeypatch.setattr('project.internal.conda_api._get_conda_command', get_fail_command)
+    requirement = CondaEnvRequirement(registry=PluginRegistry())
+    status = requirement.check_status(dict(CONDA_DEFAULT_ENV="not_a_real_env_anyone_has"))
+    assert status.status_description.startswith(
+        "Conda didn't understand environment name or prefix not_a_real_env_anyone_has: ")
+    assert 'FAILURE' in status.status_description
+
+
+def test_conda_fails_while_listing_installed(monkeypatch):
+    def sabotaged_installed_command(prefix):
+        from project.internal import conda_api
+        raise conda_api.CondaError("sabotage!")
+
+    monkeypatch.setattr('project.internal.conda_api.installed', sabotaged_installed_command)
+
+    requirement = CondaEnvRequirement(registry=PluginRegistry(),
+                                      options=dict(project_scoped=False),
+                                      conda_package_specs=['not_a_real_package'])
+    status = requirement.check_status(dict(CONDA_DEFAULT_ENV="root"))
+    assert status.status_description.startswith("Conda failed while listing installed packages in ")
+    assert status.status_description.endswith(": sabotage!")
+
+
 def test_project_dir_not_set(monkeypatch):
     def mock_resolve_env_to_prefix(name_or_prefix):
         return "/foo"

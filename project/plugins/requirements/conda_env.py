@@ -36,7 +36,11 @@ class CondaEnvRequirement(EnvVarRequirement):
         if name_or_prefix is None:
             return "A Conda environment hasn't been activated for this project (%s is unset)." % (self.env_var)
 
-        prefix = conda_api.resolve_env_to_prefix(name_or_prefix)
+        try:
+            prefix = conda_api.resolve_env_to_prefix(name_or_prefix)
+        except conda_api.CondaError as e:
+            return "Conda didn't understand environment name or prefix %s: %s" % (name_or_prefix, str(e))
+
         if prefix is None:
             return "Conda environment %s='%s' does not exist yet." % (self.env_var, name_or_prefix)
 
@@ -56,7 +60,11 @@ class CondaEnvRequirement(EnvVarRequirement):
         if len(self.conda_package_specs) == 0:
             return None
 
-        installed = conda_api.installed(prefix)
+        try:
+            installed = conda_api.installed(prefix)
+        except conda_api.CondaError as e:
+            return "Conda failed while listing installed packages in %s: %s" % (prefix, str(e))
+
         missing = set()
 
         for name in self.conda_package_names_set:
