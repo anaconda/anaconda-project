@@ -235,6 +235,24 @@ class YamlFile(object):
         existing[path[-1]] = value
         self._dirty = True
 
+    def unset_value(self, path):
+        """Remove a single value at the given path.
+
+        This method does not save the file, call ``save()`` to do that.
+
+        Args:
+            path (str or list of str): single key, or list of nested keys
+        """
+        self._throw_if_corrupted()
+
+        path = self._path(path)
+
+        existing = self._get_dict_or_none(path[:-1])
+        key = path[-1]
+        if existing is not None and key in existing:
+            del existing[key]
+            self._dirty = True
+
     def get_value(self, path, default=None):
         """Get a single value from the YAML file.
 

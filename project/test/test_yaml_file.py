@@ -453,3 +453,59 @@ e:
         assert original_canon == new_canon
 
     with_file_contents(original_content, check_roundtrip)
+
+
+def test_read_yaml_file_and_unset_values():
+    # testing single-item dict, two-item dict, and toplevel value
+    original_content = """
+a:
+  b: 1
+
+x:
+  y: 2
+  z: 3
+
+q: 4
+"""
+
+    def unset_values(filename):
+        yaml = YamlFile(filename)
+        assert yaml.change_count == 1
+        a_b = yaml.get_value(["a", "b"])
+        assert 1 == a_b
+        x_y = yaml.get_value(["x", "y"])
+        assert 2 == x_y
+        x_z = yaml.get_value(["x", "z"])
+        assert 3 == x_z
+        q = yaml.get_value("q")
+        assert 4 == q
+
+        def assert_unset_on_reload(path):
+            yaml2 = YamlFile(filename)
+            assert yaml2.change_count == 1
+            value2 = yaml2.get_value(path, None)
+            assert value2 is None
+
+        scope = dict(last_change=yaml.change_count)
+
+        def check_unset(path):
+            assert yaml.change_count == scope['last_change']
+            assert not yaml._dirty
+            yaml.unset_value(path)
+            assert yaml.get_value(path, None) is None
+            assert yaml._dirty
+            yaml.save()
+            assert yaml.change_count == (scope['last_change'] + 1)
+            scope['last_change'] += 1
+            assert_unset_on_reload(path)
+
+        check_unset(["a", "b"])
+        check_unset(["x", "y"])
+        check_unset(["x", "z"])
+        check_unset("q")
+
+        assert not yaml._dirty
+        yaml.unset_value("not_in_there")
+        assert not yaml._dirty
+
+    with_file_contents(original_content, unset_values)
