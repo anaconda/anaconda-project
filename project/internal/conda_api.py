@@ -1,8 +1,9 @@
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, print_function, division, unicode_literals
 import errno
 import subprocess
 import json
 import os
+import sys
 
 
 class CondaError(Exception):
@@ -17,11 +18,16 @@ class CondaEnvExistsError(CondaError):
     pass
 
 
-def _call_conda(extra_args):
+# this function exists so we can monkeypatch it in tests
+def _get_conda_command(extra_args):
     # just use whatever conda is on the path
     cmd_list = ['conda']
-
     cmd_list.extend(extra_args)
+    return cmd_list
+
+
+def _call_conda(extra_args):
+    cmd_list = _get_conda_command(extra_args)
 
     try:
         p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -29,14 +35,20 @@ def _call_conda(extra_args):
         raise CondaError("failed to run: %r: %r" % (" ".join(cmd_list), repr(e)))
     (out, err) = p.communicate()
     errstr = err.decode().strip()
-    if errstr:
+    if p.returncode != 0:
         raise CondaError('%s: %s' % (" ".join(cmd_list), errstr))
+    elif errstr != '':
+        for line in errstr.split("\n"):
+            print("Conda: %s" % line, file=sys.stderr)
     return out
 
 
 def _call_and_parse_json(extra_args):
     out = _call_conda(extra_args)
-    return json.loads(out.decode())
+    try:
+        return json.loads(out.decode())
+    except ValueError as e:
+        raise CondaError('Invalid JSON from conda: %s' % str(e))
 
 
 def info():

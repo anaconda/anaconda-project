@@ -97,6 +97,45 @@ def test_conda_invoke_fails(monkeypatch):
     with_directory_contents(dict(), do_test)
 
 
+def test_conda_invoke_nonzero_returncode(monkeypatch):
+    def get_failed_command(extra_args):
+        return ["bash", "-c", "echo TEST_ERROR 1>&2 && false"]
+
+    def do_test(dirname):
+        monkeypatch.setattr('project.internal.conda_api._get_conda_command', get_failed_command)
+        with pytest.raises(conda_api.CondaError) as excinfo:
+            conda_api.info()
+        assert 'TEST_ERROR' in repr(excinfo.value)
+
+    with_directory_contents(dict(), do_test)
+
+
+def test_conda_invoke_zero_returncode_with_stuff_on_stderr(monkeypatch, capsys):
+    def get_command(extra_args):
+        return ["bash", "-c", "echo TEST_ERROR 1>&2 && echo '{}' || true"]
+
+    def do_test(dirname):
+        monkeypatch.setattr('project.internal.conda_api._get_conda_command', get_command)
+        conda_api.info()
+        (out, err) = capsys.readouterr()
+        assert 'Conda: TEST_ERROR\n' == err
+
+    with_directory_contents(dict(), do_test)
+
+
+def test_conda_invoke_zero_returncode_with_invalid_json(monkeypatch, capsys):
+    def get_command(extra_args):
+        return ["echo", "NOT_JSON"]
+
+    def do_test(dirname):
+        monkeypatch.setattr('project.internal.conda_api._get_conda_command', get_command)
+        with pytest.raises(conda_api.CondaError) as excinfo:
+            conda_api.info()
+        assert 'Invalid JSON from conda' in repr(excinfo.value)
+
+    with_directory_contents(dict(), do_test)
+
+
 def test_resolve_root_prefix():
     prefix = conda_api.resolve_env_to_prefix('root')
     assert prefix is not None
