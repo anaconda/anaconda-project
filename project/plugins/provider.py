@@ -257,17 +257,24 @@ class EnvVarProvider(Provider):
 
             value_string = values['value']
 
-            local_override_value = self._local_state_override(context.requirement, context.local_state_file)
+            path = ["variables", context.requirement.env_var]
 
-            key = self._key_from_value(local_override_value)
-            if key is None and context.requirement.encrypted:
-                key = 'ANACONDA_MASTER_PASSWORD'
-
-            if key is not None:
-                value = dict(key=key, encrypted=encrypt_string(value_string, context.environ[key]))
+            if value_string == '':
+                # the reason empty string unsets is that otherwise there's no easy
+                # way to unset from a web form
+                context.local_state_file.unset_value(path)
             else:
-                value = value_string
-            context.local_state_file.set_value(["variables", context.requirement.env_var], value)
+                local_override_value = self._local_state_override(context.requirement, context.local_state_file)
+
+                key = self._key_from_value(local_override_value)
+                if key is None and context.requirement.encrypted:
+                    key = 'ANACONDA_MASTER_PASSWORD'
+
+                if key is not None:
+                    value = dict(key=key, encrypted=encrypt_string(value_string, context.environ[key]))
+                else:
+                    value = value_string
+                context.local_state_file.set_value(path, value)
 
     def config_html(self, requirement):
         """Override superclass to provide our config html."""

@@ -350,6 +350,40 @@ runtime:
 """}, check_env_var_provider_with_number_default)
 
 
+def test_env_var_provider_configure_local_state_value():
+    def check_env_var_provider_config_local_state(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO")
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
+        assert dict() == config
+
+        assert local_state_file.get_value(['variables', 'FOO']) is None
+
+        provider.set_config_values_as_strings(config_context, dict(value="bar"))
+
+        assert local_state_file.get_value(['variables', 'FOO']) == "bar"
+        local_state_file.save()
+
+        local_state_file_2 = LocalStateFile.load_for_directory(dirname)
+        assert local_state_file_2.get_value(['variables', 'FOO']) == "bar"
+
+        # setting empty string = unset
+        provider.set_config_values_as_strings(config_context, dict(value=""))
+        assert local_state_file.get_value(['variables', 'FOO']) is None
+
+        local_state_file.save()
+
+        local_state_file_3 = LocalStateFile.load_for_directory(dirname)
+        assert local_state_file_3.get_value(['variables', 'FOO']) is None
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  - FOO
+"""}, check_env_var_provider_config_local_state)
+
+
 def test_fail_to_find_providers_by_service():
     registry = PluginRegistry()
     found = registry.find_providers_by_service(requirement=None, service="nope")
