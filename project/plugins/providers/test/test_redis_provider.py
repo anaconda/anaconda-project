@@ -9,15 +9,14 @@ from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
 from project.plugins.provider import ProviderConfigContext
 from project.plugins.providers.redis import DefaultRedisProvider, ProjectScopedRedisProvider
-from project.plugins.requirement import EnvVarRequirement
+from project.plugins.requirements.redis import RedisRequirement
 from project.prepare import prepare, unprepare
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
 
 
 def _redis_requirement():
-    # TODO this should be RedisRequirement
-    return EnvVarRequirement(registry=PluginRegistry(), env_var="REDIS_URL")
+    return RedisRequirement(registry=PluginRegistry(), env_var="REDIS_URL")
 
 
 def test_find_by_service_redis():
