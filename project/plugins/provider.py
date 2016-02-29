@@ -98,12 +98,6 @@ class Provider(with_metaclass(ABCMeta)):
     """A Provider can take some action to meet a Requirement."""
 
     @property
-    @abstractmethod
-    def title(self):
-        """Human-friendly title of the provider."""
-        pass  # pragma: no cover
-
-    @property
     def config_key(self):
         """When we store config for this provider, we use this as the key."""
         return self.__class__.__name__
@@ -191,11 +185,6 @@ class Provider(with_metaclass(ABCMeta)):
 
 class EnvVarProvider(Provider):
     """Meets a requirement for an env var by letting people set it manually."""
-
-    @property
-    def title(self):
-        """Override superclass with our title."""
-        return "Manually set environment variable"
 
     def _local_state_override(self, requirement, local_state_file):
         return local_state_file.get_value(["variables", requirement.env_var], default=None)

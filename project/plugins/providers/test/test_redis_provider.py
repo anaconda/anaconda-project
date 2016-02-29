@@ -24,9 +24,7 @@ def test_find_by_service_redis():
     found = registry.find_providers_by_service(requirement=None, service="redis")
     assert 2 == len(found)
     assert isinstance(found[0], DefaultRedisProvider)
-    assert "Default Redis port on localhost" == found[0].title
     assert isinstance(found[1], ProjectScopedRedisProvider)
-    assert "Run a dedicated redis-server process for this project." == found[1].title
 
 
 def test_reading_default_config():

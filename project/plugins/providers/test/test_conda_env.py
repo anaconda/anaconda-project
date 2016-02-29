@@ -19,7 +19,6 @@ def test_find_by_class_name_conda_env():
     found = registry.find_provider_by_class_name(class_name="ProjectScopedCondaEnvProvider")
     assert found is not None
     assert isinstance(found, ProjectScopedCondaEnvProvider)
-    assert "Conda environment inside the project directory" == found.title
 
 
 def test_prepare_project_scoped_env():

@@ -22,11 +22,6 @@ def test_find_providers_by_env_var():
     assert "EnvVarProvider" == found[0].config_key
 
 
-def test_env_var_provider_title():
-    provider = EnvVarProvider()
-    assert "Manually set environment variable" == provider.title
-
-
 def test_find_provider_by_class_name():
     registry = PluginRegistry()
     found = registry.find_provider_by_class_name(class_name="ProjectScopedCondaEnvProvider")

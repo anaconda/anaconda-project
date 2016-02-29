@@ -8,11 +8,6 @@ from project.internal import keyring
 class MasterPasswordProvider(Provider):
     """Provides a master password, stored in the OS keyring if possible."""
 
-    @property
-    def title(self):
-        """Override superclass with our title."""
-        return "Get master password from OS keyring"
-
     def read_config(self, context):
         """Override superclass to read from keyring."""
         config = dict()

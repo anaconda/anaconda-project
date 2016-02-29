@@ -16,11 +16,6 @@ _DEFAULT_SYSTEM_REDIS_URL = "redis://localhost:6379"
 class DefaultRedisProvider(Provider):
     """Provides the default Redis service on localhost port 6379."""
 
-    @property
-    def title(self):
-        """Override superclass to provide our title."""
-        return "Default Redis port on localhost"
-
     def read_config(self, context):
         """Override superclass to return empty config."""
         return dict()
@@ -33,11 +28,6 @@ class DefaultRedisProvider(Provider):
 # future: this should introduce a requirement that redis-server is on path
 class ProjectScopedRedisProvider(Provider):
     """Runs a project-scoped Redis process (each project needing Redis gets its own)."""
-
-    @property
-    def title(self):
-        """Override superclass to provide our title."""
-        return "Run a dedicated redis-server process for this project."
 
     @classmethod
     def _parse_port_range(cls, s):

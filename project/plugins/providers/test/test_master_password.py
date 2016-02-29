@@ -10,11 +10,6 @@ from project.plugins.requirements.master_password import MasterPasswordRequireme
 from project.plugins.providers.master_password import MasterPasswordProvider
 
 
-def test_master_password_provider_title():
-    provider = MasterPasswordProvider()
-    assert "Get master password from OS keyring" == provider.title
-
-
 def test_find_by_class_name():
     registry = PluginRegistry()
     found = registry.find_provider_by_class_name(class_name="MasterPasswordProvider")

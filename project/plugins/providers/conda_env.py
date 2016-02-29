@@ -10,11 +10,6 @@ from project.plugins.provider import Provider
 class ProjectScopedCondaEnvProvider(Provider):
     """Provides a project-scoped Conda environment."""
 
-    @property
-    def title(self):
-        """Override superclass to provide our title."""
-        return "Conda environment inside the project directory"
-
     def read_config(self, context):
         """Override superclass to return our config."""
         config = dict()
