@@ -17,7 +17,7 @@ def _default_show_url(url):
     webbrowser.open_new_tab(url)
 
 
-def prepare_browser(stage, io_loop, show_url):
+def prepare_browser(project, stage, io_loop, show_url):
     from tornado.ioloop import IOLoop
     from project.internal.ui_server import UIServer, UIServerDoneEvent
 
@@ -37,7 +37,7 @@ def prepare_browser(stage, io_loop, show_url):
                 result_holder['result'] = event.result
                 io_loop.stop()
 
-        server = UIServer(stage, event_handler=event_handler, io_loop=io_loop)
+        server = UIServer(project, stage, event_handler=event_handler, io_loop=io_loop)
         try:
             print("# Configure the project at {url} to continue...".format(url=server.url))
             show_url(server.url)

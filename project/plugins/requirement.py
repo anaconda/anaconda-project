@@ -128,7 +128,7 @@ class EnvVarRequirement(Requirement):
     @property
     def title(self):
         """Override superclass title."""
-        return self.env_var
+        return "%s environment variable must be set" % (self.env_var)
 
     @property
     def encrypted(self):

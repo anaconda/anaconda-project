@@ -27,6 +27,12 @@ def _set_element_value(element, value):
                 element['checked'] = ''
             else:
                 del element['checked']
+        elif element['type'] == 'hidden':
+            # we don't know what to do with these; right now
+            # we use them as a hack to go next to checkboxes
+            # and be sure we always send a value for checkbox
+            # query params
+            pass
         else:
             element['value'] = value_string
     elif element.name == 'textarea':

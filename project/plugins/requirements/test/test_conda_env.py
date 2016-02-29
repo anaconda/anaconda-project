@@ -14,6 +14,14 @@ def test_find_by_env_var_conda_env():
     assert found.env_var == 'CONDA_DEFAULT_ENV'
 
 
+def test_conda_env_title():
+    requirement = CondaEnvRequirement(registry=PluginRegistry())
+    assert requirement.title == 'A Conda environment inside the project directory'
+
+    requirement = CondaEnvRequirement(registry=PluginRegistry(), options=dict(project_scoped=False))
+    assert requirement.title == 'A Conda environment'
+
+
 def test_conda_default_env_not_set():
     requirement = CondaEnvRequirement(registry=PluginRegistry())
     status = requirement.check_status(dict())
@@ -36,7 +44,7 @@ def test_conda_fails_while_looking_up_env(monkeypatch):
     requirement = CondaEnvRequirement(registry=PluginRegistry())
     status = requirement.check_status(dict(CONDA_DEFAULT_ENV="not_a_real_env_anyone_has"))
     assert status.status_description.startswith(
-        "Conda didn't understand environment name or prefix not_a_real_env_anyone_has: ")
+        "Conda didn't understand environment name or prefix not_a_real_env_anyone_has from CONDA_DEFAULT_ENV: ")
     assert 'FAILURE' in status.status_description
 
 
@@ -74,8 +82,7 @@ def test_error_when_not_project_scoped_and_must_be(monkeypatch):
     def check_when_not_project_scoped(dirname):
         requirement = CondaEnvRequirement(registry=PluginRegistry(), options=dict(project_scoped=True))
         status = requirement.check_status(dict(CONDA_DEFAULT_ENV="root", PROJECT_DIR=dirname))
-        expected = ("This project needs a dedicated Conda environment inside %s, " +
-                    "the current environment (in %s) isn't dedicated to this project.") % (dirname, "/foo")
+        expected = "The current environment (in %s) isn't inside the project directory (%s)." % ("/foo", dirname)
         assert expected == status.status_description
 
     with_directory_contents(dict(), check_when_not_project_scoped)

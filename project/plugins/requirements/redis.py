@@ -12,6 +12,11 @@ class RedisRequirement(EnvVarRequirement):
         """Extend superclass to default to REDIS_URL."""
         super(RedisRequirement, self).__init__(registry=registry, env_var=env_var, options=options)
 
+    @property
+    def title(self):
+        """Override superclass to supply our title."""
+        return "A running Redis server, located by a redis: URL set as %s" % (self.env_var)
+
     def _find_providers(self):
         return self.registry.find_providers_by_service(self, 'redis')
 

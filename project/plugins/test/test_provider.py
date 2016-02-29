@@ -384,6 +384,32 @@ runtime:
 """}, check_env_var_provider_config_local_state)
 
 
+def test_env_var_provider_config_html():
+    def check_env_var_provider_config(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO")
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
+        assert dict() == config
+
+        # config html when variable is unset
+        status = requirement.check_status(dict())
+        html = provider.config_html(status)
+        assert 'Use this value:' in html
+
+        # config html when variable is set
+        status = requirement.check_status(dict(FOO='from_environ'))
+        html = provider.config_html(status)
+        assert 'Use this value instead:' in html
+
+    # set a default to be sure we prefer 'environ' instead
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  - FOO
+"""}, check_env_var_provider_config)
+
+
 def test_fail_to_find_providers_by_service():
     registry = PluginRegistry()
     found = registry.find_providers_by_service(requirement=None, service="nope")

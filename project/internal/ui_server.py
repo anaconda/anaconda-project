@@ -26,7 +26,7 @@ class UIServerDoneEvent(UIServerEvent):
 
 # future: use actual template system
 # it's important to replace & before the later ones
-_entity_table = [ ("&", "&amp;"), ("<", "&lt;"), (">", "&gt;"), ("'", "&#39;"), ('"', "&quot;") ]
+_entity_table = [("&", "&amp;"), ("<", "&lt;"), (">", "&gt;"), ("'", "&#39;"), ('"', "&quot;")]
 
 
 def _html_escape(text):
@@ -46,13 +46,13 @@ class PrepareViewHandler(RequestHandler):
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Project setup</title>
+    <title>Project setup for %s</title>
   </head>
   <body>
     %s
   </body>
 </html>
-""" % (content)
+""" % (self.application.project.name, content)
 
     def _html_for_status_list(self, statuses, with_config, prepare_context=None):
         html = "<ul>"
@@ -62,14 +62,15 @@ class PrepareViewHandler(RequestHandler):
                 check = '<span style="color: green;">✓</span> '
             else:
                 check = '<span style="color: red;">✗</span> '
-            html = html + html_tag("h3", status.requirement.title).replace('<h3>', '<h3>' + check)
-            html = html + html_tag("p", status.status_description)
+            html = html + html_tag("h4", status.requirement.title)
+            html = html + html_tag("p", "Status: " + status.status_description).replace("<p>Status: ", "<p>Status: " +
+                                                                                        check + " ")
             if with_config:
                 for provider in status.possible_providers:
                     config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
                                                            status.requirement)
                     config = provider.read_config(config_context)
-                    raw_html = provider.config_html(status.requirement)
+                    raw_html = provider.config_html(status)
                     if raw_html is not None:
                         prefix = self.application.form_prefix(status.requirement, provider)
                         cleaned_html = cleanup_and_scope_form(raw_html, prefix, config)
@@ -124,11 +125,12 @@ class PrepareViewHandler(RequestHandler):
             page = self._outer_page("""
 <div>
   <form action="/" method="post" enctype="multipart/form-data">
-    <input type="submit" value="%s"></input>
+    <h2>Project "%s" has these requirements that may need setup:</h2>
     %s
+    <input type="submit" value="%s"></input>
   </form>
 </div>
-""" % (self.application.prepare_stage.description_of_action, config_html))
+""" % (self.application.project.name, config_html, self.application.prepare_stage.description_of_action))
 
         self.set_header("Content-Type", 'text/html')
         self.write(page)
@@ -142,7 +144,9 @@ class PrepareViewHandler(RequestHandler):
                 parsed = self.application.parse_form_name(prepare_context, name)
                 if parsed is not None:
                     (requirement, provider, unscoped_name) = parsed
-                    value_string = self.get_body_argument(name)
+                    value_strings = self.get_body_arguments(name)
+                    print("%s = %s" % (name, value_strings))
+                    value_string = value_strings[0]
                     values = configs[(requirement, provider)]
                     values[unscoped_name] = value_string
             for ((requirement, provider), values) in configs.items():
@@ -164,8 +168,9 @@ class PrepareViewHandler(RequestHandler):
 
 
 class UIApplication(Application):
-    def __init__(self, prepare_stage, event_handler, io_loop, **kwargs):
+    def __init__(self, project, prepare_stage, event_handler, io_loop, **kwargs):
         self._event_handler = event_handler
+        self.project = project
         self.io_loop = io_loop
         self.prepare_stage = prepare_stage
         self.last_stage_result = None
@@ -216,11 +221,11 @@ class UIApplication(Application):
 
 
 class UIServer(object):
-    def __init__(self, prepare_stage, event_handler, io_loop):
+    def __init__(self, project, prepare_stage, event_handler, io_loop):
         assert event_handler is not None
         assert io_loop is not None
 
-        self._application = UIApplication(prepare_stage, event_handler, io_loop)
+        self._application = UIApplication(project, prepare_stage, event_handler, io_loop)
         self._http = HTTPServer(self._application, io_loop=io_loop)
 
         # these would throw OSError on failure

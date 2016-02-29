@@ -16,11 +16,37 @@ class ProjectScopedCondaEnvProvider(Provider):
         return "Conda environment inside the project directory"
 
     def read_config(self, context):
-        """Override superclass to return empty config."""
-        return dict()
+        """Override superclass to return our config."""
+        config = dict()
+        section = self.config_section(context.requirement)
+        config['autocreate'] = context.local_state_file.get_value(section + ['autocreate'], default=True)
+        return config
+
+    def set_config_values_as_strings(self, context, values):
+        """Override superclass to set our config values."""
+        section = self.config_section(context.requirement)
+        autocreate_string = values.get('autocreate', "True")
+        autocreate = autocreate_string == "True"
+        context.local_state_file.set_value(section + ['autocreate'], autocreate)
+
+    def config_html(self, status):
+        """Override superclass to provide our config html."""
+        if status.has_been_provided:
+            return None
+        else:
+            return """
+<form>
+  <label><input name="autocreate" type="checkbox" value="True"/>Autocreate an environment
+    in PROJECT_DIR/.envs/default  <input name="autocreate" type="hidden" value="False"/></label>
+</form>
+"""
 
     def provide(self, requirement, context):
         """Override superclass to activating a project-scoped environment (creating it if needed)."""
+        if not context.config['autocreate']:
+            context.append_log("Not trying to create a Conda environment.")
+            return
+
         # TODO: we are ignoring any version or build specs for the package names.
         # the hard part about this is that the conda command line which we use
         # to create the environment has a different syntax from meta.yaml which we

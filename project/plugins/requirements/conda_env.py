@@ -23,6 +23,18 @@ class CondaEnvRequirement(EnvVarRequirement):
             conda_package_specs = list()
         self.conda_package_specs = conda_package_specs
 
+    @property
+    def title(self):
+        """Override superclass to provide our title."""
+        if self.must_be_project_scoped:
+            base = "A Conda environment inside the project directory"
+        else:
+            base = "A Conda environment"
+        if len(self.conda_package_specs) > 0:
+            return base + " containing packages: " + ", ".join(self.conda_package_specs)
+        else:
+            return base
+
     def _find_providers(self):
         if self.must_be_project_scoped:
             provider = self.registry.find_provider_by_class_name('ProjectScopedCondaEnvProvider')
@@ -39,7 +51,8 @@ class CondaEnvRequirement(EnvVarRequirement):
         try:
             prefix = conda_api.resolve_env_to_prefix(name_or_prefix)
         except conda_api.CondaError as e:
-            return "Conda didn't understand environment name or prefix %s: %s" % (name_or_prefix, str(e))
+            return "Conda didn't understand environment name or prefix %s from %s: %s" % (name_or_prefix, self.env_var,
+                                                                                          str(e))
 
         if prefix is None:
             return "Conda environment %s='%s' does not exist yet." % (self.env_var, name_or_prefix)
@@ -54,8 +67,8 @@ class CondaEnvRequirement(EnvVarRequirement):
             # starting point.
             project_dir = environ['PROJECT_DIR']
             if not directory_contains_subdirectory(project_dir, prefix):
-                return ("This project needs a dedicated Conda environment inside %s, " +
-                        "the current environment (in %s) isn't dedicated to this project.") % (project_dir, prefix)
+                return ("The current environment (in %s) isn't inside the project directory (%s).") % (prefix,
+                                                                                                       project_dir)
 
         if len(self.conda_package_specs) == 0:
             return None

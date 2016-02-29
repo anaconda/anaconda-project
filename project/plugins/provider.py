@@ -108,6 +108,14 @@ class Provider(with_metaclass(ABCMeta)):
         """When we store config for this provider, we use this as the key."""
         return self.__class__.__name__
 
+    def config_section(self, requirement):
+        """When we store config for this provider, we put it in this section unless there's a more logical place."""
+        # runtime:
+        #   REDIS_URL:
+        #     ProjectScopedRedisProvider:
+        #       port_range: 6380-6449
+        return ["runtime", requirement.env_var, "providers", self.config_key]
+
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
         """Get a list of unset environment variable names that must be set before configuring this provider.
 
@@ -276,17 +284,21 @@ class EnvVarProvider(Provider):
                     value = value_string
                 context.local_state_file.set_value(path, value)
 
-    def config_html(self, requirement):
+    def config_html(self, status):
         """Override superclass to provide our config html."""
-        if requirement.encrypted:
+        if status.requirement.encrypted:
             input_type = 'password'
         else:
             input_type = 'text'
+        instead = ""
+        if status.has_been_provided:
+            instead = " instead"
         return """
 <form>
-  <label>Use this value: <input type="{input_type}" name="value"/></label>
+  <label>Use this value{instead}: <input type="{input_type}" name="value"/></label>
 </form>
-""".format(input_type=input_type)
+""".format(input_type=input_type,
+           instead=instead)
 
     def provide(self, requirement, context):
         """Override superclass to use configured env var (or already-set env var)."""

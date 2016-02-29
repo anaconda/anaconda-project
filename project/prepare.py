@@ -630,7 +630,7 @@ def prepare(project, environ=None, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None
     if ui_mode == UI_MODE_NOT_INTERACTIVE:
         result = prepare_not_interactive(stage)
     elif ui_mode == UI_MODE_BROWSER:
-        result = prepare_browser(stage, io_loop=io_loop, show_url=show_url)
+        result = prepare_browser(project, stage, io_loop=io_loop, show_url=show_url)
     # TODO: UI_MODE_TEXT
 
     if result.failed:

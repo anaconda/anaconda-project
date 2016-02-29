@@ -53,17 +53,10 @@ class ProjectScopedRedisProvider(Provider):
             return None
         return (lower, upper)
 
-    def _section(self, requirement):
-        return ["runtime", requirement.env_var, "providers", self.config_key]
-
     def read_config(self, context):
         """Override superclass to return our config."""
-        # providers:
-        #   ProjectScopedRedisProvider:
-        #     REDIS_URL:
-        #       port_range: 6380-6449
         config = dict()
-        section = self._section(context.requirement)
+        section = self.config_section(context.requirement)
         default_lower_port = 6380  # one above 6379 default Redis
         default_upper_port = 6449  # entirely arbitrary
         default_port_range = "%d-%d" % (default_lower_port, default_upper_port)
@@ -78,12 +71,14 @@ class ProjectScopedRedisProvider(Provider):
             config['lower_port'] = parsed_port_range[0]
             config['upper_port'] = parsed_port_range[1]
 
+        config['autostart'] = context.local_state_file.get_value(section + ['autostart'], default=True)
+
         return config
 
     def set_config_values_as_strings(self, context, values):
         """Override superclass to set our config values."""
         config = self.read_config(context)
-        section = self._section(context.requirement)
+        section = self.config_section(context.requirement)
         upper_port = config['upper_port']
         lower_port = config['lower_port']
         if 'lower_port' in values:
@@ -93,12 +88,18 @@ class ProjectScopedRedisProvider(Provider):
 
         context.local_state_file.set_value(section + ['port_range'], "%s-%s" % (lower_port, upper_port))
 
-    def config_html(self, requirement):
+        autostart_string = values.get('autostart', "True")
+        autostart = autostart_string == "True"
+        context.local_state_file.set_value(section + ['autostart'], autostart)
+
+    def config_html(self, status):
         """Override superclass to provide our config html."""
         return """
 <form>
-  Start a project-dedicated redis-server, using a port between <input type="text" name="lower_port"/>
-  and <input type="text" name="upper_port"/>
+  <label><input type="checkbox" name="autostart" value="True"/> Start a
+   project-dedicated redis-server, using a port between <input type="text" name="lower_port"/>
+   and <input type="text" name="upper_port"/></label>
+  <input type="hidden" name="autostart" value="False"/>
 </form>
 """
 
@@ -109,6 +110,10 @@ class ProjectScopedRedisProvider(Provider):
         requirement's env var to that server's URL.
 
         """
+        if not context.config['autostart']:
+            context.append_log("Not trying to start a redis-server.")
+            return
+
         url = None  # this is a hack because yapf adds a blank line here and pep257 hates it
 
         def ensure_redis(run_state):

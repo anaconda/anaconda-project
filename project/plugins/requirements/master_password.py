@@ -15,7 +15,7 @@ class MasterPasswordRequirement(EnvVarRequirement):
     @property
     def title(self):
         """Override superclass title."""
-        return "Anaconda master password"
+        return "Anaconda master password (used to encrypt other passwords and credentials)"
 
     @property
     def encrypted(self):

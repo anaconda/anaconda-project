@@ -16,6 +16,7 @@ from project.project_file import PROJECT_FILENAME
 
 
 def _redis_requirement():
+    # TODO this should be RedisRequirement
     return EnvVarRequirement(registry=PluginRegistry(), env_var="REDIS_URL")
 
 
@@ -49,6 +50,7 @@ def test_reading_valid_config():
         config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
         assert 7389 == config['lower_port']
         assert 7421 == config['upper_port']
+        assert config['autostart'] is False
 
     with_directory_contents(
         {
@@ -58,6 +60,7 @@ runtime:
     providers:
       ProjectScopedRedisProvider:
         port_range: 7389-7421
+        autostart: false
          """
         }, read_config)
 
@@ -339,6 +342,41 @@ runtime:
     assert "REDIS_URL" in err
     assert "missing requirement" in err
     assert "" == out
+
+
+def _monkeypatch_can_connect_to_socket_always_fails(monkeypatch):
+    def mock_can_connect_to_socket(host, port, timeout_seconds=0.5):
+        return False
+
+    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+
+
+def test_fail_to_prepare_local_redis_server_autostart_false(monkeypatch, capsys):
+    _monkeypatch_can_connect_to_socket_always_fails(monkeypatch)
+
+    def check_no_autostart(dirname):
+        project = Project(dirname)
+        result = prepare(project, environ=dict())
+        assert not result
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  REDIS_URL: {}
+""",
+         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+runtime:
+  REDIS_URL:
+    providers:
+      ProjectScopedRedisProvider:
+        autostart: false
+"""}, check_no_autostart)
+
+    out, err = capsys.readouterr()
+    assert out == "Not trying to start a redis-server.\n"
+    assert err == ("missing requirement to run this project: A running Redis server, located " +
+                   "by a redis: URL set as REDIS_URL\n" +
+                   "  Cannot connect to redis://localhost:6379 (from REDIS_URL environment variable).\n")
 
 
 def test_redis_server_configure_custom_port_range(monkeypatch, capsys):

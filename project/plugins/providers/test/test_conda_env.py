@@ -7,8 +7,11 @@ from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import prepare
 from project.project import Project
 from project.project_file import PROJECT_FILENAME
+from project.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME, LocalStateFile
 from project.plugins.registry import PluginRegistry
+from project.plugins.provider import ProviderConfigContext
 from project.plugins.providers.conda_env import ProjectScopedCondaEnvProvider
+from project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
 def test_find_by_class_name_conda_env():
@@ -54,6 +57,87 @@ def test_prepare_project_scoped_env():
 runtime:
   CONDA_DEFAULT_ENV: {}
 """}, prepare_project_scoped_env)
+
+
+def test_reading_autocreate_config():
+    def read_config(dirname):
+        local_state = LocalStateFile.load_for_directory(dirname)
+        requirement = CondaEnvRequirement(registry=PluginRegistry())
+        provider = ProjectScopedCondaEnvProvider()
+        config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
+        assert config['autocreate'] is True
+
+    with_directory_contents(
+        {
+            LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+runtime:
+  CONDA_DEFAULT_ENV:
+    providers:
+      ProjectScopedCondaEnvProvider:
+        autocreate: true
+         """
+        }, read_config)
+
+
+def test_setting_autocreate_config():
+    def check_set_config(dirname):
+        local_state = LocalStateFile.load_for_directory(dirname)
+        requirement = CondaEnvRequirement(registry=PluginRegistry())
+        provider = ProjectScopedCondaEnvProvider()
+        context = ProviderConfigContext(dict(), local_state, requirement)
+        config = provider.read_config(context)
+        assert config['autocreate'] is True
+        provider.set_config_values_as_strings(context, dict(autocreate='False'))
+        config = provider.read_config(context)
+        assert config['autocreate'] is False
+        provider.set_config_values_as_strings(context, dict(autocreate='True'))
+        config = provider.read_config(context)
+        assert config['autocreate'] is True
+
+    with_directory_contents({}, check_set_config)
+
+
+def test_config_html():
+    def check_config_html(dirname):
+        requirement = CondaEnvRequirement(registry=PluginRegistry())
+        provider = ProjectScopedCondaEnvProvider()
+        status = requirement.check_status(dict())
+        html = provider.config_html(status)
+        assert "Autocreate an environment" in html
+        status._has_been_provided = True
+        html = provider.config_html(status)
+        assert html is None
+
+    with_directory_contents({}, check_config_html)
+
+
+def test_prepare_no_op_if_autocreate_disabled(capsys):
+    def prepare_does_nothing_with_autocreate_false(dirname):
+        project = Project(dirname)
+        fake_old_path = "foo" + os.pathsep + "bar"
+        environ = dict(PROJECT_DIR=dirname, PATH=fake_old_path)
+        result = prepare(project, environ=environ)
+        assert not result
+        expected_env = os.path.join(dirname, ".envs/default")
+        assert not os.path.exists(os.path.join(expected_env, "conda-meta"))
+
+        out, err = capsys.readouterr()
+        assert out == "Not trying to create a Conda environment.\n"
+        assert err == ("missing requirement to run this project: A Conda environment inside the project directory\n" +
+                       "  A Conda environment hasn't been activated for this project (CONDA_DEFAULT_ENV is unset).\n")
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+runtime:
+  CONDA_DEFAULT_ENV: {}
+    """,
+         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+runtime:
+  CONDA_DEFAULT_ENV:
+    providers:
+      ProjectScopedCondaEnvProvider:
+        autocreate: false
+         """}, prepare_does_nothing_with_autocreate_false)
 
 
 def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):

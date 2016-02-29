@@ -27,7 +27,7 @@ class MasterPasswordProvider(Provider):
             value_string = values['value']
             keyring.set(context.requirement.env_var, value_string)
 
-    def config_html(self, requirement):
+    def config_html(self, status):
         """Override superclass to provide our config html."""
         return """
 <form>
