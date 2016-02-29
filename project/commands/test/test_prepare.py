@@ -122,6 +122,18 @@ def test_main_fails_to_redis(monkeypatch, capsys):
     _monkeypatch_can_connect_to_socket_to_fail_to_find_redis(monkeypatch)
     _monkeypatch_open_new_tab(monkeypatch)
 
+    from project.prepare import prepare as real_prepare
+
+    def _mock_prepare_do_not_keep_going(project,
+                                        environ=None,
+                                        ui_mode=UI_MODE_NOT_INTERACTIVE,
+                                        keep_going_until_success=False,
+                                        io_loop=None,
+                                        show_url=None):
+        return real_prepare(project, environ, ui_mode, False, io_loop, show_url)
+
+    monkeypatch.setattr('project.prepare.prepare', _mock_prepare_do_not_keep_going)
+
     def main_redis_url(dirname):
         main(['prepare', dirname])
 

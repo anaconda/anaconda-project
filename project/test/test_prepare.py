@@ -91,6 +91,24 @@ runtime:
 """}, prepare_some_env_var)
 
 
+def test_prepare_some_env_var_not_set_keep_going():
+    def prepare_some_env_var_keep_going(dirname):
+        project = Project(dirname)
+        environ = dict(BAR='bar')
+        stage = prepare_in_stages(project, environ=environ, keep_going_until_success=True)
+        for i in range(1, 10):
+            next_stage = stage.execute()
+            assert next_stage is not None
+            assert stage.failed
+            stage = next_stage
+        assert dict(BAR='bar') == environ
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  FOO: {}
+"""}, prepare_some_env_var_keep_going)
+
+
 def test_prepare_with_app_entry():
     def prepare_with_app_entry(dirname):
         os.chmod(os.path.join(dirname, "echo.py"), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)

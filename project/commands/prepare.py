@@ -4,7 +4,7 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 
-from project.prepare import prepare, UI_MODE_BROWSER
+from project import prepare
 from project.project import Project
 
 
@@ -15,7 +15,7 @@ def prepare_command(dirname, ui_mode):
         Prepare result (can be treated as True on success).
     """
     project = Project(dirname)
-    result = prepare(project, ui_mode=ui_mode)
+    result = prepare.prepare(project, ui_mode=ui_mode, keep_going_until_success=True)
 
     return result
 
@@ -28,7 +28,7 @@ def main(argv):
     else:
         dirname = "."
     dirname = os.path.abspath(dirname)
-    if prepare_command(dirname, ui_mode=UI_MODE_BROWSER):
+    if prepare_command(dirname, ui_mode=prepare.UI_MODE_BROWSER):
         sys.exit(0)
     else:
         sys.exit(1)

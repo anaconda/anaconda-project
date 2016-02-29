@@ -145,7 +145,6 @@ class PrepareViewHandler(RequestHandler):
                 if parsed is not None:
                     (requirement, provider, unscoped_name) = parsed
                     value_strings = self.get_body_arguments(name)
-                    print("%s = %s" % (name, value_strings))
                     value_string = value_strings[0]
                     values = configs[(requirement, provider)]
                     values[unscoped_name] = value_string

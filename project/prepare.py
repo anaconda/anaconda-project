@@ -105,7 +105,11 @@ class PrepareResult(with_metaclass(ABCMeta)):
     @property
     @abstractmethod
     def failed(self):
-        """True if we failed to prepare the project to run."""
+        """True if we failed to do what this stage was intended to do.
+
+        If ``execute()`` returned non-None, the failure may not be fatal; stages
+        can continue to be executed and may resolve the issue.
+        """
         pass  # pragma: no cover
 
     @property
@@ -207,7 +211,7 @@ class PrepareStage(with_metaclass(ABCMeta)):
     @property
     @abstractmethod
     def failed(self):
-        """True if there was a failure during ``execute()``."""
+        """Synonym for result.failed, only available after ``execute()``."""
         pass  # pragma: no cover
 
     @abstractmethod
@@ -229,7 +233,7 @@ class PrepareStage(with_metaclass(ABCMeta)):
     @property
     @abstractmethod
     def result(self):
-        """The ``PrepareResult`` (only available if ``execute()`` returned None)."""
+        """The ``PrepareResult`` (only available if ``execute()`` has been called)."""
         pass  # pragma: no cover
 
     @property
@@ -301,7 +305,7 @@ class _FunctionPrepareStage(PrepareStage):
     @property
     def result(self):
         if self._result is None:
-            raise RuntimeError("result property isn't available until execute() returns None")
+            raise RuntimeError("result property isn't available until after execute()")
         return self._result
 
     @property
@@ -315,6 +319,7 @@ class _FunctionPrepareStage(PrepareStage):
         return self._statuses_after_execute
 
     def set_result(self, result, rechecked_statuses):
+        assert result is not None
         self._statuses_after_execute = _refresh_status_list(self._statuses_before_execute, rechecked_statuses)
         self._result = result
 
@@ -397,7 +402,7 @@ def _sort_statuses(environ, local_state, statuses, missing_vars_getter):
     return toposort_from_dependency_info(statuses, get_node_key, get_dependency_keys, can_ignore_dependency_on_key)
 
 
-def _configure_and_provide(project, environ, local_state, statuses, all_statuses):
+def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success):
     def provide_stage(stage):
         # the plan is a list of (provider, requirement) in order we
         # should run it.  our algorithm to decide on this may be
@@ -446,6 +451,10 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
 
         if failed:
             stage.set_result(PrepareFailure(logs=logs, errors=errors), rechecked)
+            if keep_going_until_success:
+                return _start_over(stage.statuses_after_execute, rechecked)
+            else:
+                return None
         else:
             exec_info = None
             if project.launch_argv is not None:
@@ -460,11 +469,15 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 # directory.
                 exec_info = CommandExecInfo(cwd=project.directory_path, args=argv, env=environ)
             stage.set_result(PrepareSuccess(logs=logs, command_exec_info=exec_info, environ=environ), rechecked)
-        return None
+            return None
 
-    configure_context = ConfigurePrepareContext(environ=environ, local_state_file=local_state, statuses=statuses)
+    def _start_over(updated_all_statuses, updated_statuses):
+        configure_context = ConfigurePrepareContext(environ=environ,
+                                                    local_state_file=local_state,
+                                                    statuses=updated_statuses)
+        return _FunctionPrepareStage("Set up project.", updated_all_statuses, provide_stage, configure_context)
 
-    return _FunctionPrepareStage("Set up project.", all_statuses, provide_stage, configure_context)
+    return _start_over(all_statuses, statuses)
 
 
 def _partition_first_group_to_configure(environ, local_state, statuses):
@@ -501,7 +514,8 @@ def _partition_first_group_to_configure(environ, local_state, statuses):
     return (head, tail)
 
 
-def _process_requirement_statuses(project, environ, local_state, current_statuses, all_statuses):
+def _process_requirement_statuses(project, environ, local_state, current_statuses, all_statuses,
+                                  keep_going_until_success):
     (initial, remaining) = _partition_first_group_to_configure(environ, local_state, current_statuses)
 
     # a surprising thing here is that the "stages" from
@@ -513,14 +527,15 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
     # but we always want at least one _configure_and_provide()
 
     def _stages_for(statuses):
-        return _configure_and_provide(project, environ, local_state, statuses, all_statuses)
+        return _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success)
 
     if len(initial) > 0 and len(remaining) > 0:
 
         def process_remaining(updated_all_statuses):
             # get the new status for each remaining requirement
             updated = _refresh_status_list(remaining, updated_all_statuses)
-            return _process_requirement_statuses(project, environ, local_state, updated, updated_all_statuses)
+            return _process_requirement_statuses(project, environ, local_state, updated, updated_all_statuses,
+                                                 keep_going_until_success)
 
         return _after_stage_success(_stages_for(initial), process_remaining)
     elif len(initial) > 0:
@@ -556,7 +571,18 @@ def _add_missing_env_var_requirements(project, environ, local_state, statuses):
         _add_missing_env_var_requirements(project, environ, local_state, statuses)
 
 
-def prepare_in_stages(project, environ=None):
+def _first_stage(project, environ, local_state, statuses, keep_going_until_success):
+    assert 'PROJECT_DIR' in environ
+
+    _add_missing_env_var_requirements(project, environ, local_state, statuses)
+
+    first_stage = _process_requirement_statuses(project, environ, local_state, statuses, statuses,
+                                                keep_going_until_success)
+
+    return first_stage
+
+
+def prepare_in_stages(project, environ=None, keep_going_until_success=False):
     """Get a chain of all steps needed to get a project ready to execute.
 
     This function does not immediately do anything; it returns a
@@ -572,6 +598,7 @@ def prepare_in_stages(project, environ=None):
     Args:
         project (Project): the project
         environ (dict): the environment to start from (None to use os.environ)
+        keep_going_until_success (bool): keep returning new stages until all requirements are met
 
     Returns:
         The first ``PrepareStage`` in the chain of steps.
@@ -597,14 +624,15 @@ def prepare_in_stages(project, environ=None):
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
-    _add_missing_env_var_requirements(project, environ, local_state, statuses)
-
-    first_stage = _process_requirement_statuses(project, environ_copy, local_state, statuses, statuses)
-
-    return first_stage
+    return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success)
 
 
-def prepare(project, environ=None, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None, show_url=None):
+def prepare(project,
+            environ=None,
+            ui_mode=UI_MODE_NOT_INTERACTIVE,
+            keep_going_until_success=False,
+            io_loop=None,
+            show_url=None):
     """Perform all steps needed to get a project ready to execute.
 
     This may need to ask the user questions, may start services,
@@ -615,6 +643,7 @@ def prepare(project, environ=None, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None
         project (Project): the project
         environ (dict): the environment to prepare (None to use os.environ)
         ui_mode (str): one of ``UI_MODE_TEXT``, ``UI_MODE_BROWSER``, ``UI_MODE_NOT_INTERACTIVE``
+        keep_going_until_success (bool): keep asking questions until all requirements are met
         io_loop (IOLoop): tornado IOLoop to use, None for default
         show_url (function): takes a URL and displays it in a browser somehow, None for default
 
@@ -625,7 +654,7 @@ def prepare(project, environ=None, ui_mode=UI_MODE_NOT_INTERACTIVE, io_loop=None
     if ui_mode not in _all_ui_modes:
         raise ValueError("invalid UI mode " + ui_mode)
 
-    stage = prepare_in_stages(project, environ)
+    stage = prepare_in_stages(project, environ, keep_going_until_success)
 
     if ui_mode == UI_MODE_NOT_INTERACTIVE:
         result = prepare_not_interactive(stage)
