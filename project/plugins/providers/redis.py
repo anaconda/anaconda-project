@@ -10,6 +10,8 @@ import sys
 from project.plugins.provider import Provider
 import project.plugins.network_util as network_util
 
+_DEFAULT_SYSTEM_REDIS_URL = "redis://localhost:6379"
+
 
 class DefaultRedisProvider(Provider):
     """Provides the default Redis service on localhost port 6379."""
@@ -25,7 +27,7 @@ class DefaultRedisProvider(Provider):
 
     def provide(self, requirement, context):
         """Override superclass to set the requirement's env var to the default Redis localhost URL."""
-        context.environ[requirement.env_var] = "redis://localhost:6379"
+        context.environ[requirement.env_var] = _DEFAULT_SYSTEM_REDIS_URL
 
 
 # future: this should introduce a requirement that redis-server is on path
