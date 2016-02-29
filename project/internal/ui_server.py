@@ -25,11 +25,12 @@ class UIServerDoneEvent(UIServerEvent):
         self.result = result
 
 # future: use actual template system
-_entity_table = {"&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"}
+# it's important to replace & before the later ones
+_entity_table = [ ("&", "&amp;"), ("<", "&lt;"), (">", "&gt;"), ("'", "&#39;"), ('"', "&quot;") ]
 
 
 def _html_escape(text):
-    for key, value in _entity_table.items():
+    for (key, value) in _entity_table:
         text = text.replace(key, value)
     return text
 
