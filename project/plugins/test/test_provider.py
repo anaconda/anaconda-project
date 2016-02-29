@@ -390,12 +390,12 @@ def test_env_var_provider_config_html():
 
         # config html when variable is unset
         status = requirement.check_status(dict())
-        html = provider.config_html(status)
+        html = provider.config_html(config_context, status)
         assert 'Use this value:' in html
 
         # config html when variable is set
         status = requirement.check_status(dict(FOO='from_environ'))
-        html = provider.config_html(status)
+        html = provider.config_html(config_context, status)
         assert 'Use this value instead:' in html
 
     # set a default to be sure we prefer 'environ' instead

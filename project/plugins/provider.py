@@ -144,7 +144,7 @@ class Provider(with_metaclass(ABCMeta)):
         """
         pass  # silently ignore unknown config values
 
-    def config_html(self, requirement):
+    def config_html(self, context, status):
         """Get an HTML string for configuring the provider.
 
         The HTML string must contain a single <form> tag. Any
@@ -273,7 +273,7 @@ class EnvVarProvider(Provider):
                     value = value_string
                 context.local_state_file.set_value(path, value)
 
-    def config_html(self, status):
+    def config_html(self, context, status):
         """Override superclass to provide our config html."""
         if status.requirement.encrypted:
             input_type = 'password'

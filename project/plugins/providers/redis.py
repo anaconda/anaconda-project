@@ -84,7 +84,7 @@ class ProjectScopedRedisProvider(Provider):
         autostart = autostart_string == "True"
         context.local_state_file.set_value(section + ['autostart'], autostart)
 
-    def config_html(self, status):
+    def config_html(self, context, status):
         """Override superclass to provide our config html."""
         return """
 <form>

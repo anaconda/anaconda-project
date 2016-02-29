@@ -98,13 +98,15 @@ def test_setting_autocreate_config():
 
 def test_config_html():
     def check_config_html(dirname):
+        local_state = LocalStateFile.load_for_directory(dirname)
         requirement = CondaEnvRequirement(registry=PluginRegistry())
         provider = ProjectScopedCondaEnvProvider()
+        context = ProviderConfigContext(dict(), local_state, requirement)
         status = requirement.check_status(dict())
-        html = provider.config_html(status)
+        html = provider.config_html(context, status)
         assert "Autocreate an environment" in html
         status._has_been_provided = True
-        html = provider.config_html(status)
+        html = provider.config_html(context, status)
         assert html is None
 
     with_directory_contents({}, check_config_html)

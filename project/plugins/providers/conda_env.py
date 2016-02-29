@@ -24,7 +24,7 @@ class ProjectScopedCondaEnvProvider(Provider):
         autocreate = autocreate_string == "True"
         context.local_state_file.set_value(section + ['autocreate'], autocreate)
 
-    def config_html(self, status):
+    def config_html(self, context, status):
         """Override superclass to provide our config html."""
         if status.has_been_provided:
             return None
