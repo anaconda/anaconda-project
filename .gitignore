@@ -98,3 +98,4 @@ htmlcov
 /.anaconda
 /.travis.yml
 /.envs
+/record.txt
