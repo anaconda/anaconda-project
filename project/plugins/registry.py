@@ -54,8 +54,8 @@ class PluginRegistry(object):
         """
         # future goal will be to un-hardcode this of course
         if service == 'redis':
-            from .providers.redis import DefaultRedisProvider, ProjectScopedRedisProvider
-            return [DefaultRedisProvider(), ProjectScopedRedisProvider()]
+            from .providers.redis import RedisProvider
+            return [RedisProvider()]
         else:
             return []
 

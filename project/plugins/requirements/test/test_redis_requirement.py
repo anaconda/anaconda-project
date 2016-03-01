@@ -44,5 +44,5 @@ def test_redis_url_cannot_connect(monkeypatch):
     status = requirement.check_status(dict(REDIS_URL="redis://example.com:1234/"))
     assert dict(host='example.com', port=1234, timeout_seconds=0.5) == can_connect_args
     assert not status
-    expected = "Cannot connect to redis://example.com:1234/ (from REDIS_URL environment variable)."
+    expected = "Cannot connect to Redis at redis://example.com:1234/."
     assert expected == status.status_description

@@ -8,7 +8,7 @@ from project.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
 from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
 from project.plugins.provider import ProviderConfigContext
-from project.plugins.providers.redis import DefaultRedisProvider, ProjectScopedRedisProvider
+from project.plugins.providers.redis import RedisProvider
 from project.plugins.requirements.redis import RedisRequirement
 from project.prepare import prepare, unprepare
 from project.project import Project
@@ -22,16 +22,15 @@ def _redis_requirement():
 def test_find_by_service_redis():
     registry = PluginRegistry()
     found = registry.find_providers_by_service(requirement=None, service="redis")
-    assert 2 == len(found)
-    assert isinstance(found[0], DefaultRedisProvider)
-    assert isinstance(found[1], ProjectScopedRedisProvider)
+    assert 1 == len(found)
+    assert isinstance(found[0], RedisProvider)
 
 
 def test_reading_default_config():
     def read_config(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
-        provider = ProjectScopedRedisProvider()
+        provider = RedisProvider()
         config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
         assert 6380 == config['lower_port']
         assert 6449 == config['upper_port']
@@ -43,11 +42,11 @@ def test_reading_valid_config():
     def read_config(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
-        provider = ProjectScopedRedisProvider()
+        provider = RedisProvider()
         config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
         assert 7389 == config['lower_port']
         assert 7421 == config['upper_port']
-        assert config['autostart'] is False
+        assert 'all' == config['scope']
 
     with_directory_contents(
         {
@@ -55,7 +54,7 @@ def test_reading_valid_config():
 runtime:
   REDIS_URL:
     providers:
-      ProjectScopedRedisProvider:
+      RedisProvider:
         port_range: 7389-7421
         autostart: false
          """
@@ -66,7 +65,7 @@ def _read_invalid_port_range(capsys, port_range):
     def read_config(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
-        provider = ProjectScopedRedisProvider()
+        provider = RedisProvider()
         config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
         # revert to defaults
         assert 6380 == config['lower_port']
@@ -81,7 +80,7 @@ def _read_invalid_port_range(capsys, port_range):
 runtime:
   REDIS_URL:
     providers:
-      ProjectScopedRedisProvider:
+      RedisProvider:
         port_range: %s
          """ % port_range
         }, read_config)
@@ -111,7 +110,7 @@ def test_set_config_values_as_strings():
     def set_config(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
-        provider = ProjectScopedRedisProvider()
+        provider = RedisProvider()
         provider.set_config_values_as_strings(
             ProviderConfigContext(dict(), local_state, requirement),
             dict(lower_port="6001"))
@@ -216,7 +215,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert result
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        state = local_state_file.get_service_run_state("ProjectScopedRedisProvider")
+        state = local_state_file.get_service_run_state("RedisProvider")
         assert 'port' in state
         port = state['port']
 
@@ -237,7 +236,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert not real_can_connect_to_socket(host='localhost', port=port)
 
         local_state_file.load()
-        assert dict() == local_state_file.get_service_run_state("ProjectScopedRedisProvider")
+        assert dict() == local_state_file.get_service_run_state("RedisProvider")
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -257,9 +256,10 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         project = Project(dirname)
         result = prepare(project, environ=dict())
         assert result
+        assert 'REDIS_URL' in result.environ
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        state = local_state_file.get_service_run_state("ProjectScopedRedisProvider")
+        state = local_state_file.get_service_run_state("RedisProvider")
         assert 'port' in state
         port = state['port']
 
@@ -272,6 +272,13 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert os.path.exists(logfile)
 
         assert real_can_connect_to_socket(host='localhost', port=port)
+
+        # be sure we generate the config html that would use the old one
+        requirement = _redis_requirement()
+        status = requirement.check_status(result.environ)
+        config_context = ProviderConfigContext(result.environ, local_state_file, requirement)
+        html = RedisProvider().config_html(config_context, status)
+        assert 'Use the redis-server we started earlier' in html
 
         # now try again, and we should re-use the exact same server
         pidfile_mtime = os.path.getmtime(pidfile)
@@ -296,7 +303,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert not real_can_connect_to_socket(host='localhost', port=port)
 
         local_state_file.load()
-        assert dict() == local_state_file.get_service_run_state("ProjectScopedRedisProvider")
+        assert dict() == local_state_file.get_service_run_state("RedisProvider")
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -348,7 +355,7 @@ def _monkeypatch_can_connect_to_socket_always_fails(monkeypatch):
     monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
 
 
-def test_fail_to_prepare_local_redis_server_autostart_false(monkeypatch, capsys):
+def test_fail_to_prepare_local_redis_server_scope_system(monkeypatch, capsys):
     _monkeypatch_can_connect_to_socket_always_fails(monkeypatch)
 
     def check_no_autostart(dirname):
@@ -365,15 +372,15 @@ runtime:
 runtime:
   REDIS_URL:
     providers:
-      ProjectScopedRedisProvider:
-        autostart: false
+      RedisProvider:
+        scope: system
 """}, check_no_autostart)
 
     out, err = capsys.readouterr()
-    assert out == "Not trying to start a redis-server.\n"
-    assert err == ("missing requirement to run this project: A running Redis server, located " +
-                   "by a redis: URL set as REDIS_URL\n" +
-                   "  Cannot connect to redis://localhost:6379 (from REDIS_URL environment variable).\n")
+    assert out == ""
+    assert err == ("Could not connect to system default Redis.\n" +
+                   "missing requirement to run this project: A running Redis server, located " +
+                   "by a redis: URL set as REDIS_URL\n" + "  Environment variable REDIS_URL is not set.\n")
 
 
 def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
@@ -394,7 +401,7 @@ runtime:
 runtime:
   REDIS_URL:
     providers:
-      ProjectScopedRedisProvider:
+      RedisProvider:
         port_range: 7389-7421
 """}, start_local_redis)
 
@@ -484,3 +491,29 @@ def test_fail_to_prepare_local_redis_server_exec_fails_no_logfile(monkeypatch, c
 
 def test_fail_to_prepare_local_redis_server_exec_fails_logfile_is_dir(monkeypatch, capsys):
     _fail_to_prepare_local_redis_server_exec_fails(monkeypatch, capsys, logfile_fail_mode='is_dir')
+
+
+def test_set_scope_in_local_state(monkeypatch):
+    can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
+
+    def prepare_after_setting_scope(dirname):
+        local_state = LocalStateFile.load_for_directory(dirname)
+        requirement = _redis_requirement()
+        provider = RedisProvider()
+        config_context = ProviderConfigContext(dict(), local_state, requirement)
+        config = provider.read_config(config_context)
+        assert config['scope'] == 'all'
+        provider.set_config_values_as_strings(config_context, dict(scope='system'))
+        config = provider.read_config(config_context)
+        assert config['scope'] == 'system'
+
+        project = Project(dirname)
+        result = prepare(project, environ=dict())
+        assert result
+        assert dict(REDIS_URL="redis://localhost:6379", PROJECT_DIR=project.directory_path) == result.environ
+        assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  REDIS_URL: {}
+"""}, prepare_after_setting_scope)

@@ -241,3 +241,22 @@ def test_cleanup_and_scope_form_select_using_element_text():
 """.strip()
 
     assert expected == cleaned
+
+
+def test_cleanup_and_scope_form_leave_hidden_alone():
+    original = """
+<form>
+  <input type="hidden" name="foo" value="bar"/>
+</form>
+"""
+
+    cleaned = cleanup_and_scope_form(original, "prefix.", dict(foo="blah"))
+
+    # we should NOT set the value on a hidden
+    expected = """
+<div>
+<input name="prefix.foo" type="hidden" value="bar"/>
+</div>
+""".strip()
+
+    assert expected == cleaned

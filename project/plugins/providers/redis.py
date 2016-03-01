@@ -10,23 +10,13 @@ import sys
 from project.plugins.provider import Provider
 import project.plugins.network_util as network_util
 
-_DEFAULT_SYSTEM_REDIS_URL = "redis://localhost:6379"
-
-
-class DefaultRedisProvider(Provider):
-    """Provides the default Redis service on localhost port 6379."""
-
-    def read_config(self, context):
-        """Override superclass to return empty config."""
-        return dict()
-
-    def provide(self, requirement, context):
-        """Override superclass to set the requirement's env var to the default Redis localhost URL."""
-        context.environ[requirement.env_var] = _DEFAULT_SYSTEM_REDIS_URL
+_DEFAULT_SYSTEM_REDIS_HOST = "localhost"
+_DEFAULT_SYSTEM_REDIS_PORT = 6379
+_DEFAULT_SYSTEM_REDIS_URL = "redis://%s:%d" % (_DEFAULT_SYSTEM_REDIS_HOST, _DEFAULT_SYSTEM_REDIS_PORT)
 
 
 # future: this should introduce a requirement that redis-server is on path
-class ProjectScopedRedisProvider(Provider):
+class RedisProvider(Provider):
     """Runs a project-scoped Redis process (each project needing Redis gets its own)."""
 
     @classmethod
@@ -63,7 +53,7 @@ class ProjectScopedRedisProvider(Provider):
             config['lower_port'] = parsed_port_range[0]
             config['upper_port'] = parsed_port_range[1]
 
-        config['autostart'] = context.local_state_file.get_value(section + ['autostart'], default=True)
+        config['scope'] = context.local_state_file.get_value(section + ['scope'], default='all')
 
         return config
 
@@ -80,34 +70,62 @@ class ProjectScopedRedisProvider(Provider):
 
         context.local_state_file.set_value(section + ['port_range'], "%s-%s" % (lower_port, upper_port))
 
-        autostart_string = values.get('autostart', "True")
-        autostart = autostart_string == "True"
-        context.local_state_file.set_value(section + ['autostart'], autostart)
+        if 'scope' in values:
+            context.local_state_file.set_value(section + ['scope'], values['scope'])
+
+    def _previously_run_redis_url_if_alive(self, run_state):
+        if 'port' in run_state and network_util.can_connect_to_socket(host='localhost', port=run_state['port']):
+            return "redis://localhost:{port}".format(port=run_state['port'])
+        else:
+            return None
+
+    def _can_connect_to_system_default(self):
+        return network_util.can_connect_to_socket(host=_DEFAULT_SYSTEM_REDIS_HOST, port=_DEFAULT_SYSTEM_REDIS_PORT)
 
     def config_html(self, context, status):
         """Override superclass to provide our config html."""
-        return """
-<form>
-  <label><input type="checkbox" name="autostart" value="True"/> Start a
+        run_state = context.local_state_file.get_service_run_state(self.config_key)
+        previous = self._previously_run_redis_url_if_alive(run_state)
+        systemwide = self._can_connect_to_system_default()
+
+        if systemwide:
+            system_option = """
+  <div>
+    <label><input type="radio" name="scope" value="system"/>Always use system default Redis on %s port %d</label>
+  </div>
+""" % (_DEFAULT_SYSTEM_REDIS_HOST, _DEFAULT_SYSTEM_REDIS_PORT)
+        else:
+            system_option = ""
+
+        if previous is not None:
+            project_option = "Use the redis-server we started earlier at %s" % (previous)
+        else:
+            project_option = """Always start a
    project-dedicated redis-server, using a port between <input type="text" name="lower_port"/>
-   and <input type="text" name="upper_port"/></label>
-  <input type="hidden" name="autostart" value="False"/>
-</form>
+   and <input type="text" name="upper_port"/>
 """
 
-    def provide(self, requirement, context):
-        """Override superclass to start a project-scoped redis-server.
+        return """
+<form>
+  <div>
+    <label><input type="radio" name="scope" value="all"/>Use system default Redis when it's running,
+        otherwise start our own redis-server</label>
+  </div>
+  %s
+  <div>
+    <label><input type="radio" name="scope" value="project"/>%s</label>
+  </div>
+</form>
+""" % (system_option, project_option)
 
-        If it locates or starts a redis-server, it sets the
-        requirement's env var to that server's URL.
+    def _provide_system(self, requirement, context):
+        if self._can_connect_to_system_default():
+            context.append_log("Found system default Redis at %s" % _DEFAULT_SYSTEM_REDIS_URL)
+            return _DEFAULT_SYSTEM_REDIS_URL
+        else:
+            context.append_error("Could not connect to system default Redis.")
 
-        """
-        if not context.config['autostart']:
-            context.append_log("Not trying to start a redis-server.")
-            return
-
-        url = None  # this is a hack because yapf adds a blank line here and pep257 hates it
-
+    def _provide_project(self, requirement, context):
         def ensure_redis(run_state):
             # this is pretty lame, we'll want to get fancier at a
             # future time (e.g. use Chalmers, stuff like
@@ -116,8 +134,8 @@ class ProjectScopedRedisProvider(Provider):
             # require the user to have set up anything in advance,
             # e.g. if we use Chalmers we should automatically take
             # care of configuring/starting Chalmers itself.
-            if 'port' in run_state and network_util.can_connect_to_socket(host='localhost', port=run_state['port']):
-                url = "redis://localhost:{port}".format(port=run_state['port'])
+            url = self._previously_run_redis_url_if_alive(run_state)
+            if url is not None:
                 context.append_log("Using redis-server we started previously at {url}".format(url=url))
                 return url
 
@@ -193,6 +211,23 @@ class ProjectScopedRedisProvider(Provider):
 
                 return url
 
-        url = context.transform_service_run_state(self.config_key, ensure_redis)
+        return context.transform_service_run_state(self.config_key, ensure_redis)
+
+    def provide(self, requirement, context):
+        """Override superclass to start a project-scoped redis-server.
+
+        If it locates or starts a redis-server, it sets the
+        requirement's env var to that server's URL.
+
+        """
+        url = None
+        scope = context.config['scope']
+
+        if scope == 'system' or scope == 'all':
+            url = self._provide_system(requirement, context)
+
+        if url is None and (scope == 'project' or scope == 'all'):
+            url = self._provide_project(requirement, context)
+
         if url is not None:
             context.environ[requirement.env_var] = url
