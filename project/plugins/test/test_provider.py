@@ -14,14 +14,6 @@ from project.project import Project
 from project.project_file import ProjectFile, PROJECT_FILENAME
 
 
-def test_find_providers_by_env_var():
-    registry = PluginRegistry()
-    found = registry.find_providers_by_env_var(requirement=None, env_var="FOO")
-    assert 1 == len(found)
-    assert isinstance(found[0], EnvVarProvider)
-    assert "EnvVarProvider" == found[0].config_key
-
-
 def test_find_provider_by_class_name():
     registry = PluginRegistry()
     found = registry.find_provider_by_class_name(class_name="ProjectScopedCondaEnvProvider")
@@ -405,12 +397,6 @@ def test_env_var_provider_config_html():
 runtime:
   - FOO
 """}, check_env_var_provider_config)
-
-
-def test_fail_to_find_providers_by_service():
-    registry = PluginRegistry()
-    found = registry.find_providers_by_service(requirement=None, service="nope")
-    assert 0 == len(found)
 
 
 def test_provide_context_properties():

@@ -35,13 +35,11 @@ class CondaEnvRequirement(EnvVarRequirement):
         else:
             return base
 
-    def _find_providers(self):
+    def _find_provider(self):
         if self.must_be_project_scoped:
-            provider = self.registry.find_provider_by_class_name('ProjectScopedCondaEnvProvider')
-            assert provider is not None
-            return [provider]
+            return self.registry.find_provider_by_class_name('ProjectScopedCondaEnvProvider')
         else:
-            return self.registry.find_providers_by_env_var(self, self.env_var)
+            return self.registry.find_provider_by_class_name('EnvVarProvider')
 
     def _why_not_provided(self, environ):
         name_or_prefix = self._get_value_of_env_var(environ)
@@ -94,18 +92,18 @@ class CondaEnvRequirement(EnvVarRequirement):
     def check_status(self, environ):
         """Override superclass to get our status."""
         why_not_provided = self._why_not_provided(environ)
-        providers = self._find_providers()
+        provider = self._find_provider()
         if why_not_provided is None:
             return RequirementStatus(
                 self,
                 has_been_provided=True,
                 status_description=("Using Conda environment %s" % self._get_value_of_env_var(environ)),
-                possible_providers=providers)
+                provider=provider)
         else:
             return RequirementStatus(self,
                                      has_been_provided=False,
                                      status_description=why_not_provided,
-                                     possible_providers=providers)
+                                     provider=provider)
 
     @property
     def must_be_project_scoped(self):

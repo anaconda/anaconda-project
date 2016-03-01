@@ -66,15 +66,14 @@ class PrepareViewHandler(RequestHandler):
             html = html + html_tag("p", "Status: " + status.status_description).replace("<p>Status: ", "<p>Status: " +
                                                                                         check + " ")
             if with_config and not status.has_been_provided:
-                for provider in status.possible_providers:
-                    config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
-                                                           status.requirement)
-                    config = provider.read_config(config_context)
-                    raw_html = provider.config_html(config_context, status)
-                    if raw_html is not None:
-                        prefix = self.application.form_prefix(status.requirement, provider)
-                        cleaned_html = cleanup_and_scope_form(raw_html, prefix, config)
-                        html = html + "\n" + cleaned_html
+                config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
+                                                       status.requirement)
+                config = status.provider.read_config(config_context)
+                raw_html = status.provider.config_html(config_context, status)
+                if raw_html is not None:
+                    prefix = self.application.form_prefix(status.requirement, status.provider)
+                    cleaned_html = cleanup_and_scope_form(raw_html, prefix, config)
+                    html = html + "\n" + cleaned_html
 
             html = html + "</li>"
         html = html + "</ul>"
@@ -212,9 +211,8 @@ class UIApplication(Application):
         requirement = self._requirements_by_id[req_id]
         for status in prepare_context.statuses:
             if status.requirement is requirement:
-                for provider in status.possible_providers:
-                    if provider_key == provider.config_key:
-                        return (requirement, provider, unscoped_name)
+                if provider_key == status.provider.config_key:
+                    return (requirement, status.provider, unscoped_name)
         print("did not find provider " + provider_key, file=sys.stderr)
         return None
 

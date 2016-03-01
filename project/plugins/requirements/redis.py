@@ -17,9 +17,6 @@ class RedisRequirement(EnvVarRequirement):
         """Override superclass to supply our title."""
         return "A running Redis server, located by a redis: URL set as %s" % (self.env_var)
 
-    def _find_providers(self):
-        return self.registry.find_providers_by_service(self, 'redis')
-
     def _why_not_provided(self, environ):
         url = self._get_value_of_env_var(environ)
         if url is None:
@@ -38,15 +35,15 @@ class RedisRequirement(EnvVarRequirement):
     def check_status(self, environ):
         """Override superclass to get our status."""
         why_not_provided = self._why_not_provided(environ)
-        providers = self._find_providers()
+        provider = self.registry.find_provider_by_class_name('RedisProvider')
         if why_not_provided is None:
             return RequirementStatus(
                 self,
                 has_been_provided=True,
                 status_description=("Using Redis server at %s" % self._get_value_of_env_var(environ)),
-                possible_providers=providers)
+                provider=provider)
         else:
             return RequirementStatus(self,
                                      has_been_provided=False,
                                      status_description=why_not_provided,
-                                     possible_providers=providers)
+                                     provider=provider)

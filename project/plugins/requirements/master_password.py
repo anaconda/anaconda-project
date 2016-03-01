@@ -22,23 +22,13 @@ class MasterPasswordRequirement(EnvVarRequirement):
         """Override superclass to never encrypt ANACONDA_MASTER_PASSWORD which would be circular."""
         return False
 
-    def _find_providers(self):
-        """Override superclass to list master password providers."""
-        return [self.registry.find_provider_by_class_name('MasterPasswordProvider')]
-
     def check_status(self, environ):
         """Override superclass to get our status."""
         value = self._get_value_of_env_var(environ)
-        providers = self._find_providers()
+        provider = self.registry.find_provider_by_class_name('MasterPasswordProvider')
         unset_message = "Anaconda master password isn't set as the ANACONDA_MASTER_PASSWORD environment variable."
         set_message = "Using Anaconda master password from the environment variable."
         if value is None:
-            return RequirementStatus(self,
-                                     has_been_provided=False,
-                                     status_description=unset_message,
-                                     possible_providers=providers)
+            return RequirementStatus(self, has_been_provided=False, status_description=unset_message, provider=provider)
         else:
-            return RequirementStatus(self,
-                                     has_been_provided=True,
-                                     status_description=set_message,
-                                     possible_providers=providers)
+            return RequirementStatus(self, has_been_provided=True, status_description=set_message, provider=provider)

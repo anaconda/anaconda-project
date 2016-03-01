@@ -16,12 +16,12 @@ class RequirementStatus(with_metaclass(ABCMeta)):
 
     """
 
-    def __init__(self, requirement, has_been_provided, status_description, possible_providers):
+    def __init__(self, requirement, has_been_provided, status_description, provider):
         """Construct an abstract RequirementStatus."""
         self._requirement = requirement
         self._has_been_provided = has_been_provided
         self._status_description = status_description
-        self._possible_providers = tuple(possible_providers)
+        self._provider = provider
 
     def __bool__(self):
         """True if the requirement is met."""
@@ -47,9 +47,9 @@ class RequirementStatus(with_metaclass(ABCMeta)):
         return self._status_description
 
     @property
-    def possible_providers(self):
-        """Get a tuple of providers that could provide this requirement."""
-        return self._possible_providers
+    def provider(self):
+        """Get the provider for this requirement."""
+        return self._provider
 
     def recheck(self, environ):
         """Get a new ``RequirementStatus`` reflecting the current state.
@@ -162,15 +162,15 @@ class EnvVarRequirement(Requirement):
         """Override superclass to get our status."""
         value = self._get_value_of_env_var(environ)
 
-        possible_providers = self.registry.find_providers_by_env_var(self, self.env_var)
+        provider = self.registry.find_provider_by_class_name('EnvVarProvider')
 
         if value is None:
             return RequirementStatus(self,
                                      has_been_provided=False,
                                      status_description=self._unset_message(),
-                                     possible_providers=possible_providers)
+                                     provider=provider)
         else:
             return RequirementStatus(self,
                                      has_been_provided=True,
                                      status_description=self._set_message(environ),
-                                     possible_providers=possible_providers)
+                                     provider=provider)

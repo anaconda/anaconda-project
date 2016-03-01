@@ -29,36 +29,6 @@ class PluginRegistry(object):
             from .requirement import EnvVarRequirement
             return EnvVarRequirement(registry=self, env_var=env_var, options=options)
 
-    def find_providers_by_env_var(self, requirement, env_var):
-        """Look up providers for the given requirement which needs the given env_var.
-
-        Args:
-            requirement (Requirement): the requirement we want to provide
-            env_var (str): name of the environment variable the requirement wants
-
-        Returns:
-            list of Provider
-        """
-        from .provider import EnvVarProvider
-        return [EnvVarProvider()]
-
-    def find_providers_by_service(self, requirement, service):
-        """Look up providers for the given requirement by service name.
-
-        Args:
-            requirement (Requirement): the requirement we want to provide
-            service (str): conventional name of the service the requirement wants
-
-        Returns:
-            list of Provider
-        """
-        # future goal will be to un-hardcode this of course
-        if service == 'redis':
-            from .providers.redis import RedisProvider
-            return [RedisProvider()]
-        else:
-            return []
-
     def find_provider_by_class_name(self, class_name):
         """Look up a provider by class name.
 
@@ -75,5 +45,11 @@ class PluginRegistry(object):
         elif class_name == 'MasterPasswordProvider':
             from .providers.master_password import MasterPasswordProvider
             return MasterPasswordProvider()
+        elif class_name == 'RedisProvider':
+            from .providers.redis import RedisProvider
+            return RedisProvider()
+        elif class_name == 'EnvVarProvider':
+            from .provider import EnvVarProvider
+            return EnvVarProvider()
         else:
             return None

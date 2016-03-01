@@ -19,13 +19,6 @@ def _redis_requirement():
     return RedisRequirement(registry=PluginRegistry(), env_var="REDIS_URL")
 
 
-def test_find_by_service_redis():
-    registry = PluginRegistry()
-    found = registry.find_providers_by_service(requirement=None, service="redis")
-    assert 1 == len(found)
-    assert isinstance(found[0], RedisProvider)
-
-
 def test_reading_default_config():
     def read_config(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)

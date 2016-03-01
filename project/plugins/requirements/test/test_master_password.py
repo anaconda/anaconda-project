@@ -20,8 +20,8 @@ def test_master_password_not_set():
     assert expected == status.status_description
 
 
-def test_master_password_providers():
+def test_master_password_provider():
     requirement = MasterPasswordRequirement(registry=PluginRegistry())
     status = requirement.check_status(dict())
-    len(status.possible_providers) == 1
-    assert isinstance(status.possible_providers[0], MasterPasswordProvider)
+    assert status.provider is not None
+    assert isinstance(status.provider, MasterPasswordProvider)

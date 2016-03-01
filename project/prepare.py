@@ -388,9 +388,8 @@ def _sort_statuses(environ, local_state, statuses, missing_vars_getter):
 
     def get_dependency_keys(status):
         config_keys = set()
-        for provider in status.possible_providers:
-            for env_var in missing_vars_getter(provider, status.requirement, environ, local_state):
-                config_keys.add(env_var)
+        for env_var in missing_vars_getter(status.provider, status.requirement, environ, local_state):
+            config_keys.add(env_var)
         return config_keys
 
     def can_ignore_dependency_on_key(key):
@@ -425,15 +424,14 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         did_any_providing = False
 
         for status in rechecked:
-            for provider in status.possible_providers:
-                if not status.has_been_provided:
-                    did_any_providing = True
-                    config_context = ProviderConfigContext(environ, local_state, status.requirement)
-                    config = provider.read_config(config_context)
-                    context = ProvideContext(environ, local_state, config)
-                    provider.provide(status.requirement, context)
-                    logs.extend(context.logs)
-                    errors.extend(context.errors)
+            if not status.has_been_provided:
+                did_any_providing = True
+                config_context = ProviderConfigContext(environ, local_state, status.requirement)
+                config = status.provider.read_config(config_context)
+                context = ProvideContext(environ, local_state, config)
+                status.provider.provide(status.requirement, context)
+                logs.extend(context.logs)
+                errors.extend(context.errors)
 
         if did_any_providing:
             old = rechecked
@@ -498,9 +496,7 @@ def _partition_first_group_to_configure(environ, local_state, statuses):
     while sorted:
         status = sorted.pop()
 
-        missing_vars = []
-        for provider in status.possible_providers:
-            missing_vars = provider.missing_env_vars_to_configure(status.requirement, environ, local_state)
+        missing_vars = status.provider.missing_env_vars_to_configure(status.requirement, environ, local_state)
 
         if len(missing_vars) > 0:
             tail.append(status)
@@ -554,9 +550,8 @@ def _add_missing_env_var_requirements(project, environ, local_state, statuses):
 
     needed_env_vars = set()
     for status in statuses:
-        for provider in status.possible_providers:
-            needed_env_vars.update(provider.missing_env_vars_to_configure(status.requirement, environ, local_state))
-            needed_env_vars.update(provider.missing_env_vars_to_provide(status.requirement, environ, local_state))
+        needed_env_vars.update(status.provider.missing_env_vars_to_configure(status.requirement, environ, local_state))
+        needed_env_vars.update(status.provider.missing_env_vars_to_provide(status.requirement, environ, local_state))
 
     created_anything = False
 
