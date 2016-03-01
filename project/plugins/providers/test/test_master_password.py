@@ -25,6 +25,27 @@ def _load_master_password_requirement(dirname):
     raise RuntimeError("No requirement for master password was in the project file, only %r" % (project.requirements))
 
 
+def test_master_password_provider_with_value_not_set():
+    def check_not_set(dirname):
+        provider = MasterPasswordProvider()
+        requirement = _load_master_password_requirement(dirname)
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        config = provider.read_config(config_context)
+        assert dict() == config
+        status = requirement.check_status(dict())
+        html = provider.config_html(config_context, status)
+        assert 'type="password"' in html
+        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+        provider.provide(requirement, context=context)
+        assert 'ANACONDA_MASTER_PASSWORD' not in context.environ
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  ANACONDA_MASTER_PASSWORD: {}
+"""}, check_not_set)
+
+
 def test_master_password_provider_with_value_set_in_environment():
     def check_set_in_environment(dirname):
         provider = MasterPasswordProvider()
