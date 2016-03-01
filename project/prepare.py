@@ -417,7 +417,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         # we have to recheck all the statuses in case configuration happened
         rechecked = []
         for status in sorted:
-            rechecked.append(status.recheck(environ))
+            rechecked.append(status.recheck(environ, local_state))
 
         logs = []
         errors = []
@@ -437,7 +437,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             old = rechecked
             rechecked = []
             for status in old:
-                rechecked.append(status.recheck(environ))
+                rechecked.append(status.recheck(environ, local_state))
 
         failed = False
         for status in rechecked:
@@ -559,7 +559,7 @@ def _add_missing_env_var_requirements(project, environ, local_state, statuses):
         if env_var not in by_env_var:
             created_anything = True
             requirement = project.plugin_registry.find_requirement_by_env_var(env_var, options=dict())
-            statuses.append(requirement.check_status(environ))
+            statuses.append(requirement.check_status(environ, local_state))
 
     if created_anything:
         # run the whole above again to find any transitive requirements of the new providers
@@ -612,12 +612,12 @@ def prepare_in_stages(project, environ=None, keep_going_until_success=False):
     # it's useful for scripts to find their source tree.
     environ_copy['PROJECT_DIR'] = project.directory_path
 
+    local_state = LocalStateFile.load_for_directory(project.directory_path)
+
     statuses = []
     for requirement in project.requirements:
-        status = requirement.check_status(environ_copy)
+        status = requirement.check_status(environ_copy, local_state)
         statuses.append(status)
-
-    local_state = LocalStateFile.load_for_directory(project.directory_path)
 
     return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success)
 

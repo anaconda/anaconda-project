@@ -22,7 +22,7 @@ class MasterPasswordRequirement(EnvVarRequirement):
         """Override superclass to never encrypt ANACONDA_MASTER_PASSWORD which would be circular."""
         return False
 
-    def check_status(self, environ):
+    def check_status(self, environ, local_state_file):
         """Override superclass to get our status."""
         value = self._get_value_of_env_var(environ)
         provider = self.registry.find_provider_by_class_name('MasterPasswordProvider')

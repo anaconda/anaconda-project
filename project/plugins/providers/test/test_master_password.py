@@ -33,7 +33,7 @@ def test_master_password_provider_with_value_not_set():
         config_context = ProviderConfigContext(dict(), local_state_file, requirement)
         config = provider.read_config(config_context)
         assert dict() == config
-        status = requirement.check_status(dict())
+        status = requirement.check_status(dict(), local_state_file)
         html = provider.config_html(config_context, status)
         assert 'type="password"' in html
         context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)

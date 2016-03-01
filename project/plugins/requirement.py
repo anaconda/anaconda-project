@@ -51,13 +51,13 @@ class RequirementStatus(with_metaclass(ABCMeta)):
         """Get the provider for this requirement."""
         return self._provider
 
-    def recheck(self, environ):
+    def recheck(self, environ, local_state_file):
         """Get a new ``RequirementStatus`` reflecting the current state.
 
         This calls ``Requirement.check_status()`` which can do network and filesystem IO,
         so be cautious about where you call it.
         """
-        return self.requirement.check_status(environ)
+        return self.requirement.check_status(environ, local_state_file)
 
 
 class Requirement(with_metaclass(ABCMeta)):
@@ -92,7 +92,7 @@ class Requirement(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @abstractmethod
-    def check_status(self, environ):
+    def check_status(self, environ, local_state_file):
         """Check on the requirement and return a ``RequirementStatus`` with the current status.
 
         This may attempt to talk to servers, check that files
@@ -102,6 +102,7 @@ class Requirement(with_metaclass(ABCMeta)):
 
         Args:
             environ (dict): use this rather than the system environment directly
+            local_state_file (LocalStateFile): project local state
 
         Returns:
             a ``RequirementStatus``
@@ -158,7 +159,7 @@ class EnvVarRequirement(Requirement):
             return "Environment variable {env_var} set to '{value}'".format(env_var=self.env_var,
                                                                             value=self._get_value_of_env_var(environ))
 
-    def check_status(self, environ):
+    def check_status(self, environ, local_state_file):
         """Override superclass to get our status."""
         value = self._get_value_of_env_var(environ)
 

@@ -102,7 +102,7 @@ def test_config_html():
         requirement = CondaEnvRequirement(registry=PluginRegistry())
         provider = ProjectScopedCondaEnvProvider()
         context = ProviderConfigContext(dict(), local_state, requirement)
-        status = requirement.check_status(dict())
+        status = requirement.check_status(dict(), local_state)
         html = provider.config_html(context, status)
         assert "Autocreate an environment" in html
         status._has_been_provided = True

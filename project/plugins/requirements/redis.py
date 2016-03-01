@@ -32,7 +32,7 @@ class RedisRequirement(EnvVarRequirement):
         else:
             return "Cannot connect to Redis at {url}.".format(url=url, env_var=self.env_var)
 
-    def check_status(self, environ):
+    def check_status(self, environ, local_state_file):
         """Override superclass to get our status."""
         why_not_provided = self._why_not_provided(environ)
         provider = self.registry.find_provider_by_class_name('RedisProvider')

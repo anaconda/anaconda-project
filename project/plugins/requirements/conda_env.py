@@ -89,7 +89,7 @@ class CondaEnvRequirement(EnvVarRequirement):
 
         return None
 
-    def check_status(self, environ):
+    def check_status(self, environ, local_state_file):
         """Override superclass to get our status."""
         why_not_provided = self._why_not_provided(environ)
         provider = self._find_provider()
