@@ -68,11 +68,10 @@ class PrepareViewHandler(RequestHandler):
             if with_config:
                 config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
                                                        status.requirement)
-                config = status.provider.read_config(config_context)
                 raw_html = status.provider.config_html(config_context, status)
                 if raw_html is not None:
                     prefix = self.application.form_prefix(status.requirement, status.provider)
-                    cleaned_html = cleanup_and_scope_form(raw_html, prefix, config)
+                    cleaned_html = cleanup_and_scope_form(raw_html, prefix, status.analysis.config)
                     html = html + "\n" + cleaned_html
 
             html = html + "</li>"

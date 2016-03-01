@@ -10,6 +10,8 @@ from project.internal.makedirs import makedirs_ok_if_exists
 from project.internal.crypto import encrypt_string, decrypt_string
 
 
+# TODO: get rid of this class before we freeze the API, pretty
+# sure it's annoying and pointless
 class ProviderConfigContext(object):
     """A context passed to config-related methods on Provider."""
 
@@ -94,6 +96,35 @@ class ProvideContext(object):
         return self._config
 
 
+class ProviderAnalysis(object):
+    """A Provider's preflight check snapshotting the state prior to ``provide()``.
+
+    Instances of this class are immutable, and are usually created as part of a
+    ``RequirementStatus``.
+    """
+
+    def __init__(self, config, missing_env_vars_to_configure, missing_env_vars_to_provide):
+        """Create a ProviderAnalysis."""
+        self._config = config
+        self._missing_env_vars_to_configure = missing_env_vars_to_configure
+        self._missing_env_vars_to_provide = missing_env_vars_to_provide
+
+    @property
+    def config(self):
+        """Get the configuration dict from the time of analysis."""
+        return self._config
+
+    @property
+    def missing_env_vars_to_configure(self):
+        """Get the env vars we were missing in order to configure, from the time of analysis."""
+        return self._missing_env_vars_to_configure
+
+    @property
+    def missing_env_vars_to_provide(self):
+        """Get the env vars we were missing in order to provide, from the time of analysis."""
+        return self._missing_env_vars_to_provide
+
+
 class Provider(with_metaclass(ABCMeta)):
     """A Provider can take some action to meet a Requirement."""
 
@@ -166,6 +197,24 @@ class Provider(with_metaclass(ABCMeta)):
 
         """
         return None
+
+    def analyze(self, requirement, environ, local_state_file):
+        """Analyze whether and how we'll be able to provide the requirement.
+
+        This is used to show the situation in the UI, and also to
+        consolidate all IO-type work in one place (inside
+        Requirement.check_status()).
+
+        Returns:
+          A ``ProviderAnalysis`` instance.
+        """
+        config_context = ProviderConfigContext(environ, local_state_file, requirement)
+        config = self.read_config(config_context)
+        missing_to_configure = self.missing_env_vars_to_configure(requirement, environ, local_state_file)
+        missing_to_provide = self.missing_env_vars_to_provide(requirement, environ, local_state_file)
+        return ProviderAnalysis(config=config,
+                                missing_env_vars_to_configure=missing_to_configure,
+                                missing_env_vars_to_provide=missing_to_provide)
 
     @abstractmethod
     def provide(self, requirement, context):
