@@ -1,5 +1,5 @@
 package:
-  name: conda_project
+  name: anaconda_project
   version: 0.1
 
 build:
