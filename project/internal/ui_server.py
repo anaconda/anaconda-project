@@ -65,7 +65,7 @@ class PrepareViewHandler(RequestHandler):
             html = html + html_tag("h4", status.requirement.title)
             html = html + html_tag("p", "Status: " + status.status_description).replace("<p>Status: ", "<p>Status: " +
                                                                                         check + " ")
-            if with_config:
+            if with_config and not status.has_been_provided:
                 for provider in status.possible_providers:
                     config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
                                                            status.requirement)
