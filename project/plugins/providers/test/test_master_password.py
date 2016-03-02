@@ -36,7 +36,7 @@ def test_master_password_provider_with_value_not_set():
         status = requirement.check_status(dict(), local_state_file)
         html = provider.config_html(config_context, status)
         assert 'type="password"' in html
-        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+        context = ProvideContext(environ=dict(), local_state_file=local_state_file, status=status)
         provider.provide(requirement, context=context)
         assert 'ANACONDA_MASTER_PASSWORD' not in context.environ
 
@@ -54,9 +54,9 @@ def test_master_password_provider_with_value_set_in_environment():
         config_context = ProviderConfigContext(dict(), local_state_file, requirement)
         config = provider.read_config(config_context)
         assert dict() == config
-        context = ProvideContext(environ=dict(ANACONDA_MASTER_PASSWORD='from_environ'),
-                                 local_state_file=local_state_file,
-                                 config=config)
+        environ = dict(ANACONDA_MASTER_PASSWORD='from_environ')
+        status = requirement.check_status(environ, local_state_file)
+        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
         provider.provide(requirement, context=context)
         assert 'ANACONDA_MASTER_PASSWORD' in context.environ
         assert 'from_environ' == context.environ['ANACONDA_MASTER_PASSWORD']
@@ -80,9 +80,9 @@ def test_master_password_provider_with_value_set_in_keyring():
             config_context = ProviderConfigContext(dict(), local_state_file, requirement)
             config = provider.read_config(config_context)
             assert dict(value='from_keyring') == config
-            context = ProvideContext(environ=dict(ANACONDA_MASTER_PASSWORD='from_environ'),
-                                     local_state_file=local_state_file,
-                                     config=config)
+            environ = dict(ANACONDA_MASTER_PASSWORD='from_environ')
+            status = requirement.check_status(environ, local_state_file)
+            context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
             provider.provide(requirement, context=context)
             assert 'ANACONDA_MASTER_PASSWORD' in context.environ
             assert 'from_keyring' == context.environ['ANACONDA_MASTER_PASSWORD']
@@ -105,7 +105,9 @@ def test_master_password_provider_with_value_set_in_default():
         config_context = ProviderConfigContext(dict(), local_state_file, requirement)
         config = provider.read_config(config_context)
         assert dict() == config
-        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+        environ = dict()
+        status = requirement.check_status(environ, local_state_file)
+        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
         provider.provide(requirement, context=context)
         assert 'ANACONDA_MASTER_PASSWORD' in context.environ
         assert 'from_default' == context.environ['ANACONDA_MASTER_PASSWORD']
@@ -126,7 +128,9 @@ def test_master_password_provider_with_list_set_in_default():
         config_context = ProviderConfigContext(dict(), local_state_file, requirement)
         config = provider.read_config(config_context)
         assert dict() == config
-        context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+        environ = dict()
+        status = requirement.check_status(environ, local_state_file)
+        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
         provider.provide(requirement, context=context)
         assert 'ANACONDA_MASTER_PASSWORD' not in context.environ
         assert ["Value of 'ANACONDA_MASTER_PASSWORD' should be a string not []"] == context.errors
@@ -151,7 +155,9 @@ def test_master_password_provider_saves_config_in_keyring():
             assert dict() == config
             provider.set_config_values_as_strings(config_context, dict(value='from_config'))
             assert keyring.get('ANACONDA_MASTER_PASSWORD') == 'from_config'
-            context = ProvideContext(environ=dict(), local_state_file=local_state_file, config=config)
+            environ = dict()
+            status = requirement.check_status(environ, local_state_file)
+            context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
             provider.provide(requirement, context=context)
             assert 'ANACONDA_MASTER_PASSWORD' in context.environ
             assert 'from_config' == context.environ['ANACONDA_MASTER_PASSWORD']

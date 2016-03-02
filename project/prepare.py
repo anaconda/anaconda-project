@@ -420,7 +420,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         for status in rechecked:
             if not status.has_been_provided:
                 did_any_providing = True
-                context = ProvideContext(environ, local_state, status.analysis.config)
+                context = ProvideContext(environ, local_state, status)
                 status.provider.provide(status.requirement, context)
                 logs.extend(context.logs)
                 errors.extend(context.errors)
