@@ -7,16 +7,19 @@ build:
     - cd $RECIPE_DIR/..
     - $PYTHON setup.py install --single-version-externally-managed --record=record.txt
 
-test:
-  requires:
-    - coverage
-    - flake8
-    - pep257
-    - pytest
-    - pytest-cov
-    - yapf
-
 requirements:
   build:
     - python
     - setuptools
+    - coverage
+    - flake8
+    - pytest
+    - pytest-cov
+    - bcrypt
+
+  run:
+    - beautifulsoup4
+    - ruamel.yaml
+    - tornado
+    - pycrypto
+    - bcrypt
