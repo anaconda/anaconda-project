@@ -7,12 +7,22 @@ import os
 import subprocess
 import sys
 
-from project.plugins.provider import Provider
+from project.plugins.provider import Provider, ProviderAnalysis
 import project.plugins.network_util as network_util
 
 _DEFAULT_SYSTEM_REDIS_HOST = "localhost"
 _DEFAULT_SYSTEM_REDIS_PORT = 6379
 _DEFAULT_SYSTEM_REDIS_URL = "redis://%s:%d" % (_DEFAULT_SYSTEM_REDIS_HOST, _DEFAULT_SYSTEM_REDIS_PORT)
+
+
+class _RedisProviderAnalysis(ProviderAnalysis):
+    """Subtype of ProviderAnalysis with extra fields RedisProvider needs to track."""
+
+    def __init__(self, config, missing_to_configure, missing_to_provide, existing_scoped_instance_url,
+                 default_system_exists):
+        super(_RedisProviderAnalysis, self).__init__(config, missing_to_configure, missing_to_provide)
+        self.existing_scoped_instance_url = existing_scoped_instance_url
+        self.default_system_exists = default_system_exists
 
 
 # future: this should introduce a requirement that redis-server is on path
@@ -84,11 +94,9 @@ class RedisProvider(Provider):
 
     def config_html(self, context, status):
         """Override superclass to provide our config html."""
-        run_state = context.local_state_file.get_service_run_state(self.config_key)
-        previous = self._previously_run_redis_url_if_alive(run_state)
-        systemwide = self._can_connect_to_system_default()
+        analysis = status.analysis
 
-        if systemwide:
+        if analysis.default_system_exists:
             system_option = """
   <div>
     <label><input type="radio" name="scope" value="system"/>Always use system default Redis on %s port %d</label>
@@ -97,8 +105,8 @@ class RedisProvider(Provider):
         else:
             system_option = ""
 
-        if previous is not None:
-            project_option = "Use the redis-server we started earlier at %s" % (previous)
+        if analysis.existing_scoped_instance_url is not None:
+            project_option = "Use the redis-server we started earlier at %s" % (analysis.existing_scoped_instance_url)
         else:
             project_option = """Always start a
    project-dedicated redis-server, using a port between <input type="text" name="lower_port"/>
@@ -118,14 +126,29 @@ class RedisProvider(Provider):
 </form>
 """ % (system_option, project_option)
 
+    def analyze(self, requirement, environ, local_state_file):
+        """Override superclass to store additional fields in the analysis."""
+        analysis = super(RedisProvider, self).analyze(requirement, environ, local_state_file)
+        run_state = local_state_file.get_service_run_state(self.config_key)
+        previous = self._previously_run_redis_url_if_alive(run_state)
+        systemwide = self._can_connect_to_system_default()
+
+        return _RedisProviderAnalysis(analysis.config,
+                                      analysis.missing_env_vars_to_configure,
+                                      analysis.missing_env_vars_to_provide,
+                                      existing_scoped_instance_url=previous,
+                                      default_system_exists=systemwide)
+
     def _provide_system(self, requirement, context):
-        if self._can_connect_to_system_default():
+        if context.status.analysis.default_system_exists:
             context.append_log("Found system default Redis at %s" % _DEFAULT_SYSTEM_REDIS_URL)
             return _DEFAULT_SYSTEM_REDIS_URL
         else:
             context.append_error("Could not connect to system default Redis.")
 
     def _provide_project(self, requirement, context):
+        config = context.status.analysis.config
+
         def ensure_redis(run_state):
             # this is pretty lame, we'll want to get fancier at a
             # future time (e.g. use Chalmers, stuff like
@@ -134,7 +157,7 @@ class RedisProvider(Provider):
             # require the user to have set up anything in advance,
             # e.g. if we use Chalmers we should automatically take
             # care of configuring/starting Chalmers itself.
-            url = self._previously_run_redis_url_if_alive(run_state)
+            url = context.status.analysis.existing_scoped_instance_url
             if url is not None:
                 context.append_log("Using redis-server we started previously at {url}".format(url=url))
                 return url
@@ -150,8 +173,8 @@ class RedisProvider(Provider):
             # it. This is a pretty huge hack and a race condition,
             # but Redis doesn't as far as I know have "let the OS
             # pick the port" mode.
-            LOWER_PORT = context.config['lower_port']
-            UPPER_PORT = context.config['upper_port']
+            LOWER_PORT = config['lower_port']
+            UPPER_PORT = config['upper_port']
             port = LOWER_PORT
             while port <= UPPER_PORT:
                 if not network_util.can_connect_to_socket(host='localhost', port=port):
@@ -221,9 +244,9 @@ class RedisProvider(Provider):
 
         """
         url = None
-        scope = context.config['scope']
+        scope = context.status.analysis.config['scope']
 
-        if scope == 'system' or scope == 'all':
+        if url is None and (scope == 'system' or scope == 'all'):
             url = self._provide_system(requirement, context)
 
         if url is None and (scope == 'project' or scope == 'all'):

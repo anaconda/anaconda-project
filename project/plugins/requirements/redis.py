@@ -1,6 +1,6 @@
 """Redis-related requirements."""
 
-from project.plugins.requirement import EnvVarRequirement, RequirementStatus
+from project.plugins.requirement import EnvVarRequirement
 # don't "import from" network_util or we can't monkeypatch it in tests
 import project.plugins.network_util as network_util
 
@@ -32,18 +32,18 @@ class RedisRequirement(EnvVarRequirement):
         else:
             return "Cannot connect to Redis at {url}.".format(url=url, env_var=self.env_var)
 
-    def check_status(self, environ):
+    def check_status(self, environ, local_state_file):
         """Override superclass to get our status."""
         why_not_provided = self._why_not_provided(environ)
-        provider = self.registry.find_provider_by_class_name('RedisProvider')
-        if why_not_provided is None:
-            return RequirementStatus(
-                self,
-                has_been_provided=True,
-                status_description=("Using Redis server at %s" % self._get_value_of_env_var(environ)),
-                provider=provider)
+
+        has_been_provided = why_not_provided is None
+        if has_been_provided:
+            status_description = ("Using Redis server at %s" % self._get_value_of_env_var(environ))
         else:
-            return RequirementStatus(self,
-                                     has_been_provided=False,
-                                     status_description=why_not_provided,
-                                     provider=provider)
+            status_description = why_not_provided
+
+        return self._create_status(environ,
+                                   local_state_file,
+                                   has_been_provided=has_been_provided,
+                                   status_description=status_description,
+                                   provider_class_name='RedisProvider')

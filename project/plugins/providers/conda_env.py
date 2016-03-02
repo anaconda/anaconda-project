@@ -38,7 +38,7 @@ class ProjectScopedCondaEnvProvider(Provider):
 
     def provide(self, requirement, context):
         """Override superclass to activating a project-scoped environment (creating it if needed)."""
-        if not context.config['autocreate']:
+        if not context.status.analysis.config['autocreate']:
             context.append_log("Not trying to create a Conda environment.")
             return
 

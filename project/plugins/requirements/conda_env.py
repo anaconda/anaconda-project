@@ -1,7 +1,7 @@
 """Conda-env-related requirements."""
 from __future__ import absolute_import, print_function
 
-from project.plugins.requirement import EnvVarRequirement, RequirementStatus
+from project.plugins.requirement import EnvVarRequirement
 import project.internal.conda_api as conda_api
 from project.internal.directory_contains import directory_contains_subdirectory
 
@@ -34,12 +34,6 @@ class CondaEnvRequirement(EnvVarRequirement):
             return base + " containing packages: " + ", ".join(self.conda_package_specs)
         else:
             return base
-
-    def _find_provider(self):
-        if self.must_be_project_scoped:
-            return self.registry.find_provider_by_class_name('ProjectScopedCondaEnvProvider')
-        else:
-            return self.registry.find_provider_by_class_name('EnvVarProvider')
 
     def _why_not_provided(self, environ):
         name_or_prefix = self._get_value_of_env_var(environ)
@@ -89,21 +83,26 @@ class CondaEnvRequirement(EnvVarRequirement):
 
         return None
 
-    def check_status(self, environ):
+    def check_status(self, environ, local_state_file):
         """Override superclass to get our status."""
         why_not_provided = self._why_not_provided(environ)
-        provider = self._find_provider()
-        if why_not_provided is None:
-            return RequirementStatus(
-                self,
-                has_been_provided=True,
-                status_description=("Using Conda environment %s" % self._get_value_of_env_var(environ)),
-                provider=provider)
+        # TODO: this is busted, we could activate the root environment
+        # or something even if we won't project-scope
+        if self.must_be_project_scoped:
+            provider_class_name = 'ProjectScopedCondaEnvProvider'
         else:
-            return RequirementStatus(self,
-                                     has_been_provided=False,
-                                     status_description=why_not_provided,
-                                     provider=provider)
+            provider_class_name = 'EnvVarProvider'
+        has_been_provided = why_not_provided is None
+        if has_been_provided:
+            status_description = ("Using Conda environment %s" % self._get_value_of_env_var(environ))
+        else:
+            status_description = why_not_provided
+
+        return self._create_status(environ,
+                                   local_state_file,
+                                   has_been_provided=has_been_provided,
+                                   status_description=status_description,
+                                   provider_class_name=provider_class_name)
 
     @property
     def must_be_project_scoped(self):

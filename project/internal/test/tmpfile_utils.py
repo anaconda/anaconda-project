@@ -3,6 +3,7 @@ import shutil
 import os.path
 
 from project.internal.makedirs import makedirs_ok_if_exists
+from project.local_state_file import LocalStateFile
 
 
 class TmpDir(object):
@@ -44,3 +45,11 @@ def with_file_contents(contents, func, dir=None):
         func(f.name)
 
     with_temporary_file(with_file_object, dir=dir)
+
+
+def tmp_local_state_file():
+    import tempfile
+    f = tempfile.NamedTemporaryFile(dir=None)
+    local_state = LocalStateFile(f.name)
+    f.close()
+    return local_state

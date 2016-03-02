@@ -67,7 +67,7 @@ def test_ui_server_with_form():
 
         project = Project(dirname)
         requirement = EnvVarRequirement(registry=project.plugin_registry, env_var="FOO")
-        status = requirement.check_status(dict())
+        status = requirement.check_status(dict(), local_state_file)
         context = ConfigurePrepareContext(dict(), local_state_file, [status])
         server = UIServer(project, _no_op_prepare(context), event_handler, io_loop)
 
@@ -111,7 +111,7 @@ def _ui_server_bad_form_name_test(capsys, name_template, expected_err):
         local_state_file = LocalStateFile.load_for_directory(dirname)
 
         requirement = EnvVarRequirement(registry=project.plugin_registry, env_var="FOO")
-        status = requirement.check_status(dict())
+        status = requirement.check_status(dict(), local_state_file)
         context = ConfigurePrepareContext(dict(), local_state_file, [status])
         server = UIServer(project, _no_op_prepare(context), event_handler, io_loop)
 

@@ -12,7 +12,7 @@ from project.internal.metaclass import with_metaclass
 from project.internal.prepare_ui import prepare_not_interactive, prepare_browser
 from project.internal.toposort import toposort_from_dependency_info
 from project.local_state_file import LocalStateFile
-from project.plugins.provider import ProvideContext, ProviderConfigContext
+from project.plugins.provider import ProvideContext
 
 UI_MODE_TEXT = "text"
 UI_MODE_BROWSER = "browser"
@@ -388,7 +388,7 @@ def _sort_statuses(environ, local_state, statuses, missing_vars_getter):
 
     def get_dependency_keys(status):
         config_keys = set()
-        for env_var in missing_vars_getter(status.provider, status.requirement, environ, local_state):
+        for env_var in missing_vars_getter(status):
             config_keys.add(env_var)
         return config_keys
 
@@ -403,21 +403,15 @@ def _sort_statuses(environ, local_state, statuses, missing_vars_getter):
 
 def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success):
     def provide_stage(stage):
-        # the plan is a list of (provider, requirement) in order we
-        # should run it.  our algorithm to decide on this may be
-        # getting more complicated for example we should be able to
-        # ignore any disabled providers, or prefer certain providers,
-        # etc.
-
-        def get_missing_to_provide(provider, requirement, environ, local_state):
-            return provider.missing_env_vars_to_provide(requirement, environ, local_state)
+        def get_missing_to_provide(status):
+            return status.analysis.missing_env_vars_to_provide
 
         sorted = _sort_statuses(environ, local_state, statuses, get_missing_to_provide)
 
         # we have to recheck all the statuses in case configuration happened
         rechecked = []
         for status in sorted:
-            rechecked.append(status.recheck(environ))
+            rechecked.append(status.recheck(environ, local_state))
 
         logs = []
         errors = []
@@ -426,9 +420,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         for status in rechecked:
             if not status.has_been_provided:
                 did_any_providing = True
-                config_context = ProviderConfigContext(environ, local_state, status.requirement)
-                config = status.provider.read_config(config_context)
-                context = ProvideContext(environ, local_state, config)
+                context = ProvideContext(environ, local_state, status)
                 status.provider.provide(status.requirement, context)
                 logs.extend(context.logs)
                 errors.extend(context.errors)
@@ -437,7 +429,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             old = rechecked
             rechecked = []
             for status in old:
-                rechecked.append(status.recheck(environ))
+                rechecked.append(status.recheck(environ, local_state))
 
         failed = False
         for status in rechecked:
@@ -479,8 +471,8 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
 
 
 def _partition_first_group_to_configure(environ, local_state, statuses):
-    def get_missing_to_configure(provider, requirement, environ, local_state):
-        return provider.missing_env_vars_to_configure(requirement, environ, local_state)
+    def get_missing_to_configure(status):
+        return status.analysis.missing_env_vars_to_configure
 
     sorted = _sort_statuses(environ, local_state, statuses, get_missing_to_configure)
 
@@ -559,7 +551,7 @@ def _add_missing_env_var_requirements(project, environ, local_state, statuses):
         if env_var not in by_env_var:
             created_anything = True
             requirement = project.plugin_registry.find_requirement_by_env_var(env_var, options=dict())
-            statuses.append(requirement.check_status(environ))
+            statuses.append(requirement.check_status(environ, local_state))
 
     if created_anything:
         # run the whole above again to find any transitive requirements of the new providers
@@ -612,12 +604,12 @@ def prepare_in_stages(project, environ=None, keep_going_until_success=False):
     # it's useful for scripts to find their source tree.
     environ_copy['PROJECT_DIR'] = project.directory_path
 
+    local_state = LocalStateFile.load_for_directory(project.directory_path)
+
     statuses = []
     for requirement in project.requirements:
-        status = requirement.check_status(environ_copy)
+        status = requirement.check_status(environ_copy, local_state)
         statuses.append(status)
-
-    local_state = LocalStateFile.load_for_directory(project.directory_path)
 
     return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success)
 

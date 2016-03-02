@@ -268,7 +268,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
 
         # be sure we generate the config html that would use the old one
         requirement = _redis_requirement()
-        status = requirement.check_status(result.environ)
+        status = requirement.check_status(result.environ, local_state_file)
         config_context = ProviderConfigContext(result.environ, local_state_file, requirement)
         html = RedisProvider().config_html(config_context, status)
         assert 'Use the redis-server we started earlier' in html
@@ -327,7 +327,7 @@ def test_fail_to_prepare_local_redis_server_no_port_available(monkeypatch, capsy
         project = Project(dirname)
         result = prepare(project, environ=dict())
         assert not result
-        assert 71 == len(can_connect_args_list)
+        assert 73 == len(can_connect_args_list)
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -383,7 +383,7 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
         project = Project(dirname)
         result = prepare(project, environ=dict())
         assert not result
-        assert 34 == len(can_connect_args_list)
+        assert 36 == len(can_connect_args_list)
 
     with_directory_contents(
         {PROJECT_FILENAME: """

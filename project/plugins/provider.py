@@ -10,6 +10,8 @@ from project.internal.makedirs import makedirs_ok_if_exists
 from project.internal.crypto import encrypt_string, decrypt_string
 
 
+# TODO: get rid of this class before we freeze the API, pretty
+# sure it's annoying and pointless
 class ProviderConfigContext(object):
     """A context passed to config-related methods on Provider."""
 
@@ -23,20 +25,19 @@ class ProviderConfigContext(object):
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""
 
-    def __init__(self, environ, local_state_file, config):
+    def __init__(self, environ, local_state_file, status):
         """Create a ProvideContext.
 
         Args:
             environ (dict): environment variables to be read and modified
             local_state_file (LocalStateFile): to store any created state
-            config (dict): configuration for the provider
+            status (RequirementStatus): current status
         """
         self.environ = environ
         self._local_state_file = local_state_file
         self._logs = []
         self._errors = []
-        # defensive copy so we don't modify what was passed in
-        self._config = deepcopy(config)
+        self._status = status
 
     def ensure_work_directory(self, relative_name):
         """Create a project-scoped work directory with the given name.
@@ -89,9 +90,38 @@ class ProvideContext(object):
         return self._logs
 
     @property
+    def status(self):
+        """Get the current ``RequirementStatus``."""
+        return self._status
+
+
+class ProviderAnalysis(object):
+    """A Provider's preflight check snapshotting the state prior to ``provide()``.
+
+    Instances of this class are immutable, and are usually created as part of a
+    ``RequirementStatus``.
+    """
+
+    def __init__(self, config, missing_env_vars_to_configure, missing_env_vars_to_provide):
+        """Create a ProviderAnalysis."""
+        self._config = deepcopy(config)  # defensive copy so we don't modify the original
+        self._missing_env_vars_to_configure = missing_env_vars_to_configure
+        self._missing_env_vars_to_provide = missing_env_vars_to_provide
+
+    @property
     def config(self):
-        """Get the configuration dict for the provider."""
+        """Get the configuration dict from the time of analysis."""
         return self._config
+
+    @property
+    def missing_env_vars_to_configure(self):
+        """Get the env vars we were missing in order to configure, from the time of analysis."""
+        return self._missing_env_vars_to_configure
+
+    @property
+    def missing_env_vars_to_provide(self):
+        """Get the env vars we were missing in order to provide, from the time of analysis."""
+        return self._missing_env_vars_to_provide
 
 
 class Provider(with_metaclass(ABCMeta)):
@@ -166,6 +196,24 @@ class Provider(with_metaclass(ABCMeta)):
 
         """
         return None
+
+    def analyze(self, requirement, environ, local_state_file):
+        """Analyze whether and how we'll be able to provide the requirement.
+
+        This is used to show the situation in the UI, and also to
+        consolidate all IO-type work in one place (inside
+        Requirement.check_status()).
+
+        Returns:
+          A ``ProviderAnalysis`` instance.
+        """
+        config_context = ProviderConfigContext(environ, local_state_file, requirement)
+        config = self.read_config(config_context)
+        missing_to_configure = self.missing_env_vars_to_configure(requirement, environ, local_state_file)
+        missing_to_provide = self.missing_env_vars_to_provide(requirement, environ, local_state_file)
+        return ProviderAnalysis(config=config,
+                                missing_env_vars_to_configure=missing_to_configure,
+                                missing_env_vars_to_provide=missing_to_provide)
 
     @abstractmethod
     def provide(self, requirement, context):
@@ -298,12 +346,12 @@ class EnvVarProvider(Provider):
         #  - then anything already set in the environment wins, so you
         #    can override on the command line like `FOO=bar myapp`
         #  - then the project.yml default value
-        if 'value' in context.config:
+        if 'value' in context.status.analysis.config:
             # .anaconda/project-local.yml
             #
             # variables:
             #   REDIS_URL: "redis://example.com:1234"
-            context.environ[requirement.env_var] = context.config['value']
+            context.environ[requirement.env_var] = context.status.analysis.config['value']
         elif requirement.env_var in context.environ:
             # nothing to do here
             pass

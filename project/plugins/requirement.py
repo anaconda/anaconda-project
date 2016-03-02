@@ -8,20 +8,20 @@ from project.internal.metaclass import with_metaclass
 
 
 class RequirementStatus(with_metaclass(ABCMeta)):
-    """Abstract class describing the status of a requirement.
+    """Class describing the status of a requirement.
 
     Values of this class are immutable; to get updated status, you
-    would call ``check_status`` again on a requirement to get a
-    new status.
+    would call ``recheck()`` to get a new status.
 
     """
 
-    def __init__(self, requirement, has_been_provided, status_description, provider):
+    def __init__(self, requirement, has_been_provided, status_description, provider, analysis):
         """Construct an abstract RequirementStatus."""
         self._requirement = requirement
         self._has_been_provided = has_been_provided
         self._status_description = status_description
         self._provider = provider
+        self._analysis = analysis
 
     def __bool__(self):
         """True if the requirement is met."""
@@ -51,13 +51,18 @@ class RequirementStatus(with_metaclass(ABCMeta)):
         """Get the provider for this requirement."""
         return self._provider
 
-    def recheck(self, environ):
+    @property
+    def analysis(self):
+        """Get the provider's analysis of the status."""
+        return self._analysis
+
+    def recheck(self, environ, local_state_file):
         """Get a new ``RequirementStatus`` reflecting the current state.
 
         This calls ``Requirement.check_status()`` which can do network and filesystem IO,
         so be cautious about where you call it.
         """
-        return self.requirement.check_status(environ)
+        return self.requirement.check_status(environ, local_state_file)
 
 
 class Requirement(with_metaclass(ABCMeta)):
@@ -91,8 +96,17 @@ class Requirement(with_metaclass(ABCMeta)):
         """Human-readable title of the requirement."""
         pass  # pragma: no cover
 
+    def _create_status(self, environ, local_state_file, has_been_provided, status_description, provider_class_name):
+        provider = self.registry.find_provider_by_class_name(provider_class_name)
+        analysis = provider.analyze(self, environ, local_state_file)
+        return RequirementStatus(self,
+                                 has_been_provided=has_been_provided,
+                                 status_description=status_description,
+                                 provider=provider,
+                                 analysis=analysis)
+
     @abstractmethod
-    def check_status(self, environ):
+    def check_status(self, environ, local_state_file):
         """Check on the requirement and return a ``RequirementStatus`` with the current status.
 
         This may attempt to talk to servers, check that files
@@ -102,6 +116,7 @@ class Requirement(with_metaclass(ABCMeta)):
 
         Args:
             environ (dict): use this rather than the system environment directly
+            local_state_file (LocalStateFile): project local state
 
         Returns:
             a ``RequirementStatus``
@@ -158,19 +173,18 @@ class EnvVarRequirement(Requirement):
             return "Environment variable {env_var} set to '{value}'".format(env_var=self.env_var,
                                                                             value=self._get_value_of_env_var(environ))
 
-    def check_status(self, environ):
+    def check_status(self, environ, local_state_file):
         """Override superclass to get our status."""
         value = self._get_value_of_env_var(environ)
 
-        provider = self.registry.find_provider_by_class_name('EnvVarProvider')
-
-        if value is None:
-            return RequirementStatus(self,
-                                     has_been_provided=False,
-                                     status_description=self._unset_message(),
-                                     provider=provider)
+        has_been_provided = value is not None
+        if has_been_provided:
+            status_description = self._set_message(environ)
         else:
-            return RequirementStatus(self,
-                                     has_been_provided=True,
-                                     status_description=self._set_message(environ),
-                                     provider=provider)
+            status_description = self._unset_message()
+
+        return self._create_status(environ,
+                                   local_state_file,
+                                   has_been_provided=has_been_provided,
+                                   status_description=status_description,
+                                   provider_class_name='EnvVarProvider')

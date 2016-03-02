@@ -1,6 +1,8 @@
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirement import EnvVarRequirement
 
+from project.internal.test.tmpfile_utils import tmp_local_state_file
+
 
 def test_find_by_env_var_unknown():
     registry = PluginRegistry()
@@ -31,6 +33,6 @@ def test_autoguess_encrypted_option():
 
 def test_empty_variable_treated_as_unset():
     requirement = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO')
-    status = requirement.check_status(dict(FOO=''))
+    status = requirement.check_status(dict(FOO=''), tmp_local_state_file())
     assert not status
     assert "Environment variable FOO is not set." == status.status_description
