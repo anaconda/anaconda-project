@@ -8,16 +8,6 @@ build:
     - $PYTHON setup.py install --single-version-externally-managed --record=record.txt
 
 requirements:
-  test:
-    - python
-    - setuptools
-    - coverage
-    - flake8
-    - pytest
-    - pytest-cov
-    - bcrypt
-    - pyapf
-
   build:
     - python
     - setuptools
