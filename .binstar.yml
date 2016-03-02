@@ -4,11 +4,16 @@ platform:
   - linux-64
 
 engine:
-  - python=2.7
+  - python=3.5
+
+install:
+  - conda install -y -q pip
+  - pip install coverage flake8 pep257 pytest pytest-cov yapf beautifulsoup4 ruamel.yaml tornado
+  - conda install -y -q pycrypto
+  - conda install -y -q bcrypt
 
 test:
-  - python setup.py develop > develop.output
-  - python binstar/tests/runtests.py -v2  --skip-s3
+  - python setup.py test
 
 script:
   - conda build conda.recipe
