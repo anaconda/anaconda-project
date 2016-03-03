@@ -6,6 +6,7 @@ import errno
 import os
 import subprocess
 import sys
+import time
 
 from project.plugins.provider import Provider, ProviderAnalysis
 import project.plugins.network_util as network_util
@@ -208,7 +209,32 @@ class RedisProvider(Provider):
             assert out is None  # because we didn't PIPE it
             err = err.decode(errors='replace')
 
-            if popen.returncode != 0:
+            url = None
+            if popen.returncode == 0:
+                # now we need to wait for Redis to be ready
+                redis_is_ready = False
+                MAX_WAIT_TIME = 10
+                so_far = 0
+                while so_far < MAX_WAIT_TIME:
+                    increment = MAX_WAIT_TIME / 500.0
+                    time.sleep(increment)
+                    so_far += increment
+                    if network_util.can_connect_to_socket(host='localhost', port=port):
+                        redis_is_ready = True
+                        break
+
+                if redis_is_ready:
+                    run_state['port'] = port
+                    url = "redis://localhost:{port}".format(port=port)
+
+                    # note: --port doesn't work, only -p, and the failure with --port is silent.
+                    run_state['shutdown_commands'] = [['redis-cli', '-p', str(port), 'shutdown']]
+                else:
+                    context.append_log(
+                        "redis-server started successfully, but we timed out trying to connect to it on port %d" %
+                        (port))
+
+            if url is None:
                 for line in err.split("\n"):
                     if line != "":
                         context.append_log(line)
@@ -222,17 +248,10 @@ class RedisProvider(Provider):
                     if e.errno != errno.ENOENT:
                         context.append_log("Failed to read {logfile}: {error}".format(logfile=logfile, error=e))
 
-                context.append_error("redis-server process failed, exited " + "with code {code}".format(
+                context.append_error("redis-server process failed or timed out, exited with code {code}".format(
                     code=popen.returncode))
-                return None
-            else:
-                run_state['port'] = port
-                url = "redis://localhost:{port}".format(port=port)
 
-                # note: --port doesn't work, only -p, and the failure with --port is silent.
-                run_state['shutdown_commands'] = [['redis-cli', '-p', str(port), 'shutdown']]
-
-                return url
+            return url
 
         return context.transform_service_run_state(self.config_key, ensure_redis)
 
