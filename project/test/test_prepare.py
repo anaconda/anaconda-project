@@ -6,6 +6,7 @@ import pytest
 import stat
 import subprocess
 
+from project.test.environ_utils import minimal_environ, strip_environ
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.crypto import decrypt_string
 from project.prepare import (prepare, unprepare, UI_MODE_BROWSER, prepare_in_stages, PrepareSuccess, PrepareFailure,
@@ -18,11 +19,11 @@ from project.local_state_file import LocalStateFile
 def test_prepare_empty_directory():
     def prepare_empty(dirname):
         project = Project(dirname)
-        environ = dict()
+        environ = minimal_environ()
         result = prepare(project, environ=environ)
         assert result
-        assert dict(PROJECT_DIR=project.directory_path) == result.environ
-        assert dict() == environ
+        assert dict(PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert dict() == strip_environ(environ)
 
     with_directory_contents(dict(), prepare_empty)
 
@@ -31,7 +32,7 @@ def test_prepare_bad_ui_mode():
     def prepare_bad_ui_mode(dirname):
         with pytest.raises(ValueError) as excinfo:
             project = Project(dirname)
-            environ = dict()
+            environ = minimal_environ()
             prepare(project, ui_mode="BAD_UI_MODE", environ=environ)
         assert "invalid UI mode" in repr(excinfo.value)
 
@@ -52,7 +53,7 @@ def test_default_to_system_environ():
         project = Project(dirname)
         os_environ_copy = deepcopy(os.environ)
         result = prepare(project)
-        assert project.directory_path == result.environ['PROJECT_DIR']
+        assert project.directory_path == strip_environ(result.environ)['PROJECT_DIR']
         # os.environ wasn't modified
         assert os_environ_copy == os.environ
         # result.environ inherits everything in os.environ
@@ -65,11 +66,11 @@ def test_default_to_system_environ():
 def test_prepare_some_env_var_already_set():
     def prepare_some_env_var(dirname):
         project = Project(dirname)
-        environ = dict(FOO='bar')
+        environ = minimal_environ(FOO='bar')
         result = prepare(project, environ=environ)
         assert result
-        assert dict(FOO='bar', PROJECT_DIR=project.directory_path) == result.environ
-        assert dict(FOO='bar') == environ
+        assert dict(FOO='bar', PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert dict(FOO='bar') == strip_environ(environ)
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -80,10 +81,10 @@ runtime:
 def test_prepare_some_env_var_not_set():
     def prepare_some_env_var(dirname):
         project = Project(dirname)
-        environ = dict(BAR='bar')
+        environ = minimal_environ(BAR='bar')
         result = prepare(project, environ=environ)
         assert not result
-        assert dict(BAR='bar') == environ
+        assert dict(BAR='bar') == strip_environ(environ)
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -94,14 +95,14 @@ runtime:
 def test_prepare_some_env_var_not_set_keep_going():
     def prepare_some_env_var_keep_going(dirname):
         project = Project(dirname)
-        environ = dict(BAR='bar')
+        environ = minimal_environ(BAR='bar')
         stage = prepare_in_stages(project, environ=environ, keep_going_until_success=True)
         for i in range(1, 10):
             next_stage = stage.execute()
             assert next_stage is not None
             assert stage.failed
             stage = next_stage
-        assert dict(BAR='bar') == environ
+        assert dict(BAR='bar') == strip_environ(environ)
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -147,13 +148,13 @@ print(repr(sys.argv))
 def test_update_environ():
     def prepare_then_update_environ(dirname):
         project = Project(dirname)
-        environ = dict(FOO='bar')
+        environ = minimal_environ(FOO='bar')
         result = prepare(project, environ=environ)
         assert result
 
-        other = dict(BAR='baz')
+        other = minimal_environ(BAR='baz')
         result.update_environ(other)
-        assert dict(FOO='bar', BAR='baz', PROJECT_DIR=dirname) == other
+        assert dict(FOO='bar', BAR='baz', PROJECT_DIR=dirname) == strip_environ(other)
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -275,10 +276,10 @@ def test_prepare_with_browser(monkeypatch):
 
     def prepare_with_browser(dirname):
         project = Project(dirname)
-        environ = dict(BAR='bar')
+        environ = minimal_environ(BAR='bar')
         result = prepare(project, environ=environ, io_loop=io_loop, ui_mode=UI_MODE_BROWSER)
         assert not result
-        assert dict(BAR='bar') == environ
+        assert dict(BAR='bar') == strip_environ(environ)
 
         # wait for the results of the POST to come back,
         # awesome hack-tacular
@@ -367,13 +368,13 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
 
     def prepare_with_browser(dirname):
         project = Project(dirname)
-        environ = dict(ANACONDA_MASTER_PASSWORD='bar')
+        environ = minimal_environ(ANACONDA_MASTER_PASSWORD='bar')
         result = prepare(project, environ=environ, io_loop=io_loop, ui_mode=UI_MODE_BROWSER)
         assert result
         assert dict(ANACONDA_MASTER_PASSWORD='bar',
                     FOO_PASSWORD='bloop',
-                    PROJECT_DIR=project.directory_path) == result.environ
-        assert dict(ANACONDA_MASTER_PASSWORD='bar') == environ
+                    PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert dict(ANACONDA_MASTER_PASSWORD='bar') == strip_environ(environ)
 
         # wait for the results of the POST to come back,
         # awesome hack-tacular

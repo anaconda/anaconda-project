@@ -594,6 +594,8 @@ def prepare_in_stages(project, environ=None, keep_going_until_success=False):
     if environ is None:
         environ = os.environ
 
+    assert 'PATH' in environ
+
     # we modify a copy, which 1) makes all our changes atomic and
     # 2) minimizes memory leaks on systems that use putenv() (it
     # appears we must use deepcopy (vs plain copy) or we still
