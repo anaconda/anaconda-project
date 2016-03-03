@@ -11,10 +11,6 @@ requirements:
   build:
     - python
     - setuptools
-    - coverage
-    - flake8
-    - pytest
-    - pytest-cov
     - bcrypt
 
   run:
