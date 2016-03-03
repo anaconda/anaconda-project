@@ -21,7 +21,7 @@ class TmpDir(object):
 
 
 def with_directory_contents(contents, func):
-    with (TmpDir(prefix="project-test-tmpdir-")) as dirname:
+    with (TmpDir(prefix="test-")) as dirname:
         for filename, file_content in contents.items():
             path = os.path.join(dirname, filename)
             makedirs_ok_if_exists(os.path.dirname(path))
