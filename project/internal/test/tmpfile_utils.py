@@ -26,7 +26,7 @@ def with_directory_contents(contents, func):
             f.write(file_content)
             f.flush()
             f.close()
-        func(dirname)
+        func(os.path.realpath(dirname))
 
 
 def with_temporary_file(func, dir=None):

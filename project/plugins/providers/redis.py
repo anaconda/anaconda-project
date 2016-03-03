@@ -243,6 +243,8 @@ class RedisProvider(Provider):
         requirement's env var to that server's URL.
 
         """
+        assert 'PATH' in context.environ
+
         url = None
         scope = context.status.analysis.config['scope']
 

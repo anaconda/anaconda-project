@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import os
 
 import project.internal.conda_api as conda_api
+from project.test.environ_utils import minimal_environ, strip_environ
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import prepare
 from project.project import Project
@@ -116,7 +117,7 @@ def test_prepare_no_op_if_autocreate_disabled(capsys):
     def prepare_does_nothing_with_autocreate_false(dirname):
         project = Project(dirname)
         fake_old_path = "foo" + os.pathsep + "bar"
-        environ = dict(PROJECT_DIR=dirname, PATH=fake_old_path)
+        environ = minimal_environ(PROJECT_DIR=dirname, PATH=fake_old_path)
         result = prepare(project, environ=environ)
         assert not result
         expected_env = os.path.join(dirname, ".envs/default")
@@ -149,7 +150,7 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
 
     def prepare_project_scoped_env(dirname):
         project = Project(dirname)
-        environ = dict(PROJECT_DIR=dirname)
+        environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare(project, environ=environ)
         assert not result
 
@@ -162,10 +163,10 @@ runtime:
 def test_prepare_in_root_env():
     def prepare_in_root_env(dirname):
         project = Project(dirname)
-        environ = dict(PROJECT_DIR=dirname, CONDA_DEFAULT_ENV='root')
+        environ = minimal_environ(PROJECT_DIR=dirname, CONDA_DEFAULT_ENV='root')
         result = prepare(project, environ=environ)
         assert result
-        assert dict(CONDA_DEFAULT_ENV='root', PROJECT_DIR=project.directory_path) == result.environ
+        assert dict(CONDA_DEFAULT_ENV='root', PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
 
     with_directory_contents(
         {PROJECT_FILENAME: """
@@ -177,7 +178,7 @@ runtime:
 def test_prepare_project_scoped_env_with_packages():
     def prepare_project_scoped_env(dirname):
         project = Project(dirname)
-        environ = dict(PROJECT_DIR=dirname)
+        environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare(project, environ=environ)
         assert result
 
@@ -192,7 +193,7 @@ def test_prepare_project_scoped_env_with_packages():
         reqs = project.project_file.requirements_run
         project.project_file.set_value(['requirements', 'run'], reqs + ['ipython-notebook'])
         project.project_file.save()
-        environ = dict(PROJECT_DIR=dirname)
+        environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare(project, environ=environ)
         assert result
 
@@ -207,7 +208,7 @@ def test_prepare_project_scoped_env_with_packages():
         reqs = project.project_file.requirements_run
         project.project_file.set_value(['requirements', 'run'], reqs + ['boguspackage'])
         project.project_file.save()
-        environ = dict(PROJECT_DIR=dirname)
+        environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare(project, environ=environ)
         assert not result
 
