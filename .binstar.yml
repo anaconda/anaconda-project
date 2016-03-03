@@ -11,6 +11,7 @@ install:
   - pip install coverage flake8 pep257 pytest pytest-cov yapf beautifulsoup4 ruamel.yaml tornado
   - conda install -y -q pycrypto
   - conda install -y -q bcrypt
+  - conda install -c https://conda.anaconda.org/binstar redis-server
 
 test:
   - python setup.py test
