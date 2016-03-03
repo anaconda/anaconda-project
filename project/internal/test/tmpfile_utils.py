@@ -5,10 +5,13 @@ import os.path
 from project.internal.makedirs import makedirs_ok_if_exists
 from project.local_state_file import LocalStateFile
 
+local_tmp = os.path.abspath("./build/tmp")
+makedirs_ok_if_exists(local_tmp)
+
 
 class TmpDir(object):
     def __init__(self, prefix):
-        self._dir = tempfile.mkdtemp(prefix=prefix)
+        self._dir = tempfile.mkdtemp(prefix=prefix, dir=local_tmp)
 
     def __exit__(self, type, value, traceback):
         shutil.rmtree(path=self._dir)
@@ -18,7 +21,7 @@ class TmpDir(object):
 
 
 def with_directory_contents(contents, func):
-    with (TmpDir(prefix="project-test-tmpdir-")) as dirname:
+    with (TmpDir(prefix="test-")) as dirname:
         for filename, file_content in contents.items():
             path = os.path.join(dirname, filename)
             makedirs_ok_if_exists(os.path.dirname(path))
@@ -30,6 +33,8 @@ def with_directory_contents(contents, func):
 
 
 def with_temporary_file(func, dir=None):
+    if dir is None:
+        dir = local_tmp
     import tempfile
     f = tempfile.NamedTemporaryFile(dir=dir)
     try:
@@ -49,7 +54,7 @@ def with_file_contents(contents, func, dir=None):
 
 def tmp_local_state_file():
     import tempfile
-    f = tempfile.NamedTemporaryFile(dir=None)
+    f = tempfile.NamedTemporaryFile(dir=local_tmp)
     local_state = LocalStateFile(f.name)
     f.close()
     return local_state
