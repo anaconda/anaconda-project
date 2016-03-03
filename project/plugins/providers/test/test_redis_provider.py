@@ -310,6 +310,64 @@ runtime:
 """}, start_local_redis)
 
 
+def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
+    # this test will fail if you don't have Redis installed, since
+    # it actually starts it.
+    from project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+
+    _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
+
+    def start_local_redis_and_time_out(dirname):
+        project = Project(dirname)
+
+        from time import sleep as real_sleep
+
+        killed = {}
+
+        def mock_sleep_kills_redis(seconds):
+            # first time the Redis provider sleeps to wait for the
+            # server to appear, we kill the server; after that
+            # we make sleep into a no-op so we rapidly time out.
+            if 'done' in killed:
+                return
+
+            pidfile = os.path.join(dirname, ".anaconda", "run", "project_scoped_redis", "redis.pid")
+            count = 0
+            while count < 15:
+                if os.path.exists(pidfile):
+                    break
+                real_sleep(0.1)
+                count = count + 1
+
+            assert os.path.exists(pidfile)
+
+            with codecs.open(pidfile, 'r', 'utf-8') as f:
+                for line in f.readlines():
+                    try:
+                        import signal
+                        os.kill(int(line.strip()), signal.SIGKILL)
+                    except Exception:
+                        pass
+
+            # be sure it's gone
+            real_sleep(0.1)
+            killed['done'] = True
+
+        monkeypatch.setattr('time.sleep', mock_sleep_kills_redis)
+
+        result = prepare(project, environ=minimal_environ())
+        assert not result
+
+        out, err = capsys.readouterr()
+        assert "redis-server started successfully, but we timed out trying to connect to it on port" in out
+        assert "redis-server process failed or timed out, exited with code 0" in err
+
+    with_directory_contents({PROJECT_FILENAME: """
+runtime:
+  REDIS_URL: {}
+"""}, start_local_redis_and_time_out)
+
+
 def _monkeypatch_can_connect_to_socket_always_succeeds_on_nonstandard(monkeypatch):
     can_connect_args_list = []
 
