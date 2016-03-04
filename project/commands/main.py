@@ -1,6 +1,7 @@
 """The ``main`` function chooses and runs a subcommand."""
 from __future__ import absolute_import, print_function
 
+import sys
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 import project.commands.launch as launch
@@ -35,3 +36,6 @@ def _run_parser(args):
 def main(argv):
     """Start the launch command."""
     _run_parser(argv)
+    # the various sub-mains exit(0) if they succeed, if we get here
+    # we must not have called one of them
+    sys.exit(1)
