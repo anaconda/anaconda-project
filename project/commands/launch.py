@@ -31,7 +31,6 @@ def launch_command(dirname, ui_mode):
 
 def main(args):
     """Start the launch command."""
-    # future: real arg parser
     dirname = os.path.abspath(args.dirname)
     launch_command(dirname, ui_mode=UI_MODE_NOT_INTERACTIVE)
     # if we returned, we failed to launch the command and should have printed an error
