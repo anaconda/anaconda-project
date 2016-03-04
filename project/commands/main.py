@@ -24,7 +24,7 @@ def _run_parser(args):
     preset.add_argument('project_dir', default='.')
     preset.set_defaults(main=prepare.main)
 
-    preset = subparsers.add_parser('activate', "Prepare project and outputs lines to be sourced.")
+    preset = subparsers.add_parser('activate', description="Prepare project and outputs lines to be sourced.")
     preset.add_argument('project_dir', default='.')
     preset.set_defaults(main=activate.main)
 
