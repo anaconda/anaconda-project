@@ -38,14 +38,9 @@ def activate(dirname, ui_mode):
     return exports
 
 
-def main(argv):
+def main(args):
     """Start the activate command."""
-    # future: real arg parser
-    if len(argv) > 1:
-        dirname = argv[1]
-    else:
-        dirname = "."
-    dirname = os.path.abspath(dirname)
+    dirname = os.path.abspath(args.dirname)
     result = activate(dirname, ui_mode=UI_MODE_NOT_INTERACTIVE)
     if result is None:
         sys.exit(1)

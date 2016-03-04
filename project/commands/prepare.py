@@ -20,14 +20,9 @@ def prepare_command(dirname, ui_mode):
     return result
 
 
-def main(argv):
+def main(args):
     """Start the prepare command."""
-    # future: real arg parser
-    if len(argv) > 1:
-        dirname = argv[1]
-    else:
-        dirname = "."
-    dirname = os.path.abspath(dirname)
+    dirname = os.path.abspath(args.dirname)
     if prepare_command(dirname, ui_mode=prepare.UI_MODE_BROWSER):
         sys.exit(0)
     else:

@@ -29,14 +29,10 @@ def launch_command(dirname, ui_mode):
             print("Failed to execute '%s': %s" % (" ".join(result.command_exec_info.args), e.strerror), file=sys.stderr)
 
 
-def main(argv):
+def main(args):
     """Start the launch command."""
     # future: real arg parser
-    if len(argv) > 1:
-        dirname = argv[1]
-    else:
-        dirname = "."
-    dirname = os.path.abspath(dirname)
+    dirname = os.path.abspath(args.dirname)
     launch_command(dirname, ui_mode=UI_MODE_NOT_INTERACTIVE)
     # if we returned, we failed to launch the command and should have printed an error
     sys.exit(1)
