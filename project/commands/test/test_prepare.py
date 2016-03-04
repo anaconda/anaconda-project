@@ -62,7 +62,7 @@ def test_main(monkeypatch, capsys):
     _monkeypatch_open_new_tab(monkeypatch)
 
     def main_redis_url(dirname):
-        main(['prepare', dirname])
+        main(dirname)
 
     with pytest.raises(SystemExit) as excinfo:
         with_directory_contents({PROJECT_FILENAME: """
@@ -92,7 +92,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
                 return real_abspath(path)
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
-        main(['prepare'])
+        main()
 
     with pytest.raises(SystemExit) as excinfo:
         with_directory_contents({PROJECT_FILENAME: """
@@ -135,7 +135,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
     monkeypatch.setattr('project.prepare.prepare', _mock_prepare_do_not_keep_going)
 
     def main_redis_url(dirname):
-        main(['prepare', dirname])
+        main(dirname)
 
     with pytest.raises(SystemExit) as excinfo:
         with_directory_contents({PROJECT_FILENAME: """

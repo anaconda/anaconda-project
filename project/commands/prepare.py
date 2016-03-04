@@ -8,22 +8,22 @@ from project import prepare
 from project.project import Project
 
 
-def prepare_command(dirname, ui_mode):
+def prepare_command(project_dir, ui_mode):
     """Configure the project to run.
 
     Returns:
         Prepare result (can be treated as True on success).
     """
-    project = Project(dirname)
+    project = Project(project_dir)
     result = prepare.prepare(project, ui_mode=ui_mode, keep_going_until_success=True)
 
     return result
 
 
-def main(args):
+def main(project_dir='.', ui_mode=prepare.UI_MODE_BROWSER):
     """Start the prepare command."""
-    dirname = os.path.abspath(args.project_dir)
-    if prepare_command(dirname, ui_mode=prepare.UI_MODE_BROWSER):
+    project_dir = os.path.abspath(project_dir)
+    if prepare_command(project_dir, ui_mode=ui_mode):
         sys.exit(0)
     else:
         sys.exit(1)

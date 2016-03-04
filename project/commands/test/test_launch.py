@@ -88,7 +88,7 @@ def test_main(monkeypatch, capsys):
     monkeypatch.setattr('os.execvpe', mock_execvpe)
 
     def check_launch_main(dirname):
-        result = main(['launch', dirname])
+        result = main(dirname)
         assert result is None
         assert 'file' in executed
         assert 'args' in executed
@@ -119,7 +119,7 @@ def test_main_failed_exec(monkeypatch, capsys):
     monkeypatch.setattr('os.execvpe', mock_execvpe)
 
     def check_launch_main(dirname):
-        result = main(['launch', dirname])
+        result = main(dirname)
         assert result is None
 
     with pytest.raises(SystemExit) as excinfo:
@@ -158,7 +158,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
-        result = main(['launch'])
+        result = main()
         assert result is None
         assert 'file' in executed
         assert 'args' in executed

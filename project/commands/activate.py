@@ -38,10 +38,10 @@ def activate(dirname, ui_mode):
     return exports
 
 
-def main(args):
+def main(project_dir='.', ui_mode=UI_MODE_NOT_INTERACTIVE):
     """Start the activate command."""
-    dirname = os.path.abspath(args.project_dir)
-    result = activate(dirname, ui_mode=UI_MODE_NOT_INTERACTIVE)
+    project_dir = os.path.abspath(project_dir)
+    result = activate(project_dir, ui_mode=ui_mode)
     if result is None:
         sys.exit(1)
     else:

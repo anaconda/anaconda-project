@@ -61,7 +61,7 @@ def test_main(monkeypatch, capsys):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def main_redis_url(dirname):
-        main(['activate', dirname])
+        main(dirname)
 
     with pytest.raises(SystemExit) as excinfo:
         with_directory_contents({PROJECT_FILENAME: """
@@ -91,7 +91,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
                 return real_abspath(path)
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
-        main(['activate'])
+        main()
 
     with pytest.raises(SystemExit) as excinfo:
         with_directory_contents({PROJECT_FILENAME: """
@@ -122,7 +122,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
     _monkeypatch_can_connect_to_socket_to_fail_to_find_redis(monkeypatch)
 
     def main_redis_url(dirname):
-        main(['activate', dirname])
+        main(dirname)
 
     with pytest.raises(SystemExit) as excinfo:
         with_directory_contents({PROJECT_FILENAME: """
