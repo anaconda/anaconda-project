@@ -17,17 +17,19 @@ def main(argv):
 
     subparsers = parser.add_subparsers()
 
-    preset = subparsers.add_parser('launch', description=launch.launch_command.__doc__)
-    preset.add_argument('dirname')
+    preset = subparsers.add_parser('launch', description="Runs the project")
+    preset.add_argument('project_dir', default='.')
     # preset.add_argument('ui_mode')
     preset.set_defaults(main=launch.main)
 
-    preset = subparsers.add_parser('prepare', description=prepare.prepare_command.__doc__)
-    preset.add_argument('dirname', default='.')
+    preset = subparsers.add_parser(
+        'prepare', description="Configure the project to run.")
+    preset.add_argument('project_dir', default='.')
     preset.set_defaults(main=prepare.main)
 
-    preset = subparsers.add_parser('activate', description=activate.activate.__doc__)
-    preset.add_argument('dirname', default='.')
+    preset = subparsers.add_parser(
+        'activate', "Prepare project and outputs lines to be sourced.")
+    preset.add_argument('project_dir', default='.')
     preset.set_defaults(main=activate.main)
 
     args = parser.parse_args()

@@ -22,7 +22,7 @@ def prepare_command(dirname, ui_mode):
 
 def main(args):
     """Start the prepare command."""
-    dirname = os.path.abspath(args.dirname)
+    dirname = os.path.abspath(args.project_dir)
     if prepare_command(dirname, ui_mode=prepare.UI_MODE_BROWSER):
         sys.exit(0)
     else:
