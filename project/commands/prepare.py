@@ -1,7 +1,6 @@
 """The ``prepare`` command configures a project to run, asking the user questions if necessary."""
 from __future__ import absolute_import, print_function
 
-import os
 import sys
 
 from project import prepare
@@ -20,10 +19,7 @@ def prepare_command(project_dir, ui_mode):
     return result
 
 
-def main(project_dir='.', ui_mode=prepare.UI_MODE_BROWSER):
+def main(args):
     """Start the prepare command."""
-    project_dir = os.path.abspath(project_dir)
-    if prepare_command(project_dir, ui_mode=ui_mode):
-        sys.exit(0)
-    else:
+    if not prepare_command(args.project_dir, args.ui_mode):
         sys.exit(1)

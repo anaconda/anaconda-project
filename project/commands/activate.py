@@ -9,7 +9,7 @@ try:
 except ImportError:  # pragma: no cover (py2 only)
     from pipes import quote
 
-from project.prepare import prepare, UI_MODE_NOT_INTERACTIVE
+from project.prepare import prepare
 from project.project import Project
 
 
@@ -38,13 +38,11 @@ def activate(dirname, ui_mode):
     return exports
 
 
-def main(project_dir='.', ui_mode=UI_MODE_NOT_INTERACTIVE):
+def main(args):
     """Start the activate command."""
-    project_dir = os.path.abspath(project_dir)
-    result = activate(project_dir, ui_mode=ui_mode)
+    result = activate(args.project_dir, args.ui_mode)
     if result is None:
         sys.exit(1)
     else:
         for line in result:
             print(line)
-        sys.exit(0)
