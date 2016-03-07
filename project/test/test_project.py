@@ -255,6 +255,61 @@ environments:
     """}, check_environments)
 
 
+def test_load_environments_merging_in_global():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 0 == len(project.problems)
+        assert len(project.conda_environments) == 2
+        assert 'foo' in project.conda_environments
+        assert 'bar' in project.conda_environments
+        assert project.default_conda_environment_name == 'foo'
+        foo = project.conda_environments['foo']
+        bar = project.conda_environments['bar']
+        assert foo.dependencies == ('dead-parrot', 'elephant', 'python', 'dog', 'cat', 'zebra')
+        assert bar.dependencies == ('dead-parrot', 'elephant')
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+dependencies:
+  - dead-parrot
+  - elephant
+
+environments:
+  foo:
+    dependencies:
+       - python
+       - dog
+       - cat
+       - zebra
+  bar: {}
+    """}, check_environments)
+
+
+def test_load_environments_default_always_default_even_if_not_first():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 0 == len(project.problems)
+        assert len(project.conda_environments) == 3
+        assert 'foo' in project.conda_environments
+        assert 'bar' in project.conda_environments
+        assert 'default' in project.conda_environments
+        assert project.default_conda_environment_name == 'default'
+        foo = project.conda_environments['foo']
+        bar = project.conda_environments['bar']
+        default = project.conda_environments['default']
+        assert foo.dependencies == ()
+        assert bar.dependencies == ()
+        assert default.dependencies == ()
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+environments:
+  foo: {}
+  bar: {}
+  default: {}
+    """}, check_environments)
+
+
 def test_complain_about_environments_not_a_dict():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
