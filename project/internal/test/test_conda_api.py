@@ -67,8 +67,7 @@ def test_conda_create_bad_package():
         # print this because pytest truncates it
         print("bad package excinfo.value: " + repr(excinfo.value))
         # at some point conda changed this error message
-        assert ('No packages found' in repr(excinfo.value) or
-                'Package missing in current' in repr(excinfo.value))
+        assert ('No packages found' in repr(excinfo.value) or 'Package missing in current' in repr(excinfo.value))
         assert 'this_is_not_a_real_package' in repr(excinfo.value)
 
     with_directory_contents(dict(), do_test)
