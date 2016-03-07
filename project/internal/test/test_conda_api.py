@@ -64,6 +64,8 @@ def test_conda_create_bad_package():
 
         with pytest.raises(conda_api.CondaError) as excinfo:
             conda_api.create(prefix=envdir, pkgs=['this_is_not_a_real_package'])
+        # print this because pytest truncates it
+        print("bad package excinfo.value: " + repr(excinfo.value))
         assert 'No packages found' in repr(excinfo.value)
         assert 'this_is_not_a_real_package' in repr(excinfo.value)
 
