@@ -43,14 +43,10 @@ def test_activate(monkeypatch):
         assert result is not None
         assert ['export PROJECT_DIR=' + dirname, 'export REDIS_URL=redis://localhost:6379'] == result
 
-    with_directory_contents(
-        {PROJECT_FILENAME: """
+    with_directory_contents({PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
-    """,
-         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
-inherit_environment: true # to speed up the test
-"""}, activate_redis_url)
+    """}, activate_redis_url)
 
 
 def test_activate_quoting(monkeypatch):
@@ -67,7 +63,6 @@ runtime:
   FOO: {}
     """,
             LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
-inherit_environment: true # to speed up the test
 variables:
   FOO: $! boo
 """
@@ -81,13 +76,9 @@ def test_main(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         main(Args(project_dir=dirname))
 
-    with_directory_contents(
-        {PROJECT_FILENAME: """
+    with_directory_contents({PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
-""",
-         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
-inherit_environment: true # to speed up the test
 """}, main_redis_url)
 
     assert can_connect_args['port'] == 6379
@@ -114,13 +105,9 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         main(Args(project_dir=dirname))
 
-    with_directory_contents(
-        {PROJECT_FILENAME: """
+    with_directory_contents({PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
-""",
-         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
-inherit_environment: true # to speed up the test
 """}, main_redis_url)
 
     assert can_connect_args['port'] == 6379
@@ -149,13 +136,9 @@ def test_main_fails_to_redis(monkeypatch, capsys):
         main(Args(project_dir=dirname))
 
     with pytest.raises(SystemExit) as excinfo:
-        with_directory_contents(
-            {PROJECT_FILENAME: """
+        with_directory_contents({PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
-""",
-             LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
-inherit_environment: true # to speed up the test
 """}, main_redis_url)
 
     assert 1 == excinfo.value.code
