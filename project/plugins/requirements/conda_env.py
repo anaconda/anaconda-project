@@ -1,126 +1,92 @@
 """Conda-env-related requirements."""
 from __future__ import absolute_import, print_function
 
+import os
+
 from project.plugins.requirement import EnvVarRequirement
 import project.internal.conda_api as conda_api
-from project.internal.directory_contains import directory_contains_subdirectory
 
 
 class CondaEnvRequirement(EnvVarRequirement):
-    """A requirement for CONDA_DEFAULT_ENV (or another specified env var) to point to a conda env."""
+    """A requirement for CONDA_ENV_PATH (or another specified env var) to point to a conda env."""
 
-    def __init__(self, registry, env_var="CONDA_DEFAULT_ENV", options=None, conda_package_specs=None):
-        """Extend superclass to default to CONDA_DEFAULT_ENV and set conda_packages.
+    def __init__(self,
+                 registry,
+                 env_var="CONDA_ENV_PATH",
+                 options=None,
+                 environments=None,
+                 default_environment_name='default'):
+        """Extend superclass to default to CONDA_ENV_PATH and carry environment information.
 
         Args:
             registry (PluginRegistry): plugin registry
             env_var (str): env var name
             options (dict): options from the config
-            conda_package_specs (list of str): list of package spec strings (as in ``conda.resolve.MatchSpec``)
+            environments (dict): dict from env name to ``CondaEnvironment``
+            default_environment_name (str): name of env to use by default
         """
         super(CondaEnvRequirement, self).__init__(registry=registry, env_var=env_var, options=options)
-        if conda_package_specs is None:
-            conda_package_specs = list()
-        self.conda_package_specs = conda_package_specs
+        self.environments = environments
+        self.default_environment_name = default_environment_name
 
     @property
     def title(self):
         """Override superclass to provide our title."""
-        if self.must_be_project_scoped:
-            base = "A Conda environment inside the project directory"
+        return "A Conda environment"
+
+    def _status_from_analysis(self, environ, local_state_file, analysis):
+        config = analysis.config
+
+        assert 'source' in config
+        assert config['source'] != 'default'
+        assert config['source'] != 'unset'
+
+        prefix = None
+        if 'value' in config and (config['source'] == 'variables' or config['source'] == 'project'):
+            prefix = config['value']
+        elif config['source'] == 'environ' and local_state_file.get_value('inherit_environment', default=False):
+            prefix = environ.get(self.env_var, None)
+
+        # At present we change 'unset' to 'project' and then use the default env,
+        # so prefix of None should not be possible.
+        # if prefix is None: return (False, "A Conda environment hasn't been chosen for this project.")
+        assert prefix is not None
+
+        if not os.path.isdir(os.path.join(prefix, 'conda-meta')):
+            return (False, "'%s' doesn't look like it contains a Conda environment yet." % (prefix))
+
+        env_name = config.get('env_name', None)
+        if env_name is not None:
+            environment_spec = self.environments[env_name]
+
+            if len(environment_spec.dependencies) > 0:
+                try:
+                    installed = conda_api.installed(prefix)
+                except conda_api.CondaError as e:
+                    return (False, "Conda failed while listing installed packages in %s: %s" % (prefix, str(e)))
+
+                missing = set()
+
+                # TODO: we don't verify that the environment contains the right versions
+                # https://github.com/Anaconda-Server/anaconda-project/issues/77
+                for name in environment_spec.conda_package_names_set:
+                    if name not in installed:
+                        missing.add(name)
+
+                if len(missing) > 0:
+                    sorted = list(missing)
+                    sorted.sort()
+                    return (False, "Conda environment is missing packages: %s" % (", ".join(sorted)))
+
+        if environ.get(self.env_var, None) is None:
+            # this is our vaguest / least-helpful message so only if we didn't do better above
+            return (False, "%s is not set." % self.env_var)
         else:
-            base = "A Conda environment"
-        if len(self.conda_package_specs) > 0:
-            return base + " containing packages: " + ", ".join(self.conda_package_specs)
-        else:
-            return base
-
-    def _why_not_provided(self, environ):
-        name_or_prefix = self._get_value_of_env_var(environ)
-        if name_or_prefix is None:
-            return "A Conda environment hasn't been activated for this project (%s is unset)." % (self.env_var)
-
-        try:
-            prefix = conda_api.resolve_env_to_prefix(name_or_prefix)
-        except conda_api.CondaError as e:
-            return "Conda didn't understand environment name or prefix %s from %s: %s" % (name_or_prefix, self.env_var,
-                                                                                          str(e))
-
-        if prefix is None:
-            return "Conda environment %s='%s' does not exist yet." % (self.env_var, name_or_prefix)
-
-        if self.must_be_project_scoped:
-            if 'PROJECT_DIR' not in environ:
-                return "PROJECT_DIR isn't set, so cannot find or create a dedicated Conda environment."
-            # "inside the project directory" is a kind of rough
-            # proxy for "environment dedicated to this project,"
-            # we could define "project-scoped" in some more
-            # elaborate way I suppose, but this seems like a fine
-            # starting point.
-            project_dir = environ['PROJECT_DIR']
-            if not directory_contains_subdirectory(project_dir, prefix):
-                return ("The current environment (in %s) isn't inside the project directory (%s).") % (prefix,
-                                                                                                       project_dir)
-
-        if len(self.conda_package_specs) == 0:
-            return None
-
-        try:
-            installed = conda_api.installed(prefix)
-        except conda_api.CondaError as e:
-            return "Conda failed while listing installed packages in %s: %s" % (prefix, str(e))
-
-        missing = set()
-
-        for name in self.conda_package_names_set:
-            if name not in installed:
-                missing.add(name)
-
-        if len(missing) > 0:
-            sorted = list(missing)
-            sorted.sort()
-            return "Conda environment is missing packages: %s" % (", ".join(sorted))
-
-        return None
+            return (True, "Using Conda environment %s." % prefix)
 
     def check_status(self, environ, local_state_file):
         """Override superclass to get our status."""
-        why_not_provided = self._why_not_provided(environ)
-        # TODO: this is busted, we could activate the root environment
-        # or something even if we won't project-scope
-        if self.must_be_project_scoped:
-            provider_class_name = 'ProjectScopedCondaEnvProvider'
-        else:
-            provider_class_name = 'EnvVarProvider'
-        has_been_provided = why_not_provided is None
-        if has_been_provided:
-            status_description = ("Using Conda environment %s" % self._get_value_of_env_var(environ))
-        else:
-            status_description = why_not_provided
-
-        return self._create_status(environ,
-                                   local_state_file,
-                                   has_been_provided=has_been_provided,
-                                   status_description=status_description,
-                                   provider_class_name=provider_class_name)
-
-    @property
-    def must_be_project_scoped(self):
-        """Get whether environment must be dedicated to this project."""
-        return self.options.get('project_scoped', True)
-
-    @property
-    def conda_package_names_set(self):
-        """conda package names that the environment must contain, as a set."""
-        names = set()
-        for spec in self.conda_package_specs:
-            pieces = spec.split(' ', 3)
-            name = pieces[0]
-            # vspecs = []
-            # if len(pieces) > 1:
-            #     vspecs = pieces[1].split('|')
-            # build = None
-            # if len(pieces) > 2:
-            #     build = pieces[2]
-            names.add(name)
-        return names
+        return self._create_status_from_analysis(environ,
+                                                 local_state_file,
+                                                 provider_class_name='CondaEnvProvider',
+                                                 status_getter=self._status_from_analysis)

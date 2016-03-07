@@ -7,6 +7,7 @@ from distutils.spawn import find_executable
 
 from project.project_file import ProjectFile
 from project.conda_meta_file import CondaMetaFile
+from project.conda_environment import CondaEnvironment
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 
@@ -19,6 +20,8 @@ class _ConfigCache(object):
 
         self.project_file_count = 0
         self.conda_meta_file_count = 0
+        self.conda_environments = dict()
+        self.default_conda_environment_name = 'default'
 
     def update(self, project_file, conda_meta_file):
         if project_file.change_count == self.project_file_count and \
@@ -41,9 +44,12 @@ class _ConfigCache(object):
         if not (project_file.corrupted or conda_meta_file.corrupted):
             # future: we could un-hardcode this so plugins can add stuff here
             self._update_runtime(requirements, problems, project_file)
+            self._update_conda_environments(problems, project_file)
             # this MUST be after we _update_runtime since we may get CondaEnvRequirement
-            # options in the runtime section
-            self._update_conda_env_requirements(requirements, problems, project_file, conda_meta_file)
+            # options in the runtime section, and after _update_conda_environments
+            # since we use those
+            self._update_conda_env_requirements(requirements, problems, project_file)
+
             self._update_launch_argv(problems, project_file, conda_meta_file)
 
         self.requirements = requirements
@@ -80,30 +86,56 @@ class _ConfigCache(object):
                 "runtime section contains wrong value type {runtime}, should be dict or list of requirements".format(
                     runtime=runtime))
 
-    def _update_conda_env_requirements(self, requirements, problems, project_file, conda_meta_file):
-        packages = []
+    def _update_conda_environments(self, problems, project_file):
+        def _parse_dependencies(deps):
+            if not isinstance(deps, (list, tuple)):
+                problems.append("%s: dependencies: value should be a list of package names, not '%r'" %
+                                (project_file.filename, deps))
+                return []
+            cleaned = []
+            for dep in deps:
+                if isinstance(dep, str):
+                    cleaned.append(dep.strip())
+                else:
+                    problems.append("%s: dependencies: value should be a package name (as a string) not '%r'" %
+                                    (project_file.filename, dep))
+            return cleaned
 
-        def load_from(yaml_file):
-            found = yaml_file.requirements_run
-            if not isinstance(found, (list, tuple)):
-                problems.append("%s: requirements: run: value should be a list of strings, not '%r'" %
-                                (yaml_file.filename, found))
-            else:
-                for item in found:
-                    if not isinstance(item, str):
-                        problems.append("%s: requirements: run: value should be a string not '%r'" %
-                                        (yaml_file.filename, item))
-                        # future: validate MatchSpec
-                    else:
-                        packages.append(item)
+        self.conda_environments = dict()
+        shared_deps = _parse_dependencies(project_file.get_value('dependencies', default=[]))
+        environments = project_file.get_value('environments', default={})
+        first_listed_name = None
+        if isinstance(environments, dict):
+            for (name, attrs) in environments.items():
+                if first_listed_name is None:
+                    first_listed_name = name
+                if 'dependencies' in attrs:
+                    deps = _parse_dependencies(attrs.get('dependencies'))
+                else:
+                    deps = []
+                # ideally we would merge same-name packages here, choosing the
+                # highest of the two versions or something. maybe conda will
+                # do that for us anyway?
+                all_deps = shared_deps + deps
+                self.conda_environments[name] = CondaEnvironment(name=name, dependencies=all_deps)
+        else:
+            problems.append(
+                "%s: environments should be a dictionary from environment name to environment attributes, not %r" %
+                (project_file.filename, environments))
 
-        load_from(conda_meta_file)
-        load_from(project_file)
+        # invariant is that we always have at least one
+        # environment; it doesn't have to be named 'default' but
+        # we name it that if no named environment was created.
+        if len(self.conda_environments) == 0:
+            self.conda_environments['default'] = CondaEnvironment(name='default', dependencies=shared_deps)
 
-        # for the getter on Project
-        self.requirements_run = list(packages)
+        if 'default' in self.conda_environments:
+            self.default_conda_environment_name = 'default'
+        else:
+            self.default_conda_environment_name = first_listed_name
 
-        if problems or not packages:
+    def _update_conda_env_requirements(self, requirements, problems, project_file):
+        if problems:
             return
 
         # use existing CondaEnvRequirement if it was created via env var
@@ -113,10 +145,13 @@ class _ConfigCache(object):
                 env_requirement = r
 
         if env_requirement is None:
-            env_requirement = CondaEnvRequirement(registry=self.registry, conda_package_specs=packages)
+            env_requirement = CondaEnvRequirement(registry=self.registry,
+                                                  environments=self.conda_environments,
+                                                  default_environment_name=self.default_conda_environment_name)
             requirements.append(env_requirement)
         else:
-            env_requirement.conda_package_specs.extend(packages)
+            env_requirement.environments = self.conda_environments
+            env_requirement.default_environment_name = self.default_conda_environment_name
 
     def _update_launch_argv(self, problems, project_file, conda_meta_file):
         def load_from(yaml_file):
@@ -223,15 +258,18 @@ class Project(object):
         return self._search_project_then_meta('version', fallback="unknown")
 
     @property
-    def requirements_run(self):
-        """Get the combined "requirements: run" lists from both project.yml and meta.yaml.
+    def conda_environments(self):
+        """Get a dictionary of environment names to CondaEnvironment instances."""
+        return self._updated_cache().conda_environments
 
-        The returned list is a list of strings in conda "match
-        specification" format (see
-        http://conda.pydata.org/docs/spec.html#build-version-spec
-        and the ``conda.resolve.MatchSpec`` class).
+    @property
+    def default_conda_environment_name(self):
+        """Get the named environment to use by default.
+
+        This will be the one named "default" if it exists, and
+        otherwise the first-listed one.
         """
-        return self._updated_cache().requirements_run
+        return self._updated_cache().default_conda_environment_name
 
     @property
     def launch_argv(self):
@@ -256,7 +294,7 @@ class Project(object):
             argv as list of strings
         """
         # see conda.misc::launch for what we're copying
-        for name in ('CONDA_DEFAULT_ENV', 'PATH', 'PROJECT_DIR'):
+        for name in ('CONDA_ENV_PATH', 'PATH', 'PROJECT_DIR'):
             if name not in environ:
                 raise ValueError("To get a runnable command for the app, %s must be set." % (name))
 

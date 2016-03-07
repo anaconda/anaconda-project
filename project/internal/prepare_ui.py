@@ -42,7 +42,6 @@ def prepare_browser(project, stage, io_loop, show_url):
             print("# Configure the project at {url} to continue...".format(url=server.url))
             show_url(server.url)
 
-            print("starting io loop")
             io_loop.start()
         finally:
             server.unlisten()
@@ -50,5 +49,9 @@ def prepare_browser(project, stage, io_loop, show_url):
         if old_current_loop is not None:
             old_current_loop.make_current()
 
-    assert 'result' in result_holder
-    return result_holder['result']
+    if 'result' in result_holder:
+        return result_holder['result']
+    else:
+        from project.prepare import PrepareFailure
+        # this pretty much only happens in unit tests.
+        return PrepareFailure(logs=[], errors=["Browser UI main loop was stopped."])

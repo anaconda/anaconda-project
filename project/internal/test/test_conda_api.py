@@ -151,6 +151,15 @@ def test_resolve_named_env(monkeypatch):
     assert "/foo/envs/bar" == prefix
 
 
+def test_resolve_bogus_env(monkeypatch):
+    def mock_info():
+        return {'root_prefix': '/foo', 'envs': ['/foo/envs/bar']}
+
+    monkeypatch.setattr('project.internal.conda_api.info', mock_info)
+    prefix = conda_api.resolve_env_to_prefix('nope')
+    assert prefix is None
+
+
 def test_resolve_env_prefix_from_dirname():
     prefix = conda_api.resolve_env_to_prefix('/foo/bar')
     assert "/foo/bar" == prefix

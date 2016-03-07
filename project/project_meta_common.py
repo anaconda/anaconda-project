@@ -26,11 +26,6 @@ class _ProjectMetaCommon(object):
         return self.set_value(['package', 'version'], value)
 
     @property
-    def requirements_run(self):
-        """Get runtime requirements as a list of strings."""
-        return self.get_value(['requirements', 'run'], default=[])
-
-    @property
     def app_entry(self):
         """Get the argv to run the app as a string.
 

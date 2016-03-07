@@ -19,7 +19,7 @@ class PluginRegistry(object):
         if env_var == 'REDIS_URL':
             from .requirements.redis import RedisRequirement
             return RedisRequirement(registry=self, env_var=env_var, options=options)
-        elif env_var == 'CONDA_DEFAULT_ENV':
+        elif env_var == 'CONDA_ENV_PATH':
             from .requirements.conda_env import CondaEnvRequirement
             return CondaEnvRequirement(registry=self, env_var=env_var, options=options)
         elif env_var == 'ANACONDA_MASTER_PASSWORD':
@@ -39,9 +39,9 @@ class PluginRegistry(object):
             an instance of the passed-in class name or None if not found
         """
         # future goal will be to un-hardcode this of course
-        if class_name == 'ProjectScopedCondaEnvProvider':
-            from .providers.conda_env import ProjectScopedCondaEnvProvider
-            return ProjectScopedCondaEnvProvider()
+        if class_name == 'CondaEnvProvider':
+            from .providers.conda_env import CondaEnvProvider
+            return CondaEnvProvider()
         elif class_name == 'MasterPasswordProvider':
             from .providers.master_password import MasterPasswordProvider
             return MasterPasswordProvider()

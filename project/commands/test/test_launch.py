@@ -10,6 +10,8 @@ from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE
 from project.project_file import PROJECT_FILENAME
 
+from project.test.project_utils import project_dir_disable_dedicated_env
+
 
 class Args(object):
     def __init__(self, **kwargs):
@@ -35,6 +37,8 @@ def test_launch_command(monkeypatch):
     monkeypatch.setattr('os.execvpe', mock_execvpe)
 
     def check_launch(dirname):
+        project_dir_disable_dedicated_env(dirname)
+
         result = launch_command(dirname, UI_MODE_NOT_INTERACTIVE)
         assert result is None
         assert 'file' in executed
@@ -58,6 +62,7 @@ app:
 
 def test_launch_command_no_app_entry(capsys):
     def check_launch_no_app_entry(dirname):
+        project_dir_disable_dedicated_env(dirname)
         result = launch_command(dirname, UI_MODE_NOT_INTERACTIVE)
         assert result is None
 
@@ -72,6 +77,7 @@ def test_launch_command_no_app_entry(capsys):
 
 def test_launch_command_failed_prepare(capsys):
     def check_launch_failed_prepare(dirname):
+        project_dir_disable_dedicated_env(dirname)
         result = launch_command(dirname, UI_MODE_NOT_INTERACTIVE)
         assert result is None
 
@@ -96,7 +102,9 @@ def test_main(monkeypatch, capsys):
     monkeypatch.setattr('os.execvpe', mock_execvpe)
 
     def check_launch_main(dirname):
+        project_dir_disable_dedicated_env(dirname)
         result = main(Args(project_dir=dirname))
+
         assert result is None
         assert 'file' in executed
         assert 'args' in executed
@@ -127,7 +135,9 @@ def test_main_failed_exec(monkeypatch, capsys):
     monkeypatch.setattr('os.execvpe', mock_execvpe)
 
     def check_launch_main(dirname):
+        project_dir_disable_dedicated_env(dirname)
         result = main(Args(project_dir=dirname))
+
         assert result is None
 
     with pytest.raises(SystemExit) as excinfo:
@@ -166,7 +176,9 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
+        project_dir_disable_dedicated_env(dirname)
         result = main(Args(project_dir=dirname))
+
         assert result is None
         assert 'file' in executed
         assert 'args' in executed

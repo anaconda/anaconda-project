@@ -7,17 +7,19 @@ import subprocess
 
 import pytest
 
+from project.test.environ_utils import minimal_environ
 from project.internal.test.tmpfile_utils import with_directory_contents
+from project.test.project_utils import project_no_dedicated_env
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirement import EnvVarRequirement
-from project.project import Project
+from project.plugins.requirements.conda_env import CondaEnvRequirement
 from project.project_file import PROJECT_FILENAME
 from project.conda_meta_file import META_DIRECTORY, META_FILENAME
 
 
 def test_properties():
     def check_properties(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert dirname == project.directory_path
         assert dirname == os.path.dirname(project.project_file.filename)
         assert dirname == os.path.dirname(os.path.dirname(project.conda_meta_file.filename))
@@ -30,7 +32,7 @@ def test_properties():
 
 def test_ignore_trailing_slash_on_dirname():
     def check_properties(dirname):
-        project = Project(dirname + "/")
+        project = project_no_dedicated_env(dirname + "/")
         assert dirname == project.directory_path
         assert dirname == os.path.dirname(project.project_file.filename)
         assert dirname == os.path.dirname(os.path.dirname(project.conda_meta_file.filename))
@@ -43,10 +45,11 @@ def test_ignore_trailing_slash_on_dirname():
 
 def test_single_env_var_requirement():
     def check_some_env_var(dirname):
-        project = Project(dirname)
-        assert 1 == len(project.requirements)
-        assert "FOO" == project.requirements[0].env_var
+        project = project_no_dedicated_env(dirname)
         assert [] == project.problems
+        assert 2 == len(project.requirements)
+        assert "FOO" == project.requirements[0].env_var
+        assert "CONDA_ENV_PATH" == project.requirements[1].env_var
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -56,7 +59,7 @@ runtime:
 
 def test_problem_in_project_file():
     def check_problem(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert 0 == len(project.requirements)
         assert 1 == len(project.problems)
 
@@ -68,10 +71,11 @@ runtime:
 
 def test_single_env_var_requirement_with_options():
     def check_some_env_var(dirname):
-        project = Project(dirname)
-        assert 1 == len(project.requirements)
+        project = project_no_dedicated_env(dirname)
+        assert 2 == len(project.requirements)
         assert "FOO" == project.requirements[0].env_var
         assert dict(default="hello") == project.requirements[0].options
+        assert "CONDA_ENV_PATH" == project.requirements[1].env_var
 
     with_directory_contents({PROJECT_FILENAME: """
 runtime:
@@ -82,7 +86,7 @@ runtime:
 def test_override_plugin_registry():
     def check_override_plugin_registry(dirname):
         registry = PluginRegistry()
-        project = Project(dirname, registry)
+        project = project_no_dedicated_env(dirname, registry)
         assert project._config_cache.registry is registry
 
     with_directory_contents({PROJECT_FILENAME: """
@@ -93,7 +97,7 @@ runtime:
 
 def test_get_name_and_version_from_conda_meta_yaml():
     def check_conda_meta(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert project.name == "foo"
         assert project.version == "1.2.3"
 
@@ -109,7 +113,7 @@ package:
 
 def test_get_name_and_version_from_project_file():
     def check_name_and_version(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert project.name == "foo"
         assert project.version == "1.2.3"
 
@@ -131,7 +135,7 @@ package:
 
 def test_set_name_and_version_in_project_file():
     def check_name_and_version(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert project.name == "foo"
         assert project.version == "1.2.3"
 
@@ -141,7 +145,7 @@ def test_set_name_and_version_in_project_file():
         assert project.version == "4.5.6"
         project.project_file.save()
 
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert project2.name == "bar"
         assert project2.version == "4.5.6"
 
@@ -153,104 +157,142 @@ package:
     """}, check_name_and_version)
 
 
-def test_get_package_requirements_from_project_and_meta_files():
+def test_get_package_requirements_from_project_file():
     def check_get_packages(dirname):
-        project = Project(dirname)
-        # note that the current algorithm is that we do not
-        # de-duplicate; testing that specifically so we'll
-        # notice if it changes.
-        assert ["foo", "bar", "foo", "hello >= 1.0", "world"] == project.requirements_run
+        project = project_no_dedicated_env(dirname)
+        env = project.conda_environments['default']
+        assert env.name == 'default'
+        assert ("foo", "hello >= 1.0", "world") == env.dependencies
+        assert set(["foo", "hello", "world"]) == env.conda_package_names_set
 
         # find CondaEnvRequirement
         conda_env_req = None
         for r in project.requirements:
-            if hasattr(r, 'conda_package_specs'):
+            if isinstance(r, CondaEnvRequirement):
                 assert conda_env_req is None  # only one
                 conda_env_req = r
-        assert ["foo", "bar", "foo", "hello >= 1.0", "world"] == conda_env_req.conda_package_specs
+        assert len(conda_env_req.environments) == 1
+        assert 'default' in conda_env_req.environments
+        assert conda_env_req.environments['default'] is env
 
     with_directory_contents(
         {PROJECT_FILENAME: """
-requirements:
-  run:
-    - foo
-    - hello >= 1.0
-    - world
-    """,
-         META_DIRECTORY + "/" + META_FILENAME: """
-requirements:
-  run:
-    - foo
-    - bar
-"""}, check_get_packages)
+dependencies:
+  - foo
+  - hello >= 1.0
+  - world
+    """}, check_get_packages)
 
 
 def test_use_env_options_when_packages_also_specified():
-    def check_use_env_options(dirname):
-        project = Project(dirname)
-        assert ["foo"] == project.requirements_run
+    def check_get_packages(dirname):
+        project = project_no_dedicated_env(dirname)
 
         # find CondaEnvRequirement
         conda_env_req = None
         for r in project.requirements:
-            if hasattr(r, 'conda_package_specs'):
+            if isinstance(r, CondaEnvRequirement):
                 assert conda_env_req is None  # only one
                 conda_env_req = r
-        assert ["foo"] == conda_env_req.conda_package_specs
-        assert dict(project_scoped=False) == conda_env_req.options
+
+        assert conda_env_req.options == dict(hello=42)
 
     with_directory_contents(
         {PROJECT_FILENAME: """
 runtime:
-  CONDA_DEFAULT_ENV : { project_scoped: false }
+  CONDA_ENV_PATH: { hello: 42 }
 
-requirements:
-  run:
-    - foo
-"""}, check_use_env_options)
+dependencies:
+  - foo
+  - hello >= 1.0
+  - world
+    """}, check_get_packages)
 
 
-def test_get_package_requirements_from_empty_project_and_meta_files():
+def test_get_package_requirements_from_empty_project():
     def check_get_packages(dirname):
-        project = Project(dirname)
-        assert [] == project.requirements_run
+        project = project_no_dedicated_env(dirname)
+        assert () == project.conda_environments['default'].dependencies
 
-    with_directory_contents({PROJECT_FILENAME: "", META_DIRECTORY + "/" + META_FILENAME: ""}, check_get_packages)
+    with_directory_contents({PROJECT_FILENAME: ""}, check_get_packages)
 
 
-def test_complain_about_broken_package_requirements():
+def test_complain_about_dependencies_not_a_list():
     def check_get_packages(dirname):
-        project = Project(dirname)
-        assert 2 == len(project.problems)
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
         "should be a list of strings not 'CommentedMap" in project.problems[0]
-        "should be a string not '42'" in project.problems[1]
+
+    with_directory_contents({PROJECT_FILENAME: """
+dependencies:
+    foo: bar
+    """}, check_get_packages)
+
+
+def test_load_environments():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 0 == len(project.problems)
+        assert len(project.conda_environments) == 2
+        assert 'foo' in project.conda_environments
+        assert 'bar' in project.conda_environments
+        assert project.default_conda_environment_name == 'foo'
+        foo = project.conda_environments['foo']
+        bar = project.conda_environments['bar']
+        assert foo.dependencies == ('python', 'dog', 'cat', 'zebra')
+        assert bar.dependencies == ()
 
     with_directory_contents(
         {PROJECT_FILENAME: """
-requirements:
-  run:
-    foo: bar
-    """,
-         META_DIRECTORY + "/" + META_FILENAME: """
-requirements:
-  run:
+environments:
+  foo:
+    dependencies:
+       - python
+       - dog
+       - cat
+       - zebra
+  bar: {}
+    """}, check_environments)
+
+
+def test_complain_about_environments_not_a_dict():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        "should be a directory from environment name to environment attributes, not 42" in project.problems[0]
+
+    with_directory_contents({PROJECT_FILENAME: """
+environments: 42
+    """}, check_environments)
+
+
+def test_complain_about_dependencies_list_of_wrong_thing():
+    def check_get_packages(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        "should be a string not '42'" in project.problems[0]
+
+    with_directory_contents({PROJECT_FILENAME: """
+dependencies:
     - 42
-    - bar
-"""}, check_get_packages)
+    """}, check_get_packages)
 
 
 def test_load_list_of_runtime_requirements():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         requirements = project.requirements
-        assert 2 == len(requirements)
+        assert 3 == len(requirements)
         assert isinstance(requirements[0], EnvVarRequirement)
         assert 'FOO' == requirements[0].env_var
         assert isinstance(requirements[1], EnvVarRequirement)
         assert 'BAR' == requirements[1].env_var
+        assert isinstance(requirements[2], CondaEnvRequirement)
+        assert 'CONDA_ENV_PATH' == requirements[2].env_var
+        assert dict() == requirements[2].options
         assert len(project.problems) == 0
 
     with_directory_contents({PROJECT_FILENAME: "runtime:\n  - FOO\n  - BAR\n"}, check_file)
@@ -260,16 +302,19 @@ def test_load_dict_of_runtime_requirements():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         requirements = project.requirements
-        assert 2 == len(requirements)
+        assert 3 == len(requirements)
         assert isinstance(requirements[0], EnvVarRequirement)
         assert 'FOO' == requirements[0].env_var
         assert dict(a=1) == requirements[0].options
         assert isinstance(requirements[1], EnvVarRequirement)
         assert 'BAR' == requirements[1].env_var
         assert dict(b=2) == requirements[1].options
+        assert isinstance(requirements[2], CondaEnvRequirement)
+        assert 'CONDA_ENV_PATH' == requirements[2].env_var
+        assert dict() == requirements[2].options
         assert len(project.problems) == 0
 
     with_directory_contents({PROJECT_FILENAME: "runtime:\n  FOO: { a: 1 }\n  BAR: { b: 2 }\n"}, check_file)
@@ -279,7 +324,7 @@ def test_non_string_runtime_requirements():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert 2 == len(project.problems)
         assert 0 == len(project.requirements)
         assert "42 is not a string" in project.problems[0]
@@ -292,7 +337,7 @@ def test_bad_runtime_requirements_options():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert 2 == len(project.problems)
         assert 0 == len(project.requirements)
         assert "key FOO with value 42; the value must be a dict" in project.problems[0]
@@ -305,7 +350,7 @@ def test_runtime_requirements_not_a_collection():
     def check_file(dirname):
         filename = os.path.join(dirname, PROJECT_FILENAME)
         assert os.path.exists(filename)
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         assert 0 == len(project.requirements)
         assert "runtime section contains wrong value type 42" in project.problems[0]
@@ -315,7 +360,7 @@ def test_runtime_requirements_not_a_collection():
 
 def test_corrupted_project_file_and_meta_file():
     def check_problem(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert 0 == len(project.requirements)
         assert 2 == len(project.problems)
         assert 'project.yml has a syntax error that needs to be fixed by hand' in project.problems[0]
@@ -337,7 +382,7 @@ package:
 
 def test_non_string_in_app_entry():
     def check_app_entry(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         assert "should be a string not '42'" in project.problems[0]
 
@@ -346,7 +391,7 @@ def test_non_string_in_app_entry():
 
 def test_launch_argv_from_project_file():
     def check_launch_argv(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert project.launch_argv == ('foo', 'bar', '${PREFIX}')
 
     with_directory_contents({PROJECT_FILENAME: """
@@ -357,7 +402,7 @@ app:
 
 def test_launch_argv_from_meta_file():
     def check_launch_argv(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert project.launch_argv == ('foo', 'bar', '${PREFIX}')
 
     with_directory_contents(
@@ -368,20 +413,18 @@ app:
 
 
 def _launch_argv_for_environment(environ, expected_output, chdir=False):
+    environ = minimal_environ(**environ)
+
     def check_echo_output(dirname):
-        if 'CONDA_DEFAULT_ENV' not in environ:
-            environ['CONDA_DEFAULT_ENV'] = 'root'
         if 'PROJECT_DIR' not in environ:
             environ['PROJECT_DIR'] = dirname
-        if 'PATH' not in environ:
-            environ['PATH'] = os.environ['PATH']
         os.chmod(os.path.join(dirname, "echo.py"), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
         old_dir = None
         if chdir:
             old_dir = os.getcwd()
             os.chdir(dirname)
         try:
-            project = Project(dirname)
+            project = project_no_dedicated_env(dirname)
             argv = project.launch_argv_for_environment(environ)
             output = subprocess.check_output(argv).decode()
             assert output == expected_output.format(dirname=dirname)
@@ -404,27 +447,26 @@ print(repr(sys.argv))
 
 
 def test_launch_command_in_project_dir():
-    import project.internal.conda_api as conda_api
-    prefix = conda_api.resolve_env_to_prefix('root')
+    prefix = os.getenv('CONDA_ENV_PATH')
     _launch_argv_for_environment(dict(), "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix)
 
 
 def test_launch_command_in_project_dir_and_cwd_is_project_dir():
-    import project.internal.conda_api as conda_api
-    prefix = conda_api.resolve_env_to_prefix('root')
+    prefix = os.getenv('CONDA_ENV_PATH')
     _launch_argv_for_environment(dict(), "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix, chdir=True)
 
 
 def test_launch_command_in_project_dir_with_conda_env():
     _launch_argv_for_environment(
-        dict(CONDA_DEFAULT_ENV='/someplace'),
+        dict(CONDA_ENV_PATH='/someplace',
+             CONDA_DEFAULT_ENV='/someplace'),
         "['{dirname}/echo.py', '/someplace/blah', 'foo', 'bar']\n")
 
 
 def test_launch_command_is_on_system_path():
     def check_python_version_output(dirname):
-        environ = dict(CONDA_DEFAULT_ENV='root', PATH=os.environ['PATH'], PROJECT_DIR=dirname)
-        project = Project(dirname)
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        project = project_no_dedicated_env(dirname)
         argv = project.launch_argv_for_environment(environ)
         output = subprocess.check_output(argv, stderr=subprocess.STDOUT).decode()
         assert output.startswith("Python")
@@ -438,8 +480,8 @@ app:
 def test_launch_command_does_not_exist():
     def check_error_on_nonexistent_path(dirname):
         import errno
-        environ = dict(CONDA_DEFAULT_ENV='root', PATH=os.environ['PATH'], PROJECT_DIR=dirname)
-        project = Project(dirname)
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        project = project_no_dedicated_env(dirname)
         argv = project.launch_argv_for_environment(environ)
         assert argv[0] == 'this-command-does-not-exist'
         try:
@@ -460,9 +502,9 @@ app:
 
 def test_launch_command_stuff_missing_from_environment():
     def check_launch_with_stuff_missing(dirname):
-        project = Project(dirname)
-        environ = dict(CONDA_DEFAULT_ENV='root', PATH=os.environ['PATH'], PROJECT_DIR=dirname)
-        for key in environ:
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        for key in ('PATH', 'CONDA_ENV_PATH', 'PROJECT_DIR'):
             environ_copy = deepcopy(environ)
             del environ_copy[key]
             with pytest.raises(ValueError) as excinfo:

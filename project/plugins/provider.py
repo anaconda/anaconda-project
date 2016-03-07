@@ -94,6 +94,11 @@ class ProvideContext(object):
         """Get the current ``RequirementStatus``."""
         return self._status
 
+    @property
+    def local_state_file(self):
+        """Get the LocalStateFile."""
+        return self._local_state_file
+
 
 class ProviderAnalysis(object):
     """A Provider's preflight check snapshotting the state prior to ``provide()``.
@@ -246,6 +251,25 @@ class EnvVarProvider(Provider):
         else:
             return None
 
+    def _possibly_decrypted_value(self, requirement, context, value):
+        assert value is not None  # if it's None caller couldn't detect errors
+        key = self._key_from_value(value)
+        if key is not None:
+            if 'encrypted' not in value:
+                context.append_error("No 'encrypted' field in the value of %s" % (requirement.env_var))
+                return None
+            if key not in context.environ:
+                context.append_error("Master password %s is not set so can't get value of %s." %
+                                     (key, requirement.env_var))
+                return None
+            value = decrypt_string(value['encrypted'], context.environ[key])
+        if isinstance(value, dict) or isinstance(value, list):
+            context.append_error("Value of '%s' should be a string not %r" % (requirement.env_var, value))
+            return None
+        else:
+            value = str(value)  # convert number, bool, null to a string
+        return value
+
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
         """Override superclass to require encryption key variable if this env var is encrypted."""
         # we need the master password to either read from local
@@ -357,6 +381,13 @@ class EnvVarProvider(Provider):
                     context.local_state_file.set_value(disabled_path, value)
                     context.local_state_file.unset_value(override_path)
 
+    def _extra_source_options_html(self, context, status):
+        """Override this in a subtype to add choices to the config HTML.
+
+        Choices should be radio inputs with name="source"
+        """
+        return ""
+
     def config_html(self, context, status):
         """Override superclass to provide our config html."""
         if status.requirement.encrypted:
@@ -364,7 +395,9 @@ class EnvVarProvider(Provider):
         else:
             input_type = 'text'
 
-        choices_html = ""
+        extra_html = self._extra_source_options_html(context, status)
+
+        choices_html = extra_html
 
         if context.requirement.env_var in context.environ:
             choices_html = choices_html + """
@@ -411,12 +444,15 @@ class EnvVarProvider(Provider):
         #  - then anything already set in the environment wins, so you
         #    can override on the command line like `FOO=bar myapp`
         #  - then the project.yml default value
-        if context.status.analysis.config['source'] == 'variables':
+        local_state_override = self._local_state_override(requirement, context.local_state_file)
+        if local_state_override is not None:
             # .anaconda/project-local.yml
             #
             # variables:
             #   REDIS_URL: "redis://example.com:1234"
-            context.environ[requirement.env_var] = context.status.analysis.config['value']
+            local_state_override = self._possibly_decrypted_value(requirement, context, local_state_override)
+            if local_state_override is not None:
+                context.environ[requirement.env_var] = local_state_override
         elif requirement.env_var in context.environ:
             # nothing to do here
             pass
@@ -427,16 +463,9 @@ class EnvVarProvider(Provider):
             #   REDIS_URL:
             #     default: "redis://example.com:1234"
             value = requirement.options['default']
-            default_key = self._key_from_value(value)
-            if default_key is not None:
-                if 'encrypted' not in value:
-                    context.append_error("No 'encrypted' field in the default value of %s" % (requirement.env_var))
-                    return
-                value = decrypt_string(value['encrypted'], context.environ[default_key])
-            if isinstance(value, dict) or isinstance(value, list):
-                context.append_error("Value of '%s' should be a string not %r" % (requirement.env_var, value))
-            else:
-                value = str(value)  # convert number, bool, null to a string
+            if value is not None:
+                value = self._possibly_decrypted_value(requirement, context, value)
+            if value is not None:
                 context.environ[requirement.env_var] = value
         else:
             pass

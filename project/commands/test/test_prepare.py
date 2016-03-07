@@ -7,6 +7,8 @@ from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE, UI_MODE_BROWSER
 from project.project_file import PROJECT_FILENAME
 
+from project.test.project_utils import project_dir_disable_dedicated_env
+
 
 class Args(object):
     def __init__(self, **kwargs):
@@ -34,6 +36,7 @@ def test_prepare_command(monkeypatch):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def prepare_redis_url(dirname):
+        project_dir_disable_dedicated_env(dirname)
         result = prepare_command(dirname, UI_MODE_NOT_INTERACTIVE)
         assert can_connect_args['port'] == 6379
         assert result
@@ -70,6 +73,7 @@ def test_main(monkeypatch, capsys):
     _monkeypatch_open_new_tab(monkeypatch)
 
     def main_redis_url(dirname):
+        project_dir_disable_dedicated_env(dirname)
         main(Args(project_dir=dirname))
 
     with_directory_contents({PROJECT_FILENAME: """
@@ -98,6 +102,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
                 return real_abspath(path)
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
+        project_dir_disable_dedicated_env(dirname)
         main(Args(project_dir=dirname))
 
     with_directory_contents({PROJECT_FILENAME: """
@@ -139,6 +144,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
     monkeypatch.setattr('project.prepare.prepare', _mock_prepare_do_not_keep_going)
 
     def main_redis_url(dirname):
+        project_dir_disable_dedicated_env(dirname)
         main(Args(project_dir=dirname))
 
     with pytest.raises(SystemExit) as excinfo:
