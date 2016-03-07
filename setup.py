@@ -107,6 +107,10 @@ column_limit : 120
         if changed:
             _atomic_replace(path, contents, encoding)
             print("Reformatted:     " + path)
+            # we fail the tests if we reformat anything, because
+            # we want CI to complain if a PR didn't run yapf
+            if len(self.failed) == 0 or self.failed[-1] != 'yapf':
+                self.failed.append("yapf")
         else:
             pass
             # print("No reformatting: " + path)
