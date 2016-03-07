@@ -1,34 +1,25 @@
 """The ``prepare`` command configures a project to run, asking the user questions if necessary."""
 from __future__ import absolute_import, print_function
 
-import os
 import sys
 
 from project import prepare
 from project.project import Project
 
 
-def prepare_command(dirname, ui_mode):
+def prepare_command(project_dir, ui_mode):
     """Configure the project to run.
 
     Returns:
         Prepare result (can be treated as True on success).
     """
-    project = Project(dirname)
+    project = Project(project_dir)
     result = prepare.prepare(project, ui_mode=ui_mode, keep_going_until_success=True)
 
     return result
 
 
-def main(argv):
+def main(args):
     """Start the prepare command."""
-    # future: real arg parser
-    if len(argv) > 1:
-        dirname = argv[1]
-    else:
-        dirname = "."
-    dirname = os.path.abspath(dirname)
-    if prepare_command(dirname, ui_mode=prepare.UI_MODE_BROWSER):
-        sys.exit(0)
-    else:
+    if not prepare_command(args.project_dir, args.ui_mode):
         sys.exit(1)

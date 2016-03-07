@@ -11,6 +11,14 @@ from project.prepare import UI_MODE_NOT_INTERACTIVE
 from project.project_file import PROJECT_FILENAME
 
 
+class Args(object):
+    def __init__(self, **kwargs):
+        self.project_dir = "."
+        self.ui_mode = UI_MODE_NOT_INTERACTIVE
+        for key in kwargs:
+            setattr(self, key, kwargs[key])
+
+
 def test_launch_command(monkeypatch):
 
     executed = {}
@@ -88,7 +96,7 @@ def test_main(monkeypatch, capsys):
     monkeypatch.setattr('os.execvpe', mock_execvpe)
 
     def check_launch_main(dirname):
-        result = main(['launch', dirname])
+        result = main(Args(project_dir=dirname))
         assert result is None
         assert 'file' in executed
         assert 'args' in executed
@@ -119,7 +127,7 @@ def test_main_failed_exec(monkeypatch, capsys):
     monkeypatch.setattr('os.execvpe', mock_execvpe)
 
     def check_launch_main(dirname):
-        result = main(['launch', dirname])
+        result = main(Args(project_dir=dirname))
         assert result is None
 
     with pytest.raises(SystemExit) as excinfo:
@@ -158,7 +166,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
-        result = main(['launch'])
+        result = main(Args(project_dir=dirname))
         assert result is None
         assert 'file' in executed
         assert 'args' in executed
