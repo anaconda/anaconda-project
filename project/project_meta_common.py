@@ -24,18 +24,3 @@ class _ProjectMetaCommon(object):
     def version(self, value):
         """Set the "package: version" field in the file."""
         return self.set_value(['package', 'version'], value)
-
-    @property
-    def app_entry(self):
-        """Get the argv to run the app as a string.
-
-        Conda parses this by splitting on whitespace, then
-        replacing the string "${PREFIX}" inside each arg with the
-        environment prefix, then replacing "argv[0]" with the full
-        path. See conda/misc.py::launch().
-
-        Returns:
-            None if not found
-
-        """
-        return self.get_value(['app', 'entry'], default=None)

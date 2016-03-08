@@ -3,11 +3,10 @@ from __future__ import absolute_import
 
 import os
 
-from distutils.spawn import find_executable
-
 from project.project_file import ProjectFile
 from project.conda_meta_file import CondaMetaFile
 from project.conda_environment import CondaEnvironment
+from project.project_commands import ProjectCommand
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 
@@ -18,6 +17,8 @@ class _ConfigCache(object):
             registry = PluginRegistry()
         self.registry = registry
 
+        self.commands = dict()
+        self.default_command_name = None
         self.project_file_count = 0
         self.conda_meta_file_count = 0
         self.conda_environments = dict()
@@ -50,7 +51,7 @@ class _ConfigCache(object):
             # since we use those
             self._update_conda_env_requirements(requirements, problems, project_file)
 
-            self._update_launch_argv(problems, project_file, conda_meta_file)
+            self._update_commands(problems, project_file, conda_meta_file)
 
         self.requirements = requirements
         self.problems = problems
@@ -153,27 +154,69 @@ class _ConfigCache(object):
             env_requirement.environments = self.conda_environments
             env_requirement.default_environment_name = self.default_conda_environment_name
 
-    def _update_launch_argv(self, problems, project_file, conda_meta_file):
-        def load_from(yaml_file):
-            app_entry = yaml_file.app_entry
-            if app_entry is not None and not isinstance(app_entry, str):
-                problems.append("%s: app: entry: should be a string not '%r'" % (yaml_file.filename, app_entry))
-                return None
-            else:
-                return app_entry
+    def _update_commands(self, problems, project_file, conda_meta_file):
+        failed = False
 
-        app_entry = load_from(project_file)
-        if app_entry is None:
-            app_entry = load_from(conda_meta_file)
+        app_entry_from_meta_yaml = conda_meta_file.app_entry
+        if app_entry_from_meta_yaml is not None:
+            if not isinstance(app_entry_from_meta_yaml, str):
+                problems.append("%s: app: entry: should be a string not '%r'" %
+                                (conda_meta_file.filename, app_entry_from_meta_yaml))
+                app_entry_from_meta_yaml = None
+                failed = True
 
-        if app_entry is None:
-            self.launch_argv = None
+        first_command_name = None
+        commands = dict()
+        commands_section = project_file.get_value('commands', None)
+        if commands_section is not None and not isinstance(commands_section, dict):
+            problems.append("%s: 'commands:' section should be a dictionary from command names to attributes, not %r" %
+                            (project_file.filename, commands_section))
+            failed = True
+        elif commands_section is not None:
+            for (name, attrs) in commands_section.items():
+                if first_command_name is None:
+                    first_command_name = name
+
+                if not isinstance(attrs, dict):
+                    problems.append("%s: command name '%s' should be followed by a dictionary of attributes not %r" %
+                                    (project_file.filename, name, attrs))
+                    continue
+
+                copy = attrs.copy()
+                # default conda_app_entry to the one from meta.yaml
+                if 'conda_app_entry' not in copy and app_entry_from_meta_yaml is not None:
+                    copy['conda_app_entry'] = app_entry_from_meta_yaml
+
+                if len(copy) == 0:
+                    problems.append("%s: command '%s' does not have a command line in it" %
+                                    (project_file.filename, name))
+                    failed = True
+
+                # for the moment, all possible attributes are command line strings, so
+                # we can check them all in the same way
+                for attr in attrs:
+                    if not isinstance(attrs[attr], str):
+                        problems.append("%s: command '%s' attribute '%s' should be a string not '%r'" %
+                                        (project_file.filename, name, attr, attrs[attr]))
+                        failed = True
+
+                commands[name] = ProjectCommand(name=name, attributes=copy)
+
+        if failed:
+            self.commands = dict()
+            self.default_command_name = None
         else:
-            # conda.misc uses plain split and not shlex or
-            # anything like that, we need to match its
-            # interpretation
-            parsed = app_entry.split()
-            self.launch_argv = tuple(parsed)
+            # if no commands and we have a meta.yaml app entry, use the meta.yaml
+            if app_entry_from_meta_yaml is not None and len(commands) == 0:
+                commands['default'] = ProjectCommand(name='default',
+                                                     attributes=dict(conda_app_entry=app_entry_from_meta_yaml))
+
+            self.commands = commands
+            if 'default' in commands:
+                self.default_command_name = 'default'
+            else:
+                # note: this may be None
+                self.default_command_name = first_command_name
 
 
 class Project(object):
@@ -272,51 +315,42 @@ class Project(object):
         return self._updated_cache().default_conda_environment_name
 
     @property
-    def launch_argv(self):
-        """Get the argv to run the project or None.
+    def commands(self):
+        """Get the dictionary of commands to run the project.
 
-        This argv is not "ready to use" because it has to be
-        resolved against a set of environment variables and a
-        conda environment. The ``prepare()`` API can do this for
-        you.
+        This dictionary can be empty.
 
         Returns:
-            iterable of strings or None if no launch command configured
+            dictionary of command names to ``ProjectCommand``
         """
-        return self._updated_cache().launch_argv
+        return self._updated_cache().commands
+
+    @property
+    def default_command(self):
+        """Get the default ``ProjectCommand`` or None if we don't have one.
+
+        Returns:
+            the default ``ProjectCommand``
+        """
+        cache = self._updated_cache()
+        if cache.default_command_name is None:
+            return None
+        else:
+            return cache.commands[cache.default_command_name]
 
     def launch_argv_for_environment(self, environ):
-        """Get a usable argv with the executable path made absolute and prefix substituted.
+        """Get a usable argv with any processing and interpretation necessary to execute it.
 
         Args:
             environ (dict): the environment
         Returns:
-            argv as list of strings
+            argv as list of strings, or None if no commands are configured
         """
-        # see conda.misc::launch for what we're copying
-        for name in ('CONDA_ENV_PATH', 'PATH', 'PROJECT_DIR'):
-            if name not in environ:
-                raise ValueError("To get a runnable command for the app, %s must be set." % (name))
+        # we use ANACONDA_PROJECT_COMMAND if configured and otherwise
+        # the default command
+        command_name = environ.get('ANACONDA_PROJECT_COMMAND', self._updated_cache().default_command_name)
+        if command_name is None:
+            return None
+        command = self._updated_cache().commands[command_name]
 
-        prefix = None  # fetch this lazily only if needed
-        args = []
-        for arg in self.launch_argv:
-            if '${PREFIX}' in arg:
-                if prefix is None:
-                    import project.internal.conda_api as conda_api
-                    prefix = conda_api.resolve_env_to_prefix(environ['CONDA_DEFAULT_ENV'])
-                    arg = arg.replace('${PREFIX}', prefix)
-            args.append(arg)
-
-        # always look in the project directory. This is a little
-        # odd because we don't add PROJECT_DIR to PATH for child
-        # processes - maybe we should?
-        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        executable = find_executable(args[0], path)
-        if executable is not None:
-            # if the executable is in cwd, for some reason find_executable does not
-            # return the full path to it, just a relative path.
-            args[0] = os.path.abspath(executable)
-        # if we didn't find args[0] on the path, we leave it as-is
-        # and wait for it to fail when we later try to run it.
-        return args
+        return command.launch_argv_for_environment(environ)
