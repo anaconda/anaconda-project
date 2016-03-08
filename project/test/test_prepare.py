@@ -7,18 +7,18 @@ import stat
 import subprocess
 
 from project.test.environ_utils import minimal_environ, strip_environ
+from project.test.project_utils import project_no_dedicated_env
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.crypto import decrypt_string
 from project.prepare import (prepare, unprepare, UI_MODE_BROWSER, prepare_in_stages, PrepareSuccess, PrepareFailure,
                              _after_stage_success, _FunctionPrepareStage)
-from project.project import Project
 from project.project_file import PROJECT_FILENAME
 from project.local_state_file import LocalStateFile
 
 
 def test_prepare_empty_directory():
     def prepare_empty(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         environ = minimal_environ()
         result = prepare(project, environ=environ)
         assert result
@@ -31,7 +31,7 @@ def test_prepare_empty_directory():
 def test_prepare_bad_ui_mode():
     def prepare_bad_ui_mode(dirname):
         with pytest.raises(ValueError) as excinfo:
-            project = Project(dirname)
+            project = project_no_dedicated_env(dirname)
             environ = minimal_environ()
             prepare(project, ui_mode="BAD_UI_MODE", environ=environ)
         assert "invalid UI mode" in repr(excinfo.value)
@@ -41,7 +41,7 @@ def test_prepare_bad_ui_mode():
 
 def test_unprepare_empty_directory():
     def unprepare_empty(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         result = unprepare(project)
         assert result is None
 
@@ -50,7 +50,7 @@ def test_unprepare_empty_directory():
 
 def test_default_to_system_environ():
     def prepare_system_environ(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         os_environ_copy = deepcopy(os.environ)
         result = prepare(project)
         assert project.directory_path == strip_environ(result.environ)['PROJECT_DIR']
@@ -65,7 +65,7 @@ def test_default_to_system_environ():
 
 def test_prepare_some_env_var_already_set():
     def prepare_some_env_var(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         environ = minimal_environ(FOO='bar')
         result = prepare(project, environ=environ)
         assert result
@@ -80,7 +80,7 @@ runtime:
 
 def test_prepare_some_env_var_not_set():
     def prepare_some_env_var(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         environ = minimal_environ(BAR='bar')
         result = prepare(project, environ=environ)
         assert not result
@@ -94,7 +94,7 @@ runtime:
 
 def test_prepare_some_env_var_not_set_keep_going():
     def prepare_some_env_var_keep_going(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         environ = minimal_environ(BAR='bar')
         stage = prepare_in_stages(project, environ=environ, keep_going_until_success=True)
         for i in range(1, 10):
@@ -114,20 +114,19 @@ def test_prepare_with_app_entry():
     def prepare_with_app_entry(dirname):
         os.chmod(os.path.join(dirname, "echo.py"), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
 
-        project = Project(dirname)
-        environ = deepcopy(os.environ)
-        environ['FOO'] = 'bar'
-        environ['CONDA_DEFAULT_ENV'] = '/someplace'
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ(FOO='bar')
+        env_path = environ.get('CONDA_ENV_PATH')
         result = prepare(project, environ=environ)
         assert result
 
         command = result.command_exec_info
         assert 'FOO' in command.env
         assert command.cwd == project.directory_path
-        assert command.args == ['%s/echo.py' % dirname, '/someplace', 'foo', 'bar']
+        assert command.args == ['%s/echo.py' % dirname, env_path, 'foo', 'bar']
         p = command.popen(stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (out, err) = p.communicate()
-        assert out.decode() == ("['%s/echo.py', '/someplace', 'foo', 'bar']\n" % dirname)
+        assert out.decode() == ("['%s/echo.py', '%s', 'foo', 'bar']\n" % (dirname, env_path))
         assert err.decode() == ""
 
     with_directory_contents(
@@ -147,7 +146,7 @@ print(repr(sys.argv))
 
 def test_update_environ():
     def prepare_then_update_environ(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         environ = minimal_environ(FOO='bar')
         result = prepare(project, environ=environ)
         assert result
@@ -164,7 +163,7 @@ runtime:
 
 def test_attempt_to_grab_result_early():
     def early_result_grab(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         first_stage = prepare_in_stages(project)
         with pytest.raises(RuntimeError) as excinfo:
             first_stage.result
@@ -175,7 +174,7 @@ def test_attempt_to_grab_result_early():
 
 def test_attempt_to_grab_statuses_early():
     def early_status_grab(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         first_stage = prepare_in_stages(project)
         with pytest.raises(RuntimeError) as excinfo:
             first_stage.statuses_after_execute
@@ -275,7 +274,7 @@ def test_prepare_with_browser(monkeypatch):
     monkeypatch.setattr('webbrowser.open_new_tab', mock_open_new_tab)
 
     def prepare_with_browser(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         environ = minimal_environ(BAR='bar')
         result = prepare(project, environ=environ, io_loop=io_loop, ui_mode=UI_MODE_BROWSER)
         assert not result
@@ -331,7 +330,6 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
 
     def fill_in_password(url, first_response):
         from project.internal.test.http_utils import http_post_async
-        from project.internal.test.multipart import MultipartEncoder
         from project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
         from tornado import gen
         from bs4 import BeautifulSoup
@@ -352,12 +350,7 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
 
         @gen.coroutine
         def do_http():
-
-            encoder = MultipartEncoder({field['name']: 'bloop'})
-            body = encoder.to_string()
-            headers = {'Content-Type': encoder.content_type}
-
-            http_results['post_fill_in_password'] = yield http_post_async(url, body=body, headers=headers)
+            http_results['post_fill_in_password'] = yield http_post_async(url, form={field['name']: 'bloop'})
 
         io_loop.add_callback(do_http)
 
@@ -367,7 +360,7 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
     monkeypatch.setattr('webbrowser.open_new_tab', mock_open_new_tab)
 
     def prepare_with_browser(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         environ = minimal_environ(ANACONDA_MASTER_PASSWORD='bar')
         result = prepare(project, environ=environ, io_loop=io_loop, ui_mode=UI_MODE_BROWSER)
         assert result

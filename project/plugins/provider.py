@@ -94,6 +94,11 @@ class ProvideContext(object):
         """Get the current ``RequirementStatus``."""
         return self._status
 
+    @property
+    def local_state_file(self):
+        """Get the LocalStateFile."""
+        return self._local_state_file
+
 
 class ProviderAnalysis(object):
     """A Provider's preflight check snapshotting the state prior to ``provide()``.
@@ -237,11 +242,33 @@ class EnvVarProvider(Provider):
     def _local_state_override(self, requirement, local_state_file):
         return local_state_file.get_value(["variables", requirement.env_var], default=None)
 
+    def _disabled_local_state_override(self, requirement, local_state_file):
+        return local_state_file.get_value(["disabled_variables", requirement.env_var], default=None)
+
     def _key_from_value(cls, value):
         if isinstance(value, dict) and 'key' in value:
             return value['key']
         else:
             return None
+
+    def _possibly_decrypted_value(self, requirement, context, value):
+        assert value is not None  # if it's None caller couldn't detect errors
+        key = self._key_from_value(value)
+        if key is not None:
+            if 'encrypted' not in value:
+                context.append_error("No 'encrypted' field in the value of %s" % (requirement.env_var))
+                return None
+            if key not in context.environ:
+                context.append_error("Master password %s is not set so can't get value of %s." %
+                                     (key, requirement.env_var))
+                return None
+            value = decrypt_string(value['encrypted'], context.environ[key])
+        if isinstance(value, dict) or isinstance(value, list):
+            context.append_error("Value of '%s' should be a string not %r" % (requirement.env_var, value))
+            return None
+        else:
+            value = str(value)  # convert number, bool, null to a string
+        return value
 
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
         """Override superclass to require encryption key variable if this env var is encrypted."""
@@ -286,7 +313,12 @@ class EnvVarProvider(Provider):
         """Override superclass to read env var value."""
         config = dict()
         value = self._local_state_override(context.requirement, context.local_state_file)
+        disabled_value = self._disabled_local_state_override(context.requirement, context.local_state_file)
+        was_disabled = value is None and disabled_value is not None
+        if was_disabled:
+            value = disabled_value
         key = self._key_from_value(value)
+
         if value is not None:
             if key is not None:
                 # TODO: we need to deal with missing 'encrypted'
@@ -294,22 +326,44 @@ class EnvVarProvider(Provider):
                 encrypted = value['encrypted']
                 value = decrypt_string(encrypted, context.environ[key])
             config['value'] = value
+
+        if value is not None and not was_disabled:
+            source = 'variables'
+        elif context.requirement.env_var in context.environ:
+            source = 'environ'
+        elif 'default' in context.requirement.options:
+            source = 'default'
+        else:
+            source = 'unset'
+        config['source'] = source
         return config
 
     def set_config_values_as_strings(self, context, values):
         """Override superclass to set env var value."""
+        override_path = ["variables", context.requirement.env_var]
+        disabled_path = ["disabled_variables", context.requirement.env_var]
+
+        # we set override_path only if the source is variables,
+        # otherwise the value goes in disabled_variables. If we
+        # don't have a source that means the only option we
+        # presented as to set the local override, so default to
+        # 'variables'
+        overriding = (values.get('source', 'variables') == 'variables')
+
         if 'value' in values:
 
             value_string = values['value']
 
-            path = ["variables", context.requirement.env_var]
-
             if value_string == '':
                 # the reason empty string unsets is that otherwise there's no easy
                 # way to unset from a web form
-                context.local_state_file.unset_value(path)
+                context.local_state_file.unset_value(override_path)
+                context.local_state_file.unset_value(disabled_path)
             else:
                 local_override_value = self._local_state_override(context.requirement, context.local_state_file)
+                if local_override_value is None:
+                    local_override_value = self._disabled_local_state_override(context.requirement,
+                                                                               context.local_state_file)
 
                 key = self._key_from_value(local_override_value)
                 if key is None and context.requirement.encrypted:
@@ -319,7 +373,20 @@ class EnvVarProvider(Provider):
                     value = dict(key=key, encrypted=encrypt_string(value_string, context.environ[key]))
                 else:
                     value = value_string
-                context.local_state_file.set_value(path, value)
+
+                if overriding:
+                    context.local_state_file.set_value(override_path, value)
+                    context.local_state_file.unset_value(disabled_path)
+                else:
+                    context.local_state_file.set_value(disabled_path, value)
+                    context.local_state_file.unset_value(override_path)
+
+    def _extra_source_options_html(self, context, status):
+        """Override this in a subtype to add choices to the config HTML.
+
+        Choices should be radio inputs with name="source"
+        """
+        return ""
 
     def config_html(self, context, status):
         """Override superclass to provide our config html."""
@@ -327,15 +394,46 @@ class EnvVarProvider(Provider):
             input_type = 'password'
         else:
             input_type = 'text'
-        instead = ""
-        if status.has_been_provided:
-            instead = " instead"
+
+        extra_html = self._extra_source_options_html(context, status)
+
+        choices_html = extra_html
+
+        if context.requirement.env_var in context.environ:
+            choices_html = choices_html + """
+            <div>
+              <label><input type="radio" name="source" value="environ"/>Keep value '{from_environ}'</label>
+            </div>
+            <div>
+              <label><input type="radio" name="source" value="variables"/>Use this value instead:
+                     <input type="{input_type}" name="value"/></label>
+            </div>
+            """.format(from_environ=context.environ[context.requirement.env_var],
+                       input_type=input_type)
+        else:
+            if 'default' in context.requirement.options:
+                choices_html = choices_html + """
+                <div>
+                  <label><input type="radio" name="source" value="default"/>Keep default '{from_default}'</label>
+                </div>
+                <div>
+                  <label><input type="radio" name="source" value="variables"/>Use this value instead:
+                         <input type="{input_type}" name="value"/></label>
+                </div>
+                """.format(input_type=input_type,
+                           from_default=context.requirement.options['default'])
+            else:
+                choices_html = choices_html + """
+                <div>
+                  <label>Use this value: <input type="{input_type}" name="value"/></label>
+                </div>
+                """.format(input_type=input_type)
+
         return """
 <form>
-  <label>Use this value{instead}: <input type="{input_type}" name="value"/></label>
+  %s
 </form>
-""".format(input_type=input_type,
-           instead=instead)
+""" % (choices_html)
 
     def provide(self, requirement, context):
         """Override superclass to use configured env var (or already-set env var)."""
@@ -346,12 +444,15 @@ class EnvVarProvider(Provider):
         #  - then anything already set in the environment wins, so you
         #    can override on the command line like `FOO=bar myapp`
         #  - then the project.yml default value
-        if 'value' in context.status.analysis.config:
+        local_state_override = self._local_state_override(requirement, context.local_state_file)
+        if local_state_override is not None:
             # .anaconda/project-local.yml
             #
             # variables:
             #   REDIS_URL: "redis://example.com:1234"
-            context.environ[requirement.env_var] = context.status.analysis.config['value']
+            local_state_override = self._possibly_decrypted_value(requirement, context, local_state_override)
+            if local_state_override is not None:
+                context.environ[requirement.env_var] = local_state_override
         elif requirement.env_var in context.environ:
             # nothing to do here
             pass
@@ -362,16 +463,9 @@ class EnvVarProvider(Provider):
             #   REDIS_URL:
             #     default: "redis://example.com:1234"
             value = requirement.options['default']
-            default_key = self._key_from_value(value)
-            if default_key is not None:
-                if 'encrypted' not in value:
-                    context.append_error("No 'encrypted' field in the default value of %s" % (requirement.env_var))
-                    return
-                value = decrypt_string(value['encrypted'], context.environ[default_key])
-            if isinstance(value, dict) or isinstance(value, list):
-                context.append_error("Value of '%s' should be a string not %r" % (requirement.env_var, value))
-            else:
-                value = str(value)  # convert number, bool, null to a string
+            if value is not None:
+                value = self._possibly_decrypted_value(requirement, context, value)
+            if value is not None:
                 context.environ[requirement.env_var] = value
         else:
             pass

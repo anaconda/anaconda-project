@@ -1,108 +1,88 @@
 from __future__ import absolute_import, print_function
 
+from project.test.project_utils import project_dir_disable_dedicated_env
+from project.test.environ_utils import minimal_environ, minimal_environ_no_conda_env
+from project.conda_environment import CondaEnvironment
+from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 
-from project.internal.test.tmpfile_utils import with_directory_contents, tmp_local_state_file
+from project.internal.test.tmpfile_utils import with_directory_contents
+
+
+def _empty_default_requirement():
+    return CondaEnvRequirement(registry=PluginRegistry(), environments=dict(default=CondaEnvironment('default', [])))
 
 
 def test_find_by_env_var_conda_env():
     registry = PluginRegistry()
-    found = registry.find_requirement_by_env_var(env_var='CONDA_DEFAULT_ENV', options=dict())
+    found = registry.find_requirement_by_env_var(env_var='CONDA_ENV_PATH', options=dict())
     assert found is not None
     assert isinstance(found, CondaEnvRequirement)
-    assert found.env_var == 'CONDA_DEFAULT_ENV'
+    assert found.env_var == 'CONDA_ENV_PATH'
 
 
 def test_conda_env_title():
-    requirement = CondaEnvRequirement(registry=PluginRegistry())
-    assert requirement.title == 'A Conda environment inside the project directory'
-
-    requirement = CondaEnvRequirement(registry=PluginRegistry(), options=dict(project_scoped=False))
+    requirement = _empty_default_requirement()
     assert requirement.title == 'A Conda environment'
 
 
 def test_conda_default_env_not_set():
-    requirement = CondaEnvRequirement(registry=PluginRegistry())
-    status = requirement.check_status(dict(), tmp_local_state_file())
-    expected = "A Conda environment hasn't been activated for this project (CONDA_DEFAULT_ENV is unset)."
-    assert expected == status.status_description
+    def check_conda_default_env_not_set(dirname):
+        requirement = _empty_default_requirement()
+        project_dir_disable_dedicated_env(dirname)
+        local_state = LocalStateFile.load_for_directory(dirname)
+        status = requirement.check_status(minimal_environ_no_conda_env(PROJECT_DIR=dirname), local_state)
+        expected = "'{}/.envs/default' doesn't look like it contains a Conda environment yet.".format(dirname)
+        assert expected == status.status_description
+
+    with_directory_contents(dict(), check_conda_default_env_not_set)
 
 
 def test_conda_default_env_is_bogus():
-    requirement = CondaEnvRequirement(registry=PluginRegistry())
-    status = requirement.check_status(dict(CONDA_DEFAULT_ENV="not_a_real_env_anyone_has"), tmp_local_state_file())
-    expected = "Conda environment CONDA_DEFAULT_ENV='not_a_real_env_anyone_has' does not exist yet."
-    assert expected == status.status_description
+    def check_conda_default_env_is_bogus(dirname):
+        requirement = _empty_default_requirement()
+        project_dir_disable_dedicated_env(dirname)
+        local_state = LocalStateFile.load_for_directory(dirname)
+        status = requirement.check_status(
+            minimal_environ_no_conda_env(CONDA_ENV_PATH="not_a_real_env_anyone_has",
+                                         PROJECT_DIR=dirname),
+            local_state)
+        expected = "'not_a_real_env_anyone_has' doesn't look like it contains a Conda environment yet."
+        assert expected == status.status_description
 
-
-def test_conda_fails_while_looking_up_env(monkeypatch):
-    def get_fail_command(extra_args):
-        return ["bash", "-c", "echo FAILURE 1>&2 && false"]
-
-    monkeypatch.setattr('project.internal.conda_api._get_conda_command', get_fail_command)
-    requirement = CondaEnvRequirement(registry=PluginRegistry())
-    status = requirement.check_status(dict(CONDA_DEFAULT_ENV="not_a_real_env_anyone_has"), tmp_local_state_file())
-    assert status.status_description.startswith(
-        "Conda didn't understand environment name or prefix not_a_real_env_anyone_has from CONDA_DEFAULT_ENV: ")
-    assert 'FAILURE' in status.status_description
+    with_directory_contents(dict(), check_conda_default_env_is_bogus)
 
 
 def test_conda_fails_while_listing_installed(monkeypatch):
-    def sabotaged_installed_command(prefix):
-        from project.internal import conda_api
-        raise conda_api.CondaError("sabotage!")
+    def check_fails_while_listing_installed(dirname):
+        def sabotaged_installed_command(prefix):
+            from project.internal import conda_api
+            raise conda_api.CondaError("sabotage!")
 
-    monkeypatch.setattr('project.internal.conda_api.installed', sabotaged_installed_command)
+        monkeypatch.setattr('project.internal.conda_api.installed', sabotaged_installed_command)
 
-    requirement = CondaEnvRequirement(registry=PluginRegistry(),
-                                      options=dict(project_scoped=False),
-                                      conda_package_specs=['not_a_real_package'])
-    status = requirement.check_status(dict(CONDA_DEFAULT_ENV="root"), tmp_local_state_file())
-    assert status.status_description.startswith("Conda failed while listing installed packages in ")
-    assert status.status_description.endswith(": sabotage!")
+        project_dir_disable_dedicated_env(dirname)
+        local_state = LocalStateFile.load_for_directory(dirname)
 
+        requirement = CondaEnvRequirement(
+            registry=PluginRegistry(),
+            environments=dict(default=CondaEnvironment('default', ['not_a_real_package'])))
+        status = requirement.check_status(minimal_environ(PROJECT_DIR=dirname), local_state)
+        assert status.status_description.startswith("Conda failed while listing installed packages in ")
+        assert status.status_description.endswith(": sabotage!")
 
-def test_project_dir_not_set(monkeypatch):
-    def mock_resolve_env_to_prefix(name_or_prefix):
-        return "/foo"
-
-    monkeypatch.setattr('project.internal.conda_api.resolve_env_to_prefix', mock_resolve_env_to_prefix)
-    requirement = CondaEnvRequirement(registry=PluginRegistry(), options=dict(project_scoped=True))
-    status = requirement.check_status(dict(CONDA_DEFAULT_ENV="root"), tmp_local_state_file())
-    assert "PROJECT_DIR isn't set, so cannot find or create a dedicated Conda environment." == status.status_description
-
-
-def test_error_when_not_project_scoped_and_must_be(monkeypatch):
-    def mock_resolve_env_to_prefix(name_or_prefix):
-        return "/foo"
-
-    monkeypatch.setattr('project.internal.conda_api.resolve_env_to_prefix', mock_resolve_env_to_prefix)
-
-    def check_when_not_project_scoped(dirname):
-        requirement = CondaEnvRequirement(registry=PluginRegistry(), options=dict(project_scoped=True))
-        status = requirement.check_status(dict(CONDA_DEFAULT_ENV="root", PROJECT_DIR=dirname), tmp_local_state_file())
-        expected = "The current environment (in %s) isn't inside the project directory (%s)." % ("/foo", dirname)
-        assert expected == status.status_description
-
-    with_directory_contents(dict(), check_when_not_project_scoped)
-
-
-def test_when_need_not_be_project_scoped(monkeypatch):
-    def check_when_need_not_be_project_scoped(dirname):
-        requirement = CondaEnvRequirement(registry=PluginRegistry(), options=dict(project_scoped=False))
-        status = requirement.check_status(dict(CONDA_DEFAULT_ENV="root", PROJECT_DIR=dirname), tmp_local_state_file())
-        assert status.has_been_provided
-
-    with_directory_contents(dict(), check_when_need_not_be_project_scoped)
+    with_directory_contents(dict(), check_fails_while_listing_installed)
 
 
 def test_missing_package():
     def check_missing_package(dirname):
-        requirement = CondaEnvRequirement(registry=PluginRegistry(),
-                                          options=dict(project_scoped=False),
-                                          conda_package_specs=['boguspackage', 'boguspackage2'])
-        status = requirement.check_status(dict(CONDA_DEFAULT_ENV="root", PROJECT_DIR=dirname), tmp_local_state_file())
+        requirement = CondaEnvRequirement(
+            registry=PluginRegistry(),
+            environments=dict(default=CondaEnvironment('default', ['boguspackage', 'boguspackage2'])))
+        project_dir_disable_dedicated_env(dirname)
+        local_state = LocalStateFile.load_for_directory(dirname)
+        status = requirement.check_status(minimal_environ(PROJECT_DIR=dirname), local_state)
         assert "Conda environment is missing packages: boguspackage, boguspackage2" == status.status_description
 
     with_directory_contents(dict(), check_missing_package)

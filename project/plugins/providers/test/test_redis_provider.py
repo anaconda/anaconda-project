@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import codecs
 import os
 
+from project.test.project_utils import project_no_dedicated_env
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.test.environ_utils import minimal_environ, strip_environ
 from project.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
@@ -12,7 +13,6 @@ from project.plugins.provider import ProviderConfigContext
 from project.plugins.providers.redis import RedisProvider
 from project.plugins.requirements.redis import RedisRequirement
 from project.prepare import prepare, unprepare
-from project.project import Project
 from project.project_file import PROJECT_FILENAME
 
 
@@ -148,7 +148,7 @@ def test_prepare_redis_url_with_dict_in_runtime_section(monkeypatch):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def prepare_redis_url(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ())
         assert result
         assert dict(REDIS_URL="redis://localhost:6379",
@@ -165,7 +165,7 @@ def test_prepare_redis_url_with_list_in_runtime_section(monkeypatch):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def prepare_redis_url(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ())
         assert result
         assert dict(REDIS_URL="redis://localhost:6379",
@@ -206,7 +206,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
                                                                                         real_can_connect_to_socket)
 
     def start_local_redis(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ())
         assert result
 
@@ -250,7 +250,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
                                                                                         real_can_connect_to_socket)
 
     def start_local_redis(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ())
         assert result
         assert 'REDIS_URL' in result.environ
@@ -318,7 +318,7 @@ def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
     _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
 
     def start_local_redis_and_time_out(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
 
         from time import sleep as real_sleep
 
@@ -388,7 +388,7 @@ def test_fail_to_prepare_local_redis_server_no_port_available(monkeypatch, capsy
     can_connect_args_list = _monkeypatch_can_connect_to_socket_always_succeeds_on_nonstandard(monkeypatch)
 
     def start_local_redis(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ())
         assert not result
         assert 73 == len(can_connect_args_list)
@@ -416,7 +416,7 @@ def test_fail_to_prepare_local_redis_server_scope_system(monkeypatch, capsys):
     _monkeypatch_can_connect_to_socket_always_fails(monkeypatch)
 
     def check_no_autostart(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ())
         assert not result
 
@@ -444,7 +444,7 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
     can_connect_args_list = _monkeypatch_can_connect_to_socket_always_succeeds_on_nonstandard(monkeypatch)
 
     def start_local_redis(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ())
         assert not result
         assert 36 == len(can_connect_args_list)
@@ -510,7 +510,7 @@ sys.exit(1)
 
         monkeypatch.setattr("subprocess.Popen", mock_Popen)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ())
         assert not result
 
@@ -564,7 +564,7 @@ def test_set_scope_in_local_state(monkeypatch):
         config = provider.read_config(config_context)
         assert config['scope'] == 'system'
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ())
         assert result
         assert dict(REDIS_URL="redis://localhost:6379",

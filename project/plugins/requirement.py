@@ -105,6 +105,16 @@ class Requirement(with_metaclass(ABCMeta)):
                                  provider=provider,
                                  analysis=analysis)
 
+    def _create_status_from_analysis(self, environ, local_state_file, provider_class_name, status_getter):
+        provider = self.registry.find_provider_by_class_name(provider_class_name)
+        analysis = provider.analyze(self, environ, local_state_file)
+        (has_been_provided, status_description) = status_getter(environ, local_state_file, analysis)
+        return RequirementStatus(self,
+                                 has_been_provided=has_been_provided,
+                                 status_description=status_description,
+                                 provider=provider,
+                                 analysis=analysis)
+
     @abstractmethod
     def check_status(self, environ, local_state_file):
         """Check on the requirement and return a ``RequirementStatus`` with the current status.

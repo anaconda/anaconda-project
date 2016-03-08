@@ -137,6 +137,15 @@ column_limit : 120
 
     def _pep257(self):
         from pep257 import run_pep257, NO_VIOLATIONS_RETURN_CODE, VIOLATIONS_RETURN_CODE, INVALID_OPTIONS_RETURN_CODE
+        from pep257 import log as pep257_log
+
+        # hack pep257 not to spam enormous amounts of debug logging if you use pytest -s.
+        # run_pep257() below calls log.setLevel
+        def ignore_set_level(level):
+            pass
+
+        pep257_log.setLevel = ignore_set_level
+
         # hack alert (replacing argv temporarily because pep257 looks at it)
         old_argv = sys.argv
         try:
