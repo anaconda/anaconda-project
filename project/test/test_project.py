@@ -479,6 +479,29 @@ def test_empty_command():
     with_directory_contents({PROJECT_FILENAME: "commands:\n default: {}\n"}, check_app_entry)
 
 
+def test_command_with_bogus_key():
+    def check_app_entry(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        expected_error = "%s: command '%s' does not have a command line in it" % (project.project_file.filename,
+                                                                                  'default')
+        assert expected_error == project.problems[0]
+
+    with_directory_contents({PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n"}, check_app_entry)
+
+
+def test_command_with_bogus_key_and_ok_key():
+    def check_app_entry(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        command = project.default_command
+        command.name == 'default'
+        command._attributes == dict(shell="bar")
+
+    with_directory_contents(
+        {PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n\n    shell: 'bar'\n"}, check_app_entry)
+
+
 def test_two_empty_commands():
     def check_app_entry(dirname):
         project = project_no_dedicated_env(dirname)
@@ -504,7 +527,18 @@ def test_non_string_as_value_of_conda_app_entry():
     with_directory_contents({PROJECT_FILENAME: "commands:\n default:\n    conda_app_entry: 42\n"}, check_app_entry)
 
 
-def test_launch_argv_from_project_file():
+def test_non_string_as_value_of_shell():
+    def check_shell_non_dict(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        expected_error = "%s: command '%s' attribute '%s' should be a string not '%r'" % (project.project_file.filename,
+                                                                                          'default', 'shell', 42)
+        assert expected_error == project.problems[0]
+
+    with_directory_contents({PROJECT_FILENAME: "commands:\n default:\n    shell: 42\n"}, check_shell_non_dict)
+
+
+def test_launch_argv_from_project_file_app_entry():
     def check_launch_argv(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
@@ -521,6 +555,26 @@ def test_launch_argv_from_project_file():
 commands:
   foo:
     conda_app_entry: foo bar ${PREFIX}
+"""}, check_launch_argv)
+
+
+def test_launch_argv_from_project_file_shell():
+    def check_launch_argv(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        command = project.default_command
+        command.name == 'foo'
+        command._attributes == dict(shell="foo bar ${PREFIX}")
+
+        assert 1 == len(project.commands)
+        assert 'foo' in project.commands
+        assert project.commands['foo'] is command
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+commands:
+  foo:
+    shell: foo bar ${PREFIX}
 """}, check_launch_argv)
 
 
@@ -576,7 +630,10 @@ app:
         }, check_launch_argv)
 
 
-def _launch_argv_for_environment(environ, expected_output, chdir=False):
+def _launch_argv_for_environment(environ,
+                                 expected_output,
+                                 chdir=False,
+                                 command_line='conda_app_entry: echo.py ${PREFIX}/blah foo bar'):
     environ = minimal_environ(**environ)
 
     def check_echo_output(dirname):
@@ -591,7 +648,7 @@ def _launch_argv_for_environment(environ, expected_output, chdir=False):
             project = project_no_dedicated_env(dirname)
             assert [] == project.problems
             exec_info = project.exec_info_for_environment(environ)
-            output = subprocess.check_output(exec_info.args, shell=exec_info.shell).decode()
+            output = subprocess.check_output(exec_info.args, shell=exec_info.shell, env=environ).decode()
             assert output == expected_output.format(dirname=dirname)
         finally:
             if old_dir is not None:
@@ -602,8 +659,8 @@ def _launch_argv_for_environment(environ, expected_output, chdir=False):
             PROJECT_FILENAME: """
 commands:
   default:
-    conda_app_entry: echo.py ${PREFIX}/blah foo bar
-""",
+    %s
+""" % command_line,
             "echo.py": """#!/usr/bin/env python
 from __future__ import print_function
 import sys
@@ -615,6 +672,13 @@ print(repr(sys.argv))
 def test_launch_command_in_project_dir():
     prefix = os.getenv('CONDA_ENV_PATH')
     _launch_argv_for_environment(dict(), "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix)
+
+
+def test_launch_command_in_project_dir_with_shell(monkeypatch):
+    prefix = os.getenv('CONDA_ENV_PATH')
+    _launch_argv_for_environment(dict(),
+                                 "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix,
+                                 command_line='shell: ${PROJECT_DIR}/echo.py ${CONDA_ENV_PATH}/blah foo bar')
 
 
 def test_launch_command_in_project_dir_and_cwd_is_project_dir():

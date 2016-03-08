@@ -5,7 +5,14 @@ from copy import copy
 from distutils.spawn import find_executable
 
 import os
+import platform
 import sys
+
+
+def _is_windows():
+    # it's tempting to cache this but it hoses our test monkeypatching so don't.
+    # or at least be aware you'll have to fix tests...
+    return (platform.system() == 'Windows')
 
 
 class CommandExecInfo(object):
@@ -59,8 +66,7 @@ class CommandExecInfo(object):
         """
         args = copy(self._args)
         if self._shell:
-            import platform
-            if platform.system() == 'Windows':
+            if _is_windows():
                 # The issue here is that in Lib/subprocess.py in
                 # the Python distribution, if shell=True the code
                 # jumps through some funky hoops setting flags on
@@ -100,6 +106,34 @@ class ProjectCommand(object):
         """Get name of the command."""
         return self._name
 
+    def _choose_args_and_shell(self, environ):
+        args = None
+        shell = False
+
+        shell_command = self._attributes.get('shell', None)
+        if shell_command is not None and not _is_windows():
+            args = [shell_command]
+            shell = True
+
+        if args is None:
+            # see conda.misc::launch for what we're copying
+            app_entry = self._attributes.get('conda_app_entry', None)
+            if app_entry is not None:
+                # conda.misc uses plain split and not shlex or
+                # anything like that, we need to match its
+                # interpretation
+                parsed = app_entry.split()
+                args = []
+                for arg in parsed:
+                    if '${PREFIX}' in arg:
+                        arg = arg.replace('${PREFIX}', environ['CONDA_ENV_PATH'])
+                    args.append(arg)
+
+        # this should have been validated when loading the project file
+        assert args is not None
+
+        return (args, shell)
+
     def exec_info_for_environment(self, environ):
         """Get a ``CommandExecInfo`` ready to be executed.
 
@@ -112,24 +146,7 @@ class ProjectCommand(object):
             if name not in environ:
                 raise ValueError("To get a runnable command for the app, %s must be set." % (name))
 
-        args = None
-        shell = False
-
-        # see conda.misc::launch for what we're copying
-        app_entry = self._attributes.get('conda_app_entry', None)
-        if app_entry is not None:
-            # conda.misc uses plain split and not shlex or
-            # anything like that, we need to match its
-            # interpretation
-            parsed = app_entry.split()
-            args = []
-            for arg in parsed:
-                if '${PREFIX}' in arg:
-                    arg = arg.replace('${PREFIX}', environ['CONDA_ENV_PATH'])
-                args.append(arg)
-
-        # this should have been validated when loading the project file
-        assert args is not None
+        (args, shell) = self._choose_args_and_shell(environ)
 
         # always look in the project directory. This is a little
         # odd because we don't add PROJECT_DIR to PATH for child
