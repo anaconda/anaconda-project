@@ -524,8 +524,8 @@ commands:
 """}, check_launch_argv)
 
 
-def test_launch_argv_is_none_when_no_commands():
-    def check_launch_argv(dirname):
+def test_exec_info_is_none_when_no_commands():
+    def check_exec_info(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
@@ -533,11 +533,11 @@ def test_launch_argv_is_none_when_no_commands():
 
         environ = minimal_environ(PROJECT_DIR=dirname)
 
-        launch_argv = project.launch_argv_for_environment(environ)
-        assert launch_argv is None
+        exec_info = project.exec_info_for_environment(environ)
+        assert exec_info is None
 
     with_directory_contents({PROJECT_FILENAME: """
-"""}, check_launch_argv)
+"""}, check_exec_info)
 
 
 def test_launch_argv_from_meta_file():
@@ -590,8 +590,8 @@ def _launch_argv_for_environment(environ, expected_output, chdir=False):
         try:
             project = project_no_dedicated_env(dirname)
             assert [] == project.problems
-            argv = project.launch_argv_for_environment(environ)
-            output = subprocess.check_output(argv).decode()
+            exec_info = project.exec_info_for_environment(environ)
+            output = subprocess.check_output(exec_info.args, shell=exec_info.shell).decode()
             assert output == expected_output.format(dirname=dirname)
         finally:
             if old_dir is not None:
@@ -634,8 +634,8 @@ def test_launch_command_is_on_system_path():
         environ = minimal_environ(PROJECT_DIR=dirname)
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        argv = project.launch_argv_for_environment(environ)
-        output = subprocess.check_output(argv, stderr=subprocess.STDOUT).decode()
+        exec_info = project.exec_info_for_environment(environ)
+        output = subprocess.check_output(exec_info.args, shell=exec_info.shell, stderr=subprocess.STDOUT).decode()
         assert output.startswith("Python")
 
     with_directory_contents(
@@ -652,15 +652,15 @@ def test_launch_command_does_not_exist():
         environ = minimal_environ(PROJECT_DIR=dirname)
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        argv = project.launch_argv_for_environment(environ)
-        assert argv[0] == 'this-command-does-not-exist'
+        exec_info = project.exec_info_for_environment(environ)
+        assert exec_info.args[0] == 'this-command-does-not-exist'
         try:
             FileNotFoundError
         except NameError:
             # python 2
             FileNotFoundError = OSError
         with pytest.raises(FileNotFoundError) as excinfo:
-            subprocess.check_output(argv, stderr=subprocess.STDOUT).decode()
+            subprocess.check_output(exec_info.args, stderr=subprocess.STDOUT, shell=exec_info.shell).decode()
         assert excinfo.value.errno == errno.ENOENT
 
     with_directory_contents(
@@ -680,7 +680,7 @@ def test_launch_command_stuff_missing_from_environment():
             environ_copy = deepcopy(environ)
             del environ_copy[key]
             with pytest.raises(ValueError) as excinfo:
-                project.launch_argv_for_environment(environ_copy)
+                project.exec_info_for_environment(environ_copy)
             assert ('%s must be set' % key) in repr(excinfo.value)
 
     with_directory_contents(

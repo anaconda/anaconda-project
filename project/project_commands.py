@@ -1,9 +1,85 @@
 """Class representing a command from the project file."""
 from __future__ import absolute_import
 
+from copy import copy
 from distutils.spawn import find_executable
 
 import os
+import sys
+
+
+class CommandExecInfo(object):
+    """Class describing an executable command."""
+
+    def __init__(self, cwd, args, shell, env):
+        """Construct a CommandExecInfo."""
+        self._cwd = cwd
+        self._args = args
+        self._shell = shell
+        self._env = env
+
+    @property
+    def cwd(self):
+        """Working directory to run the command in."""
+        return self._cwd
+
+    @property
+    def args(self):
+        """Command line argument vector to run the command."""
+        return self._args
+
+    @property
+    def shell(self):
+        """Whether the command should be run with shell=True."""
+        return self._shell
+
+    @property
+    def env(self):
+        """Environment to run the command in."""
+        return self._env
+
+    def popen(self, **kwargs):
+        """Convenience method runs the command using Popen.
+
+        Args:
+            kwargs: passed through to Popen
+
+        Returns:
+            Popen instance
+        """
+        import subprocess
+
+        return subprocess.Popen(args=self._args, env=self._env, cwd=self._cwd, shell=self._shell, **kwargs)
+
+    def execvpe(self):
+        """Convenience method exec's the command replacing the current process.
+
+        Returns:
+            Does not return. May raise an OSError though.
+        """
+        args = copy(self._args)
+        if self._shell:
+            import platform
+            if platform.system() == 'Windows':
+                # The issue here is that in Lib/subprocess.py in
+                # the Python distribution, if shell=True the code
+                # jumps through some funky hoops setting flags on
+                # the Windows API calls. We can't easily simulate
+                # that for execvpe.  Not sure what to do.
+                raise RuntimeError("Cannot exec with a shell on Windows")
+            else:
+                # this is all shell=True does on unix
+                args = ['/bin/sh', '-c'] + args
+
+        try:
+            old_dir = os.getcwd()
+            os.chdir(self._cwd)
+            sys.stderr.flush()
+            sys.stdout.flush()
+            os.execvpe(args[0], args, self._env)
+        finally:
+            # avoid side effect if exec fails (or is mocked in tests)
+            os.chdir(old_dir)
 
 
 class ProjectCommand(object):
@@ -24,11 +100,11 @@ class ProjectCommand(object):
         """Get name of the command."""
         return self._name
 
-    def launch_argv_for_environment(self, environ):
-        """Get a usable argv with the executable path made absolute and prefix substituted.
+    def exec_info_for_environment(self, environ):
+        """Get a ``CommandExecInfo`` ready to be executed.
 
         Args:
-            environ (dict): the environment
+            environ (dict): the environment containing a CONDA_ENV_PATH, PATH, and PROJECT_DIR
         Returns:
             argv as list of strings
         """
@@ -37,6 +113,7 @@ class ProjectCommand(object):
                 raise ValueError("To get a runnable command for the app, %s must be set." % (name))
 
         args = None
+        shell = False
 
         # see conda.misc::launch for what we're copying
         app_entry = self._attributes.get('conda_app_entry', None)
@@ -65,4 +142,13 @@ class ProjectCommand(object):
             args[0] = os.path.abspath(executable)
         # if we didn't find args[0] on the path, we leave it as-is
         # and wait for it to fail when we later try to run it.
-        return args
+
+        # conda.misc.launch() uses the home directory
+        # instead of the project directory as cwd when
+        # running an installed package, but for our
+        # purposes where we know we have a project dir
+        # that's user-interesting, project directory seems
+        # more useful. This way apps can for example find
+        # sample data files relative to the project
+        # directory.
+        return CommandExecInfo(cwd=environ['PROJECT_DIR'], args=args, env=environ, shell=shell)

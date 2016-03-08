@@ -338,8 +338,8 @@ class Project(object):
         else:
             return cache.commands[cache.default_command_name]
 
-    def launch_argv_for_environment(self, environ):
-        """Get a usable argv with any processing and interpretation necessary to execute it.
+    def exec_info_for_environment(self, environ):
+        """Get the information needed to run the project.
 
         Args:
             environ (dict): the environment
@@ -353,4 +353,4 @@ class Project(object):
             return None
         command = self._updated_cache().commands[command_name]
 
-        return command.launch_argv_for_environment(environ)
+        return command.exec_info_for_environment(environ)
