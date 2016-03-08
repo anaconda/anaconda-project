@@ -188,7 +188,7 @@ class _ConfigCache(object):
                     copy['conda_app_entry'] = app_entry_from_meta_yaml
 
                 have_command = False
-                for attr in ('conda_app_entry', 'shell'):
+                for attr in ('conda_app_entry', 'shell', 'windows'):
                     if attr not in copy:
                         continue
 
@@ -352,7 +352,7 @@ class Project(object):
         Args:
             environ (dict): the environment
         Returns:
-            argv as list of strings, or None if no commands are configured
+            argv as list of strings, or None if no commands are configured that work on our platform
         """
         # we use ANACONDA_PROJECT_COMMAND if configured and otherwise
         # the default command

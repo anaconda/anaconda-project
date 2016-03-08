@@ -72,7 +72,11 @@ class CommandExecInfo(object):
                 # jumps through some funky hoops setting flags on
                 # the Windows API calls. We can't easily simulate
                 # that for execvpe.  Not sure what to do.
-                raise RuntimeError("Cannot exec with a shell on Windows")
+                # Probably we need to emulate exec by calling
+                # popen above and then having the parent process
+                # exit. But we need to develop that fix on Windows
+                # so we can test it.
+                raise NotImplementedError("exec on Windows is not implemented")
             else:
                 # this is all shell=True does on unix
                 args = ['/bin/sh', '-c'] + args
@@ -110,10 +114,16 @@ class ProjectCommand(object):
         args = None
         shell = False
 
-        shell_command = self._attributes.get('shell', None)
-        if shell_command is not None and not _is_windows():
-            args = [shell_command]
-            shell = True
+        if _is_windows():
+            windows_command = self._attributes.get('windows', None)
+            if windows_command is not None:
+                args = [windows_command]
+                shell = True
+        else:
+            shell_command = self._attributes.get('shell', None)
+            if shell_command is not None:
+                args = [shell_command]
+                shell = True
 
         if args is None:
             # see conda.misc::launch for what we're copying
@@ -129,9 +139,7 @@ class ProjectCommand(object):
                         arg = arg.replace('${PREFIX}', environ['CONDA_ENV_PATH'])
                     args.append(arg)
 
-        # this should have been validated when loading the project file
-        assert args is not None
-
+        # args can be None if the command doesn't work on our platform
         return (args, shell)
 
     def exec_info_for_environment(self, environ):
@@ -147,6 +155,10 @@ class ProjectCommand(object):
                 raise ValueError("To get a runnable command for the app, %s must be set." % (name))
 
         (args, shell) = self._choose_args_and_shell(environ)
+
+        if args is None:
+            # command doesn't work on our platform for example
+            return None
 
         # always look in the project directory. This is a little
         # odd because we don't add PROJECT_DIR to PATH for child

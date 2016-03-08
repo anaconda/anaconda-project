@@ -578,6 +578,36 @@ commands:
 """}, check_launch_argv)
 
 
+def test_launch_argv_from_project_file_windows(monkeypatch):
+    def check_launch_argv(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        command = project.default_command
+        command.name == 'foo'
+        command._attributes == dict(shell="foo bar ${PREFIX}")
+
+        assert 1 == len(project.commands)
+        assert 'foo' in project.commands
+        assert project.commands['foo'] is command
+
+        def mock_platform_system():
+            return 'Windows'
+
+        monkeypatch.setattr('platform.system', mock_platform_system)
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+
+        exec_info = project.exec_info_for_environment(environ)
+        assert exec_info.shell
+
+    with_directory_contents(
+        {PROJECT_FILENAME: """
+commands:
+  foo:
+    windows: foo bar %CONDA_ENV_PATH%
+"""}, check_launch_argv)
+
+
 def test_exec_info_is_none_when_no_commands():
     def check_exec_info(dirname):
         project = project_no_dedicated_env(dirname)
@@ -592,6 +622,30 @@ def test_exec_info_is_none_when_no_commands():
 
     with_directory_contents({PROJECT_FILENAME: """
 """}, check_exec_info)
+
+
+def test_exec_info_is_none_when_command_not_for_our_platform():
+    def check_exec_info(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        command = project.default_command
+        assert command is not None
+        assert command.name == 'foo'
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+
+        exec_info = project.exec_info_for_environment(environ)
+        assert exec_info is None
+
+    import platform
+    not_us = 'windows'
+    if platform.system() == 'Windows':
+        not_us = 'shell'
+    with_directory_contents({PROJECT_FILENAME: """
+commands:
+  foo:
+    %s: foo
+""" % not_us}, check_exec_info)
 
 
 def test_launch_argv_from_meta_file():

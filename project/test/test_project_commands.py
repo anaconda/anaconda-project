@@ -30,7 +30,7 @@ def test_execvpe_with_shell_on_windows(monkeypatch):
     monkeypatch.setattr('platform.system', mock_platform_system)
 
     info = CommandExecInfo(cwd='/somewhere', args=['foo', 'bar'], shell=True, env=dict(FOO='bar'))
-    with pytest.raises(RuntimeError) as excinfo:
+    with pytest.raises(NotImplementedError) as excinfo:
         info.execvpe()
 
-    assert 'Cannot exec with a shell on Windows' in repr(excinfo.value)
+    assert 'exec on Windows is not implemented' in repr(excinfo.value)
