@@ -6,7 +6,13 @@ import os
 from project.yaml_file import YamlFile
 
 LOCAL_STATE_DIRECTORY = ".anaconda"
-LOCAL_STATE_FILENAME = "project-local.yml"
+
+# these are in the order we'll use them if multiple are present
+possible_local_state_file_names = ("project-local.yml", "project-local.yaml")
+
+DEFAULT_LOCAL_STATE_FILENAME = possible_local_state_file_names[0]
+
+DEFAULT_RELATIVE_LOCAL_STATE_PATH = os.path.join(LOCAL_STATE_DIRECTORY, DEFAULT_LOCAL_STATE_FILENAME)
 
 SERVICE_RUN_STATES_SECTION = "service_run_states"
 
@@ -42,8 +48,11 @@ class LocalStateFile(YamlFile):
             a new ``LocalStateFile``
 
         """
-        path = os.path.join(directory, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME)
-        return LocalStateFile(path)
+        for name in possible_local_state_file_names:
+            path = os.path.join(directory, LOCAL_STATE_DIRECTORY, name)
+            if os.path.isfile(path):
+                return LocalStateFile(path)
+        return LocalStateFile(os.path.join(directory, DEFAULT_RELATIVE_LOCAL_STATE_PATH))
 
     def _default_comment(self):
         return "Anaconda local project state"

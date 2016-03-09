@@ -6,7 +6,7 @@ import os
 from project.test.project_utils import project_no_dedicated_env
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.test.environ_utils import minimal_environ, strip_environ
-from project.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
+from project.local_state_file import DEFAULT_RELATIVE_LOCAL_STATE_PATH
 from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
 from project.plugins.provider import ProviderConfigContext
@@ -44,7 +44,7 @@ def test_reading_valid_config():
 
     with_directory_contents(
         {
-            LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+            DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
 runtime:
   REDIS_URL:
     providers:
@@ -70,7 +70,7 @@ def _read_invalid_port_range(capsys, port_range):
 
     with_directory_contents(
         {
-            LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+            DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
 runtime:
   REDIS_URL:
     providers:
@@ -425,7 +425,7 @@ def test_fail_to_prepare_local_redis_server_scope_system(monkeypatch, capsys):
 runtime:
   REDIS_URL: {}
 """,
-         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+         DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
 runtime:
   REDIS_URL:
     providers:
@@ -454,7 +454,7 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
 runtime:
   REDIS_URL: {}
     """,
-         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+         DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
 runtime:
   REDIS_URL:
     providers:

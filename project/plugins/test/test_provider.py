@@ -6,7 +6,7 @@ import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.crypto import encrypt_string
-from project.local_state_file import LocalStateFile, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
+from project.local_state_file import LocalStateFile, DEFAULT_RELATIVE_LOCAL_STATE_PATH
 from project.plugins.provider import Provider, ProvideContext, EnvVarProvider, ProviderConfigContext
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirement import EnvVarRequirement
@@ -238,7 +238,7 @@ runtime:
   FOO:
     default: from_default
     """,
-         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+         DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
 variables:
   FOO: from_local_state
 """}, check_env_var_provider)

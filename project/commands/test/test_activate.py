@@ -6,7 +6,7 @@ from project.commands.activate import activate, main
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE
 from project.project_file import DEFAULT_PROJECT_FILENAME
-from project.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
+from project.local_state_file import DEFAULT_RELATIVE_LOCAL_STATE_PATH
 
 from project.test.project_utils import project_dir_disable_dedicated_env
 
@@ -62,7 +62,7 @@ def test_activate_quoting(monkeypatch):
 runtime:
   FOO: {}
     """,
-            LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+            DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
 variables:
   FOO: $! boo
 """
