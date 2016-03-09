@@ -8,7 +8,7 @@ import os
 from project.commands.launch import launch_command, main
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE
-from project.project_file import PROJECT_FILENAME
+from project.project_file import DEFAULT_PROJECT_FILENAME
 
 from project.test.project_utils import project_dir_disable_dedicated_env
 
@@ -50,7 +50,7 @@ def test_launch_command(monkeypatch):
         assert 'bar' == executed['env']['FOO']
 
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO: {}
 
@@ -67,7 +67,7 @@ def test_launch_command_no_app_entry(capsys):
         result = launch_command(dirname, UI_MODE_NOT_INTERACTIVE)
         assert result is None
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 
 """}, check_launch_no_app_entry)
 
@@ -82,7 +82,7 @@ def test_launch_command_failed_prepare(capsys):
         result = launch_command(dirname, UI_MODE_NOT_INTERACTIVE)
         assert result is None
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   - WILL_NOT_BE_SET
 """}, check_launch_failed_prepare)
@@ -116,7 +116,7 @@ def test_main(monkeypatch, capsys):
 
     with pytest.raises(SystemExit) as excinfo:
         with_directory_contents(
-            {PROJECT_FILENAME: """
+            {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
@@ -145,7 +145,7 @@ def test_main_failed_exec(monkeypatch, capsys):
 
     with pytest.raises(SystemExit) as excinfo:
         with_directory_contents(
-            {PROJECT_FILENAME: """
+            {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
@@ -194,7 +194,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
 
     with pytest.raises(SystemExit) as excinfo:
         with_directory_contents(
-            {PROJECT_FILENAME: """
+            {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version

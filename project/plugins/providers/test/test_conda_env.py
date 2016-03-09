@@ -7,7 +7,7 @@ from project.test.environ_utils import (minimal_environ, minimal_environ_no_cond
 from project.internal.test.http_utils import http_get_async, http_post_async
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import prepare, UI_MODE_BROWSER
-from project.project_file import PROJECT_FILENAME
+from project.project_file import DEFAULT_PROJECT_FILENAME
 from project.project import Project
 from project.plugins.registry import PluginRegistry
 from project.plugins.providers.conda_env import CondaEnvProvider
@@ -55,7 +55,7 @@ def test_prepare_project_scoped_env():
                     PATH=expected_new_path) == result.environ
         assert conda_meta_mtime == os.path.getmtime(os.path.join(expected_env, "conda-meta"))
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   CONDA_ENV_PATH: {}
 """}, prepare_project_scoped_env)
@@ -73,7 +73,7 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
         result = prepare(project, environ=environ)
         assert not result
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   CONDA_ENV_PATH: {}
 """}, prepare_project_scoped_env_fails)
@@ -116,7 +116,8 @@ def test_prepare_project_scoped_env_with_packages():
         result = prepare(project, environ=environ)
         assert not result
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
 dependencies:
     - ipython
     - numpy
@@ -234,7 +235,7 @@ def _verify_choices(response, expected):
 
 
 def test_browser_ui_with_default_env_and_no_env_var_set(monkeypatch):
-    directory_contents = {PROJECT_FILENAME: ""}
+    directory_contents = {DEFAULT_PROJECT_FILENAME: ""}
     initial_environ = minimal_environ_no_conda_env()
 
     @gen.coroutine
@@ -277,7 +278,7 @@ def test_browser_ui_with_default_env_and_no_env_var_set(monkeypatch):
 
 
 def test_browser_ui_with_default_env_and_env_var_set(monkeypatch):
-    directory_contents = {PROJECT_FILENAME: ""}
+    directory_contents = {DEFAULT_PROJECT_FILENAME: ""}
     initial_environ = minimal_environ(CONDA_ENV_PATH='/not/a/real/environment')
 
     stuff = dict()
@@ -325,7 +326,7 @@ def test_browser_ui_with_default_env_and_env_var_set(monkeypatch):
 
 
 def test_browser_ui_with_default_env_and_env_var_set_to_default_already(monkeypatch):
-    directory_contents = {PROJECT_FILENAME: ""}
+    directory_contents = {DEFAULT_PROJECT_FILENAME: ""}
 
     def initial_environ(dirname):
         default_env_path = os.path.join(dirname, ".envs/default")
@@ -374,7 +375,7 @@ def test_browser_ui_with_default_env_and_env_var_set_to_default_already(monkeypa
 
 
 def test_browser_ui_keeping_env_var_set(monkeypatch):
-    directory_contents = {PROJECT_FILENAME: ""}
+    directory_contents = {DEFAULT_PROJECT_FILENAME: ""}
     initial_environ = minimal_environ(CONDA_ENV_PATH='/not/a/real/environment')
 
     stuff = dict()
@@ -424,7 +425,7 @@ def test_browser_ui_keeping_env_var_set(monkeypatch):
 
 
 def test_browser_ui_ignores_default_in_project_file(monkeypatch):
-    directory_contents = {PROJECT_FILENAME: """
+    directory_contents = {DEFAULT_PROJECT_FILENAME: """
 runtime:
   CONDA_ENV_PATH: { default: "/something" }
 """}
@@ -470,7 +471,7 @@ runtime:
 
 
 def test_browser_ui_two_envs_defaulting_to_first(monkeypatch):
-    directory_contents = {PROJECT_FILENAME: """
+    directory_contents = {DEFAULT_PROJECT_FILENAME: """
 environments:
   first_env: {}
   second_env:
@@ -519,7 +520,7 @@ environments:
 
 
 def test_browser_ui_two_envs_choosing_second(monkeypatch):
-    directory_contents = {PROJECT_FILENAME: """
+    directory_contents = {DEFAULT_PROJECT_FILENAME: """
 environments:
   first_env:
     dependencies:

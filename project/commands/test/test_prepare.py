@@ -5,7 +5,7 @@ import pytest
 from project.commands.prepare import prepare_command, main
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE, UI_MODE_BROWSER
-from project.project_file import PROJECT_FILENAME
+from project.project_file import DEFAULT_PROJECT_FILENAME
 
 from project.test.project_utils import project_dir_disable_dedicated_env
 
@@ -41,7 +41,7 @@ def test_prepare_command(monkeypatch):
         assert can_connect_args['port'] == 6379
         assert result
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
 """}, prepare_redis_url)
@@ -76,7 +76,7 @@ def test_main(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         main(Args(project_dir=dirname))
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
 """}, main_redis_url)
@@ -105,7 +105,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         main(Args(project_dir=dirname))
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
 """}, main_redis_url)
@@ -148,7 +148,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
         main(Args(project_dir=dirname))
 
     with pytest.raises(SystemExit) as excinfo:
-        with_directory_contents({PROJECT_FILENAME: """
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
 """}, main_redis_url)
