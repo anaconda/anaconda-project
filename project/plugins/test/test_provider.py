@@ -6,12 +6,12 @@ import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.crypto import encrypt_string
-from project.local_state_file import LocalStateFile, LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
+from project.local_state_file import LocalStateFile, DEFAULT_RELATIVE_LOCAL_STATE_PATH
 from project.plugins.provider import Provider, ProvideContext, EnvVarProvider, ProviderConfigContext
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirement import EnvVarRequirement
 from project.project import Project
-from project.project_file import ProjectFile, PROJECT_FILENAME
+from project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME
 
 
 def test_find_provider_by_class_name():
@@ -66,7 +66,7 @@ def test_env_var_provider_with_no_value():
         provider.provide(requirement, context=context)
         assert 'FOO' not in context.environ
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   - FOO
 """}, check_env_var_provider)
@@ -86,7 +86,7 @@ def test_env_var_provider_with_default_value_in_project_file():
         assert 'from_default' == context.environ['FOO']
 
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO:
     default: from_default
@@ -189,7 +189,7 @@ def test_env_var_provider_with_unencrypted_default_value_in_project_file_for_enc
         assert 'from_default' == context.environ['FOO_SECRET']
 
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO_SECRET:
     default: from_default
@@ -211,7 +211,7 @@ def test_env_var_provider_with_value_set_in_environment():
 
     # set a default to be sure we prefer 'environ' instead
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO:
     default: from_default
@@ -233,12 +233,12 @@ def test_env_var_provider_with_value_set_in_local_state():
         assert 'from_local_state' == context.environ['FOO']
 
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO:
     default: from_default
     """,
-         LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+         DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
 variables:
   FOO: from_local_state
 """}, check_env_var_provider)
@@ -271,7 +271,7 @@ def test_env_var_provider_with_encrypted_default_value_in_local_state():
         assert 'from_local_state' == context.environ['FOO_SECRET']
 
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO_SECRET:
     default: from_default
@@ -292,7 +292,7 @@ def test_env_var_provider_with_missing_encrypted_field_in_project_file():
         assert ["No 'encrypted' field in the value of FOO"] == context.errors
 
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO:
     default: { key: 'MASTER_PASSWORD' }
@@ -313,7 +313,7 @@ def test_env_var_provider_with_missing_key_field_in_project_file():
         assert "Value of 'FOO' should be a string" in context.errors[0]
 
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO:
     default: { encrypted: 'abcdefg' }
@@ -333,7 +333,7 @@ def test_env_var_provider_with_list_valued_default_project_file():
         assert 1 == len(context.errors)
         assert "Value of 'FOO' should be a string" in context.errors[0]
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO:
     default: []
@@ -355,7 +355,7 @@ def test_env_var_provider_with_number_valued_default_project_file():
         assert context.environ['FOO'] == "42"
         assert isinstance(context.environ['FOO'], str)
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO:
     default: 42
@@ -391,7 +391,7 @@ def test_env_var_provider_configure_local_state_value():
         local_state_file_3 = LocalStateFile.load_for_directory(dirname)
         assert local_state_file_3.get_value(['variables', 'FOO']) is None
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   - FOO
 """}, check_env_var_provider_config_local_state)
@@ -419,7 +419,7 @@ def test_env_var_provider_configure_disabled_local_state_value():
         config = provider.read_config(config_context)
         assert config == dict(source='unset', value='bar')
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   - FOO
 """}, check_env_var_provider_config_disabled_local_state)
@@ -463,7 +463,7 @@ def test_env_var_provider_config_html():
         assert 'Use this value instead:' in html
 
     # set a default to be sure we prefer 'environ' instead
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   - FOO
 """}, check_env_var_provider_config)
