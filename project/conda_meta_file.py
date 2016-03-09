@@ -8,9 +8,12 @@ from project.project_meta_common import _ProjectMetaCommon
 
 META_DIRECTORY = "conda.recipe"
 
-# hmm. this one uses .yaml and our others use .yml,
-# as does environment.yml
-META_FILENAME = "meta.yaml"
+# here we don't support .yml because conda build doesn't either
+possible_meta_file_names = ('meta.yaml', 'conda.yaml')
+
+DEFAULT_META_FILENAME = possible_meta_file_names[0]
+
+DEFAULT_RELATIVE_META_PATH = os.path.join(META_DIRECTORY, DEFAULT_META_FILENAME)
 
 
 class CondaMetaFile(YamlFile, _ProjectMetaCommon):
@@ -41,8 +44,11 @@ class CondaMetaFile(YamlFile, _ProjectMetaCommon):
             a new ``MetaFile``
 
         """
-        path = os.path.join(directory, META_DIRECTORY, META_FILENAME)
-        return CondaMetaFile(path)
+        for name in possible_meta_file_names:
+            path = os.path.join(directory, META_DIRECTORY, name)
+            if os.path.isfile(path):
+                return CondaMetaFile(path)
+        return CondaMetaFile(os.path.join(directory, DEFAULT_RELATIVE_META_PATH))
 
     def _default_comment(self):
         return "Conda meta.yaml file"

@@ -6,8 +6,10 @@ import os
 from project.yaml_file import YamlFile
 from project.project_meta_common import _ProjectMetaCommon
 
-# use .yml not .yaml to make Windows happy
-PROJECT_FILENAME = "project.yml"
+# these are in the order we'll use them if multiple are present
+possible_project_file_names = ("project.yml", "project.yaml")
+
+DEFAULT_PROJECT_FILENAME = possible_project_file_names[0]
 
 
 class ProjectFile(YamlFile, _ProjectMetaCommon):
@@ -46,8 +48,11 @@ class ProjectFile(YamlFile, _ProjectMetaCommon):
             a new ``ProjectFile``
 
         """
-        path = os.path.join(directory, PROJECT_FILENAME)
-        return ProjectFile(path)
+        for name in possible_project_file_names:
+            path = os.path.join(directory, name)
+            if os.path.isfile(path):
+                return ProjectFile(path)
+        return ProjectFile(os.path.join(directory, DEFAULT_PROJECT_FILENAME))
 
     def __init__(self, filename):
         """Construct a ``ProjectFile`` with the given filename and requirement registry.

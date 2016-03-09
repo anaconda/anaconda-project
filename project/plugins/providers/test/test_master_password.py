@@ -5,7 +5,7 @@ from project.local_state_file import LocalStateFile
 from project.plugins.provider import ProvideContext, ProviderConfigContext
 from project.plugins.registry import PluginRegistry
 from project.project import Project
-from project.project_file import PROJECT_FILENAME
+from project.project_file import DEFAULT_PROJECT_FILENAME
 from project.plugins.requirements.master_password import MasterPasswordRequirement
 from project.plugins.providers.master_password import MasterPasswordProvider
 
@@ -40,7 +40,7 @@ def test_master_password_provider_with_value_not_set():
         provider.provide(requirement, context=context)
         assert 'ANACONDA_MASTER_PASSWORD' not in context.environ
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   ANACONDA_MASTER_PASSWORD: {}
 """}, check_not_set)
@@ -63,7 +63,7 @@ def test_master_password_provider_with_value_set_in_environment():
 
     # set a default to be sure we prefer 'environ' instead
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   ANACONDA_MASTER_PASSWORD: { default: 'from_default' }
 """}, check_set_in_environment)
@@ -91,7 +91,7 @@ def test_master_password_provider_with_value_set_in_keyring():
 
     # set a default to be sure we prefer keyring
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   ANACONDA_MASTER_PASSWORD: { default: 'from_default' }
 """}, check_set_in_keyring)
@@ -114,7 +114,7 @@ def test_master_password_provider_with_value_set_in_default():
 
     # set a default to be sure we prefer keyring
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   ANACONDA_MASTER_PASSWORD: { default: 'from_default' }
 """}, check_set_in_default)
@@ -137,7 +137,7 @@ def test_master_password_provider_with_list_set_in_default():
 
     # set a default to be sure we prefer keyring
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   ANACONDA_MASTER_PASSWORD: { default: [] }
 """}, check_list_set_in_default)
@@ -166,7 +166,7 @@ def test_master_password_provider_saves_config_in_keyring():
 
     # set a default to be sure we prefer keyring we configure
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   ANACONDA_MASTER_PASSWORD: { default: 'from_default' }
 """}, check_configure_via_keyring)

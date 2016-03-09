@@ -12,7 +12,7 @@ from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.crypto import decrypt_string
 from project.prepare import (prepare, unprepare, UI_MODE_BROWSER, prepare_in_stages, PrepareSuccess, PrepareFailure,
                              _after_stage_success, _FunctionPrepareStage)
-from project.project_file import PROJECT_FILENAME
+from project.project_file import DEFAULT_PROJECT_FILENAME
 from project.local_state_file import LocalStateFile
 
 
@@ -72,7 +72,7 @@ def test_prepare_some_env_var_already_set():
         assert dict(FOO='bar', PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict(FOO='bar') == strip_environ(environ)
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO: {}
 """}, prepare_some_env_var)
@@ -86,7 +86,7 @@ def test_prepare_some_env_var_not_set():
         assert not result
         assert dict(BAR='bar') == strip_environ(environ)
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO: {}
 """}, prepare_some_env_var)
@@ -104,7 +104,7 @@ def test_prepare_some_env_var_not_set_keep_going():
             stage = next_stage
         assert dict(BAR='bar') == strip_environ(environ)
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO: {}
 """}, prepare_some_env_var_keep_going)
@@ -130,7 +130,7 @@ def test_prepare_with_app_entry():
         assert err.decode() == ""
 
     with_directory_contents(
-        {PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO: {}
 
@@ -156,7 +156,7 @@ def test_update_environ():
         result.update_environ(other)
         assert dict(FOO='bar', BAR='baz', PROJECT_DIR=dirname) == strip_environ(other)
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO: {}
 """}, prepare_then_update_environ)
@@ -293,7 +293,7 @@ def test_prepare_with_browser(monkeypatch):
         assert 200 == http_results['get'].code
         assert 200 == http_results['post'].code
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO: {}
 """}, prepare_with_browser)
@@ -400,7 +400,7 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
         # now a no-browser prepare() should read password from the
         # local state file
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO_PASSWORD: {}
 """}, prepare_with_browser)

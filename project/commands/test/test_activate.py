@@ -5,8 +5,8 @@ import pytest
 from project.commands.activate import activate, main
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE
-from project.project_file import PROJECT_FILENAME
-from project.local_state_file import LOCAL_STATE_DIRECTORY, LOCAL_STATE_FILENAME
+from project.project_file import DEFAULT_PROJECT_FILENAME
+from project.local_state_file import DEFAULT_RELATIVE_LOCAL_STATE_PATH
 
 from project.test.project_utils import project_dir_disable_dedicated_env
 
@@ -43,7 +43,7 @@ def test_activate(monkeypatch):
         assert result is not None
         assert ['export PROJECT_DIR=' + dirname, 'export REDIS_URL=redis://localhost:6379'] == result
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
     """}, activate_redis_url)
@@ -58,11 +58,11 @@ def test_activate_quoting(monkeypatch):
 
     with_directory_contents(
         {
-            PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO: {}
     """,
-            LOCAL_STATE_DIRECTORY + "/" + LOCAL_STATE_FILENAME: """
+            DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
 variables:
   FOO: $! boo
 """
@@ -76,7 +76,7 @@ def test_main(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         main(Args(project_dir=dirname))
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
 """}, main_redis_url)
@@ -105,7 +105,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         main(Args(project_dir=dirname))
 
-    with_directory_contents({PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
 """}, main_redis_url)
@@ -136,7 +136,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
         main(Args(project_dir=dirname))
 
     with pytest.raises(SystemExit) as excinfo:
-        with_directory_contents({PROJECT_FILENAME: """
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
 """}, main_redis_url)
