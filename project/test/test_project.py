@@ -14,7 +14,7 @@ from project.plugins.registry import PluginRegistry
 from project.plugins.requirement import EnvVarRequirement
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 from project.project_file import DEFAULT_PROJECT_FILENAME
-from project.conda_meta_file import META_DIRECTORY, META_FILENAME
+from project.conda_meta_file import DEFAULT_RELATIVE_META_PATH
 
 
 def test_properties():
@@ -104,7 +104,7 @@ def test_get_name_and_version_from_conda_meta_yaml():
 
     with_directory_contents(
         {
-            META_DIRECTORY + "/" + META_FILENAME: """
+            DEFAULT_RELATIVE_META_PATH: """
 package:
   name: foo
   version: 1.2.3
@@ -127,7 +127,7 @@ package:
   name: foo
   version: 1.2.3
     """,
-         META_DIRECTORY + "/" + META_FILENAME: """
+         DEFAULT_RELATIVE_META_PATH: """
 package:
   name: from_meta
   version: 1.2.3meta
@@ -428,7 +428,7 @@ def test_corrupted_project_file_and_meta_file():
 runtime:
   FOO
 """,
-         META_DIRECTORY + "/" + META_FILENAME: """
+         DEFAULT_RELATIVE_META_PATH: """
 ^
 package:
   name: foo
@@ -444,7 +444,7 @@ def test_non_dict_meta_yaml_app_entry():
         expected_error = "%s: app: entry: should be a string not '%r'" % (project.conda_meta_file.filename, 42)
         assert expected_error == project.problems[0]
 
-    with_directory_contents({META_DIRECTORY + "/" + META_FILENAME: "app:\n  entry: 42\n"}, check_app_entry)
+    with_directory_contents({DEFAULT_RELATIVE_META_PATH: "app:\n  entry: 42\n"}, check_app_entry)
 
 
 def test_non_dict_commands_section():
@@ -550,8 +550,7 @@ def test_launch_argv_from_meta_file():
         command.name == 'default'
         command._attributes == dict(conda_app_entry="foo bar ${PREFIX}")
 
-    with_directory_contents(
-        {META_DIRECTORY + "/" + META_FILENAME: """
+    with_directory_contents({DEFAULT_RELATIVE_META_PATH: """
 app:
   entry: foo bar ${PREFIX}
 """}, check_launch_argv)
@@ -571,7 +570,7 @@ def test_launch_argv_from_meta_file_with_name_in_project_file():
 commands:
   foo: {}
 """,
-            META_DIRECTORY + "/" + META_FILENAME: """
+            DEFAULT_RELATIVE_META_PATH: """
 app:
   entry: foo bar ${PREFIX}
 """
