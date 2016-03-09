@@ -46,3 +46,20 @@ class CondaMetaFile(YamlFile, _ProjectMetaCommon):
 
     def _default_comment(self):
         return "Conda meta.yaml file"
+
+    @property
+    def app_entry(self):
+        """Get the command to run the app, as a string.
+
+        This is under "app: entry: command" in meta.yaml.
+
+        Conda parses this by splitting on whitespace, then
+        replacing the string "${PREFIX}" inside each arg with the
+        environment prefix, then replacing "argv[0]" with the full
+        path. See conda/misc.py::launch().
+
+        Returns:
+            None if not found
+
+        """
+        return self.get_value(['app', 'entry'], default=None)

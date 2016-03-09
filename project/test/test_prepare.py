@@ -134,8 +134,9 @@ def test_prepare_with_app_entry():
 runtime:
   FOO: {}
 
-app:
-  entry: echo.py ${PREFIX} foo bar
+commands:
+  default:
+    conda_app_entry: echo.py ${PREFIX} foo bar
 """,
          "echo.py": """#!/usr/bin/env python
 from __future__ import print_function

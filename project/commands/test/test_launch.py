@@ -54,8 +54,9 @@ def test_launch_command(monkeypatch):
 runtime:
   FOO: {}
 
-app:
-  entry: python --version
+commands:
+  default:
+    conda_app_entry: python --version
 
 """}, check_launch)
 
@@ -114,9 +115,11 @@ def test_main(monkeypatch, capsys):
         assert '--version' == executed['args'][1]
 
     with pytest.raises(SystemExit) as excinfo:
-        with_directory_contents({PROJECT_FILENAME: """
-app:
-  entry: python --version
+        with_directory_contents(
+            {PROJECT_FILENAME: """
+commands:
+  default:
+    conda_app_entry: python --version
 
 """}, check_launch_main)
 
@@ -141,9 +144,11 @@ def test_main_failed_exec(monkeypatch, capsys):
         assert result is None
 
     with pytest.raises(SystemExit) as excinfo:
-        with_directory_contents({PROJECT_FILENAME: """
-app:
-  entry: python --version
+        with_directory_contents(
+            {PROJECT_FILENAME: """
+commands:
+  default:
+    conda_app_entry: python --version
 
 """}, check_launch_main)
 
@@ -188,9 +193,11 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         assert '--version' == executed['args'][1]
 
     with pytest.raises(SystemExit) as excinfo:
-        with_directory_contents({PROJECT_FILENAME: """
-app:
-  entry: python --version
+        with_directory_contents(
+            {PROJECT_FILENAME: """
+commands:
+  default:
+    conda_app_entry: python --version
 
 """}, check_launch_main)
 

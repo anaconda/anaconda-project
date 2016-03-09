@@ -447,7 +447,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 return None
         else:
             exec_info = None
-            if project.launch_argv is not None:
+            if project.default_command is not None:
                 argv = project.launch_argv_for_environment(environ)
                 # conda.misc.launch() uses the home directory
                 # instead of the project directory as cwd when
