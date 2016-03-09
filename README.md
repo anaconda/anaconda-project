@@ -63,8 +63,10 @@ sync: http://conda.pydata.org/docs/building/meta-yaml.html
   here instead, if you either don't have a conda recipe or
   want to override it for Anaconda Project purposes.
   Fields we look at right now: `name`, `version`
-* `app`: the `entry` field means the same thing as in `meta.yaml`,
-  we use it from either file.
+* `commands`: A dictionary from command names to command
+  attributes, where the attributes can be `conda_app_entry` (same
+  as app:entry: in meta.yaml), `shell` (shell command line),
+  `windows` (windows cmd.exe command line).
 * `requirements`: the `run` requirements can be in here or in `meta.yaml`
 
 # `project-local.yml` Schema
