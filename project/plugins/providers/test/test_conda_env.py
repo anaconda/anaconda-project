@@ -62,7 +62,7 @@ runtime:
 
 
 def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
-    def mock_create(prefix, pkgs):
+    def mock_create(prefix, pkgs, channels):
         raise conda_api.CondaError("error_from_conda_create")
 
     monkeypatch.setattr('project.internal.conda_api.create', mock_create)
@@ -128,7 +128,7 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
     from tornado.ioloop import IOLoop
     io_loop = IOLoop()
 
-    def mock_conda_create(prefix, pkgs):
+    def mock_conda_create(prefix, pkgs, channels):
         from project.internal.makedirs import makedirs_ok_if_exists
         metadir = os.path.join(prefix, "conda-meta")
         makedirs_ok_if_exists(metadir)

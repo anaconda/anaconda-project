@@ -88,37 +88,46 @@ class _ConfigCache(object):
                     runtime=runtime))
 
     def _update_conda_environments(self, problems, project_file):
-        def _parse_dependencies(deps):
-            if not isinstance(deps, (list, tuple)):
-                problems.append("%s: dependencies: value should be a list of package names, not '%r'" %
-                                (project_file.filename, deps))
+        def _parse_string_list(parent_dict, key, what):
+            items = parent_dict.get(key, [])
+            if not isinstance(items, (list, tuple)):
+                problems.append("%s: %s: value should be a list of %ss, not '%r'" %
+                                (project_file.filename, key, what, items))
                 return []
             cleaned = []
-            for dep in deps:
-                if isinstance(dep, str):
-                    cleaned.append(dep.strip())
+            for item in items:
+                if isinstance(item, str):
+                    cleaned.append(item.strip())
                 else:
-                    problems.append("%s: dependencies: value should be a package name (as a string) not '%r'" %
-                                    (project_file.filename, dep))
+                    problems.append("%s: %s: value should be a %s (as a string) not '%r'" %
+                                    (project_file.filename, key, what, item))
             return cleaned
 
+        def _parse_channels(parent_dict):
+            return _parse_string_list(parent_dict, 'channels', 'channel name')
+
+        def _parse_dependencies(parent_dict):
+            return _parse_string_list(parent_dict, 'dependencies', 'package name')
+
         self.conda_environments = dict()
-        shared_deps = _parse_dependencies(project_file.get_value('dependencies', default=[]))
+        shared_deps = _parse_dependencies(project_file.root)
+        shared_channels = _parse_channels(project_file.root)
         environments = project_file.get_value('environments', default={})
         first_listed_name = None
         if isinstance(environments, dict):
             for (name, attrs) in environments.items():
                 if first_listed_name is None:
                     first_listed_name = name
-                if 'dependencies' in attrs:
-                    deps = _parse_dependencies(attrs.get('dependencies'))
-                else:
-                    deps = []
+                deps = _parse_dependencies(attrs)
+                channels = _parse_channels(attrs)
                 # ideally we would merge same-name packages here, choosing the
                 # highest of the two versions or something. maybe conda will
                 # do that for us anyway?
                 all_deps = shared_deps + deps
-                self.conda_environments[name] = CondaEnvironment(name=name, dependencies=all_deps)
+                all_channels = shared_channels + channels
+                self.conda_environments[name] = CondaEnvironment(name=name,
+                                                                 dependencies=all_deps,
+                                                                 channels=all_channels)
         else:
             problems.append(
                 "%s: environments should be a dictionary from environment name to environment attributes, not %r" %
@@ -128,7 +137,9 @@ class _ConfigCache(object):
         # environment; it doesn't have to be named 'default' but
         # we name it that if no named environment was created.
         if len(self.conda_environments) == 0:
-            self.conda_environments['default'] = CondaEnvironment(name='default', dependencies=shared_deps)
+            self.conda_environments['default'] = CondaEnvironment(name='default',
+                                                                  dependencies=shared_deps,
+                                                                  channels=shared_channels)
 
         if 'default' in self.conda_environments:
             self.default_conda_environment_name = 'default'

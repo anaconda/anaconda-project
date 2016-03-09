@@ -139,6 +139,22 @@ def test_conda_invoke_zero_returncode_with_invalid_json(monkeypatch, capsys):
     with_directory_contents(dict(), do_test)
 
 
+def test_conda_create_gets_channels(monkeypatch):
+    def mock_call_conda(extra_args):
+        assert ['create', '--yes', '--quiet', '--prefix', '/prefix', '--channel', 'foo', 'python'] == extra_args
+
+    monkeypatch.setattr('project.internal.conda_api._call_conda', mock_call_conda)
+    conda_api.create(prefix='/prefix', pkgs=['python'], channels=['foo'])
+
+
+def test_conda_install_gets_channels(monkeypatch):
+    def mock_call_conda(extra_args):
+        assert ['install', '--yes', '--quiet', '--prefix', '/prefix', '--channel', 'foo', 'python'] == extra_args
+
+    monkeypatch.setattr('project.internal.conda_api._call_conda', mock_call_conda)
+    conda_api.install(prefix='/prefix', pkgs=['python'], channels=['foo'])
+
+
 def test_resolve_root_prefix():
     prefix = conda_api.resolve_env_to_prefix('root')
     assert prefix is not None

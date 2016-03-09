@@ -164,6 +164,7 @@ def test_get_package_requirements_from_project_file():
         env = project.conda_environments['default']
         assert env.name == 'default'
         assert ("foo", "hello >= 1.0", "world") == env.dependencies
+        assert ("mtv", "hbo") == env.channels
         assert set(["foo", "hello", "world"]) == env.conda_package_names_set
 
         # find CondaEnvRequirement
@@ -182,6 +183,10 @@ dependencies:
   - foo
   - hello >= 1.0
   - world
+
+channels:
+  - mtv
+  - hbo
     """}, check_get_packages)
 
 
@@ -268,12 +273,17 @@ def test_load_environments_merging_in_global():
         bar = project.conda_environments['bar']
         assert foo.dependencies == ('dead-parrot', 'elephant', 'python', 'dog', 'cat', 'zebra')
         assert bar.dependencies == ('dead-parrot', 'elephant')
+        assert foo.channels == ('mtv', 'hbo')
+        assert bar.channels == ('mtv', )
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 dependencies:
   - dead-parrot
   - elephant
+
+channels:
+  - mtv
 
 environments:
   foo:
@@ -282,6 +292,8 @@ environments:
        - dog
        - cat
        - zebra
+    channels:
+       - hbo
   bar: {}
     """}, check_environments)
 
