@@ -10,7 +10,7 @@ import hashlib
 
 
 class FileDownloader(object):
-    def __init__(self, url, filename, hash_algorithm):
+    def __init__(self, url, filename, hash_algorithm=None):
         """Downloader for the given url to the given filename, computing the given hash.
 
         hash_algorithm is the name of a hash function in hashlib
@@ -34,7 +34,8 @@ class FileDownloader(object):
             self._errors.append("Could not create directory '%s': %s" % (dirname, e))
             raise gen.Return(None)
 
-        hasher = getattr(hashlib, self._hash_algorithm)()
+        if self._hash_algorithm is not None:
+            hasher = getattr(hashlib, self._hash_algorithm)()
         self._client = httpclient.AsyncHTTPClient(
             io_loop=io_loop,
             max_clients=1,
@@ -47,14 +48,14 @@ class FileDownloader(object):
 
         tmp_filename = self._filename + ".part"
         try:
-            file = open(tmp_filename, 'wb')
+            _file = open(tmp_filename, 'wb')
         except EnvironmentError as e:
             self._errors.append("Failed to open %s: %s" % (tmp_filename, e))
             raise gen.Return(None)
 
         def cleanup_tmp():
             try:
-                file.close()
+                _file.close()
                 # future: we could save it in order to try
                 # resuming a failed download midstream, but
                 # pointless until the download code above
@@ -66,9 +67,12 @@ class FileDownloader(object):
         def writer(chunk):
             if len(self._errors) > 0:
                 return
-            hasher.update(chunk)
+
+            if self._hash_algorithm is not None:
+                hasher.update(chunk)
+
             try:
-                file.write(chunk)
+                _file.write(chunk)
             except EnvironmentError as e:
                 # we can't actually throw this error or Tornado freaks out, so instead
                 # we ignore all future chunks once we have an error, which does mean
@@ -91,12 +95,12 @@ class FileDownloader(object):
 
             if len(self._errors) == 0:
                 try:
-                    file.close()  # be sure tmp_filename is flushed
+                    _file.close()  # be sure tmp_filename is flushed
                     os.rename(tmp_filename, self._filename)
                 except EnvironmentError as e:
                     self._errors.append("Failed to rename %s to %s: %s" % (tmp_filename, self._filename, str(e)))
 
-            if len(self._errors) == 0:
+            if len(self._errors) == 0 and self._hash_algorithm is not None:
                 self._hash = hasher.hexdigest()
 
             raise gen.Return(response)

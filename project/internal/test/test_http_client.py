@@ -19,8 +19,9 @@ def _download_file(length, hash_algorithm):
             assert [] == download.errors
             assert response is not None
             assert response.code == 200
-            server_hash = server.server_computed_hash_for_downloaded_url(url)
-            assert download.hash == server_hash
+            if hash_algorithm:
+                server_hash = server.server_computed_hash_for_downloaded_url(url)
+                assert download.hash == server_hash
             statinfo = os.stat(filename)
             assert statinfo.st_size == length
             assert not os.path.isfile(filename + ".part")
@@ -34,6 +35,10 @@ def test_download_empty_file_md5():
 
 def test_download_small_file_md5():
     _download_file(1024, 'md5')
+
+
+def test_download_small_file_hashless():
+    _download_file(1024, None)
 
 
 def test_download_medium_file_md5():

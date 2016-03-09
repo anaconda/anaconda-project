@@ -17,12 +17,12 @@ class _DownloadView(RequestHandler):
     @gen.coroutine
     def get(self, *args, **kwargs):
         download_id = self.get_argument("id")
-        hash_algorithm = self.get_argument("hash_algorithm")
+        hash_algorithm = self.get_argument("hash_algorithm", None)
         length = int(self.get_argument("length"))
 
         print("Planning to send %d bytes" % length)
-
-        hasher = getattr(hashlib, hash_algorithm)()
+        if hash_algorithm:
+            hasher = getattr(hashlib, hash_algorithm)()
 
         self.set_status(200)
         self.set_header('Content-Length', str(length))
@@ -30,16 +30,17 @@ class _DownloadView(RequestHandler):
         remaining = length
         while remaining > 0:
             to_write = data[:remaining]
-            hasher.update(to_write)
+            if hash_algorithm:
+                hasher.update(to_write)
             remaining = remaining - len(to_write)
             self.write(to_write)
             try:
                 yield self.flush()
             except Exception as e:
-                print("Flush failed with %d remaining and %d written" % (remaining, length - remaining))
                 raise e
 
-        self.application.hashes[download_id] = hasher.hexdigest()
+        if hash_algorithm:
+            self.application.hashes[download_id] = hasher.hexdigest()
 
         self.finish()
 
@@ -98,8 +99,10 @@ class _TestServer(object):
         return self.url + "error"
 
     def new_download_url(self, download_length, hash_algorithm):
-        return (self.url + "download?id=" + str(uuid.uuid4()) + "&length=" + str(download_length) + "&hash_algorithm=" +
-                hash_algorithm)
+        url = (self.url + "download?id=" + str(uuid.uuid4()) + "&length=" + str(download_length))
+        if hash_algorithm:
+            url += "&hash_algorithm=" + hash_algorithm
+        return url
 
     def server_computed_hash_for_downloaded_url(self, download_url):
         i = download_url.index("id=")
