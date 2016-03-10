@@ -1,9 +1,95 @@
 """Class representing a command from the project file."""
 from __future__ import absolute_import
 
+from copy import copy
 from distutils.spawn import find_executable
 
 import os
+import platform
+import sys
+
+
+def _is_windows():
+    # it's tempting to cache this but it hoses our test monkeypatching so don't.
+    # or at least be aware you'll have to fix tests...
+    return (platform.system() == 'Windows')
+
+
+class CommandExecInfo(object):
+    """Class describing an executable command."""
+
+    def __init__(self, cwd, args, shell, env):
+        """Construct a CommandExecInfo."""
+        self._cwd = cwd
+        self._args = args
+        self._shell = shell
+        self._env = env
+
+    @property
+    def cwd(self):
+        """Working directory to run the command in."""
+        return self._cwd
+
+    @property
+    def args(self):
+        """Command line argument vector to run the command."""
+        return self._args
+
+    @property
+    def shell(self):
+        """Whether the command should be run with shell=True."""
+        return self._shell
+
+    @property
+    def env(self):
+        """Environment to run the command in."""
+        return self._env
+
+    def popen(self, **kwargs):
+        """Convenience method runs the command using Popen.
+
+        Args:
+            kwargs: passed through to Popen
+
+        Returns:
+            Popen instance
+        """
+        import subprocess
+
+        return subprocess.Popen(args=self._args, env=self._env, cwd=self._cwd, shell=self._shell, **kwargs)
+
+    def execvpe(self):
+        """Convenience method exec's the command replacing the current process.
+
+        Returns:
+            Does not return. May raise an OSError though.
+        """
+        args = copy(self._args)
+        if self._shell:
+            if _is_windows():
+                # The issue here is that in Lib/subprocess.py in
+                # the Python distribution, if shell=True the code
+                # jumps through some funky hoops setting flags on
+                # the Windows API calls. We can't easily simulate
+                # that for execvpe.  Not sure what to do.
+                # Probably we need to emulate exec by calling
+                # popen above and then having the parent process
+                # exit. But we need to develop that fix on Windows
+                # so we can test it.
+                raise NotImplementedError("exec on Windows is not implemented")
+            else:
+                # this is all shell=True does on unix
+                args = ['/bin/sh', '-c'] + args
+
+        try:
+            old_dir = os.getcwd()
+            os.chdir(self._cwd)
+            sys.stderr.flush()
+            sys.stdout.flush()
+            os.execvpe(args[0], args, self._env)
+        finally:
+            # avoid side effect if exec fails (or is mocked in tests)
+            os.chdir(old_dir)
 
 
 class ProjectCommand(object):
@@ -24,11 +110,43 @@ class ProjectCommand(object):
         """Get name of the command."""
         return self._name
 
-    def launch_argv_for_environment(self, environ):
-        """Get a usable argv with the executable path made absolute and prefix substituted.
+    def _choose_args_and_shell(self, environ):
+        args = None
+        shell = False
+
+        if _is_windows():
+            windows_command = self._attributes.get('windows', None)
+            if windows_command is not None:
+                args = [windows_command]
+                shell = True
+        else:
+            shell_command = self._attributes.get('shell', None)
+            if shell_command is not None:
+                args = [shell_command]
+                shell = True
+
+        if args is None:
+            # see conda.misc::launch for what we're copying
+            app_entry = self._attributes.get('conda_app_entry', None)
+            if app_entry is not None:
+                # conda.misc uses plain split and not shlex or
+                # anything like that, we need to match its
+                # interpretation
+                parsed = app_entry.split()
+                args = []
+                for arg in parsed:
+                    if '${PREFIX}' in arg:
+                        arg = arg.replace('${PREFIX}', environ['CONDA_ENV_PATH'])
+                    args.append(arg)
+
+        # args can be None if the command doesn't work on our platform
+        return (args, shell)
+
+    def exec_info_for_environment(self, environ):
+        """Get a ``CommandExecInfo`` ready to be executed.
 
         Args:
-            environ (dict): the environment
+            environ (dict): the environment containing a CONDA_ENV_PATH, PATH, and PROJECT_DIR
         Returns:
             argv as list of strings
         """
@@ -36,33 +154,35 @@ class ProjectCommand(object):
             if name not in environ:
                 raise ValueError("To get a runnable command for the app, %s must be set." % (name))
 
-        args = None
+        (args, shell) = self._choose_args_and_shell(environ)
 
-        # see conda.misc::launch for what we're copying
-        app_entry = self._attributes.get('conda_app_entry', None)
-        if app_entry is not None:
-            # conda.misc uses plain split and not shlex or
-            # anything like that, we need to match its
-            # interpretation
-            parsed = app_entry.split()
-            args = []
-            for arg in parsed:
-                if '${PREFIX}' in arg:
-                    arg = arg.replace('${PREFIX}', environ['CONDA_ENV_PATH'])
-                args.append(arg)
-
-        # this should have been validated when loading the project file
-        assert args is not None
+        if args is None:
+            # command doesn't work on our platform for example
+            return None
 
         # always look in the project directory. This is a little
         # odd because we don't add PROJECT_DIR to PATH for child
         # processes - maybe we should?
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        executable = find_executable(args[0], path)
-        if executable is not None:
-            # if the executable is in cwd, for some reason find_executable does not
-            # return the full path to it, just a relative path.
-            args[0] = os.path.abspath(executable)
-        # if we didn't find args[0] on the path, we leave it as-is
-        # and wait for it to fail when we later try to run it.
-        return args
+
+        # if we're using a shell, then args[0] is a whole command
+        # line and not a single program name, and the shell will
+        # search the path for us.
+        if not shell:
+            executable = find_executable(args[0], path)
+            # if we didn't find args[0] on the path, we leave it as-is
+            # and wait for it to fail when we later try to run it.
+            if executable is not None:
+                # if the executable is in cwd, for some reason find_executable does not
+                # return the full path to it, just a relative path.
+                args[0] = os.path.abspath(executable)
+
+        # conda.misc.launch() uses the home directory
+        # instead of the project directory as cwd when
+        # running an installed package, but for our
+        # purposes where we know we have a project dir
+        # that's user-interesting, project directory seems
+        # more useful. This way apps can for example find
+        # sample data files relative to the project
+        # directory.
+        return CommandExecInfo(cwd=environ['PROJECT_DIR'], args=args, env=environ, shell=shell)

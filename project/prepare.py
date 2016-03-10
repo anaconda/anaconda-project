@@ -33,60 +33,6 @@ def _update_environ(dest, src):
             dest[key] = value
 
 
-class CommandExecInfo(object):
-    """Class describing an executable command."""
-
-    def __init__(self, cwd, args, env):
-        """Construct an CommandExecInfo."""
-        self._cwd = cwd
-        self._args = args
-        self._env = env
-
-    @property
-    def cwd(self):
-        """Working directory to run the command in."""
-        return self._cwd
-
-    @property
-    def args(self):
-        """Command line argument vector to run the command."""
-        return self._args
-
-    @property
-    def env(self):
-        """Environment to run the command in."""
-        return self._env
-
-    def popen(self, **kwargs):
-        """Convenience method runs the command using Popen.
-
-        Args:
-            kwargs: passed through to Popen
-
-        Returns:
-            Popen instance
-        """
-        import subprocess
-
-        return subprocess.Popen(args=self._args, env=self._env, cwd=self._cwd, **kwargs)
-
-    def execvpe(self):
-        """Convenience method exec's the command replacing the current process.
-
-        Returns:
-            Does not return. May raise an OSError though.
-        """
-        try:
-            old_dir = os.getcwd()
-            os.chdir(self._cwd)
-            sys.stderr.flush()
-            sys.stdout.flush()
-            os.execvpe(self._args[0], self._args, self._env)
-        finally:
-            # avoid side effect if exec fails (or is mocked in tests)
-            os.chdir(old_dir)
-
-
 class PrepareResult(with_metaclass(ABCMeta)):
     """Abstract class describing the result of preparing the project to run."""
 
@@ -446,18 +392,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             else:
                 return None
         else:
-            exec_info = None
-            if project.default_command is not None:
-                argv = project.launch_argv_for_environment(environ)
-                # conda.misc.launch() uses the home directory
-                # instead of the project directory as cwd when
-                # running an installed package, but for our
-                # purposes where we know we have a project dir
-                # that's user-interesting, project directory seems
-                # more useful. This way apps can for example find
-                # sample data files relative to the project
-                # directory.
-                exec_info = CommandExecInfo(cwd=project.directory_path, args=argv, env=environ)
+            exec_info = project.exec_info_for_environment(environ)
             stage.set_result(PrepareSuccess(logs=logs, command_exec_info=exec_info, environ=environ), rechecked)
             return None
 

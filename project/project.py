@@ -187,18 +187,26 @@ class _ConfigCache(object):
                 if 'conda_app_entry' not in copy and app_entry_from_meta_yaml is not None:
                     copy['conda_app_entry'] = app_entry_from_meta_yaml
 
-                if len(copy) == 0:
+                have_command = False
+                for attr in ('conda_app_entry', 'shell', 'windows'):
+                    if attr not in copy:
+                        continue
+
+                    # this should be True even if we have problems
+                    # with the command line, since "no command
+                    # line" error is confusing if there is one and
+                    # it's broken
+                    have_command = True
+
+                    if not isinstance(copy[attr], str):
+                        problems.append("%s: command '%s' attribute '%s' should be a string not '%r'" %
+                                        (project_file.filename, name, attr, copy[attr]))
+                        failed = True
+
+                if not have_command:
                     problems.append("%s: command '%s' does not have a command line in it" %
                                     (project_file.filename, name))
                     failed = True
-
-                # for the moment, all possible attributes are command line strings, so
-                # we can check them all in the same way
-                for attr in attrs:
-                    if not isinstance(attrs[attr], str):
-                        problems.append("%s: command '%s' attribute '%s' should be a string not '%r'" %
-                                        (project_file.filename, name, attr, attrs[attr]))
-                        failed = True
 
                 commands[name] = ProjectCommand(name=name, attributes=copy)
 
@@ -338,13 +346,13 @@ class Project(object):
         else:
             return cache.commands[cache.default_command_name]
 
-    def launch_argv_for_environment(self, environ):
-        """Get a usable argv with any processing and interpretation necessary to execute it.
+    def exec_info_for_environment(self, environ):
+        """Get the information needed to run the project.
 
         Args:
             environ (dict): the environment
         Returns:
-            argv as list of strings, or None if no commands are configured
+            argv as list of strings, or None if no commands are configured that work on our platform
         """
         # we use ANACONDA_PROJECT_COMMAND if configured and otherwise
         # the default command
@@ -353,4 +361,4 @@ class Project(object):
             return None
         command = self._updated_cache().commands[command_name]
 
-        return command.launch_argv_for_environment(environ)
+        return command.exec_info_for_environment(environ)

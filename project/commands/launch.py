@@ -19,7 +19,7 @@ def launch_command(project_dir, ui_mode):
     if result.failed:
         return
     elif result.command_exec_info is None:
-        print("No known launch command for project %s; try adding an 'app: entry: ' to project.yml" % project_dir,
+        print("No known launch command for project %s; try adding a 'commands:' section to project.yml" % project_dir,
               file=sys.stderr)
     else:
         try:
