@@ -20,12 +20,11 @@ from project.conda_meta_file import DEFAULT_RELATIVE_META_PATH
 def test_properties():
     def check_properties(dirname):
         project = project_no_dedicated_env(dirname)
+        assert project.problems == []
         assert dirname == project.directory_path
         assert dirname == os.path.dirname(project.project_file.filename)
         assert dirname == os.path.dirname(os.path.dirname(project.conda_meta_file.filename))
         assert project.name == os.path.basename(dirname)
-        assert project.version == "unknown"
-        assert project.problems == []
 
     with_directory_contents(dict(), check_properties)
 
@@ -33,12 +32,11 @@ def test_properties():
 def test_ignore_trailing_slash_on_dirname():
     def check_properties(dirname):
         project = project_no_dedicated_env(dirname + "/")
+        assert project.problems == []
         assert dirname == project.directory_path
         assert dirname == os.path.dirname(project.project_file.filename)
         assert dirname == os.path.dirname(os.path.dirname(project.conda_meta_file.filename))
         assert project.name == os.path.basename(dirname)
-        assert project.version == "unknown"
-        assert project.problems == []
 
     with_directory_contents(dict(), check_properties)
 
@@ -96,66 +94,87 @@ runtime:
 """}, check_override_plugin_registry)
 
 
-def test_get_name_and_version_from_conda_meta_yaml():
-    def check_conda_meta(dirname):
+def test_get_name_from_conda_meta_yaml():
+    def check_name_from_meta_file(dirname):
         project = project_no_dedicated_env(dirname)
         assert project.name == "foo"
-        assert project.version == "1.2.3"
 
-    with_directory_contents(
-        {
-            DEFAULT_RELATIVE_META_PATH: """
+    with_directory_contents({DEFAULT_RELATIVE_META_PATH: """
 package:
   name: foo
-  version: 1.2.3
-"""
-        }, check_conda_meta)
+"""}, check_name_from_meta_file)
 
 
-def test_get_name_and_version_from_project_file():
-    def check_name_and_version(dirname):
+def test_broken_name_in_conda_meta_yaml():
+    def check_name_from_meta_file(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [
+            (dirname + "/" + DEFAULT_RELATIVE_META_PATH + ": package: name: field should have a string value not []")
+        ] == project.problems
+
+    with_directory_contents({DEFAULT_RELATIVE_META_PATH: """
+package:
+  name: []
+"""}, check_name_from_meta_file)
+
+
+def test_get_name_from_project_file():
+    def check_name_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
         assert project.name == "foo"
-        assert project.version == "1.2.3"
 
         assert project.conda_meta_file.name == "from_meta"
-        assert project.conda_meta_file.version == "1.2.3meta"
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-package:
-  name: foo
-  version: 1.2.3
+name: foo
     """,
          DEFAULT_RELATIVE_META_PATH: """
 package:
   name: from_meta
-  version: 1.2.3meta
-"""}, check_name_and_version)
+"""}, check_name_from_project_file)
 
 
-def test_set_name_and_version_in_project_file():
-    def check_name_and_version(dirname):
+def test_broken_name_in_project_file():
+    def check_name_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
-        assert project.name == "foo"
-        assert project.version == "1.2.3"
-
-        project.project_file.name = "bar"
-        project.project_file.version = "4.5.6"
-        assert project.name == "bar"
-        assert project.version == "4.5.6"
-        project.project_file.save()
-
-        project2 = project_no_dedicated_env(dirname)
-        assert project2.name == "bar"
-        assert project2.version == "4.5.6"
+        assert [(dirname + "/" + DEFAULT_PROJECT_FILENAME + ": name: field should have a string value not []")
+                ] == project.problems
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
+name: []
+    """,
+         DEFAULT_RELATIVE_META_PATH: """
 package:
-  name: foo
-  version: 1.2.3
-    """}, check_name_and_version)
+  name: from_meta
+"""}, check_name_from_project_file)
+
+
+def test_get_name_from_directory_name():
+    def check_name_from_directory_name(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert project.name == os.path.basename(dirname)
+
+    with_directory_contents(dict(), check_name_from_directory_name)
+
+
+def test_set_name_in_project_file():
+    def check_set_name(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert project.name == "foo"
+
+        project.project_file.name = "bar"
+        assert project.name == "foo"
+        project.project_file.save()
+        assert project.name == "bar"
+
+        project2 = project_no_dedicated_env(dirname)
+        assert project2.name == "bar"
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+name: foo
+"""}, check_set_name)
 
 
 def test_get_package_requirements_from_project_file():

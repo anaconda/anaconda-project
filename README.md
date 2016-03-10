@@ -47,22 +47,21 @@ directory underneath `.anaconda/run/`
 
 ## `PROJECTDIR/conda.recipe/meta.yaml`
 
-Defined by conda, we look in here for info we didn't find in
+Defined by conda, we look in here for some info we didn't find in
 project.yml to keep people from having to keep the two files in
 sync: http://conda.pydata.org/docs/building/meta-yaml.html
 
+Specifically right now we look at `package: name:` and `app: entry:`
+
 # `project.yml` Schema
 
+* `name`: name of the project
 * `runtime`: Defines runtime requirements, which are provided to
   the running project as environment variables. Contains either a
   list of environment variable names, or a dict with environment
   variable names as keys and options affecting those variables.
   All the listed environment variables have to be set, one way or
   another, before running the project.
-* `package`: Some fields in `conda.recipe/meta.yml` can be set
-  here instead, if you either don't have a conda recipe or
-  want to override it for Anaconda Project purposes.
-  Fields we look at right now: `name`, `version`
 * `commands`: A dictionary from command names to command
   attributes, where the attributes can be `conda_app_entry` (same
   as app:entry: in meta.yaml), `shell` (shell command line),

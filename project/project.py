@@ -12,11 +12,13 @@ from project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
 class _ConfigCache(object):
-    def __init__(self, registry):
+    def __init__(self, directory_path, registry):
+        self.directory_path = directory_path
         if registry is None:
             registry = PluginRegistry()
         self.registry = registry
 
+        self.name = None
         self.commands = dict()
         self.default_command_name = None
         self.project_file_count = 0
@@ -43,6 +45,7 @@ class _ConfigCache(object):
                             (conda_meta_file.filename, conda_meta_file.corrupted_error_message))
 
         if not (project_file.corrupted or conda_meta_file.corrupted):
+            self._update_name(problems, project_file, conda_meta_file)
             # future: we could un-hardcode this so plugins can add stuff here
             self._update_runtime(requirements, problems, project_file)
             self._update_conda_environments(problems, project_file)
@@ -55,6 +58,24 @@ class _ConfigCache(object):
 
         self.requirements = requirements
         self.problems = problems
+
+    def _update_name(self, problems, project_file, conda_meta_file):
+        name = project_file.name
+        if name is not None and not isinstance(name, str):
+            problems.append("%s: name: field should have a string value not %r" % (project_file.filename, name))
+            name = None
+
+        if name is None:
+            name = conda_meta_file.name
+            if name is not None and not isinstance(name, str):
+                problems.append("%s: package: name: field should have a string value not %r" %
+                                (conda_meta_file.filename, name))
+                name = None
+
+        if name is None:
+            name = os.path.basename(self.directory_path)
+
+        self.name = name
 
     def _update_runtime(self, requirements, problems, project_file):
         runtime = project_file.get_value("runtime")
@@ -246,7 +267,7 @@ class Project(object):
         self._project_file = ProjectFile.load_for_directory(directory_path)
         self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
-        self._config_cache = _ConfigCache(plugin_registry)
+        self._config_cache = _ConfigCache(self._directory_path, plugin_registry)
 
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._conda_meta_file)
@@ -287,26 +308,14 @@ class Project(object):
         """
         return self._updated_cache().problems
 
-    def _search_project_then_meta(self, attr, fallback):
-        project_value = getattr(self.project_file, attr)
-        if project_value is not None:
-            return project_value
-
-        meta_value = getattr(self.conda_meta_file, attr)
-        if meta_value is not None:
-            return meta_value
-
-        return fallback
-
     @property
     def name(self):
-        """Get the "package: name" field from either project.yml or meta.yaml."""
-        return self._search_project_then_meta('name', fallback=self._directory_basename)
+        """Get the project name.
 
-    @property
-    def version(self):
-        """Get the "package: version" field from either project.yml or meta.yaml."""
-        return self._search_project_then_meta('version', fallback="unknown")
+        Prefers in order: `name` field from project.yml, `package:
+        name:` from meta.yaml, then project directory name.
+        """
+        return self._updated_cache().name
 
     @property
     def conda_environments(self):
