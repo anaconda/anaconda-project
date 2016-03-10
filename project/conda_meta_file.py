@@ -73,3 +73,8 @@ class CondaMetaFile(YamlFile):
     def name(self):
         """Get the "package: name" field from the file."""
         return self.get_value(['package', 'name'], default=None)
+
+    @property
+    def icon(self):
+        """Get the "app: icon" field from the file."""
+        return self.get_value(['app', 'icon'], default=None)

@@ -51,11 +51,16 @@ Defined by conda, we look in here for some info we didn't find in
 project.yml to keep people from having to keep the two files in
 sync: http://conda.pydata.org/docs/building/meta-yaml.html
 
-Specifically right now we look at `package: name:` and `app: entry:`
+Specifically right now we look at:
+* `package: name:`
+* `app: entry:`
+* `app: icon:`
 
 # `project.yml` Schema
 
 * `name`: name of the project
+* `icon`: icon for project (displayed by some UIs). should be a
+  relative filename in the project directory
 * `runtime`: Defines runtime requirements, which are provided to
   the running project as environment variables. Contains either a
   list of environment variable names, or a dict with environment

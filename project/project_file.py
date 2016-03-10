@@ -83,3 +83,13 @@ class ProjectFile(YamlFile):
     def name(self, value):
         """Set the "name" field in the file."""
         self.set_value('name', value)
+
+    @property
+    def icon(self):
+        """Get the "icon" field from the file."""
+        return self.get_value('icon', default=None)
+
+    @icon.setter
+    def icon(self, value):
+        """Set the "icon" field in the file."""
+        self.set_value('icon', value)

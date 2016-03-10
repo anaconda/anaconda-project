@@ -14,7 +14,7 @@ from project.plugins.registry import PluginRegistry
 from project.plugins.requirement import EnvVarRequirement
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 from project.project_file import DEFAULT_PROJECT_FILENAME
-from project.conda_meta_file import DEFAULT_RELATIVE_META_PATH
+from project.conda_meta_file import DEFAULT_RELATIVE_META_PATH, META_DIRECTORY
 
 
 def test_properties():
@@ -175,6 +175,100 @@ def test_set_name_in_project_file():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 name: foo
 """}, check_set_name)
+
+
+def test_get_icon_from_conda_meta_yaml():
+    def check_icon_from_meta_file(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert project.icon == os.path.join(dirname, META_DIRECTORY, "foo.png")
+
+    with_directory_contents(
+        {DEFAULT_RELATIVE_META_PATH: """
+app:
+  icon: foo.png
+""",
+         "conda.recipe/foo.png": ""}, check_icon_from_meta_file)
+
+
+def test_broken_icon_in_conda_meta_yaml():
+    def check_icon_from_meta_file(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [
+            (dirname + "/" + DEFAULT_RELATIVE_META_PATH + ": app: icon: field should have a string value not []")
+        ] == project.problems
+
+    with_directory_contents({DEFAULT_RELATIVE_META_PATH: """
+app:
+  icon: []
+"""}, check_icon_from_meta_file)
+
+
+def test_get_icon_from_project_file():
+    def check_icon_from_project_file(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert project.icon == os.path.join(dirname, "foo.png")
+
+        assert project.conda_meta_file.icon == "from_meta.png"
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+icon: foo.png
+    """,
+         DEFAULT_RELATIVE_META_PATH: """
+app:
+  icon: from_meta.png
+""",
+         "foo.png": "",
+         "conda.recipe/from_meta.png": ""}, check_icon_from_project_file)
+
+
+def test_broken_icon_in_project_file():
+    def check_icon_from_project_file(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [(dirname + "/" + DEFAULT_PROJECT_FILENAME + ": icon: field should have a string value not []")
+                ] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+icon: []
+    """,
+         DEFAULT_RELATIVE_META_PATH: """
+app:
+  icon: from_meta.png
+         """,
+         "conda.recipe/from_meta.png": ""}, check_icon_from_project_file)
+
+
+def test_nonexistent_icon_in_project_file():
+    def check_icon_from_project_file(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert project.icon is None
+        assert ["Icon file %s does not exist." % (os.path.join(dirname, "foo.png"))] == project.problems
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+icon: foo.png
+    """}, check_icon_from_project_file)
+
+
+def test_set_icon_in_project_file():
+    def check_set_icon(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert project.icon == os.path.join(dirname, "foo.png")
+
+        project.project_file.icon = "bar.png"
+        assert project.icon == os.path.join(dirname, "foo.png")
+        project.project_file.save()
+        assert project.icon == os.path.join(dirname, "bar.png")
+
+        project2 = project_no_dedicated_env(dirname)
+        assert project2.icon == os.path.join(dirname, "bar.png")
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+icon: foo.png
+""",
+         "foo.png": "",
+         "bar.png": ""}, check_set_icon)
 
 
 def test_get_package_requirements_from_project_file():

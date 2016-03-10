@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import os
 
 from project.project_file import ProjectFile
-from project.conda_meta_file import CondaMetaFile
+from project.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from project.conda_environment import CondaEnvironment
 from project.project_commands import ProjectCommand
 from project.plugins.registry import PluginRegistry
@@ -19,6 +19,7 @@ class _ConfigCache(object):
         self.registry = registry
 
         self.name = None
+        self.icon = None
         self.commands = dict()
         self.default_command_name = None
         self.project_file_count = 0
@@ -46,6 +47,7 @@ class _ConfigCache(object):
 
         if not (project_file.corrupted or conda_meta_file.corrupted):
             self._update_name(problems, project_file, conda_meta_file)
+            self._update_icon(problems, project_file, conda_meta_file)
             # future: we could un-hardcode this so plugins can add stuff here
             self._update_runtime(requirements, problems, project_file)
             self._update_conda_environments(problems, project_file)
@@ -76,6 +78,30 @@ class _ConfigCache(object):
             name = os.path.basename(self.directory_path)
 
         self.name = name
+
+    def _update_icon(self, problems, project_file, conda_meta_file):
+        icon = project_file.icon
+        if icon is not None and not isinstance(icon, str):
+            problems.append("%s: icon: field should have a string value not %r" % (project_file.filename, icon))
+            icon = None
+
+        if icon is None:
+            icon = conda_meta_file.icon
+            if icon is not None and not isinstance(icon, str):
+                problems.append("%s: app: icon: field should have a string value not %r" %
+                                (conda_meta_file.filename, icon))
+                icon = None
+            if icon is not None:
+                # relative to conda.recipe
+                icon = os.path.join(META_DIRECTORY, icon)
+
+        if icon is not None:
+            icon = os.path.join(self.directory_path, icon)
+            if not os.path.isfile(icon):
+                problems.append("Icon file %s does not exist." % icon)
+                icon = None
+
+        self.icon = icon
 
     def _update_runtime(self, requirements, problems, project_file):
         runtime = project_file.get_value("runtime")
@@ -316,6 +342,15 @@ class Project(object):
         name:` from meta.yaml, then project directory name.
         """
         return self._updated_cache().name
+
+    @property
+    def icon(self):
+        """Get the project's icon as an absolute path or None if no icon.
+
+        Prefers in order: `icon` field from project.yml, `app:
+        icon:` from meta.yaml.
+        """
+        return self._updated_cache().icon
 
     @property
     def conda_environments(self):
