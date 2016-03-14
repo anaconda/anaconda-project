@@ -22,16 +22,16 @@ def _run_parser(args):
     subparsers = parser.add_subparsers(help="Sub-commands")
 
     preset = subparsers.add_parser('launch', help="Runs the project, setting up requirements first.")
-    preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.')
+    preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
     preset.set_defaults(main=launch.main, ui_mode=UI_MODE_NOT_INTERACTIVE)
 
     preset = subparsers.add_parser('prepare', help="Sets up project requirements but does not run the project.")
-    preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.')
+    preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
     preset.set_defaults(main=prepare.main, ui_mode=UI_MODE_BROWSER)
 
     preset = subparsers.add_parser('activate',
                                    help="Sets up project and outputs shell export commands reflecting the setup.")
-    preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.')
+    preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
     preset.set_defaults(main=activate.main, ui_mode=UI_MODE_NOT_INTERACTIVE)
 
     # argparse doesn't do this for us for whatever reason
