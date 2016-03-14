@@ -57,6 +57,9 @@ class CondaManager(with_metaclass(ABCMeta)):
         Raised exceptions that are user-interesting conda problems
         should be subtypes of ``CondaManagerError``.
 
+        The prefix may not exist (which would be considered a
+        deviation).
+
         Args:
             prefix (str): the environment prefix (absolute path)
             spec (CondaEnvironment): specification for the environment
@@ -73,6 +76,8 @@ class CondaManager(with_metaclass(ABCMeta)):
 
         Raised exceptions that are user-interesting conda problems
         should be subtypes of ``CondaManagerError``.
+
+        The prefix may not exist (this method should then try to create it).
 
         Args:
             prefix (str): the environment prefix (absolute path)
@@ -96,7 +101,14 @@ class CondaEnvironmentDeviations(object):
 
     @property
     def ok(self):
-        """True if no deviations were found, environment looks good."""
+        """True if no deviations were found, environment exists and looks good.
+
+        If the deviations are "ok" then
+        ``CondaManager.fix_environment_deviations()`` would be
+        expected to have no work to do and doesn't need to be
+        called.
+
+        """
         return len(self.missing_packages) == 0 and len(self.wrong_version_packages) == 0
 
     @property
