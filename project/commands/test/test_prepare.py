@@ -2,6 +2,7 @@ from __future__ import absolute_import, print_function
 
 import pytest
 
+from project.commands.main import main as toplevel_main
 from project.commands.prepare import prepare_command, main
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE, UI_MODE_BROWSER
@@ -103,7 +104,31 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
         project_dir_disable_dedicated_env(dirname)
-        main(Args(project_dir=dirname))
+        with pytest.raises(SystemExit) as excinfo:
+            toplevel_main(['anaconda-project', 'prepare'])
+        assert excinfo.value.code == 0
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+runtime:
+  REDIS_URL: {}
+"""}, main_redis_url)
+
+    assert can_connect_args['port'] == 6379
+
+    out, err = capsys.readouterr()
+    assert "# Configure the project at " in out
+    assert "" == err
+
+
+def test_main_dirname_provided_use_it(monkeypatch, capsys):
+    can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
+    _monkeypatch_open_new_tab(monkeypatch)
+
+    def main_redis_url(dirname):
+        project_dir_disable_dedicated_env(dirname)
+        with pytest.raises(SystemExit) as excinfo:
+            toplevel_main(['anaconda-project', 'prepare', dirname])
+        assert excinfo.value.code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:

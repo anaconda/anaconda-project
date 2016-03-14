@@ -5,6 +5,7 @@ import errno
 import pytest
 import os
 
+from project.commands.main import main as toplevel_main
 from project.commands.launch import launch_command, main
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE
@@ -182,7 +183,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = main(Args(project_dir=dirname))
+        result = toplevel_main(['anaconda-project', 'launch'])
 
         assert result is None
         assert 'file' in executed
