@@ -4,7 +4,6 @@ from __future__ import absolute_import
 import os
 
 from project.yaml_file import YamlFile
-from project.project_meta_common import _ProjectMetaCommon
 
 # these are in the order we'll use them if multiple are present
 possible_project_file_names = ("project.yml", "project.yaml")
@@ -12,7 +11,7 @@ possible_project_file_names = ("project.yml", "project.yaml")
 DEFAULT_PROJECT_FILENAME = possible_project_file_names[0]
 
 
-class ProjectFile(YamlFile, _ProjectMetaCommon):
+class ProjectFile(YamlFile):
     """Represents the ``project.yml`` file which describes the project across machines/users.
 
     State that's specific to a machine/user/checkout/deployment
@@ -74,3 +73,23 @@ class ProjectFile(YamlFile, _ProjectMetaCommon):
 
     def _default_comment(self):
         return "Anaconda project file"
+
+    @property
+    def name(self):
+        """Get the "name" field from the file."""
+        return self.get_value('name', default=None)
+
+    @name.setter
+    def name(self, value):
+        """Set the "name" field in the file."""
+        self.set_value('name', value)
+
+    @property
+    def icon(self):
+        """Get the "icon" field from the file."""
+        return self.get_value('icon', default=None)
+
+    @icon.setter
+    def icon(self, value):
+        """Set the "icon" field in the file."""
+        self.set_value('icon', value)

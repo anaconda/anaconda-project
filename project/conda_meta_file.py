@@ -4,7 +4,6 @@ from __future__ import absolute_import
 import os
 
 from project.yaml_file import YamlFile
-from project.project_meta_common import _ProjectMetaCommon
 
 META_DIRECTORY = "conda.recipe"
 
@@ -16,7 +15,7 @@ DEFAULT_META_FILENAME = possible_meta_file_names[0]
 DEFAULT_RELATIVE_META_PATH = os.path.join(META_DIRECTORY, DEFAULT_META_FILENAME)
 
 
-class CondaMetaFile(YamlFile, _ProjectMetaCommon):
+class CondaMetaFile(YamlFile):
     """Represents the ``conda.recipe/meta.yaml`` file which describes the project for packaging.
 
     Anaconda Project reads this, if present, for information not found in project.yml.
@@ -69,3 +68,13 @@ class CondaMetaFile(YamlFile, _ProjectMetaCommon):
 
         """
         return self.get_value(['app', 'entry'], default=None)
+
+    @property
+    def name(self):
+        """Get the "package: name" field from the file."""
+        return self.get_value(['package', 'name'], default=None)
+
+    @property
+    def icon(self):
+        """Get the "app: icon" field from the file."""
+        return self.get_value(['app', 'icon'], default=None)
