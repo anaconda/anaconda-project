@@ -22,6 +22,8 @@ def test_read_yaml_file_and_get_value():
         value = yaml.get_value(("a", "b"))
         assert "c" == value
 
+        assert yaml.root == dict(a=dict(b='c'))
+
     with_file_contents("""
 a:
   b: c

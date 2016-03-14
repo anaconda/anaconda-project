@@ -81,7 +81,7 @@ def resolve_env_to_prefix(name_or_prefix):
     return None
 
 
-def create(prefix, pkgs=None):
+def create(prefix, pkgs=None, channels=()):
     """Create an environment either by name or path with a specified set of packages."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to install into new environment')
@@ -91,17 +91,23 @@ def create(prefix, pkgs=None):
 
     cmd_list = ['create', '--yes', '--quiet', '--prefix', prefix]
 
+    for channel in channels:
+        cmd_list.extend(['--channel', channel])
+
     cmd_list.extend(pkgs)
     return _call_conda(cmd_list)
 
 
-def install(prefix, pkgs=None):
+def install(prefix, pkgs=None, channels=()):
     """Install packages into an environment either by name or path with a specified set of packages."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to install into existing environment')
 
     cmd_list = ['install', '--yes', '--quiet']
     cmd_list.extend(['--prefix', prefix])
+
+    for channel in channels:
+        cmd_list.extend(['--channel', channel])
 
     cmd_list.extend(pkgs)
     return _call_conda(cmd_list)

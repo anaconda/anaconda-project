@@ -159,7 +159,7 @@ class CondaEnvProvider(EnvVarProvider):
                     try:
                         # TODO we are ignoring package versions here
                         # https://github.com/Anaconda-Server/anaconda-project/issues/77
-                        conda_api.install(prefix=prefix, pkgs=list(missing))
+                        conda_api.install(prefix=prefix, pkgs=list(missing), channels=env_spec.channels)
                     except conda_api.CondaError as e:
                         context.append_error("Failed to install missing packages: " + ", ".join(missing))
                         context.append_error(str(e))
@@ -167,7 +167,7 @@ class CondaEnvProvider(EnvVarProvider):
             else:
                 # Create environment from scratch
                 try:
-                    conda_api.create(prefix=prefix, pkgs=list(command_line_packages))
+                    conda_api.create(prefix=prefix, pkgs=list(command_line_packages), channels=env_spec.channels)
                 except conda_api.CondaError as e:
                     context.append_error(str(e))
                     return

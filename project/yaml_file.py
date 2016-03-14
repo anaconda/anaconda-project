@@ -269,3 +269,10 @@ class YamlFile(object):
             return default
         else:
             return existing.get(path[-1], default)
+
+    @property
+    def root(self):
+        """Get the outermost value from the yaml file."""
+        self._throw_if_corrupted()
+
+        return self._yaml
