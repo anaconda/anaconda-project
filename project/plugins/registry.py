@@ -51,5 +51,8 @@ class PluginRegistry(object):
         elif class_name == 'EnvVarProvider':
             from .provider import EnvVarProvider
             return EnvVarProvider()
+        elif class_name == 'DownloadProvider':
+            from .providers.download import DownloadProvider
+            return DownloadProvider()
         else:
             return None

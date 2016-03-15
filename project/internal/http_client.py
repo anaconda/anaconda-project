@@ -44,7 +44,8 @@ class FileDownloader(object):
             # once.
             max_buffer_size=1024 * 1024,
             # without this we 599 on large downloads
-            max_body_size=100 * 1024 * 1024 * 1024)
+            max_body_size=100 * 1024 * 1024 * 1024,
+            force_instance=True)
 
         tmp_filename = self._filename + ".part"
         try:

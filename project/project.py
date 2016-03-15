@@ -8,6 +8,7 @@ from project.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from project.conda_environment import CondaEnvironment
 from project.project_commands import ProjectCommand
 from project.plugins.registry import PluginRegistry
+from project.plugins.requirements import download
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
@@ -50,6 +51,7 @@ class _ConfigCache(object):
             self._update_icon(problems, project_file, conda_meta_file)
             # future: we could un-hardcode this so plugins can add stuff here
             self._update_runtime(requirements, problems, project_file)
+            self._update_downloads(requirements, problems, project_file)
             self._update_conda_environments(problems, project_file)
             # this MUST be after we _update_runtime since we may get CondaEnvRequirement
             # options in the runtime section, and after _update_conda_environments
@@ -133,6 +135,25 @@ class _ConfigCache(object):
             problems.append(
                 "runtime section contains wrong value type {runtime}, should be dict or list of requirements".format(
                     runtime=runtime))
+
+    def _update_downloads(self, requirements, problems, project_file):
+        downloads = project_file.get_value('downloads')
+
+        if downloads is None:
+            return
+
+        if not isinstance(downloads, dict):
+            problems.append("'downloads:' section should be a dictionary, found {}".format(repr(downloads)))
+            return
+
+        for varname, item in downloads.items():
+            if isinstance(item, str):
+                requirements.append(download.DownloadRequirement(self.registry, env_var=varname, options={'url': item}))
+            elif isinstance(item, dict):
+                if 'url' in item:
+                    requirements.append(download.DownloadRequirement(self.registry, env_var=varname, options=item))
+                else:
+                    problems.append('Download item doesn\'t contain url: {}'.format(varname))
 
     def _update_conda_environments(self, problems, project_file):
         def _parse_string_list(parent_dict, key, what):
