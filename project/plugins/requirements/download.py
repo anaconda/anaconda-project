@@ -30,19 +30,20 @@ class DownloadRequirement(EnvVarRequirement):
                 return
 
             for method in _hash_algorithms:
-                if method in item:
-                    if hash_algorithm is not None:
-                        problems.append("Multiple checksums for download {}: {} and {}.".format(varname, hash_algorithm,
-                                                                                                method))
-                        return
+                if method not in item:
+                    continue
+
+                if hash_algorithm is not None:
+                    problems.append("Multiple checksums for download {}: {} and {}.".format(varname, hash_algorithm,
+                                                                                            method))
+                    return
+                else:
+                    hash_value = item[method]
+                    if isinstance(hash_value, str):
+                        hash_algorithm = method
                     else:
-                        hash_value = item[method]
-                        if isinstance(hash_value, str):
-                            hash_algorithm = method
-                        else:
-                            problems.append("Checksum value for {} should be a string not {}.".format(varname,
-                                                                                                      hash_value))
-                            return
+                        problems.append("Checksum value for {} should be a string not {}.".format(varname, hash_value))
+                        return
 
             filename = item.get('filename', None)
 
