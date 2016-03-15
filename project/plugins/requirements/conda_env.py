@@ -4,7 +4,7 @@ from __future__ import absolute_import, print_function
 import os
 
 from project.plugins.requirement import EnvVarRequirement
-import project.internal.conda_api as conda_api
+from project.conda_manager import new_conda_manager, CondaManagerError
 
 
 class CondaEnvRequirement(EnvVarRequirement):
@@ -28,6 +28,7 @@ class CondaEnvRequirement(EnvVarRequirement):
         super(CondaEnvRequirement, self).__init__(registry=registry, env_var=env_var, options=options)
         self.environments = environments
         self.default_environment_name = default_environment_name
+        self._conda = new_conda_manager()
 
     @property
     def title(self):
@@ -59,24 +60,13 @@ class CondaEnvRequirement(EnvVarRequirement):
         if env_name is not None:
             environment_spec = self.environments[env_name]
 
-            if len(environment_spec.dependencies) > 0:
-                try:
-                    installed = conda_api.installed(prefix)
-                except conda_api.CondaError as e:
-                    return (False, "Conda failed while listing installed packages in %s: %s" % (prefix, str(e)))
+            try:
+                deviations = self._conda.find_environment_deviations(prefix, environment_spec)
+                if not deviations.ok:
+                    return (False, deviations.summary)
 
-                missing = set()
-
-                # TODO: we don't verify that the environment contains the right versions
-                # https://github.com/Anaconda-Server/anaconda-project/issues/77
-                for name in environment_spec.conda_package_names_set:
-                    if name not in installed:
-                        missing.add(name)
-
-                if len(missing) > 0:
-                    sorted = list(missing)
-                    sorted.sort()
-                    return (False, "Conda environment is missing packages: %s" % (", ".join(sorted)))
+            except CondaManagerError as e:
+                return (False, str(e))
 
         if environ.get(self.env_var, None) is None:
             # this is our vaguest / least-helpful message so only if we didn't do better above

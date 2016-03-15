@@ -3,12 +3,17 @@ from __future__ import absolute_import, print_function
 
 import os
 
-import project.internal.conda_api as conda_api
+from project.conda_manager import new_conda_manager, CondaManagerError
 from project.plugins.provider import EnvVarProvider
 
 
 class CondaEnvProvider(EnvVarProvider):
     """Provides a Conda environment."""
+
+    def __init__(self):
+        """Override to create our CondaManager."""
+        super(CondaEnvProvider, self).__init__()
+        self._conda = new_conda_manager()
 
     def read_config(self, context):
         """Override superclass to add a choice to create a project-scoped environment."""
@@ -146,37 +151,19 @@ class CondaEnvProvider(EnvVarProvider):
         # TODO if not creating a named env, we could use the
         # shared dependencies, but for now we leave it alone
         if env_spec is not None:
-            command_line_packages = set(['python']).union(set(env_spec.dependencies))
-
-            if os.path.isdir(os.path.join(prefix, 'conda-meta')):
-                # Update the environment with possibly-missing packages
-                installed = conda_api.installed(prefix)
-                missing = set()
-                for name in env_spec.conda_package_names_set:
-                    if name not in installed:
-                        missing.add(name)
-                if len(missing) > 0:
-                    try:
-                        # TODO we are ignoring package versions here
-                        # https://github.com/Anaconda-Server/anaconda-project/issues/77
-                        conda_api.install(prefix=prefix, pkgs=list(missing), channels=env_spec.channels)
-                    except conda_api.CondaError as e:
-                        context.append_error("Failed to install missing packages: " + ", ".join(missing))
-                        context.append_error(str(e))
-                        return
-            else:
-                # Create environment from scratch
-                try:
-                    conda_api.create(prefix=prefix, pkgs=list(command_line_packages), channels=env_spec.channels)
-                except conda_api.CondaError as e:
-                    context.append_error(str(e))
-                    return
+            try:
+                self._conda.fix_environment_deviations(prefix, env_spec)
+            except CondaManagerError as e:
+                context.append_error(str(e))
+                return
 
         context.environ[requirement.env_var] = prefix
         # future: if the prefix is a (globally, not project-scoped) named environment
         # this should be set to the name
         context.environ["CONDA_DEFAULT_ENV"] = prefix
         path = context.environ.get("PATH", "")
+
+        import project.internal.conda_api as conda_api
         context.environ["PATH"] = conda_api.set_conda_env_in_path(path, prefix)
         # Some stuff can only be done when a shell is launched:
         #  - we can't set PS1 because it shouldn't be exported.
