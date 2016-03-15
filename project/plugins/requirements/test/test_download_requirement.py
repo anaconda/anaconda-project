@@ -88,7 +88,7 @@ def test_download_with_no_checksum():
 
 def test_download_wrong_checksum():
     datafile, digest = make_file_with_checksum()
-    digest += '1'
+    digest += '_BROKEN'
 
     def downloaded_file_valid(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
@@ -101,7 +101,9 @@ def test_download_wrong_checksum():
                                           hash_value=digest)
         status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
         assert not status
-        assert 'File download checksum error for {}'.format(filename) == status.status_description
+        assert 'File checksum error for {}, expected {} but was {}'.format(
+            filename, 'aeca3c870b9de245e8f8c2d27ce85763_BROKEN',
+            'aeca3c870b9de245e8f8c2d27ce85763') == status.status_description
 
     with_directory_contents({'data.zip': datafile}, downloaded_file_valid)
 
@@ -122,7 +124,8 @@ def test_download_error_readfile(monkeypatch):
                                           filename='data.zip',
                                           hash_algorithm='md5',
                                           hash_value=digest)
-        monkeypatch.setattr('project.plugins.requirements.download.DownloadRequirement._checksum', checksum_mock)
+        monkeypatch.setattr('project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none',
+                            checksum_mock)
         status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
         assert not status
         assert 'File referenced by: {} cannot be read ({})'.format(ENV_VAR, filename) == status.status_description

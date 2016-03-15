@@ -45,10 +45,11 @@ def test_prepare_download(monkeypatch):
             raise gen.Return(res)
 
         def mock_checksum(self, fp):
-            return True
+            return None
 
         monkeypatch.setattr("project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr("project.plugins.requirements.download.DownloadRequirement._checksum", mock_checksum)
+        monkeypatch.setattr("project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none",
+                            mock_checksum)
         project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
@@ -89,10 +90,11 @@ def test_provide_minimal(monkeypatch):
             raise gen.Return(res)
 
         def mock_checksum(self, fp):
-            return True
+            return None
 
         monkeypatch.setattr("project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr("project.plugins.requirements.download.DownloadRequirement._checksum", mock_checksum)
+        monkeypatch.setattr("project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none",
+                            mock_checksum)
         project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
@@ -182,9 +184,10 @@ def test_file_exists(monkeypatch):
         project = project_no_dedicated_env(dirname)
 
         def mock_checksum(self, fp):
-            return True
+            return None
 
-        monkeypatch.setattr("project.plugins.requirements.download.DownloadRequirement._checksum", mock_checksum)
+        monkeypatch.setattr("project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none",
+                            mock_checksum)
         result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
         assert 'DATAFILE' in result.environ
