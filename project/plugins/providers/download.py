@@ -2,118 +2,107 @@
 from __future__ import print_function
 
 import os
-import functools
 
 from tornado.ioloop import IOLoop
 
 from project.internal.http_client import FileDownloader
-from project.plugins.provider import Provider, ProviderAnalysis
+from project.plugins.provider import EnvVarProvider, ProviderAnalysis
 
 
 class _DownloadProviderAnalysis(ProviderAnalysis):
     """Subtype of ProviderAnalysis showing if a filename exists."""
 
-    def __init__(self, config, missing_to_configure, missing_to_provide, existing_scoped_filename):
+    def __init__(self, config, missing_to_configure, missing_to_provide, existing_filename):
         super(_DownloadProviderAnalysis, self).__init__(config, missing_to_configure, missing_to_provide)
-        self.existing_scoped_filename = existing_scoped_filename
+        self.existing_filename = existing_filename
 
 
-class DownloadProvider(Provider):
+class DownloadProvider(EnvVarProvider):
     """Downloads a file according to the specified requirement."""
-
-    def config_section(self, requirement):
-        """Special case for section."""
-        # downloads:
-        #   env_var_name:
-        #       url: http://ip:port/path.ext
-        #       hash_algorithm: hash_value
-        return ["downloads", requirement.env_var]
 
     def read_config(self, context):
         """Override superclass to return our config."""
-        config = {'url': None}
-        section = self.config_section(context.requirement)
-        config['url'] = context.local_state_file.get_value(section + ['url'])
-        for method in ['md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512']:
-            value = context.local_state_file.get_value(section + [method])
-            if value:
-                config['hash_value'] = value
-                config['hash_algorithm'] = method
-                break
+        config = super(DownloadProvider, self).read_config(context)
 
-        if 'hash_algorithm' not in config:
-            config['hash_value'] = context.local_state_file.get_value(section + ['hash_value'])
-            config['hash_algorithm'] = context.local_state_file.get_value(section + ['hash_algorithm'])
-        config['filename'] = context.local_state_file.get_value(section + ['filename'])
+        assert 'source' in config
+        assert config['source'] != 'default'
+
+        if config['source'] == 'unset':
+            config['source'] = 'download'
 
         return config
 
     def set_config_values_as_strings(self, context, values):
-        """Override superclass to set our config values."""
-        section = self.config_section(context.requirement)
+        """Override superclass to clear out environ if we decide not to use it."""
+        super(DownloadProvider, self).set_config_values_as_strings(context, values)
 
-        for key, value in values.items():
-            context.local_state_file.set_value(section + [key], value)
+        if 'source' in values and values['source'] != 'environ':
+            # clear out the previous setting; this is sort of a hack. The problem
+            # is that we don't want to delete env vars set in actual os.environ on
+            # the command line, in our first pass, and in some subtypes of EnvVarProvider
+            # (CondaEnvProvider) we also don't want to use it by default. Otherwise
+            # we should probably do this in EnvVarProvider. future: rethink this.
+            # a possible fix is to track an initial_environ for the whole prepare
+            # sequence, separately from the current running environ?
+            context.environ.pop(context.requirement.env_var, None)
 
-    def config_html(self, context, status):
-        """Override superclass to provide our config html."""
+    def _extra_source_options_html(self, context, status):
         analysis = status.analysis
 
-        if analysis.existing_scoped_filename is not None:
-            project_option = "<form>Previously downloaded file located at {}</form>".format(
-                analysis.existing_scoped_filename)
+        if analysis.existing_filename is not None:
+            if context.environ.get(context.requirement.env_var, None) == analysis.existing_filename:
+                # avoid redundant choice
+                extra_html = ""
+            else:
+                extra_html = """
+            <div>
+              <label><input type="radio" name="source" value="download"/>Use already-downloaded file {}</label>
+            </div>
+            """.format(analysis.existing_filename)
         else:
-            project_option = ('<form>'
-                              'Download a file at url: <input type="text" name="url"/><br>'
-                              'Download to location: <input type="text" name="filename"/><br>'
-                              'Verification algorithm: <input type="text" name="hash_algorithm"/><br>'
-                              'Checksum value: <input type="text" name="hash_value"/><br>'
-                              '</form>')
-        return project_option
+            extra_html = """
+            <div>
+              <label><input type="radio" name="source" value="download"/>Download {} to {}</label>
+            </div>
+            """.format(context.requirement.url, context.requirement.filename)
 
-    def _previous_file_state(self, file_state):
-        if 'filename' not in file_state:
-            return
-        if os.path.exists(file_state['filename']):
-            return file_state['filename']
+        return extra_html
 
     def analyze(self, requirement, environ, local_state_file):
         """Override superclass to store additional fields in the analysis."""
         analysis = super(DownloadProvider, self).analyze(requirement, environ, local_state_file)
-        # future: change run state to something more appropriate.
-        file_state = local_state_file.get_service_run_state(requirement.env_var)
-        previous_filename = self._previous_file_state(file_state)
-
+        filename = os.path.join(environ['PROJECT_DIR'], requirement.filename)
+        if os.path.exists(filename):
+            existing_filename = filename
+        else:
+            existing_filename = None
         return _DownloadProviderAnalysis(analysis.config,
                                          analysis.missing_env_vars_to_configure,
                                          analysis.missing_env_vars_to_provide,
-                                         existing_scoped_filename=previous_filename)
+                                         existing_filename=existing_filename)
 
     def _provide_download(self, requirement, context):
-        def _ensure_download(requirement, context, run_state):
-            filename = context.status.analysis.existing_scoped_filename
-            if filename is not None and os.path.exists(filename):
-                context.append_log("Previously downloaded file located at {}".format(filename))
+        filename = context.status.analysis.existing_filename
+        if filename is not None:
+            context.append_log("Previously downloaded file located at {}".format(filename))
+            return filename
+
+        filename = os.path.abspath(os.path.join(context.environ['PROJECT_DIR'], requirement.filename))
+        download = FileDownloader(url=requirement.url, filename=filename, hash_algorithm=requirement.hash_algorithm)
+
+        try:
+            _ioloop = IOLoop(make_current=False)
+            response = _ioloop.run_sync(lambda: download.run(_ioloop))
+            if response.code == 200:
                 return filename
-
-            filename = os.path.join(context.environ['PROJECT_DIR'], requirement.filename)
-            run_state.clear()
-            download = FileDownloader(url=requirement.url, filename=filename, hash_algorithm=requirement.hash_algorithm)
-
-            try:
-                _ioloop = IOLoop()
-                response = _ioloop.run_sync(lambda: download.run(_ioloop))
-                if response.code == 200:
-                    run_state['filename'] = os.path.abspath(filename)
-            except Exception as e:
-                print("Error downloading {}: {}".format(requirement.url, str(e)))
-            finally:
-                _ioloop.close()
-            return run_state.get('filename', None)
-
-        ensure_download = functools.partial(_ensure_download, requirement, context)
-
-        return context.transform_service_run_state(requirement.env_var, ensure_download)
+            else:
+                context.append_error("Error downloading {}: response code {}".format(requirement.url, response.code))
+                return None
+        except Exception as e:
+            context.append_error("Error downloading {}: {}".format(requirement.url, str(e)))
+            return None
+        finally:
+            _ioloop.close()
 
     def provide(self, requirement, context):
         """Override superclass to start a download..
@@ -122,8 +111,9 @@ class DownloadProvider(Provider):
         requirement's env var to that filename.
 
         """
-        assert 'PATH' in context.environ
-        filename = self._provide_download(requirement, context)
+        super(DownloadProvider, self).provide(requirement, context)
 
-        if filename is not None:
-            context.environ[requirement.env_var] = filename
+        if requirement.env_var not in context.environ or context.status.analysis.config['source'] == 'download':
+            filename = self._provide_download(requirement, context)
+            if filename is not None:
+                context.environ[requirement.env_var] = filename

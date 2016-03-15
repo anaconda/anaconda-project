@@ -108,10 +108,12 @@ class DownloadRequirement(EnvVarRequirement):
             return self._unset_message()
         filename = environ[self.env_var]
         if not os.path.exists(filename):
-            return 'File not downloaded: {}'.format(filename)
+            return 'File not found: {}'.format(filename)
 
         try:
-            if not self._checksum(filename):
+            if self._checksum(filename):
+                return None
+            else:
                 return 'File download checksum error for {}'.format(filename)
         except OSError:
             return 'File referenced by: {} cannot be read ({})'.format(self.env_var, filename)

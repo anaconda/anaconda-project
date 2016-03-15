@@ -17,7 +17,7 @@ def test_filename_not_set():
                                           env_var=ENV_VAR,
                                           url='http://example.com',
                                           filename=ENV_VAR)
-        status = requirement.check_status(dict(), local_state)
+        status = requirement.check_status(dict(PROJECT_DIR=dirname), local_state)
         assert not status
         assert "Environment variable {} is not set.".format(ENV_VAR) == status.status_description
 
@@ -32,9 +32,9 @@ def test_download_filename_missing():
                                           env_var=ENV_VAR,
                                           url='http://localhost/data.zip',
                                           filename='data.zip')
-        status = requirement.check_status({ENV_VAR: filename}, local_state)
+        status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
         assert not status
-        assert 'File not downloaded: {}'.format(filename) == status.status_description
+        assert 'File not found: {}'.format(filename) == status.status_description
 
     with_directory_contents({}, check_missing_filename)
 
@@ -62,7 +62,7 @@ def test_download_checksum():
                                           filename='data.zip',
                                           hash_algorithm='md5',
                                           hash_value=digest)
-        status = requirement.check_status({ENV_VAR: filename}, local_state)
+        status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
         assert status
         assert 'File downloaded to {}'.format(filename) == status.status_description
 
@@ -79,7 +79,7 @@ def test_download_with_no_checksum():
                                           env_var=ENV_VAR,
                                           url='http://localhost/data.zip',
                                           filename='data.zip')
-        status = requirement.check_status({ENV_VAR: filename}, local_state)
+        status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
         assert status
         assert 'File downloaded to {}'.format(filename) == status.status_description
 
@@ -99,7 +99,7 @@ def test_download_wrong_checksum():
                                           filename='data.zip',
                                           hash_algorithm='md5',
                                           hash_value=digest)
-        status = requirement.check_status({ENV_VAR: filename}, local_state)
+        status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
         assert not status
         assert 'File download checksum error for {}'.format(filename) == status.status_description
 
@@ -123,7 +123,7 @@ def test_download_error_readfile(monkeypatch):
                                           hash_algorithm='md5',
                                           hash_value=digest)
         monkeypatch.setattr('project.plugins.requirements.download.DownloadRequirement._checksum', checksum_mock)
-        status = requirement.check_status({ENV_VAR: filename}, local_state)
+        status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
         assert not status
         assert 'File referenced by: {} cannot be read ({})'.format(ENV_VAR, filename) == status.status_description
 
