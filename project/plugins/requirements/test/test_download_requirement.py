@@ -15,7 +15,8 @@ def test_filename_not_set():
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = DownloadRequirement(registry=PluginRegistry(),
                                           env_var=ENV_VAR,
-                                          options={'url': 'http://example.com'})
+                                          url='http://example.com',
+                                          filename=ENV_VAR)
         status = requirement.check_status(dict(), local_state)
         assert not status
         assert "Environment variable {} is not set.".format(ENV_VAR) == status.status_description
@@ -29,7 +30,8 @@ def test_download_filename_missing():
         filename = '/data.zip'
         requirement = DownloadRequirement(registry=PluginRegistry(),
                                           env_var=ENV_VAR,
-                                          options={'url': 'http://localhost/data.zip'})
+                                          url='http://localhost/data.zip',
+                                          filename='data.zip')
         status = requirement.check_status({ENV_VAR: filename}, local_state)
         assert not status
         assert 'File not downloaded: {}'.format(filename) == status.status_description
@@ -53,9 +55,13 @@ def test_download_checksum():
 
     def verify_checksum(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        options = {'url': 'http://localhost/data.zip', 'md5': digest}
         filename = os.path.join(dirname, 'data.zip')
-        requirement = DownloadRequirement(registry=PluginRegistry(), env_var=ENV_VAR, options=options)
+        requirement = DownloadRequirement(registry=PluginRegistry(),
+                                          env_var=ENV_VAR,
+                                          url='http://localhost/data.zip',
+                                          filename='data.zip',
+                                          hash_algorithm='md5',
+                                          hash_value=digest)
         status = requirement.check_status({ENV_VAR: filename}, local_state)
         assert status
         assert 'File downloaded to {}'.format(filename) == status.status_description
@@ -68,9 +74,11 @@ def test_download_with_no_checksum():
 
     def downloaded_file_valid(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        options = {'url': 'http://localhost/data.zip'}
         filename = os.path.join(dirname, 'data.zip')
-        requirement = DownloadRequirement(registry=PluginRegistry(), env_var=ENV_VAR, options=options)
+        requirement = DownloadRequirement(registry=PluginRegistry(),
+                                          env_var=ENV_VAR,
+                                          url='http://localhost/data.zip',
+                                          filename='data.zip')
         status = requirement.check_status({ENV_VAR: filename}, local_state)
         assert status
         assert 'File downloaded to {}'.format(filename) == status.status_description
@@ -84,9 +92,13 @@ def test_download_wrong_checksum():
 
     def downloaded_file_valid(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        options = {'url': 'http://localhost/data.zip', 'md5': digest}
         filename = os.path.join(dirname, 'data.zip')
-        requirement = DownloadRequirement(registry=PluginRegistry(), env_var=ENV_VAR, options=options)
+        requirement = DownloadRequirement(registry=PluginRegistry(),
+                                          env_var=ENV_VAR,
+                                          url='http://localhost/data.zip',
+                                          filename='data.zip',
+                                          hash_algorithm='md5',
+                                          hash_value=digest)
         status = requirement.check_status({ENV_VAR: filename}, local_state)
         assert not status
         assert 'File download checksum error for {}'.format(filename) == status.status_description
@@ -103,12 +115,43 @@ def test_download_error_readfile(monkeypatch):
 
     def downloaded_file_valid(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        options = {'url': 'http://localhost/data.zip', 'md5': digest}
         filename = os.path.join(dirname, 'data.zip')
-        requirement = DownloadRequirement(registry=PluginRegistry(), env_var=ENV_VAR, options=options)
+        requirement = DownloadRequirement(registry=PluginRegistry(),
+                                          env_var=ENV_VAR,
+                                          url='http://localhost/data.zip',
+                                          filename='data.zip',
+                                          hash_algorithm='md5',
+                                          hash_value=digest)
         monkeypatch.setattr('project.plugins.requirements.download.DownloadRequirement._checksum', checksum_mock)
         status = requirement.check_status({ENV_VAR: filename}, local_state)
         assert not status
         assert 'File referenced by: {} cannot be read ({})'.format(ENV_VAR, filename) == status.status_description
 
     with_directory_contents({'data.zip': datafile}, downloaded_file_valid)
+
+
+def test_use_variable_name_for_filename():
+    problems = []
+    requirements = []
+    DownloadRequirement.parse(PluginRegistry(),
+                              varname='FOO',
+                              item='http://example.com/',
+                              problems=problems,
+                              requirements=requirements)
+    assert [] == problems
+    assert len(requirements) == 1
+    assert requirements[0].filename == 'FOO'
+    assert requirements[0].url == 'http://example.com/'
+
+
+def test_checksum_is_not_a_string():
+    problems = []
+    requirements = []
+    DownloadRequirement.parse(PluginRegistry(),
+                              varname='FOO',
+                              item=dict(url='http://example.com/',
+                                        md5=[]),
+                              problems=problems,
+                              requirements=requirements)
+    assert ['Checksum value for FOO should be a string not [].'] == problems
+    assert len(requirements) == 0

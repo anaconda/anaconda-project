@@ -8,7 +8,7 @@ from project.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from project.conda_environment import CondaEnvironment
 from project.project_commands import ProjectCommand
 from project.plugins.registry import PluginRegistry
-from project.plugins.requirements import download
+from project.plugins.requirements.download import DownloadRequirement
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
@@ -147,13 +147,7 @@ class _ConfigCache(object):
             return
 
         for varname, item in downloads.items():
-            if isinstance(item, str):
-                requirements.append(download.DownloadRequirement(self.registry, env_var=varname, options={'url': item}))
-            elif isinstance(item, dict):
-                if 'url' in item:
-                    requirements.append(download.DownloadRequirement(self.registry, env_var=varname, options=item))
-                else:
-                    problems.append('Download item doesn\'t contain url: {}'.format(varname))
+            DownloadRequirement.parse(self.registry, varname, item, problems, requirements)
 
     def _update_conda_environments(self, problems, project_file):
         def _parse_string_list(parent_dict, key, what):

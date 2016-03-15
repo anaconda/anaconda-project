@@ -96,12 +96,9 @@ class DownloadProvider(Provider):
                 context.append_log("Previously downloaded file located at {}".format(filename))
                 return filename
 
-            url = requirement.options['url']
-            filename = requirement.options['filename']
-            filename = os.path.join(context.environ['PROJECT_DIR'], filename)
+            filename = os.path.join(context.environ['PROJECT_DIR'], requirement.filename)
             run_state.clear()
-            hash_algorithm = requirement.options.get('hash_algorithm', None)
-            download = FileDownloader(url=url, filename=filename, hash_algorithm=hash_algorithm)
+            download = FileDownloader(url=requirement.url, filename=filename, hash_algorithm=requirement.hash_algorithm)
 
             try:
                 _ioloop = IOLoop()
@@ -109,7 +106,7 @@ class DownloadProvider(Provider):
                 if response.code == 200:
                     run_state['filename'] = os.path.abspath(filename)
             except Exception as e:
-                print("Error downloading {}: {}".format(url, str(e)))
+                print("Error downloading {}: {}".format(requirement.url, str(e)))
             finally:
                 _ioloop.close()
             return run_state.get('filename', None)

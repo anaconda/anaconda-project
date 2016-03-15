@@ -23,7 +23,8 @@ DATAFILE_CONTENT = ("downloads:\n"
 def _download_requirement():
     return DownloadRequirement(registry=PluginRegistry(),
                                env_var="DATAFILE",
-                               options={'url': 'http://localhost/data.zip'})
+                               url='http://localhost/data.zip',
+                               filename='data.zip')
 
 
 def test_reading_valid_config():
@@ -164,7 +165,33 @@ def test_provide_missing_url(monkeypatch):
     def provide_download(dirname):
         project = project_no_dedicated_env(dirname)
         prepare(project, environ=minimal_environ())
-        assert "Download item doesn\'t contain url: DATAFILE" in project.problems
+        assert "Download item DATAFILE doesn't contain a 'url' field." in project.problems
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
+
+
+def test_provide_empty_url(monkeypatch):
+    ERR_DATAFILE_CONTENT = ("downloads:\n" "    DATAFILE:\n" "       url: \"\"\n")
+
+    def provide_download(dirname):
+        project = project_no_dedicated_env(dirname)
+        prepare(project, environ=minimal_environ())
+        assert "Download item DATAFILE has an empty 'url' field." in project.problems
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
+
+
+def test_provide_multiple_checksums(monkeypatch):
+    ERR_DATAFILE_CONTENT = ("downloads:\n"
+                            "    DATAFILE:\n"
+                            "       url: http://localhost/\n"
+                            "       md5: abcdefg\n"
+                            "       sha1: abcdefg\n")
+
+    def provide_download(dirname):
+        project = project_no_dedicated_env(dirname)
+        prepare(project, environ=minimal_environ())
+        assert "Multiple checksums for download DATAFILE: md5 and sha1." in project.problems
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
 

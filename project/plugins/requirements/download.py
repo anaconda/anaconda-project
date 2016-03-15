@@ -8,27 +8,77 @@ import os
 from project.plugins.requirement import EnvVarRequirement
 from project.plugins.network_util import urlparse
 
+_hash_algorithms = ('md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512')
+
 
 class DownloadRequirement(EnvVarRequirement):
     """A requirement for ``env_var`` to point to a downloaded file."""
 
-    def __init__(self, registry, env_var, options):
-        """Extend init by decoupling the hash method if present."""
-        # options is a required parameter, no default.
-        assert isinstance(options, dict)
-        assert 'url' in options
+    @classmethod
+    def parse(cls, registry, varname, item, problems, requirements):
+        """Parse an item from the downloads: section."""
+        url = None
+        filename = None
+        hash_algorithm = None
+        hash_value = None
+        if isinstance(item, str):
+            url = item
+        elif isinstance(item, dict):
+            url = item.get('url', None)
+            if url is None:
+                problems.append("Download item {} doesn't contain a 'url' field.".format(varname))
+                return
 
-        for method in ['md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512']:
-            if method in options:
-                options['hash_alg'] = method
-                options['hash_value'] = options[method]
-                options.pop(method)
-                break
+            for method in _hash_algorithms:
+                if method in item:
+                    if hash_algorithm is not None:
+                        problems.append("Multiple checksums for download {}: {} and {}.".format(varname, hash_algorithm,
+                                                                                                method))
+                        return
+                    else:
+                        hash_value = item[method]
+                        if isinstance(hash_value, str):
+                            hash_algorithm = method
+                        else:
+                            problems.append("Checksum value for {} should be a string not {}.".format(varname,
+                                                                                                      hash_value))
+                            return
 
-        if 'filename' not in options:
-            filename = urlparse.urlsplit(options['url']).path
-            options['filename'] = os.path.basename(filename)
-        super(DownloadRequirement, self).__init__(registry=registry, env_var=env_var, options=options)
+            filename = item.get('filename', None)
+
+        if url == '':
+            problems.append("Download item {} has an empty 'url' field.".format(varname))
+            return
+
+        if filename is None:
+            # urlsplit doesn't seem to ever throw an exception, but it can
+            # return pretty nonsensical stuff on invalid urls, in particular
+            # an empty path is very possible
+            filename = urlparse.urlsplit(url).path
+            if filename != '':
+                filename = os.path.basename(filename)
+            if filename == '':
+                filename = varname
+
+        requirements.append(DownloadRequirement(registry,
+                                                env_var=varname,
+                                                url=url,
+                                                filename=filename,
+                                                hash_algorithm=hash_algorithm,
+                                                hash_value=hash_value))
+
+    def __init__(self, registry, env_var, url, filename, hash_algorithm=None, hash_value=None):
+        """Extend init to accept url and hash parameters."""
+        super(DownloadRequirement, self).__init__(registry=registry, env_var=env_var)
+        assert url is not None
+        assert filename is not None
+        assert len(url) > 0
+        assert len(filename) > 0
+        self.url = url
+        self.filename = filename
+        assert hash_algorithm is None or hash_algorithm in _hash_algorithms
+        self.hash_algorithm = hash_algorithm
+        self.hash_value = hash_value
 
     @property
     def title(self):
@@ -36,7 +86,7 @@ class DownloadRequirement(EnvVarRequirement):
         return "A downloaded file which is referenced by {}".format(self.env_var)  # pragma: no cover
 
     def _checksum(self, filename):
-        if 'hash_alg' not in self.options:
+        if self.hash_algorithm is None:
             return True
 
         # future: keep track of how much of the file was read in %
@@ -44,14 +94,14 @@ class DownloadRequirement(EnvVarRequirement):
         # size = st.st_size
 
         read_size = 1024 * 1024
-        checksum = getattr(hashlib, self.options['hash_alg'])()
+        checksum = getattr(hashlib, self.hash_algorithm)()
         with open(filename, 'rb') as f:
             data = f.read(read_size)
             while data:
                 checksum.update(data)
                 data = f.read(read_size)
         digest = checksum.hexdigest()
-        return digest == self.options.get('hash_value', None)
+        return digest == self.hash_value
 
     def _why_not_provided(self, environ):
         if self.env_var not in environ:
