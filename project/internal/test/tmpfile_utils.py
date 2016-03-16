@@ -1,6 +1,6 @@
 import tempfile
 import shutil
-import os.path
+import os
 
 from project.internal.makedirs import makedirs_ok_if_exists
 from project.local_state_file import LocalStateFile
@@ -36,11 +36,16 @@ def with_temporary_file(func, dir=None):
     if dir is None:
         dir = local_tmp
     import tempfile
-    f = tempfile.NamedTemporaryFile(dir=dir)
+    # Windows throws a permission denied if we use delete=True for
+    # auto-delete, and then try to open the file again ourselves
+    # with f.name. So we manually delete in the finally block
+    # below.
+    f = tempfile.NamedTemporaryFile(dir=dir, delete=False)
     try:
         func(f)
     finally:
         f.close()
+        os.remove(f.name)
 
 
 def with_file_contents(contents, func, dir=None):
