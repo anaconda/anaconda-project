@@ -6,7 +6,7 @@ from project.test.project_utils import project_no_dedicated_env
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.test.environ_utils import minimal_environ, strip_environ
 from project.internal.test.http_utils import http_get_async, http_post_async
-from project.local_state_file import DEFAULT_RELATIVE_LOCAL_STATE_PATH
+from project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
 from project.plugins.provider import ProviderConfigContext
@@ -197,7 +197,7 @@ def test_file_exists(monkeypatch):
     with_directory_contents(
         {
             DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT,
-            DEFAULT_RELATIVE_LOCAL_STATE_PATH: LOCAL_STATE
+            DEFAULT_LOCAL_STATE_FILENAME: LOCAL_STATE
         }, provide_download)
 
 
@@ -222,7 +222,7 @@ def test_config_html(monkeypatch):
         expected_choice = 'Use already-downloaded file {}'.format(FILENAME)
         assert expected_choice in html
 
-    with_directory_contents({DEFAULT_RELATIVE_LOCAL_STATE_PATH: DATAFILE_CONTENT}, config_html)
+    with_directory_contents({DEFAULT_LOCAL_STATE_FILENAME: DATAFILE_CONTENT}, config_html)
 
 
 def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_actions, final_result_check):

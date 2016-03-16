@@ -6,7 +6,7 @@ import pytest
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.crypto import encrypt_string
-from project.local_state_file import LocalStateFile, DEFAULT_RELATIVE_LOCAL_STATE_PATH
+from project.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
 from project.plugins.provider import Provider, ProvideContext, EnvVarProvider, ProviderConfigContext
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirement import EnvVarRequirement
@@ -238,7 +238,7 @@ runtime:
   FOO:
     default: from_default
     """,
-         DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
+         DEFAULT_LOCAL_STATE_FILENAME: """
 variables:
   FOO: from_local_state
 """}, check_env_var_provider)
@@ -501,10 +501,11 @@ def test_provide_context_ensure_work_directory():
         context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
         workpath = context.ensure_work_directory("foo")
         assert os.path.isdir(workpath)
+        assert workpath.endswith("/foo")
         parent = os.path.dirname(workpath)
-        assert parent.endswith("/run")
+        assert parent.endswith("/services")
         parent = os.path.dirname(parent)
-        assert parent.endswith("/.anaconda")
+        assert parent == dirname
 
         # be sure we can create if it already exists
         workpath2 = context.ensure_work_directory("foo")

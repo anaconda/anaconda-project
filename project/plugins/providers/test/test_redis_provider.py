@@ -6,7 +6,7 @@ import os
 from project.test.project_utils import project_no_dedicated_env
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.test.environ_utils import minimal_environ, strip_environ
-from project.local_state_file import DEFAULT_RELATIVE_LOCAL_STATE_PATH
+from project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
 from project.plugins.provider import ProviderConfigContext
@@ -44,7 +44,7 @@ def test_reading_valid_config():
 
     with_directory_contents(
         {
-            DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
+            DEFAULT_LOCAL_STATE_FILENAME: """
 runtime:
   REDIS_URL:
     providers:
@@ -70,7 +70,7 @@ def _read_invalid_port_range(capsys, port_range):
 
     with_directory_contents(
         {
-            DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
+            DEFAULT_LOCAL_STATE_FILENAME: """
 runtime:
   REDIS_URL:
     providers:
@@ -219,8 +219,8 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
                     PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert len(can_connect_args_list) >= 2
 
-        pidfile = os.path.join(dirname, ".anaconda/run/project_scoped_redis/redis.pid")
-        logfile = os.path.join(dirname, ".anaconda/run/project_scoped_redis/redis.log")
+        pidfile = os.path.join(dirname, "services/redis/redis.pid")
+        logfile = os.path.join(dirname, "services/redis/redis.log")
         assert os.path.exists(pidfile)
         assert os.path.exists(logfile)
 
@@ -264,8 +264,8 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
                     PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert len(can_connect_args_list) >= 2
 
-        pidfile = os.path.join(dirname, ".anaconda/run/project_scoped_redis/redis.pid")
-        logfile = os.path.join(dirname, ".anaconda/run/project_scoped_redis/redis.log")
+        pidfile = os.path.join(dirname, "services/redis/redis.pid")
+        logfile = os.path.join(dirname, "services/redis/redis.log")
         assert os.path.exists(pidfile)
         assert os.path.exists(logfile)
 
@@ -331,7 +331,7 @@ def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
             if 'done' in killed:
                 return
 
-            pidfile = os.path.join(dirname, ".anaconda", "run", "project_scoped_redis", "redis.pid")
+            pidfile = os.path.join(dirname, "services", "redis", "redis.pid")
             count = 0
             while count < 15:
                 if os.path.exists(pidfile):
@@ -425,7 +425,7 @@ def test_fail_to_prepare_local_redis_server_scope_system(monkeypatch, capsys):
 runtime:
   REDIS_URL: {}
 """,
-         DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
+         DEFAULT_LOCAL_STATE_FILENAME: """
 runtime:
   REDIS_URL:
     providers:
@@ -454,7 +454,7 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
 runtime:
   REDIS_URL: {}
     """,
-         DEFAULT_RELATIVE_LOCAL_STATE_PATH: """
+         DEFAULT_LOCAL_STATE_FILENAME: """
 runtime:
   REDIS_URL:
     providers:
@@ -477,7 +477,7 @@ def _fail_to_prepare_local_redis_server_exec_fails(monkeypatch, capsys, logfile_
     _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
 
     def start_local_redis(dirname):
-        logfile = os.path.join(dirname, ".anaconda/run/project_scoped_redis/redis.log")
+        logfile = os.path.join(dirname, "services/redis/redis.log")
 
         from subprocess import Popen as real_Popen
 

@@ -45,7 +45,7 @@ class ProvideContext(object):
         Args:
             relative_name (str): name to distinguish this dir from other work directories
         """
-        path = os.path.join(os.path.dirname(self._local_state_file.filename), "run", relative_name)
+        path = os.path.join(os.path.dirname(self._local_state_file.filename), "services", relative_name)
         makedirs_ok_if_exists(path)
         return path
 
@@ -449,7 +449,7 @@ class EnvVarProvider(Provider):
         #  - then the project.yml default value
         local_state_override = self._local_state_override(requirement, context.local_state_file)
         if local_state_override is not None:
-            # .anaconda/project-local.yml
+            # project-local.yml
             #
             # variables:
             #   REDIS_URL: "redis://example.com:1234"

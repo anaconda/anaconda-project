@@ -165,7 +165,7 @@ class RedisProvider(Provider):
 
             run_state.clear()
 
-            workdir = context.ensure_work_directory("project_scoped_redis")
+            workdir = context.ensure_work_directory("redis")
             pidfile = os.path.join(workdir, "redis.pid")
             logfile = os.path.join(workdir, "redis.log")
 
