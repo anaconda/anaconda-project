@@ -52,6 +52,9 @@ def with_file_contents(contents, func, dir=None):
     def with_file_object(f):
         f.write(contents.encode("UTF-8"))
         f.flush()
+        # Windows will get mad if we try to rename it without closing,
+        # and some users of with_file_contents want to rename it.
+        f.close()
         func(f.name)
 
     with_temporary_file(with_file_object, dir=dir)
