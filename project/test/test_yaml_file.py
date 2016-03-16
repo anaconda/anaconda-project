@@ -114,7 +114,11 @@ def test_read_yaml_file_that_is_a_directory():
         os.makedirs(filename)
         with pytest.raises(IOError) as excinfo:
             YamlFile(filename)
-        assert errno.EISDIR == excinfo.value.errno
+        import platform
+        if platform.system() == 'Windows':
+            assert errno.EACCES == excinfo.value.errno
+        else:
+            assert errno.EISDIR == excinfo.value.errno
 
     with_directory_contents(dict(), check_read_directory)
 
