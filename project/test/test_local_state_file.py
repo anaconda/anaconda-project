@@ -22,7 +22,7 @@ def test_create_missing_local_state_file():
             # this is sort of annoying that the default empty file
             # has {} in it, but in our real usage we should only
             # save the file if we set something in it probably.
-            assert "# Anaconda local project state\n{}\n" == contents
+            assert "# Anaconda local project state (specific to this user/machine)\n{}\n" == contents
 
     with_directory_contents(dict(), create_file)
 

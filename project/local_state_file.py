@@ -51,7 +51,7 @@ class LocalStateFile(YamlFile):
         return LocalStateFile(os.path.join(directory, DEFAULT_LOCAL_STATE_FILENAME))
 
     def _default_comment(self):
-        return "Anaconda local project state"
+        return "Anaconda local project state (specific to this user/machine)"
 
     def set_service_run_state(self, service_name, state):
         """Set a dict value in the ``service_run_states`` section.
