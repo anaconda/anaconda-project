@@ -425,9 +425,12 @@ class EnvVarProvider(Provider):
             else:
                 choices_html = choices_html + """
                 <div>
-                  <label>Use this value: <input type="{input_type}" name="value"/></label>
+                  <label><input type="radio" name="source" value="variables"/>Use this value:
+                         <input type="{input_type}" name="value"/></label>
                 </div>
                 """.format(input_type=input_type)
+
+        # print(("%s: choices_html=\n" % self.__class__.__name__) + choices_html)
 
         return """
 <form>
