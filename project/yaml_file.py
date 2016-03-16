@@ -13,6 +13,7 @@ import os
 import uuid
 
 from project.internal.makedirs import makedirs_ok_if_exists
+from project.internal.rename import rename_over_existing
 
 
 def _atomic_replace(path, contents, encoding='utf-8'):
@@ -22,8 +23,7 @@ def _atomic_replace(path, contents, encoding='utf-8'):
             file.write(contents)
             file.flush()
             file.close()
-        # on windows this may not work, we will see
-        os.rename(tmp, path)
+        rename_over_existing(tmp, path)
     finally:
         try:
             os.remove(tmp)

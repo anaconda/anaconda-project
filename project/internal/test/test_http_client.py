@@ -153,7 +153,7 @@ def test_download_fail_to_rename_tmp_file(monkeypatch):
             def mock_rename(src, dest):
                 raise OSError("FAIL")
 
-            monkeypatch.setattr('os.rename', mock_rename)
+            monkeypatch.setattr('project.internal.rename.rename_over_existing', mock_rename)
 
             response = IOLoop.current().run_sync(lambda: download.run(IOLoop.current()))
             assert ["Failed to rename %s to %s: FAIL" % (filename + ".part", filename)] == download.errors

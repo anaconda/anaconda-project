@@ -4,6 +4,7 @@ from tornado import httpclient
 from tornado import gen
 
 import project.internal.makedirs as makedirs
+import project.internal.rename as rename
 
 import os
 import hashlib
@@ -97,7 +98,7 @@ class FileDownloader(object):
             if len(self._errors) == 0:
                 try:
                     _file.close()  # be sure tmp_filename is flushed
-                    os.rename(tmp_filename, self._filename)
+                    rename.rename_over_existing(tmp_filename, self._filename)
                 except EnvironmentError as e:
                     self._errors.append("Failed to rename %s to %s: %s" % (tmp_filename, self._filename, str(e)))
 
