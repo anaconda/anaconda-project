@@ -46,4 +46,4 @@ class CondaEnvironment(object):
 
     def path(self, project_dir):
         """The filesystem path to this environment (or the path it would have if it existed)."""
-        return os.path.join(project_dir, ".envs", self.name)
+        return os.path.join(project_dir, "envs", self.name)

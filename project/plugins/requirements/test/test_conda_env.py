@@ -34,7 +34,7 @@ def test_conda_default_env_not_set():
         project_dir_disable_dedicated_env(dirname)
         local_state = LocalStateFile.load_for_directory(dirname)
         status = requirement.check_status(minimal_environ_no_conda_env(PROJECT_DIR=dirname), local_state)
-        expected = "'{}/.envs/default' doesn't look like it contains a Conda environment yet.".format(dirname)
+        expected = "'{}/envs/default' doesn't look like it contains a Conda environment yet.".format(dirname)
         assert expected == status.status_description
 
     with_directory_contents(dict(), check_conda_default_env_not_set)

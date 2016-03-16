@@ -12,7 +12,7 @@ def project_dir_disable_dedicated_env(dirname):
 
 
 def project_no_dedicated_env(*args, **kwargs):
-    """Get a project that won't create .envs/default as long as there's an env already."""
+    """Get a project that won't create envs/default as long as there's an env already."""
     if len(args) > 0:
         dirname = args[0]
     elif 'directory_path' in kwargs:
