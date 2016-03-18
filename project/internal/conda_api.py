@@ -131,13 +131,79 @@ def installed(prefix):
     return result
 
 
-def _is_conda_bindir(path):
-    # TODO: I think Windows uses Scripts
-    if not (path.endswith("/bin") or path.endswith("/bin/")):
+def _contains_conda_meta(path):
+    conda_meta = os.path.join(path, "conda-meta")
+    return os.path.isdir(conda_meta)
+
+
+def _is_conda_bindir_unix(path):
+    if path.endswith("/"):
+        path = path[:-1]
+    if not path.endswith("/bin"):
         return False
     possible_prefix = os.path.dirname(path)
-    conda_meta = os.path.join(possible_prefix, "conda-meta")
-    return os.path.isdir(conda_meta)
+    return _contains_conda_meta(possible_prefix)
+
+
+def _path_endswith_windows(path, suffix):
+    if path.endswith("\\") or path.endswith("/"):
+        path = path[:-1]
+    replaced = suffix.replace("\\", "/")
+    return path.endswith("\\" + suffix) or \
+        path.endswith("/" + suffix) or \
+        path.endswith("\\" + replaced) or \
+        path.endswith("/" + replaced)
+
+
+def _is_conda_bindir_windows(path):
+    # on Windows there are three conda binary locations:
+    #   - the prefix itself (contains python.exe)
+    #   - prefix\Library\bin
+    #   - prefix\Scripts
+    if path.endswith("\\") or path.endswith("/"):
+        path = path[:-1]
+    if _contains_conda_meta(path):
+        return True
+    elif _path_endswith_windows(path, "Library\\bin"):
+        possible_prefix = os.path.dirname(os.path.dirname(path))
+        return _contains_conda_meta(possible_prefix)
+    elif _path_endswith_windows(path, "Scripts"):
+        possible_prefix = os.path.dirname(path)
+        return _contains_conda_meta(possible_prefix)
+    else:
+        return False
+
+
+def _windows_bindirs(prefix):
+    # activate.bat in conda-env does it in this order, [ prefix, Scripts, Library\bin ]
+    dirs = [prefix]
+    for item in ("Scripts", "Library\\bin"):
+        dirs.append(os.path.join(prefix, item))
+    return dirs
+
+
+def _unix_bindirs(prefix):
+    return [os.path.join(prefix, "bin")]
+
+
+def _set_conda_env_in_path(path, prefix, bindirs_func, is_bindir_func):
+    elements = path.split(os.pathsep)
+    new_elements = []
+    if prefix is not None:
+        new_elements = bindirs_func(prefix)
+    for element in elements:
+        if element != "" and not is_bindir_func(element):
+            new_elements.append(element)
+
+    return os.pathsep.join(new_elements)
+
+
+def _set_conda_env_in_path_unix(path, prefix):
+    return _set_conda_env_in_path(path, prefix, _unix_bindirs, _is_conda_bindir_unix)
+
+
+def _set_conda_env_in_path_windows(path, prefix):
+    return _set_conda_env_in_path(path, prefix, _windows_bindirs, _is_conda_bindir_windows)
 
 
 def set_conda_env_in_path(path, prefix):
@@ -149,12 +215,8 @@ def set_conda_env_in_path(path, prefix):
     Returns:
         the new PATH value
     """
-    elements = path.split(os.pathsep)
-    new_elements = []
-    if prefix is not None:
-        # TODO: I think Windows uses Scripts
-        new_elements.append(os.path.join(prefix, "bin"))
-    for element in elements:
-        if element != "" and not _is_conda_bindir(element):
-            new_elements.append(element)
-    return os.pathsep.join(new_elements)
+    import platform
+    if platform.system() == 'Windows':
+        return _set_conda_env_in_path_windows(path, prefix)
+    else:
+        return _set_conda_env_in_path_unix(path, prefix)
