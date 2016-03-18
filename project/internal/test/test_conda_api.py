@@ -1,11 +1,19 @@
 from __future__ import absolute_import, print_function
 
 import os
+import platform
 import pytest
 
 import project.internal.conda_api as conda_api
 
 from project.internal.test.tmpfile_utils import with_directory_contents
+
+if platform.system() == 'Windows':
+    PYTHON_BINARY = "python.exe"
+    IPYTHON_BINARY = "Scripts\ipython.exe"
+else:
+    PYTHON_BINARY = "bin/python"
+    IPYTHON_BINARY = "bin/ipython"
 
 
 def test_conda_info():
@@ -32,7 +40,7 @@ def test_conda_create_and_install():
 
         assert os.path.isdir(envdir)
         assert os.path.isdir(os.path.join(envdir, "conda-meta"))
-        assert os.path.exists(os.path.join(envdir, "bin/python"))
+        assert os.path.exists(os.path.join(envdir, PYTHON_BINARY))
 
         # test that if it exists we can't create it again
         with pytest.raises(conda_api.CondaEnvExistsError) as excinfo:
@@ -40,9 +48,9 @@ def test_conda_create_and_install():
         assert 'already exists' in repr(excinfo.value)
 
         # test that we can install a package
-        assert not os.path.exists(os.path.join(envdir, "bin/ipython"))
+        assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
         conda_api.install(prefix=envdir, pkgs=['ipython'])
-        assert os.path.exists(os.path.join(envdir, "bin/ipython"))
+        assert os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
 
     with_directory_contents(dict(), do_test)
 
