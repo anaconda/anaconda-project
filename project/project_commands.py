@@ -70,13 +70,11 @@ class CommandExecInfo(object):
                 # The issue here is that in Lib/subprocess.py in
                 # the Python distribution, if shell=True the code
                 # jumps through some funky hoops setting flags on
-                # the Windows API calls. We can't easily simulate
-                # that for execvpe.  Not sure what to do.
-                # Probably we need to emulate exec by calling
-                # popen above and then having the parent process
-                # exit. But we need to develop that fix on Windows
-                # so we can test it.
-                raise NotImplementedError("exec on Windows is not implemented")
+                # the Windows API calls. We need to do that, rather
+                # than calling os.execvpe which doesn't let us set those
+                # flags. So we spawn the child and then exit.
+                self.popen()
+                sys.exit(0)
             else:
                 # this is all shell=True does on unix
                 args = ['/bin/sh', '-c'] + args
