@@ -1,6 +1,9 @@
+from __future__ import print_function, absolute_import
+
 import tempfile
 import shutil
 import os
+import sys
 
 from project.internal.makedirs import makedirs_ok_if_exists
 from project.local_state_file import LocalStateFile
@@ -14,7 +17,16 @@ class TmpDir(object):
         self._dir = tempfile.mkdtemp(prefix=prefix, dir=local_tmp)
 
     def __exit__(self, type, value, traceback):
-        shutil.rmtree(path=self._dir)
+        try:
+          shutil.rmtree(path=self._dir)
+        except Exception as e:
+            # prefer original exception to rmtree exception
+            if value is None:
+                print("Exception cleaning up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
+                raise e
+            else:
+                print("Failed to clean up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
+                raise value
 
     def __enter__(self):
         return self._dir
