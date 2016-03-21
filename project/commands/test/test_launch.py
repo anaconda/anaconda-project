@@ -2,6 +2,7 @@ from __future__ import absolute_import, print_function
 
 from copy import deepcopy
 import errno
+import platform
 import pytest
 import os
 
@@ -45,8 +46,11 @@ def test_launch_command(monkeypatch):
         assert 'file' in executed
         assert 'args' in executed
         assert 'env' in executed
-        assert executed['file'].endswith("python")
-        assert executed['args'][0].endswith("python")
+        binary_name = "python"
+        if platform.system() == 'Windows':
+            binary_name = "python.exe"
+        assert executed['file'].endswith(binary_name)
+        assert executed['args'][0].endswith(binary_name)
         assert '--version' == executed['args'][1]
         assert 'bar' == executed['env']['FOO']
 
