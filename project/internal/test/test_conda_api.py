@@ -276,7 +276,15 @@ def test_set_conda_env_in_path_unix(monkeypatch):
 
         monkeypatch.setattr('platform.system', mock_system)
 
-        monkeypatch.setattr('os.pathsep', ':')
+        def mock_is_conda_bindir_unix(path):
+            if path.endswith("\\"):
+                path = path[:-1]
+            if not path.endswith("\\bin"):
+                return False
+            possible_prefix = os.path.dirname(path)
+            return os.path.isdir(os.path.join(possible_prefix, "conda-meta"))
+
+        monkeypatch.setattr('project.internal.conda_api._is_conda_bindir_unix', mock_is_conda_bindir_unix)
 
     def check_conda_env_in_path_unix(dirname):
         env1 = os.path.join(dirname, "env1")

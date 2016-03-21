@@ -7,6 +7,8 @@ from project.internal.test.tmpfile_utils import with_directory_contents
 from tornado.ioloop import IOLoop
 
 import os
+import platform
+import stat
 
 
 def _download_file(length, hash_algorithm):
@@ -96,20 +98,37 @@ def test_download_fail_to_open_file(monkeypatch):
     def inside_directory_fail_to_open_file(dirname):
         statinfo = os.stat(dirname)
         try:
-            os.chmod(dirname, 600)  # make the open fail
             filename = os.path.join(dirname, "downloaded-file")
+            # make the open fail
+            if platform.system() == 'Windows':
+                # windows does not have read-only directories so we have to
+                # make the file read-only
+                with open(filename + ".part", 'wb') as file:
+                    file.write("".encode())
+                os.chmod(filename + ".part", stat.S_IREAD)
+            else:
+                os.chmod(dirname, stat.S_IREAD)
+
             with HttpServerTestContext() as server:
                 url = server.error_url
                 download = FileDownloader(url=url, filename=filename, hash_algorithm='md5')
                 response = IOLoop.current().run_sync(lambda: download.run(IOLoop.current()))
+                filename_with_weird_extra_slashes = filename
+                if platform.system() == 'Windows':
+                    # I dunno. that's what Windows gives us.
+                    filename_with_weird_extra_slashes = filename.replace("\\", "\\\\")
                 assert ["Failed to open %s.part: [Errno 13] Permission denied: '%s.part'" %
-                        (filename, filename)] == download.errors
+                        (filename, filename_with_weird_extra_slashes)] == download.errors
                 assert response is None
                 assert not os.path.isfile(filename)
-                assert not os.path.isfile(filename + ".part")
+                if platform.system() != 'Windows':
+                    # on windows we created this ourselves to cause the open error above
+                    assert not os.path.isfile(filename + ".part")
         finally:
             # put this back so we don't get an exception cleaning up the directory
             os.chmod(dirname, statinfo.st_mode)
+            if platform.system() == 'Windows':
+                os.chmod(filename + ".part", stat.S_IWRITE)
 
     with_directory_contents(dict(), inside_directory_fail_to_open_file)
 
