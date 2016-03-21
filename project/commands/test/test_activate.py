@@ -2,6 +2,11 @@ from __future__ import absolute_import, print_function
 
 import pytest
 
+try:
+    from shlex import quote
+except ImportError:
+    from pipes import quote
+
 from project.commands.main import main as toplevel_main
 from project.commands.activate import activate, main
 from project.internal.test.tmpfile_utils import with_directory_contents
@@ -42,7 +47,7 @@ def test_activate(monkeypatch):
         result = activate(dirname, UI_MODE_NOT_INTERACTIVE)
         assert can_connect_args['port'] == 6379
         assert result is not None
-        assert ['export PROJECT_DIR=' + dirname, 'export REDIS_URL=redis://localhost:6379'] == result
+        assert ['export PROJECT_DIR=' + quote(dirname), 'export REDIS_URL=redis://localhost:6379'] == result
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
