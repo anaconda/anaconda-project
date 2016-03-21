@@ -3,7 +3,6 @@ from __future__ import absolute_import, print_function
 import os
 import platform
 
-
 from project.test.project_utils import project_dir_disable_dedicated_env
 from project.test.environ_utils import minimal_environ, minimal_environ_no_conda_env
 from project.conda_environment import CondaEnvironment
@@ -55,7 +54,8 @@ def test_conda_default_env_not_set():
         project_dir_disable_dedicated_env(dirname)
         local_state = LocalStateFile.load_for_directory(dirname)
         status = requirement.check_status(minimal_environ_no_conda_env(PROJECT_DIR=dirname), local_state)
-        expected = "'{}' doesn't look like it contains a Conda environment yet.".format(os.path.join(dirname, 'envs', 'default'))
+        expected = "'{}' doesn't look like it contains a Conda environment yet.".format(os.path.join(dirname, 'envs',
+                                                                                                     'default'))
         assert expected == status.status_description
 
     with_directory_contents(dict(), check_conda_default_env_not_set)
@@ -67,9 +67,8 @@ def test_conda_default_env_is_bogus():
         project_dir_disable_dedicated_env(dirname)
         local_state = LocalStateFile.load_for_directory(dirname)
         status = requirement.check_status(
-            minimal_environ_no_conda_env(** { conda_env_var: "not_a_real_env_anyone_has",
-                                         'PROJECT_DIR' : dirname }),
-            local_state)
+            minimal_environ_no_conda_env(**{conda_env_var: "not_a_real_env_anyone_has",
+                                            'PROJECT_DIR': dirname}), local_state)
         expected = "'not_a_real_env_anyone_has' doesn't look like it contains a Conda environment yet."
         assert expected == status.status_description
 
