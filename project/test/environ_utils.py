@@ -4,7 +4,20 @@ import os
 
 # we keep the conda env variables because otherwise
 # we'd have to keep recreating project-specific conda envs in our tests
-system_vars_to_keep = ('PATH', 'LD_LIBRARY_PATH', 'TERM', 'PYTHONPATH')
+system_vars_to_keep = ('PATH',
+                       'LD_LIBRARY_PATH',
+                       'TERM',
+                       'PYTHONPATH',
+                       'HOME',
+                       # Windows stuff
+                       'SystemRoot',
+                       'SystemDrive',
+                       'OS',
+                       'ProgramData',
+                       'ProgramFiles',
+                       'LOCALAPPDATA',
+                       'HOMEDRIVE',
+                       'HOMEPATH')
 conda_vars_to_keep = ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH')
 
 
