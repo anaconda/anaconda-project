@@ -91,7 +91,7 @@ class AllTestsCommand(TestCommand):
             for root, dirs, files in os.walk(ROOT):
                 # chop out hidden directories
                 files = [f for f in files if not f[0] == '.']
-                dirs[:] = [d for d in dirs if not d[0] == '.']
+                dirs[:] = [d for d in dirs if (d[0] != '.' and d != 'build')]
                 # now walk files
                 for f in files:
                     if f.endswith(".py"):
