@@ -20,7 +20,7 @@ if platform.system() == 'Windows':
     script_dir = "Scripts"
     conda_env_var = 'CONDA_DEFAULT_ENV'
 else:
-    script_dir = script_dir
+    script_dir = "bin"
     conda_env_var = 'CONDA_ENV_PATH'
 
 
