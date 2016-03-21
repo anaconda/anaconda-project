@@ -15,12 +15,24 @@ def _empty_default_requirement():
                                environments=dict(default=CondaEnvironment('default', [], [])))
 
 
-def test_find_by_env_var_conda_env():
+def test_env_var_on_windows(monkeypatch):
+    def mock_system():
+        return 'Windows'
+
+    monkeypatch.setattr('platform.system', mock_system)
     registry = PluginRegistry()
-    found = registry.find_requirement_by_env_var(env_var='CONDA_ENV_PATH', options=dict())
-    assert found is not None
-    assert isinstance(found, CondaEnvRequirement)
-    assert found.env_var == 'CONDA_ENV_PATH'
+    requirement = CondaEnvRequirement(registry)
+    assert requirement.env_var == 'CONDA_DEFAULT_ENV'
+
+
+def test_env_var_on_linux(monkeypatch):
+    def mock_system():
+        return 'Linux'
+
+    monkeypatch.setattr('platform.system', mock_system)
+    registry = PluginRegistry()
+    requirement = CondaEnvRequirement(registry)
+    assert requirement.env_var == 'CONDA_ENV_PATH'
 
 
 def test_conda_env_title():

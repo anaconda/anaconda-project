@@ -55,10 +55,7 @@ def test_prepare_project_scoped_env():
                     PATH=expected_new_path) == result.environ
         assert conda_meta_mtime == os.path.getmtime(os.path.join(expected_env, "conda-meta"))
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
-  CONDA_ENV_PATH: {}
-"""}, prepare_project_scoped_env)
+    with_directory_contents(dict(), prepare_project_scoped_env)
 
 
 def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
@@ -73,10 +70,7 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
         result = prepare(project, environ=environ)
         assert not result
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
-  CONDA_ENV_PATH: {}
-"""}, prepare_project_scoped_env_fails)
+    with_directory_contents(dict(), prepare_project_scoped_env_fails)
 
 
 def test_prepare_project_scoped_env_with_packages():
@@ -421,52 +415,6 @@ def test_browser_ui_keeping_env_var_set(monkeypatch):
                          initial_environ=initial_environ,
                          # we choose keep environment twice, should be idempotent
                          http_actions=[get_initial, post_choosing_keep_environ, post_choosing_keep_environ],
-                         final_result_check=final_result_check)
-
-
-def test_browser_ui_ignores_default_in_project_file(monkeypatch):
-    directory_contents = {DEFAULT_PROJECT_FILENAME: """
-runtime:
-  CONDA_ENV_PATH: { default: "/something" }
-"""}
-    initial_environ = minimal_environ_no_conda_env()
-
-    @gen.coroutine
-    def get_initial(url):
-        response = yield http_get_async(url)
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        # print("BODY: " + body)
-        assert "envs/default' doesn't look like it contains a Conda environment yet." in body
-        _verify_choices(response,
-                        (
-                            # by default, use one of the project-defined named envs
-                            ('project', True),
-                            # allow typing in a manual value
-                            ('variables', False)))
-
-    @gen.coroutine
-    def post_empty_form(url):
-        response = yield http_post_async(url, body='')
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        assert "Done!" in body
-        assert "Using Conda environment" in body
-        assert "envs/default" in body
-        _verify_choices(response, ())
-
-    def final_result_check(dirname, result):
-        assert result
-        expected_env_path = os.path.join(dirname, 'envs/default')
-        expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
-        assert expected == strip_environ_keeping_conda_env(result.environ)
-        bindir = os.path.join(expected_env_path, "bin")  # won't work on windows
-        assert bindir in result.environ.get("PATH")
-
-    _run_browser_ui_test(monkeypatch=monkeypatch,
-                         directory_contents=directory_contents,
-                         initial_environ=initial_environ,
-                         http_actions=[get_initial, post_empty_form],
                          final_result_check=final_result_check)
 
 

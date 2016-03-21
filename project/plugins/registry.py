@@ -19,9 +19,6 @@ class PluginRegistry(object):
         if env_var == 'REDIS_URL':
             from .requirements.redis import RedisRequirement
             return RedisRequirement(registry=self, env_var=env_var, options=options)
-        elif env_var == 'CONDA_ENV_PATH':
-            from .requirements.conda_env import CondaEnvRequirement
-            return CondaEnvRequirement(registry=self, env_var=env_var, options=options)
         elif env_var == 'ANACONDA_MASTER_PASSWORD':
             from .requirements.master_password import MasterPasswordRequirement
             return MasterPasswordRequirement(registry=self, options=options)

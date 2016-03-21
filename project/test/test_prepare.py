@@ -116,7 +116,7 @@ def test_prepare_with_app_entry():
 
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(FOO='bar')
-        env_path = environ.get('CONDA_ENV_PATH')
+        env_path = environ.get('CONDA_ENV_PATH', environ.get('CONDA_DEFAULT_ENV', None))
         result = prepare(project, environ=environ)
         assert result
 

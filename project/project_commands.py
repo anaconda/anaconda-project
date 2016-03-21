@@ -136,7 +136,7 @@ class ProjectCommand(object):
                 args = []
                 for arg in parsed:
                     if '${PREFIX}' in arg:
-                        arg = arg.replace('${PREFIX}', environ['CONDA_ENV_PATH'])
+                        arg = arg.replace('${PREFIX}', environ.get('CONDA_ENV_PATH', environ.get('CONDA_DEFAULT_ENV')))
                     args.append(arg)
 
         # args can be None if the command doesn't work on our platform
@@ -150,7 +150,11 @@ class ProjectCommand(object):
         Returns:
             argv as list of strings
         """
-        for name in ('CONDA_ENV_PATH', 'PATH', 'PROJECT_DIR'):
+        if _is_windows():
+            conda_var = 'CONDA_DEFAULT_ENV'
+        else:
+            conda_var = 'CONDA_ENV_PATH'
+        for name in (conda_var, 'PATH', 'PROJECT_DIR'):
             if name not in environ:
                 raise ValueError("To get a runnable command for the app, %s must be set." % (name))
 

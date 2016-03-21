@@ -107,6 +107,15 @@ class _ConfigCache(object):
 
     def _update_runtime(self, requirements, problems, project_file):
         runtime = project_file.get_value("runtime")
+
+        def check_conda_reserved(key):
+            if key in ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH'):
+                problems.append(("Environment variable %s is reserved for Conda's use, " +
+                                 "so it can't appear in the runtime section.") % key)
+                return True
+            else:
+                return False
+
         # runtime: section can contain a list of var names
         # or a dict from var names to options. it can also
         # be missing
@@ -114,6 +123,8 @@ class _ConfigCache(object):
             pass
         elif isinstance(runtime, dict):
             for key in runtime.keys():
+                if check_conda_reserved(key):
+                    continue
                 options = runtime[key]
                 if isinstance(options, dict):
                     requirement = self.registry.find_requirement_by_env_var(key, options)
@@ -125,6 +136,8 @@ class _ConfigCache(object):
         elif isinstance(runtime, list):
             for item in runtime:
                 if isinstance(item, str):
+                    if check_conda_reserved(item):
+                        continue
                     requirement = self.registry.find_requirement_by_env_var(item, options=dict())
                     requirements.append(requirement)
                 else:
@@ -212,20 +225,10 @@ class _ConfigCache(object):
         if problems:
             return
 
-        # use existing CondaEnvRequirement if it was created via env var
-        env_requirement = None
-        for r in requirements:
-            if isinstance(r, CondaEnvRequirement):
-                env_requirement = r
-
-        if env_requirement is None:
-            env_requirement = CondaEnvRequirement(registry=self.registry,
-                                                  environments=self.conda_environments,
-                                                  default_environment_name=self.default_conda_environment_name)
-            requirements.append(env_requirement)
-        else:
-            env_requirement.environments = self.conda_environments
-            env_requirement.default_environment_name = self.default_conda_environment_name
+        env_requirement = CondaEnvRequirement(registry=self.registry,
+                                              environments=self.conda_environments,
+                                              default_environment_name=self.default_conda_environment_name)
+        requirements.append(env_requirement)
 
     def _update_commands(self, problems, project_file, conda_meta_file):
         failed = False
