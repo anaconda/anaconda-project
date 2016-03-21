@@ -74,7 +74,9 @@ def with_file_contents(contents, func, dir=None):
 
 def tmp_local_state_file():
     import tempfile
-    f = tempfile.NamedTemporaryFile(dir=local_tmp)
+    # delete=False required so windows will allow the file to be opened
+    f = tempfile.NamedTemporaryFile(dir=local_tmp, delete=False)
     local_state = LocalStateFile(f.name)
     f.close()
+    os.remove(f.name)
     return local_state
