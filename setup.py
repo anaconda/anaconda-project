@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import errno
 import os
+import shutil
 import sys
 import uuid
 from os.path import dirname, realpath
@@ -25,6 +26,17 @@ else:
 REQUIRES = ['beautifulsoup4 >= 4.3', 'ruamel.yaml >= ' + RUAMEL_VERSION, 'tornado >= 4.3', 'pycrypto', 'bcrypt >= 2.0']
 
 TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf']
+
+# clean up leftover trash as best we can
+BUILD_TMP = os.path.join(ROOT, 'build', 'tmp')
+if os.path.isdir(BUILD_TMP):
+    print("Cleaning up " + BUILD_TMP)
+    try:
+        shutil.rmtree(BUILD_TMP, ignore_errors=True)
+    except Exception as e:
+        print("Failed to remove %s: %s" % (BUILD_TMP, str(e)))
+    else:
+        print("Done removing " + BUILD_TMP)
 
 
 def _rename_over_existing(src, dest):
