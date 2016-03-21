@@ -18,7 +18,7 @@ class TmpDir(object):
 
     def __exit__(self, type, value, traceback):
         try:
-          shutil.rmtree(path=self._dir)
+            shutil.rmtree(path=self._dir)
         except Exception as e:
             # prefer original exception to rmtree exception
             if value is None:

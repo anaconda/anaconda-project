@@ -3,7 +3,10 @@
 
 from __future__ import print_function
 
-import os, sys
+import errno
+import os
+import sys
+import uuid
 from os.path import dirname, realpath
 from distutils.core import setup
 from setuptools.command.test import test as TestCommand
@@ -24,6 +27,30 @@ REQUIRES = ['beautifulsoup4 >= 4.3', 'ruamel.yaml >= ' + RUAMEL_VERSION, 'tornad
 TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf']
 
 
+def _rename_over_existing(src, dest):
+    try:
+        # On Windows, this will throw EEXIST, on Linux it won't.
+        os.rename(src, dest)
+    except IOError as e:
+        if e.errno == errno.EEXIST:
+            # Clearly this song-and-dance is not in fact atomic,
+            # but if something goes wrong putting the new file in
+            # place at least the backup file might still be
+            # around.
+            backup = dest + ".bak-" + str(uuid.uuid4())
+            os.rename(dest, backup)
+            try:
+                os.rename(src, dest)
+            except Exception as e:
+                os.rename(backup, dest)
+                raise e
+            finally:
+                try:
+                    os.remove(backup)
+                except Exception as e:
+                    pass
+
+
 def _atomic_replace(path, contents, encoding):
     import codecs
     import uuid
@@ -34,8 +61,7 @@ def _atomic_replace(path, contents, encoding):
             file.write(contents)
             file.flush()
             file.close()
-        # on windows this may not work, we will see
-        os.rename(tmp, path)
+        _rename_over_existing(tmp, path)
     finally:
         try:
             os.remove(tmp)
@@ -87,6 +113,8 @@ class AllTestsCommand(TestCommand):
                             handle.flush()
 
     def _format_file(self, path):
+        import platform
+        import codecs
         from yapf.yapflib.yapf_api import FormatFile
         config = """{
 column_limit : 120
@@ -98,6 +126,15 @@ column_limit : 120
             # is dangerous, so don't use it unless you submit a fix to
             # yapf.
             (contents, encoding, changed) = FormatFile(path, style_config=config)
+            if platform.system() == 'Windows':
+                # yapf screws up line endings on windows
+                with codecs.open(path, 'r', encoding) as file:
+                    old_contents = file.read()
+                contents = contents.replace("\r\n", "\n")
+                if len(old_contents) == 0:
+                    # windows yapf seems to force a newline? I dunno
+                    contents = ""
+                changed = (old_contents != contents)
         except Exception as e:
             error = "yapf crashed on {path}: {error}".format(path=path, error=e)
             print(error, file=sys.stderr)
@@ -186,7 +223,12 @@ column_limit : 120
             print("Failures in: " + repr(self.failed))
             sys.exit(1)
         else:
-            print("All tests passed! 💯 🌟")
+            import platform
+            if platform.system() == 'Windows':
+                # windows console defaults to crap encoding so they get no flair
+                print("All tests passed!")
+            else:
+                print("All tests passed! 💯 🌟")
 
 
 setup(name='conda-project-prototype',
