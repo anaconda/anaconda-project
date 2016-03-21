@@ -63,8 +63,8 @@ def test_download_checksum():
                                           hash_algorithm='md5',
                                           hash_value=digest)
         status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
-        assert status
         assert 'File downloaded to {}'.format(filename) == status.status_description
+        assert status
 
     with_directory_contents({'data.zip': datafile}, verify_checksum)
 
