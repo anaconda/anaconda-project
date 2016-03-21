@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 import codecs
 import os
+import platform
 
 from project.test.project_utils import project_no_dedicated_env
 from project.internal.test.tmpfile_utils import with_directory_contents
@@ -200,6 +201,10 @@ def _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, rea
 def test_prepare_and_unprepare_local_redis_server(monkeypatch):
     # this test will fail if you don't have Redis installed, since
     # it actually starts it.
+    if platform.system() == 'Windows':
+        print("Cannot start redis-server on Windows")
+        return
+
     from project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     can_connect_args_list = _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch,
@@ -244,6 +249,10 @@ runtime:
 def test_prepare_local_redis_server_twice_reuses(monkeypatch):
     # this test will fail if you don't have Redis installed, since
     # it actually starts it.
+    if platform.system() == 'Windows':
+        print("Cannot start redis-server on Windows")
+        return
+
     from project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     can_connect_args_list = _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch,
@@ -313,6 +322,10 @@ runtime:
 def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
     # this test will fail if you don't have Redis installed, since
     # it actually starts it.
+    if platform.system() == 'Windows':
+        print("Cannot start redis-server on Windows")
+        return
+
     from project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
