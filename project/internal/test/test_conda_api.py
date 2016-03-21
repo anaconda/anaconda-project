@@ -15,6 +15,21 @@ else:
     PYTHON_BINARY = "bin/python"
     IPYTHON_BINARY = "bin/ipython"
 
+def monkeypatch_conda_not_to_use_links(monkeypatch):
+    # on Windows, if you hardlink a file that's in use you can't then
+    # remove the file. So we need to pass --copy to conda to avoid errors
+    # in the tests when we try to clean up.
+    if platform.system() != 'Windows':
+        return
+    def mock_get_conda_command(extra_args):
+        cmd_list = ['conda']
+        cmd_list.extend(extra_args)
+        if 'create' in cmd_list:
+            i = cmd_list.index('create')
+            cmd_list[i:i+1] = ['create', '--copy']
+        return cmd_list
+    monkeypatch.setattr('project.internal.conda_api._get_conda_command', mock_get_conda_command)
+
 
 def test_conda_info():
     json = conda_api.info()
@@ -31,7 +46,8 @@ def test_conda_info():
     assert 'envs' in json
 
 
-def test_conda_create_and_install():
+def test_conda_create_and_install(monkeypatch):
+    monkeypatch_conda_not_to_use_links(monkeypatch)
     def do_test(dirname):
         envdir = os.path.join(dirname, "myenv")
         # don't specify a python version so we use the one we already have
@@ -81,7 +97,8 @@ def test_conda_create_bad_package():
     with_directory_contents(dict(), do_test)
 
 
-def test_conda_install_no_packages():
+def test_conda_install_no_packages(monkeypatch):
+    monkeypatch_conda_not_to_use_links(monkeypatch)
     def do_test(dirname):
         envdir = os.path.join(dirname, "myenv")
 
