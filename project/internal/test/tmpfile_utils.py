@@ -1,5 +1,6 @@
 from __future__ import print_function, absolute_import
 
+import codecs
 import tempfile
 import shutil
 import os
@@ -37,10 +38,8 @@ def with_directory_contents(contents, func):
         for filename, file_content in contents.items():
             path = os.path.join(dirname, filename)
             makedirs_ok_if_exists(os.path.dirname(path))
-            f = open(path, 'w')
-            f.write(file_content)
-            f.flush()
-            f.close()
+            with codecs.open(path, 'w', 'utf-8') as f:
+                f.write(file_content)
         func(os.path.realpath(dirname))
 
 
