@@ -60,7 +60,7 @@ def test_activate_quoting(monkeypatch):
         project_dir_disable_dedicated_env(dirname)
         result = activate(dirname, UI_MODE_NOT_INTERACTIVE)
         assert result is not None
-        assert ["export FOO='$! boo'", 'export PROJECT_DIR=' + dirname] == result
+        assert ["export FOO='$! boo'", 'export PROJECT_DIR=' + quote(dirname)] == result
 
     with_directory_contents(
         {
