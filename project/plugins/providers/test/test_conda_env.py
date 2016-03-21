@@ -1,11 +1,13 @@
 from __future__ import absolute_import
 
 import os
+import platform
 
 import project.internal.conda_api as conda_api
 from project.test.environ_utils import (minimal_environ, minimal_environ_no_conda_env, strip_environ_keeping_conda_env)
 from project.internal.test.http_utils import http_get_async, http_post_async
 from project.internal.test.tmpfile_utils import with_directory_contents
+from project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
 from project.prepare import prepare, UI_MODE_BROWSER
 from project.project_file import DEFAULT_PROJECT_FILENAME
 from project.project import Project
@@ -13,6 +15,13 @@ from project.plugins.registry import PluginRegistry
 from project.plugins.providers.conda_env import CondaEnvProvider
 
 from tornado import gen
+
+if platform.system() == 'Windows':
+    script_dir = "Scripts"
+    conda_env_var = 'CONDA_DEFAULT_ENV'
+else:
+    script_dir = script_dir
+    conda_env_var = 'CONDA_ENV_PATH'
 
 
 def test_find_by_class_name_conda_env():
@@ -22,19 +31,29 @@ def test_find_by_class_name_conda_env():
     assert isinstance(found, CondaEnvProvider)
 
 
-def test_prepare_project_scoped_env():
+def test_prepare_project_scoped_env(monkeypatch):
+    monkeypatch_conda_not_to_use_links(monkeypatch)
+
     def prepare_project_scoped_env(dirname):
         project = Project(dirname)
         fake_old_path = "foo" + os.pathsep + "bar"
         environ = dict(PROJECT_DIR=dirname, PATH=fake_old_path)
         result = prepare(project, environ=environ)
         assert result
-        expected_env = os.path.join(dirname, "envs/default")
-        expected_new_path = os.path.join(expected_env, "bin") + os.pathsep + "foo" + os.pathsep + "bar"
-        assert dict(CONDA_ENV_PATH=expected_env,
-                    CONDA_DEFAULT_ENV=expected_env,
-                    PROJECT_DIR=project.directory_path,
-                    PATH=expected_new_path) == result.environ
+        expected_env = os.path.join(dirname, "envs", "default")
+        if platform.system() == 'Windows':
+            expected_new_path = expected_env + os.pathsep + os.path.join(
+                expected_env, script_dir) + os.pathsep + os.path.join(expected_env, "Library",
+                                                                      "bin") + os.pathsep + "foo" + os.pathsep + "bar"
+        else:
+            expected_new_path = os.path.join(expected_env, script_dir) + os.pathsep + "foo" + os.pathsep + "bar"
+        expected = dict(CONDA_ENV_PATH=expected_env,
+                        CONDA_DEFAULT_ENV=expected_env,
+                        PROJECT_DIR=project.directory_path,
+                        PATH=expected_new_path)
+        if platform.system() == 'Windows':
+            del expected['CONDA_ENV_PATH']
+        expected == result.environ
         assert os.path.exists(os.path.join(expected_env, "conda-meta"))
         conda_meta_mtime = os.path.getmtime(os.path.join(expected_env, "conda-meta"))
 
@@ -49,10 +68,13 @@ def test_prepare_project_scoped_env():
         environ = dict(PROJECT_DIR=dirname, PATH=fake_old_path)
         result = prepare(project, environ=environ)
         assert result
-        assert dict(CONDA_ENV_PATH=expected_env,
-                    CONDA_DEFAULT_ENV=expected_env,
-                    PROJECT_DIR=project.directory_path,
-                    PATH=expected_new_path) == result.environ
+        expected = dict(CONDA_ENV_PATH=expected_env,
+                        CONDA_DEFAULT_ENV=expected_env,
+                        PROJECT_DIR=project.directory_path,
+                        PATH=expected_new_path)
+        if platform.system() == 'Windows':
+            del expected['CONDA_ENV_PATH']
+        assert expected == result.environ
         assert conda_meta_mtime == os.path.getmtime(os.path.join(expected_env, "conda-meta"))
 
     with_directory_contents(dict(), prepare_project_scoped_env)
@@ -73,14 +95,16 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
     with_directory_contents(dict(), prepare_project_scoped_env_fails)
 
 
-def test_prepare_project_scoped_env_with_packages():
+def test_prepare_project_scoped_env_with_packages(monkeypatch):
+    monkeypatch_conda_not_to_use_links(monkeypatch)
+
     def prepare_project_scoped_env_with_packages(dirname):
         project = Project(dirname)
         environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare(project, environ=environ)
         assert result
 
-        prefix = result.environ['CONDA_ENV_PATH']
+        prefix = result.environ[conda_env_var]
         installed = conda_api.installed(prefix)
 
         assert 'ipython' in installed
@@ -95,7 +119,7 @@ def test_prepare_project_scoped_env_with_packages():
         result = prepare(project, environ=environ)
         assert result
 
-        prefix = result.environ['CONDA_ENV_PATH']
+        prefix = result.environ[conda_env_var]
         installed = conda_api.installed(prefix)
 
         assert 'ipython' in installed
@@ -237,8 +261,8 @@ def test_browser_ui_with_default_env_and_no_env_var_set(monkeypatch):
         response = yield http_get_async(url)
         assert response.code == 200
         body = response.body.decode('utf-8')
-        # print("BODY: " + body)
-        assert "envs/default' doesn't look like it contains a Conda environment yet." in body
+        # print("BODY: " + body.encode("ascii", 'ignore').decode('ascii'))
+        assert "default' doesn't look like it contains a Conda environment yet." in body
         _verify_choices(response,
                         (
                             # by default, use one of the project-defined named envs
@@ -253,15 +277,17 @@ def test_browser_ui_with_default_env_and_no_env_var_set(monkeypatch):
         body = response.body.decode('utf-8')
         assert "Done!" in body
         assert "Using Conda environment" in body
-        assert "envs/default" in body
+        assert "default" in body
         _verify_choices(response, ())
 
     def final_result_check(dirname, result):
         assert result
-        expected_env_path = os.path.join(dirname, 'envs/default')
+        expected_env_path = os.path.join(dirname, 'envs', 'default')
         expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
+        if platform.system() == 'Windows':
+            del expected['CONDA_ENV_PATH']
         assert expected == strip_environ_keeping_conda_env(result.environ)
-        bindir = os.path.join(expected_env_path, "bin")  # won't work on windows
+        bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
 
     _run_browser_ui_test(monkeypatch=monkeypatch,
@@ -273,7 +299,8 @@ def test_browser_ui_with_default_env_and_no_env_var_set(monkeypatch):
 
 def test_browser_ui_with_default_env_and_env_var_set(monkeypatch):
     directory_contents = {DEFAULT_PROJECT_FILENAME: ""}
-    initial_environ = minimal_environ(CONDA_ENV_PATH='/not/a/real/environment')
+    envprefix = os.path.join("not", "a", "real", "environment")
+    initial_environ = minimal_environ(**{conda_env_var: envprefix})
 
     stuff = dict()
 
@@ -282,7 +309,7 @@ def test_browser_ui_with_default_env_and_env_var_set(monkeypatch):
         response = yield http_get_async(url)
         assert response.code == 200
         body = response.body.decode('utf-8')
-        assert "envs/default' doesn't look like it contains a Conda environment yet." in body
+        assert "default' doesn't look like it contains a Conda environment yet." in body
         stuff['form_names'] = _form_names(response)
         _verify_choices(response,
                         (
@@ -301,15 +328,17 @@ def test_browser_ui_with_default_env_and_env_var_set(monkeypatch):
         body = response.body.decode('utf-8')
         assert "Done!" in body
         assert "Using Conda environment" in body
-        assert "envs/default" in body
+        assert "default" in body
         _verify_choices(response, ())
 
     def final_result_check(dirname, result):
         assert result
-        expected_env_path = os.path.join(dirname, 'envs/default')
+        expected_env_path = os.path.join(dirname, 'envs', 'default')
         expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
+        if platform.system() == 'Windows':
+            del expected['CONDA_ENV_PATH']
         assert expected == strip_environ_keeping_conda_env(result.environ)
-        bindir = os.path.join(expected_env_path, "bin")  # won't work on windows
+        bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
 
     _run_browser_ui_test(monkeypatch=monkeypatch,
@@ -323,8 +352,8 @@ def test_browser_ui_with_default_env_and_env_var_set_to_default_already(monkeypa
     directory_contents = {DEFAULT_PROJECT_FILENAME: ""}
 
     def initial_environ(dirname):
-        default_env_path = os.path.join(dirname, "envs/default")
-        return minimal_environ(CONDA_ENV_PATH=default_env_path, CONDA_DEFAULT_ENV=default_env_path)
+        default_env_path = os.path.join(dirname, "envs", "default")
+        return minimal_environ(**{conda_env_var: default_env_path})
 
     stuff = dict()
 
@@ -333,7 +362,7 @@ def test_browser_ui_with_default_env_and_env_var_set_to_default_already(monkeypa
         response = yield http_get_async(url)
         assert response.code == 200
         body = response.body.decode('utf-8')
-        assert "envs/default' doesn't look like it contains a Conda environment yet." in body
+        assert "default' doesn't look like it contains a Conda environment yet." in body
         stuff['form_names'] = _form_names(response)
         _verify_choices(response,
                         (
@@ -350,15 +379,17 @@ def test_browser_ui_with_default_env_and_env_var_set_to_default_already(monkeypa
         body = response.body.decode('utf-8')
         assert "Done!" in body
         assert "Using Conda environment" in body
-        assert "envs/default" in body
+        assert "default" in body
         _verify_choices(response, ())
 
     def final_result_check(dirname, result):
         assert result
-        expected_env_path = os.path.join(dirname, 'envs/default')
+        expected_env_path = os.path.join(dirname, 'envs', 'default')
         expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
+        if platform.system() == 'Windows':
+            del expected['CONDA_ENV_PATH']
         assert expected == strip_environ_keeping_conda_env(result.environ)
-        bindir = os.path.join(expected_env_path, "bin")  # won't work on windows
+        bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
 
     _run_browser_ui_test(monkeypatch=monkeypatch,
@@ -370,7 +401,8 @@ def test_browser_ui_with_default_env_and_env_var_set_to_default_already(monkeypa
 
 def test_browser_ui_keeping_env_var_set(monkeypatch):
     directory_contents = {DEFAULT_PROJECT_FILENAME: ""}
-    initial_environ = minimal_environ(CONDA_ENV_PATH='/not/a/real/environment')
+    envprefix = os.path.join("not", "a", "real", "environment")
+    initial_environ = minimal_environ(**{conda_env_var: envprefix})
 
     stuff = dict()
 
@@ -379,7 +411,7 @@ def test_browser_ui_keeping_env_var_set(monkeypatch):
         response = yield http_get_async(url)
         assert response.code == 200
         body = response.body.decode('utf-8')
-        assert "envs/default' doesn't look like it contains a Conda environment yet." in body
+        assert "default' doesn't look like it contains a Conda environment yet." in body
         stuff['form_names'] = _form_names(response)
         _verify_choices(response,
                         (
@@ -399,7 +431,7 @@ def test_browser_ui_keeping_env_var_set(monkeypatch):
         # print("POST BODY: " + body)
         assert "Done!" not in body
         # error message should be about the environ thing we chose
-        assert "'/not/a/real/environment' doesn't look like it contains a Conda environment yet." in body
+        assert envprefix + "' doesn't look like it contains a Conda environment yet." in body
         _verify_choices(response,
                         (('project', False),
                          # the thing we chose should still be chosen
@@ -434,7 +466,7 @@ environments:
         assert response.code == 200
         body = response.body.decode('utf-8')
         # print("BODY: " + body)
-        assert "envs/first_env' doesn't look like it contains a Conda environment yet." in body
+        assert "first_env' doesn't look like it contains a Conda environment yet." in body
         _verify_choices(response,
                         (
                             # by default, use one of the project-defined named envs
@@ -449,15 +481,17 @@ environments:
         body = response.body.decode('utf-8')
         assert "Done!" in body
         assert "Using Conda environment" in body
-        assert "envs/first_env" in body
+        assert "first_env" in body
         _verify_choices(response, ())
 
     def final_result_check(dirname, result):
         assert result
-        expected_env_path = os.path.join(dirname, 'envs/first_env')
+        expected_env_path = os.path.join(dirname, 'envs', 'first_env')
         expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
+        if platform.system() == 'Windows':
+            del expected['CONDA_ENV_PATH']
         assert expected == strip_environ_keeping_conda_env(result.environ)
-        bindir = os.path.join(expected_env_path, "bin")  # won't work on windows
+        bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
 
     _run_browser_ui_test(monkeypatch=monkeypatch,
@@ -485,8 +519,8 @@ environments:
         assert response.code == 200
         body = response.body.decode('utf-8')
         stuff['form_names'] = _form_names(response)
-        print("BODY: " + body)
-        assert "envs/first_env' doesn't look like it contains a Conda environment yet." in body
+        # print("BODY: " + body)
+        assert "first_env' doesn't look like it contains a Conda environment yet." in body
         _verify_choices(response,
                         (
                             # by default, use one of the project-defined named envs
@@ -502,15 +536,17 @@ environments:
         body = response.body.decode('utf-8')
         assert "Done!" in body
         assert "Using Conda environment" in body
-        assert "envs/second_env" in body
+        assert "second_env" in body
         _verify_choices(response, ())
 
     def final_result_check(dirname, result):
         assert result
-        expected_env_path = os.path.join(dirname, 'envs/second_env')
+        expected_env_path = os.path.join(dirname, 'envs', 'second_env')
         expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
+        if platform.system() == 'Windows':
+            del expected['CONDA_ENV_PATH']
         assert expected == strip_environ_keeping_conda_env(result.environ)
-        bindir = os.path.join(expected_env_path, "bin")  # won't work on windows
+        bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
 
     _run_browser_ui_test(monkeypatch=monkeypatch,

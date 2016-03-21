@@ -29,6 +29,9 @@ def monkeypatch_conda_not_to_use_links(monkeypatch):
         if 'create' in cmd_list:
             i = cmd_list.index('create')
             cmd_list[i:i + 1] = ['create', '--copy']
+        elif 'install' in cmd_list:
+            i = cmd_list.index('install')
+            cmd_list[i:i + 1] = ['install', '--copy']
         return cmd_list
 
     monkeypatch.setattr('project.internal.conda_api._get_conda_command', mock_get_conda_command)

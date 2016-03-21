@@ -17,7 +17,8 @@ def _minimal_environ_full(with_conda_env, **additions):
     if len(additions) > 0 or not with_conda_env:
         if not with_conda_env:
             for name in conda_vars_to_keep:
-                del minimal_environ[name]
+                if name in minimal_environ:
+                    del minimal_environ[name]
 
         for (key, value) in additions.items():
             minimal_environ[key] = value
