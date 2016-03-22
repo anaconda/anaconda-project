@@ -118,7 +118,8 @@ def test_broken_name_in_conda_meta_yaml():
     def check_name_from_meta_file(dirname):
         project = project_no_dedicated_env(dirname)
         assert [
-            (dirname + "/" + DEFAULT_RELATIVE_META_PATH + ": package: name: field should have a string value not []")
+            (os.path.join(dirname, DEFAULT_RELATIVE_META_PATH) +
+             ": package: name: field should have a string value not []")
         ] == project.problems
 
     with_directory_contents({DEFAULT_RELATIVE_META_PATH: """
@@ -147,7 +148,7 @@ package:
 def test_broken_name_in_project_file():
     def check_name_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [(dirname + "/" + DEFAULT_PROJECT_FILENAME + ": name: field should have a string value not []")
+        assert [(os.path.join(dirname, DEFAULT_PROJECT_FILENAME) + ": name: field should have a string value not []")
                 ] == project.problems
 
     with_directory_contents(
@@ -203,7 +204,7 @@ def test_broken_icon_in_conda_meta_yaml():
     def check_icon_from_meta_file(dirname):
         project = project_no_dedicated_env(dirname)
         assert [
-            (dirname + "/" + DEFAULT_RELATIVE_META_PATH + ": app: icon: field should have a string value not []")
+            (os.path.join(dirname, DEFAULT_RELATIVE_META_PATH) + ": app: icon: field should have a string value not []")
         ] == project.problems
 
     with_directory_contents({DEFAULT_RELATIVE_META_PATH: """
@@ -234,7 +235,7 @@ app:
 def test_broken_icon_in_project_file():
     def check_icon_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [(dirname + "/" + DEFAULT_PROJECT_FILENAME + ": icon: field should have a string value not []")
+        assert [(os.path.join(dirname, DEFAULT_PROJECT_FILENAME) + ": icon: field should have a string value not []")
                 ] == project.problems
 
     with_directory_contents(
@@ -511,7 +512,10 @@ def test_load_dict_of_runtime_requirements():
         assert 'BAR' == requirements[1].env_var
         assert dict(b=2) == requirements[1].options
         assert isinstance(requirements[2], CondaEnvRequirement)
-        assert 'CONDA_ENV_PATH' == requirements[2].env_var
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[2].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[2].env_var
         assert dict() == requirements[2].options
         assert len(project.problems) == 0
 

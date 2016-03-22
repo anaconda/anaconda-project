@@ -24,6 +24,7 @@ class CommandExecInfo(object):
         self._args = args
         self._shell = shell
         self._env = env
+        assert shell is False or len(args) == 1
 
     @property
     def cwd(self):
@@ -32,7 +33,11 @@ class CommandExecInfo(object):
 
     @property
     def args(self):
-        """Command line argument vector to run the command."""
+        """Command line argument vector to run the command.
+
+        If the ``shell`` property is True, then pass args[0] as a string to Popen,
+        rather than this entire list of args.
+        """
         return self._args
 
     @property
@@ -81,6 +86,7 @@ class CommandExecInfo(object):
         """
         args = copy(self._args)
         if self._shell:
+            assert len(args) == 1
             if _is_windows():
                 # The issue here is that in Lib/subprocess.py in
                 # the Python distribution, if shell=True the code

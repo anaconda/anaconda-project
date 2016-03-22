@@ -4,7 +4,6 @@ from copy import deepcopy
 import os
 import platform
 import pytest
-import stat
 import subprocess
 
 from project.test.environ_utils import minimal_environ, strip_environ
