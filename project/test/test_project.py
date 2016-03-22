@@ -873,8 +873,7 @@ commands:
   default:
     %s
 """ % command_line,
-            "echo_stuff.sh": """
-#!/bin/sh
+            "echo_stuff.sh": """#!/bin/sh
 echo "$*"
 """,
             "echo_stuff.bat": """
@@ -896,7 +895,7 @@ def test_launch_command_in_project_dir_with_shell(monkeypatch):
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
     _launch_argv_for_environment(dict(),
                                  "%s foo bar" % (prefix),
-                                 command_line='shell: ${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar')
+                                 command_line='shell: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"')
 
 
 def test_launch_command_in_project_dir_with_windows(monkeypatch):
