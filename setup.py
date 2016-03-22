@@ -5,6 +5,7 @@ from __future__ import print_function
 
 import errno
 import os
+import platform
 import shutil
 import sys
 import uuid
@@ -92,8 +93,14 @@ class AllTestsCommand(TestCommand):
         # traces huge by showing source code for each frame, so not
         # adding it by default.
         # To see stdout "live" instead of capturing it, use -s.
-        self.pytest_args = ['-v', '-rw', '--durations=10', '--cov-config', os.path.join(ROOT, ".coveragerc"),
-                            '--cov=project', '--cov-report=term-missing', '--cov-report=html']
+        coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=project',
+                         '--cov-report=term-missing', '--cov-report=html']
+        self.pytest_args = ['-v', '-rw', '--durations=10']
+        # 100% coverage on Windows requires us to do extra mocks because generally Windows
+        # can't run all the servers, such as redis-server. So we relax the coverage requirement
+        # for Windows only.
+        if platform.system() != 'Windows':
+            self.pytest_args = self.pytest_args + coverage_args
         self.pyfiles = None
         self.failed = []
 
