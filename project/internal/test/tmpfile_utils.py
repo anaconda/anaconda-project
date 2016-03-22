@@ -1,6 +1,10 @@
+from __future__ import print_function, absolute_import
+
+import codecs
 import tempfile
 import shutil
-import os.path
+import os
+import sys
 
 from project.internal.makedirs import makedirs_ok_if_exists
 from project.local_state_file import LocalStateFile
@@ -14,7 +18,16 @@ class TmpDir(object):
         self._dir = tempfile.mkdtemp(prefix=prefix, dir=local_tmp)
 
     def __exit__(self, type, value, traceback):
-        shutil.rmtree(path=self._dir)
+        try:
+            shutil.rmtree(path=self._dir)
+        except Exception as e:
+            # prefer original exception to rmtree exception
+            if value is None:
+                print("Exception cleaning up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
+                raise e
+            else:
+                print("Failed to clean up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
+                raise value
 
     def __enter__(self):
         return self._dir
@@ -25,10 +38,8 @@ def with_directory_contents(contents, func):
         for filename, file_content in contents.items():
             path = os.path.join(dirname, filename)
             makedirs_ok_if_exists(os.path.dirname(path))
-            f = open(path, 'w')
-            f.write(file_content)
-            f.flush()
-            f.close()
+            with codecs.open(path, 'w', 'utf-8') as f:
+                f.write(file_content)
         func(os.path.realpath(dirname))
 
 
@@ -36,17 +47,25 @@ def with_temporary_file(func, dir=None):
     if dir is None:
         dir = local_tmp
     import tempfile
-    f = tempfile.NamedTemporaryFile(dir=dir)
+    # Windows throws a permission denied if we use delete=True for
+    # auto-delete, and then try to open the file again ourselves
+    # with f.name. So we manually delete in the finally block
+    # below.
+    f = tempfile.NamedTemporaryFile(dir=dir, delete=False)
     try:
         func(f)
     finally:
         f.close()
+        os.remove(f.name)
 
 
 def with_file_contents(contents, func, dir=None):
     def with_file_object(f):
         f.write(contents.encode("UTF-8"))
         f.flush()
+        # Windows will get mad if we try to rename it without closing,
+        # and some users of with_file_contents want to rename it.
+        f.close()
         func(f.name)
 
     with_temporary_file(with_file_object, dir=dir)
@@ -54,7 +73,9 @@ def with_file_contents(contents, func, dir=None):
 
 def tmp_local_state_file():
     import tempfile
-    f = tempfile.NamedTemporaryFile(dir=local_tmp)
+    # delete=False required so windows will allow the file to be opened
+    f = tempfile.NamedTemporaryFile(dir=local_tmp, delete=False)
     local_state = LocalStateFile(f.name)
     f.close()
+    os.remove(f.name)
     return local_state

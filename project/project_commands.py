@@ -24,6 +24,7 @@ class CommandExecInfo(object):
         self._args = args
         self._shell = shell
         self._env = env
+        assert shell is False or len(args) == 1
 
     @property
     def cwd(self):
@@ -32,7 +33,11 @@ class CommandExecInfo(object):
 
     @property
     def args(self):
-        """Command line argument vector to run the command."""
+        """Command line argument vector to run the command.
+
+        If the ``shell`` property is True, then pass args[0] as a string to Popen,
+        rather than this entire list of args.
+        """
         return self._args
 
     @property
@@ -56,7 +61,22 @@ class CommandExecInfo(object):
         """
         import subprocess
 
-        return subprocess.Popen(args=self._args, env=self._env, cwd=self._cwd, shell=self._shell, **kwargs)
+        if self._shell:
+            # on Windows, with shell=True Python interprets the args as NOT quoted
+            # and quotes them, but assumes a single string parameter is pre-quoted
+            # which is what we want.
+            # on Unix, with shell=True we interpret args[0]
+            # the same as a single string (it's the parameter after -c in sh -c)
+            # and anything after args[0] is passed as another flag to sh.
+            # (we never have anything after args[0])
+            # So if we always use the single string to popen when shell=True, things
+            # should work OK on all platforms.
+            assert len(self._args) == 1
+            args = self._args[0]
+        else:
+
+            args = self._args
+        return subprocess.Popen(args=args, env=self._env, cwd=self._cwd, shell=self._shell, **kwargs)
 
     def execvpe(self):
         """Convenience method exec's the command replacing the current process.
@@ -66,17 +86,16 @@ class CommandExecInfo(object):
         """
         args = copy(self._args)
         if self._shell:
+            assert len(args) == 1
             if _is_windows():
                 # The issue here is that in Lib/subprocess.py in
                 # the Python distribution, if shell=True the code
                 # jumps through some funky hoops setting flags on
-                # the Windows API calls. We can't easily simulate
-                # that for execvpe.  Not sure what to do.
-                # Probably we need to emulate exec by calling
-                # popen above and then having the parent process
-                # exit. But we need to develop that fix on Windows
-                # so we can test it.
-                raise NotImplementedError("exec on Windows is not implemented")
+                # the Windows API calls. We need to do that, rather
+                # than calling os.execvpe which doesn't let us set those
+                # flags. So we spawn the child and then exit.
+                self.popen()
+                sys.exit(0)
             else:
                 # this is all shell=True does on unix
                 args = ['/bin/sh', '-c'] + args
@@ -136,7 +155,7 @@ class ProjectCommand(object):
                 args = []
                 for arg in parsed:
                     if '${PREFIX}' in arg:
-                        arg = arg.replace('${PREFIX}', environ['CONDA_ENV_PATH'])
+                        arg = arg.replace('${PREFIX}', environ.get('CONDA_ENV_PATH', environ.get('CONDA_DEFAULT_ENV')))
                     args.append(arg)
 
         # args can be None if the command doesn't work on our platform
@@ -150,7 +169,11 @@ class ProjectCommand(object):
         Returns:
             argv as list of strings
         """
-        for name in ('CONDA_ENV_PATH', 'PATH', 'PROJECT_DIR'):
+        if _is_windows():
+            conda_var = 'CONDA_DEFAULT_ENV'
+        else:
+            conda_var = 'CONDA_ENV_PATH'
+        for name in (conda_var, 'PATH', 'PROJECT_DIR'):
             if name not in environ:
                 raise ValueError("To get a runnable command for the app, %s must be set." % (name))
 

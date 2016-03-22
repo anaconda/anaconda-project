@@ -2,30 +2,33 @@
 from __future__ import absolute_import, print_function
 
 import os
+import platform
 
 from project.plugins.requirement import EnvVarRequirement
 from project.conda_manager import new_conda_manager, CondaManagerError
 
 
 class CondaEnvRequirement(EnvVarRequirement):
-    """A requirement for CONDA_ENV_PATH (or another specified env var) to point to a conda env."""
+    """A requirement for CONDA_ENV_PATH (or CONDA_DEFAULT_ENV on Windows) to point to a conda env."""
 
-    def __init__(self,
-                 registry,
-                 env_var="CONDA_ENV_PATH",
-                 options=None,
-                 environments=None,
-                 default_environment_name='default'):
+    def __init__(self, registry, environments=None, default_environment_name='default'):
         """Extend superclass to default to CONDA_ENV_PATH and carry environment information.
 
         Args:
             registry (PluginRegistry): plugin registry
-            env_var (str): env var name
-            options (dict): options from the config
             environments (dict): dict from env name to ``CondaEnvironment``
             default_environment_name (str): name of env to use by default
         """
-        super(CondaEnvRequirement, self).__init__(registry=registry, env_var=env_var, options=options)
+        if platform.system() == 'Windows':
+            # On Windows, activate.bat never sets CONDA_ENV_PATH but
+            # sets CONDA_DEFAULT_ENV to the full path to the environment.
+            env_var = "CONDA_DEFAULT_ENV"
+        else:
+            # On Unix, activate script sets CONDA_ENV_PATH to the full
+            # path, and sets CONDA_DEFAULT_ENV to either just the env
+            # name or the full path.
+            env_var = "CONDA_ENV_PATH"
+        super(CondaEnvRequirement, self).__init__(registry=registry, env_var=env_var)
         self.environments = environments
         self.default_environment_name = default_environment_name
         self._conda = new_conda_manager()

@@ -2,6 +2,7 @@ from __future__ import absolute_import, print_function
 
 from copy import deepcopy
 import os
+import platform
 import stat
 import subprocess
 
@@ -47,7 +48,11 @@ def test_single_env_var_requirement():
         assert [] == project.problems
         assert 2 == len(project.requirements)
         assert "FOO" == project.requirements[0].env_var
-        assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
@@ -73,7 +78,11 @@ def test_single_env_var_requirement_with_options():
         assert 2 == len(project.requirements)
         assert "FOO" == project.requirements[0].env_var
         assert dict(default="hello") == project.requirements[0].options
-        assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
@@ -109,7 +118,8 @@ def test_broken_name_in_conda_meta_yaml():
     def check_name_from_meta_file(dirname):
         project = project_no_dedicated_env(dirname)
         assert [
-            (dirname + "/" + DEFAULT_RELATIVE_META_PATH + ": package: name: field should have a string value not []")
+            (os.path.join(dirname, DEFAULT_RELATIVE_META_PATH) +
+             ": package: name: field should have a string value not []")
         ] == project.problems
 
     with_directory_contents({DEFAULT_RELATIVE_META_PATH: """
@@ -138,7 +148,7 @@ package:
 def test_broken_name_in_project_file():
     def check_name_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [(dirname + "/" + DEFAULT_PROJECT_FILENAME + ": name: field should have a string value not []")
+        assert [(os.path.join(dirname, DEFAULT_PROJECT_FILENAME) + ": name: field should have a string value not []")
                 ] == project.problems
 
     with_directory_contents(
@@ -194,7 +204,7 @@ def test_broken_icon_in_conda_meta_yaml():
     def check_icon_from_meta_file(dirname):
         project = project_no_dedicated_env(dirname)
         assert [
-            (dirname + "/" + DEFAULT_RELATIVE_META_PATH + ": app: icon: field should have a string value not []")
+            (os.path.join(dirname, DEFAULT_RELATIVE_META_PATH) + ": app: icon: field should have a string value not []")
         ] == project.problems
 
     with_directory_contents({DEFAULT_RELATIVE_META_PATH: """
@@ -225,7 +235,7 @@ app:
 def test_broken_icon_in_project_file():
     def check_icon_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [(dirname + "/" + DEFAULT_PROJECT_FILENAME + ": icon: field should have a string value not []")
+        assert [(os.path.join(dirname, DEFAULT_PROJECT_FILENAME) + ": icon: field should have a string value not []")
                 ] == project.problems
 
     with_directory_contents(
@@ -303,31 +313,6 @@ channels:
     """}, check_get_packages)
 
 
-def test_use_env_options_when_packages_also_specified():
-    def check_get_packages(dirname):
-        project = project_no_dedicated_env(dirname)
-
-        # find CondaEnvRequirement
-        conda_env_req = None
-        for r in project.requirements:
-            if isinstance(r, CondaEnvRequirement):
-                assert conda_env_req is None  # only one
-                conda_env_req = r
-
-        assert conda_env_req.options == dict(hello=42)
-
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
-runtime:
-  CONDA_ENV_PATH: { hello: 42 }
-
-dependencies:
-  - foo
-  - hello >= 1.0
-  - world
-    """}, check_get_packages)
-
-
 def test_get_package_requirements_from_empty_project():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
@@ -346,6 +331,36 @@ def test_complain_about_dependencies_not_a_list():
 dependencies:
     foo: bar
     """}, check_get_packages)
+
+
+def test_complain_about_conda_env_in_runtime_list():
+    def check_complain_about_conda_env_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        template = "Environment variable %s is reserved for Conda's use, " + \
+                   "so it can't appear in the runtime section."
+        assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV'] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+runtime:
+  - CONDA_ENV_PATH
+  - CONDA_DEFAULT_ENV
+    """}, check_complain_about_conda_env_var)
+
+
+def test_complain_about_conda_env_in_runtime_dict():
+    def check_complain_about_conda_env_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        template = "Environment variable %s is reserved for Conda's use, " + \
+                   "so it can't appear in the runtime section."
+        assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV'] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+runtime:
+  CONDA_ENV_PATH: {}
+  CONDA_DEFAULT_ENV: {}
+    """}, check_complain_about_conda_env_var)
 
 
 def test_load_environments():
@@ -472,7 +487,10 @@ def test_load_list_of_runtime_requirements():
         assert isinstance(requirements[1], EnvVarRequirement)
         assert 'BAR' == requirements[1].env_var
         assert isinstance(requirements[2], CondaEnvRequirement)
-        assert 'CONDA_ENV_PATH' == requirements[2].env_var
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[2].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[2].env_var
         assert dict() == requirements[2].options
         assert len(project.problems) == 0
 
@@ -494,7 +512,10 @@ def test_load_dict_of_runtime_requirements():
         assert 'BAR' == requirements[1].env_var
         assert dict(b=2) == requirements[1].options
         assert isinstance(requirements[2], CondaEnvRequirement)
-        assert 'CONDA_ENV_PATH' == requirements[2].env_var
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[2].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[2].env_var
         assert dict() == requirements[2].options
         assert len(project.problems) == 0
 
@@ -731,7 +752,7 @@ def test_launch_argv_from_project_file_windows(monkeypatch):
         {DEFAULT_PROJECT_FILENAME: """
 commands:
   foo:
-    windows: foo bar %CONDA_ENV_PATH%
+    windows: foo bar %CONDA_DEFAULT_ENV%
 """}, check_launch_argv)
 
 
@@ -810,16 +831,22 @@ app:
         }, check_launch_argv)
 
 
+if platform.system() == 'Windows':
+    echo_stuff = "echo_stuff.bat"
+else:
+    echo_stuff = "echo_stuff.sh"
+
+
 def _launch_argv_for_environment(environ,
                                  expected_output,
                                  chdir=False,
-                                 command_line='conda_app_entry: echo.py ${PREFIX}/blah foo bar'):
+                                 command_line=('conda_app_entry: %s ${PREFIX} foo bar' % echo_stuff)):
     environ = minimal_environ(**environ)
 
     def check_echo_output(dirname):
         if 'PROJECT_DIR' not in environ:
             environ['PROJECT_DIR'] = dirname
-        os.chmod(os.path.join(dirname, "echo.py"), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+        os.chmod(os.path.join(dirname, echo_stuff), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
         old_dir = None
         if chdir:
             old_dir = os.getcwd()
@@ -828,8 +855,13 @@ def _launch_argv_for_environment(environ,
             project = project_no_dedicated_env(dirname)
             assert [] == project.problems
             exec_info = project.exec_info_for_environment(environ)
-            output = subprocess.check_output(exec_info.args, shell=exec_info.shell, env=environ).decode()
-            assert output == expected_output.format(dirname=dirname)
+            if exec_info.shell:
+                args = exec_info.args[0]
+            else:
+                args = exec_info.args
+            output = subprocess.check_output(args, shell=exec_info.shell, env=environ).decode()
+            # strip() removes \r\n or \n so we don't have to deal with the difference
+            assert output.strip() == expected_output.format(dirname=dirname)
         finally:
             if old_dir is not None:
                 os.chdir(old_dir)
@@ -841,36 +873,55 @@ commands:
   default:
     %s
 """ % command_line,
-            "echo.py": """#!/usr/bin/env python
-from __future__ import print_function
-import sys
-print(repr(sys.argv))
+            "echo_stuff.sh": """#!/bin/sh
+echo "$*"
+""",
+            "echo_stuff.bat": """
+@echo off
+echo %*
 """
         }, check_echo_output)
 
 
 def test_launch_command_in_project_dir():
-    prefix = os.getenv('CONDA_ENV_PATH')
-    _launch_argv_for_environment(dict(), "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix)
+    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
+    _launch_argv_for_environment(dict(), "%s foo bar" % (prefix))
 
 
 def test_launch_command_in_project_dir_with_shell(monkeypatch):
-    prefix = os.getenv('CONDA_ENV_PATH')
+    if platform.system() == 'Windows':
+        print("Cannot test shell on Windows")
+        return
+    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
     _launch_argv_for_environment(dict(),
-                                 "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix,
-                                 command_line='shell: ${PROJECT_DIR}/echo.py ${CONDA_ENV_PATH}/blah foo bar')
+                                 "%s foo bar" % (prefix),
+                                 command_line='shell: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"')
+
+
+def test_launch_command_in_project_dir_with_windows(monkeypatch):
+    if platform.system() != 'Windows':
+        print("Cannot test windows cmd on unix")
+        return
+    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
+    _launch_argv_for_environment(
+        dict(),
+        "%s foo bar" % (prefix),
+        command_line='''windows: "\\"%PROJECT_DIR%\\"\\\\echo_stuff.bat %CONDA_DEFAULT_ENV% foo bar"''')
 
 
 def test_launch_command_in_project_dir_and_cwd_is_project_dir():
-    prefix = os.getenv('CONDA_ENV_PATH')
-    _launch_argv_for_environment(dict(), "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix, chdir=True)
+    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
+    _launch_argv_for_environment(dict(),
+                                 "%s foo bar" % prefix,
+                                 chdir=True,
+                                 command_line=('conda_app_entry: %s ${PREFIX} foo bar' % os.path.join(".", echo_stuff)))
 
 
 def test_launch_command_in_project_dir_with_conda_env():
     _launch_argv_for_environment(
         dict(CONDA_ENV_PATH='/someplace',
              CONDA_DEFAULT_ENV='/someplace'),
-        "['{dirname}/echo.py', '/someplace/blah', 'foo', 'bar']\n")
+        "/someplace foo bar")
 
 
 def test_launch_command_is_on_system_path():
@@ -920,7 +971,10 @@ def test_launch_command_stuff_missing_from_environment():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         environ = minimal_environ(PROJECT_DIR=dirname)
-        for key in ('PATH', 'CONDA_ENV_PATH', 'PROJECT_DIR'):
+        conda_var = 'CONDA_ENV_PATH'
+        if platform.system() == 'Windows':
+            conda_var = 'CONDA_DEFAULT_ENV'
+        for key in ('PATH', conda_var, 'PROJECT_DIR'):
             environ_copy = deepcopy(environ)
             del environ_copy[key]
             with pytest.raises(ValueError) as excinfo:

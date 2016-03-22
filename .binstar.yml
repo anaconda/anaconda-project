@@ -2,6 +2,7 @@ package: anaconda_project
 
 platform:
   - linux-64
+  - win-64
 
 engine:
   - python=3.5

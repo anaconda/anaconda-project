@@ -501,9 +501,9 @@ def test_provide_context_ensure_work_directory():
         context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
         workpath = context.ensure_work_directory("foo")
         assert os.path.isdir(workpath)
-        assert workpath.endswith("/foo")
+        assert workpath.endswith("foo")
         parent = os.path.dirname(workpath)
-        assert parent.endswith("/services")
+        assert parent.endswith("services")
         parent = os.path.dirname(parent)
         assert parent == dirname
 

@@ -4,7 +4,20 @@ import os
 
 # we keep the conda env variables because otherwise
 # we'd have to keep recreating project-specific conda envs in our tests
-system_vars_to_keep = ('PATH', 'LD_LIBRARY_PATH', 'TERM', 'PYTHONPATH')
+system_vars_to_keep = ('PATH',
+                       'LD_LIBRARY_PATH',
+                       'TERM',
+                       'PYTHONPATH',
+                       'HOME',
+                       # Windows stuff
+                       'SystemRoot',
+                       'SystemDrive',
+                       'OS',
+                       'ProgramData',
+                       'ProgramFiles',
+                       'LOCALAPPDATA',
+                       'HOMEDRIVE',
+                       'HOMEPATH')
 conda_vars_to_keep = ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH')
 
 
@@ -17,7 +30,8 @@ def _minimal_environ_full(with_conda_env, **additions):
     if len(additions) > 0 or not with_conda_env:
         if not with_conda_env:
             for name in conda_vars_to_keep:
-                del minimal_environ[name]
+                if name in minimal_environ:
+                    del minimal_environ[name]
 
         for (key, value) in additions.items():
             minimal_environ[key] = value

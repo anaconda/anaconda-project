@@ -1,11 +1,40 @@
 from __future__ import absolute_import, print_function
 
 import os
+import platform
 import pytest
 
 import project.internal.conda_api as conda_api
 
 from project.internal.test.tmpfile_utils import with_directory_contents
+
+if platform.system() == 'Windows':
+    PYTHON_BINARY = "python.exe"
+    IPYTHON_BINARY = "Scripts\ipython.exe"
+else:
+    PYTHON_BINARY = "bin/python"
+    IPYTHON_BINARY = "bin/ipython"
+
+
+def monkeypatch_conda_not_to_use_links(monkeypatch):
+    # on Windows, if you hardlink a file that's in use you can't then
+    # remove the file. So we need to pass --copy to conda to avoid errors
+    # in the tests when we try to clean up.
+    if platform.system() != 'Windows':
+        return
+
+    def mock_get_conda_command(extra_args):
+        cmd_list = ['conda']
+        cmd_list.extend(extra_args)
+        if 'create' in cmd_list:
+            i = cmd_list.index('create')
+            cmd_list[i:i + 1] = ['create', '--copy']
+        elif 'install' in cmd_list:
+            i = cmd_list.index('install')
+            cmd_list[i:i + 1] = ['install', '--copy']
+        return cmd_list
+
+    monkeypatch.setattr('project.internal.conda_api._get_conda_command', mock_get_conda_command)
 
 
 def test_conda_info():
@@ -23,7 +52,9 @@ def test_conda_info():
     assert 'envs' in json
 
 
-def test_conda_create_and_install():
+def test_conda_create_and_install(monkeypatch):
+    monkeypatch_conda_not_to_use_links(monkeypatch)
+
     def do_test(dirname):
         envdir = os.path.join(dirname, "myenv")
         # don't specify a python version so we use the one we already have
@@ -32,7 +63,7 @@ def test_conda_create_and_install():
 
         assert os.path.isdir(envdir)
         assert os.path.isdir(os.path.join(envdir, "conda-meta"))
-        assert os.path.exists(os.path.join(envdir, "bin/python"))
+        assert os.path.exists(os.path.join(envdir, PYTHON_BINARY))
 
         # test that if it exists we can't create it again
         with pytest.raises(conda_api.CondaEnvExistsError) as excinfo:
@@ -40,9 +71,9 @@ def test_conda_create_and_install():
         assert 'already exists' in repr(excinfo.value)
 
         # test that we can install a package
-        assert not os.path.exists(os.path.join(envdir, "bin/ipython"))
+        assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
         conda_api.install(prefix=envdir, pkgs=['ipython'])
-        assert os.path.exists(os.path.join(envdir, "bin/ipython"))
+        assert os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
 
     with_directory_contents(dict(), do_test)
 
@@ -73,7 +104,9 @@ def test_conda_create_bad_package():
     with_directory_contents(dict(), do_test)
 
 
-def test_conda_install_no_packages():
+def test_conda_install_no_packages(monkeypatch):
+    monkeypatch_conda_not_to_use_links(monkeypatch)
+
     def do_test(dirname):
         envdir = os.path.join(dirname, "myenv")
 
@@ -234,8 +267,26 @@ def test_installed_cannot_list_dir(monkeypatch):
     assert 'cannot list this' in repr(excinfo.value)
 
 
-def test_set_conda_env_in_path(monkeypatch):
-    def check_conda_env_in_path(dirname):
+def test_set_conda_env_in_path_unix(monkeypatch):
+    import platform
+    if platform.system() == 'Windows':
+
+        def mock_system():
+            return 'Linux'
+
+        monkeypatch.setattr('platform.system', mock_system)
+
+        def mock_is_conda_bindir_unix(path):
+            if path.endswith("\\"):
+                path = path[:-1]
+            if not path.endswith("\\bin"):
+                return False
+            possible_prefix = os.path.dirname(path)
+            return os.path.isdir(os.path.join(possible_prefix, "conda-meta"))
+
+        monkeypatch.setattr('project.internal.conda_api._is_conda_bindir_unix', mock_is_conda_bindir_unix)
+
+    def check_conda_env_in_path_unix(dirname):
         env1 = os.path.join(dirname, "env1")
         os.makedirs(os.path.join(env1, "conda-meta"))
         env1bin = os.path.join(env1, "bin")
@@ -267,8 +318,174 @@ def test_set_conda_env_in_path(monkeypatch):
         path = conda_api.set_conda_env_in_path(notenvbin + os.pathsep + env2bin, env1)
         assert (env1bin + os.pathsep + notenvbin) == path
         # keep a bunch of random stuff
-        random_stuff = "foo:bar:/baz/boo"
+        random_stuff = "foo:bar/:/baz/boo/"
         path = conda_api.set_conda_env_in_path(random_stuff, env1)
         assert (env1bin + os.pathsep + random_stuff) == path
 
-    with_directory_contents(dict(), check_conda_env_in_path)
+    with_directory_contents(dict(), check_conda_env_in_path_unix)
+
+
+def _windows_monkeypatch(monkeypatch):
+    import platform
+    if platform.system() != 'Windows':
+
+        def mock_system():
+            return 'Windows'
+
+        monkeypatch.setattr('platform.system', mock_system)
+
+        monkeypatch.setattr('os.pathsep', ';')
+
+        from os.path import dirname as real_dirname
+
+        def mock_dirname(path):
+            replaced = path.replace("\\", "/")
+            return real_dirname(replaced)
+
+        monkeypatch.setattr('os.path.dirname', mock_dirname)
+
+        def mock_join(path, *more):
+            for m in more:
+                if not (path.endswith("\\") or path.endswith("/")):
+                    path = path + "\\"
+                if m.startswith("\\") or m.startswith("/"):
+                    m = m[1:]
+                path = path + m
+            return path.replace("\\", "/")
+
+        monkeypatch.setattr('os.path.join', mock_join)
+
+        from os import makedirs as real_makedirs
+
+        def mock_makedirs(path, mode=int('0777', 8), exist_ok=True):
+            return real_makedirs(path.replace("\\", "/"), mode, exist_ok)
+
+        monkeypatch.setattr('os.makedirs', mock_makedirs)
+
+        from os.path import isdir as real_isdir
+
+        def mock_isdir(path):
+            return real_isdir(path.replace("\\", "/"))
+
+        monkeypatch.setattr('os.path.isdir', mock_isdir)
+
+
+def test_set_conda_env_in_path_windows(monkeypatch):
+    def check_conda_env_in_path_windows(dirname):
+        _windows_monkeypatch(monkeypatch)
+
+        scripts = "Scripts"
+        library = "Library\\bin"
+
+        env1 = os.path.join(dirname, "env1")
+        os.makedirs(os.path.join(env1, "conda-meta"))
+        env1scripts = os.path.join(env1, scripts)
+        os.makedirs(env1scripts)
+        env1lib = os.path.join(env1, library)
+        os.makedirs(env1lib)
+
+        env1path = "%s;%s;%s" % (env1, env1scripts, env1lib)
+
+        env2 = os.path.join(dirname, "env2")
+        os.makedirs(os.path.join(env2, "conda-meta"))
+        env2scripts = os.path.join(env2, scripts)
+        os.makedirs(env2scripts)
+        env2lib = os.path.join(env2, library)
+        os.makedirs(env2lib)
+
+        env2path = "%s;%s;%s" % (env2, env2scripts, env2lib)
+
+        notenv = os.path.join(dirname, "notenv")
+        notenvscripts = os.path.join(notenv, scripts)
+        os.makedirs(notenvscripts)
+        notenvlib = os.path.join(notenv, library)
+        os.makedirs(notenvlib)
+
+        notenvpath = "%s;%s;%s" % (notenv, notenvscripts, notenvlib)
+
+        # add env to empty path
+        path = conda_api.set_conda_env_in_path("", env1)
+        assert env1path == path
+        # add env that's already there
+        path = conda_api.set_conda_env_in_path(env1path, env1)
+        assert env1path == path
+        # we can set a non-env because we don't waste time checking it
+        path = conda_api.set_conda_env_in_path("", notenv)
+        assert notenvpath == path
+        # add an env to a non-env
+        path = conda_api.set_conda_env_in_path(notenvpath, env1)
+        assert (env1path + os.pathsep + notenvpath) == path
+        # add an env to another env
+        path = conda_api.set_conda_env_in_path(env1path, env2)
+        assert env2path == path
+        # replace an env that wasn't at the front
+        path = conda_api.set_conda_env_in_path(notenvpath + os.pathsep + env2path, env1)
+        assert (env1path + os.pathsep + notenvpath) == path
+        # keep a bunch of random stuff
+        random_stuff = "foo;bar;/baz/boo"
+        path = conda_api.set_conda_env_in_path(random_stuff, env1)
+        assert (env1path + os.pathsep + random_stuff) == path
+
+    with_directory_contents(dict(), check_conda_env_in_path_windows)
+
+
+def test_set_conda_env_in_path_windows_trailing_slashes(monkeypatch):
+    def check_conda_env_in_path_windows_trailing_slashes(dirname):
+        _windows_monkeypatch(monkeypatch)
+
+        scripts = "Scripts"
+        library = "Library\\bin"
+
+        env1 = os.path.join(dirname, "env1")
+        os.makedirs(os.path.join(env1, "conda-meta"))
+        env1scripts = os.path.join(env1, scripts)
+        os.makedirs(env1scripts)
+        env1lib = os.path.join(env1, library)
+        os.makedirs(env1lib)
+
+        env1path = "%s\\;%s\\;%s\\" % (env1, env1scripts, env1lib)
+        env1path_no_slashes = "%s;%s;%s" % (env1, env1scripts, env1lib)
+
+        env2 = os.path.join(dirname, "env2")
+        os.makedirs(os.path.join(env2, "conda-meta"))
+        env2scripts = os.path.join(env2, scripts)
+        os.makedirs(env2scripts)
+        env2lib = os.path.join(env2, library)
+        os.makedirs(env2lib)
+
+        env2path = "%s\\;%s\\;%s\\" % (env2, env2scripts, env2lib)
+        env2path_no_slashes = "%s;%s;%s" % (env2, env2scripts, env2lib)
+
+        notenv = os.path.join(dirname, "notenv\\")
+        notenvscripts = os.path.join(notenv, scripts)
+        os.makedirs(notenvscripts)
+        notenvlib = os.path.join(notenv, library)
+        os.makedirs(notenvlib)
+
+        notenvpath = "%s\\;%s\\;%s\\" % (notenv, notenvscripts, notenvlib)
+        notenvpath_no_slashes = "%s;%s;%s" % (notenv, notenvscripts, notenvlib)
+
+        # add env to empty path
+        path = conda_api.set_conda_env_in_path("", env1)
+        assert env1path_no_slashes == path
+        # add env that's already there
+        path = conda_api.set_conda_env_in_path(env1path, env1)
+        assert env1path_no_slashes == path
+        # we can set a non-env because we don't waste time checking it
+        path = conda_api.set_conda_env_in_path("", notenv)
+        assert notenvpath_no_slashes == path
+        # add an env to a non-env
+        path = conda_api.set_conda_env_in_path(notenvpath, env1)
+        assert (env1path_no_slashes + os.pathsep + notenvpath) == path
+        # add an env to another env
+        path = conda_api.set_conda_env_in_path(env1path, env2)
+        assert env2path_no_slashes == path
+        # replace an env that wasn't at the front
+        path = conda_api.set_conda_env_in_path(notenvpath + os.pathsep + env2path, env1)
+        assert (env1path_no_slashes + os.pathsep + notenvpath) == path
+        # keep a bunch of random stuff
+        random_stuff = "foo;bar;/baz/boo"
+        path = conda_api.set_conda_env_in_path(random_stuff, env1)
+        assert (env1path_no_slashes + os.pathsep + random_stuff) == path
+
+    with_directory_contents(dict(), check_conda_env_in_path_windows_trailing_slashes)

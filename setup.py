@@ -3,7 +3,12 @@
 
 from __future__ import print_function
 
-import os, sys
+import errno
+import os
+import platform
+import shutil
+import sys
+import uuid
 from os.path import dirname, realpath
 from distutils.core import setup
 from setuptools.command.test import test as TestCommand
@@ -23,6 +28,41 @@ REQUIRES = ['beautifulsoup4 >= 4.3', 'ruamel.yaml >= ' + RUAMEL_VERSION, 'tornad
 
 TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf']
 
+# clean up leftover trash as best we can
+BUILD_TMP = os.path.join(ROOT, 'build', 'tmp')
+if os.path.isdir(BUILD_TMP):
+    print("Cleaning up " + BUILD_TMP)
+    try:
+        shutil.rmtree(BUILD_TMP, ignore_errors=True)
+    except Exception as e:
+        print("Failed to remove %s: %s" % (BUILD_TMP, str(e)))
+    else:
+        print("Done removing " + BUILD_TMP)
+
+
+def _rename_over_existing(src, dest):
+    try:
+        # On Windows, this will throw EEXIST, on Linux it won't.
+        os.rename(src, dest)
+    except IOError as e:
+        if e.errno == errno.EEXIST:
+            # Clearly this song-and-dance is not in fact atomic,
+            # but if something goes wrong putting the new file in
+            # place at least the backup file might still be
+            # around.
+            backup = dest + ".bak-" + str(uuid.uuid4())
+            os.rename(dest, backup)
+            try:
+                os.rename(src, dest)
+            except Exception as e:
+                os.rename(backup, dest)
+                raise e
+            finally:
+                try:
+                    os.remove(backup)
+                except Exception as e:
+                    pass
+
 
 def _atomic_replace(path, contents, encoding):
     import codecs
@@ -34,8 +74,7 @@ def _atomic_replace(path, contents, encoding):
             file.write(contents)
             file.flush()
             file.close()
-        # on windows this may not work, we will see
-        os.rename(tmp, path)
+        _rename_over_existing(tmp, path)
     finally:
         try:
             os.remove(tmp)
@@ -54,8 +93,14 @@ class AllTestsCommand(TestCommand):
         # traces huge by showing source code for each frame, so not
         # adding it by default.
         # To see stdout "live" instead of capturing it, use -s.
-        self.pytest_args = ['-v', '-rw', '--durations=10', '--cov-config', os.path.join(ROOT, ".coveragerc"),
-                            '--cov=project', '--cov-report=term-missing', '--cov-report=html']
+        coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=project',
+                         '--cov-report=term-missing', '--cov-report=html']
+        self.pytest_args = ['-v', '-rw', '--durations=10']
+        # 100% coverage on Windows requires us to do extra mocks because generally Windows
+        # can't run all the servers, such as redis-server. So we relax the coverage requirement
+        # for Windows only.
+        if platform.system() != 'Windows':
+            self.pytest_args = self.pytest_args + coverage_args
         self.pyfiles = None
         self.failed = []
 
@@ -65,7 +110,7 @@ class AllTestsCommand(TestCommand):
             for root, dirs, files in os.walk(ROOT):
                 # chop out hidden directories
                 files = [f for f in files if not f[0] == '.']
-                dirs[:] = [d for d in dirs if not d[0] == '.']
+                dirs[:] = [d for d in dirs if (d[0] != '.' and d != 'build')]
                 # now walk files
                 for f in files:
                     if f.endswith(".py"):
@@ -87,6 +132,8 @@ class AllTestsCommand(TestCommand):
                             handle.flush()
 
     def _format_file(self, path):
+        import platform
+        import codecs
         from yapf.yapflib.yapf_api import FormatFile
         config = """{
 column_limit : 120
@@ -98,6 +145,15 @@ column_limit : 120
             # is dangerous, so don't use it unless you submit a fix to
             # yapf.
             (contents, encoding, changed) = FormatFile(path, style_config=config)
+            if platform.system() == 'Windows':
+                # yapf screws up line endings on windows
+                with codecs.open(path, 'r', encoding) as file:
+                    old_contents = file.read()
+                contents = contents.replace("\r\n", "\n")
+                if len(old_contents) == 0:
+                    # windows yapf seems to force a newline? I dunno
+                    contents = ""
+                changed = (old_contents != contents)
         except Exception as e:
             error = "yapf crashed on {path}: {error}".format(path=path, error=e)
             print(error, file=sys.stderr)
@@ -186,7 +242,12 @@ column_limit : 120
             print("Failures in: " + repr(self.failed))
             sys.exit(1)
         else:
-            print("All tests passed! 💯 🌟")
+            import platform
+            if platform.system() == 'Windows':
+                # windows console defaults to crap encoding so they get no flair
+                print("All tests passed!")
+            else:
+                print("All tests passed! 💯 🌟")
 
 
 setup(name='conda-project-prototype',

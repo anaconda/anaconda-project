@@ -24,6 +24,13 @@ class CondaEnvProvider(EnvVarProvider):
 
         assert 'source' in config
 
+        # we don't support a default here because it would
+        # need a hardcoded path which the project.yml author
+        # would have no way of providing. Fortunately there's
+        # no syntax in project.yml that should result in setting
+        # a default.
+        assert config['source'] != 'default'
+
         if config['source'] == 'environ':
             # we have a setting (off by default) for whether to
             # use the conda env we were in prior to
@@ -35,10 +42,6 @@ class CondaEnvProvider(EnvVarProvider):
             # if nothing is selected, default to project mode
             # because we don't have a radio button in the UI for
             # "do nothing" right now
-            config['source'] = 'project'
-        elif config['source'] == 'default':
-            # we don't support a default here for CONDA_ENV_PATH
-            # because it would need a hardcoded path
             config['source'] = 'project'
 
         # be sure we don't get confused by alternate ways to spell the path
@@ -158,9 +161,13 @@ class CondaEnvProvider(EnvVarProvider):
                 return
 
         context.environ[requirement.env_var] = prefix
-        # future: if the prefix is a (globally, not project-scoped) named environment
-        # this should be set to the name
-        context.environ["CONDA_DEFAULT_ENV"] = prefix
+        if requirement.env_var != "CONDA_DEFAULT_ENV":
+            # This only matters on Unix, on Windows
+            # requirement.env_var is CONDA_DEFAULT_ENV already.
+            # future: if the prefix is a (globally, not
+            # project-scoped) named environment this should be set
+            # to the name
+            context.environ["CONDA_DEFAULT_ENV"] = prefix
         path = context.environ.get("PATH", "")
 
         import project.internal.conda_api as conda_api
