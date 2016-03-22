@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 from copy import deepcopy
 import os
+import platform
 import pytest
 import stat
 import subprocess
@@ -112,8 +113,6 @@ runtime:
 
 def test_prepare_with_app_entry():
     def prepare_with_app_entry(dirname):
-        os.chmod(os.path.join(dirname, "echo.py"), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(FOO='bar')
         env_path = environ.get('CONDA_ENV_PATH', environ.get('CONDA_DEFAULT_ENV', None))
@@ -123,10 +122,15 @@ def test_prepare_with_app_entry():
         command = result.command_exec_info
         assert 'FOO' in command.env
         assert command.cwd == project.directory_path
-        assert command.args == ['%s/echo.py' % dirname, env_path, 'foo', 'bar']
+        if platform.system() == 'Windows':
+            commandpath = os.path.join(env_path, "python.exe")
+        else:
+            commandpath = os.path.join(env_path, "bin", "python")
+        assert command.args == [commandpath, 'echo.py', env_path, 'foo', 'bar']
         p = command.popen(stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (out, err) = p.communicate()
-        assert out.decode() == ("['%s/echo.py', '%s', 'foo', 'bar']\n" % (dirname, env_path))
+        # strip is to pull off the platform-specific newline
+        assert out.decode().strip() == ("['echo.py', '%s', 'foo', 'bar']" % (env_path.replace("\\", "\\\\")))
         assert err.decode() == ""
 
     with_directory_contents(
@@ -136,9 +140,9 @@ runtime:
 
 commands:
   default:
-    conda_app_entry: echo.py ${PREFIX} foo bar
+    conda_app_entry: python echo.py ${PREFIX} foo bar
 """,
-         "echo.py": """#!/usr/bin/env python
+         "echo.py": """
 from __future__ import print_function
 import sys
 print(repr(sys.argv))
