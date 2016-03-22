@@ -35,6 +35,7 @@ def test_execvpe_with_shell_on_windows(monkeypatch):
     monkeypatch.setattr('platform.system', mock_platform_system)
 
     executed = {}
+
     def mock_popen(args, env, cwd, shell):
         executed['args'] = args
         executed['env'] = env

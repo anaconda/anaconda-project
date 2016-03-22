@@ -56,7 +56,22 @@ class CommandExecInfo(object):
         """
         import subprocess
 
-        return subprocess.Popen(args=self._args, env=self._env, cwd=self._cwd, shell=self._shell, **kwargs)
+        if self._shell:
+            # on Windows, with shell=True Python interprets the args as NOT quoted
+            # and quotes them, but assumes a single string parameter is pre-quoted
+            # which is what we want.
+            # on Unix, with shell=True we interpret args[0]
+            # the same as a single string (it's the parameter after -c in sh -c)
+            # and anything after args[0] is passed as another flag to sh.
+            # (we never have anything after args[0])
+            # So if we always use the single string to popen when shell=True, things
+            # should work OK on all platforms.
+            assert len(self._args) == 1
+            args = self._args[0]
+        else:
+
+            args = self._args
+        return subprocess.Popen(args=args, env=self._env, cwd=self._cwd, shell=self._shell, **kwargs)
 
     def execvpe(self):
         """Convenience method exec's the command replacing the current process.

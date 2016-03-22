@@ -827,16 +827,22 @@ app:
         }, check_launch_argv)
 
 
+if platform.system() == 'Windows':
+    echo_stuff = "echo_stuff.bat"
+else:
+    echo_stuff = "echo_stuff.sh"
+
+
 def _launch_argv_for_environment(environ,
                                  expected_output,
                                  chdir=False,
-                                 command_line='conda_app_entry: echo.py ${PREFIX}/blah foo bar'):
+                                 command_line=('conda_app_entry: %s ${PREFIX} foo bar' % echo_stuff)):
     environ = minimal_environ(**environ)
 
     def check_echo_output(dirname):
         if 'PROJECT_DIR' not in environ:
             environ['PROJECT_DIR'] = dirname
-        os.chmod(os.path.join(dirname, "echo.py"), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+        os.chmod(os.path.join(dirname, echo_stuff), stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
         old_dir = None
         if chdir:
             old_dir = os.getcwd()
@@ -845,8 +851,13 @@ def _launch_argv_for_environment(environ,
             project = project_no_dedicated_env(dirname)
             assert [] == project.problems
             exec_info = project.exec_info_for_environment(environ)
-            output = subprocess.check_output(exec_info.args, shell=exec_info.shell, env=environ).decode()
-            assert output == expected_output.format(dirname=dirname)
+            if exec_info.shell:
+                args = exec_info.args[0]
+            else:
+                args = exec_info.args
+            output = subprocess.check_output(args, shell=exec_info.shell, env=environ).decode()
+            # strip() removes \r\n or \n so we don't have to deal with the difference
+            assert output.strip() == expected_output.format(dirname=dirname)
         finally:
             if old_dir is not None:
                 os.chdir(old_dir)
@@ -858,36 +869,56 @@ commands:
   default:
     %s
 """ % command_line,
-            "echo.py": """#!/usr/bin/env python
-from __future__ import print_function
-import sys
-print(repr(sys.argv))
+            "echo_stuff.sh": """
+#!/bin/sh
+echo "$*"
+""",
+            "echo_stuff.bat": """
+@echo off
+echo %*
 """
         }, check_echo_output)
 
 
 def test_launch_command_in_project_dir():
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _launch_argv_for_environment(dict(), "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix)
+    _launch_argv_for_environment(dict(), "%s foo bar" % (prefix))
 
 
 def test_launch_command_in_project_dir_with_shell(monkeypatch):
+    if platform.system() == 'Windows':
+        print("Cannot test shell on Windows")
+        return
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
     _launch_argv_for_environment(dict(),
-                                 "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix,
-                                 command_line='shell: ${PROJECT_DIR}/echo.py ${CONDA_ENV_PATH}/blah foo bar')
+                                 "%s foo bar" % (prefix),
+                                 command_line='shell: ${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar')
+
+
+def test_launch_command_in_project_dir_with_windows(monkeypatch):
+    if platform.system() != 'Windows':
+        print("Cannot test windows cmd on unix")
+        return
+    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
+    _launch_argv_for_environment(
+        dict(),
+        "%s foo bar" % (prefix),
+        command_line='''windows: "\\"%PROJECT_DIR%\\"\\\\echo_stuff.bat %CONDA_DEFAULT_ENV% foo bar"''')
 
 
 def test_launch_command_in_project_dir_and_cwd_is_project_dir():
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _launch_argv_for_environment(dict(), "['{dirname}/echo.py', '%s/blah', 'foo', 'bar']\n" % prefix, chdir=True)
+    _launch_argv_for_environment(dict(),
+                                 "%s foo bar" % prefix,
+                                 chdir=True,
+                                 command_line=('conda_app_entry: %s ${PREFIX} foo bar' % os.path.join(".", echo_stuff)))
 
 
 def test_launch_command_in_project_dir_with_conda_env():
     _launch_argv_for_environment(
         dict(CONDA_ENV_PATH='/someplace',
              CONDA_DEFAULT_ENV='/someplace'),
-        "['{dirname}/echo.py', '/someplace/blah', 'foo', 'bar']\n")
+        "/someplace foo bar")
 
 
 def test_launch_command_is_on_system_path():
