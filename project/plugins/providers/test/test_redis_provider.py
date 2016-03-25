@@ -10,7 +10,6 @@ from project.test.environ_utils import minimal_environ, strip_environ
 from project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
-from project.plugins.provider import ProviderConfigContext
 from project.plugins.providers.redis import RedisProvider
 from project.plugins.requirements.redis import RedisRequirement
 from project.prepare import prepare, unprepare
@@ -26,7 +25,7 @@ def test_reading_default_config():
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
         provider = RedisProvider()
-        config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
+        config = provider.read_config(requirement, dict(), local_state)
         assert 6380 == config['lower_port']
         assert 6449 == config['upper_port']
 
@@ -38,7 +37,7 @@ def test_reading_valid_config():
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
         provider = RedisProvider()
-        config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
+        config = provider.read_config(requirement, dict(), local_state)
         assert 7389 == config['lower_port']
         assert 7421 == config['upper_port']
         assert 'all' == config['scope']
@@ -61,7 +60,7 @@ def _read_invalid_port_range(capsys, port_range):
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
         provider = RedisProvider()
-        config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
+        config = provider.read_config(requirement, dict(), local_state)
         # revert to defaults
         assert 6380 == config['lower_port']
         assert 6449 == config['upper_port']
@@ -106,25 +105,22 @@ def test_set_config_values_as_strings():
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
         provider = RedisProvider()
-        provider.set_config_values_as_strings(
-            ProviderConfigContext(dict(), local_state, requirement),
-            dict(lower_port="6001"))
-        config = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
+        provider.set_config_values_as_strings(requirement, dict(), local_state, dict(lower_port="6001"))
+        config = provider.read_config(requirement, dict(), local_state)
         assert config['lower_port'] == 6001
         assert config['upper_port'] == 6449
 
-        provider.set_config_values_as_strings(
-            ProviderConfigContext(dict(), local_state, requirement),
-            dict(upper_port="6700"))
-        config2 = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
+        provider.set_config_values_as_strings(requirement, dict(), local_state, dict(upper_port="6700"))
+        config2 = provider.read_config(requirement, dict(), local_state)
         assert config2['lower_port'] == 6001
         assert config2['upper_port'] == 6700
 
-        provider.set_config_values_as_strings(
-            ProviderConfigContext(dict(), local_state, requirement),
-            dict(lower_port="5500",
-                 upper_port="6800"))
-        config2 = provider.read_config(ProviderConfigContext(dict(), local_state, requirement))
+        provider.set_config_values_as_strings(requirement,
+                                              dict(),
+                                              local_state,
+                                              dict(lower_port="5500",
+                                                   upper_port="6800"))
+        config2 = provider.read_config(requirement, dict(), local_state)
         assert config2['lower_port'] == 5500
         assert config2['upper_port'] == 6800
 
@@ -283,8 +279,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         # be sure we generate the config html that would use the old one
         requirement = _redis_requirement()
         status = requirement.check_status(result.environ, local_state_file)
-        config_context = ProviderConfigContext(result.environ, local_state_file, requirement)
-        html = RedisProvider().config_html(config_context, status)
+        html = RedisProvider().config_html(requirement, result.environ, local_state_file, status)
         assert 'Use the redis-server we started earlier' in html
 
         # now try again, and we should re-use the exact same server
@@ -570,11 +565,11 @@ def test_set_scope_in_local_state(monkeypatch):
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
         provider = RedisProvider()
-        config_context = ProviderConfigContext(minimal_environ(), local_state, requirement)
-        config = provider.read_config(config_context)
+        environ = minimal_environ()
+        config = provider.read_config(requirement, environ, local_state)
         assert config['scope'] == 'all'
-        provider.set_config_values_as_strings(config_context, dict(scope='system'))
-        config = provider.read_config(config_context)
+        provider.set_config_values_as_strings(requirement, environ, local_state, dict(scope='system'))
+        config = provider.read_config(requirement, environ, local_state)
         assert config['scope'] == 'system'
 
         project = project_no_dedicated_env(dirname)

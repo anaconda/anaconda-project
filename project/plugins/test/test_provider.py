@@ -7,7 +7,7 @@ import pytest
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.crypto import encrypt_string
 from project.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
-from project.plugins.provider import Provider, ProvideContext, EnvVarProvider, ProviderConfigContext
+from project.plugins.provider import Provider, ProvideContext, EnvVarProvider
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirement import EnvVarRequirement
 from project.project import Project
@@ -33,7 +33,7 @@ def test_provider_default_method_implementations():
         def title(self):
             return ""
 
-        def read_config(self, context):
+        def read_config(self, requirement, environ, local_state_file):
             return dict()
 
         def provide(self, requirement, context):
@@ -42,9 +42,9 @@ def test_provider_default_method_implementations():
     provider = UselessProvider()
     # this method is supposed to do nothing by default (ignore
     # unknown names, in particular)
-    provider.set_config_values_as_strings(context=None, values=dict())
+    provider.set_config_values_as_strings(requirement=None, environ=None, local_state_file=None, values=dict())
     # this is supposed to return None by default
-    provider.config_html(context=None, status=None) is None
+    provider.config_html(requirement=None, environ=None, local_state_file=None, status=None) is None
 
 
 def _load_env_var_requirement(dirname, env_var):
@@ -260,11 +260,11 @@ def test_env_var_provider_with_encrypted_default_value_in_local_state():
         assert ('MASTER', ) == provider.missing_env_vars_to_configure(requirement, dict(), local_state_file)
         assert ('MASTER', ) == provider.missing_env_vars_to_provide(requirement, dict(), local_state_file)
 
-        config_context = ProviderConfigContext(dict(MASTER=secret), local_state_file, requirement)
-        assert () == provider.missing_env_vars_to_configure(requirement, config_context.environ, local_state_file)
-        assert () == provider.missing_env_vars_to_provide(requirement, config_context.environ, local_state_file)
-        status = requirement.check_status(config_context.environ, local_state_file)
-        context = ProvideContext(environ=config_context.environ, local_state_file=local_state_file, status=status)
+        environ = dict(MASTER=secret)
+        assert () == provider.missing_env_vars_to_configure(requirement, environ, local_state_file)
+        assert () == provider.missing_env_vars_to_provide(requirement, environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file)
+        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
         provider.provide(requirement, context=context)
         assert [] == context.errors
         assert 'FOO_SECRET' in context.environ
@@ -372,9 +372,9 @@ def test_env_var_provider_configure_local_state_value():
 
         assert local_state_file.get_value(['variables', 'FOO']) is None
 
-        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        environ = dict()
 
-        provider.set_config_values_as_strings(config_context, dict(value="bar"))
+        provider.set_config_values_as_strings(requirement, environ, local_state_file, dict(value="bar"))
 
         assert local_state_file.get_value(['variables', 'FOO']) == "bar"
         local_state_file.save()
@@ -383,7 +383,7 @@ def test_env_var_provider_configure_local_state_value():
         assert local_state_file_2.get_value(['variables', 'FOO']) == "bar"
 
         # setting empty string = unset
-        provider.set_config_values_as_strings(config_context, dict(value=""))
+        provider.set_config_values_as_strings(requirement, environ, local_state_file, dict(value=""))
         assert local_state_file.get_value(['variables', 'FOO']) is None
 
         local_state_file.save()
@@ -408,15 +408,19 @@ def test_env_var_provider_configure_disabled_local_state_value():
         assert local_state_file.get_value(['variables', 'FOO']) is None
         assert local_state_file.get_value(['disabled_variables', 'FOO']) is None
 
-        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
+        environ = dict()
 
         # source=environ should mean we set disabled_variables instead of variables
-        provider.set_config_values_as_strings(config_context, dict(source='environ', value="bar"))
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state_file,
+                                              dict(source='environ',
+                                                   value="bar"))
 
         assert local_state_file.get_value(['variables', 'FOO']) is None
         assert local_state_file.get_value(['disabled_variables', 'FOO']) == "bar"
 
-        config = provider.read_config(config_context)
+        config = provider.read_config(requirement, environ, local_state_file)
         assert config == dict(source='unset', value='bar')
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -430,35 +434,35 @@ def test_env_var_provider_config_html():
         provider = EnvVarProvider()
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
-        config = provider.read_config(config_context)
+        environ = dict()
+        config = provider.read_config(requirement, environ, local_state_file)
         assert dict(source='unset') == config
 
         # config html when variable is unset
         status = requirement.check_status(dict(), local_state_file)
-        html = provider.config_html(config_context, status)
+        html = provider.config_html(requirement, environ, local_state_file, status)
         assert "Keep" not in html
         assert 'Use this value:' in html
 
         # config html when variable is unset and we have a default
         requirement.options['default'] = 'from_default'
         status = requirement.check_status(dict(), local_state_file)
-        html = provider.config_html(config_context, status)
+        html = provider.config_html(requirement, environ, local_state_file, status)
         assert "Keep default 'from_default'" in html
         assert 'Use this value instead:' in html
 
         # config html when variable is set
-        config_context.environ = dict(FOO='from_environ')
-        status = requirement.check_status(config_context.environ, local_state_file)
-        html = provider.config_html(config_context, status)
+        environ = dict(FOO='from_environ')
+        status = requirement.check_status(environ, local_state_file)
+        html = provider.config_html(requirement, environ, local_state_file, status)
         assert "Keep value 'from_environ'" in html
         assert 'Use this value instead:' in html
 
         # config html when local state override is present
-        config_context.environ = dict(FOO='from_environ')
+        environ = dict(FOO='from_environ')
         local_state_file.set_value(['variables', 'FOO'], 'from_local_state')
-        status = requirement.check_status(config_context.environ, local_state_file)
-        html = provider.config_html(config_context, status)
+        status = requirement.check_status(environ, local_state_file)
+        html = provider.config_html(requirement, environ, local_state_file, status)
         assert "Keep value 'from_environ'" in html
         assert 'Use this value instead:' in html
 

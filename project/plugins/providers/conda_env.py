@@ -15,12 +15,12 @@ class CondaEnvProvider(EnvVarProvider):
         super(CondaEnvProvider, self).__init__()
         self._conda = new_conda_manager()
 
-    def read_config(self, context):
+    def read_config(self, requirement, environ, local_state_file):
         """Override superclass to add a choice to create a project-scoped environment."""
-        config = super(CondaEnvProvider, self).read_config(context)
+        config = super(CondaEnvProvider, self).read_config(requirement, environ, local_state_file)
 
-        assert 'PROJECT_DIR' in context.environ
-        project_dir = context.environ['PROJECT_DIR']
+        assert 'PROJECT_DIR' in environ
+        project_dir = environ['PROJECT_DIR']
 
         assert 'source' in config
 
@@ -36,7 +36,7 @@ class CondaEnvProvider(EnvVarProvider):
             # use the conda env we were in prior to
             # preparation. By default we always use a
             # project-scoped one.
-            if not context.local_state_file.get_value('inherit_environment', default=False):
+            if not local_state_file.get_value('inherit_environment', default=False):
                 config['source'] = 'project'
         elif config['source'] == 'unset':
             # if nothing is selected, default to project mode
@@ -49,47 +49,47 @@ class CondaEnvProvider(EnvVarProvider):
             config['value'] = os.path.normpath(config['value'])
 
         # set env_name
-        config['env_name'] = context.requirement.default_environment_name
+        config['env_name'] = requirement.default_environment_name
 
         if 'value' in config:
-            for env in context.requirement.environments.values():
+            for env in requirement.environments.values():
                 if config['value'] == env.path(project_dir):
                     config['env_name'] = env.name
                     if config['source'] == 'variables':
                         config['source'] = 'project'
         elif config['source'] == 'project':
-            env = context.requirement.environments.get(config['env_name'])
+            env = requirement.environments.get(config['env_name'])
             config['value'] = env.path(project_dir)
 
         # print("read_config " + repr(config))
 
         return config
 
-    def set_config_values_as_strings(self, context, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
         """Override superclass to support 'project' source option."""
-        super(CondaEnvProvider, self).set_config_values_as_strings(context, values)
+        super(CondaEnvProvider, self).set_config_values_as_strings(requirement, environ, local_state_file, values)
         # print("Setting values: " + repr(values))
         if 'source' in values:
             if values['source'] == 'project':
-                project_dir = context.environ['PROJECT_DIR']
+                project_dir = environ['PROJECT_DIR']
                 name = values['env_name']
-                for env in context.requirement.environments.values():
+                for env in requirement.environments.values():
                     if env.name == name:
                         prefix = env.path(project_dir)
-                        context.local_state_file.set_value(['variables', context.requirement.env_var], prefix)
+                        local_state_file.set_value(['variables', requirement.env_var], prefix)
             elif values['source'] == 'environ':
                 # if user chose 'environ' explicitly, we need to set the inherit_environment flag
-                context.local_state_file.set_value('inherit_environment', True)
+                local_state_file.set_value('inherit_environment', True)
 
-    def config_html(self, context, status):
+    def config_html(self, requirement, environ, local_state_file, status):
         """Override superclass to provide the extra option to create one of our configured environments."""
         # print("config_html with config " + repr(status.analysis.config))
-        environ_value = context.environ.get(context.requirement.env_var, None)
-        project_dir = context.environ['PROJECT_DIR']
+        environ_value = environ.get(requirement.env_var, None)
+        project_dir = environ['PROJECT_DIR']
         options_html = ('<div><label><input type="radio" name="source" ' +
                         'value="project"/>Use project-specific environment: <select name="env_name">')
         environ_value_is_project_specific = False
-        for env in context.requirement.environments.values():
+        for env in requirement.environments.values():
             html = ('<option value="%s">%s</option>\n' % (env.name, env.name))
             if env.path(project_dir) == environ_value:
                 environ_value_is_project_specific = True
@@ -109,7 +109,7 @@ class CondaEnvProvider(EnvVarProvider):
               <label><input type="radio" name="source" value="variables"/>Use this %s instead:
                      <input type="text" name="value"/></label>
             </div>
-            """ % (context.requirement.env_var)
+            """ % (requirement.env_var)
 
         return """
 <form>

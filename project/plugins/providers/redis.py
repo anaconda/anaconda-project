@@ -46,14 +46,14 @@ class RedisProvider(Provider):
             return None
         return (lower, upper)
 
-    def read_config(self, context):
+    def read_config(self, requirement, environ, local_state_file):
         """Override superclass to return our config."""
         config = dict()
-        section = self.config_section(context.requirement)
+        section = self.config_section(requirement)
         default_lower_port = 6380  # one above 6379 default Redis
         default_upper_port = 6449  # entirely arbitrary
         default_port_range = "%d-%d" % (default_lower_port, default_upper_port)
-        port_range_string = context.local_state_file.get_value(section + ['port_range'], default=default_port_range)
+        port_range_string = local_state_file.get_value(section + ['port_range'], default=default_port_range)
         parsed_port_range = self._parse_port_range(port_range_string)
         if parsed_port_range is None:
             print("Invalid port_range '%s', should be like '%s'" % (port_range_string, default_port_range),
@@ -64,14 +64,14 @@ class RedisProvider(Provider):
             config['lower_port'] = parsed_port_range[0]
             config['upper_port'] = parsed_port_range[1]
 
-        config['scope'] = context.local_state_file.get_value(section + ['scope'], default='all')
+        config['scope'] = local_state_file.get_value(section + ['scope'], default='all')
 
         return config
 
-    def set_config_values_as_strings(self, context, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
         """Override superclass to set our config values."""
-        config = self.read_config(context)
-        section = self.config_section(context.requirement)
+        config = self.read_config(requirement, environ, local_state_file)
+        section = self.config_section(requirement)
         upper_port = config['upper_port']
         lower_port = config['lower_port']
         if 'lower_port' in values:
@@ -79,10 +79,10 @@ class RedisProvider(Provider):
         if 'upper_port' in values:
             upper_port = values['upper_port']
 
-        context.local_state_file.set_value(section + ['port_range'], "%s-%s" % (lower_port, upper_port))
+        local_state_file.set_value(section + ['port_range'], "%s-%s" % (lower_port, upper_port))
 
         if 'scope' in values:
-            context.local_state_file.set_value(section + ['scope'], values['scope'])
+            local_state_file.set_value(section + ['scope'], values['scope'])
 
     def _previously_run_redis_url_if_alive(self, run_state):
         if 'port' in run_state and network_util.can_connect_to_socket(host='localhost', port=run_state['port']):
@@ -93,7 +93,7 @@ class RedisProvider(Provider):
     def _can_connect_to_system_default(self):
         return network_util.can_connect_to_socket(host=_DEFAULT_SYSTEM_REDIS_HOST, port=_DEFAULT_SYSTEM_REDIS_PORT)
 
-    def config_html(self, context, status):
+    def config_html(self, requirement, environ, local_state_file, status):
         """Override superclass to provide our config html."""
         analysis = status.analysis
 

@@ -9,7 +9,6 @@ from project.internal.test.http_utils import http_get_async, http_post_async
 from project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
-from project.plugins.provider import ProviderConfigContext
 from project.plugins.providers.download import DownloadProvider
 from project.plugins.requirements.download import DownloadRequirement
 from project.prepare import prepare, UI_MODE_BROWSER
@@ -206,10 +205,10 @@ def test_config_html(monkeypatch):
         FILENAME = os.path.join(dirname, 'data.zip')
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = _download_requirement()
-        status = requirement.check_status(minimal_environ(PROJECT_DIR=dirname), local_state_file)
-        config_context = ProviderConfigContext(minimal_environ(PROJECT_DIR=dirname), local_state_file, requirement)
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        status = requirement.check_status(environ, local_state_file)
         provider = DownloadProvider()
-        html = provider.config_html(config_context, status)
+        html = provider.config_html(requirement, environ, local_state_file, status)
         assert 'Download {} to {}'.format(requirement.url, requirement.filename) in html
 
         with open(FILENAME, 'w') as f:
@@ -217,8 +216,7 @@ def test_config_html(monkeypatch):
 
         env = minimal_environ(PROJECT_DIR=dirname)
         status = requirement.check_status(env, local_state_file)
-        config_context = ProviderConfigContext(env, local_state_file, requirement)
-        html = provider.config_html(config_context, status)
+        html = provider.config_html(requirement, env, local_state_file, status)
         expected_choice = 'Use already-downloaded file {}'.format(FILENAME)
         assert expected_choice in html
 

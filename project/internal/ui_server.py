@@ -10,8 +10,6 @@ from tornado.httpserver import HTTPServer
 from tornado.netutil import bind_sockets
 from tornado.web import Application, RequestHandler
 
-from project.plugins.provider import ProviderConfigContext
-
 from project.internal.plugin_html import cleanup_and_scope_form, html_tag
 
 
@@ -66,9 +64,8 @@ class PrepareViewHandler(RequestHandler):
             html = html + html_tag("p", "Status: " + status.status_description).replace("<p>Status: ", "<p>Status: " +
                                                                                         check + " ")
             if with_config:
-                config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
-                                                       status.requirement)
-                raw_html = status.provider.config_html(config_context, status)
+                raw_html = status.provider.config_html(status.requirement, prepare_context.environ,
+                                                       prepare_context.local_state_file, status)
                 if raw_html is not None:
                     prefix = self.application.form_prefix(status.requirement, status.provider)
                     cleaned_html = cleanup_and_scope_form(raw_html, prefix, status.analysis.config)
@@ -147,9 +144,8 @@ class PrepareViewHandler(RequestHandler):
                     values = configs[(requirement, provider)]
                     values[unscoped_name] = value_string
             for ((requirement, provider), values) in configs.items():
-                config_context = ProviderConfigContext(prepare_context.environ, prepare_context.local_state_file,
-                                                       requirement)
-                provider.set_config_values_as_strings(config_context, values)
+                provider.set_config_values_as_strings(requirement, prepare_context.environ,
+                                                      prepare_context.local_state_file, values)
 
             prepare_context.local_state_file.save()
 
