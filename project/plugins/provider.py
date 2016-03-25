@@ -120,19 +120,6 @@ class ProviderAnalysis(object):
 class Provider(with_metaclass(ABCMeta)):
     """A Provider can take some action to meet a Requirement."""
 
-    @property
-    def config_key(self):
-        """When we store config for this provider, we use this as the key."""
-        return self.__class__.__name__
-
-    def config_section(self, requirement):
-        """When we store config for this provider, we put it in this section unless there's a more logical place."""
-        # runtime:
-        #   REDIS_URL:
-        #     ProjectScopedRedisProvider:
-        #       port_range: 6380-6449
-        return ["runtime", requirement.env_var, "providers", self.config_key]
-
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
         """Get a list of unset environment variable names that must be set before configuring this provider.
 

@@ -47,10 +47,8 @@ def test_reading_valid_config():
             DEFAULT_LOCAL_STATE_FILENAME: """
 runtime:
   REDIS_URL:
-    providers:
-      RedisProvider:
-        port_range: 7389-7421
-        autostart: false
+    port_range: 7389-7421
+    autostart: false
          """
         }, read_config)
 
@@ -73,9 +71,7 @@ def _read_invalid_port_range(capsys, port_range):
             DEFAULT_LOCAL_STATE_FILENAME: """
 runtime:
   REDIS_URL:
-    providers:
-      RedisProvider:
-        port_range: %s
+    port_range: %s
          """ % port_range
         }, read_config)
 
@@ -212,7 +208,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert result
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        state = local_state_file.get_service_run_state("RedisProvider")
+        state = local_state_file.get_service_run_state("redis")
         assert 'port' in state
         port = state['port']
 
@@ -234,7 +230,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert not real_can_connect_to_socket(host='localhost', port=port)
 
         local_state_file.load()
-        assert dict() == local_state_file.get_service_run_state("RedisProvider")
+        assert dict() == local_state_file.get_service_run_state("redis")
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
@@ -261,7 +257,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert 'REDIS_URL' in result.environ
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        state = local_state_file.get_service_run_state("RedisProvider")
+        state = local_state_file.get_service_run_state("redis")
         assert 'port' in state
         port = state['port']
 
@@ -306,7 +302,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert not real_can_connect_to_socket(host='localhost', port=port)
 
         local_state_file.load()
-        assert dict() == local_state_file.get_service_run_state("RedisProvider")
+        assert dict() == local_state_file.get_service_run_state("redis")
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
@@ -436,9 +432,7 @@ runtime:
          DEFAULT_LOCAL_STATE_FILENAME: """
 runtime:
   REDIS_URL:
-    providers:
-      RedisProvider:
-        scope: system
+    scope: system
 """}, check_no_autostart)
 
     out, err = capsys.readouterr()
@@ -465,9 +459,7 @@ runtime:
          DEFAULT_LOCAL_STATE_FILENAME: """
 runtime:
   REDIS_URL:
-    providers:
-      RedisProvider:
-        port_range: 7389-7421
+    port_range: 7389-7421
 """}, start_local_redis)
 
     out, err = capsys.readouterr()

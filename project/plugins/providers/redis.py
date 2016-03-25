@@ -46,10 +46,13 @@ class RedisProvider(Provider):
             return None
         return (lower, upper)
 
+    def _config_section(self, requirement):
+        return ["runtime", requirement.env_var]
+
     def read_config(self, requirement, environ, local_state_file):
         """Override superclass to return our config."""
         config = dict()
-        section = self.config_section(requirement)
+        section = self._config_section(requirement)
         default_lower_port = 6380  # one above 6379 default Redis
         default_upper_port = 6449  # entirely arbitrary
         default_port_range = "%d-%d" % (default_lower_port, default_upper_port)
@@ -71,7 +74,7 @@ class RedisProvider(Provider):
     def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
         """Override superclass to set our config values."""
         config = self.read_config(requirement, environ, local_state_file)
-        section = self.config_section(requirement)
+        section = self._config_section(requirement)
         upper_port = config['upper_port']
         lower_port = config['lower_port']
         if 'lower_port' in values:
@@ -130,7 +133,7 @@ class RedisProvider(Provider):
     def analyze(self, requirement, environ, local_state_file):
         """Override superclass to store additional fields in the analysis."""
         analysis = super(RedisProvider, self).analyze(requirement, environ, local_state_file)
-        run_state = local_state_file.get_service_run_state(self.config_key)
+        run_state = local_state_file.get_service_run_state('redis')
         previous = self._previously_run_redis_url_if_alive(run_state)
         systemwide = self._can_connect_to_system_default()
 
@@ -253,7 +256,7 @@ class RedisProvider(Provider):
 
             return url
 
-        return context.transform_service_run_state(self.config_key, ensure_redis)
+        return context.transform_service_run_state('redis', ensure_redis)
 
     def provide(self, requirement, context):
         """Override superclass to start a project-scoped redis-server.

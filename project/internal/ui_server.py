@@ -188,7 +188,7 @@ class UIApplication(Application):
             self._ids_by_requirement[status.requirement] = req_id
 
     def form_prefix(self, requirement, provider):
-        return "%s.%s." % (self._ids_by_requirement[requirement], provider.config_key)
+        return "%s.%s." % (self._ids_by_requirement[requirement], provider.__class__.__name__)
 
     def parse_form_name(self, prepare_context, name):
         pieces = name.split(".")
@@ -206,7 +206,7 @@ class UIApplication(Application):
         requirement = self._requirements_by_id[req_id]
         for status in prepare_context.statuses:
             if status.requirement is requirement:
-                if provider_key == status.provider.config_key:
+                if provider_key == status.provider.__class__.__name__:
                     return (requirement, status.provider, unscoped_name)
         print("did not find provider " + provider_key, file=sys.stderr)
         return None
