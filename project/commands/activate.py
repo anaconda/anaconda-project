@@ -2,7 +2,6 @@
 from __future__ import absolute_import, print_function
 
 import os
-import sys
 
 try:
     from shlex import quote  # pragma: no cover (py3 only)
@@ -39,10 +38,11 @@ def activate(dirname, ui_mode):
 
 
 def main(args):
-    """Start the activate command."""
+    """Start the activate command and return exit status code."""
     result = activate(args.project_dir, args.ui_mode)
     if result is None:
-        sys.exit(1)
+        return 1
     else:
         for line in result:
             print(line)
+        return 0

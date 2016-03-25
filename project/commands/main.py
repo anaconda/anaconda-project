@@ -12,8 +12,7 @@ import project.commands.prepare as prepare
 import project.commands.activate as activate
 
 
-def _run_parser(args):
-    """Internal function to run the parsing of params and run the commands. Allows mocking."""
+def _parse_args_and_run_subcommand(argv):
     parser = ArgumentParser(prog="anaconda-project", description="Actions on Anaconda projects.")
 
     # future: make setup.py store our version in a version.py then use that here
@@ -35,22 +34,26 @@ def _run_parser(args):
     preset.set_defaults(main=activate.main, ui_mode=UI_MODE_NOT_INTERACTIVE)
 
     # argparse doesn't do this for us for whatever reason
-    if len(args) == 0:
+    if len(argv) < 2:
         print("Must specify a subcommand.", file=sys.stderr)
         parser.print_usage(file=sys.stderr)
-        sys.exit(2)  # argparse exits with 2 on bad args, copy that
+        return 2  # argparse exits with 2 on bad args, copy that
 
-    args = parser.parse_args(args)
+    try:
+        args = parser.parse_args(argv[1:])
+    except SystemExit as e:
+        return e.code
 
     # 'project_dir' is used for all subcommands now, but may not be always
     if 'project_dir' in args:
         args.project_dir = os.path.abspath(args.project_dir)
 
-    args.main(args)
-
-    sys.exit(0)
+    return args.main(args)
 
 
-def main(argv):
-    """anaconda-project main entry point."""
-    _run_parser(argv[1:])
+def main():
+    """anaconda-project command line tool Conda-style entry point.
+
+    Conda expects us to take no args and return an exit code.
+    """
+    return _parse_args_and_run_subcommand(sys.argv)

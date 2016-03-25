@@ -29,7 +29,7 @@ def launch_command(project_dir, ui_mode):
 
 
 def main(args):
-    """Start the launch command."""
+    """Start the launch command and return exit status code.."""
     launch_command(args.project_dir, args.ui_mode)
     # if we returned, we failed to launch the command and should have printed an error
-    sys.exit(1)
+    return 1

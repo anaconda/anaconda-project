@@ -3,10 +3,9 @@ from __future__ import absolute_import, print_function
 from copy import deepcopy
 import errno
 import platform
-import pytest
 import os
 
-from project.commands.main import main as toplevel_main
+from project.commands.main import _parse_args_and_run_subcommand
 from project.commands.launch import launch_command, main
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE
@@ -21,6 +20,11 @@ class Args(object):
         self.ui_mode = UI_MODE_NOT_INTERACTIVE
         for key in kwargs:
             setattr(self, key, kwargs[key])
+
+
+python_exe = "python"
+if platform.system() == 'Windows':
+    python_exe = "python.exe"
 
 
 def test_launch_command(monkeypatch):
@@ -46,11 +50,8 @@ def test_launch_command(monkeypatch):
         assert 'file' in executed
         assert 'args' in executed
         assert 'env' in executed
-        binary_name = "python"
-        if platform.system() == 'Windows':
-            binary_name = "python.exe"
-        assert executed['file'].endswith(binary_name)
-        assert executed['args'][0].endswith(binary_name)
+        assert executed['file'].endswith(python_exe)
+        assert executed['args'][0].endswith(python_exe)
         assert '--version' == executed['args'][1]
         assert 'bar' == executed['env']['FOO']
 
@@ -111,25 +112,21 @@ def test_main(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         result = main(Args(project_dir=dirname))
 
-        assert result is None
+        assert 1 == result
         assert 'file' in executed
         assert 'args' in executed
         assert 'env' in executed
-        assert executed['file'].endswith("python")
-        assert executed['args'][0].endswith("python")
+        assert executed['file'].endswith(python_exe)
+        assert executed['args'][0].endswith(python_exe)
         assert '--version' == executed['args'][1]
 
-    with pytest.raises(SystemExit) as excinfo:
-        with_directory_contents(
-            {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
 
 """}, check_launch_main)
-
-    # main() assumes failure if execvpe returns, as it did here
-    assert 1 == excinfo.value.code
 
     out, err = capsys.readouterr()
     assert "" == out
@@ -146,18 +143,15 @@ def test_main_failed_exec(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         result = main(Args(project_dir=dirname))
 
-        assert result is None
+        assert 1 == result
 
-    with pytest.raises(SystemExit) as excinfo:
-        with_directory_contents(
-            {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
 
 """}, check_launch_main)
-
-    assert 1 == excinfo.value.code
 
     out, err = capsys.readouterr()
     assert "" == out
@@ -187,27 +181,23 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = toplevel_main(['anaconda-project', 'launch'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch'])
 
-        assert result is None
+        assert 1 == result
         assert 'file' in executed
         assert 'args' in executed
         assert 'env' in executed
-        assert executed['file'].endswith("python")
-        assert executed['args'][0].endswith("python")
+        assert executed['file'].endswith(python_exe)
+        assert executed['args'][0].endswith(python_exe)
         assert '--version' == executed['args'][1]
 
-    with pytest.raises(SystemExit) as excinfo:
-        with_directory_contents(
-            {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
 
 """}, check_launch_main)
-
-    # main() assumes failure if execvpe returns, as it did here
-    assert 1 == excinfo.value.code
 
     out, err = capsys.readouterr()
     assert "" == out

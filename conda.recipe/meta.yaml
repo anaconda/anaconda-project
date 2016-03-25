@@ -2,6 +2,10 @@ package:
   name: anaconda_project
   version: 0.1
 
+build:
+  entry_points:
+    - anaconda-project = project.commands.main:main
+
 requirements:
   build:
     - python
