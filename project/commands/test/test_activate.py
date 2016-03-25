@@ -1,13 +1,11 @@
 from __future__ import absolute_import, print_function
 
-import pytest
-
 try:
     from shlex import quote
 except ImportError:
     from pipes import quote
 
-from project.commands.main import main as toplevel_main
+from project.commands.main import _parse_args_and_run_subcommand
 from project.commands.activate import activate, main
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.prepare import UI_MODE_NOT_INTERACTIVE
@@ -109,9 +107,8 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
         project_dir_disable_dedicated_env(dirname)
-        with pytest.raises(SystemExit) as excinfo:
-            toplevel_main(['anaconda-project', 'activate'])
-        assert excinfo.value.code == 0
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate'])
+        assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
@@ -131,9 +128,8 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        with pytest.raises(SystemExit) as excinfo:
-            toplevel_main(['anaconda-project', 'activate', dirname])
-        assert excinfo.value.code == 0
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', dirname])
+        assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
@@ -163,15 +159,13 @@ def test_main_fails_to_redis(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        main(Args(project_dir=dirname))
+        code = main(Args(project_dir=dirname))
+        assert 1 == code
 
-    with pytest.raises(SystemExit) as excinfo:
-        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   REDIS_URL: {}
 """}, main_redis_url)
-
-    assert 1 == excinfo.value.code
 
     out, err = capsys.readouterr()
     assert "missing requirement" in err
