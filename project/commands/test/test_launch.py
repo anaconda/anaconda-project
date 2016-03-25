@@ -22,6 +22,11 @@ class Args(object):
             setattr(self, key, kwargs[key])
 
 
+python_exe = "python"
+if platform.system() == 'Windows':
+    python_exe = "python.exe"
+
+
 def test_launch_command(monkeypatch):
 
     executed = {}
@@ -45,11 +50,8 @@ def test_launch_command(monkeypatch):
         assert 'file' in executed
         assert 'args' in executed
         assert 'env' in executed
-        binary_name = "python"
-        if platform.system() == 'Windows':
-            binary_name = "python.exe"
-        assert executed['file'].endswith(binary_name)
-        assert executed['args'][0].endswith(binary_name)
+        assert executed['file'].endswith(python_exe)
+        assert executed['args'][0].endswith(python_exe)
         assert '--version' == executed['args'][1]
         assert 'bar' == executed['env']['FOO']
 
@@ -114,8 +116,8 @@ def test_main(monkeypatch, capsys):
         assert 'file' in executed
         assert 'args' in executed
         assert 'env' in executed
-        assert executed['file'].endswith("python")
-        assert executed['args'][0].endswith("python")
+        assert executed['file'].endswith(python_exe)
+        assert executed['args'][0].endswith(python_exe)
         assert '--version' == executed['args'][1]
 
     with_directory_contents(
@@ -185,8 +187,8 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         assert 'file' in executed
         assert 'args' in executed
         assert 'env' in executed
-        assert executed['file'].endswith("python")
-        assert executed['args'][0].endswith("python")
+        assert executed['file'].endswith(python_exe)
+        assert executed['args'][0].endswith(python_exe)
         assert '--version' == executed['args'][1]
 
     with_directory_contents(
