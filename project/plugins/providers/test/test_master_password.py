@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function
 
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.local_state_file import LocalStateFile
-from project.plugins.provider import ProvideContext, ProviderConfigContext
+from project.plugins.provider import ProvideContext
 from project.plugins.registry import PluginRegistry
 from project.project import Project
 from project.project_file import DEFAULT_PROJECT_FILENAME
@@ -30,11 +30,11 @@ def test_master_password_provider_with_value_not_set():
         provider = MasterPasswordProvider()
         requirement = _load_master_password_requirement(dirname)
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
-        config = provider.read_config(config_context)
+        environ = dict()
+        config = provider.read_config(requirement, environ, local_state_file)
         assert dict() == config
-        status = requirement.check_status(dict(), local_state_file)
-        html = provider.config_html(config_context, status)
+        status = requirement.check_status(environ, local_state_file)
+        html = provider.config_html(requirement, environ, local_state_file, status)
         assert 'type="password"' in html
         context = ProvideContext(environ=dict(), local_state_file=local_state_file, status=status)
         provider.provide(requirement, context=context)
@@ -51,8 +51,8 @@ def test_master_password_provider_with_value_set_in_environment():
         provider = MasterPasswordProvider()
         requirement = _load_master_password_requirement(dirname)
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
-        config = provider.read_config(config_context)
+        environ = dict()
+        config = provider.read_config(requirement, environ, local_state_file)
         assert dict() == config
         environ = dict(ANACONDA_MASTER_PASSWORD='from_environ')
         status = requirement.check_status(environ, local_state_file)
@@ -77,8 +77,8 @@ def test_master_password_provider_with_value_set_in_keyring():
             provider = MasterPasswordProvider()
             requirement = _load_master_password_requirement(dirname)
             local_state_file = LocalStateFile.load_for_directory(dirname)
-            config_context = ProviderConfigContext(dict(), local_state_file, requirement)
-            config = provider.read_config(config_context)
+            environ = dict()
+            config = provider.read_config(requirement, environ, local_state_file)
             assert dict(value='from_keyring') == config
             environ = dict(ANACONDA_MASTER_PASSWORD='from_environ')
             status = requirement.check_status(environ, local_state_file)
@@ -102,8 +102,8 @@ def test_master_password_provider_with_value_set_in_default():
         provider = MasterPasswordProvider()
         requirement = _load_master_password_requirement(dirname)
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
-        config = provider.read_config(config_context)
+        environ = dict()
+        config = provider.read_config(requirement, environ, local_state_file)
         assert dict() == config
         environ = dict()
         status = requirement.check_status(environ, local_state_file)
@@ -125,8 +125,8 @@ def test_master_password_provider_with_list_set_in_default():
         provider = MasterPasswordProvider()
         requirement = _load_master_password_requirement(dirname)
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        config_context = ProviderConfigContext(dict(), local_state_file, requirement)
-        config = provider.read_config(config_context)
+        environ = dict()
+        config = provider.read_config(requirement, environ, local_state_file)
         assert dict() == config
         environ = dict()
         status = requirement.check_status(environ, local_state_file)
@@ -150,10 +150,10 @@ def test_master_password_provider_saves_config_in_keyring():
             provider = MasterPasswordProvider()
             requirement = _load_master_password_requirement(dirname)
             local_state_file = LocalStateFile.load_for_directory(dirname)
-            config_context = ProviderConfigContext(dict(), local_state_file, requirement)
-            config = provider.read_config(config_context)
+            environ = dict()
+            config = provider.read_config(requirement, environ, local_state_file)
             assert dict() == config
-            provider.set_config_values_as_strings(config_context, dict(value='from_config'))
+            provider.set_config_values_as_strings(requirement, environ, local_state_file, dict(value='from_config'))
             assert keyring.get('ANACONDA_MASTER_PASSWORD') == 'from_config'
             environ = dict()
             status = requirement.check_status(environ, local_state_file)

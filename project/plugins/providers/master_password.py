@@ -8,21 +8,21 @@ from project.internal import keyring
 class MasterPasswordProvider(Provider):
     """Provides a master password, stored in the OS keyring if possible."""
 
-    def read_config(self, context):
+    def read_config(self, requirement, environ, local_state_file):
         """Override superclass to read from keyring."""
         config = dict()
-        value = keyring.get(context.requirement.env_var)
+        value = keyring.get(requirement.env_var)
         if value is not None:
             config['value'] = value
         return config
 
-    def set_config_values_as_strings(self, context, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
         """Override superclass to set in keyring."""
         if 'value' in values:
             value_string = values['value']
-            keyring.set(context.requirement.env_var, value_string)
+            keyring.set(requirement.env_var, value_string)
 
-    def config_html(self, context, status):
+    def config_html(self, requirement, environ, local_state_file, status):
         """Override superclass to provide our config html."""
         return """
 <form>

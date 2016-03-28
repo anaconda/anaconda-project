@@ -10,18 +10,6 @@ from project.internal.makedirs import makedirs_ok_if_exists
 from project.internal.crypto import encrypt_string, decrypt_string
 
 
-# TODO: get rid of this class before we freeze the API, pretty
-# sure it's annoying and pointless
-class ProviderConfigContext(object):
-    """A context passed to config-related methods on Provider."""
-
-    def __init__(self, environ, local_state_file, requirement):
-        """Construct a ProviderConfigContext."""
-        self.environ = environ
-        self.local_state_file = local_state_file
-        self.requirement = requirement
-
-
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""
 
@@ -132,19 +120,6 @@ class ProviderAnalysis(object):
 class Provider(with_metaclass(ABCMeta)):
     """A Provider can take some action to meet a Requirement."""
 
-    @property
-    def config_key(self):
-        """When we store config for this provider, we use this as the key."""
-        return self.__class__.__name__
-
-    def config_section(self, requirement):
-        """When we store config for this provider, we put it in this section unless there's a more logical place."""
-        # runtime:
-        #   REDIS_URL:
-        #     ProjectScopedRedisProvider:
-        #       port_range: 6380-6449
-        return ["runtime", requirement.env_var, "providers", self.config_key]
-
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
         """Get a list of unset environment variable names that must be set before configuring this provider.
 
@@ -166,20 +141,28 @@ class Provider(with_metaclass(ABCMeta)):
         return ()
 
     @abstractmethod
-    def read_config(self, context):
-        """Read a config dict from the local state file for the given requirement."""
+    def read_config(self, requirement, environ, local_state_file):
+        """Read a config dict from the local state file for the given requirement.
+
+        Args:
+            requirement (Requirement): the requirement we're providing
+            environ (dict): current environment variables
+            local_state_file (LocalStateFile): file to read from
+        """
         pass  # pragma: no cover
 
-    def set_config_values_as_strings(self, context, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
         """Set some config values in the state file (should not save the file).
 
         Args:
-            context (ProviderConfigContext): context
+            requirement (Requirement): the requirement we're providing
+            environ (dict): current environment variables
+            local_state_file (LocalStateFile): file to save to
             values (dict): dict from string to string
         """
         pass  # silently ignore unknown config values
 
-    def config_html(self, context, status):
+    def config_html(self, requirement, environ, local_state_file, status):
         """Get an HTML string for configuring the provider.
 
         The HTML string must contain a single <form> tag. Any
@@ -195,6 +178,12 @@ class Provider(with_metaclass(ABCMeta)):
         This is simple to use, but for now not very flexible; if you need
         more flexibility let us know and we can figure out what API
         to add in future versions.
+
+        Args:
+            requirement (Requirement): the requirement we're providing
+            environ (dict): current environment variables
+            local_state_file (LocalStateFile): file to save to
+            status (RequirementStatus): last-computed status
 
         Returns:
             An HTML string or None if there's nothing to configure.
@@ -212,8 +201,7 @@ class Provider(with_metaclass(ABCMeta)):
         Returns:
           A ``ProviderAnalysis`` instance.
         """
-        config_context = ProviderConfigContext(environ, local_state_file, requirement)
-        config = self.read_config(config_context)
+        config = self.read_config(requirement, environ, local_state_file)
         missing_to_configure = self.missing_env_vars_to_configure(requirement, environ, local_state_file)
         missing_to_provide = self.missing_env_vars_to_provide(requirement, environ, local_state_file)
         return ProviderAnalysis(config=config,
@@ -309,11 +297,11 @@ class EnvVarProvider(Provider):
             else:
                 return ()
 
-    def read_config(self, context):
+    def read_config(self, requirement, environ, local_state_file):
         """Override superclass to read env var value."""
         config = dict()
-        value = self._local_state_override(context.requirement, context.local_state_file)
-        disabled_value = self._disabled_local_state_override(context.requirement, context.local_state_file)
+        value = self._local_state_override(requirement, local_state_file)
+        disabled_value = self._disabled_local_state_override(requirement, local_state_file)
         was_disabled = value is None and disabled_value is not None
         if was_disabled:
             value = disabled_value
@@ -324,24 +312,24 @@ class EnvVarProvider(Provider):
                 # TODO: we need to deal with missing 'encrypted'
                 # or with a bad password in some way
                 encrypted = value['encrypted']
-                value = decrypt_string(encrypted, context.environ[key])
+                value = decrypt_string(encrypted, environ[key])
             config['value'] = value
 
         if value is not None and not was_disabled:
             source = 'variables'
-        elif context.requirement.env_var in context.environ:
+        elif requirement.env_var in environ:
             source = 'environ'
-        elif 'default' in context.requirement.options:
+        elif 'default' in requirement.options:
             source = 'default'
         else:
             source = 'unset'
         config['source'] = source
         return config
 
-    def set_config_values_as_strings(self, context, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
         """Override superclass to set env var value."""
-        override_path = ["variables", context.requirement.env_var]
-        disabled_path = ["disabled_variables", context.requirement.env_var]
+        override_path = ["variables", requirement.env_var]
+        disabled_path = ["disabled_variables", requirement.env_var]
 
         # we set override_path only if the source is variables,
         # otherwise the value goes in disabled_variables. If we
@@ -357,49 +345,48 @@ class EnvVarProvider(Provider):
             if value_string == '':
                 # the reason empty string unsets is that otherwise there's no easy
                 # way to unset from a web form
-                context.local_state_file.unset_value(override_path)
-                context.local_state_file.unset_value(disabled_path)
+                local_state_file.unset_value(override_path)
+                local_state_file.unset_value(disabled_path)
             else:
-                local_override_value = self._local_state_override(context.requirement, context.local_state_file)
+                local_override_value = self._local_state_override(requirement, local_state_file)
                 if local_override_value is None:
-                    local_override_value = self._disabled_local_state_override(context.requirement,
-                                                                               context.local_state_file)
+                    local_override_value = self._disabled_local_state_override(requirement, local_state_file)
 
                 key = self._key_from_value(local_override_value)
-                if key is None and context.requirement.encrypted:
+                if key is None and requirement.encrypted:
                     key = 'ANACONDA_MASTER_PASSWORD'
 
                 if key is not None:
-                    value = dict(key=key, encrypted=encrypt_string(value_string, context.environ[key]))
+                    value = dict(key=key, encrypted=encrypt_string(value_string, environ[key]))
                 else:
                     value = value_string
 
                 if overriding:
-                    context.local_state_file.set_value(override_path, value)
-                    context.local_state_file.unset_value(disabled_path)
+                    local_state_file.set_value(override_path, value)
+                    local_state_file.unset_value(disabled_path)
                 else:
-                    context.local_state_file.set_value(disabled_path, value)
-                    context.local_state_file.unset_value(override_path)
+                    local_state_file.set_value(disabled_path, value)
+                    local_state_file.unset_value(override_path)
 
-    def _extra_source_options_html(self, context, status):
+    def _extra_source_options_html(self, requirement, environ, local_state_file, status):
         """Override this in a subtype to add choices to the config HTML.
 
         Choices should be radio inputs with name="source"
         """
         return ""
 
-    def config_html(self, context, status):
+    def config_html(self, requirement, environ, local_state_file, status):
         """Override superclass to provide our config html."""
         if status.requirement.encrypted:
             input_type = 'password'
         else:
             input_type = 'text'
 
-        extra_html = self._extra_source_options_html(context, status)
+        extra_html = self._extra_source_options_html(requirement, environ, local_state_file, status)
 
         choices_html = extra_html
 
-        if context.requirement.env_var in context.environ:
+        if requirement.env_var in environ:
             choices_html = choices_html + """
             <div>
               <label><input type="radio" name="source" value="environ"/>Keep value '{from_environ}'</label>
@@ -408,10 +395,10 @@ class EnvVarProvider(Provider):
               <label><input type="radio" name="source" value="variables"/>Use this value instead:
                      <input type="{input_type}" name="value"/></label>
             </div>
-            """.format(from_environ=context.environ[context.requirement.env_var],
+            """.format(from_environ=environ[requirement.env_var],
                        input_type=input_type)
         else:
-            if 'default' in context.requirement.options:
+            if 'default' in requirement.options:
                 choices_html = choices_html + """
                 <div>
                   <label><input type="radio" name="source" value="default"/>Keep default '{from_default}'</label>
@@ -421,7 +408,7 @@ class EnvVarProvider(Provider):
                          <input type="{input_type}" name="value"/></label>
                 </div>
                 """.format(input_type=input_type,
-                           from_default=context.requirement.options['default'])
+                           from_default=requirement.options['default'])
             else:
                 choices_html = choices_html + """
                 <div>

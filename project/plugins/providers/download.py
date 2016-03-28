@@ -20,9 +20,9 @@ class _DownloadProviderAnalysis(ProviderAnalysis):
 class DownloadProvider(EnvVarProvider):
     """Downloads a file according to the specified requirement."""
 
-    def read_config(self, context):
+    def read_config(self, requirement, environ, local_state_file):
         """Override superclass to return our config."""
-        config = super(DownloadProvider, self).read_config(context)
+        config = super(DownloadProvider, self).read_config(requirement, environ, local_state_file)
 
         assert 'source' in config
         assert config['source'] != 'default'
@@ -32,9 +32,9 @@ class DownloadProvider(EnvVarProvider):
 
         return config
 
-    def set_config_values_as_strings(self, context, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
         """Override superclass to clear out environ if we decide not to use it."""
-        super(DownloadProvider, self).set_config_values_as_strings(context, values)
+        super(DownloadProvider, self).set_config_values_as_strings(requirement, environ, local_state_file, values)
 
         if 'source' in values and values['source'] != 'environ':
             # clear out the previous setting; this is sort of a hack. The problem
@@ -44,13 +44,13 @@ class DownloadProvider(EnvVarProvider):
             # we should probably do this in EnvVarProvider. future: rethink this.
             # a possible fix is to track an initial_environ for the whole prepare
             # sequence, separately from the current running environ?
-            context.environ.pop(context.requirement.env_var, None)
+            environ.pop(requirement.env_var, None)
 
-    def _extra_source_options_html(self, context, status):
+    def _extra_source_options_html(self, requirement, environ, local_state_file, status):
         analysis = status.analysis
 
         if analysis.existing_filename is not None:
-            if context.environ.get(context.requirement.env_var, None) == analysis.existing_filename:
+            if environ.get(requirement.env_var, None) == analysis.existing_filename:
                 # avoid redundant choice
                 extra_html = ""
             else:
@@ -64,7 +64,7 @@ class DownloadProvider(EnvVarProvider):
             <div>
               <label><input type="radio" name="source" value="download"/>Download {} to {}</label>
             </div>
-            """.format(context.requirement.url, context.requirement.filename)
+            """.format(requirement.url, requirement.filename)
 
         return extra_html
 
