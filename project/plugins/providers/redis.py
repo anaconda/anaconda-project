@@ -8,7 +8,7 @@ import subprocess
 import sys
 import time
 
-from project.plugins.provider import Provider, ProviderAnalysis
+from project.plugins.provider import EnvVarProvider, ProviderAnalysis
 import project.plugins.network_util as network_util
 
 _DEFAULT_SYSTEM_REDIS_HOST = "localhost"
@@ -27,7 +27,7 @@ class _RedisProviderAnalysis(ProviderAnalysis):
 
 
 # future: this should introduce a requirement that redis-server is on path
-class RedisProvider(Provider):
+class RedisProvider(EnvVarProvider):
     """Runs a project-scoped Redis process (each project needing Redis gets its own)."""
 
     @classmethod
@@ -51,8 +51,16 @@ class RedisProvider(Provider):
 
     def read_config(self, requirement, environ, local_state_file):
         """Override superclass to return our config."""
-        config = dict()
+        config = super(RedisProvider, self).read_config(requirement, environ, local_state_file)
+
+        assert 'source' in config
+
         section = self._config_section(requirement)
+
+        scope = local_state_file.get_value(section + ['scope'], default='all')
+        if config['source'] == 'unset':
+            config['source'] = 'find_' + scope
+
         default_lower_port = 6380  # one above 6379 default Redis
         default_upper_port = 6449  # entirely arbitrary
         default_port_range = "%d-%d" % (default_lower_port, default_upper_port)
@@ -66,8 +74,6 @@ class RedisProvider(Provider):
         else:
             config['lower_port'] = parsed_port_range[0]
             config['upper_port'] = parsed_port_range[1]
-
-        config['scope'] = local_state_file.get_value(section + ['scope'], default='all')
 
         return config
 
@@ -84,8 +90,30 @@ class RedisProvider(Provider):
 
         local_state_file.set_value(section + ['port_range'], "%s-%s" % (lower_port, upper_port))
 
-        if 'scope' in values:
-            local_state_file.set_value(section + ['scope'], values['scope'])
+        if 'source' in values:
+            if values['source'] == 'find_all':
+                scope = 'all'
+            elif values['source'] == 'find_project':
+                scope = 'project'
+            elif values['source'] == 'find_system':
+                scope = 'system'
+            else:
+                scope = None
+            if scope is not None:
+                local_state_file.set_value(section + ['scope'], scope)
+
+            if values['source'] != 'environ':
+                # clear out the previous setting; this is sort of a hack. The problem
+                # is that we don't want to delete env vars set in actual os.environ on
+                # the command line, in our first pass, and in some subtypes of EnvVarProvider
+                # (CondaEnvProvider) we also don't want to use it by default. Otherwise
+                # we should probably do this in EnvVarProvider. future: rethink this.
+                # a possible fix is to track an initial_environ for the whole prepare
+                # sequence, separately from the current running environ?
+                environ.pop(requirement.env_var, None)
+
+        # set a manually-specified value
+        super(RedisProvider, self).set_config_values_as_strings(requirement, environ, local_state_file, values)
 
     def _previously_run_redis_url_if_alive(self, run_state):
         if 'port' in run_state and network_util.can_connect_to_socket(host='localhost', port=run_state['port']):
@@ -96,14 +124,14 @@ class RedisProvider(Provider):
     def _can_connect_to_system_default(self):
         return network_util.can_connect_to_socket(host=_DEFAULT_SYSTEM_REDIS_HOST, port=_DEFAULT_SYSTEM_REDIS_PORT)
 
-    def config_html(self, requirement, environ, local_state_file, status):
+    def _extra_source_options_html(self, requirement, environ, local_state_file, status):
         """Override superclass to provide our config html."""
         analysis = status.analysis
 
         if analysis.default_system_exists:
             system_option = """
   <div>
-    <label><input type="radio" name="scope" value="system"/>Always use system default Redis on %s port %d</label>
+    <label><input type="radio" name="source" value="find_system"/>Always use system default Redis on %s port %d</label>
   </div>
 """ % (_DEFAULT_SYSTEM_REDIS_HOST, _DEFAULT_SYSTEM_REDIS_PORT)
         else:
@@ -118,16 +146,14 @@ class RedisProvider(Provider):
 """
 
         return """
-<form>
   <div>
-    <label><input type="radio" name="scope" value="all"/>Use system default Redis when it's running,
+    <label><input type="radio" name="source" value="find_all"/>Use system default Redis when it's running,
         otherwise start our own redis-server</label>
   </div>
   %s
   <div>
-    <label><input type="radio" name="scope" value="project"/>%s</label>
+    <label><input type="radio" name="source" value="find_project"/>%s</label>
   </div>
-</form>
 """ % (system_option, project_option)
 
     def analyze(self, requirement, environ, local_state_file):
@@ -268,12 +294,16 @@ class RedisProvider(Provider):
         assert 'PATH' in context.environ
 
         url = None
-        scope = context.status.analysis.config['scope']
+        source = context.status.analysis.config['source']
 
-        if url is None and (scope == 'system' or scope == 'all'):
+        super(RedisProvider, self).provide(requirement, context)
+
+        url = context.environ.get(requirement.env_var, None)
+
+        if url is None and (source == 'find_system' or source == 'find_all'):
             url = self._provide_system(requirement, context)
 
-        if url is None and (scope == 'project' or scope == 'all'):
+        if url is None and (source == 'find_project' or source == 'find_all'):
             url = self._provide_project(requirement, context)
 
         if url is not None:

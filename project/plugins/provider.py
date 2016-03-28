@@ -334,24 +334,28 @@ class EnvVarProvider(Provider):
         # we set override_path only if the source is variables,
         # otherwise the value goes in disabled_variables. If we
         # don't have a source that means the only option we
-        # presented as to set the local override, so default to
+        # presented was to set the local override, so default to
         # 'variables'
         overriding = (values.get('source', 'variables') == 'variables')
 
-        if 'value' in values:
+        # If there's an existing override value and the source is not 'variables',
+        # we need to be sure to move the existing to disabled_variables.
+        # Also, we save values['value'] from the web form in local_state_file,
+        # even if we aren't using it as the source right now.
 
-            value_string = values['value']
+        local_override_value = self._local_state_override(requirement, local_state_file)
+        if local_override_value is None:
+            local_override_value = self._disabled_local_state_override(requirement, local_state_file)
 
+        value_string = values.get('value', local_override_value)
+
+        if value_string is not None:
             if value_string == '':
                 # the reason empty string unsets is that otherwise there's no easy
                 # way to unset from a web form
                 local_state_file.unset_value(override_path)
                 local_state_file.unset_value(disabled_path)
             else:
-                local_override_value = self._local_state_override(requirement, local_state_file)
-                if local_override_value is None:
-                    local_override_value = self._disabled_local_state_override(requirement, local_state_file)
-
                 key = self._key_from_value(local_override_value)
                 if key is None and requirement.encrypted:
                     key = 'ANACONDA_MASTER_PASSWORD'

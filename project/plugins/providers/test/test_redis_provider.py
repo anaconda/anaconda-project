@@ -40,7 +40,7 @@ def test_reading_valid_config():
         config = provider.read_config(requirement, dict(), local_state)
         assert 7389 == config['lower_port']
         assert 7421 == config['upper_port']
-        assert 'all' == config['scope']
+        assert 'find_all' == config['source']
 
     with_directory_contents(
         {
@@ -559,10 +559,42 @@ def test_set_scope_in_local_state(monkeypatch):
         provider = RedisProvider()
         environ = minimal_environ()
         config = provider.read_config(requirement, environ, local_state)
-        assert config['scope'] == 'all'
-        provider.set_config_values_as_strings(requirement, environ, local_state, dict(scope='system'))
+        assert config['source'] == 'find_all'
+        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='find_project'))
         config = provider.read_config(requirement, environ, local_state)
-        assert config['scope'] == 'system'
+        assert config['source'] == 'find_project'
+        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='find_all'))
+        config = provider.read_config(requirement, environ, local_state)
+        assert config['source'] == 'find_all'
+        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='environ'))
+        config = provider.read_config(requirement, environ, local_state)
+        assert config['source'] == 'find_all'  # default if no env var set
+        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='environ'))
+        environ_with_redis_url = environ.copy()
+        environ_with_redis_url['REDIS_URL'] = 'blah'
+        config = provider.read_config(requirement, environ_with_redis_url, local_state)
+        assert config['source'] == 'environ'  # default when the env var IS set
+
+        # use local variable when env var not set
+        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='variables', value='foo'))
+        config = provider.read_config(requirement, environ, local_state)
+        assert config['source'] == 'variables'
+        assert config['value'] == 'foo'
+
+        # use local variable when env var _is_ set
+        provider.set_config_values_as_strings(requirement,
+                                              environ_with_redis_url,
+                                              local_state,
+                                              dict(source='variables',
+                                                   value='foo'))
+        config = provider.read_config(requirement, environ, local_state)
+        assert config['source'] == 'variables'
+        assert config['value'] == 'foo'
+
+        # set to use system, which should override using the local state
+        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='find_system'))
+        config = provider.read_config(requirement, environ, local_state)
+        assert config['source'] == 'find_system'
 
         project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ())
