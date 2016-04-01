@@ -12,6 +12,7 @@ from project.test.project_utils import project_dir_disable_dedicated_env
 class Args(object):
     def __init__(self, **kwargs):
         self.project_dir = "."
+        self.environment = 'default'
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -36,7 +37,7 @@ def test_prepare_command(monkeypatch):
 
     def prepare_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = prepare_command(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
+        result = prepare_command(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None)
         assert can_connect_args['port'] == 6379
         assert result
 
@@ -177,3 +178,48 @@ runtime:
     out, err = capsys.readouterr()
     assert "missing requirement" in err
     assert "All ports from 6380 to 6449 were in use" in err
+
+
+def test_prepare_command_choose_environment(capsys):
+    def check_prepare_choose_environment(dirname):
+        project_dir_disable_dedicated_env(dirname)
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', dirname, '--environment=bar'])
+        assert result == 1
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+environments:
+  foo:
+    dependencies:
+        - nonexistent_foo
+  bar:
+    dependencies:
+        - nonexistent_bar
+"""}, check_prepare_choose_environment)
+
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert 'Conda environment is missing packages: nonexistent_bar' in err
+
+
+def test_prepare_command_choose_environment_does_not_exist(capsys):
+    def check_prepare_choose_environment_does_not_exist(dirname):
+        project_dir_disable_dedicated_env(dirname)
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', dirname, '--environment=nope'])
+        assert result == 1
+
+        expected_error = "Environment name 'nope' is not in %s/project.yml, these names were found: bar, foo" % dirname
+        out, err = capsys.readouterr()
+        assert out == ""
+        assert expected_error in err
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+environments:
+  foo:
+    dependencies:
+        - nonexistent_foo
+  bar:
+    dependencies:
+        - nonexistent_bar
+"""}, check_prepare_choose_environment_does_not_exist)

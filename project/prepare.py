@@ -537,6 +537,8 @@ def prepare_in_stages(project, environ=None, keep_going_until_success=False, mod
     if mode not in _all_provide_modes:
         raise ValueError("invalid provide mode " + mode)
 
+    assert not project.problems
+
     if environ is None:
         environ = os.environ
 
@@ -589,6 +591,15 @@ def prepare(project,
     """
     if ui_mode not in _all_ui_modes:
         raise ValueError("invalid UI mode " + repr(ui_mode))
+
+    if project.problems:
+        errors = []
+        errors.append("Unable to load project:")
+        for problem in project.problems:
+            errors.append("  %s" % problem)
+        failure = PrepareFailure(logs=[], errors=errors)
+        failure.print_output()
+        return failure
 
     if ui_mode == UI_MODE_TEXT_ASSUME_YES_PRODUCTION:
         provide_mode = PROVIDE_MODE_PRODUCTION

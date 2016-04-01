@@ -18,6 +18,7 @@ from project.test.project_utils import project_dir_disable_dedicated_env
 class Args(object):
     def __init__(self, **kwargs):
         self.project_dir = "."
+        self.environment = 'default'
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -42,7 +43,7 @@ def test_activate(monkeypatch):
 
     def activate_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
+        result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None)
         assert can_connect_args['port'] == 6379
         assert result is not None
         assert ['export PROJECT_DIR=' + quote(dirname), 'export REDIS_URL=redis://localhost:6379'] == result
@@ -56,7 +57,7 @@ runtime:
 def test_activate_quoting(monkeypatch):
     def activate_foo(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
+        result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None)
         assert result is not None
         assert ["export FOO='$! boo'", 'export PROJECT_DIR=' + quote(dirname)] == result
 
