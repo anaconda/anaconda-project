@@ -5,7 +5,7 @@ import os
 import sys
 from argparse import ArgumentParser
 
-from project.prepare import UI_MODE_BROWSER, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
+from project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
 
 import project.commands.launch as launch
 import project.commands.prepare as prepare
@@ -20,18 +20,27 @@ def _parse_args_and_run_subcommand(argv):
 
     subparsers = parser.add_subparsers(help="Sub-commands")
 
+    def add_common_args(preset):
+        preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
+        preset.add_argument('--mode',
+                            metavar='MODE',
+                            default=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                            choices=_all_ui_modes,
+                            action='store',
+                            help="One of " + ", ".join(_all_ui_modes))
+
     preset = subparsers.add_parser('launch', help="Runs the project, setting up requirements first.")
-    preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
-    preset.set_defaults(main=launch.main, ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
+    add_common_args(preset)
+    preset.set_defaults(main=launch.main)
 
     preset = subparsers.add_parser('prepare', help="Sets up project requirements but does not run the project.")
-    preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
-    preset.set_defaults(main=prepare.main, ui_mode=UI_MODE_BROWSER)
+    add_common_args(preset)
+    preset.set_defaults(main=prepare.main)
 
     preset = subparsers.add_parser('activate',
                                    help="Sets up project and outputs shell export commands reflecting the setup.")
-    preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
-    preset.set_defaults(main=activate.main, ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
+    add_common_args(preset)
+    preset.set_defaults(main=activate.main)
 
     # argparse doesn't do this for us for whatever reason
     if len(argv) < 2:

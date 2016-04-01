@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 from project.commands.main import _parse_args_and_run_subcommand
 from project.commands.prepare import prepare_command, main
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, UI_MODE_BROWSER
+from project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
 from project.project_file import DEFAULT_PROJECT_FILENAME
 
 from project.test.project_utils import project_dir_disable_dedicated_env
@@ -12,7 +12,7 @@ from project.test.project_utils import project_dir_disable_dedicated_env
 class Args(object):
     def __init__(self, **kwargs):
         self.project_dir = "."
-        self.ui_mode = UI_MODE_BROWSER
+        self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -73,7 +73,7 @@ def test_main(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        main(Args(project_dir=dirname))
+        main(Args(project_dir=dirname, mode='browser'))
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
@@ -102,7 +102,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'prepare'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--mode=browser'])
         assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -123,7 +123,7 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', dirname, '--mode=browser'])
         assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """

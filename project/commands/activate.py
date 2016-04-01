@@ -39,7 +39,7 @@ def activate(dirname, ui_mode):
 
 def main(args):
     """Start the activate command and return exit status code."""
-    result = activate(args.project_dir, args.ui_mode)
+    result = activate(args.project_dir, args.mode)
     if result is None:
         return 1
     else:

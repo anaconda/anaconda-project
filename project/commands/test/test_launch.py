@@ -17,7 +17,7 @@ from project.test.project_utils import project_dir_disable_dedicated_env
 class Args(object):
     def __init__(self, **kwargs):
         self.project_dir = "."
-        self.ui_mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
+        self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
             setattr(self, key, kwargs[key])
 

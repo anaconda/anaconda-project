@@ -19,7 +19,7 @@ def prepare_command(project_dir, ui_mode):
 
 def main(args):
     """Start the prepare command and return exit status code."""
-    if prepare_command(args.project_dir, args.ui_mode):
+    if prepare_command(args.project_dir, args.mode):
         return 0
     else:
         return 1

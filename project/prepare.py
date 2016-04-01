@@ -15,11 +15,13 @@ from project.local_state_file import LocalStateFile
 from project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT, PROVIDE_MODE_PRODUCTION, PROVIDE_MODE_CHECK)
 from project.plugins.provider import ProvideContext
 
+# these UI_MODE_ strings are used as values for command line options, so they are user-visible
+
 UI_MODE_BROWSER = "browser"
-UI_MODE_TEXT_ASK_QUESTIONS = "text_ask_questions"
-UI_MODE_TEXT_ASSUME_YES_PRODUCTION = "assume_yes_production"
-UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT = "assume_yes_development"
-UI_MODE_TEXT_ASSUME_NO = "assume_no"
+UI_MODE_TEXT_ASK_QUESTIONS = "ask"
+UI_MODE_TEXT_ASSUME_YES_PRODUCTION = "production_defaults"
+UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT = "development_defaults"
+UI_MODE_TEXT_ASSUME_NO = "check"
 
 _all_ui_modes = (UI_MODE_BROWSER, UI_MODE_TEXT_ASK_QUESTIONS, UI_MODE_TEXT_ASSUME_YES_PRODUCTION,
                  UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, UI_MODE_TEXT_ASSUME_NO)
@@ -586,7 +588,7 @@ def prepare(project,
 
     """
     if ui_mode not in _all_ui_modes:
-        raise ValueError("invalid UI mode " + ui_mode)
+        raise ValueError("invalid UI mode " + repr(ui_mode))
 
     if ui_mode == UI_MODE_TEXT_ASSUME_YES_PRODUCTION:
         provide_mode = PROVIDE_MODE_PRODUCTION
