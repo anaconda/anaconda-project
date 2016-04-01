@@ -1,7 +1,7 @@
 from __future__ import absolute_import, print_function
 
 
-def prepare_not_interactive(stage):
+def prepare_text(stage):
     result = None
     while stage is not None:
         next_stage = stage.execute()

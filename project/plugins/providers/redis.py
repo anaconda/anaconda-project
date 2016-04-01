@@ -10,6 +10,7 @@ import time
 
 from project.plugins.provider import EnvVarProvider, ProviderAnalysis
 import project.plugins.network_util as network_util
+from project.provide import PROVIDE_MODE_DEVELOPMENT
 
 _DEFAULT_SYSTEM_REDIS_HOST = "localhost"
 _DEFAULT_SYSTEM_REDIS_PORT = 6379
@@ -304,7 +305,9 @@ class RedisProvider(EnvVarProvider):
             url = self._provide_system(requirement, context)
 
         if url is None and (source == 'find_project' or source == 'find_all'):
-            url = self._provide_project(requirement, context)
+            # we will only start a local Redis in "dev" mode, not prod or check mode
+            if context.mode == PROVIDE_MODE_DEVELOPMENT:
+                url = self._provide_project(requirement, context)
 
         if url is not None:
             context.environ[requirement.env_var] = url

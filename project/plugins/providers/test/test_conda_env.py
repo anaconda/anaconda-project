@@ -8,7 +8,7 @@ from project.test.environ_utils import (minimal_environ, minimal_environ_no_cond
 from project.internal.test.http_utils import http_get_async, http_post_async
 from project.internal.test.tmpfile_utils import with_directory_contents
 from project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
-from project.prepare import prepare, UI_MODE_BROWSER
+from project.prepare import prepare, UI_MODE_BROWSER, UI_MODE_TEXT_ASSUME_NO
 from project.project_file import DEFAULT_PROJECT_FILENAME
 from project.project import Project
 from project.plugins.registry import PluginRegistry
@@ -93,6 +93,24 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
         assert not result
 
     with_directory_contents(dict(), prepare_project_scoped_env_fails)
+
+
+def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
+    def mock_create(prefix, pkgs, channels):
+        raise Exception("Should not have attempted to create env")
+
+    monkeypatch.setattr('project.internal.conda_api.create', mock_create)
+
+    def prepare_project_scoped_env_not_attempted(dirname):
+        project = Project(dirname)
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        result = prepare(project, environ=environ, ui_mode=UI_MODE_TEXT_ASSUME_NO)
+        assert not result
+        expected_env_path = os.path.join(dirname, "envs", "default")
+        assert ['missing requirement to run this project: A Conda environment',
+                "  '%s' doesn't look like it contains a Conda environment yet." % expected_env_path] == result.errors
+
+    with_directory_contents(dict(), prepare_project_scoped_env_not_attempted)
 
 
 def test_prepare_project_scoped_env_with_packages(monkeypatch):

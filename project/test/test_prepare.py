@@ -39,6 +39,17 @@ def test_prepare_bad_ui_mode():
     with_directory_contents(dict(), prepare_bad_ui_mode)
 
 
+def test_prepare_bad_provide_mode():
+    def prepare_bad_provide_mode(dirname):
+        with pytest.raises(ValueError) as excinfo:
+            project = project_no_dedicated_env(dirname)
+            environ = minimal_environ()
+            prepare_in_stages(project, mode="BAD_PROVIDE_MODE", environ=environ)
+        assert "invalid provide mode" in repr(excinfo.value)
+
+    with_directory_contents(dict(), prepare_bad_provide_mode)
+
+
 def test_unprepare_empty_directory():
     def unprepare_empty(dirname):
         project = project_no_dedicated_env(dirname)

@@ -9,16 +9,22 @@ import sys
 from copy import copy, deepcopy
 
 from project.internal.metaclass import with_metaclass
-from project.internal.prepare_ui import prepare_not_interactive, prepare_browser
+from project.internal.prepare_ui import prepare_text, prepare_browser
 from project.internal.toposort import toposort_from_dependency_info
 from project.local_state_file import LocalStateFile
+from project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT, PROVIDE_MODE_PRODUCTION, PROVIDE_MODE_CHECK)
 from project.plugins.provider import ProvideContext
 
-UI_MODE_TEXT = "text"
-UI_MODE_BROWSER = "browser"
-UI_MODE_NOT_INTERACTIVE = "not_interactive"
+# these UI_MODE_ strings are used as values for command line options, so they are user-visible
 
-_all_ui_modes = (UI_MODE_TEXT, UI_MODE_BROWSER, UI_MODE_NOT_INTERACTIVE)
+UI_MODE_BROWSER = "browser"
+UI_MODE_TEXT_ASK_QUESTIONS = "ask"
+UI_MODE_TEXT_ASSUME_YES_PRODUCTION = "production_defaults"
+UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT = "development_defaults"
+UI_MODE_TEXT_ASSUME_NO = "check"
+
+_all_ui_modes = (UI_MODE_BROWSER, UI_MODE_TEXT_ASK_QUESTIONS, UI_MODE_TEXT_ASSUME_YES_PRODUCTION,
+                 UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, UI_MODE_TEXT_ASSUME_NO)
 
 
 def _update_environ(dest, src):
@@ -347,7 +353,7 @@ def _sort_statuses(environ, local_state, statuses, missing_vars_getter):
     return toposort_from_dependency_info(statuses, get_node_key, get_dependency_keys, can_ignore_dependency_on_key)
 
 
-def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success):
+def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success, mode):
     def provide_stage(stage):
         def get_missing_to_provide(status):
             return status.analysis.missing_env_vars_to_provide
@@ -366,7 +372,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         for status in rechecked:
             if not status.has_been_provided:
                 did_any_providing = True
-                context = ProvideContext(environ, local_state, status)
+                context = ProvideContext(environ, local_state, status, mode)
                 status.provider.provide(status.requirement, context)
                 logs.extend(context.logs)
                 errors.extend(context.errors)
@@ -438,7 +444,7 @@ def _partition_first_group_to_configure(environ, local_state, statuses):
 
 
 def _process_requirement_statuses(project, environ, local_state, current_statuses, all_statuses,
-                                  keep_going_until_success):
+                                  keep_going_until_success, mode):
     (initial, remaining) = _partition_first_group_to_configure(environ, local_state, current_statuses)
 
     # a surprising thing here is that the "stages" from
@@ -450,7 +456,8 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
     # but we always want at least one _configure_and_provide()
 
     def _stages_for(statuses):
-        return _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success)
+        return _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success,
+                                      mode)
 
     if len(initial) > 0 and len(remaining) > 0:
 
@@ -458,7 +465,7 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
             # get the new status for each remaining requirement
             updated = _refresh_status_list(remaining, updated_all_statuses)
             return _process_requirement_statuses(project, environ, local_state, updated, updated_all_statuses,
-                                                 keep_going_until_success)
+                                                 keep_going_until_success, mode)
 
         return _after_stage_success(_stages_for(initial), process_remaining)
     elif len(initial) > 0:
@@ -493,18 +500,18 @@ def _add_missing_env_var_requirements(project, environ, local_state, statuses):
         _add_missing_env_var_requirements(project, environ, local_state, statuses)
 
 
-def _first_stage(project, environ, local_state, statuses, keep_going_until_success):
+def _first_stage(project, environ, local_state, statuses, keep_going_until_success, mode):
     assert 'PROJECT_DIR' in environ
 
     _add_missing_env_var_requirements(project, environ, local_state, statuses)
 
     first_stage = _process_requirement_statuses(project, environ, local_state, statuses, statuses,
-                                                keep_going_until_success)
+                                                keep_going_until_success, mode)
 
     return first_stage
 
 
-def prepare_in_stages(project, environ=None, keep_going_until_success=False):
+def prepare_in_stages(project, environ=None, keep_going_until_success=False, mode=PROVIDE_MODE_DEVELOPMENT):
     """Get a chain of all steps needed to get a project ready to execute.
 
     This function does not immediately do anything; it returns a
@@ -521,11 +528,15 @@ def prepare_in_stages(project, environ=None, keep_going_until_success=False):
         project (Project): the project
         environ (dict): the environment to start from (None to use os.environ)
         keep_going_until_success (bool): keep returning new stages until all requirements are met
+        mode (str): One of ``PROVIDE_MODE_PRODUCTION``, ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_CHECK``
 
     Returns:
         The first ``PrepareStage`` in the chain of steps.
 
     """
+    if mode not in _all_provide_modes:
+        raise ValueError("invalid provide mode " + mode)
+
     if environ is None:
         environ = os.environ
 
@@ -548,12 +559,12 @@ def prepare_in_stages(project, environ=None, keep_going_until_success=False):
         status = requirement.check_status(environ_copy, local_state)
         statuses.append(status)
 
-    return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success)
+    return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode)
 
 
 def prepare(project,
             environ=None,
-            ui_mode=UI_MODE_NOT_INTERACTIVE,
+            ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
             keep_going_until_success=False,
             io_loop=None,
             show_url=None):
@@ -566,7 +577,8 @@ def prepare(project,
     Args:
         project (Project): the project
         environ (dict): the environment to prepare (None to use os.environ)
-        ui_mode (str): one of ``UI_MODE_TEXT``, ``UI_MODE_BROWSER``, ``UI_MODE_NOT_INTERACTIVE``
+        ui_mode (str): one of ``UI_MODE_BROWSER``, ``UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT``,
+                       ``UI_MODE_TEXT_ASSUME_YES_PRODUCTION``, ``UI_MODE_TEXT_ASSUME_NO``
         keep_going_until_success (bool): keep asking questions until all requirements are met
         io_loop (IOLoop): tornado IOLoop to use, None for default
         show_url (function): takes a URL and displays it in a browser somehow, None for default
@@ -576,15 +588,23 @@ def prepare(project,
 
     """
     if ui_mode not in _all_ui_modes:
-        raise ValueError("invalid UI mode " + ui_mode)
+        raise ValueError("invalid UI mode " + repr(ui_mode))
 
-    stage = prepare_in_stages(project, environ, keep_going_until_success)
+    if ui_mode == UI_MODE_TEXT_ASSUME_YES_PRODUCTION:
+        provide_mode = PROVIDE_MODE_PRODUCTION
+    elif ui_mode == UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT or ui_mode == UI_MODE_BROWSER:
+        provide_mode = PROVIDE_MODE_DEVELOPMENT
+    elif ui_mode == UI_MODE_TEXT_ASSUME_NO:
+        provide_mode = PROVIDE_MODE_CHECK
 
-    if ui_mode == UI_MODE_NOT_INTERACTIVE:
-        result = prepare_not_interactive(stage)
-    elif ui_mode == UI_MODE_BROWSER:
+    assert ui_mode != UI_MODE_TEXT_ASK_QUESTIONS  # Not implemented yet
+
+    stage = prepare_in_stages(project, environ, keep_going_until_success, provide_mode)
+
+    if ui_mode == UI_MODE_BROWSER:
         result = prepare_browser(project, stage, io_loop=io_loop, show_url=show_url)
-    # TODO: UI_MODE_TEXT
+    else:
+        result = prepare_text(stage)
 
     if result.failed:
         result.print_output()

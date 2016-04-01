@@ -8,7 +8,7 @@ import os
 from project.commands.main import _parse_args_and_run_subcommand
 from project.commands.launch import launch_command, main
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.prepare import UI_MODE_NOT_INTERACTIVE
+from project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
 from project.project_file import DEFAULT_PROJECT_FILENAME
 
 from project.test.project_utils import project_dir_disable_dedicated_env
@@ -17,7 +17,7 @@ from project.test.project_utils import project_dir_disable_dedicated_env
 class Args(object):
     def __init__(self, **kwargs):
         self.project_dir = "."
-        self.ui_mode = UI_MODE_NOT_INTERACTIVE
+        self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -45,7 +45,7 @@ def test_launch_command(monkeypatch):
     def check_launch(dirname):
         project_dir_disable_dedicated_env(dirname)
 
-        result = launch_command(dirname, UI_MODE_NOT_INTERACTIVE)
+        result = launch_command(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
         assert result is None
         assert 'file' in executed
         assert 'args' in executed
@@ -70,7 +70,7 @@ commands:
 def test_launch_command_no_app_entry(capsys):
     def check_launch_no_app_entry(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = launch_command(dirname, UI_MODE_NOT_INTERACTIVE)
+        result = launch_command(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
         assert result is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -85,7 +85,7 @@ def test_launch_command_no_app_entry(capsys):
 def test_launch_command_failed_prepare(capsys):
     def check_launch_failed_prepare(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = launch_command(dirname, UI_MODE_NOT_INTERACTIVE)
+        result = launch_command(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
         assert result is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """

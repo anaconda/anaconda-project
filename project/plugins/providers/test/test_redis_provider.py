@@ -12,7 +12,7 @@ from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
 from project.plugins.providers.redis import RedisProvider
 from project.plugins.requirements.redis import RedisRequirement
-from project.prepare import prepare, unprepare
+from project.prepare import prepare, unprepare, UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_NO
 from project.project_file import DEFAULT_PROJECT_FILENAME
 
 
@@ -404,6 +404,48 @@ runtime:
 
     out, err = capsys.readouterr()
     assert "All ports from 6380 to 6449 were in use, could not start redis-server on one of them." in err
+    assert "REDIS_URL" in err
+    assert "missing requirement" in err
+    assert "" == out
+
+
+def test_do_not_start_local_redis_server_in_prod_mode(monkeypatch, capsys):
+    can_connect_args_list = _monkeypatch_can_connect_to_socket_always_succeeds_on_nonstandard(monkeypatch)
+
+    def no_start_local_redis(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = prepare(project, environ=minimal_environ(), ui_mode=UI_MODE_TEXT_ASSUME_YES_PRODUCTION)
+        assert not result
+        assert 3 == len(can_connect_args_list)
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+runtime:
+  REDIS_URL: {}
+"""}, no_start_local_redis)
+
+    out, err = capsys.readouterr()
+    assert "Could not connect to system default Redis." in err
+    assert "REDIS_URL" in err
+    assert "missing requirement" in err
+    assert "" == out
+
+
+def test_do_not_start_local_redis_server_in_check_mode(monkeypatch, capsys):
+    can_connect_args_list = _monkeypatch_can_connect_to_socket_always_succeeds_on_nonstandard(monkeypatch)
+
+    def no_start_local_redis(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = prepare(project, environ=minimal_environ(), ui_mode=UI_MODE_TEXT_ASSUME_NO)
+        assert not result
+        assert 3 == len(can_connect_args_list)
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+runtime:
+  REDIS_URL: {}
+"""}, no_start_local_redis)
+
+    out, err = capsys.readouterr()
+    assert "Could not connect to system default Redis." in err
     assert "REDIS_URL" in err
     assert "missing requirement" in err
     assert "" == out

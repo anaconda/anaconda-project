@@ -11,7 +11,7 @@ from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
 from project.plugins.providers.download import DownloadProvider
 from project.plugins.requirements.download import DownloadRequirement
-from project.prepare import prepare, UI_MODE_BROWSER
+from project.prepare import prepare, UI_MODE_BROWSER, UI_MODE_TEXT_ASSUME_NO
 from project.project_file import DEFAULT_PROJECT_FILENAME
 
 from tornado import gen
@@ -98,6 +98,23 @@ def test_provide_minimal(monkeypatch):
         result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
         assert 'DATAFILE' in result.environ
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: MIN_DATAFILE_CONTENT}, provide_download)
+
+
+def test_provide_no_download_in_check_mode(monkeypatch):
+    MIN_DATAFILE_CONTENT = ("downloads:\n" "    DATAFILE: http://localhost/data.zip\n")
+
+    def provide_download(dirname):
+        @gen.coroutine
+        def mock_downloader_run(self, loop):
+            raise Exception("should not have tried to download in check mode")
+
+        monkeypatch.setattr("project.internal.http_client.FileDownloader.run", mock_downloader_run)
+
+        project = project_no_dedicated_env(dirname)
+        result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname), ui_mode=UI_MODE_TEXT_ASSUME_NO)
+        assert not result
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: MIN_DATAFILE_CONTENT}, provide_download)
 

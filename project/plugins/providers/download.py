@@ -7,6 +7,7 @@ from tornado.ioloop import IOLoop
 
 from project.internal.http_client import FileDownloader
 from project.plugins.provider import EnvVarProvider, ProviderAnalysis
+from project.provide import PROVIDE_MODE_CHECK
 
 
 class _DownloadProviderAnalysis(ProviderAnalysis):
@@ -112,6 +113,10 @@ class DownloadProvider(EnvVarProvider):
 
         """
         super(DownloadProvider, self).provide(requirement, context)
+
+        if context.mode == PROVIDE_MODE_CHECK:
+            return
+        # we do the download in both prod and dev mode
 
         if requirement.env_var not in context.environ or context.status.analysis.config['source'] == 'download':
             filename = self._provide_download(requirement, context)
