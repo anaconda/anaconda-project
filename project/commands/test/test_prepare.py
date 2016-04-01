@@ -1,5 +1,7 @@
 from __future__ import absolute_import, print_function
 
+import os
+
 from project.commands.main import _parse_args_and_run_subcommand
 from project.commands.prepare import prepare_command, main
 from project.internal.test.tmpfile_utils import with_directory_contents
@@ -208,7 +210,8 @@ def test_prepare_command_choose_environment_does_not_exist(capsys):
         result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', dirname, '--environment=nope'])
         assert result == 1
 
-        expected_error = "Environment name 'nope' is not in %s/project.yml, these names were found: bar, foo" % dirname
+        expected_error = "Environment name 'nope' is not in %s, these names were found: bar, foo" % os.path.join(
+            dirname, DEFAULT_PROJECT_FILENAME)
         out, err = capsys.readouterr()
         assert out == ""
         assert expected_error in err
