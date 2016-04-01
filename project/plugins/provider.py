@@ -13,19 +13,21 @@ from project.internal.crypto import encrypt_string, decrypt_string
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""
 
-    def __init__(self, environ, local_state_file, status):
+    def __init__(self, environ, local_state_file, status, mode):
         """Create a ProvideContext.
 
         Args:
             environ (dict): environment variables to be read and modified
             local_state_file (LocalStateFile): to store any created state
             status (RequirementStatus): current status
+            mode (str): one of PROVIDE_MODE_PRODUCTION, PROVIDE_MODE_DEVELOPMENT, PROVIDE_MODE_CHECK
         """
         self.environ = environ
         self._local_state_file = local_state_file
         self._logs = []
         self._errors = []
         self._status = status
+        self._mode = mode
 
     def ensure_work_directory(self, relative_name):
         """Create a project-scoped work directory with the given name.
@@ -86,6 +88,14 @@ class ProvideContext(object):
     def local_state_file(self):
         """Get the LocalStateFile."""
         return self._local_state_file
+
+    @property
+    def mode(self):
+        """Get flavor of provide.
+
+        Value should be ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_PRODUCTION``, or ``PROVIDE_MODE_CHECK``.
+        """
+        return self._mode
 
 
 class ProviderAnalysis(object):

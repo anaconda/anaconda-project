@@ -5,6 +5,7 @@ import os
 
 from project.conda_manager import new_conda_manager, CondaManagerError
 from project.plugins.provider import EnvVarProvider
+from project.provide import PROVIDE_MODE_CHECK
 
 
 class CondaEnvProvider(EnvVarProvider):
@@ -145,20 +146,23 @@ class CondaEnvProvider(EnvVarProvider):
 
         assert prefix is not None
 
-        env_spec = None
-        for env in requirement.environments.values():
-            if env.path(project_dir) == prefix:
-                env_spec = env
-                break
+        if context.mode != PROVIDE_MODE_CHECK:
+            # we update the environment in both prod and dev mode
 
-        # TODO if not creating a named env, we could use the
-        # shared dependencies, but for now we leave it alone
-        if env_spec is not None:
-            try:
-                self._conda.fix_environment_deviations(prefix, env_spec)
-            except CondaManagerError as e:
-                context.append_error(str(e))
-                return
+            env_spec = None
+            for env in requirement.environments.values():
+                if env.path(project_dir) == prefix:
+                    env_spec = env
+                    break
+
+            # TODO if not creating a named env, we could use the
+            # shared dependencies, but for now we leave it alone
+            if env_spec is not None:
+                try:
+                    self._conda.fix_environment_deviations(prefix, env_spec)
+                except CondaManagerError as e:
+                    context.append_error(str(e))
+                    return
 
         context.environ[requirement.env_var] = prefix
         if requirement.env_var != "CONDA_DEFAULT_ENV":

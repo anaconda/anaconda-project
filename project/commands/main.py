@@ -5,7 +5,7 @@ import os
 import sys
 from argparse import ArgumentParser
 
-from project.prepare import UI_MODE_BROWSER, UI_MODE_NOT_INTERACTIVE
+from project.prepare import UI_MODE_BROWSER, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
 
 import project.commands.launch as launch
 import project.commands.prepare as prepare
@@ -22,7 +22,7 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('launch', help="Runs the project, setting up requirements first.")
     preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
-    preset.set_defaults(main=launch.main, ui_mode=UI_MODE_NOT_INTERACTIVE)
+    preset.set_defaults(main=launch.main, ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
 
     preset = subparsers.add_parser('prepare', help="Sets up project requirements but does not run the project.")
     preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
@@ -31,7 +31,7 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser('activate',
                                    help="Sets up project and outputs shell export commands reflecting the setup.")
     preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
-    preset.set_defaults(main=activate.main, ui_mode=UI_MODE_NOT_INTERACTIVE)
+    preset.set_defaults(main=activate.main, ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
 
     # argparse doesn't do this for us for whatever reason
     if len(argv) < 2:

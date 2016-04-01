@@ -8,7 +8,7 @@ except ImportError:
 from project.commands.main import _parse_args_and_run_subcommand
 from project.commands.activate import activate, main
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.prepare import UI_MODE_NOT_INTERACTIVE
+from project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
 from project.project_file import DEFAULT_PROJECT_FILENAME
 from project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 
@@ -18,7 +18,7 @@ from project.test.project_utils import project_dir_disable_dedicated_env
 class Args(object):
     def __init__(self, **kwargs):
         self.project_dir = "."
-        self.ui_mode = UI_MODE_NOT_INTERACTIVE
+        self.ui_mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -42,7 +42,7 @@ def test_activate(monkeypatch):
 
     def activate_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = activate(dirname, UI_MODE_NOT_INTERACTIVE)
+        result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
         assert can_connect_args['port'] == 6379
         assert result is not None
         assert ['export PROJECT_DIR=' + quote(dirname), 'export REDIS_URL=redis://localhost:6379'] == result
@@ -56,7 +56,7 @@ runtime:
 def test_activate_quoting(monkeypatch):
     def activate_foo(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = activate(dirname, UI_MODE_NOT_INTERACTIVE)
+        result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
         assert result is not None
         assert ["export FOO='$! boo'", 'export PROJECT_DIR=' + quote(dirname)] == result
 

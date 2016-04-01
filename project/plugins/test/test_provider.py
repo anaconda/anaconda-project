@@ -11,6 +11,7 @@ from project.plugins.provider import Provider, ProvideContext, EnvVarProvider
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirement import EnvVarRequirement
 from project.project import Project
+from project.provide import PROVIDE_MODE_DEVELOPMENT
 from project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME
 
 
@@ -61,7 +62,10 @@ def test_env_var_provider_with_no_value():
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
         status = requirement.check_status(dict(), local_state_file)
-        context = ProvideContext(environ=dict(), local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=dict(),
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
 
         provider.provide(requirement, context=context)
         assert 'FOO' not in context.environ
@@ -79,7 +83,10 @@ def test_env_var_provider_with_default_value_in_project_file():
         assert dict(default='from_default') == requirement.options
         local_state_file = LocalStateFile.load_for_directory(dirname)
         status = requirement.check_status(dict(), local_state_file)
-        context = ProvideContext(environ=dict(), local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=dict(),
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert [] == context.errors
         assert 'FOO' in context.environ
@@ -111,7 +118,10 @@ def test_env_var_provider_with_encrypted_default_value_in_project_file():
         status = requirement.check_status(environ, local_state_file)
         assert ('ANACONDA_MASTER_PASSWORD', ) == status.analysis.missing_env_vars_to_configure
         assert ('MASTER', ) == status.analysis.missing_env_vars_to_provide
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert [] == context.errors
         assert 'FOO_SECRET' in context.environ
@@ -138,7 +148,10 @@ def test_env_var_provider_with_encrypted_default_value_in_project_file_no_master
         status = requirement.check_status(environ, local_state_file)
         assert ('ANACONDA_MASTER_PASSWORD', ) == status.analysis.missing_env_vars_to_configure
         assert ('MASTER', ) == status.analysis.missing_env_vars_to_provide
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert ["Master password MASTER is not set so can't get value of FOO_SECRET."] == context.errors
         assert 'FOO_SECRET' not in context.environ
@@ -162,7 +175,10 @@ def test_env_var_provider_with_encrypted_default_value_in_project_file_for_non_e
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict(MASTER=secret)
         status = requirement.check_status(environ, local_state_file)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert [] == context.errors
         assert 'FOO' in context.environ
@@ -183,7 +199,10 @@ def test_env_var_provider_with_unencrypted_default_value_in_project_file_for_enc
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict()
         status = requirement.check_status(environ, local_state_file)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert 'FOO_SECRET' in context.environ
         assert 'from_default' == context.environ['FOO_SECRET']
@@ -204,7 +223,10 @@ def test_env_var_provider_with_value_set_in_environment():
         environ = dict(FOO='from_environ')
         status = requirement.check_status(environ, local_state_file)
         assert dict(source='environ') == status.analysis.config
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert 'FOO' in context.environ
         assert 'from_environ' == context.environ['FOO']
@@ -227,7 +249,10 @@ def test_env_var_provider_with_value_set_in_local_state():
         environ = dict(FOO='from_environ')
         status = requirement.check_status(environ, local_state_file)
         assert dict(value="from_local_state", source="variables") == status.analysis.config
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert 'FOO' in context.environ
         assert 'from_local_state' == context.environ['FOO']
@@ -264,7 +289,10 @@ def test_env_var_provider_with_encrypted_default_value_in_local_state():
         assert () == provider.missing_env_vars_to_configure(requirement, environ, local_state_file)
         assert () == provider.missing_env_vars_to_provide(requirement, environ, local_state_file)
         status = requirement.check_status(environ, local_state_file)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert [] == context.errors
         assert 'FOO_SECRET' in context.environ
@@ -286,7 +314,10 @@ def test_env_var_provider_with_missing_encrypted_field_in_project_file():
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict()
         status = requirement.check_status(environ, local_state_file)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert 'FOO' not in context.environ
         assert ["No 'encrypted' field in the value of FOO"] == context.errors
@@ -306,7 +337,10 @@ def test_env_var_provider_with_missing_key_field_in_project_file():
         assert dict(default=dict(encrypted='abcdefg')) == requirement.options
         local_state_file = LocalStateFile.load_for_directory(dirname)
         status = requirement.check_status(dict(), local_state_file)
-        context = ProvideContext(environ=dict(), local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=dict(),
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert 'FOO' not in context.environ
         assert 1 == len(context.errors)
@@ -327,7 +361,10 @@ def test_env_var_provider_with_list_valued_default_project_file():
         assert dict(default=[]) == requirement.options
         local_state_file = LocalStateFile.load_for_directory(dirname)
         status = requirement.check_status(dict(), local_state_file)
-        context = ProvideContext(environ=dict(), local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=dict(),
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert 'FOO' not in context.environ
         assert 1 == len(context.errors)
@@ -348,7 +385,10 @@ def test_env_var_provider_with_number_valued_default_project_file():
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict()
         status = requirement.check_status(environ, local_state_file)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
         assert 'FOO' in context.environ
         assert 0 == len(context.errors)
@@ -479,7 +519,10 @@ def test_provide_context_properties():
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         assert dict(foo='bar') == context.environ
         assert [] == context.errors
         context.append_error("foo")
@@ -502,7 +545,10 @@ def test_provide_context_ensure_work_directory():
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         workpath = context.ensure_work_directory("foo")
         assert os.path.isdir(workpath)
         assert workpath.endswith("foo")
@@ -530,7 +576,10 @@ def test_provide_context_ensure_work_directory_cannot_create(monkeypatch):
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
         with pytest.raises(IOError) as excinfo:
             context.ensure_work_directory("foo")
         assert "this is not EEXIST" in repr(excinfo.value)
@@ -545,7 +594,10 @@ def test_provide_context_transform_service_run_state():
         local_state_file.set_service_run_state("myservice", dict(port=42))
         requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file)
-        context = ProvideContext(environ=environ, local_state_file=local_state_file, status=status)
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
 
         def transform_it(state):
             assert 42 == state['port']

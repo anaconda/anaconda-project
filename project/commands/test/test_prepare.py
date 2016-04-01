@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 from project.commands.main import _parse_args_and_run_subcommand
 from project.commands.prepare import prepare_command, main
 from project.internal.test.tmpfile_utils import with_directory_contents
-from project.prepare import UI_MODE_NOT_INTERACTIVE, UI_MODE_BROWSER
+from project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, UI_MODE_BROWSER
 from project.project_file import DEFAULT_PROJECT_FILENAME
 
 from project.test.project_utils import project_dir_disable_dedicated_env
@@ -36,7 +36,7 @@ def test_prepare_command(monkeypatch):
 
     def prepare_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = prepare_command(dirname, UI_MODE_NOT_INTERACTIVE)
+        result = prepare_command(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
         assert can_connect_args['port'] == 6379
         assert result
 
@@ -156,7 +156,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
 
     def _mock_prepare_do_not_keep_going(project,
                                         environ=None,
-                                        ui_mode=UI_MODE_NOT_INTERACTIVE,
+                                        ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
                                         keep_going_until_success=False,
                                         io_loop=None,
                                         show_url=None):
