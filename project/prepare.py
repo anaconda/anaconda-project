@@ -545,10 +545,24 @@ def prepare_in_stages(project, environ=None, keep_going_until_success=False, mod
     assert 'PATH' in environ
 
     # we modify a copy, which 1) makes all our changes atomic and
-    # 2) minimizes memory leaks on systems that use putenv() (it
-    # appears we must use deepcopy (vs plain copy) or we still
-    # modify os.environ somehow)
-    environ_copy = deepcopy(environ)
+    # 2) minimizes memory leaks on systems that use putenv().
+    #
+    # On Linux, it appears we must use deepcopy (vs plain copy) or
+    # we still modify os.environ somehow.
+    #
+    # On the Windows CI server, but NOT on my local Windows 10
+    # machine, deepcopy() didn't work but adding the extra .copy()
+    # fixed it. The failure mode was that changes to PATH in the
+    # copy were not visible via os.environ or os.getenv('PATH'),
+    # but they DID affect what subprocess.Popen was able to see,
+    # so that a test which modified PATH in this environ_copy
+    # would break subsequent tests (such as test_conda_api which
+    # tries to run conda). Anyway, presumably this is a bug in
+    # something, but I'm not sure in what. If you can remove the
+    # extra copy() and still pass all tests on all platforms at
+    # some point in the future, feel free to clean up this
+    # hackery.
+    environ_copy = deepcopy(environ.copy())
 
     # many requirements and providers might need this, plus
     # it's useful for scripts to find their source tree.
