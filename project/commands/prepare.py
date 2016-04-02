@@ -5,13 +5,13 @@ from project import prepare
 from project.project import Project
 
 
-def prepare_command(project_dir, ui_mode):
+def prepare_command(project_dir, ui_mode, conda_environment):
     """Configure the project to run.
 
     Returns:
         Prepare result (can be treated as True on success).
     """
-    project = Project(project_dir)
+    project = Project(project_dir, default_conda_environment=conda_environment)
     result = prepare.prepare(project, ui_mode=ui_mode, keep_going_until_success=True)
 
     return result
@@ -19,7 +19,7 @@ def prepare_command(project_dir, ui_mode):
 
 def main(args):
     """Start the prepare command and return exit status code."""
-    if prepare_command(args.project_dir, args.mode):
+    if prepare_command(args.project_dir, args.mode, args.environment):
         return 0
     else:
         return 1

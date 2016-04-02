@@ -22,6 +22,11 @@ def _parse_args_and_run_subcommand(argv):
 
     def add_common_args(preset):
         preset.add_argument('project_dir', metavar='PROJECT_DIR', default='.', nargs='?')
+        preset.add_argument('--environment',
+                            metavar='ENVIRONMENT_NAME',
+                            default=None,
+                            action='store',
+                            help="An environment name from project.yml")
         preset.add_argument('--mode',
                             metavar='MODE',
                             default=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,

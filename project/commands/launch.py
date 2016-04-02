@@ -7,13 +7,13 @@ from project.prepare import prepare
 from project.project import Project
 
 
-def launch_command(project_dir, ui_mode):
+def launch_command(project_dir, ui_mode, conda_environment):
     """Run the project.
 
     Returns:
         Does not return if successful.
     """
-    project = Project(project_dir)
+    project = Project(project_dir, default_conda_environment=conda_environment)
     result = prepare(project, ui_mode=ui_mode)
 
     if result.failed:
@@ -30,6 +30,6 @@ def launch_command(project_dir, ui_mode):
 
 def main(args):
     """Start the launch command and return exit status code.."""
-    launch_command(args.project_dir, args.mode)
+    launch_command(args.project_dir, args.mode, args.environment)
     # if we returned, we failed to launch the command and should have printed an error
     return 1

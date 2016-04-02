@@ -12,7 +12,7 @@ from project.prepare import prepare
 from project.project import Project
 
 
-def activate(dirname, ui_mode):
+def activate(dirname, ui_mode, conda_environment):
     """Prepare project and return lines to be sourced.
 
     Future direction: should also activate the proper conda env.
@@ -20,7 +20,7 @@ def activate(dirname, ui_mode):
     Returns:
         None on failure or a list of lines to print.
     """
-    project = Project(dirname)
+    project = Project(dirname, default_conda_environment=conda_environment)
     result = prepare(project, ui_mode=ui_mode)
     if result.failed:
         result.print_output()
@@ -39,7 +39,7 @@ def activate(dirname, ui_mode):
 
 def main(args):
     """Start the activate command and return exit status code."""
-    result = activate(args.project_dir, args.mode)
+    result = activate(args.project_dir, args.mode, args.environment)
     if result is None:
         return 1
     else:
