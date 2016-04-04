@@ -90,6 +90,20 @@ def test_launch_command_no_app_entry(capsys):
     assert 'No known launch command' in err
 
 
+def test_launch_command_nonexistent_project(capsys):
+    def check_launch_nonexistent(dirname):
+        project_dir = os.path.join(dirname, "nope")
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', project_dir])
+
+        assert 1 == result
+
+        out, err = capsys.readouterr()
+        assert out == ""
+        assert ("Project directory '%s' does not exist." % project_dir) in err
+
+    with_directory_contents(dict(), check_launch_nonexistent)
+
+
 def test_launch_command_failed_prepare(capsys):
     def check_launch_failed_prepare(dirname):
         project_dir_disable_dedicated_env(dirname)
