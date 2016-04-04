@@ -13,7 +13,7 @@ from project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
 class _ConfigCache(object):
-    def __init__(self, directory_path, registry, default_default_conda_environment_name):
+    def __init__(self, directory_path, registry, default_default_conda_environment_name, default_command):
         self.directory_path = directory_path
         if registry is None:
             registry = PluginRegistry()
@@ -22,7 +22,7 @@ class _ConfigCache(object):
         self.name = None
         self.icon = None
         self.commands = dict()
-        self.default_command_name = None
+        self.default_command_name = default_command
         self.project_file_count = 0
         self.conda_meta_file_count = 0
         self.conda_environments = dict()
@@ -311,11 +311,17 @@ class _ConfigCache(object):
                                                      attributes=dict(conda_app_entry=app_entry_from_meta_yaml))
 
             self.commands = commands
-            if 'default' in commands:
-                self.default_command_name = 'default'
+            # command specified, but not found in self.commands
+            if self.default_command_name is not None and self.default_command_name not in self.commands:
+                problems.append(
+                    'No such command: %s, valid comments are: %s' % (
+                        self.default_command_name, ', '.join(self.commands.keys())))
             else:
-                # note: this may be None
-                self.default_command_name = first_command_name
+                if 'default' in commands:
+                    self.default_command_name = 'default'
+                else:
+                    # note: this may be None
+                    self.default_command_name = first_command_name
 
 
 class Project(object):
@@ -326,7 +332,7 @@ class Project(object):
     the project directory or global user configuration.
     """
 
-    def __init__(self, directory_path, plugin_registry=None, default_conda_environment=None):
+    def __init__(self, directory_path, plugin_registry=None, default_conda_environment=None, default_command=None):
         """Construct a Project with the given directory and plugin registry.
 
         Args:
@@ -338,7 +344,7 @@ class Project(object):
         self._project_file = ProjectFile.load_for_directory(directory_path)
         self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
-        self._config_cache = _ConfigCache(self._directory_path, plugin_registry, default_conda_environment)
+        self._config_cache = _ConfigCache(self._directory_path, plugin_registry, default_conda_environment, default_command)
 
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._conda_meta_file)
