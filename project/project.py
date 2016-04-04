@@ -431,11 +431,12 @@ class Project(object):
         else:
             return cache.commands[cache.default_command_name]
 
-    def exec_info_for_environment(self, environ):
+    def exec_info_for_environment(self, environ, extra_args=None):
         """Get the information needed to run the project.
 
         Args:
             environ (dict): the environment
+            extra_args (list of str): extra args to append to the command line
         Returns:
             argv as list of strings, or None if no commands are configured that work on our platform
         """
@@ -446,4 +447,4 @@ class Project(object):
             return None
         command = self._updated_cache().commands[command_name]
 
-        return command.exec_info_for_environment(environ)
+        return command.exec_info_for_environment(environ, extra_args)
