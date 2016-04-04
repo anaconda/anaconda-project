@@ -923,7 +923,7 @@ def test_launch_command_in_project_dir_with_windows(monkeypatch):
     _launch_argv_for_environment(
         dict(),
         "%s foo bar" % (prefix),
-        command_line='''windows: "\\"%PROJECT_DIR%\\"\\\\echo_stuff.bat %CONDA_DEFAULT_ENV% foo bar"''')
+        command_line='''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %CONDA_DEFAULT_ENV% foo bar"''')
 
 
 def test_launch_command_in_project_dir_with_windows_extra_args(monkeypatch):
@@ -934,7 +934,7 @@ def test_launch_command_in_project_dir_with_windows_extra_args(monkeypatch):
     _launch_argv_for_environment(
         dict(),
         "%s foo bar baz" % (prefix),
-        command_line='''windows: "\\"%PROJECT_DIR%\\"\\\\echo_stuff.bat %CONDA_DEFAULT_ENV% foo bar"''',
+        command_line='''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %CONDA_DEFAULT_ENV% foo bar"''',
         extra_args=["baz"])
 
 
