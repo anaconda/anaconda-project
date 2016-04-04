@@ -16,6 +16,7 @@ from project.plugins.requirement import EnvVarRequirement
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 from project.project_file import DEFAULT_PROJECT_FILENAME
 from project.conda_meta_file import DEFAULT_RELATIVE_META_PATH, META_DIRECTORY
+from project.project import Project
 
 
 def test_properties():
@@ -70,6 +71,18 @@ def test_problem_in_project_file():
 runtime:
   42
 """}, check_problem)
+
+
+def test_project_dir_does_not_exist():
+    def check_does_not_exist(dirname):
+        project_dir = os.path.join(dirname, 'foo')
+        assert not os.path.isdir(project_dir)
+        project = Project(project_dir)
+        assert not os.path.isdir(project_dir)
+        assert ["Project directory '%s' does not exist." % project_dir] == project.problems
+        assert 0 == len(project.requirements)
+
+    with_directory_contents(dict(), check_does_not_exist)
 
 
 def test_single_env_var_requirement_with_options():

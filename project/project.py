@@ -43,6 +43,10 @@ class _ConfigCache(object):
         requirements = []
         problems = []
 
+        project_exists = os.path.isdir(self.directory_path)
+        if not project_exists:
+            problems.append("Project directory '%s' does not exist." % self.directory_path)
+
         if project_file.corrupted:
             problems.append("%s has a syntax error that needs to be fixed by hand: %s" %
                             (project_file.filename, project_file.corrupted_error_message))
@@ -50,7 +54,7 @@ class _ConfigCache(object):
             problems.append("%s has a syntax error that needs to be fixed by hand: %s" %
                             (conda_meta_file.filename, conda_meta_file.corrupted_error_message))
 
-        if not (project_file.corrupted or conda_meta_file.corrupted):
+        if project_exists and not (project_file.corrupted or conda_meta_file.corrupted):
             self._update_name(problems, project_file, conda_meta_file)
             self._update_icon(problems, project_file, conda_meta_file)
             # future: we could un-hardcode this so plugins can add stuff here
