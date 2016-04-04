@@ -111,6 +111,22 @@ class CommandExecInfo(object):
             os.chdir(old_dir)
 
 
+def _append_extra_args_to_command_line(command, extra_args):
+    if extra_args is None:
+        return command
+    else:
+        if _is_windows():  # pragma: no cover
+            from project.internal.windows_cmdline import (windows_split_command_line, windows_join_command_line)
+            args = windows_split_command_line(command)
+            return windows_join_command_line(args + extra_args)
+        else:
+            import shlex
+            new_command = command
+            for arg in extra_args:
+                new_command = new_command + " " + shlex.quote(arg)
+            return new_command
+
+
 class ProjectCommand(object):
     """Represents an command from the project file."""
 
@@ -129,20 +145,18 @@ class ProjectCommand(object):
         """Get name of the command."""
         return self._name
 
-    def _choose_args_and_shell(self, environ):
+    def _choose_args_and_shell(self, environ, extra_args=None):
         args = None
         shell = False
 
         if _is_windows():
-            windows_command = self._attributes.get('windows', None)
-            if windows_command is not None:
-                args = [windows_command]
-                shell = True
+            shell_field = 'windows'
         else:
-            shell_command = self._attributes.get('shell', None)
-            if shell_command is not None:
-                args = [shell_command]
-                shell = True
+            shell_field = 'shell'
+        command = self._attributes.get(shell_field, None)
+        if command is not None:
+            args = [_append_extra_args_to_command_line(command, extra_args)]
+            shell = True
 
         if args is None:
             # see conda.misc::launch for what we're copying
@@ -157,15 +171,18 @@ class ProjectCommand(object):
                     if '${PREFIX}' in arg:
                         arg = arg.replace('${PREFIX}', environ.get('CONDA_ENV_PATH', environ.get('CONDA_DEFAULT_ENV')))
                     args.append(arg)
+                if extra_args is not None:
+                    args = args + extra_args
 
         # args can be None if the command doesn't work on our platform
         return (args, shell)
 
-    def exec_info_for_environment(self, environ):
+    def exec_info_for_environment(self, environ, extra_args=None):
         """Get a ``CommandExecInfo`` ready to be executed.
 
         Args:
             environ (dict): the environment containing a CONDA_ENV_PATH, PATH, and PROJECT_DIR
+            extra_args (list of str): extra args to append to the command line
         Returns:
             argv as list of strings
         """
@@ -177,7 +194,7 @@ class ProjectCommand(object):
             if name not in environ:
                 raise ValueError("To get a runnable command for the app, %s must be set." % (name))
 
-        (args, shell) = self._choose_args_and_shell(environ)
+        (args, shell) = self._choose_args_and_shell(environ, extra_args)
 
         if args is None:
             # command doesn't work on our platform for example

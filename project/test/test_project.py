@@ -840,7 +840,8 @@ else:
 def _launch_argv_for_environment(environ,
                                  expected_output,
                                  chdir=False,
-                                 command_line=('conda_app_entry: %s ${PREFIX} foo bar' % echo_stuff)):
+                                 command_line=('conda_app_entry: %s ${PREFIX} foo bar' % echo_stuff),
+                                 extra_args=None):
     environ = minimal_environ(**environ)
 
     def check_echo_output(dirname):
@@ -854,7 +855,7 @@ def _launch_argv_for_environment(environ,
         try:
             project = project_no_dedicated_env(dirname)
             assert [] == project.problems
-            exec_info = project.exec_info_for_environment(environ)
+            exec_info = project.exec_info_for_environment(environ, extra_args)
             if exec_info.shell:
                 args = exec_info.args[0]
             else:
@@ -888,6 +889,11 @@ def test_launch_command_in_project_dir():
     _launch_argv_for_environment(dict(), "%s foo bar" % (prefix))
 
 
+def test_launch_command_in_project_dir_extra_args():
+    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
+    _launch_argv_for_environment(dict(), "%s foo bar baz" % (prefix), extra_args=["baz"])
+
+
 def test_launch_command_in_project_dir_with_shell(monkeypatch):
     if platform.system() == 'Windows':
         print("Cannot test shell on Windows")
@@ -898,6 +904,17 @@ def test_launch_command_in_project_dir_with_shell(monkeypatch):
                                  command_line='shell: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"')
 
 
+def test_launch_command_in_project_dir_with_shell_extra_args(monkeypatch):
+    if platform.system() == 'Windows':
+        print("Cannot test shell on Windows")
+        return
+    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
+    _launch_argv_for_environment(dict(),
+                                 "%s foo bar baz" % (prefix),
+                                 command_line='shell: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"',
+                                 extra_args=["baz"])
+
+
 def test_launch_command_in_project_dir_with_windows(monkeypatch):
     if platform.system() != 'Windows':
         print("Cannot test windows cmd on unix")
@@ -906,7 +923,19 @@ def test_launch_command_in_project_dir_with_windows(monkeypatch):
     _launch_argv_for_environment(
         dict(),
         "%s foo bar" % (prefix),
-        command_line='''windows: "\\"%PROJECT_DIR%\\"\\\\echo_stuff.bat %CONDA_DEFAULT_ENV% foo bar"''')
+        command_line='''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %CONDA_DEFAULT_ENV% foo bar"''')
+
+
+def test_launch_command_in_project_dir_with_windows_extra_args(monkeypatch):
+    if platform.system() != 'Windows':
+        print("Cannot test windows cmd on unix")
+        return
+    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
+    _launch_argv_for_environment(
+        dict(),
+        "%s foo bar baz" % (prefix),
+        command_line='''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %CONDA_DEFAULT_ENV% foo bar"''',
+        extra_args=["baz"])
 
 
 def test_launch_command_in_project_dir_and_cwd_is_project_dir():

@@ -1,5 +1,5 @@
 [run]
-omit = */test/*
+omit = */test/*,*/windows_cmdline.py
 
 [report]
 fail_under=100
