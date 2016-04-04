@@ -13,7 +13,7 @@ from project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
 class _ConfigCache(object):
-    def __init__(self, directory_path, registry, default_default_conda_environment_name):
+    def __init__(self, directory_path, registry, default_default_conda_environment_name, default_default_command_name):
         self.directory_path = directory_path
         if registry is None:
             registry = PluginRegistry()
@@ -22,6 +22,10 @@ class _ConfigCache(object):
         self.name = None
         self.icon = None
         self.commands = dict()
+        if default_default_command_name is None:
+            self.default_default_command_name = 'default'
+        else:
+            self.default_default_command_name = default_default_command_name
         self.default_command_name = None
         self.project_file_count = 0
         self.conda_meta_file_count = 0
@@ -311,11 +315,19 @@ class _ConfigCache(object):
                                                      attributes=dict(conda_app_entry=app_entry_from_meta_yaml))
 
             self.commands = commands
-            if 'default' in commands:
-                self.default_command_name = 'default'
-            else:
+
+        if self.default_default_command_name in self.commands:
+            self.default_command_name = self.default_default_command_name
+        else:
+            # 'default' is always mapped to the first-listed if none is named 'default'
+            if self.default_default_command_name == 'default':
                 # note: this may be None
                 self.default_command_name = first_command_name
+            else:
+                problems.append("Command name '%s' is not in %s, these names were found: %s" %
+                                (self.default_default_command_name, project_file.filename,
+                                 ", ".join(sorted(self.commands.keys()))))
+                self.default_command_name = None
 
 
 class Project(object):
@@ -326,19 +338,21 @@ class Project(object):
     the project directory or global user configuration.
     """
 
-    def __init__(self, directory_path, plugin_registry=None, default_conda_environment=None):
+    def __init__(self, directory_path, plugin_registry=None, default_conda_environment=None, default_command=None):
         """Construct a Project with the given directory and plugin registry.
 
         Args:
             directory_path (str): path to the project directory
             plugin_registry (PluginRegistry): where to look up Requirement and Provider instances, None for default
             default_conda_environment (str): name of conda environment to use by default
+            default_command (str): name of command from commands section to use by default
         """
         self._directory_path = os.path.realpath(directory_path)
         self._project_file = ProjectFile.load_for_directory(directory_path)
         self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
-        self._config_cache = _ConfigCache(self._directory_path, plugin_registry, default_conda_environment)
+        self._config_cache = _ConfigCache(self._directory_path, plugin_registry, default_conda_environment,
+                                          default_command)
 
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._conda_meta_file)
