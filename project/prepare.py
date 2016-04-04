@@ -353,7 +353,8 @@ def _sort_statuses(environ, local_state, statuses, missing_vars_getter):
     return toposort_from_dependency_info(statuses, get_node_key, get_dependency_keys, can_ignore_dependency_on_key)
 
 
-def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success, mode):
+def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success, mode,
+                           extra_command_args):
     def provide_stage(stage):
         def get_missing_to_provide(status):
             return status.analysis.missing_env_vars_to_provide
@@ -398,7 +399,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             else:
                 return None
         else:
-            exec_info = project.exec_info_for_environment(environ)
+            exec_info = project.exec_info_for_environment(environ, extra_command_args)
             stage.set_result(PrepareSuccess(logs=logs, command_exec_info=exec_info, environ=environ), rechecked)
             return None
 
@@ -444,7 +445,7 @@ def _partition_first_group_to_configure(environ, local_state, statuses):
 
 
 def _process_requirement_statuses(project, environ, local_state, current_statuses, all_statuses,
-                                  keep_going_until_success, mode):
+                                  keep_going_until_success, mode, extra_command_args):
     (initial, remaining) = _partition_first_group_to_configure(environ, local_state, current_statuses)
 
     # a surprising thing here is that the "stages" from
@@ -457,7 +458,7 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
 
     def _stages_for(statuses):
         return _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success,
-                                      mode)
+                                      mode, extra_command_args)
 
     if len(initial) > 0 and len(remaining) > 0:
 
@@ -465,7 +466,7 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
             # get the new status for each remaining requirement
             updated = _refresh_status_list(remaining, updated_all_statuses)
             return _process_requirement_statuses(project, environ, local_state, updated, updated_all_statuses,
-                                                 keep_going_until_success, mode)
+                                                 keep_going_until_success, mode, extra_command_args)
 
         return _after_stage_success(_stages_for(initial), process_remaining)
     elif len(initial) > 0:
@@ -500,18 +501,22 @@ def _add_missing_env_var_requirements(project, environ, local_state, statuses):
         _add_missing_env_var_requirements(project, environ, local_state, statuses)
 
 
-def _first_stage(project, environ, local_state, statuses, keep_going_until_success, mode):
+def _first_stage(project, environ, local_state, statuses, keep_going_until_success, mode, extra_command_args):
     assert 'PROJECT_DIR' in environ
 
     _add_missing_env_var_requirements(project, environ, local_state, statuses)
 
     first_stage = _process_requirement_statuses(project, environ, local_state, statuses, statuses,
-                                                keep_going_until_success, mode)
+                                                keep_going_until_success, mode, extra_command_args)
 
     return first_stage
 
 
-def prepare_in_stages(project, environ=None, keep_going_until_success=False, mode=PROVIDE_MODE_DEVELOPMENT):
+def prepare_in_stages(project,
+                      environ=None,
+                      keep_going_until_success=False,
+                      mode=PROVIDE_MODE_DEVELOPMENT,
+                      extra_command_args=None):
     """Get a chain of all steps needed to get a project ready to execute.
 
     This function does not immediately do anything; it returns a
@@ -529,6 +534,7 @@ def prepare_in_stages(project, environ=None, keep_going_until_success=False, mod
         environ (dict): the environment to start from (None to use os.environ)
         keep_going_until_success (bool): keep returning new stages until all requirements are met
         mode (str): One of ``PROVIDE_MODE_PRODUCTION``, ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_CHECK``
+        extra_command_args (list of str): extra args for the command we prepare
 
     Returns:
         The first ``PrepareStage`` in the chain of steps.
@@ -575,13 +581,15 @@ def prepare_in_stages(project, environ=None, keep_going_until_success=False, mod
         status = requirement.check_status(environ_copy, local_state)
         statuses.append(status)
 
-    return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode)
+    return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode,
+                        extra_command_args)
 
 
 def prepare(project,
             environ=None,
             ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
             keep_going_until_success=False,
+            extra_command_args=None,
             io_loop=None,
             show_url=None):
     """Perform all steps needed to get a project ready to execute.
@@ -596,6 +604,7 @@ def prepare(project,
         ui_mode (str): one of ``UI_MODE_BROWSER``, ``UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT``,
                        ``UI_MODE_TEXT_ASSUME_YES_PRODUCTION``, ``UI_MODE_TEXT_ASSUME_NO``
         keep_going_until_success (bool): keep asking questions until all requirements are met
+        extra_command_args (list of str): extra args for the command we prepare
         io_loop (IOLoop): tornado IOLoop to use, None for default
         show_url (function): takes a URL and displays it in a browser somehow, None for default
 
@@ -624,7 +633,7 @@ def prepare(project,
 
     assert ui_mode != UI_MODE_TEXT_ASK_QUESTIONS  # Not implemented yet
 
-    stage = prepare_in_stages(project, environ, keep_going_until_success, provide_mode)
+    stage = prepare_in_stages(project, environ, keep_going_until_success, provide_mode, extra_command_args)
 
     if ui_mode == UI_MODE_BROWSER:
         result = prepare_browser(project, stage, io_loop=io_loop, show_url=show_url)

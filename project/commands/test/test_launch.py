@@ -19,6 +19,7 @@ class Args(object):
         self.project_dir = "."
         self.environment = 'default'
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
+        self.extra_args_for_command = None
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -46,7 +47,10 @@ def test_launch_command(monkeypatch):
     def check_launch(dirname):
         project_dir_disable_dedicated_env(dirname)
 
-        result = launch_command(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None)
+        result = launch_command(dirname,
+                                UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                                conda_environment=None,
+                                extra_command_args=None)
         assert result is None
         assert 'file' in executed
         assert 'args' in executed
@@ -71,7 +75,10 @@ commands:
 def test_launch_command_no_app_entry(capsys):
     def check_launch_no_app_entry(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = launch_command(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None)
+        result = launch_command(dirname,
+                                UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                                conda_environment=None,
+                                extra_command_args=None)
         assert result is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -86,7 +93,10 @@ def test_launch_command_no_app_entry(capsys):
 def test_launch_command_failed_prepare(capsys):
     def check_launch_failed_prepare(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = launch_command(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None)
+        result = launch_command(dirname,
+                                UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                                conda_environment=None,
+                                extra_command_args=None)
         assert result is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -191,6 +201,54 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         assert executed['file'].endswith(python_exe)
         assert executed['args'][0].endswith(python_exe)
         assert '--version' == executed['args'][1]
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+commands:
+  default:
+    conda_app_entry: python --version
+
+"""}, check_launch_main)
+
+    out, err = capsys.readouterr()
+    assert "" == out
+    assert "" == err
+
+
+def test_launch_command_extra_args(monkeypatch, capsys):
+    executed = {}
+
+    def mock_execvpe(file, args, env):
+        executed['file'] = file
+        executed['args'] = args
+        executed['env'] = env
+
+    monkeypatch.setattr('os.execvpe', mock_execvpe)
+
+    def check_launch_main(dirname):
+        from os.path import abspath as real_abspath
+
+        def mock_abspath(path):
+            if path == ".":
+                return dirname
+            else:
+                return real_abspath(path)
+
+        monkeypatch.setattr('os.path.abspath', mock_abspath)
+
+        project_dir_disable_dedicated_env(dirname)
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', dirname, 'foo', '$PATH'])
+
+        assert 1 == result
+        assert 'file' in executed
+        assert 'args' in executed
+        assert 'env' in executed
+        assert executed['file'].endswith(python_exe)
+        assert executed['args'][0].endswith(python_exe)
+        assert len(executed['args']) == 4
+        assert '--version' == executed['args'][1]
+        assert 'foo' == executed['args'][2]
+        assert '$PATH' == executed['args'][3]
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """

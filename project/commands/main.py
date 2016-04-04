@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 
 import os
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, REMAINDER
 
 from project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
 
@@ -36,6 +36,7 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('launch', help="Runs the project, setting up requirements first.")
     add_common_args(preset)
+    preset.add_argument('extra_args_for_command', metavar='EXTRA_ARGS_FOR_COMMAND', default=None, nargs=REMAINDER)
     preset.set_defaults(main=launch.main)
 
     preset = subparsers.add_parser('prepare', help="Sets up project requirements but does not run the project.")
