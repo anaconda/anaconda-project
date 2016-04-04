@@ -13,7 +13,7 @@ def launch_command(project_dir, ui_mode, conda_environment, command, extra_comma
     Returns:
         Does not return if successful.
     """
-    project = Project(project_dir, default_conda_environment=conda_environment, command=command)
+    project = Project(project_dir, default_conda_environment=conda_environment, default_command=command)
     result = prepare(project, ui_mode=ui_mode, extra_command_args=extra_command_args)
 
     if result.failed:
