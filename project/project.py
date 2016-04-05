@@ -8,6 +8,7 @@ from project.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from project.conda_environment import CondaEnvironment
 from project.project_commands import ProjectCommand
 from project.plugins.registry import PluginRegistry
+from project.plugins.requirement import EnvVarRequirement
 from project.plugins.requirements.download import DownloadRequirement
 from project.plugins.requirements.conda_env import CondaEnvRequirement
 
@@ -466,3 +467,38 @@ class Project(object):
         command = self._updated_cache().commands[command_name]
 
         return command.exec_info_for_environment(environ, extra_args)
+
+    def publication_info(self):
+        """Get JSON-serializable information to be stored as metadata when publishing the project.
+
+        This is a "baked" version of project.yml which also
+        includes any defaults or automatic configuration.
+
+        Before calling this, check that Project.problems is empty.
+
+        Returns:
+            A dictionary containing JSON-compatible types.
+        """
+        json = dict()
+        json['name'] = self.name
+        commands = dict()
+        for key, command in self.commands.items():
+            commands[key] = dict(description=command.description)
+        json['commands'] = commands
+        envs = dict()
+        for key, env in self.conda_environments.items():
+            envs[key] = dict(dependencies=list(env.dependencies), channels=list(env.channels))
+        json['environments'] = envs
+        variables = dict()
+        downloads = dict()
+        for req in self.requirements:
+            if isinstance(req, CondaEnvRequirement):
+                continue
+            elif isinstance(req, DownloadRequirement):
+                downloads[req.env_var] = dict(title=req.title, encrypted=req.encrypted, url=req.url)
+            elif isinstance(req, EnvVarRequirement):
+                variables[req.env_var] = dict(title=req.title, encrypted=req.encrypted)
+        json['downloads'] = downloads
+        json['variables'] = variables
+
+        return json
