@@ -167,6 +167,9 @@ class ProjectCommand(object):
         return command
 
     def _choose_args_and_shell(self, environ, extra_args=None):
+        if 'notebook' in self._attributes:
+            return ['jupyter-notebook', self._attributes['notebook']], False
+
         args = None
         shell = False
 

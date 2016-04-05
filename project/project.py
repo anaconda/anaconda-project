@@ -284,7 +284,7 @@ class _ConfigCache(object):
                     copy['conda_app_entry'] = app_entry_from_meta_yaml
 
                 have_command = False
-                for attr in ('conda_app_entry', 'shell', 'windows'):
+                for attr in ('conda_app_entry', 'shell', 'windows', 'notebook'):
                     if attr not in copy:
                         continue
 
@@ -301,6 +301,11 @@ class _ConfigCache(object):
 
                 if not have_command:
                     problems.append("%s: command '%s' does not have a command line in it" %
+                                    (project_file.filename, name))
+                    failed = True
+
+                if 'notebook' in copy and len(copy.keys()) > 1:
+                    problems.append("%s: command '%s' has conflicting statements, 'notebook' must stand alone" %
                                     (project_file.filename, name))
                     failed = True
 
