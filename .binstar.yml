@@ -14,6 +14,7 @@ install:
   - conda install -y -q bcrypt
   - conda install -c https://conda.anaconda.org/binstar redis-server
   - conda install -y ipython-notebook
+  - conda install -y bokeh
 
 test:
   - python setup.py test

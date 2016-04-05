@@ -1,6 +1,7 @@
 from __future__ import absolute_import, print_function
 
 from copy import deepcopy
+from distutils.spawn import find_executable
 import os
 import platform
 import stat
@@ -701,7 +702,6 @@ def test_non_string_as_value_of_shell():
 
 def test_notebook_command():
     def check_notebook_command(dirname):
-        from distutils.spawn import find_executable
         project = project_no_dedicated_env(dirname)
         command = project.default_command
         assert command._attributes == {'notebook': 'test.ipynb'}
@@ -728,6 +728,36 @@ def test_notebook_command_conflict():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n    shell: echo 'pass'"},
         check_notebook_conflict_command)
+
+
+def test_bokeh_command_conflict():
+    def check_bokeh_conflict_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        expected_error = "%s: command '%s' has conflicting statements, 'bokeh_app' must stand alone" % (
+            project.project_file.filename, 'default')
+        assert expected_error == project.problems[0]
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: app.py\n    shell: echo 'pass'"},
+        check_bokeh_conflict_command)
+
+
+def test_bokeh_command():
+    def check_bokeh_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command._attributes == {'bokeh_app': 'test.py'}
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(environ)
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        bokeh = find_executable('bokeh', path)
+        assert cmd_exec.args == [bokeh, 'serve', 'test.py']
+        assert cmd_exec.shell is False
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check_bokeh_command)
 
 
 def test_launch_argv_from_project_file_app_entry():
