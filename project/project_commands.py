@@ -145,15 +145,32 @@ class ProjectCommand(object):
         """Get name of the command."""
         return self._name
 
+    def _shell_field(self):
+        if _is_windows():
+            return 'windows'
+        else:
+            return 'shell'
+
+    @property
+    def description(self):
+        """Helpful string showing what the command is."""
+        # we don't change this by platform since we use it for
+        # publication_info() and it'd be weird if it mattered
+        # what platform you publish from.
+        command = self._attributes.get('shell', None)
+        if command is None:
+            command = self._attributes.get('windows', None)
+        if command is None:
+            command = self._attributes.get('conda_app_entry', None)
+        # we should have validated that there was a command
+        assert command is not None
+        return command
+
     def _choose_args_and_shell(self, environ, extra_args=None):
         args = None
         shell = False
 
-        if _is_windows():
-            shell_field = 'windows'
-        else:
-            shell_field = 'shell'
-        command = self._attributes.get(shell_field, None)
+        command = self._attributes.get(self._shell_field(), None)
         if command is not None:
             args = [_append_extra_args_to_command_line(command, extra_args)]
             shell = True

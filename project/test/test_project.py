@@ -1029,3 +1029,88 @@ commands:
   default:
     conda_app_entry: foo
 """}, check_launch_with_stuff_missing)
+
+
+def test_get_publication_info_from_empty_project():
+    def check_publication_info_from_empty(dirname):
+        project = project_no_dedicated_env(dirname)
+        expected = {
+            'name': os.path.basename(dirname),
+            'commands': {},
+            'environments': {
+                'default': {
+                    'channels': [],
+                    'dependencies': []
+                }
+            },
+            'variables': {},
+            'downloads': {}
+        }
+        assert expected == project.publication_info()
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_publication_info_from_empty)
+
+
+def test_get_publication_info_from_complex_project():
+    def check_publication_info_from_complex(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        expected = {
+            'name': 'foobar',
+            'commands': {'bar': {'description': 'echo boo'},
+                         'baz': {'description': 'echo blah'},
+                         'foo': {'description': 'echo hi'}},
+            'downloads': {'FOO': {'encrypted': False,
+                                  'title': 'A downloaded file which is referenced by FOO',
+                                  'url': 'https://example.com/blah'}},
+            'environments': {'lol': {'channels': ['bar'],
+                                     'dependencies': ['foo']},
+                             'w00t': {'channels': ['bar'],
+                                      'dependencies': ['foo', 'something']},
+                             'woot': {'channels': ['bar', 'woohoo'],
+                                      'dependencies': ['foo', 'blah']}},
+            'variables': {'SOMETHING': {'encrypted': False,
+                                        'title': 'SOMETHING environment variable must be set'},
+                          'SOMETHING_ELSE': {'encrypted': False,
+                                             'title': 'SOMETHING_ELSE environment variable must be set'}}
+        }
+
+        assert expected == project.publication_info()
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: foobar
+
+commands:
+  foo:
+    shell: echo hi
+  bar:
+    windows: echo boo
+  baz:
+    conda_app_entry: echo blah
+
+dependencies:
+  - foo
+
+channels:
+  - bar
+
+environments:
+  woot:
+    dependencies:
+      - blah
+    channels:
+      - woohoo
+  w00t:
+    dependencies:
+      - something
+  lol: {}
+
+downloads:
+  FOO: https://example.com/blah
+
+runtime:
+  SOMETHING: {}
+  SOMETHING_ELSE: {}
+
+    """}, check_publication_info_from_complex)
