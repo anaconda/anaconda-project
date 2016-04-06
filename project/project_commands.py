@@ -168,10 +168,12 @@ class ProjectCommand(object):
 
     def _choose_args_and_shell(self, environ, extra_args=None):
         if 'notebook' in self._attributes:
-            return ['jupyter-notebook', self._attributes['notebook']], False
+            path = os.path.join(environ['PROJECT_DIR'], self._attributes['notebook'])
+            return ['jupyter-notebook', path], False
 
         if 'bokeh_app' in self._attributes:
-            return ['bokeh', 'serve', self._attributes['bokeh_app']], False
+            path = os.path.join(environ['PROJECT_DIR'], self._attributes['bokeh_app'])
+            return ['bokeh', 'serve', path], False
 
         args = None
         shell = False
