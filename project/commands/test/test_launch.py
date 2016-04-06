@@ -102,7 +102,7 @@ def test_launch_command_no_app_entry(capsys):
 def test_launch_command_nonexistent_project(capsys):
     def check_launch_nonexistent(dirname):
         project_dir = os.path.join(dirname, "nope")
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', project_dir])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--project-dir', project_dir])
 
         assert 1 == result
 
@@ -261,7 +261,8 @@ def test_launch_command_extra_args(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', dirname, 'foo', '$PATH'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--project-dir', dirname, 'foo', '$PATH'
+                                                 ])
 
         assert 1 == result
         assert 'file' in executed
@@ -309,7 +310,8 @@ def test_launch_command_specify_name(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--command', 'foo', dirname])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--command', 'foo', '--project-dir',
+                                                 dirname])
 
         assert 1 == result
         assert 'file' in executed
@@ -350,7 +352,8 @@ def test_launch_command_nonexistent_name(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--command', 'nope', dirname])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--command', 'nope', '--project-dir',
+                                                 dirname])
 
         assert 1 == result
 

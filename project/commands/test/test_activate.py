@@ -135,7 +135,7 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', '--project-dir', dirname])
         assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
