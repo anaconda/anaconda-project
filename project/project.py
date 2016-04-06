@@ -284,7 +284,7 @@ class _ConfigCache(object):
                     copy['conda_app_entry'] = app_entry_from_meta_yaml
 
                 have_command = False
-                for attr in ('conda_app_entry', 'shell', 'windows', 'notebook'):
+                for attr in ('conda_app_entry', 'shell', 'windows', 'notebook', 'bokeh_app'):
                     if attr not in copy:
                         continue
 
@@ -304,9 +304,10 @@ class _ConfigCache(object):
                                     (project_file.filename, name))
                     failed = True
 
-                if 'notebook' in copy and len(copy.keys()) > 1:
-                    problems.append("%s: command '%s' has conflicting statements, 'notebook' must stand alone" %
-                                    (project_file.filename, name))
+                if ('notebook' in copy or 'bokeh_app' in copy) and len(copy.keys()) > 1:
+                    label = 'bokeh_app' if 'bokeh_app' in copy else 'notebook'
+                    problems.append("%s: command '%s' has conflicting statements, '%s' must stand alone" %
+                                    (project_file.filename, name, label))
                     failed = True
 
                 commands[name] = ProjectCommand(name=name, attributes=copy)

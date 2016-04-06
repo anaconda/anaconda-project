@@ -170,6 +170,9 @@ class ProjectCommand(object):
         if 'notebook' in self._attributes:
             return ['jupyter-notebook', self._attributes['notebook']], False
 
+        if 'bokeh_app' in self._attributes:
+            return ['bokeh', 'serve', self._attributes['bokeh_app']], False
+
         args = None
         shell = False
 
