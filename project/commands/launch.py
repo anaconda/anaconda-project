@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+#
+# The full license is in the file LICENSE.txt, distributed with this software.
+# ----------------------------------------------------------------------------
 """The ``launch`` command executes a project, by default without asking questions (fails on missing config)."""
 from __future__ import absolute_import, print_function
 

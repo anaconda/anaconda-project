@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # from urllib3 because it's needed by multipart.py also in this directory
 # https://github.com/shazow/urllib3/blob/4bd2f2aeec323df1c878f9f1aec69ce9d6d01fcd/urllib3/fields.py
 

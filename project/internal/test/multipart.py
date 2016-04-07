@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Multipart encoder from requests-toolbelt
 # https://github.com/sigmavirus24/requests-toolbelt/blob/ef6e0bc12fe406e0bd730b8150deb5267e18fae9/requests_toolbelt/multipart/encoder.py
 

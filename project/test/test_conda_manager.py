@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+#
+# The full license is in the file LICENSE.txt, distributed with this software.
+# ----------------------------------------------------------------------------
 from __future__ import absolute_import
 
 from project.conda_manager import push_conda_manager_class, pop_conda_manager_class, new_conda_manager, CondaManager
