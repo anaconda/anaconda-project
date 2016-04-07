@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+#
+# The full license is in the file LICENSE.txt, distributed with this software.
+# ----------------------------------------------------------------------------
 from project.yaml_file import YamlFile
 from project.internal.test.tmpfile_utils import with_file_contents, with_directory_contents
 

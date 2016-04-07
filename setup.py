@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+#
+# The full license is in the file LICENSE.txt, distributed with this software.
+# ----------------------------------------------------------------------------
 """Setup script."""
 
 from __future__ import print_function
 
+import codecs
 import errno
 import os
 import platform
+import re
 import shutil
 import sys
 import uuid
@@ -65,7 +72,6 @@ def _rename_over_existing(src, dest):
 
 
 def _atomic_replace(path, contents, encoding):
-    import codecs
     import uuid
 
     tmp = path + "tmp-" + str(uuid.uuid4())
@@ -80,6 +86,19 @@ def _atomic_replace(path, contents, encoding):
             os.remove(tmp)
         except (IOError, OSError):
             pass
+
+
+coding_utf8_header = "# -*- coding: utf-8 -*-\n"
+
+copyright_header = """
+# ----------------------------------------------------------------------------
+# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+#
+# The full license is in the file LICENSE.txt, distributed with this software.
+# ----------------------------------------------------------------------------
+""".lstrip()
+
+copyright_re = re.compile('# *Copyright ')
 
 
 class AllTestsCommand(TestCommand):
@@ -110,7 +129,7 @@ class AllTestsCommand(TestCommand):
             for root, dirs, files in os.walk(ROOT):
                 # chop out hidden directories
                 files = [f for f in files if not f[0] == '.']
-                dirs[:] = [d for d in dirs if (d[0] != '.' and d != 'build')]
+                dirs[:] = [d for d in dirs if (d[0] != '.' and d != 'build' and d != '__pycache__')]
                 # now walk files
                 for f in files:
                     if f.endswith(".py"):
@@ -126,14 +145,54 @@ class AllTestsCommand(TestCommand):
                 for d in dirs:
                     init_py = os.path.join(root, d, "__init__.py")
                     if not os.path.exists(init_py):
-                        import codecs
                         print("Creating " + init_py)
                         with codecs.open(init_py, 'w', 'utf-8') as handle:
                             handle.flush()
 
+    def _headerize_file(self, path):
+        with codecs.open(path, 'r', 'utf-8') as file:
+            old_contents = file.read()
+        have_coding = (coding_utf8_header in old_contents)
+        have_copyright = (copyright_re.search(old_contents) is not None)
+        if have_coding and have_copyright:
+            return
+
+        if not have_coding:
+            print("No encoding header comment in " + path)
+            if "encoding_header" not in self.failed:
+                self.failed.append("encoding_header")
+        if not have_copyright:
+            print("No copyright header comment in " + path)
+            if "copyright_header" not in self.failed:
+                self.failed.append("copyright_header")
+
+        # Note: do NOT automatically change the copyright owner or
+        # date.  The copyright owner/date is a statement of legal
+        # reality, not a way to create legal reality. All we do
+        # here is add an owner/date if there is none; if it's
+        # incorrect, the person creating/reviewing the pull
+        # request will need to fix it. If there's already an
+        # owner/date then we leave it as-is assuming someone
+        # has manually chosen it.
+        contents = old_contents
+
+        if not have_copyright:
+            print("Adding copyright header to: " + path)
+            contents = copyright_header + contents
+
+        if not have_coding:
+            print("Adding encoding header to: " + path)
+            contents = coding_utf8_header + contents
+
+        _atomic_replace(path, contents, 'utf-8')
+
+    def _headers(self):
+        print("Checking file headers...")
+        for pyfile in self._py_files():
+            self._headerize_file(pyfile)
+
     def _format_file(self, path):
         import platform
-        import codecs
         from yapf.yapflib.yapf_api import FormatFile
         config = """{
 column_limit : 120
@@ -172,6 +231,7 @@ column_limit : 120
             # print("No reformatting: " + path)
 
     def _yapf(self):
+        print("Formatting files...")
         for pyfile in self._py_files():
             self._format_file(pyfile)
 
@@ -234,6 +294,7 @@ column_limit : 120
 
     def run_tests(self):
         self._add_missing_init_py()
+        self._headers()
         self._yapf()
         self._flake8()
         self._pytest()

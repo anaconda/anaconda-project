@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+#
+# The full license is in the file LICENSE.txt, distributed with this software.
+# ----------------------------------------------------------------------------
 from project.local_state_file import LocalStateFile
 from project.plugins.registry import PluginRegistry
 from project.plugins.requirements.redis import RedisRequirement
