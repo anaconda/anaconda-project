@@ -16,6 +16,7 @@ from project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
 import project.commands.launch as launch
 import project.commands.prepare as prepare
 import project.commands.activate as activate
+import project.commands.variable_commands as variable_commands
 
 
 def _parse_args_and_run_subcommand(argv):
@@ -26,7 +27,7 @@ def _parse_args_and_run_subcommand(argv):
 
     subparsers = parser.add_subparsers(help="Sub-commands")
 
-    def add_common_args(preset):
+    def add_common_args(preset, with_ui=True):
         preset.add_argument('--project',
                             metavar='PROJECT_DIR',
                             default='.',
@@ -36,6 +37,8 @@ def _parse_args_and_run_subcommand(argv):
                             default=None,
                             action='store',
                             help="An environment name from project.yml")
+        if not with_ui:
+            return
         preset.add_argument('--mode',
                             metavar='MODE',
                             default=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
@@ -61,6 +64,17 @@ def _parse_args_and_run_subcommand(argv):
                                    help="Sets up project and outputs shell export commands reflecting the setup.")
     add_common_args(preset)
     preset.set_defaults(main=activate.main)
+
+    preset = subparsers.add_parser('set-variable',
+                                   help="Set an environment variable and adds it to project if not present")
+    preset.add_argument('vars_to_set', metavar='VARS_TO_SET', default=None, nargs=REMAINDER)
+    add_common_args(preset, with_ui=False)
+    preset.set_defaults(main=variable_commands.main, action="set")
+
+    preset = subparsers.add_parser('unset-variable', help="Unset an environment variable and removes it from project")
+    add_common_args(preset, with_ui=False)
+    preset.add_argument('vars_to_unset', metavar='VARS_TO_UNSET', default=None, nargs=REMAINDER)
+    preset.set_defaults(main=variable_commands.main, action="unset")
 
     # argparse doesn't do this for us for whatever reason
     if len(argv) < 2:

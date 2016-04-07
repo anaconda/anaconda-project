@@ -19,16 +19,20 @@ def test_main_no_subcommand(capsys):
 
     out, err = capsys.readouterr()
     assert "" == out
-    assert 'Must specify a subcommand.\nusage: anaconda-project [-h] {launch,prepare,activate} ...\n' == err
+    expected_error_msg = ('Must specify a subcommand.\nusage: anaconda-project [-h]\n'
+                          '                        {launch,prepare,activate,set-variable,unset-variable}\n'
+                          '                        ...\n')
+    assert expected_error_msg == err
 
 
 def test_main_bad_subcommand(capsys):
     code = _parse_args_and_run_subcommand(['project', 'foo'])
 
     out, err = capsys.readouterr()
-    expected_error_msg = ("usage: anaconda-project [-h] {launch,prepare,activate} ...\n"
-                          "anaconda-project: error: invalid choice: 'foo' "
-                          "(choose from 'launch', 'prepare', 'activate')\n")
+    expected_error_msg = ("usage: anaconda-project [-h]\n"
+                          "                        {launch,prepare,activate,set-variable,unset-variable}\n"
+                          "                        ...\nanaconda-project: error: invalid choice: 'foo' "
+                          "(choose from 'launch', 'prepare', 'activate', 'set-variable', 'unset-variable')\n")
     assert expected_error_msg == err
     assert "" == out
 
@@ -36,18 +40,24 @@ def test_main_bad_subcommand(capsys):
 
 
 expected_usage_msg = \
-        'usage: anaconda-project [-h] {launch,prepare,activate} ...\n' \
+        'usage: anaconda-project [-h]\n' \
+        '                        {launch,prepare,activate,set-variable,unset-variable}\n' \
+        '                        ...\n' \
         '\n' \
         'Actions on Anaconda projects.\n' \
         '\n' \
         'positional arguments:\n' \
-        '  {launch,prepare,activate}\n' \
+        '  {launch,prepare,activate,set-variable,unset-variable}\n' \
         '                        Sub-commands\n' \
         '    launch              Runs the project, setting up requirements first.\n' \
         '    prepare             Sets up project requirements but does not run the\n' \
         '                        project.\n' \
         '    activate            Sets up project and outputs shell export commands\n' \
         '                        reflecting the setup.\n' \
+        '    set-variable        Set an environment variable and adds it to project if\n' \
+        '                        not present\n' \
+        '    unset-variable      Unset an environment variable and removes it from\n' \
+        '                        project\n' \
         '\n' \
         'optional arguments:\n' \
         '  -h, --help            show this help message and exit\n'
