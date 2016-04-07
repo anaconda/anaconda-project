@@ -27,7 +27,10 @@ def _parse_args_and_run_subcommand(argv):
     subparsers = parser.add_subparsers(help="Sub-commands")
 
     def add_common_args(preset):
-        preset.add_argument('--project', metavar='PROJECT_DIR', default='.', nargs='?')
+        preset.add_argument('--project',
+                            metavar='PROJECT_DIR',
+                            default='.',
+                            help="Project directory containing project.yml (defaults to current directory)")
         preset.add_argument('--environment',
                             metavar='ENVIRONMENT_NAME',
                             default=None,
