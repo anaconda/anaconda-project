@@ -710,7 +710,7 @@ def test_notebook_command():
         cmd_exec = command.exec_info_for_environment(environ)
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
-        assert cmd_exec.args == [jupyter_notebook, 'test.ipynb']
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb')]
         assert cmd_exec.shell is False
 
     with_directory_contents(
@@ -753,7 +753,7 @@ def test_bokeh_command():
         cmd_exec = command.exec_info_for_environment(environ)
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         bokeh = find_executable('bokeh', path)
-        assert cmd_exec.args == [bokeh, 'serve', 'test.py']
+        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py')]
         assert cmd_exec.shell is False
 
     with_directory_contents(
