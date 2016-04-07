@@ -19,7 +19,7 @@ from project.test.project_utils import project_dir_disable_dedicated_env
 
 class Args(object):
     def __init__(self, **kwargs):
-        self.project_dir = "."
+        self.project = "."
         self.environment = 'default'
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
@@ -82,7 +82,7 @@ def test_main(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        main(Args(project_dir=dirname, mode='browser'))
+        main(Args(project=dirname, mode='browser'))
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
@@ -132,8 +132,7 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project-dir', dirname, '--mode=browser'
-                                               ])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname, '--mode=browser'])
         assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -176,7 +175,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = main(Args(project_dir=dirname))
+        code = main(Args(project=dirname))
         assert 1 == code
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -192,7 +191,7 @@ runtime:
 def test_prepare_command_choose_environment(capsys):
     def check_prepare_choose_environment(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project-dir', dirname,
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname,
                                                  '--environment=bar'])
         assert result == 1
 
@@ -215,7 +214,7 @@ environments:
 def test_prepare_command_choose_environment_does_not_exist(capsys):
     def check_prepare_choose_environment_does_not_exist(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project-dir', dirname,
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname,
                                                  '--environment=nope'])
         assert result == 1
 

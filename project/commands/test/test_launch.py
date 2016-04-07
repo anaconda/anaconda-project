@@ -22,7 +22,7 @@ from project.test.project_utils import project_dir_disable_dedicated_env
 
 class Args(object):
     def __init__(self, **kwargs):
-        self.project_dir = "."
+        self.project = "."
         self.environment = 'default'
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         self.command = None
@@ -102,7 +102,7 @@ def test_launch_command_no_app_entry(capsys):
 def test_launch_command_nonexistent_project(capsys):
     def check_launch_nonexistent(dirname):
         project_dir = os.path.join(dirname, "nope")
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--project-dir', project_dir])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--project', project_dir])
 
         assert 1 == result
 
@@ -145,7 +145,7 @@ def test_main(monkeypatch, capsys):
 
     def check_launch_main(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = main(Args(project_dir=dirname))
+        result = main(Args(project=dirname))
 
         assert 1 == result
         assert 'file' in executed
@@ -176,7 +176,7 @@ def test_main_failed_exec(monkeypatch, capsys):
 
     def check_launch_main(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = main(Args(project_dir=dirname))
+        result = main(Args(project=dirname))
 
         assert 1 == result
 
@@ -261,8 +261,7 @@ def test_launch_command_extra_args(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--project-dir', dirname, 'foo', '$PATH'
-                                                 ])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--project', dirname, 'foo', '$PATH'])
 
         assert 1 == result
         assert 'file' in executed
@@ -310,8 +309,8 @@ def test_launch_command_specify_name(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--command', 'foo', '--project-dir',
-                                                 dirname])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--command', 'foo', '--project', dirname
+                                                 ])
 
         assert 1 == result
         assert 'file' in executed
@@ -352,8 +351,8 @@ def test_launch_command_nonexistent_name(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--command', 'nope', '--project-dir',
-                                                 dirname])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--command', 'nope', '--project', dirname
+                                                 ])
 
         assert 1 == result
 

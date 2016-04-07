@@ -27,7 +27,7 @@ def _parse_args_and_run_subcommand(argv):
     subparsers = parser.add_subparsers(help="Sub-commands")
 
     def add_common_args(preset):
-        preset.add_argument('--project-dir', metavar='PROJECT_DIR', default='.', nargs='?')
+        preset.add_argument('--project', metavar='PROJECT_DIR', default='.', nargs='?')
         preset.add_argument('--environment',
                             metavar='ENVIRONMENT_NAME',
                             default=None,
@@ -71,8 +71,8 @@ def _parse_args_and_run_subcommand(argv):
         return e.code
 
     # 'project_dir' is used for all subcommands now, but may not be always
-    if 'project_dir' in args:
-        args.project_dir = os.path.abspath(args.project_dir)
+    if 'project' in args:
+        args.project = os.path.abspath(args.project)
     return args.main(args)
 
 

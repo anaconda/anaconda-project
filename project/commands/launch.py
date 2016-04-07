@@ -36,6 +36,6 @@ def launch_command(project_dir, ui_mode, conda_environment, command, extra_comma
 
 def main(args):
     """Start the launch command and return exit status code.."""
-    launch_command(args.project_dir, args.mode, args.environment, args.command, args.extra_args_for_command)
+    launch_command(args.project, args.mode, args.environment, args.command, args.extra_args_for_command)
     # if we returned, we failed to launch the command and should have printed an error
     return 1
