@@ -17,7 +17,7 @@ install:
   - conda install -y bokeh
 
 test:
-  - python setup.py test
+  - LANG=en_US.UTF-8 python setup.py test
 
 script:
   - conda build conda.recipe
