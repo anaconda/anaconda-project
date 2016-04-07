@@ -723,6 +723,30 @@ def test_notebook_command():
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check_notebook_command)
 
 
+def test_notebook_guess_command():
+    def check_notebook_guess_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 'test.ipynb' in project.commands
+        command = project.commands['test.ipynb']
+        expected_nb_path = os.path.join(dirname, 'test.ipynb')
+        assert command._attributes == {'notebook': expected_nb_path}
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(environ)
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        jupyter_notebook = find_executable('jupyter-notebook', path)
+        assert cmd_exec.args == [jupyter_notebook, expected_nb_path]
+        assert cmd_exec.shell is False
+
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    shell: echo 'pass'",
+            'test.ipynb': 'pretend there is notebook data here'
+        }, check_notebook_guess_command)
+
+    # anaconda-project launch --command data.ipynb
+
+
 def test_notebook_command_conflict():
     def check_notebook_conflict_command(dirname):
         project = project_no_dedicated_env(dirname)

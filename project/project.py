@@ -318,6 +318,8 @@ class _ConfigCache(object):
 
                 commands[name] = ProjectCommand(name=name, attributes=copy)
 
+        self._add_notebook_commands(commands)
+
         if failed:
             self.commands = dict()
             self.default_command_name = None
@@ -341,6 +343,12 @@ class _ConfigCache(object):
                                 (self.default_default_command_name, project_file.filename,
                                  ", ".join(sorted(self.commands.keys()))))
                 self.default_command_name = None
+
+    def _add_notebook_commands(self, commands):
+        for dirpath, dirname, filenames in os.walk(self.directory_path):
+            for fname in filenames:
+                if fname.endswith('.ipynb') and fname not in commands:
+                    commands[fname] = ProjectCommand(name=fname, attributes={'notebook': os.path.join(dirpath, fname)})
 
 
 class Project(object):
