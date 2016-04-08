@@ -82,11 +82,11 @@ def test_main_help_via_entry_point(capsys, monkeypatch):
 def _main_calls_subcommand(monkeypatch, capsys, subcommand):
     def mock_subcommand_main(subcommand, args):
         print("Hi I am subcommand {}".format(subcommand))
-        assert args.project_dir == os.path.abspath('MYPROJECT')
+        assert args.project == os.path.abspath('MYPROJECT')
         return 27
 
     monkeypatch.setattr('project.commands.{}.main'.format(subcommand), partial(mock_subcommand_main, subcommand))
-    code = _parse_args_and_run_subcommand(['anaconda-project', subcommand, 'MYPROJECT'])
+    code = _parse_args_and_run_subcommand(['anaconda-project', subcommand, '--project', 'MYPROJECT'])
 
     assert 27 == code
 

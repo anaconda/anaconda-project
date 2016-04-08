@@ -25,7 +25,7 @@ def prepare_command(project_dir, ui_mode, conda_environment):
 
 def main(args):
     """Start the prepare command and return exit status code."""
-    if prepare_command(args.project_dir, args.mode, args.environment):
+    if prepare_command(args.project, args.mode, args.environment):
         return 0
     else:
         return 1

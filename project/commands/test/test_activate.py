@@ -23,7 +23,7 @@ from project.test.project_utils import project_dir_disable_dedicated_env
 
 class Args(object):
     def __init__(self, **kwargs):
-        self.project_dir = "."
+        self.project = "."
         self.environment = 'default'
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
@@ -85,7 +85,7 @@ def test_main(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        main(Args(project_dir=dirname))
+        main(Args(project=dirname))
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
@@ -135,7 +135,7 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', '--project', dirname])
         assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -166,7 +166,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = main(Args(project_dir=dirname))
+        code = main(Args(project=dirname))
         assert 1 == code
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """

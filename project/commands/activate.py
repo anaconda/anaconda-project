@@ -45,7 +45,7 @@ def activate(dirname, ui_mode, conda_environment):
 
 def main(args):
     """Start the activate command and return exit status code."""
-    result = activate(args.project_dir, args.mode, args.environment)
+    result = activate(args.project, args.mode, args.environment)
     if result is None:
         return 1
     else:
