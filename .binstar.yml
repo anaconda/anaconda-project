@@ -38,7 +38,7 @@ install:
   - conda install -y -q pycrypto bcrypt ipython-notebook bokeh
 
 test:
-  - LANG=en_US.UTF-8 python setup.py test
+  - python setup.py test
 
 script:
   - conda build conda.recipe
