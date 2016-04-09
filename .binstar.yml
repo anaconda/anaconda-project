@@ -1,8 +1,11 @@
+# not sure how to fix the cut-and-paste between Windows and Linux here.
+# Effectively we have two separate config files.
+
+# Linux config
+
 package: anaconda_project
 
-platform:
-  - linux-64
-  - win-64
+platform: linux-64
 
 engine:
   - python=3.5
@@ -10,11 +13,7 @@ engine:
 install:
   - conda install -y -q pip
   - pip install coverage flake8 pep257 pytest pytest-cov yapf beautifulsoup4 ruamel.yaml tornado
-  - conda install -y -q pycrypto
-  - conda install -y -q bcrypt
-  - conda install -y redis
-  - conda install -y ipython-notebook
-  - conda install -y bokeh
+  - conda install -y -q redis pycrypto bcrypt ipython-notebook bokeh libffi
 
 test:
   - LANG=en_US.UTF-8 python setup.py test
@@ -23,3 +22,31 @@ script:
   - conda build conda.recipe
 
 build_targets: [conda]
+
+--- # Windows config starts here
+
+package: anaconda_project
+
+platform: win-64
+
+engine:
+  - python=3.5
+
+install:
+  - conda install -y -q pip
+  - pip install coverage flake8 pep257 pytest pytest-cov yapf beautifulsoup4 ruamel.yaml tornado
+  - conda install -y -q pycrypto bcrypt ipython-notebook bokeh
+
+test:
+  - python setup.py test
+
+script:
+  - conda build conda.recipe
+
+build_targets: [conda]
+
+--- # disable Linux python2; I don't know where this comes from in the first place
+
+platform: linux-64
+engine: python=2
+exclude: true
