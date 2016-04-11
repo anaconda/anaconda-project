@@ -4,7 +4,7 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-"""The ``prepare`` command configures a project to run, asking the user questions if necessary."""
+"""Commands related to setting and unsetting variables."""
 from __future__ import absolute_import, print_function
 
 import sys
