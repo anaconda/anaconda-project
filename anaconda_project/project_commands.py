@@ -122,7 +122,8 @@ def _append_extra_args_to_command_line(command, extra_args):
         return command
     else:
         if _is_windows():  # pragma: no cover
-            from project.internal.windows_cmdline import (windows_split_command_line, windows_join_command_line)
+            from anaconda_project.internal.windows_cmdline import (windows_split_command_line,
+                                                                   windows_join_command_line)
             args = windows_split_command_line(command)
             return windows_join_command_line(args + extra_args)
         else:

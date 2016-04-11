@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 import json
 import pytest
 
-import project.internal.crypto as crypto
+import anaconda_project.internal.crypto as crypto
 
 
 def test_round_trip():

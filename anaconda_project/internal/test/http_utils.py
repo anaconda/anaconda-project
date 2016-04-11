@@ -6,7 +6,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-from project.internal.test.multipart import MultipartEncoder
+from anaconda_project.internal.test.multipart import MultipartEncoder
 
 from tornado import gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest

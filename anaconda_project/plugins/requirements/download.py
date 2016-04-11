@@ -11,8 +11,8 @@ from __future__ import absolute_import, print_function
 import hashlib
 import os
 
-from project.plugins.requirement import EnvVarRequirement
-from project.plugins.network_util import urlparse
+from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.network_util import urlparse
 
 _hash_algorithms = ('md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512')
 

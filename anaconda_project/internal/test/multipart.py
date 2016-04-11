@@ -28,7 +28,7 @@ import io
 import os
 from uuid import uuid4
 
-import project.internal.test.fields as fields
+import anaconda_project.internal.test.fields as fields
 
 
 class MultipartEncoder(object):

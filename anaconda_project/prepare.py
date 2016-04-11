@@ -14,12 +14,13 @@ import subprocess
 import sys
 from copy import copy, deepcopy
 
-from project.internal.metaclass import with_metaclass
-from project.internal.prepare_ui import prepare_text, prepare_browser
-from project.internal.toposort import toposort_from_dependency_info
-from project.local_state_file import LocalStateFile
-from project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT, PROVIDE_MODE_PRODUCTION, PROVIDE_MODE_CHECK)
-from project.plugins.provider import ProvideContext
+from anaconda_project.internal.metaclass import with_metaclass
+from anaconda_project.internal.prepare_ui import prepare_text, prepare_browser
+from anaconda_project.internal.toposort import toposort_from_dependency_info
+from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT, PROVIDE_MODE_PRODUCTION,
+                                      PROVIDE_MODE_CHECK)
+from anaconda_project.plugins.provider import ProvideContext
 
 # these UI_MODE_ strings are used as values for command line options, so they are user-visible
 
@@ -153,7 +154,7 @@ class ConfigurePrepareContext(object):
         self.local_state_file = local_state_file
         self.statuses = statuses
         if len(statuses) > 0:
-            from project.plugins.requirement import RequirementStatus
+            from anaconda_project.plugins.requirement import RequirementStatus
             assert isinstance(statuses[0], RequirementStatus)
 
 

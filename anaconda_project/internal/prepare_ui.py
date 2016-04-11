@@ -25,7 +25,7 @@ def _default_show_url(url):
 
 def prepare_browser(project, stage, io_loop, show_url):
     from tornado.ioloop import IOLoop
-    from project.internal.ui_server import UIServer, UIServerDoneEvent
+    from anaconda_project.internal.ui_server import UIServer, UIServerDoneEvent
 
     result_holder = {}
     old_current_loop = None
@@ -58,6 +58,6 @@ def prepare_browser(project, stage, io_loop, show_url):
     if 'result' in result_holder:
         return result_holder['result']
     else:
-        from project.prepare import PrepareFailure
+        from anaconda_project.prepare import PrepareFailure
         # this pretty much only happens in unit tests.
         return PrepareFailure(logs=[], errors=["Browser UI main loop was stopped."])

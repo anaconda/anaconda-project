@@ -9,16 +9,17 @@ from __future__ import absolute_import
 import os
 import platform
 
-import project.internal.conda_api as conda_api
-from project.test.environ_utils import (minimal_environ, minimal_environ_no_conda_env, strip_environ_keeping_conda_env)
-from project.internal.test.http_utils import http_get_async, http_post_async
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
-from project.prepare import prepare, UI_MODE_BROWSER, UI_MODE_TEXT_ASSUME_NO
-from project.project_file import DEFAULT_PROJECT_FILENAME
-from project.project import Project
-from project.plugins.registry import PluginRegistry
-from project.plugins.providers.conda_env import CondaEnvProvider
+import anaconda_project.internal.conda_api as conda_api
+from anaconda_project.test.environ_utils import (minimal_environ, minimal_environ_no_conda_env,
+                                                 strip_environ_keeping_conda_env)
+from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
+from anaconda_project.prepare import prepare, UI_MODE_BROWSER, UI_MODE_TEXT_ASSUME_NO
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.project import Project
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.providers.conda_env import CondaEnvProvider
 
 from tornado import gen
 
@@ -90,7 +91,7 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
     def mock_create(prefix, pkgs, channels):
         raise conda_api.CondaError("error_from_conda_create")
 
-    monkeypatch.setattr('project.internal.conda_api.create', mock_create)
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
     def prepare_project_scoped_env_fails(dirname):
         project = Project(dirname)
@@ -105,7 +106,7 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
     def mock_create(prefix, pkgs, channels):
         raise Exception("Should not have attempted to create env")
 
-    monkeypatch.setattr('project.internal.conda_api.create', mock_create)
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
     def prepare_project_scoped_env_not_attempted(dirname):
         project = Project(dirname)
@@ -171,14 +172,14 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
     io_loop = IOLoop()
 
     def mock_conda_create(prefix, pkgs, channels):
-        from project.internal.makedirs import makedirs_ok_if_exists
+        from anaconda_project.internal.makedirs import makedirs_ok_if_exists
         metadir = os.path.join(prefix, "conda-meta")
         makedirs_ok_if_exists(metadir)
         for p in pkgs:
             pkgmeta = os.path.join(metadir, "%s-0.1.json" % p)
             open(pkgmeta, 'a').close()
 
-    monkeypatch.setattr('project.internal.conda_api.create', mock_conda_create)
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_conda_create)
 
     http_done = dict()
 
@@ -226,7 +227,7 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
 
 
 def _extract_radio_items(response):
-    from project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
+    from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
     from bs4 import BeautifulSoup
 
     if response.code != 200:
@@ -238,7 +239,7 @@ def _extract_radio_items(response):
 
 
 def _form_names(response):
-    from project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
+    from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
     from bs4 import BeautifulSoup
 
     if response.code != 200:

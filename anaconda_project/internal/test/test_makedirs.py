@@ -9,8 +9,8 @@ from __future__ import absolute_import, print_function
 import os
 import pytest
 
-from project.internal.makedirs import makedirs_ok_if_exists
-from project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.makedirs import makedirs_ok_if_exists
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 
 def test_makedirs_ok_if_exists():

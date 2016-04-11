@@ -4,8 +4,8 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-from project.yaml_file import YamlFile
-from project.internal.test.tmpfile_utils import with_file_contents, with_directory_contents
+from anaconda_project.yaml_file import YamlFile
+from anaconda_project.internal.test.tmpfile_utils import with_file_contents, with_directory_contents
 
 import errno
 import os

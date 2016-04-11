@@ -10,7 +10,7 @@ from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 
-from project.internal.metaclass import with_metaclass
+from anaconda_project.internal.metaclass import with_metaclass
 
 
 class RequirementStatus(with_metaclass(ABCMeta)):

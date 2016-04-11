@@ -8,13 +8,13 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from project.commands.main import _parse_args_and_run_subcommand
-from project.commands.prepare import prepare_command, main
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
-from project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.commands.main import _parse_args_and_run_subcommand
+from anaconda_project.commands.prepare import prepare_command, main
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
-from project.test.project_utils import project_dir_disable_dedicated_env
+from anaconda_project.test.project_utils import project_dir_disable_dedicated_env
 
 
 class Args(object):
@@ -35,7 +35,7 @@ def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
         can_connect_args['timeout_seconds'] = timeout_seconds
         return True
 
-    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
 
     return can_connect_args
 
@@ -61,7 +61,7 @@ def _monkeypatch_open_new_tab(monkeypatch):
     http_results = {}
 
     def mock_open_new_tab(url):
-        from project.internal.test.http_utils import http_get_async, http_post_async
+        from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
         from tornado import gen
 
         @gen.coroutine
@@ -154,14 +154,14 @@ def _monkeypatch_can_connect_to_socket_to_fail_to_find_redis(monkeypatch):
         else:
             return True  # can't start a custom Redis here
 
-    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
 
 
 def test_main_fails_to_redis(monkeypatch, capsys):
     _monkeypatch_can_connect_to_socket_to_fail_to_find_redis(monkeypatch)
     _monkeypatch_open_new_tab(monkeypatch)
 
-    from project.prepare import prepare as real_prepare
+    from anaconda_project.prepare import prepare as real_prepare
 
     def _mock_prepare_do_not_keep_going(project,
                                         environ=None,
@@ -171,7 +171,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
                                         show_url=None):
         return real_prepare(project, environ, ui_mode, False, io_loop, show_url)
 
-    monkeypatch.setattr('project.prepare.prepare', _mock_prepare_do_not_keep_going)
+    monkeypatch.setattr('anaconda_project.prepare.prepare', _mock_prepare_do_not_keep_going)
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)

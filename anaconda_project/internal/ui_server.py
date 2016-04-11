@@ -15,7 +15,7 @@ from tornado.httpserver import HTTPServer
 from tornado.netutil import bind_sockets
 from tornado.web import Application, RequestHandler
 
-from project.internal.plugin_html import cleanup_and_scope_form, html_tag
+from anaconda_project.internal.plugin_html import cleanup_and_scope_form, html_tag
 
 
 class UIServerEvent(object):

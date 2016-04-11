@@ -8,17 +8,17 @@ from __future__ import absolute_import
 
 import os
 
-from project.test.project_utils import project_no_dedicated_env
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.test.environ_utils import minimal_environ, strip_environ
-from project.internal.test.http_utils import http_get_async, http_post_async
-from project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
-from project.local_state_file import LocalStateFile
-from project.plugins.registry import PluginRegistry
-from project.plugins.providers.download import DownloadProvider
-from project.plugins.requirements.download import DownloadRequirement
-from project.prepare import prepare, UI_MODE_BROWSER, UI_MODE_TEXT_ASSUME_NO
-from project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.test.environ_utils import minimal_environ, strip_environ
+from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
+from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
+from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.providers.download import DownloadProvider
+from anaconda_project.plugins.requirements.download import DownloadRequirement
+from anaconda_project.prepare import prepare, UI_MODE_BROWSER, UI_MODE_TEXT_ASSUME_NO
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 from tornado import gen
 
@@ -52,9 +52,9 @@ def test_prepare_download(monkeypatch):
         def mock_checksum(self, fp):
             return None
 
-        monkeypatch.setattr("project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr("project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none",
-                            mock_checksum)
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        monkeypatch.setattr(
+            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
         project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
@@ -69,7 +69,7 @@ def test_prepare_download_exception(monkeypatch):
         def mock_downloader_run(self, loop):
             raise Exception('error')
 
-        monkeypatch.setattr("project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
         project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert not result
@@ -97,9 +97,9 @@ def test_provide_minimal(monkeypatch):
         def mock_checksum(self, fp):
             return None
 
-        monkeypatch.setattr("project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr("project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none",
-                            mock_checksum)
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        monkeypatch.setattr(
+            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
         project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
@@ -116,7 +116,7 @@ def test_provide_no_download_in_check_mode(monkeypatch):
         def mock_downloader_run(self, loop):
             raise Exception("should not have tried to download in check mode")
 
-        monkeypatch.setattr("project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
 
         project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname), ui_mode=UI_MODE_TEXT_ASSUME_NO)
@@ -184,7 +184,7 @@ def test_failed_download(monkeypatch):
             res.code = 400
             raise gen.Return(res)
 
-        monkeypatch.setattr("project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
         project = project_no_dedicated_env(dirname)
         result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert not result
@@ -208,8 +208,8 @@ def test_file_exists(monkeypatch):
         def mock_checksum(self, fp):
             return None
 
-        monkeypatch.setattr("project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none",
-                            mock_checksum)
+        monkeypatch.setattr(
+            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
         result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
         assert 'DATAFILE' in result.environ
@@ -262,7 +262,7 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
             res.code = 200
         raise gen.Return(res)
 
-    monkeypatch.setattr("project.internal.http_client.FileDownloader.run", mock_downloader_run)
+    monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
 
     replaced = dict()
     for key, value in directory_contents.items():
@@ -319,7 +319,7 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
 
 
 def _extract_radio_items(response):
-    from project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
+    from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
     from bs4 import BeautifulSoup
 
     if response.code != 200:
@@ -331,7 +331,7 @@ def _extract_radio_items(response):
 
 
 def _form_names(response):
-    from project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
+    from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
     from bs4 import BeautifulSoup
 
     if response.code != 200:

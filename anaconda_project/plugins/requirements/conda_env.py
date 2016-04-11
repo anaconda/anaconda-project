@@ -10,8 +10,8 @@ from __future__ import absolute_import, print_function
 import os
 import platform
 
-from project.plugins.requirement import EnvVarRequirement
-from project.conda_manager import new_conda_manager, CondaManagerError
+from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.conda_manager import new_conda_manager, CondaManagerError
 
 
 class CondaEnvRequirement(EnvVarRequirement):

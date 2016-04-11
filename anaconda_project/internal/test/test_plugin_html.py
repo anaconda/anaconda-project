@@ -4,7 +4,7 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-from project.internal.plugin_html import cleanup_and_scope_form, html_tag
+from anaconda_project.internal.plugin_html import cleanup_and_scope_form, html_tag
 
 import pytest
 

@@ -9,14 +9,14 @@ from __future__ import absolute_import, print_function
 import os
 import platform
 
-from project.test.project_utils import project_dir_disable_dedicated_env
-from project.test.environ_utils import minimal_environ, minimal_environ_no_conda_env
-from project.conda_environment import CondaEnvironment
-from project.local_state_file import LocalStateFile
-from project.plugins.registry import PluginRegistry
-from project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.test.project_utils import project_dir_disable_dedicated_env
+from anaconda_project.test.environ_utils import minimal_environ, minimal_environ_no_conda_env
+from anaconda_project.conda_environment import CondaEnvironment
+from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 
-from project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 if platform.system() == 'Windows':
     conda_env_var = 'CONDA_DEFAULT_ENV'
@@ -84,10 +84,10 @@ def test_conda_default_env_is_bogus():
 def test_conda_fails_while_listing_installed(monkeypatch):
     def check_fails_while_listing_installed(dirname):
         def sabotaged_installed_command(prefix):
-            from project.internal import conda_api
+            from anaconda_project.internal import conda_api
             raise conda_api.CondaError("sabotage!")
 
-        monkeypatch.setattr('project.internal.conda_api.installed', sabotaged_installed_command)
+        monkeypatch.setattr('anaconda_project.internal.conda_api.installed', sabotaged_installed_command)
 
         project_dir_disable_dedicated_env(dirname)
         local_state = LocalStateFile.load_for_directory(dirname)

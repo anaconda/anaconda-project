@@ -4,10 +4,10 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-from project.plugins.registry import PluginRegistry
-from project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirement import EnvVarRequirement
 
-from project.internal.test.tmpfile_utils import tmp_local_state_file
+from anaconda_project.internal.test.tmpfile_utils import tmp_local_state_file
 
 
 def test_find_by_env_var_unknown():

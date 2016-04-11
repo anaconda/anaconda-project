@@ -9,15 +9,15 @@ from __future__ import absolute_import
 
 import os
 
-from project.conda_environment import CondaEnvironment
-from project.conda_meta_file import CondaMetaFile, META_DIRECTORY
-from project.local_state_file import LocalStateFile
-from project.plugins.registry import PluginRegistry
-from project.plugins.requirement import EnvVarRequirement
-from project.plugins.requirements.conda_env import CondaEnvRequirement
-from project.plugins.requirements.download import DownloadRequirement
-from project.project_commands import ProjectCommand
-from project.project_file import ProjectFile
+from anaconda_project.conda_environment import CondaEnvironment
+from anaconda_project.conda_meta_file import CondaMetaFile, META_DIRECTORY
+from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.plugins.requirements.download import DownloadRequirement
+from anaconda_project.project_commands import ProjectCommand
+from anaconda_project.project_file import ProjectFile
 
 
 class _ConfigCache(object):

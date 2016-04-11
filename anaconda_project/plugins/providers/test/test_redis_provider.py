@@ -10,16 +10,16 @@ import codecs
 import os
 import platform
 
-from project.test.project_utils import project_no_dedicated_env
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.test.environ_utils import minimal_environ, strip_environ
-from project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
-from project.local_state_file import LocalStateFile
-from project.plugins.registry import PluginRegistry
-from project.plugins.providers.redis import RedisProvider
-from project.plugins.requirements.redis import RedisRequirement
-from project.prepare import prepare, unprepare, UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_NO
-from project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.test.environ_utils import minimal_environ, strip_environ
+from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
+from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.providers.redis import RedisProvider
+from anaconda_project.plugins.requirements.redis import RedisRequirement
+from anaconda_project.prepare import prepare, unprepare, UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_NO
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 
 def _redis_requirement():
@@ -138,7 +138,7 @@ def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
         can_connect_args['timeout_seconds'] = timeout_seconds
         return True
 
-    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
 
     return can_connect_args
 
@@ -191,7 +191,7 @@ def _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, rea
         else:
             return real_can_connect_to_socket(host, port, timeout_seconds)
 
-    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
 
     return can_connect_args_list
 
@@ -203,7 +203,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         print("Cannot start redis-server on Windows")
         return
 
-    from project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     can_connect_args_list = _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch,
                                                                                         real_can_connect_to_socket)
@@ -251,7 +251,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         print("Cannot start redis-server on Windows")
         return
 
-    from project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     can_connect_args_list = _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch,
                                                                                         real_can_connect_to_socket)
@@ -323,7 +323,7 @@ def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
         print("Cannot start redis-server on Windows")
         return
 
-    from project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
 
@@ -389,7 +389,7 @@ def _monkeypatch_can_connect_to_socket_always_succeeds_on_nonstandard(monkeypatc
         can_connect_args_list.append(can_connect_args)
         return port != 6379
 
-    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
 
     return can_connect_args_list
 
@@ -461,7 +461,7 @@ def _monkeypatch_can_connect_to_socket_always_fails(monkeypatch):
     def mock_can_connect_to_socket(host, port, timeout_seconds=0.5):
         return False
 
-    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
 
 
 def test_fail_to_prepare_local_redis_server_scope_system(monkeypatch, capsys):
@@ -520,7 +520,7 @@ runtime:
 def _fail_to_prepare_local_redis_server_exec_fails(monkeypatch, capsys, logfile_fail_mode):
     # this test will fail if you don't have Redis installed, since
     # it actually starts it.
-    from project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
 

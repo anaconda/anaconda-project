@@ -4,11 +4,11 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-from project.local_state_file import LocalStateFile
-from project.plugins.registry import PluginRegistry
-from project.plugins.requirements.redis import RedisRequirement
+from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirements.redis import RedisRequirement
 
-from project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 
 def test_find_by_env_var_redis():
@@ -49,7 +49,7 @@ def _monkeypatch_can_connect_to_socket_fails(monkeypatch):
         can_connect_args_list.append(can_connect_args)
         return False
 
-    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
 
     return can_connect_args_list
 

@@ -9,8 +9,8 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from project.prepare import prepare
-from project.project import Project
+from anaconda_project.prepare import prepare
+from anaconda_project.project import Project
 
 
 def launch_command(project_dir, ui_mode, conda_environment, command, extra_command_args):

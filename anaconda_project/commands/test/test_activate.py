@@ -11,14 +11,14 @@ try:
 except ImportError:
     from pipes import quote
 
-from project.commands.main import _parse_args_and_run_subcommand
-from project.commands.activate import activate, main
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
-from project.project_file import DEFAULT_PROJECT_FILENAME
-from project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
+from anaconda_project.commands.main import _parse_args_and_run_subcommand
+from anaconda_project.commands.activate import activate, main
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 
-from project.test.project_utils import project_dir_disable_dedicated_env
+from anaconda_project.test.project_utils import project_dir_disable_dedicated_env
 
 
 class Args(object):
@@ -39,7 +39,7 @@ def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
         can_connect_args['timeout_seconds'] = timeout_seconds
         return True
 
-    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
 
     return can_connect_args
 
@@ -158,7 +158,7 @@ def _monkeypatch_can_connect_to_socket_to_fail_to_find_redis(monkeypatch):
         else:
             return True  # can't start a custom Redis here
 
-    monkeypatch.setattr("project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
 
 
 def test_main_fails_to_redis(monkeypatch, capsys):

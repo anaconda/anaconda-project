@@ -11,9 +11,9 @@ import os
 
 from tornado.ioloop import IOLoop
 
-from project.internal.http_client import FileDownloader
-from project.plugins.provider import EnvVarProvider, ProviderAnalysis
-from project.provide import PROVIDE_MODE_CHECK
+from anaconda_project.internal.http_client import FileDownloader
+from anaconda_project.plugins.provider import EnvVarProvider, ProviderAnalysis
+from anaconda_project.provide import PROVIDE_MODE_CHECK
 
 
 class _DownloadProviderAnalysis(ProviderAnalysis):

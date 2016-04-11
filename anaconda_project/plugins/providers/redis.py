@@ -14,9 +14,9 @@ import subprocess
 import sys
 import time
 
-from project.plugins.provider import EnvVarProvider, ProviderAnalysis
-import project.plugins.network_util as network_util
-from project.provide import PROVIDE_MODE_DEVELOPMENT
+from anaconda_project.plugins.provider import EnvVarProvider, ProviderAnalysis
+import anaconda_project.plugins.network_util as network_util
+from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
 
 _DEFAULT_SYSTEM_REDIS_HOST = "localhost"
 _DEFAULT_SYSTEM_REDIS_PORT = 6379

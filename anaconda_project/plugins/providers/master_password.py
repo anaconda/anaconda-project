@@ -7,8 +7,8 @@
 """Master password provider."""
 from __future__ import absolute_import, print_function
 
-from project.plugins.provider import Provider
-from project.internal import keyring
+from anaconda_project.plugins.provider import Provider
+from anaconda_project.internal import keyring
 
 
 class MasterPasswordProvider(Provider):

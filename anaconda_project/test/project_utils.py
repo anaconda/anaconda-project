@@ -6,8 +6,8 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-from project.project import Project
-from project.local_state_file import LocalStateFile
+from anaconda_project.project import Project
+from anaconda_project.local_state_file import LocalStateFile
 
 
 def project_dir_disable_dedicated_env(dirname):

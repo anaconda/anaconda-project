@@ -9,15 +9,15 @@ from __future__ import absolute_import, print_function
 from bs4 import BeautifulSoup
 from tornado.ioloop import IOLoop
 
-from project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
-from project.project import Project
-from project.prepare import ConfigurePrepareContext, _FunctionPrepareStage, PrepareSuccess
-from project.internal.test.http_utils import http_get, http_post
-from project.internal.test.multipart import MultipartEncoder
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.internal.ui_server import UIServer, UIServerDoneEvent
-from project.local_state_file import LocalStateFile
-from project.plugins.requirement import EnvVarRequirement
+from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
+from anaconda_project.project import Project
+from anaconda_project.prepare import ConfigurePrepareContext, _FunctionPrepareStage, PrepareSuccess
+from anaconda_project.internal.test.http_utils import http_get, http_post
+from anaconda_project.internal.test.multipart import MultipartEncoder
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.ui_server import UIServer, UIServerDoneEvent
+from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.plugins.requirement import EnvVarRequirement
 
 
 def _no_op_prepare(config_context):

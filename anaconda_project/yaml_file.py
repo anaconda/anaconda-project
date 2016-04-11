@@ -18,8 +18,8 @@ import errno
 import os
 import uuid
 
-from project.internal.makedirs import makedirs_ok_if_exists
-from project.internal.rename import rename_over_existing
+from anaconda_project.internal.makedirs import makedirs_ok_if_exists
+from anaconda_project.internal.rename import rename_over_existing
 
 
 def _atomic_replace(path, contents, encoding='utf-8'):

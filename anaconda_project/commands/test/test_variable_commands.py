@@ -8,9 +8,9 @@ from __future__ import absolute_import, print_function
 
 import pytest
 
-from project.commands.variable_commands import main
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.commands.variable_commands import main
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 
 class Args(object):
@@ -30,7 +30,7 @@ def test_set_variable_command(monkeypatch):
         params.append(_vars)
         return True
 
-    monkeypatch.setattr('project.project.Project.set_variables', mock_project_set_variables)
+    monkeypatch.setattr('anaconda_project.project.Project.set_variables', mock_project_set_variables)
 
     args = Args('set', vars_to_set=['foo=bar', 'baz=qux'])
     res = main(args)
@@ -66,7 +66,7 @@ def test_set_variable_command_bad(monkeypatch, capsys):
         params.append(_vars)
         return True
 
-    monkeypatch.setattr('project.project.Project.set_variables', mock_project_set_variables)
+    monkeypatch.setattr('anaconda_project.project.Project.set_variables', mock_project_set_variables)
 
     args = Args('set', vars_to_set=['foo=bar', 'baz'])
     res = main(args)

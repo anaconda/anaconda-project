@@ -6,7 +6,7 @@
 # ----------------------------------------------------------------------------
 """Requirement for a master password used to store encrypted credentials."""
 
-from project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirement import EnvVarRequirement
 
 
 class MasterPasswordRequirement(EnvVarRequirement):

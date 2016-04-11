@@ -10,15 +10,15 @@ import os
 
 import pytest
 
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.internal.crypto import encrypt_string
-from project.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
-from project.plugins.provider import Provider, ProvideContext, EnvVarProvider
-from project.plugins.registry import PluginRegistry
-from project.plugins.requirement import EnvVarRequirement
-from project.project import Project
-from project.provide import PROVIDE_MODE_DEVELOPMENT
-from project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.crypto import encrypt_string
+from anaconda_project.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
+from anaconda_project.plugins.provider import Provider, ProvideContext, EnvVarProvider
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.project import Project
+from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
+from anaconda_project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME
 
 
 def test_find_provider_by_class_name():

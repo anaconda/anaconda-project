@@ -15,16 +15,16 @@ import subprocess
 
 import pytest
 
-from project.conda_meta_file import DEFAULT_RELATIVE_META_PATH, META_DIRECTORY
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.local_state_file import LocalStateFile
-from project.plugins.registry import PluginRegistry
-from project.plugins.requirement import EnvVarRequirement
-from project.plugins.requirements.conda_env import CondaEnvRequirement
-from project.project import Project
-from project.project_file import DEFAULT_PROJECT_FILENAME
-from project.test.environ_utils import minimal_environ
-from project.test.project_utils import project_no_dedicated_env
+from anaconda_project.conda_meta_file import DEFAULT_RELATIVE_META_PATH, META_DIRECTORY
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.project import Project
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.test.environ_utils import minimal_environ
+from anaconda_project.test.project_utils import project_no_dedicated_env
 
 
 def test_properties():

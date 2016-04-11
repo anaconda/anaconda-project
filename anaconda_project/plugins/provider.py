@@ -11,9 +11,9 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 import os
 
-from project.internal.metaclass import with_metaclass
-from project.internal.makedirs import makedirs_ok_if_exists
-from project.internal.crypto import encrypt_string, decrypt_string
+from anaconda_project.internal.metaclass import with_metaclass
+from anaconda_project.internal.makedirs import makedirs_ok_if_exists
+from anaconda_project.internal.crypto import encrypt_string, decrypt_string
 
 
 class ProvideContext(object):

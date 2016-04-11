@@ -12,8 +12,8 @@ import shutil
 import os
 import sys
 
-from project.internal.makedirs import makedirs_ok_if_exists
-from project.local_state_file import LocalStateFile
+from anaconda_project.internal.makedirs import makedirs_ok_if_exists
+from anaconda_project.local_state_file import LocalStateFile
 
 local_tmp = os.path.abspath("./build/tmp")
 makedirs_ok_if_exists(local_tmp)

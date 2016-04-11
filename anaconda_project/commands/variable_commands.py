@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from project.project import Project
+from anaconda_project.project import Project
 
 
 def set_variables(project_dir, conda_environment, vars_to_set):

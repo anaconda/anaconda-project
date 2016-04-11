@@ -6,15 +6,15 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.local_state_file import LocalStateFile
-from project.plugins.provider import ProvideContext
-from project.provide import PROVIDE_MODE_DEVELOPMENT
-from project.plugins.registry import PluginRegistry
-from project.project import Project
-from project.project_file import DEFAULT_PROJECT_FILENAME
-from project.plugins.requirements.master_password import MasterPasswordRequirement
-from project.plugins.providers.master_password import MasterPasswordProvider
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.plugins.provider import ProvideContext
+from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.project import Project
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.plugins.requirements.master_password import MasterPasswordRequirement
+from anaconda_project.plugins.providers.master_password import MasterPasswordProvider
 
 
 def test_find_by_class_name():
@@ -84,7 +84,7 @@ runtime:
 
 def test_master_password_provider_with_value_set_in_keyring():
     def check_set_in_keyring(dirname):
-        from project.internal import keyring
+        from anaconda_project.internal import keyring
         keyring.set('ANACONDA_MASTER_PASSWORD', 'from_keyring')
         try:
             provider = MasterPasswordProvider()
@@ -167,7 +167,7 @@ runtime:
 
 def test_master_password_provider_saves_config_in_keyring():
     def check_configure_via_keyring(dirname):
-        from project.internal import keyring
+        from anaconda_project.internal import keyring
         try:
             provider = MasterPasswordProvider()
             requirement = _load_master_password_requirement(dirname)

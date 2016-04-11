@@ -6,7 +6,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-from project.project_commands import CommandExecInfo
+from anaconda_project.project_commands import CommandExecInfo
 
 import os
 import platform

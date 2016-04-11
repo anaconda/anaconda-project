@@ -6,9 +6,9 @@
 # ----------------------------------------------------------------------------
 """Redis-related requirements."""
 
-from project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirement import EnvVarRequirement
 # don't "import from" network_util or we can't monkeypatch it in tests
-import project.plugins.network_util as network_util
+import anaconda_project.plugins.network_util as network_util
 
 
 class RedisRequirement(EnvVarRequirement):

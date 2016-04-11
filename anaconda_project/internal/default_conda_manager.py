@@ -9,8 +9,8 @@ from __future__ import absolute_import
 
 import os
 
-from project.conda_manager import CondaManager, CondaEnvironmentDeviations, CondaManagerError
-import project.internal.conda_api as conda_api
+from anaconda_project.conda_manager import CondaManager, CondaEnvironmentDeviations, CondaManagerError
+import anaconda_project.internal.conda_api as conda_api
 
 
 class DefaultCondaManager(CondaManager):

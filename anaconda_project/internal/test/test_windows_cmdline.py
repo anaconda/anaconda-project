@@ -9,8 +9,8 @@ from __future__ import absolute_import, print_function
 import platform
 import pytest
 
-from project.internal.windows_cmdline import (windows_split_command_line, windows_join_command_line,
-                                              WindowsCommandLineException)
+from anaconda_project.internal.windows_cmdline import (windows_split_command_line, windows_join_command_line,
+                                                       WindowsCommandLineException)
 
 
 def _roundtrip(args):

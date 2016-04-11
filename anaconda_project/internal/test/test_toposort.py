@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function
 
 import pytest
 
-from project.internal.toposort import toposort_from_dependency_info, CycleError
+from anaconda_project.internal.toposort import toposort_from_dependency_info, CycleError
 
 
 # sort tuples of the form (thing, (dep1, dep2))

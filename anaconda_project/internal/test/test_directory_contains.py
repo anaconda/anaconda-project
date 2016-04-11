@@ -8,8 +8,8 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from project.internal.directory_contains import directory_contains_subdirectory
-from project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.directory_contains import directory_contains_subdirectory
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 
 def test_does_contain():

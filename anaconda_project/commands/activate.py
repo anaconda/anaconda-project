@@ -14,8 +14,8 @@ try:
 except ImportError:  # pragma: no cover (py2 only)
     from pipes import quote
 
-from project.prepare import prepare
-from project.project import Project
+from anaconda_project.prepare import prepare
+from anaconda_project.project import Project
 
 
 def activate(dirname, ui_mode, conda_environment):

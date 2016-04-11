@@ -7,8 +7,8 @@
 """The ``prepare`` command configures a project to run, asking the user questions if necessary."""
 from __future__ import absolute_import, print_function
 
-from project import prepare
-from project.project import Project
+from anaconda_project import prepare
+from anaconda_project.project import Project
 
 
 def prepare_command(project_dir, ui_mode, conda_environment):

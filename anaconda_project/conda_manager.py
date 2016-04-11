@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 
-from project.internal.metaclass import with_metaclass
+from anaconda_project.internal.metaclass import with_metaclass
 
 _conda_manager_classes = []
 
@@ -32,7 +32,7 @@ def new_conda_manager():
     """Create a new concrete ``CondaManager``."""
     global _conda_manager_classes
     if len(_conda_manager_classes) == 0:
-        from project.internal.default_conda_manager import DefaultCondaManager
+        from anaconda_project.internal.default_conda_manager import DefaultCondaManager
         klass = DefaultCondaManager
     else:
         klass = _conda_manager_classes[-1]

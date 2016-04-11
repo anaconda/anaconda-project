@@ -10,9 +10,9 @@ import os
 import platform
 import pytest
 
-import project.internal.conda_api as conda_api
+import anaconda_project.internal.conda_api as conda_api
 
-from project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 if platform.system() == 'Windows':
     PYTHON_BINARY = "python.exe"
@@ -40,7 +40,7 @@ def monkeypatch_conda_not_to_use_links(monkeypatch):
             cmd_list[i:i + 1] = ['install', '--copy']
         return cmd_list
 
-    monkeypatch.setattr('project.internal.conda_api._get_conda_command', mock_get_conda_command)
+    monkeypatch.setattr('anaconda_project.internal.conda_api._get_conda_command', mock_get_conda_command)
 
 
 def test_conda_info():
@@ -144,7 +144,7 @@ def test_conda_invoke_nonzero_returncode(monkeypatch):
         return ["bash", "-c", "echo TEST_ERROR 1>&2 && false"]
 
     def do_test(dirname):
-        monkeypatch.setattr('project.internal.conda_api._get_conda_command', get_failed_command)
+        monkeypatch.setattr('anaconda_project.internal.conda_api._get_conda_command', get_failed_command)
         with pytest.raises(conda_api.CondaError) as excinfo:
             conda_api.info()
         assert 'TEST_ERROR' in repr(excinfo.value)
@@ -157,7 +157,7 @@ def test_conda_invoke_zero_returncode_with_stuff_on_stderr(monkeypatch, capsys):
         return ["bash", "-c", "echo TEST_ERROR 1>&2 && echo '{}' || true"]
 
     def do_test(dirname):
-        monkeypatch.setattr('project.internal.conda_api._get_conda_command', get_command)
+        monkeypatch.setattr('anaconda_project.internal.conda_api._get_conda_command', get_command)
         conda_api.info()
         (out, err) = capsys.readouterr()
         assert 'Conda: TEST_ERROR\n' == err
@@ -170,7 +170,7 @@ def test_conda_invoke_zero_returncode_with_invalid_json(monkeypatch, capsys):
         return ["echo", "NOT_JSON"]
 
     def do_test(dirname):
-        monkeypatch.setattr('project.internal.conda_api._get_conda_command', get_command)
+        monkeypatch.setattr('anaconda_project.internal.conda_api._get_conda_command', get_command)
         with pytest.raises(conda_api.CondaError) as excinfo:
             conda_api.info()
         assert 'Invalid JSON from conda' in repr(excinfo.value)
@@ -182,7 +182,7 @@ def test_conda_create_gets_channels(monkeypatch):
     def mock_call_conda(extra_args):
         assert ['create', '--yes', '--quiet', '--prefix', '/prefix', '--channel', 'foo', 'python'] == extra_args
 
-    monkeypatch.setattr('project.internal.conda_api._call_conda', mock_call_conda)
+    monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
     conda_api.create(prefix='/prefix', pkgs=['python'], channels=['foo'])
 
 
@@ -190,7 +190,7 @@ def test_conda_install_gets_channels(monkeypatch):
     def mock_call_conda(extra_args):
         assert ['install', '--yes', '--quiet', '--prefix', '/prefix', '--channel', 'foo', 'python'] == extra_args
 
-    monkeypatch.setattr('project.internal.conda_api._call_conda', mock_call_conda)
+    monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
     conda_api.install(prefix='/prefix', pkgs=['python'], channels=['foo'])
 
 
@@ -204,7 +204,7 @@ def test_resolve_named_env(monkeypatch):
     def mock_info():
         return {'root_prefix': '/foo', 'envs': ['/foo/envs/bar']}
 
-    monkeypatch.setattr('project.internal.conda_api.info', mock_info)
+    monkeypatch.setattr('anaconda_project.internal.conda_api.info', mock_info)
     prefix = conda_api.resolve_env_to_prefix('bar')
     assert "/foo/envs/bar" == prefix
 
@@ -213,7 +213,7 @@ def test_resolve_bogus_env(monkeypatch):
     def mock_info():
         return {'root_prefix': '/foo', 'envs': ['/foo/envs/bar']}
 
-    monkeypatch.setattr('project.internal.conda_api.info', mock_info)
+    monkeypatch.setattr('anaconda_project.internal.conda_api.info', mock_info)
     prefix = conda_api.resolve_env_to_prefix('nope')
     assert prefix is None
 
@@ -290,7 +290,7 @@ def test_set_conda_env_in_path_unix(monkeypatch):
             possible_prefix = os.path.dirname(path)
             return os.path.isdir(os.path.join(possible_prefix, "conda-meta"))
 
-        monkeypatch.setattr('project.internal.conda_api._is_conda_bindir_unix', mock_is_conda_bindir_unix)
+        monkeypatch.setattr('anaconda_project.internal.conda_api._is_conda_bindir_unix', mock_is_conda_bindir_unix)
 
     def check_conda_env_in_path_unix(dirname):
         env1 = os.path.join(dirname, "env1")

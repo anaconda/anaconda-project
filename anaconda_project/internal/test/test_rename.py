@@ -6,8 +6,8 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-from project.internal.rename import rename_over_existing
-from project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.rename import rename_over_existing
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 import errno
 import os

@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import os
 
-from project.yaml_file import YamlFile
+from anaconda_project.yaml_file import YamlFile
 
 META_DIRECTORY = "conda.recipe"
 

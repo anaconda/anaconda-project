@@ -9,9 +9,9 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from project.conda_manager import new_conda_manager, CondaManagerError
-from project.plugins.provider import EnvVarProvider
-from project.provide import PROVIDE_MODE_CHECK
+from anaconda_project.conda_manager import new_conda_manager, CondaManagerError
+from anaconda_project.plugins.provider import EnvVarProvider
+from anaconda_project.provide import PROVIDE_MODE_CHECK
 
 
 class CondaEnvProvider(EnvVarProvider):
@@ -180,7 +180,7 @@ class CondaEnvProvider(EnvVarProvider):
             context.environ["CONDA_DEFAULT_ENV"] = prefix
         path = context.environ.get("PATH", "")
 
-        import project.internal.conda_api as conda_api
+        import anaconda_project.internal.conda_api as conda_api
         context.environ["PATH"] = conda_api.set_conda_env_in_path(path, prefix)
         # Some stuff can only be done when a shell is launched:
         #  - we can't set PS1 because it shouldn't be exported.

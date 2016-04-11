@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import os
 
-from project.yaml_file import YamlFile
+from anaconda_project.yaml_file import YamlFile
 
 # these are in the order we'll use them if multiple are present
 possible_project_file_names = ("project.yml", "project.yaml")

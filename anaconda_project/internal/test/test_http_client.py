@@ -6,9 +6,9 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-from project.internal.http_client import FileDownloader
-from project.internal.test.http_server import HttpServerTestContext
-from project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.http_client import FileDownloader
+from anaconda_project.internal.test.http_server import HttpServerTestContext
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 from tornado.ioloop import IOLoop
 
@@ -86,7 +86,7 @@ def test_download_fail_to_create_directory(monkeypatch):
         def mock_makedirs(name):
             raise IOError("Cannot create %s" % name)
 
-        monkeypatch.setattr('project.internal.makedirs.makedirs_ok_if_exists', mock_makedirs)
+        monkeypatch.setattr('anaconda_project.internal.makedirs.makedirs_ok_if_exists', mock_makedirs)
         filename = os.path.join(dirname, "downloaded-file")
         with HttpServerTestContext() as server:
             url = server.error_url
@@ -178,7 +178,7 @@ def test_download_fail_to_rename_tmp_file(monkeypatch):
             def mock_rename(src, dest):
                 raise OSError("FAIL")
 
-            monkeypatch.setattr('project.internal.rename.rename_over_existing', mock_rename)
+            monkeypatch.setattr('anaconda_project.internal.rename.rename_over_existing', mock_rename)
 
             response = IOLoop.current().run_sync(lambda: download.run(IOLoop.current()))
             assert ["Failed to rename %s to %s: FAIL" % (filename + ".part", filename)] == download.errors

@@ -12,14 +12,14 @@ import platform
 import pytest
 import subprocess
 
-from project.test.environ_utils import minimal_environ, strip_environ
-from project.test.project_utils import project_no_dedicated_env
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.internal.crypto import decrypt_string
-from project.prepare import (prepare, unprepare, UI_MODE_BROWSER, prepare_in_stages, PrepareSuccess, PrepareFailure,
-                             _after_stage_success, _FunctionPrepareStage)
-from project.project_file import DEFAULT_PROJECT_FILENAME
-from project.local_state_file import LocalStateFile
+from anaconda_project.test.environ_utils import minimal_environ, strip_environ
+from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.crypto import decrypt_string
+from anaconda_project.prepare import (prepare, unprepare, UI_MODE_BROWSER, prepare_in_stages, PrepareSuccess,
+                                      PrepareFailure, _after_stage_success, _FunctionPrepareStage)
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.local_state_file import LocalStateFile
 
 
 def test_prepare_empty_directory():
@@ -282,7 +282,7 @@ def test_prepare_with_browser(monkeypatch):
     http_results = {}
 
     def mock_open_new_tab(url):
-        from project.internal.test.http_utils import http_get_async, http_post_async
+        from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
         from tornado import gen
 
         @gen.coroutine
@@ -329,7 +329,7 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
     http_results = {}
 
     def click_submit(url):
-        from project.internal.test.http_utils import http_get_async, http_post_async
+        from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
         from tornado import gen
 
         @gen.coroutine
@@ -350,8 +350,8 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
         io_loop.add_callback(do_http)
 
     def fill_in_password(url, first_response):
-        from project.internal.test.http_utils import http_post_async
-        from project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
+        from anaconda_project.internal.test.http_utils import http_post_async
+        from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
         from tornado import gen
         from bs4 import BeautifulSoup
 

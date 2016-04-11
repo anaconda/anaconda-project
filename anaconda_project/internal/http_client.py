@@ -9,8 +9,8 @@ from __future__ import absolute_import, print_function
 from tornado import httpclient
 from tornado import gen
 
-import project.internal.makedirs as makedirs
-import project.internal.rename as rename
+import anaconda_project.internal.makedirs as makedirs
+import anaconda_project.internal.rename as rename
 
 import os
 import hashlib

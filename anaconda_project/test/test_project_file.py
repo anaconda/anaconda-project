@@ -7,8 +7,8 @@
 import codecs
 import os
 
-from project.internal.test.tmpfile_utils import with_directory_contents
-from project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME, possible_project_file_names
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME, possible_project_file_names
 
 
 def test_create_missing_project_file():

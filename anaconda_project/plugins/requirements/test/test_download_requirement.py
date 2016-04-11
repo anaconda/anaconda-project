@@ -7,11 +7,11 @@
 import hashlib
 import os
 
-from project.local_state_file import LocalStateFile
-from project.plugins.registry import PluginRegistry
-from project.plugins.requirements.download import DownloadRequirement
+from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirements.download import DownloadRequirement
 
-from project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 ENV_VAR = 'DATAFILE'
 
@@ -130,8 +130,8 @@ def test_download_error_readfile(monkeypatch):
                                           filename='data.zip',
                                           hash_algorithm='md5',
                                           hash_value=digest)
-        monkeypatch.setattr('project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none',
-                            checksum_mock)
+        monkeypatch.setattr(
+            'anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none', checksum_mock)
         status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
         assert not status
         assert 'File referenced by: {} cannot be read ({})'.format(ENV_VAR, filename) == status.status_description

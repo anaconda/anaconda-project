@@ -9,7 +9,7 @@ from functools import partial
 
 import os
 
-from project.commands.main import _parse_args_and_run_subcommand
+from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
 
 def test_main_no_subcommand(capsys):
@@ -75,7 +75,7 @@ def test_main_help(capsys):
 
 
 def test_main_help_via_entry_point(capsys, monkeypatch):
-    from project.commands.main import main
+    from anaconda_project.commands.main import main
 
     monkeypatch.setattr("sys.argv", ['project', '--help'])
 
@@ -95,7 +95,8 @@ def _main_calls_subcommand(monkeypatch, capsys, subcommand):
         assert args.project == os.path.abspath('MYPROJECT')
         return 27
 
-    monkeypatch.setattr('project.commands.{}.main'.format(subcommand), partial(mock_subcommand_main, subcommand))
+    monkeypatch.setattr('anaconda_project.commands.{}.main'.format(subcommand), partial(mock_subcommand_main,
+                                                                                        subcommand))
     code = _parse_args_and_run_subcommand(['anaconda-project', subcommand, '--project', 'MYPROJECT'])
 
     assert 27 == code
