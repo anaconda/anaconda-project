@@ -10,8 +10,9 @@ import os
 
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.commands.prepare import prepare_command, main
+from anaconda_project.commands.prepare_with_mode import (UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                                                         UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_NO)
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
-from anaconda_project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 from anaconda_project.test.project_utils import project_dir_disable_dedicated_env
@@ -40,12 +41,12 @@ def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
     return can_connect_args
 
 
-def test_prepare_command(monkeypatch):
+def _test_prepare_command(monkeypatch, ui_mode):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def prepare_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = prepare_command(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None)
+        result = prepare_command(dirname, ui_mode, conda_environment=None)
         assert can_connect_args['port'] == 6379
         assert result
 
@@ -53,6 +54,18 @@ def test_prepare_command(monkeypatch):
 runtime:
   REDIS_URL: {}
 """}, prepare_redis_url)
+
+
+def test_prepare_command_development(monkeypatch):
+    _test_prepare_command(monkeypatch, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT)
+
+
+def test_prepare_command_production(monkeypatch):
+    _test_prepare_command(monkeypatch, UI_MODE_TEXT_ASSUME_YES_PRODUCTION)
+
+
+def test_prepare_command_assume_no(monkeypatch):
+    _test_prepare_command(monkeypatch, UI_MODE_TEXT_ASSUME_NO)
 
 
 def _monkeypatch_open_new_tab(monkeypatch):
@@ -161,17 +174,16 @@ def test_main_fails_to_redis(monkeypatch, capsys):
     _monkeypatch_can_connect_to_socket_to_fail_to_find_redis(monkeypatch)
     _monkeypatch_open_new_tab(monkeypatch)
 
-    from anaconda_project.prepare import prepare as real_prepare
+    from anaconda_project.commands.prepare_with_mode import prepare_with_ui_mode_printing_errors as real_prepare
 
     def _mock_prepare_do_not_keep_going(project,
                                         environ=None,
                                         ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
-                                        keep_going_until_success=False,
-                                        io_loop=None,
-                                        show_url=None):
-        return real_prepare(project, environ, ui_mode, False, io_loop, show_url)
+                                        extra_command_args=None):
+        return real_prepare(project, environ, ui_mode=ui_mode, extra_command_args=extra_command_args)
 
-    monkeypatch.setattr('anaconda_project.prepare.prepare', _mock_prepare_do_not_keep_going)
+    monkeypatch.setattr('anaconda_project.commands.prepare_with_mode.prepare_with_ui_mode_printing_errors',
+                        _mock_prepare_do_not_keep_going)
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)

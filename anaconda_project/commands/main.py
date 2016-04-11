@@ -11,8 +11,7 @@ import os
 import sys
 from argparse import ArgumentParser, REMAINDER
 
-from anaconda_project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
-
+from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
 import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
 import anaconda_project.commands.activate as activate

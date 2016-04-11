@@ -15,23 +15,11 @@ import sys
 from copy import copy, deepcopy
 
 from anaconda_project.internal.metaclass import with_metaclass
-from anaconda_project.internal.prepare_ui import prepare_text, prepare_browser
+from anaconda_project.internal import prepare_ui
 from anaconda_project.internal.toposort import toposort_from_dependency_info
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT, PROVIDE_MODE_PRODUCTION,
-                                      PROVIDE_MODE_CHECK)
+from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT)
 from anaconda_project.plugins.provider import ProvideContext
-
-# these UI_MODE_ strings are used as values for command line options, so they are user-visible
-
-UI_MODE_BROWSER = "browser"
-UI_MODE_TEXT_ASK_QUESTIONS = "ask"
-UI_MODE_TEXT_ASSUME_YES_PRODUCTION = "production_defaults"
-UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT = "development_defaults"
-UI_MODE_TEXT_ASSUME_NO = "check"
-
-_all_ui_modes = (UI_MODE_BROWSER, UI_MODE_TEXT_ASK_QUESTIONS, UI_MODE_TEXT_ASSUME_YES_PRODUCTION,
-                 UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, UI_MODE_TEXT_ASSUME_NO)
 
 
 def _update_environ(dest, src):
@@ -592,14 +580,148 @@ def prepare_in_stages(project,
                         extra_command_args)
 
 
-def prepare(project,
-            environ=None,
-            ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
-            keep_going_until_success=False,
-            extra_command_args=None,
-            io_loop=None,
-            show_url=None):
-    """Perform all steps needed to get a project ready to execute.
+def _project_problems_to_prepare_failure(project):
+    if project.problems:
+        errors = []
+        errors.append("Unable to load project:")
+        for problem in project.problems:
+            errors.append("  %s" % problem)
+        return PrepareFailure(logs=[], errors=errors)
+    else:
+        return None
+
+
+def prepare_without_interaction(project, environ=None, mode=PROVIDE_MODE_DEVELOPMENT, extra_command_args=None):
+    """Prepare a project to run one of its commands.
+
+    This method doesn't ask the user any questions, so the
+    ``provide_mode`` lets you specify defaults suitable for a
+    local workstation, a production deployment, or "check only"
+    defaults ("check only" means don't do anything just check
+    status).
+
+    This method returns a result object. The result object has
+    a ``failed`` property.  If the result is failed, the
+    ``errors`` property has the errors.  If the result is not
+    failed, the ``command_exec_info`` property has the stuff
+    you need to run the project's default command, and the
+    ``environ`` property has the updated environment. The
+    passed-in ``environ`` is not modified in-place.
+
+    You can update your original environment with
+    ``result.update_environ()`` if you like, but it's probably
+    a bad idea to modify ``os.environ`` in that way because
+    the calling app won't want to have the project
+    environment.
+
+    The ``environ`` should usually be kept between
+    preparations, starting out as ``os.environ`` but then
+    being modified by the user.
+
+    If the project has a non-empty ``problems`` attribute,
+    this function returns the project problems inside a failed
+    result. So ``project.problems`` does not need to be checked in
+    advance.
+
+    Args:
+        project (Project): from the ``load_project`` method
+        environ (dict): os.environ or the previously-prepared environ; not modified in-place
+        mode (str): mode from ``PROVIDE_MODE_PRODUCTION``, ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_CHECK``
+        extra_command_args (list): extra args to include in the returned command argv
+
+    Returns:
+        a ``PrepareResult`` instance, which has a ``failed`` flag
+
+    """
+    failure = _project_problems_to_prepare_failure(project)
+    if failure is not None:
+        return failure
+
+    stage = prepare_in_stages(project,
+                              environ,
+                              keep_going_until_success=False,
+                              mode=mode,
+                              extra_command_args=extra_command_args)
+
+    return prepare_execute_without_interaction(stage)
+
+
+def prepare_with_browser_ui(project,
+                            environ=None,
+                            extra_command_args=None,
+                            keep_going_until_success=True,
+                            io_loop=None,
+                            show_url=None):
+    """Prepare a project to run one of its commands.
+
+    This method can interact with the user via a browser-based UI.
+
+    This method returns a result object. The result object has
+    a ``failed`` property.  If the result is failed, the
+    ``errors`` property has the errors.  If the result is not
+    failed, the ``command_exec_info`` property has the stuff
+    you need to run the project's default command, and the
+    ``environ`` property has the updated environment. The
+    passed-in ``environ`` is not modified in-place.
+
+    You can update your original environment with
+    ``result.update_environ()`` if you like, but it's probably
+    a bad idea to modify ``os.environ`` in that way because
+    the calling app won't want to have the project
+    environment.
+
+    The ``environ`` should usually be kept between
+    preparations, starting out as ``os.environ`` but then
+    being modified by the user.
+
+    If the project has a non-empty ``problems`` attribute,
+    this function returns the project problems inside a failed
+    result. So ``project.problems`` does not need to be checked in
+    advance.
+
+    Args:
+        project (Project): from the ``load_project`` method
+        environ (dict): os.environ or the previously-prepared environ; not modified in-place
+        extra_command_args (list): extra args to include in the returned command argv
+        keep_going_until_success (bool): whether to loop until requirements are met
+        io_loop (IOLoop): tornado IOLoop to use, None for default
+        show_url (function): function that's passed the URL to open it for the user
+
+    Returns:
+        a ``PrepareResult`` instance, which has a ``failed`` flag
+
+    """
+    failure = _project_problems_to_prepare_failure(project)
+    if failure is not None:
+        return failure
+
+    stage = prepare_in_stages(project,
+                              environ,
+                              keep_going_until_success=keep_going_until_success,
+                              mode=PROVIDE_MODE_DEVELOPMENT,
+                              extra_command_args=extra_command_args)
+
+    return prepare_execute_with_browser_ui(project, stage, io_loop=io_loop, show_url=show_url)
+
+
+def prepare_execute_without_interaction(stage):
+    """Advance through the PrepareStage without any interactivity.
+
+    Returns:
+       a ``PrepareResult`` instance
+    """
+    result = None
+    while stage is not None:
+        next_stage = stage.execute()
+        result = stage.result
+        if result.failed:
+            break
+        stage = next_stage
+    return result
+
+
+def prepare_execute_with_browser_ui(project, stage, io_loop=None, show_url=None):
+    """Advance through the PrepareStage using a browser UI.
 
     This may need to ask the user questions, may start services,
     run scripts, load configuration, install packages... it can do
@@ -607,11 +729,7 @@ def prepare(project,
 
     Args:
         project (Project): the project
-        environ (dict): the environment to prepare (None to use os.environ)
-        ui_mode (str): one of ``UI_MODE_BROWSER``, ``UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT``,
-                       ``UI_MODE_TEXT_ASSUME_YES_PRODUCTION``, ``UI_MODE_TEXT_ASSUME_NO``
-        keep_going_until_success (bool): keep asking questions until all requirements are met
-        extra_command_args (list of str): extra args for the command we prepare
+        stage (PrepareStage): from prepare_in_stages()
         io_loop (IOLoop): tornado IOLoop to use, None for default
         show_url (function): takes a URL and displays it in a browser somehow, None for default
 
@@ -619,38 +737,7 @@ def prepare(project,
         a ``PrepareResult`` instance
 
     """
-    if ui_mode not in _all_ui_modes:
-        raise ValueError("invalid UI mode " + repr(ui_mode))
-
-    if project.problems:
-        errors = []
-        errors.append("Unable to load project:")
-        for problem in project.problems:
-            errors.append("  %s" % problem)
-        failure = PrepareFailure(logs=[], errors=errors)
-        failure.print_output()
-        return failure
-
-    if ui_mode == UI_MODE_TEXT_ASSUME_YES_PRODUCTION:
-        provide_mode = PROVIDE_MODE_PRODUCTION
-    elif ui_mode == UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT or ui_mode == UI_MODE_BROWSER:
-        provide_mode = PROVIDE_MODE_DEVELOPMENT
-    elif ui_mode == UI_MODE_TEXT_ASSUME_NO:
-        provide_mode = PROVIDE_MODE_CHECK
-
-    assert ui_mode != UI_MODE_TEXT_ASK_QUESTIONS  # Not implemented yet
-
-    stage = prepare_in_stages(project, environ, keep_going_until_success, provide_mode, extra_command_args)
-
-    if ui_mode == UI_MODE_BROWSER:
-        result = prepare_browser(project, stage, io_loop=io_loop, show_url=show_url)
-    else:
-        result = prepare_text(stage)
-
-    if result.failed:
-        result.print_output()
-
-    return result
+    return prepare_ui.prepare_browser(project=project, stage=stage, io_loop=io_loop, show_url=show_url)
 
 
 def unprepare(project):

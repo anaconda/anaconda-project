@@ -18,8 +18,19 @@ from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.providers.redis import RedisProvider
 from anaconda_project.plugins.requirements.redis import RedisRequirement
-from anaconda_project.prepare import prepare, unprepare, UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_NO
+from anaconda_project.prepare import prepare_without_interaction, unprepare
+from anaconda_project import provide
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+
+
+# this is sort of an awkward shim because
+# prepare_without_interaction equivalent used to print errors,
+# this shim avoids rewriting the tests in here
+def _prepare_printing_errors(project, environ=None, mode=provide.PROVIDE_MODE_DEVELOPMENT):
+    result = prepare_without_interaction(project, environ=environ, mode=mode)
+    if result.failed:
+        result.print_output()
+    return result
 
 
 def _redis_requirement():
@@ -148,7 +159,7 @@ def test_prepare_redis_url_with_dict_in_runtime_section(monkeypatch):
 
     def prepare_redis_url(dirname):
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ())
+        result = _prepare_printing_errors(project, environ=minimal_environ())
         assert result
         assert dict(REDIS_URL="redis://localhost:6379",
                     PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
@@ -165,7 +176,7 @@ def test_prepare_redis_url_with_list_in_runtime_section(monkeypatch):
 
     def prepare_redis_url(dirname):
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ())
+        result = _prepare_printing_errors(project, environ=minimal_environ())
         assert result
         assert dict(REDIS_URL="redis://localhost:6379",
                     PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
@@ -210,7 +221,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
 
     def start_local_redis(dirname):
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ())
+        result = _prepare_printing_errors(project, environ=minimal_environ())
         assert result
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
@@ -258,7 +269,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
 
     def start_local_redis(dirname):
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ())
+        result = _prepare_printing_errors(project, environ=minimal_environ())
         assert result
         assert 'REDIS_URL' in result.environ
 
@@ -288,7 +299,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         pidfile_mtime = os.path.getmtime(pidfile)
         with codecs.open(pidfile, 'r', 'utf-8') as file:
             pidfile_content = file.read()
-        result2 = prepare(project, environ=minimal_environ())
+        result2 = _prepare_printing_errors(project, environ=minimal_environ())
         assert result2
 
         # port should be the same, and set in the environment
@@ -365,7 +376,7 @@ def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
 
         monkeypatch.setattr('time.sleep', mock_sleep_kills_redis)
 
-        result = prepare(project, environ=minimal_environ())
+        result = _prepare_printing_errors(project, environ=minimal_environ())
         assert not result
 
         out, err = capsys.readouterr()
@@ -399,7 +410,7 @@ def test_fail_to_prepare_local_redis_server_no_port_available(monkeypatch, capsy
 
     def start_local_redis(dirname):
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ())
+        result = _prepare_printing_errors(project, environ=minimal_environ())
         assert not result
         assert 73 == len(can_connect_args_list)
 
@@ -420,7 +431,7 @@ def test_do_not_start_local_redis_server_in_prod_mode(monkeypatch, capsys):
 
     def no_start_local_redis(dirname):
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ(), ui_mode=UI_MODE_TEXT_ASSUME_YES_PRODUCTION)
+        result = _prepare_printing_errors(project, environ=minimal_environ(), mode=provide.PROVIDE_MODE_PRODUCTION)
         assert not result
         assert 3 == len(can_connect_args_list)
 
@@ -441,7 +452,7 @@ def test_do_not_start_local_redis_server_in_check_mode(monkeypatch, capsys):
 
     def no_start_local_redis(dirname):
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ(), ui_mode=UI_MODE_TEXT_ASSUME_NO)
+        result = _prepare_printing_errors(project, environ=minimal_environ(), mode=provide.PROVIDE_MODE_CHECK)
         assert not result
         assert 3 == len(can_connect_args_list)
 
@@ -469,7 +480,7 @@ def test_fail_to_prepare_local_redis_server_scope_system(monkeypatch, capsys):
 
     def check_no_autostart(dirname):
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ())
+        result = _prepare_printing_errors(project, environ=minimal_environ())
         assert not result
 
     with_directory_contents(
@@ -495,7 +506,7 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
 
     def start_local_redis(dirname):
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ())
+        result = _prepare_printing_errors(project, environ=minimal_environ())
         assert not result
         assert 36 == len(can_connect_args_list)
 
@@ -559,7 +570,7 @@ sys.exit(1)
         monkeypatch.setattr("subprocess.Popen", mock_Popen)
 
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ())
+        result = _prepare_printing_errors(project, environ=minimal_environ())
         assert not result
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -645,7 +656,7 @@ def test_set_scope_in_local_state(monkeypatch):
         assert config['source'] == 'find_system'
 
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ())
+        result = _prepare_printing_errors(project, environ=minimal_environ())
         assert result
         assert dict(REDIS_URL="redis://localhost:6379",
                     PROJECT_DIR=project.directory_path) == strip_environ(result.environ)

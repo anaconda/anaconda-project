@@ -366,7 +366,7 @@ class Project(object):
         Args:
             directory_path (str): path to the project directory
             plugin_registry (PluginRegistry): where to look up Requirement and Provider instances, None for default
-            default_conda_environment (str): name of conda environment to use by default
+            default_conda_environment (str): name of conda environment spec to use by default
             default_command (str): name of command from commands section to use by default
         """
         self._directory_path = os.path.realpath(directory_path)

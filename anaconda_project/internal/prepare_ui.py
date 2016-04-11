@@ -7,17 +7,6 @@
 from __future__ import absolute_import, print_function
 
 
-def prepare_text(stage):
-    result = None
-    while stage is not None:
-        next_stage = stage.execute()
-        result = stage.result
-        if result.failed:
-            break
-        stage = next_stage
-    return result
-
-
 def _default_show_url(url):
     import webbrowser
     webbrowser.open_new_tab(url)

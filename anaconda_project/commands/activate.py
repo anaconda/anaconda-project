@@ -14,7 +14,7 @@ try:
 except ImportError:  # pragma: no cover (py2 only)
     from pipes import quote
 
-from anaconda_project.prepare import prepare
+from anaconda_project.commands.prepare_with_mode import prepare_with_ui_mode_printing_errors
 from anaconda_project.project import Project
 
 
@@ -27,9 +27,8 @@ def activate(dirname, ui_mode, conda_environment):
         None on failure or a list of lines to print.
     """
     project = Project(dirname, default_conda_environment=conda_environment)
-    result = prepare(project, ui_mode=ui_mode)
+    result = prepare_with_ui_mode_printing_errors(project, ui_mode=ui_mode)
     if result.failed:
-        result.print_output()
         return None
 
     exports = []

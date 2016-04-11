@@ -16,8 +16,9 @@ from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.crypto import decrypt_string
-from anaconda_project.prepare import (prepare, unprepare, UI_MODE_BROWSER, prepare_in_stages, PrepareSuccess,
-                                      PrepareFailure, _after_stage_success, _FunctionPrepareStage)
+from anaconda_project.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare,
+                                      prepare_in_stages, PrepareSuccess, PrepareFailure, _after_stage_success,
+                                      _FunctionPrepareStage)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.local_state_file import LocalStateFile
 
@@ -26,23 +27,12 @@ def test_prepare_empty_directory():
     def prepare_empty(dirname):
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ()
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert result
         assert dict(PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict() == strip_environ(environ)
 
     with_directory_contents(dict(), prepare_empty)
-
-
-def test_prepare_bad_ui_mode():
-    def prepare_bad_ui_mode(dirname):
-        with pytest.raises(ValueError) as excinfo:
-            project = project_no_dedicated_env(dirname)
-            environ = minimal_environ()
-            prepare(project, ui_mode="BAD_UI_MODE", environ=environ)
-        assert "invalid UI mode" in repr(excinfo.value)
-
-    with_directory_contents(dict(), prepare_bad_ui_mode)
 
 
 def test_prepare_bad_provide_mode():
@@ -69,7 +59,7 @@ def test_default_to_system_environ():
     def prepare_system_environ(dirname):
         project = project_no_dedicated_env(dirname)
         os_environ_copy = deepcopy(os.environ)
-        result = prepare(project)
+        result = prepare_without_interaction(project)
         assert project.directory_path == strip_environ(result.environ)['PROJECT_DIR']
         # os.environ wasn't modified
         assert os_environ_copy == os.environ
@@ -84,7 +74,7 @@ def test_prepare_some_env_var_already_set():
     def prepare_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(FOO='bar')
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert result
         assert dict(FOO='bar', PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict(FOO='bar') == strip_environ(environ)
@@ -99,7 +89,7 @@ def test_prepare_some_env_var_not_set():
     def prepare_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(BAR='bar')
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert not result
         assert dict(BAR='bar') == strip_environ(environ)
 
@@ -132,7 +122,7 @@ def test_prepare_with_app_entry():
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(FOO='bar')
         env_path = environ.get('CONDA_ENV_PATH', environ.get('CONDA_DEFAULT_ENV', None))
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert result
 
         command = result.command_exec_info
@@ -169,7 +159,7 @@ def test_update_environ():
     def prepare_then_update_environ(dirname):
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(FOO='bar')
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert result
 
         other = minimal_environ(BAR='baz')
@@ -297,7 +287,7 @@ def test_prepare_with_browser(monkeypatch):
     def prepare_with_browser(dirname):
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(BAR='bar')
-        result = prepare(project, environ=environ, io_loop=io_loop, ui_mode=UI_MODE_BROWSER)
+        result = prepare_with_browser_ui(project, environ=environ, keep_going_until_success=False, io_loop=io_loop)
         assert not result
         assert dict(BAR='bar') == strip_environ(environ)
 
@@ -383,7 +373,7 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
     def prepare_with_browser(dirname):
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(ANACONDA_MASTER_PASSWORD='bar')
-        result = prepare(project, environ=environ, io_loop=io_loop, ui_mode=UI_MODE_BROWSER)
+        result = prepare_with_browser_ui(project, environ=environ, keep_going_until_success=False, io_loop=io_loop)
         assert result
         assert dict(ANACONDA_MASTER_PASSWORD='bar',
                     FOO_PASSWORD='bloop',
@@ -424,3 +414,19 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
 runtime:
   FOO_PASSWORD: {}
 """}, prepare_with_browser)
+
+
+def test_prepare_problem_project_with_browser(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ(BAR='bar')
+        result = prepare_with_browser_ui(project, environ=environ, keep_going_until_success=False)
+        assert not result
+        assert dict(BAR='bar') == strip_environ(environ)
+
+        assert ['Unable to load project:',
+                ('  Icon file %s does not exist.' % os.path.join(dirname, 'foo.png'))] == result.errors
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+icon: foo.png
+"""}, check)
