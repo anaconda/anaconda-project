@@ -112,7 +112,7 @@ class AllTestsCommand(TestCommand):
         # traces huge by showing source code for each frame, so not
         # adding it by default.
         # To see stdout "live" instead of capturing it, use -s.
-        coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=project',
+        coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=anaconda_project',
                          '--cov-report=term-missing', '--cov-report=html']
         self.pytest_args = ['-v', '-rw', '--durations=10']
         # 100% coverage on Windows requires us to do extra mocks because generally Windows
@@ -138,7 +138,7 @@ class AllTestsCommand(TestCommand):
         return self.pyfiles
 
     def _add_missing_init_py(self):
-        root_modules = ['project']
+        root_modules = ['anaconda_project']
         for srcdir in root_modules:
             for root, dirs, files in os.walk(os.path.join(ROOT, srcdir)):
                 dirs[:] = [d for d in dirs if not (d[0] == '.' or d == '__pycache__')]
@@ -265,7 +265,7 @@ column_limit : 120
         # hack alert (replacing argv temporarily because pep257 looks at it)
         old_argv = sys.argv
         try:
-            sys.argv = ['pep257', os.path.join(ROOT, 'project')]
+            sys.argv = ['pep257', os.path.join(ROOT, 'anaconda_project')]
             code = run_pep257()
         finally:
             sys.argv = old_argv
@@ -311,12 +311,12 @@ column_limit : 120
                 print("All tests passed! 💯 🌟")
 
 
-setup(name='conda-project-prototype',
+setup(name='anaconda-project',
       version="0.1",
       author="Continuum Analytics",
       author_email='info@continuum.io',
-      url='http://github.com/Anaconda-Server/conda-project',
-      description='Project support for Anaconda',
+      url='http://github.com/Anaconda-Server/anaconda-project',
+      description='Library to load and manipulate project directories',
       license='New BSD',
       zip_safe=False,
       install_requires=REQUIRES,
@@ -326,5 +326,5 @@ setup(name='conda-project-prototype',
           'bin/anaconda-project'
       ],
       packages=[
-          'project', 'project.internal'
+          'anaconda_project', 'anaconda_project.internal'
       ])

@@ -4,7 +4,7 @@ package:
 
 build:
   entry_points:
-    - anaconda-project = project.commands.main:main
+    - anaconda-project = anaconda_project.commands.main:main
 
 requirements:
   build:
