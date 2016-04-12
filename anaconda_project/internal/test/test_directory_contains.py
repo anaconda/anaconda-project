@@ -8,7 +8,8 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from anaconda_project.internal.directory_contains import directory_contains_subdirectory
+from anaconda_project.internal.directory_contains import (directory_contains_subdirectory,
+                                                          subdirectory_relative_to_directory)
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 
@@ -34,3 +35,18 @@ def test_does_not_contain():
         assert not directory_contains_subdirectory(dirname, dirname)
 
     with_directory_contents(dict(), check_does_not_contain)
+
+
+def test_make_relative():
+    def check(dirname):
+        foo = os.path.join(dirname, 'foo')
+        assert 'foo' == subdirectory_relative_to_directory(foo, dirname)
+
+        foobar = os.path.join(dirname, os.path.join('foo', 'bar'))
+        assert os.path.join('foo', 'bar') == subdirectory_relative_to_directory(foobar, dirname)
+
+        # keep the path absolute if it isn't inside the parent
+        parent_of_dirname = os.path.dirname(dirname)
+        assert parent_of_dirname == subdirectory_relative_to_directory(parent_of_dirname, dirname)
+
+    with_directory_contents(dict(), check)

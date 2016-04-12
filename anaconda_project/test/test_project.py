@@ -766,9 +766,9 @@ def test_notebook_guess_command():
         project = project_no_dedicated_env(dirname)
         assert 'test.ipynb' in project.commands
         command = project.commands['test.ipynb']
-        expected_nb_path = os.path.join(dirname, 'test.ipynb')
-        assert command._attributes == {'notebook': expected_nb_path}
+        assert command._attributes == {'notebook': 'test.ipynb'}
 
+        expected_nb_path = os.path.join(dirname, 'test.ipynb')
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
