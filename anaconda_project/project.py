@@ -524,6 +524,10 @@ class Project(object):
         commands = dict()
         for key, command in self.commands.items():
             commands[key] = dict(description=command.description)
+            if command.bokeh_app is not None:
+                commands[key]['bokeh_app'] = command.bokeh_app
+            if command.notebook is not None:
+                commands[key]['notebook'] = command.notebook
         json['commands'] = commands
         envs = dict()
         for key, env in self.conda_environments.items():
