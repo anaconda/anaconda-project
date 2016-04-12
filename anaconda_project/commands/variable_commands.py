@@ -24,7 +24,7 @@ def set_variables(project_dir, conda_environment, vars_to_set):
         if '=' not in var:
             print("Error: {} doesn't define a name=value pair".format(var))
             return 1
-        fixed_vars.append(var.split('='))
+        fixed_vars.append(tuple(var.split('=', maxsplit=1)))
     project = Project(project_dir, default_conda_environment=conda_environment)
     if project.problems:
         print("Unable to load project:", file=sys.stderr)

@@ -32,12 +32,10 @@ def test_set_variable_command(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
 
-    args = Args('set', vars_to_set=['foo=bar', 'baz=qux'])
+    args = Args('set', vars_to_set=['foo=bar', 'baz=qux', 'has_two_equals=foo=bar'])
     res = main(args)
     assert res == 0
-    assert len(params) == 1
-    assert ['foo', 'bar'] in params[0]
-    assert ['baz', 'qux'] in params[0]
+    assert [ ('foo', 'bar'), ('baz', 'qux'), ('has_two_equals', 'foo=bar') ] == params[0]
 
 
 def test_set_variable_project_problem(capsys):
