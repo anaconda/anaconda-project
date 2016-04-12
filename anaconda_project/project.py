@@ -11,7 +11,6 @@ import os
 
 from anaconda_project.conda_environment import CondaEnvironment
 from anaconda_project.conda_meta_file import CondaMetaFile, META_DIRECTORY
-from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
@@ -495,18 +494,6 @@ class Project(object):
         command = self._updated_cache().commands[command_name]
 
         return command.exec_info_for_environment(environ, extra_args)
-
-    def set_variables(self, vars_to_set):
-        """Set variables in both local project state and changes file."""
-        local_state = LocalStateFile.load_for_directory(self.directory_path)
-        present_vars = {req.env_var for req in self.requirements if isinstance(req, EnvVarRequirement)}
-        for varname, value in vars_to_set:
-            local_state.set_value(['variables', varname], value)
-            if varname not in present_vars:
-                self.project_file.set_value(['runtime', varname], {})
-        self.project_file.save()
-        local_state.save()
-        return True
 
     def publication_info(self):
         """Get JSON-serializable information to be stored as metadata when publishing the project.

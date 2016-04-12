@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 import sys
 
 from anaconda_project.project import Project
+from anaconda_project import project_ops
 
 
 def set_variables(project_dir, conda_environment, vars_to_set):
@@ -30,7 +31,7 @@ def set_variables(project_dir, conda_environment, vars_to_set):
         for problem in project.problems:
             print("  %s" % problem, file=sys.stderr)
         return 1
-    project.set_variables(fixed_vars)
+    project_ops.add_variables(project, fixed_vars)
     return 0
 
 

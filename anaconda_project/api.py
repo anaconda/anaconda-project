@@ -20,7 +20,7 @@ from __future__ import absolute_import
 
 # This file shouldn't import anaconda_project.internal, because it's
 # supposed to wrap other public API, not be the only public API.
-from anaconda_project import prepare, project, provide
+from anaconda_project import prepare, project, provide, project_ops
 
 
 class AnacondaProject(object):
@@ -182,3 +182,15 @@ class AnacondaProject(object):
                                                extra_command_args=extra_command_args,
                                                io_loop=io_loop,
                                                show_url=show_url)
+
+    def add_variables(self, project, vars_to_set):
+        """Add variables in project.yml and set their values in local project state.
+
+        Args:
+           project (Project): the project
+           vars_to_set (list of tuple): key-value pairs
+
+        Returns:
+           None
+        """
+        return project_ops.add_variables(project=project, vars_to_set=vars_to_set)

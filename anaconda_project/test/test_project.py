@@ -17,7 +17,6 @@ import pytest
 
 from anaconda_project.conda_meta_file import DEFAULT_RELATIVE_META_PATH, META_DIRECTORY
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
-from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
@@ -206,43 +205,6 @@ def test_set_name_in_project_file():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 name: foo
 """}, check_set_name)
-
-
-def test_set_variables():
-    def check_set_var(dirname):
-        project = project_no_dedicated_env(dirname)
-        project.set_variables([('foo', 'bar'), ('baz', 'qux')])
-        re_loaded = project.project_file.load_for_directory(project.directory_path)
-        assert re_loaded.get_value(['runtime', 'foo']) == {}
-        assert re_loaded.get_value(['runtime', 'baz']) == {}
-        local_state = LocalStateFile.load_for_directory(dirname)
-
-        local_state.get_value(['runtime', 'foo']) == 'bar'
-        local_state.get_value(['runtime', 'baz']) == 'qux'
-
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('runtime:\n' '  preset: {}')}, check_set_var)
-
-
-def test_set_variables_existing_req():
-    def check_set_var(dirname):
-        project = project_no_dedicated_env(dirname)
-        project.set_variables([('foo', 'bar'), ('baz', 'qux')])
-        re_loaded = project.project_file.load_for_directory(project.directory_path)
-        assert re_loaded.get_value(['runtime', 'foo']) == {}
-        assert re_loaded.get_value(['runtime', 'baz']) == {}
-        assert re_loaded.get_value(['runtime', 'datafile'], None) is None
-        assert re_loaded.get_value(['downloads', 'datafile']) == 'http://localhost:8000/data.tgz'
-        local_state = LocalStateFile.load_for_directory(dirname)
-
-        local_state.get_value(['variables', 'foo']) == 'bar'
-        local_state.get_value(['variables', 'baz']) == 'qux'
-        local_state.get_value(['variables', 'datafile']) == 'http://localhost:8000/data.tgz'
-
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: ('runtime:\n'
-                                    '  preset: {}\n'
-                                    'downloads:\n'
-                                    '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
 
 
 def test_get_icon_from_conda_meta_yaml():
