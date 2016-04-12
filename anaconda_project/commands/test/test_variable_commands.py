@@ -26,18 +26,16 @@ def test_set_variable_command(monkeypatch):
 
     params = []
 
-    def mock_project_set_variables(self, _vars):
+    def mock_add_variables(project, _vars):
         params.append(_vars)
         return True
 
-    monkeypatch.setattr('anaconda_project.project.Project.set_variables', mock_project_set_variables)
+    monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
 
-    args = Args('set', vars_to_set=['foo=bar', 'baz=qux'])
+    args = Args('set', vars_to_set=['foo=bar', 'baz=qux', 'has_two_equals=foo=bar'])
     res = main(args)
     assert res == 0
-    assert len(params) == 1
-    assert ['foo', 'bar'] in params[0]
-    assert ['baz', 'qux'] in params[0]
+    assert [('foo', 'bar'), ('baz', 'qux'), ('has_two_equals', 'foo=bar')] == params[0]
 
 
 def test_set_variable_project_problem(capsys):
@@ -62,11 +60,11 @@ def test_set_variable_command_bad(monkeypatch, capsys):
 
     params = []
 
-    def mock_project_set_variables(self, _vars):
+    def mock_add_variables(project, _vars):
         params.append(_vars)
         return True
 
-    monkeypatch.setattr('anaconda_project.project.Project.set_variables', mock_project_set_variables)
+    monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
 
     args = Args('set', vars_to_set=['foo=bar', 'baz'])
     res = main(args)

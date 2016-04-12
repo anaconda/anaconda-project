@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 import sys
 
 from anaconda_project.project import Project
+from anaconda_project import project_ops
 
 
 def set_variables(project_dir, conda_environment, vars_to_set):
@@ -23,14 +24,14 @@ def set_variables(project_dir, conda_environment, vars_to_set):
         if '=' not in var:
             print("Error: {} doesn't define a name=value pair".format(var))
             return 1
-        fixed_vars.append(var.split('='))
+        fixed_vars.append(tuple(var.split('=', maxsplit=1)))
     project = Project(project_dir, default_conda_environment=conda_environment)
     if project.problems:
         print("Unable to load project:", file=sys.stderr)
         for problem in project.problems:
             print("  %s" % problem, file=sys.stderr)
         return 1
-    project.set_variables(fixed_vars)
+    project_ops.add_variables(project, fixed_vars)
     return 0
 
 
