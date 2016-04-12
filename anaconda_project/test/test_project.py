@@ -756,6 +756,7 @@ def test_notebook_command():
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb')]
         assert cmd_exec.shell is False
+        assert cmd_exec.notebook == 'test.ipynb'
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check_notebook_command)
@@ -766,15 +767,16 @@ def test_notebook_guess_command():
         project = project_no_dedicated_env(dirname)
         assert 'test.ipynb' in project.commands
         command = project.commands['test.ipynb']
-        expected_nb_path = os.path.join(dirname, 'test.ipynb')
-        assert command._attributes == {'notebook': expected_nb_path}
+        assert command._attributes == {'notebook': 'test.ipynb'}
 
+        expected_nb_path = os.path.join(dirname, 'test.ipynb')
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, expected_nb_path]
         assert cmd_exec.shell is False
+        assert cmd_exec.notebook == 'test.ipynb'
 
     with_directory_contents(
         {
@@ -823,6 +825,7 @@ def test_bokeh_command():
         bokeh = find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py')]
         assert cmd_exec.shell is False
+        assert cmd_exec.bokeh_app == 'test.py'
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check_bokeh_command)
@@ -1188,7 +1191,11 @@ def test_get_publication_info_from_complex_project():
             'name': 'foobar',
             'commands': {'bar': {'description': 'echo boo'},
                          'baz': {'description': 'echo blah'},
-                         'foo': {'description': 'echo hi'}},
+                         'foo': {'description': 'echo hi'},
+                         'myapp': {'description': 'Bokeh app main.py',
+                                   'bokeh_app': 'main.py'},
+                         'foo.ipynb': {'description': 'Notebook foo.ipynb',
+                                       'notebook': 'foo.ipynb'}},
             'downloads': {'FOO': {'encrypted': False,
                                   'title': 'A downloaded file which is referenced by FOO',
                                   'url': 'https://example.com/blah'}},
@@ -1217,6 +1224,8 @@ commands:
     windows: echo boo
   baz:
     conda_app_entry: echo blah
+  myapp:
+    bokeh_app: main.py
 
 dependencies:
   - foo
@@ -1242,4 +1251,6 @@ runtime:
   SOMETHING: {}
   SOMETHING_ELSE: {}
 
-    """}, check_publication_info_from_complex)
+""",
+         "main.py": "",
+         "foo.ipynb": ""}, check_publication_info_from_complex)

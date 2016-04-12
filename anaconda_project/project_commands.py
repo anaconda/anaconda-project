@@ -24,12 +24,14 @@ def _is_windows():
 class CommandExecInfo(object):
     """Class describing an executable command."""
 
-    def __init__(self, cwd, args, shell, env):
+    def __init__(self, cwd, args, shell, env, notebook=None, bokeh_app=None):
         """Construct a CommandExecInfo."""
         self._cwd = cwd
         self._args = args
         self._shell = shell
         self._env = env
+        self._notebook = notebook
+        self._bokeh_app = bokeh_app
         assert shell is False or len(args) == 1
 
     @property
@@ -55,6 +57,16 @@ class CommandExecInfo(object):
     def env(self):
         """Environment to run the command in."""
         return self._env
+
+    @property
+    def notebook(self):
+        """Notebook filename relative to project directory, or None."""
+        return self._notebook
+
+    @property
+    def bokeh_app(self):
+        """Bokeh app filename relative to project directory, or None."""
+        return self._bokeh_app
 
     def popen(self, **kwargs):
         """Convenience method runs the command using Popen.
@@ -152,6 +164,16 @@ class ProjectCommand(object):
         """Get name of the command."""
         return self._name
 
+    @property
+    def notebook(self):
+        """Notebook filename relative to project directory, or None."""
+        return self._attributes.get('notebook', None)
+
+    @property
+    def bokeh_app(self):
+        """Bokeh app filename relative to project directory, or None."""
+        return self._attributes.get('bokeh_app', None)
+
     def _shell_field(self):
         if _is_windows():
             return 'windows'
@@ -161,25 +183,32 @@ class ProjectCommand(object):
     @property
     def description(self):
         """Helpful string showing what the command is."""
+        description = None
+        if self.bokeh_app is not None:
+            description = "Bokeh app %s" % self.bokeh_app
+        if description is None:
+            if self.notebook is not None:
+                description = "Notebook %s" % self.notebook
         # we don't change this by platform since we use it for
         # publication_info() and it'd be weird if it mattered
         # what platform you publish from.
-        command = self._attributes.get('shell', None)
-        if command is None:
-            command = self._attributes.get('windows', None)
-        if command is None:
-            command = self._attributes.get('conda_app_entry', None)
-        # we should have validated that there was a command
-        assert command is not None
-        return command
+        if description is None:
+            description = self._attributes.get('shell', None)
+        if description is None:
+            description = self._attributes.get('windows', None)
+        if description is None:
+            description = self._attributes.get('conda_app_entry', None)
+        # we should have validated that there was a command in here
+        assert description is not None
+        return description
 
     def _choose_args_and_shell(self, environ, extra_args=None):
-        if 'notebook' in self._attributes:
-            path = os.path.join(environ['PROJECT_DIR'], self._attributes['notebook'])
+        if self.notebook is not None:
+            path = os.path.join(environ['PROJECT_DIR'], self.notebook)
             return ['jupyter-notebook', path], False
 
-        if 'bokeh_app' in self._attributes:
-            path = os.path.join(environ['PROJECT_DIR'], self._attributes['bokeh_app'])
+        if self.bokeh_app is not None:
+            path = os.path.join(environ['PROJECT_DIR'], self.bokeh_app)
             return ['bokeh', 'serve', path], False
 
         args = None
@@ -257,4 +286,9 @@ class ProjectCommand(object):
         # more useful. This way apps can for example find
         # sample data files relative to the project
         # directory.
-        return CommandExecInfo(cwd=environ['PROJECT_DIR'], args=args, env=environ, shell=shell)
+        return CommandExecInfo(cwd=environ['PROJECT_DIR'],
+                               args=args,
+                               env=environ,
+                               shell=shell,
+                               notebook=self.notebook,
+                               bokeh_app=self.bokeh_app)

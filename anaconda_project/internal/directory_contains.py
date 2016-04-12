@@ -8,6 +8,7 @@
 from __future__ import absolute_import, print_function
 
 import os
+import platform
 
 
 def directory_contains_subdirectory(parent, child):
@@ -28,3 +29,21 @@ def directory_contains_subdirectory(parent, child):
             return _helper(real_parent, dirname)
 
     return _helper(parent, child)
+
+
+def subdirectory_relative_to_directory(child, parent):
+    """Make subdirectory name relative to the given parent."""
+    parent = os.path.realpath(parent)
+    child = os.path.realpath(child)
+
+    if not directory_contains_subdirectory(parent, child):
+        return child
+
+    assert child.startswith(parent)
+
+    child = child[len(parent):]
+    if child.startswith("/"):  # on both unix and windows
+        child = child[1:]
+    if platform.system() == 'Windows' and child.startswith("\\"):
+        child = child[1:]  # pragma: no cover (too hard to test on linux)
+    return child

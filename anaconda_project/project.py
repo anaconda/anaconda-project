@@ -19,6 +19,8 @@ from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.project_commands import ProjectCommand
 from anaconda_project.project_file import ProjectFile
 
+from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
+
 
 class _ConfigCache(object):
     def __init__(self, directory_path, registry, default_default_conda_environment_name, default_default_command_name):
@@ -346,10 +348,15 @@ class _ConfigCache(object):
                 self.default_command_name = None
 
     def _add_notebook_commands(self, commands):
-        for dirpath, dirname, filenames in os.walk(self.directory_path):
+        for dirpath, dirnames, filenames in os.walk(self.directory_path):
             for fname in filenames:
-                if fname.endswith('.ipynb') and fname not in commands:
-                    commands[fname] = ProjectCommand(name=fname, attributes={'notebook': os.path.join(dirpath, fname)})
+                if fname.endswith('.ipynb'):
+                    relative_name = subdirectory_relative_to_directory(
+                        os.path.join(dirpath, fname), self.directory_path)
+
+                    if relative_name not in commands:
+                        commands[relative_name] = ProjectCommand(name=relative_name,
+                                                                 attributes={'notebook': relative_name})
 
 
 class Project(object):
@@ -517,6 +524,10 @@ class Project(object):
         commands = dict()
         for key, command in self.commands.items():
             commands[key] = dict(description=command.description)
+            if command.bokeh_app is not None:
+                commands[key]['bokeh_app'] = command.bokeh_app
+            if command.notebook is not None:
+                commands[key]['notebook'] = command.notebook
         json['commands'] = commands
         envs = dict()
         for key, env in self.conda_environments.items():
