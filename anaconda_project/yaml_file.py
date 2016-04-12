@@ -16,6 +16,7 @@ from ruamel.yaml.error import YAMLError
 import codecs
 import errno
 import os
+import sys
 import uuid
 
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
@@ -98,15 +99,19 @@ class YamlFile(object):
             self._yaml = None
 
         if self._yaml is None:
-            # ruamel.yaml returns None if you load an empty file,
-            # so we have to build this ourselves
-            from ruamel.yaml.comments import CommentedMap
-            self._yaml = CommentedMap()
-            self._yaml.yaml_set_start_comment(self._default_comment())
+            self._yaml = self._default_content()
             self._dirty = True
 
     def _default_comment(self):
         return "yaml file"
+
+    def _default_content(self):
+        # ruamel.yaml returns None if you load an empty file,
+        # so we have to build this ourselves
+        from ruamel.yaml.comments import CommentedMap
+        root = CommentedMap()
+        root.yaml_set_start_comment(self._default_comment())
+        return root
 
     def _throw_if_corrupted(self):
         if self._corrupted:
@@ -160,6 +165,17 @@ class YamlFile(object):
             return
 
         contents = ryaml.dump(self._yaml, Dumper=ryaml.RoundTripDumper)
+
+        try:
+            # This is to ensure we don't corrupt the file, even if ruamel.yaml is broken
+            ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+        except YAMLError as e:  # pragma: no cover (should not happen)
+            print("ruamel.yaml bug; it failed to parse a file that it generated.", file=sys.stderr)
+            print("  the parse error was: " + str(e), file=sys.stderr)
+            print("Generated file was:", file=sys.stderr)
+            print(contents, file=sys.stderr)
+            raise RuntimeError("Bug in ruamel.yaml library; failed to parse a file that it generated: " + str(e))
+
         if not os.path.isfile(self.filename):
             # might have to make the directory
             dirname = os.path.dirname(self.filename)
