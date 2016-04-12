@@ -17,7 +17,8 @@ from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.providers.download import DownloadProvider
 from anaconda_project.plugins.requirements.download import DownloadRequirement
-from anaconda_project.prepare import prepare, UI_MODE_BROWSER, UI_MODE_TEXT_ASSUME_NO
+from anaconda_project.prepare import prepare_without_interaction, prepare_with_browser_ui
+from anaconda_project import provide
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 from tornado import gen
@@ -56,7 +57,7 @@ def test_prepare_download(monkeypatch):
         monkeypatch.setattr(
             "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
         assert 'DATAFILE' in result.environ
 
@@ -71,7 +72,7 @@ def test_prepare_download_exception(monkeypatch):
 
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert not result
         assert ('missing requirement to run this project: '
                 'A downloaded file which is referenced by DATAFILE') in result.errors
@@ -101,7 +102,7 @@ def test_provide_minimal(monkeypatch):
         monkeypatch.setattr(
             "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
         assert 'DATAFILE' in result.environ
 
@@ -119,7 +120,9 @@ def test_provide_no_download_in_check_mode(monkeypatch):
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
 
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname), ui_mode=UI_MODE_TEXT_ASSUME_NO)
+        result = prepare_without_interaction(project,
+                                             environ=minimal_environ(PROJECT_DIR=dirname),
+                                             mode=provide.PROVIDE_MODE_CHECK)
         assert not result
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: MIN_DATAFILE_CONTENT}, provide_download)
@@ -130,7 +133,7 @@ def test_provide_missing_url(monkeypatch):
 
     def provide_download(dirname):
         project = project_no_dedicated_env(dirname)
-        prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert "Download item DATAFILE doesn't contain a 'url' field." in project.problems
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
@@ -141,7 +144,7 @@ def test_provide_empty_url(monkeypatch):
 
     def provide_download(dirname):
         project = project_no_dedicated_env(dirname)
-        prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert "Download item DATAFILE has an empty 'url' field." in project.problems
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
@@ -156,7 +159,7 @@ def test_provide_multiple_checksums(monkeypatch):
 
     def provide_download(dirname):
         project = project_no_dedicated_env(dirname)
-        prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert "Multiple checksums for download DATAFILE: md5 and sha1." in project.problems
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
@@ -167,7 +170,7 @@ def test_provide_wrong_form(monkeypatch):
 
     def provide_download(dirname):
         project = project_no_dedicated_env(dirname)
-        prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert "'downloads:' section should be a dictionary, found ['http://localhost/data.zip']" in project.problems
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
@@ -186,7 +189,7 @@ def test_failed_download(monkeypatch):
 
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
         project = project_no_dedicated_env(dirname)
-        result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert not result
         assert ('missing requirement to run this project: '
                 'A downloaded file which is referenced by DATAFILE') in result.errors
@@ -210,7 +213,7 @@ def test_file_exists(monkeypatch):
 
         monkeypatch.setattr(
             "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
-        result = prepare(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
         assert 'DATAFILE' in result.environ
 
@@ -299,11 +302,7 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
             environ = initial_environ(dirname)
         else:
             environ = initial_environ
-        result = prepare(project,
-                         environ=environ,
-                         io_loop=io_loop,
-                         ui_mode=UI_MODE_BROWSER,
-                         keep_going_until_success=True)
+        result = prepare_with_browser_ui(project, environ=environ, io_loop=io_loop, keep_going_until_success=True)
 
         # finish up the last http action if prepare_ui.py stopped the loop before we did
         while 'done' not in http_done:

@@ -7,7 +7,7 @@
 """The ``prepare`` command configures a project to run, asking the user questions if necessary."""
 from __future__ import absolute_import, print_function
 
-from anaconda_project import prepare
+from anaconda_project.commands.prepare_with_mode import prepare_with_ui_mode_printing_errors
 from anaconda_project.project import Project
 
 
@@ -18,7 +18,7 @@ def prepare_command(project_dir, ui_mode, conda_environment):
         Prepare result (can be treated as True on success).
     """
     project = Project(project_dir, default_conda_environment=conda_environment)
-    result = prepare.prepare(project, ui_mode=ui_mode, keep_going_until_success=True)
+    result = prepare_with_ui_mode_printing_errors(project, ui_mode=ui_mode)
 
     return result
 

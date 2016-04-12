@@ -15,9 +15,10 @@ from anaconda_project.test.environ_utils import (minimal_environ, minimal_enviro
 from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
-from anaconda_project.prepare import prepare, UI_MODE_BROWSER, UI_MODE_TEXT_ASSUME_NO
+from anaconda_project.prepare import prepare_without_interaction, prepare_with_browser_ui
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project import Project
+from anaconda_project import provide
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.providers.conda_env import CondaEnvProvider
 
@@ -45,7 +46,7 @@ def test_prepare_project_scoped_env(monkeypatch):
         project = Project(dirname)
         fake_old_path = "foo" + os.pathsep + "bar"
         environ = dict(PROJECT_DIR=dirname, PATH=fake_old_path)
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert result
         expected_env = os.path.join(dirname, "envs", "default")
         if platform.system() == 'Windows':
@@ -73,7 +74,7 @@ def test_prepare_project_scoped_env(monkeypatch):
 
         # Prepare it again should no-op (use the already-existing environment)
         environ = dict(PROJECT_DIR=dirname, PATH=fake_old_path)
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert result
         expected = dict(CONDA_ENV_PATH=expected_env,
                         CONDA_DEFAULT_ENV=expected_env,
@@ -96,7 +97,7 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
     def prepare_project_scoped_env_fails(dirname):
         project = Project(dirname)
         environ = minimal_environ(PROJECT_DIR=dirname)
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert not result
 
     with_directory_contents(dict(), prepare_project_scoped_env_fails)
@@ -111,7 +112,7 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
     def prepare_project_scoped_env_not_attempted(dirname):
         project = Project(dirname)
         environ = minimal_environ(PROJECT_DIR=dirname)
-        result = prepare(project, environ=environ, ui_mode=UI_MODE_TEXT_ASSUME_NO)
+        result = prepare_without_interaction(project, environ=environ, mode=provide.PROVIDE_MODE_CHECK)
         assert not result
         expected_env_path = os.path.join(dirname, "envs", "default")
         assert ['missing requirement to run this project: A Conda environment',
@@ -126,7 +127,7 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
     def prepare_project_scoped_env_with_packages(dirname):
         project = Project(dirname)
         environ = minimal_environ(PROJECT_DIR=dirname)
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert result
 
         prefix = result.environ[conda_env_var]
@@ -141,7 +142,7 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         project.project_file.set_value('dependencies', deps + ['ipython-notebook'])
         project.project_file.save()
         environ = minimal_environ(PROJECT_DIR=dirname)
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert result
 
         prefix = result.environ[conda_env_var]
@@ -156,7 +157,7 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         project.project_file.set_value(['dependencies'], deps + ['boguspackage'])
         project.project_file.save()
         environ = minimal_environ(PROJECT_DIR=dirname)
-        result = prepare(project, environ=environ)
+        result = prepare_without_interaction(project, environ=environ)
         assert not result
 
     with_directory_contents(
@@ -207,11 +208,7 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
             environ = initial_environ(dirname)
         else:
             environ = initial_environ
-        result = prepare(project,
-                         environ=environ,
-                         io_loop=io_loop,
-                         ui_mode=UI_MODE_BROWSER,
-                         keep_going_until_success=True)
+        result = prepare_with_browser_ui(project, environ=environ, io_loop=io_loop, keep_going_until_success=True)
 
         # finish up the last http action if prepare_ui.py stopped the loop before we did
         while 'done' not in http_done:
@@ -452,8 +449,8 @@ def test_browser_ui_keeping_env_var_set(monkeypatch):
         form = _prefix_form(stuff['form_names'], {'source': 'environ', 'env_name': 'default'})
         response = yield http_post_async(url, form=form)
         assert response.code == 200
-        body = response.body.decode('utf-8')
         # print("POST BODY: " + body)
+        body = response.body.decode('utf-8')
         assert "Done!" not in body
         # error message should be about the environ thing we chose
         assert envprefix + "' doesn't look like it contains a Conda environment yet." in body

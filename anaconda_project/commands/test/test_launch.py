@@ -13,8 +13,8 @@ import os
 
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.commands.launch import launch_command, main
+from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
-from anaconda_project.prepare import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 from anaconda_project.test.project_utils import project_dir_disable_dedicated_env

@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from anaconda_project.prepare import prepare
+from anaconda_project.commands.prepare_with_mode import prepare_with_ui_mode_printing_errors
 from anaconda_project.project import Project
 
 
@@ -20,7 +20,7 @@ def launch_command(project_dir, ui_mode, conda_environment, command, extra_comma
         Does not return if successful.
     """
     project = Project(project_dir, default_conda_environment=conda_environment, default_command=command)
-    result = prepare(project, ui_mode=ui_mode, extra_command_args=extra_command_args)
+    result = prepare_with_ui_mode_printing_errors(project, ui_mode=ui_mode, extra_command_args=extra_command_args)
 
     if result.failed:
         return
