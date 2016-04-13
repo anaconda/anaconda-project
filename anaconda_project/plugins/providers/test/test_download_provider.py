@@ -197,6 +197,25 @@ def test_failed_download(monkeypatch):
     with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
 
+def test_failed_download_before_connect(monkeypatch):
+    def provide_download(dirname):
+        @gen.coroutine
+        def mock_downloader_run(self, loop):
+            # if we don't even get an HTTP response, the errors are handled this way,
+            # e.g. if the URL is bad.
+            self._errors = ['This went horribly wrong']
+            raise gen.Return(None)
+
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        project = project_no_dedicated_env(dirname)
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        assert not result
+        assert ('missing requirement to run this project: '
+                'A downloaded file which is referenced by DATAFILE') in result.errors
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
+
+
 def test_file_exists(monkeypatch):
     def provide_download(dirname):
         FILENAME = os.path.join(dirname, 'data.zip')

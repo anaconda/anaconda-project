@@ -7,8 +7,10 @@
 from __future__ import absolute_import, print_function
 
 import os
+from tornado import gen
 
 from anaconda_project import project_ops
+from anaconda_project.project import Project
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
@@ -90,3 +92,139 @@ def test_remove_variables():
         local_state.get_value(['runtime', 'bar']) is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ('runtime:\n' '  foo: baz\n  bar: qux')}, check_remove_var)
+
+
+def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA'):
+    @gen.coroutine
+    def mock_downloader_run(self, loop):
+        class Res:
+            pass
+
+        res = Res()
+        res.code = 200
+        with open(os.path.join(dirname, filename), 'w') as out:
+            out.write('data')
+        raise gen.Return(res)
+
+    monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+
+
+def _monkeypatch_download_file_fails(monkeypatch, dirname):
+    @gen.coroutine
+    def mock_downloader_run(self, loop):
+        class Res:
+            pass
+
+        res = Res()
+        res.code = 404
+        raise gen.Return(res)
+
+    monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+
+
+def _monkeypatch_download_file_fails_to_get_http_response(monkeypatch, dirname):
+    @gen.coroutine
+    def mock_downloader_run(self, loop):
+        raise gen.Return(None)
+
+    monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+
+
+def test_add_download(monkeypatch):
+    def check(dirname):
+        _monkeypatch_download_file(monkeypatch, dirname)
+
+        project = Project(dirname)
+        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
+
+        assert os.path.isfile(os.path.join(dirname, "MYDATA"))
+        assert status
+
+        # be sure download was added to the file and saved
+        project2 = Project(dirname)
+        assert 'http://localhost:123456' == project2.project_file.get_value(['downloads', 'MYDATA'])
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_download_which_already_exists(monkeypatch):
+    def check(dirname):
+        _monkeypatch_download_file(monkeypatch, dirname, filename='foobar')
+
+        project = Project(dirname)
+        assert [] == project.problems
+
+        assert dict(url='http://localhost:56789',
+                    filename='foobar') == dict(project.project_file.get_value(['downloads', 'MYDATA']))
+
+        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
+
+        assert os.path.isfile(os.path.join(dirname, "foobar"))
+        assert status
+
+        # be sure download was added to the file and saved, and
+        # the filename attribute was kept
+        project2 = Project(dirname)
+        assert dict(url='http://localhost:123456',
+                    filename='foobar') == dict(project2.project_file.get_value(['downloads', 'MYDATA']))
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+downloads:
+    MYDATA: { url: "http://localhost:56789", filename: foobar }
+"""}, check)
+
+
+def test_add_download_fails(monkeypatch):
+    def check(dirname):
+        _monkeypatch_download_file_fails(monkeypatch, dirname)
+
+        project = Project(dirname)
+        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
+
+        assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
+        assert not status
+
+        # be sure download was NOT added to the file
+        project2 = Project(dirname)
+        assert project2.project_file.get_value(['downloads', 'MYDATA']) is None
+        # should have been dropped from the original project object also
+        assert project.project_file.get_value(['downloads', 'MYDATA']) is None
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_download_fails_to_get_http_response(monkeypatch):
+    def check(dirname):
+        _monkeypatch_download_file_fails_to_get_http_response(monkeypatch, dirname)
+
+        project = Project(dirname)
+        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
+
+        assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
+        assert not status
+
+        # be sure download was NOT added to the file
+        project2 = Project(dirname)
+        assert project2.project_file.get_value(['downloads', 'MYDATA']) is None
+        # should have been dropped from the original project object also
+        assert project.project_file.get_value(['downloads', 'MYDATA']) is None
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_download_with_project_file_problems():
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
+
+        assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
+        assert not status
+
+        # be sure download was NOT added to the file
+        project2 = Project(dirname)
+        assert project2.project_file.get_value(['downloads', 'MYDATA']) is None
+        # should have been dropped from the original project object also
+        assert project.project_file.get_value(['downloads', 'MYDATA']) is None
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  42"}, check)

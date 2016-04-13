@@ -20,6 +20,7 @@ from anaconda_project.internal.toposort import toposort_from_dependency_info
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT)
 from anaconda_project.plugins.provider import ProvideContext
+from anaconda_project.plugins.requirement import EnvVarRequirement
 
 
 def _update_environ(dest, src):
@@ -37,9 +38,10 @@ def _update_environ(dest, src):
 class PrepareResult(with_metaclass(ABCMeta)):
     """Abstract class describing the result of preparing the project to run."""
 
-    def __init__(self, logs):
+    def __init__(self, logs, statuses):
         """Construct an abstract PrepareResult."""
         self._logs = logs
+        self._statuses = tuple(statuses)
 
     def __bool__(self):
         """True if we were successful."""
@@ -75,13 +77,28 @@ class PrepareResult(with_metaclass(ABCMeta)):
             # be sure we print all these before the errors
             sys.stdout.flush()
 
+    @property
+    def statuses(self):
+        """Get latest RequirementStatus if available.
+
+        If we failed before we even checked statuses, this will be an empty list.
+        """
+        return self._statuses
+
+    def status_for_env_var(self, env_var):
+        """Get status for the given env var, or None if unknown."""
+        for status in self.statuses:
+            if isinstance(status.requirement, EnvVarRequirement) and status.requirement.env_var == env_var:
+                return status
+        return None
+
 
 class PrepareSuccess(PrepareResult):
     """Class describing the successful result of preparing the project to run."""
 
-    def __init__(self, logs, command_exec_info, environ):
+    def __init__(self, logs, statuses, command_exec_info, environ):
         """Construct a PrepareSuccess indicating a successful prepare stage."""
-        super(PrepareSuccess, self).__init__(logs)
+        super(PrepareSuccess, self).__init__(logs, statuses)
         self._command_exec_info = command_exec_info
         self._environ = environ
 
@@ -111,9 +128,9 @@ class PrepareSuccess(PrepareResult):
 class PrepareFailure(PrepareResult):
     """Class describing the failed result of preparing the project to run."""
 
-    def __init__(self, logs, errors):
+    def __init__(self, logs, statuses, errors):
         """Construct a PrepareFailure indicating a failed prepare stage."""
-        super(PrepareFailure, self).__init__(logs)
+        super(PrepareFailure, self).__init__(logs, statuses)
         self._errors = errors
 
     @property
@@ -349,7 +366,7 @@ def _sort_statuses(environ, local_state, statuses, missing_vars_getter):
 
 
 def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success, mode,
-                           extra_command_args):
+                           provide_whitelist, extra_command_args):
     def provide_stage(stage):
         def get_missing_to_provide(status):
             return status.analysis.missing_env_vars_to_provide
@@ -366,7 +383,13 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         did_any_providing = False
 
         for status in rechecked:
-            if not status.has_been_provided:
+            if provide_whitelist is not None and \
+               isinstance(status.requirement, EnvVarRequirement) and \
+               status.requirement.env_var not in provide_whitelist:
+                continue
+            elif status.has_been_provided:
+                continue
+            else:
                 did_any_providing = True
                 context = ProvideContext(environ, local_state, status, mode)
                 status.provider.provide(status.requirement, context)
@@ -387,15 +410,21 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 errors.append("  {why_not}".format(why_not=status.status_description))
                 failed = True
 
+        result_statuses = _refresh_status_list(all_statuses, rechecked)
         if failed:
-            stage.set_result(PrepareFailure(logs=logs, errors=errors), rechecked)
+            stage.set_result(PrepareFailure(logs=logs, statuses=result_statuses, errors=errors), rechecked)
             if keep_going_until_success:
                 return _start_over(stage.statuses_after_execute, rechecked)
             else:
                 return None
         else:
             exec_info = project.exec_info_for_environment(environ, extra_command_args)
-            stage.set_result(PrepareSuccess(logs=logs, command_exec_info=exec_info, environ=environ), rechecked)
+            stage.set_result(
+                PrepareSuccess(logs=logs,
+                               statuses=result_statuses,
+                               command_exec_info=exec_info,
+                               environ=environ),
+                rechecked)
             return None
 
     def _start_over(updated_all_statuses, updated_statuses):
@@ -440,7 +469,7 @@ def _partition_first_group_to_configure(environ, local_state, statuses):
 
 
 def _process_requirement_statuses(project, environ, local_state, current_statuses, all_statuses,
-                                  keep_going_until_success, mode, extra_command_args):
+                                  keep_going_until_success, mode, provide_whitelist, extra_command_args):
     (initial, remaining) = _partition_first_group_to_configure(environ, local_state, current_statuses)
 
     # a surprising thing here is that the "stages" from
@@ -453,7 +482,7 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
 
     def _stages_for(statuses):
         return _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success,
-                                      mode, extra_command_args)
+                                      mode, provide_whitelist, extra_command_args)
 
     if len(initial) > 0 and len(remaining) > 0:
 
@@ -461,7 +490,7 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
             # get the new status for each remaining requirement
             updated = _refresh_status_list(remaining, updated_all_statuses)
             return _process_requirement_statuses(project, environ, local_state, updated, updated_all_statuses,
-                                                 keep_going_until_success, mode, extra_command_args)
+                                                 keep_going_until_success, mode, provide_whitelist, extra_command_args)
 
         return _after_stage_success(_stages_for(initial), process_remaining)
     elif len(initial) > 0:
@@ -496,13 +525,14 @@ def _add_missing_env_var_requirements(project, environ, local_state, statuses):
         _add_missing_env_var_requirements(project, environ, local_state, statuses)
 
 
-def _first_stage(project, environ, local_state, statuses, keep_going_until_success, mode, extra_command_args):
+def _first_stage(project, environ, local_state, statuses, keep_going_until_success, mode, provide_whitelist,
+                 extra_command_args):
     assert 'PROJECT_DIR' in environ
 
     _add_missing_env_var_requirements(project, environ, local_state, statuses)
 
     first_stage = _process_requirement_statuses(project, environ, local_state, statuses, statuses,
-                                                keep_going_until_success, mode, extra_command_args)
+                                                keep_going_until_success, mode, provide_whitelist, extra_command_args)
 
     return first_stage
 
@@ -511,6 +541,7 @@ def prepare_in_stages(project,
                       environ=None,
                       keep_going_until_success=False,
                       mode=PROVIDE_MODE_DEVELOPMENT,
+                      provide_whitelist=None,
                       extra_command_args=None):
     """Get a chain of all steps needed to get a project ready to execute.
 
@@ -529,6 +560,7 @@ def prepare_in_stages(project,
         environ (dict): the environment to start from (None to use os.environ)
         keep_going_until_success (bool): keep returning new stages until all requirements are met
         mode (str): One of ``PROVIDE_MODE_PRODUCTION``, ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_CHECK``
+        provide_whitelist (iterable of str): ONLY call provide() for the listed env vars' requirements
         extra_command_args (list of str): extra args for the command we prepare
 
     Returns:
@@ -576,7 +608,7 @@ def prepare_in_stages(project,
         status = requirement.check_status(environ_copy, local_state)
         statuses.append(status)
 
-    return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode,
+    return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode, provide_whitelist,
                         extra_command_args)
 
 
@@ -586,12 +618,16 @@ def _project_problems_to_prepare_failure(project):
         errors.append("Unable to load project:")
         for problem in project.problems:
             errors.append("  %s" % problem)
-        return PrepareFailure(logs=[], errors=errors)
+        return PrepareFailure(logs=[], statuses=(), errors=errors)
     else:
         return None
 
 
-def prepare_without_interaction(project, environ=None, mode=PROVIDE_MODE_DEVELOPMENT, extra_command_args=None):
+def prepare_without_interaction(project,
+                                environ=None,
+                                mode=PROVIDE_MODE_DEVELOPMENT,
+                                provide_whitelist=None,
+                                extra_command_args=None):
     """Prepare a project to run one of its commands.
 
     This method doesn't ask the user any questions, so the
@@ -627,6 +663,7 @@ def prepare_without_interaction(project, environ=None, mode=PROVIDE_MODE_DEVELOP
         project (Project): from the ``load_project`` method
         environ (dict): os.environ or the previously-prepared environ; not modified in-place
         mode (str): mode from ``PROVIDE_MODE_PRODUCTION``, ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_CHECK``
+        provide_whitelist (iterable of str): ONLY call provide() for the listed env vars' requirements
         extra_command_args (list): extra args to include in the returned command argv
 
     Returns:
@@ -641,6 +678,7 @@ def prepare_without_interaction(project, environ=None, mode=PROVIDE_MODE_DEVELOP
                               environ,
                               keep_going_until_success=False,
                               mode=mode,
+                              provide_whitelist=provide_whitelist,
                               extra_command_args=extra_command_args)
 
     return prepare_execute_without_interaction(stage)

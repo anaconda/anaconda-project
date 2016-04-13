@@ -200,12 +200,12 @@ def test_skip_after_success_function_when_second_stage_fails():
     def do_first(stage):
         assert state['state'] == 'start'
         state['state'] = 'first'
-        stage.set_result(PrepareSuccess(logs=[], command_exec_info=None, environ=dict()), [])
+        stage.set_result(PrepareSuccess(logs=[], statuses=(), command_exec_info=None, environ=dict()), [])
 
         def last(stage):
             assert state['state'] == 'first'
             state['state'] = 'second'
-            stage.set_result(PrepareFailure(logs=[], errors=[]), [])
+            stage.set_result(PrepareFailure(logs=[], statuses=(), errors=[]), [])
             return None
 
         return _FunctionPrepareStage("second", [], last)
@@ -235,12 +235,12 @@ def test_run_after_success_function_when_second_stage_succeeds():
     def do_first(stage):
         assert state['state'] == 'start'
         state['state'] = 'first'
-        stage.set_result(PrepareSuccess(logs=[], command_exec_info=None, environ=dict()), [])
+        stage.set_result(PrepareSuccess(logs=[], statuses=(), command_exec_info=None, environ=dict()), [])
 
         def last(stage):
             assert state['state'] == 'first'
             state['state'] = 'second'
-            stage.set_result(PrepareSuccess(logs=[], command_exec_info=None, environ=dict()), [])
+            stage.set_result(PrepareSuccess(logs=[], statuses=(), command_exec_info=None, environ=dict()), [])
             return None
 
         return _FunctionPrepareStage("second", [], last)
@@ -430,3 +430,9 @@ def test_prepare_problem_project_with_browser(monkeypatch):
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 icon: foo.png
 """}, check)
+
+
+def test_prepare_success_properties():
+    result = PrepareSuccess(logs=["a"], statuses=(), command_exec_info=None, environ=dict())
+    assert result.statuses == ()
+    assert result.status_for_env_var('FOO') is None

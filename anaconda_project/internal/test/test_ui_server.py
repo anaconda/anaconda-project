@@ -22,7 +22,7 @@ from anaconda_project.plugins.requirement import EnvVarRequirement
 
 def _no_op_prepare(config_context):
     def _do_nothing(stage):
-        stage.set_result(PrepareSuccess(logs=[], command_exec_info=None, environ=dict()), [])
+        stage.set_result(PrepareSuccess(logs=[], statuses=(), command_exec_info=None, environ=dict()), [])
         return None
 
     return _FunctionPrepareStage("Do Nothing", [], _do_nothing, config_context)

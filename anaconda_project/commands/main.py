@@ -17,6 +17,7 @@ import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
 import anaconda_project.commands.activate as activate
 import anaconda_project.commands.variable_commands as variable_commands
+import anaconda_project.commands.download_commands as download_commands
 
 
 def _parse_args_and_run_subcommand(argv):
@@ -81,6 +82,12 @@ def _parse_args_and_run_subcommand(argv):
     add_project_arg(preset)
     preset.add_argument('vars_to_remove', metavar='VARS_TO_REMOVE', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main, action="remove")
+
+    preset = subparsers.add_parser('add-download', help="Add a URL to be downloaded before running commands")
+    add_project_arg(preset)
+    preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
+    preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
+    preset.set_defaults(main=download_commands.main_add)
 
     # argparse doesn't do this for us for whatever reason
     if len(argv) < 2:

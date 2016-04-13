@@ -100,7 +100,11 @@ class DownloadProvider(EnvVarProvider):
         try:
             _ioloop = IOLoop(make_current=False)
             response = _ioloop.run_sync(lambda: download.run(_ioloop))
-            if response.code == 200:
+            if response is None:
+                for error in download.errors:
+                    context.append_error(error)
+                return None
+            elif response.code == 200:
                 return filename
             else:
                 context.append_error("Error downloading {}: response code {}".format(requirement.url, response.code))
