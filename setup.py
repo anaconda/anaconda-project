@@ -103,7 +103,8 @@ copyright_re = re.compile('# *Copyright ')
 
 class AllTestsCommand(TestCommand):
     # `py.test --durations=5` == `python setup.py test -a "--durations=5"`
-    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
+    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test"),
+                    ('format-only', None, "Only run the linters and formatters not the actual tests")]
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
@@ -122,6 +123,7 @@ class AllTestsCommand(TestCommand):
             self.pytest_args = self.pytest_args + coverage_args
         self.pyfiles = None
         self.failed = []
+        self.format_only = False
 
     def _py_files(self):
         if self.pyfiles is None:
@@ -297,18 +299,22 @@ column_limit : 120
         self._headers()
         self._yapf()
         self._flake8()
-        self._pytest()
+        if not self.format_only:
+            self._pytest()
         self._pep257()
         if len(self.failed) > 0:
             print("Failures in: " + repr(self.failed))
             sys.exit(1)
         else:
-            import platform
-            if platform.system() == 'Windows':
-                # windows console defaults to crap encoding so they get no flair
-                print("All tests passed!")
+            if self.format_only:
+                print("Formatting looks good, but didn't run tests.")
             else:
-                print("All tests passed! 💯 🌟")
+                import platform
+                if platform.system() == 'Windows':
+                    # windows console defaults to crap encoding so they get no flair
+                    print("All tests passed!")
+                else:
+                    print("All tests passed! 💯 🌟")
 
 
 setup(name='anaconda-project',
