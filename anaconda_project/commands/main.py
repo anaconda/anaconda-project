@@ -12,6 +12,7 @@ import sys
 from argparse import ArgumentParser, REMAINDER
 
 from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
+import anaconda_project.commands.init as init
 import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
 import anaconda_project.commands.activate as activate
@@ -46,6 +47,10 @@ def _parse_args_and_run_subcommand(argv):
                             choices=_all_ui_modes,
                             action='store',
                             help="One of " + ", ".join(_all_ui_modes))
+
+    preset = subparsers.add_parser('init', help="Initializes a directory with default project config.")
+    add_project_arg(preset)
+    preset.set_defaults(main=init.main)
 
     preset = subparsers.add_parser('launch', help="Runs the project, setting up requirements first.")
     add_prepare_args(preset)
