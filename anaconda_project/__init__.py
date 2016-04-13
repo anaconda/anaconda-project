@@ -4,4 +4,6 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-"""API for working with Anaconda projects."""
+"""API for working with Anaconda projects."""  # pragma: no cover
+
+__version__ = '0.1'  # pragma: no cover

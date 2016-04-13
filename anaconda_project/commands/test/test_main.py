@@ -19,7 +19,7 @@ def test_main_no_subcommand(capsys):
 
     out, err = capsys.readouterr()
     assert "" == out
-    expected_error_msg = ('Must specify a subcommand.\nusage: anaconda-project [-h]\n'
+    expected_error_msg = ('Must specify a subcommand.\nusage: anaconda-project [-h] [-v]\n'
                           '                        {init,launch,prepare,activate,add-variable,remove-variable}\n'
                           '                        ...\n')
     assert expected_error_msg == err
@@ -29,7 +29,7 @@ def test_main_bad_subcommand(capsys):
     code = _parse_args_and_run_subcommand(['project', 'foo'])
 
     out, err = capsys.readouterr()
-    expected_error_msg = ("usage: anaconda-project [-h]\n"
+    expected_error_msg = ("usage: anaconda-project [-h] [-v]\n"
                           "                        {init,launch,prepare,activate,add-variable,remove-variable}\n"
                           "                        ...\nanaconda-project: error: invalid choice: 'foo' "
                           "(choose from 'init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable')\n")
@@ -40,7 +40,7 @@ def test_main_bad_subcommand(capsys):
 
 
 expected_usage_msg = \
-        'usage: anaconda-project [-h]\n' \
+        'usage: anaconda-project [-h] [-v]\n' \
         '                        {init,launch,prepare,activate,add-variable,remove-variable}\n' \
         '                        ...\n' \
         '\n' \
@@ -61,7 +61,8 @@ expected_usage_msg = \
         '                        project\n' \
         '\n' \
         'optional arguments:\n' \
-        '  -h, --help            show this help message and exit\n'
+        '  -h, --help            show this help message and exit\n' \
+        "  -v, --version         show program's version number and exit\n"
 
 
 def test_main_help(capsys):

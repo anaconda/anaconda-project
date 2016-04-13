@@ -20,6 +20,8 @@ from os.path import dirname, realpath
 from distutils.core import setup
 from setuptools.command.test import test as TestCommand
 
+from anaconda_project import __version__
+
 ROOT = dirname(realpath(__file__))
 
 PY2 = sys.version_info[0] == 2
@@ -318,7 +320,7 @@ column_limit : 120
 
 
 setup(name='anaconda-project',
-      version="0.1",
+      version=__version__,
       author="Continuum Analytics",
       author_email='info@continuum.io',
       url='http://github.com/Anaconda-Server/anaconda-project',
