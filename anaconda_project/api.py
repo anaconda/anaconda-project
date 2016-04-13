@@ -204,14 +204,26 @@ class AnacondaProject(object):
                                                io_loop=io_loop,
                                                show_url=show_url)
 
-    def add_variables(self, project, vars_to_set):
+    def add_variables(self, project, vars_to_add):
         """Add variables in project.yml and set their values in local project state.
 
         Args:
            project (Project): the project
-           vars_to_set (list of tuple): key-value pairs
+           vars_to_add (list of tuple): key-value pairs
 
         Returns:
            None
         """
-        return project_ops.add_variables(project=project, vars_to_set=vars_to_set)
+        return project_ops.add_variables(project=project, vars_to_add=vars_to_add)
+
+    def remove_variables(self, project, vars_to_remove):
+        """Remove variables in project.yml and remove them from local project state.
+
+        Args:
+           project (Project): the project
+           vars_to_remove (list of strings): variables to remove
+
+        Returns:
+           None
+        """
+        return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove)

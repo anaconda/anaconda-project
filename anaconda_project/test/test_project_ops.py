@@ -75,3 +75,18 @@ def test_add_variables_existing_req():
                                     '  preset: {}\n'
                                     'downloads:\n'
                                     '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
+
+
+def test_remove_variables():
+    def check_remove_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        project_ops.remove_variables(project, ['foo', 'bar'])
+        re_loaded = project.project_file.load_for_directory(project.directory_path)
+        assert re_loaded.get_value(['runtime', 'foo']) is None
+        assert re_loaded.get_value(['runtime', 'bar']) is None
+        local_state = LocalStateFile.load_for_directory(dirname)
+
+        local_state.get_value(['runtime', 'foo']) is None
+        local_state.get_value(['runtime', 'bar']) is None
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('runtime:\n' '  foo: baz\n  bar: qux')}, check_remove_var)

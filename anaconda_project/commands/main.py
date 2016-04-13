@@ -71,16 +71,16 @@ def _parse_args_and_run_subcommand(argv):
     add_prepare_args(preset)
     preset.set_defaults(main=activate.main)
 
-    preset = subparsers.add_parser('set-variable',
-                                   help="Set an environment variable and adds it to project if not present")
-    preset.add_argument('vars_to_set', metavar='VARS_TO_SET', default=None, nargs=REMAINDER)
+    preset = subparsers.add_parser('add-variable',
+                                   help="Add an environment variable and adds it to project if not present")
+    preset.add_argument('vars_to_add', metavar='VARS_TO_ADD', default=None, nargs=REMAINDER)
     add_project_arg(preset)
-    preset.set_defaults(main=variable_commands.main, action="set")
+    preset.set_defaults(main=variable_commands.main, action="add")
 
-    preset = subparsers.add_parser('unset-variable', help="Unset an environment variable and removes it from project")
+    preset = subparsers.add_parser('remove-variable', help="Remove an environment variable and removes it from project")
     add_project_arg(preset)
-    preset.add_argument('vars_to_unset', metavar='VARS_TO_UNSET', default=None, nargs=REMAINDER)
-    preset.set_defaults(main=variable_commands.main, action="unset")
+    preset.add_argument('vars_to_remove', metavar='VARS_TO_REMOVE', default=None, nargs=REMAINDER)
+    preset.set_defaults(main=variable_commands.main, action="remove")
 
     # argparse doesn't do this for us for whatever reason
     if len(argv) < 2:

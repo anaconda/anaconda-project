@@ -51,21 +51,39 @@ def create(directory_path, make_directory=False):
     return project
 
 
-def add_variables(project, vars_to_set):
+def add_variables(project, vars_to_add):
     """Add variables in project.yml and set their values in local project state.
 
     Args:
         project (Project): the project
-        vars_to_set (list of tuple): key-value pairs
+        vars_to_add (list of tuple): key-value pairs
 
     Returns:
         None
     """
     local_state = LocalStateFile.load_for_directory(project.directory_path)
     present_vars = {req.env_var for req in project.requirements if isinstance(req, EnvVarRequirement)}
-    for varname, value in vars_to_set:
+    for varname, value in vars_to_add:
         local_state.set_value(['variables', varname], value)
         if varname not in present_vars:
             project.project_file.set_value(['runtime', varname], {})
+    project.project_file.save()
+    local_state.save()
+
+
+def remove_variables(project, vars_to_remove):
+    """Add variables in project.yml and set their values in local project state.
+
+    Args:
+        project (Project): the project
+        vars_to_remove (list of tuple): key-value pairs
+
+    Returns:
+        None
+    """
+    local_state = LocalStateFile.load_for_directory(project.directory_path)
+    for varname in vars_to_remove:
+        local_state.unset_value(['variables', varname])
+        project.project_file.unset_value(['runtime', varname])
     project.project_file.save()
     local_state.save()
