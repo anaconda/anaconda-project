@@ -101,6 +101,23 @@ def test_add_variables(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
 
     p = api.AnacondaProject()
+    kwargs = dict(project=43, vars_to_add=45)
+    result = p.add_variables(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
+def test_remove_variables(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_add_variables(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
+
+    p = api.AnacondaProject()
     kwargs = dict(project=43, vars_to_set=45)
     result = p.add_variables(**kwargs)
     assert 42 == result

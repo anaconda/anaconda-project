@@ -6,23 +6,20 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-import pytest
-
 from anaconda_project.commands.variable_commands import main
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 
 class Args(object):
-    def __init__(self, action, vars_to_set=None, vars_to_unset=None, project='.'):
+    def __init__(self, action, vars_to_add=None, vars_to_remove=None, project='.'):
         self.project = project
         self.action = action
-        self.environment = 'default'
-        self.vars_to_set = vars_to_set
-        self.vars_to_unset = vars_to_unset
+        self.vars_to_add = vars_to_add
+        self.vars_to_remove = vars_to_remove
 
 
-def test_set_variable_command(monkeypatch):
+def test_add_variable_command(monkeypatch):
 
     params = []
 
@@ -32,22 +29,19 @@ def test_set_variable_command(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
 
-    args = Args('add', vars_to_set=['foo=bar', 'baz=qux', 'has_two_equals=foo=bar'])
+    args = Args('add', vars_to_add=['foo=bar', 'baz=qux', 'has_two_equals=foo=bar'])
     res = main(args)
     assert res == 0
     assert [('foo', 'bar'), ('baz', 'qux'), ('has_two_equals', 'foo=bar')] == params[0]
 
 
-def test_set_variable_project_problem(capsys):
+def test_add_variable_project_problem(capsys):
     def check_problem(dirname):
-        args = Args('add', vars_to_set=['foo=bar', 'baz=qux'], project=dirname)
+        args = Args('add', vars_to_add=['foo=bar', 'baz=qux'], project=dirname)
         res = main(args)
         assert res == 1
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
-  42
-"""}, check_problem)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("runtime:\n" "  42")}, check_problem)
 
     out, err = capsys.readouterr()
     assert out == ''
@@ -56,7 +50,7 @@ runtime:
     assert err == expected_err
 
 
-def test_set_variable_command_bad(monkeypatch, capsys):
+def test_add_variable_command_bad(monkeypatch, capsys):
 
     params = []
 
@@ -66,7 +60,7 @@ def test_set_variable_command_bad(monkeypatch, capsys):
 
     monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
 
-    args = Args('add', vars_to_set=['foo=bar', 'baz'])
+    args = Args('add', vars_to_add=['foo=bar', 'baz'])
     res = main(args)
     assert res == 1
     out, err = capsys.readouterr()
@@ -75,8 +69,30 @@ def test_set_variable_command_bad(monkeypatch, capsys):
     assert len(params) == 0
 
 
-def test_unset_variable_command(monkeypatch):
+def test_remove_variable_command(monkeypatch):
+    params = []
 
-    args = Args('unset', vars_to_unset=['foo=bar', 'baz=qux'])
-    with pytest.raises(NotImplementedError):
-        main(args)
+    def check_remove_variable(dirname):
+        def mock_remove_variables(project, _vars):
+            params.append(_vars)
+            return True
+
+        monkeypatch.setattr('anaconda_project.project_ops.remove_variables', mock_remove_variables)
+        args = Args('remove', vars_to_remove=['foo', 'baz'], project=dirname)
+        res = main(args)
+        assert res == 0
+        assert len(params) == 1
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ("runtime:\n"
+                                    "  foo: {default: test}\n"
+                                    "  baz: {default: bar}")}, check_remove_variable)
+
+
+def test_remove_variable_project_problem(monkeypatch):
+    def check_problem_remove(dirname):
+        args = Args('remove', vars_to_remove=['foo', 'baz'], project=dirname)
+        res = main(args)
+        assert res == 1
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("runtime:\n" "  foo: invalid")}, check_problem_remove)
