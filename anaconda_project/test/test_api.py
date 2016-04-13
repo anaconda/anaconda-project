@@ -10,6 +10,23 @@ from anaconda_project import api
 from anaconda_project import provide
 
 
+def test_create_project(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_create_project(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.create', mock_create_project)
+
+    p = api.AnacondaProject()
+    kwargs = dict(directory_path=1, make_directory=2)
+    result = p.create_project(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_load_project(monkeypatch):
     class MockProject(object):
         def __init__(self, *args, **kwargs):

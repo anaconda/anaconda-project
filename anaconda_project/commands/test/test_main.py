@@ -20,7 +20,7 @@ def test_main_no_subcommand(capsys):
     out, err = capsys.readouterr()
     assert "" == out
     expected_error_msg = ('Must specify a subcommand.\nusage: anaconda-project [-h]\n'
-                          '                        {launch,prepare,activate,set-variable,unset-variable}\n'
+                          '                        {init,launch,prepare,activate,set-variable,unset-variable}\n'
                           '                        ...\n')
     assert expected_error_msg == err
 
@@ -30,9 +30,9 @@ def test_main_bad_subcommand(capsys):
 
     out, err = capsys.readouterr()
     expected_error_msg = ("usage: anaconda-project [-h]\n"
-                          "                        {launch,prepare,activate,set-variable,unset-variable}\n"
+                          "                        {init,launch,prepare,activate,set-variable,unset-variable}\n"
                           "                        ...\nanaconda-project: error: invalid choice: 'foo' "
-                          "(choose from 'launch', 'prepare', 'activate', 'set-variable', 'unset-variable')\n")
+                          "(choose from 'init', 'launch', 'prepare', 'activate', 'set-variable', 'unset-variable')\n")
     assert expected_error_msg == err
     assert "" == out
 
@@ -41,14 +41,15 @@ def test_main_bad_subcommand(capsys):
 
 expected_usage_msg = \
         'usage: anaconda-project [-h]\n' \
-        '                        {launch,prepare,activate,set-variable,unset-variable}\n' \
+        '                        {init,launch,prepare,activate,set-variable,unset-variable}\n' \
         '                        ...\n' \
         '\n' \
         'Actions on Anaconda projects.\n' \
         '\n' \
         'positional arguments:\n' \
-        '  {launch,prepare,activate,set-variable,unset-variable}\n' \
+        '  {init,launch,prepare,activate,set-variable,unset-variable}\n' \
         '                        Sub-commands\n' \
+        '    init                Initializes a directory with default project config.\n' \
         '    launch              Runs the project, setting up requirements first.\n' \
         '    prepare             Sets up project requirements but does not run the\n' \
         '                        project.\n' \

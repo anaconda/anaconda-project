@@ -53,6 +53,27 @@ class AnacondaProject(object):
                                default_conda_environment=default_conda_environment,
                                default_command=default_command)
 
+    def create_project(self, directory_path, make_directory=False):
+        """Create a project skeleton in the given directory.
+
+        Returns a Project instance even if creation fails or the directory
+        doesn't exist, but in those cases the ``problems`` attribute
+        of the Project will describe the problem.
+
+        If the project.yml already exists, this simply loads it.
+
+        This will not prepare the project (create environments, etc.),
+        use the separate prepare calls if you want to do that.
+
+        Args:
+            directory_path (str): directory to contain project.yml
+            make_directory (bool): True to create the directory if it doesn't exist
+
+        Returns:
+            a Project instance
+        """
+        return project_ops.create(directory_path=directory_path, make_directory=make_directory)
+
     def prepare_project_locally(self, project, environ, extra_command_args=None):
         """Prepare a project to run one of its commands.
 
