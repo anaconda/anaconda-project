@@ -12,7 +12,7 @@ from anaconda_project import project_ops
 from anaconda_project.commands.console_utils import print_project_problems
 
 
-def set_variables(project_dir, conda_environment, vars_to_set):
+def add_variables(project_dir, conda_environment, vars_to_set):
     """Change default env variables for local project and change project file.
 
     Returns:
@@ -31,7 +31,7 @@ def set_variables(project_dir, conda_environment, vars_to_set):
     return 0
 
 
-def unset_variables(*args):
+def remove_variables(*args):
     """Unset the variables for local project and changes project file.
 
     Returns:
@@ -42,7 +42,7 @@ def unset_variables(*args):
 
 def main(args):
     """Start the prepare command and return exit status code."""
-    if args.action == 'set':
-        return set_variables(args.project, args.environment, args.vars_to_set)
+    if args.action == 'add':
+        return add_variables(args.project, args.environment, args.vars_to_set)
     else:
-        return unset_variables(args.project, args.environment, args.vars_to_unset)
+        return remove_variables(args.project, args.environment, args.vars_to_unset)

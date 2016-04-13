@@ -32,7 +32,7 @@ def test_set_variable_command(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
 
-    args = Args('set', vars_to_set=['foo=bar', 'baz=qux', 'has_two_equals=foo=bar'])
+    args = Args('add', vars_to_set=['foo=bar', 'baz=qux', 'has_two_equals=foo=bar'])
     res = main(args)
     assert res == 0
     assert [('foo', 'bar'), ('baz', 'qux'), ('has_two_equals', 'foo=bar')] == params[0]
@@ -40,7 +40,7 @@ def test_set_variable_command(monkeypatch):
 
 def test_set_variable_project_problem(capsys):
     def check_problem(dirname):
-        args = Args('set', vars_to_set=['foo=bar', 'baz=qux'], project=dirname)
+        args = Args('add', vars_to_set=['foo=bar', 'baz=qux'], project=dirname)
         res = main(args)
         assert res == 1
 
@@ -66,7 +66,7 @@ def test_set_variable_command_bad(monkeypatch, capsys):
 
     monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
 
-    args = Args('set', vars_to_set=['foo=bar', 'baz'])
+    args = Args('add', vars_to_set=['foo=bar', 'baz'])
     res = main(args)
     assert res == 1
     out, err = capsys.readouterr()
