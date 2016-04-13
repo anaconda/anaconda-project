@@ -7,8 +7,48 @@
 """High-level operations on a project."""
 from __future__ import absolute_import
 
+import os
+
+from anaconda_project.project import Project
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
+
+
+def create(directory_path, make_directory=False):
+    """Create a project skeleton in the given directory.
+
+    Returns a Project instance even if creation fails or the directory
+    doesn't exist, but in those cases the ``problems`` attribute
+    of the Project will describe the problem.
+
+    If the project.yml already exists, this simply loads it.
+
+    This will not prepare the project (create environments, etc.),
+    use the separate prepare calls if you want to do that.
+
+    Args:
+        directory_path (str): directory to contain project.yml
+        make_directory (bool): True to create the directory if it doesn't exist
+
+    Returns:
+        a Project instance
+    """
+    if make_directory and not os.path.exists(directory_path):
+        try:
+            os.makedirs(directory_path)
+        except (IOError, OSError):  # py3=IOError, py2=OSError
+            # allow project.problems to report the issue
+            pass
+
+    project = Project(directory_path)
+
+    # write out the project.yml; note that this will try to create
+    # the directory which we may not want... so only do it if
+    # we're problem-free.
+    if len(project.problems) == 0:
+        project.project_file.save()
+
+    return project
 
 
 def add_variables(project, vars_to_set):
