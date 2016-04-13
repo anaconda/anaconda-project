@@ -214,9 +214,9 @@ class AnacondaProject(object):
         Returns:
            None
         """
-        return project_ops.add_variables(project=project, vars_to_set=vars_to_add)
+        return project_ops.add_variables(project=project, vars_to_add=vars_to_add)
 
-    def remove_variables(self, project, vars_to_set):
+    def remove_variables(self, project, vars_to_remove):
         """Remove variables in project.yml and remove them from local project state.
 
         Args:
@@ -226,4 +226,4 @@ class AnacondaProject(object):
         Returns:
            None
         """
-        return project_ops.add_variables(project=project, vars_to_set=vars_to_set)
+        return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove)
