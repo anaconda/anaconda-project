@@ -52,27 +52,7 @@ def create(directory_path, make_directory=False):
     return project
 
 
-def add_download(project, env_var, url):
-    """Attempt to download the URL; if successful, add it as a download to the project.
-
-    The returned status would be None if we failed to even check the status for
-    some reason... currently this would happen if the project has non-empty
-    ``project.problems``.
-
-    Args:
-        project (Project): the project
-        env_var (str): env var to store the local filename
-        url (str): url to download
-
-    Returns:
-        RequirementStatus instance for the download requirement or None
-    """
-    # Modify the project file _in memory only_, do not save
-    existing = project.project_file.get_value(['downloads', env_var])
-    if existing is not None and isinstance(existing, dict):
-        project.project_file.set_value(['downloads', env_var, 'url'], url)
-    else:
-        project.project_file.set_value(['downloads', env_var], url)
+def _commit_requirement_if_it_works(project, env_var):
     project.project_file.use_changes_without_saving()
 
     # See if we can perform the download
@@ -86,6 +66,36 @@ def add_download(project, env_var, url):
         # yay!
         project.project_file.save()
     return status
+
+
+def add_download(project, env_var, url):
+    """Attempt to download the URL; if successful, add it as a download to the project.
+
+    The returned status would be None if we failed to even check the status for
+    some reason... currently this would happen if the project has non-empty
+    ``project.problems``.
+
+    If the returned status is not None, if it's True we were
+    successful, and if it's false ``status.errors`` may
+    (hopefully) contain a list of useful error strings.
+
+    Args:
+        project (Project): the project
+        env_var (str): env var to store the local filename
+        url (str): url to download
+
+    Returns:
+        RequirementStatus instance for the download requirement or None
+
+    """
+    # Modify the project file _in memory only_, do not save
+    existing = project.project_file.get_value(['downloads', env_var])
+    if existing is not None and isinstance(existing, dict):
+        project.project_file.set_value(['downloads', env_var, 'url'], url)
+    else:
+        project.project_file.set_value(['downloads', env_var], url)
+
+    return _commit_requirement_if_it_works(project, env_var)
 
 
 def add_variables(project, vars_to_add):
