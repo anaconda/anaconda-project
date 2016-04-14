@@ -381,6 +381,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         logs = []
         errors = []
         did_any_providing = False
+        results_by_status = dict()
 
         for status in rechecked:
             if provide_whitelist is not None and \
@@ -395,12 +396,15 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 result = status.provider.provide(status.requirement, context)
                 logs.extend(result.logs)
                 errors.extend(result.errors)
+                results_by_status[status] = result
 
         if did_any_providing:
             old = rechecked
             rechecked = []
             for status in old:
-                rechecked.append(status.recheck(environ, local_state))
+                rechecked.append(status.recheck(environ,
+                                                local_state,
+                                                latest_provide_result=results_by_status.get(status)))
 
         failed = False
         for status in rechecked:
@@ -518,7 +522,7 @@ def _add_missing_env_var_requirements(project, environ, local_state, statuses):
         if env_var not in by_env_var:
             created_anything = True
             requirement = project.plugin_registry.find_requirement_by_env_var(env_var, options=dict())
-            statuses.append(requirement.check_status(environ, local_state))
+            statuses.append(requirement.check_status(environ, local_state, latest_provide_result=None))
 
     if created_anything:
         # run the whole above again to find any transitive requirements of the new providers
@@ -605,7 +609,7 @@ def prepare_in_stages(project,
 
     statuses = []
     for requirement in project.requirements:
-        status = requirement.check_status(environ_copy, local_state)
+        status = requirement.check_status(environ_copy, local_state, latest_provide_result=None)
         statuses.append(status)
 
     return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode, provide_whitelist,

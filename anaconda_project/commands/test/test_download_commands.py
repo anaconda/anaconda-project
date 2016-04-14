@@ -15,6 +15,10 @@ class FakeRequirementStatus(object):
     def __init__(self, success, status_description):
         self.status_description = status_description
         self.success = success
+        self.logs = ["This is a log message."]
+        self.errors = []
+        if not success:
+            self.errors.append("This is an error message.")
 
     def __bool__(self):
         return self.success
@@ -71,9 +75,7 @@ def test_add_download_fails(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        # this is a TERRIBLE error message but fixing it needs a larger change
-        # in a future commit.
-        assert 'Environment variable MYDATA is not set.\n' == err
+        assert 'This is a log message.\nThis is an error message.\nEnvironment variable MYDATA is not set.\n' == err
 
     with_directory_contents(dict(), check)
 

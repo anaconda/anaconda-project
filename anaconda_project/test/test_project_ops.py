@@ -125,6 +125,7 @@ def _monkeypatch_download_file_fails(monkeypatch, dirname):
 def _monkeypatch_download_file_fails_to_get_http_response(monkeypatch, dirname):
     @gen.coroutine
     def mock_downloader_run(self, loop):
+        self._errors.append("Nope nope nope")
         raise gen.Return(None)
 
     monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
@@ -139,6 +140,8 @@ def test_add_download(monkeypatch):
 
         assert os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert status
+        assert isinstance(status.logs, list)
+        assert [] == status.errors
 
         # be sure download was added to the file and saved
         project2 = Project(dirname)
@@ -161,6 +164,8 @@ def test_add_download_which_already_exists(monkeypatch):
 
         assert os.path.isfile(os.path.join(dirname, "foobar"))
         assert status
+        assert isinstance(status.logs, list)
+        assert [] == status.errors
 
         # be sure download was added to the file and saved, and
         # the filename attribute was kept
@@ -184,6 +189,8 @@ def test_add_download_fails(monkeypatch):
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert not status
+        assert isinstance(status.logs, list)
+        assert ['Error downloading http://localhost:123456: response code 404'] == status.errors
 
         # be sure download was NOT added to the file
         project2 = Project(dirname)
@@ -203,6 +210,7 @@ def test_add_download_fails_to_get_http_response(monkeypatch):
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert not status
+        assert ['Nope nope nope'] == status.errors
 
         # be sure download was NOT added to the file
         project2 = Project(dirname)
@@ -219,7 +227,7 @@ def test_add_download_with_project_file_problems():
         status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
-        assert not status
+        assert status is None
 
         # be sure download was NOT added to the file
         project2 = Project(dirname)

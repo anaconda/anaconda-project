@@ -29,6 +29,10 @@ def add_download(project_dir, filename_variable, download_url):
         print("Added %s to the project file." % download_url)
         return 0
     else:
+        for log in status.logs:
+            print(log, file=sys.stderr)
+        for error in status.errors:
+            print(error, file=sys.stderr)
         print(status.status_description, file=sys.stderr)
         return 1
 
