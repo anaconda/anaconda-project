@@ -19,9 +19,10 @@ def test_main_no_subcommand(capsys):
 
     out, err = capsys.readouterr()
     assert "" == out
-    expected_error_msg = ('Must specify a subcommand.\nusage: anaconda-project [-h] [-v]\n'
-                          '                        {init,launch,prepare,activate,add-variable,remove-variable}\n'
-                          '                        ...\n')
+    expected_error_msg = (
+        'Must specify a subcommand.\nusage: anaconda-project [-h] [-v]\n'
+        '                        {init,launch,prepare,activate,add-variable,remove-variable,add-download}\n'
+        '                        ...\n')
     assert expected_error_msg == err
 
 
@@ -29,10 +30,11 @@ def test_main_bad_subcommand(capsys):
     code = _parse_args_and_run_subcommand(['project', 'foo'])
 
     out, err = capsys.readouterr()
-    expected_error_msg = ("usage: anaconda-project [-h] [-v]\n"
-                          "                        {init,launch,prepare,activate,add-variable,remove-variable}\n"
-                          "                        ...\nanaconda-project: error: invalid choice: 'foo' "
-                          "(choose from 'init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable')\n")
+    expected_error_msg = (
+        "usage: anaconda-project [-h] [-v]\n"
+        "                        {init,launch,prepare,activate,add-variable,remove-variable,add-download}\n"
+        "                        ...\nanaconda-project: error: invalid choice: 'foo' "
+        "(choose from 'init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable', 'add-download')\n")
     assert expected_error_msg == err
     assert "" == out
 
@@ -41,13 +43,13 @@ def test_main_bad_subcommand(capsys):
 
 expected_usage_msg = \
         'usage: anaconda-project [-h] [-v]\n' \
-        '                        {init,launch,prepare,activate,add-variable,remove-variable}\n' \
+        '                        {init,launch,prepare,activate,add-variable,remove-variable,add-download}\n' \
         '                        ...\n' \
         '\n' \
         'Actions on Anaconda projects.\n' \
         '\n' \
         'positional arguments:\n' \
-        '  {init,launch,prepare,activate,add-variable,remove-variable}\n' \
+        '  {init,launch,prepare,activate,add-variable,remove-variable,add-download}\n' \
         '                        Sub-commands\n' \
         '    init                Initializes a directory with default project config.\n' \
         '    launch              Runs the project, setting up requirements first.\n' \
@@ -59,6 +61,7 @@ expected_usage_msg = \
         '                        not present\n' \
         '    remove-variable     Remove an environment variable and removes it from\n' \
         '                        project\n' \
+        '    add-download        Add a URL to be downloaded before running commands\n' \
         '\n' \
         'optional arguments:\n' \
         '  -h, --help            show this help message and exit\n' \

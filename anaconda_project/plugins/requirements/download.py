@@ -125,7 +125,7 @@ class DownloadRequirement(EnvVarRequirement):
         except OSError:
             return 'File referenced by: {} cannot be read ({})'.format(self.env_var, filename)
 
-    def check_status(self, environ, local_state_file):
+    def check_status(self, environ, local_state_file, latest_provide_result=None):
         """Override superclass to get our status."""
         why_not_provided = self._why_not_provided(environ)
 
@@ -138,4 +138,5 @@ class DownloadRequirement(EnvVarRequirement):
                                    local_state_file,
                                    has_been_provided=has_been_provided,
                                    status_description=status_description,
-                                   provider_class_name='DownloadProvider')
+                                   provider_class_name='DownloadProvider',
+                                   latest_provide_result=latest_provide_result)

@@ -42,3 +42,5 @@ def test_empty_variable_treated_as_unset():
     status = requirement.check_status(dict(FOO=''), tmp_local_state_file())
     assert not status
     assert "Environment variable FOO is not set." == status.status_description
+    assert [] == status.logs
+    assert [] == status.errors

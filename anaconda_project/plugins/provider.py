@@ -30,8 +30,6 @@ class ProvideContext(object):
         """
         self.environ = environ
         self._local_state_file = local_state_file
-        self._logs = []
-        self._errors = []
         self._status = status
         self._mode = mode
 
@@ -66,24 +64,6 @@ class ProvideContext(object):
             self._local_state_file.set_service_run_state(service_name, modified)
             self._local_state_file.save()
         return result
-
-    def append_log(self, message):
-        """Add extra log information that may help debug errors."""
-        self._logs.append(message)
-
-    def append_error(self, error):
-        """Add a fatal error message (that blocked the provide() from succeeding)."""
-        self._errors.append(error)
-
-    @property
-    def errors(self):
-        """Get any fatal errors that occurred during provide()."""
-        return self._errors
-
-    @property
-    def logs(self):
-        """Get any debug logs that occurred during provide()."""
-        return self._logs
 
     @property
     def status(self):
@@ -131,6 +111,52 @@ class ProviderAnalysis(object):
     def missing_env_vars_to_provide(self):
         """Get the env vars we were missing in order to provide, from the time of analysis."""
         return self._missing_env_vars_to_provide
+
+
+class ProvideResult(object):
+    """A Provider's results from the ``provide()`` call.
+
+    Instances of this class are immutable, and are returned from ``provide()``.
+    """
+
+    def __init__(self, errors=None, logs=None):
+        """Create a ProvideResult."""
+        if errors is None:
+            errors = []
+        if logs is None:
+            logs = []
+        self._errors = errors
+        self._logs = logs
+
+    def copy_with_additions(self, errors=None, logs=None):
+        """Copy this result, appending additional errors and logs."""
+        if errors is None:
+            errors = []
+        if logs is None:
+            logs = []
+        if len(errors) == 0 and len(logs) == 0:
+            # we don't have to actually copy since we are immutable
+            return self
+        else:
+            return ProvideResult(errors=(self._errors + errors), logs=(self._logs + logs))
+
+    @property
+    def errors(self):
+        """Get any fatal errors that occurred during provide() preventing success."""
+        return self._errors
+
+    @property
+    def logs(self):
+        """Get any debug logs that occurred during provide()."""
+        return self._logs
+
+    @classmethod
+    def empty(cls):
+        """Get an empty ProvideResult (currently a singleton since these are immutable)."""
+        return _emptyProvideResult
+
+# get this via ProvideResult.empty()
+_emptyProvideResult = ProvideResult()
 
 
 class Provider(with_metaclass(ABCMeta)):
@@ -236,6 +262,9 @@ class Provider(with_metaclass(ABCMeta)):
             requirement (Requirement): requirement we want to meet
             context (ProvideContext): context containing project state
 
+        Returns:
+            a ``ProvideResult`` instance
+
         """
         pass  # pragma: no cover
 
@@ -255,20 +284,19 @@ class EnvVarProvider(Provider):
         else:
             return None
 
-    def _possibly_decrypted_value(self, requirement, context, value):
+    def _possibly_decrypted_value(self, requirement, context, value, errors, logs):
         assert value is not None  # if it's None caller couldn't detect errors
         key = self._key_from_value(value)
         if key is not None:
             if 'encrypted' not in value:
-                context.append_error("No 'encrypted' field in the value of %s" % (requirement.env_var))
+                errors.append("No 'encrypted' field in the value of %s" % (requirement.env_var))
                 return None
             if key not in context.environ:
-                context.append_error("Master password %s is not set so can't get value of %s." %
-                                     (key, requirement.env_var))
+                errors.append("Master password %s is not set so can't get value of %s." % (key, requirement.env_var))
                 return None
             value = decrypt_string(value['encrypted'], context.environ[key])
         if isinstance(value, dict) or isinstance(value, list):
-            context.append_error("Value of '%s' should be a string not %r" % (requirement.env_var, value))
+            errors.append("Value of '%s' should be a string not %r" % (requirement.env_var, value))
             return None
         else:
             value = str(value)  # convert number, bool, null to a string
@@ -447,6 +475,9 @@ class EnvVarProvider(Provider):
 
     def provide(self, requirement, context):
         """Override superclass to use configured env var (or already-set env var)."""
+        errors = []
+        logs = []
+
         # We prefer the values in this order:
         #  - value set in project-local state overrides everything
         #    (otherwise the UI for configuring the value would end
@@ -460,7 +491,8 @@ class EnvVarProvider(Provider):
             #
             # variables:
             #   REDIS_URL: "redis://example.com:1234"
-            local_state_override = self._possibly_decrypted_value(requirement, context, local_state_override)
+            local_state_override = self._possibly_decrypted_value(requirement, context, local_state_override, errors,
+                                                                  logs)
             if local_state_override is not None:
                 context.environ[requirement.env_var] = local_state_override
         elif requirement.env_var in context.environ:
@@ -474,8 +506,10 @@ class EnvVarProvider(Provider):
             #     default: "redis://example.com:1234"
             value = requirement.options['default']
             if value is not None:
-                value = self._possibly_decrypted_value(requirement, context, value)
+                value = self._possibly_decrypted_value(requirement, context, value, errors, logs)
             if value is not None:
                 context.environ[requirement.env_var] = value
         else:
             pass
+
+        return ProvideResult.empty().copy_with_additions(errors, logs)

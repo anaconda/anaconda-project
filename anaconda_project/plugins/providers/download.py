@@ -88,10 +88,10 @@ class DownloadProvider(EnvVarProvider):
                                          analysis.missing_env_vars_to_provide,
                                          existing_filename=existing_filename)
 
-    def _provide_download(self, requirement, context):
+    def _provide_download(self, requirement, context, errors, logs):
         filename = context.status.analysis.existing_filename
         if filename is not None:
-            context.append_log("Previously downloaded file located at {}".format(filename))
+            logs.append("Previously downloaded file located at {}".format(filename))
             return filename
 
         filename = os.path.abspath(os.path.join(context.environ['PROJECT_DIR'], requirement.filename))
@@ -100,13 +100,17 @@ class DownloadProvider(EnvVarProvider):
         try:
             _ioloop = IOLoop(make_current=False)
             response = _ioloop.run_sync(lambda: download.run(_ioloop))
-            if response.code == 200:
+            if response is None:
+                for error in download.errors:
+                    errors.append(error)
+                return None
+            elif response.code == 200:
                 return filename
             else:
-                context.append_error("Error downloading {}: response code {}".format(requirement.url, response.code))
+                errors.append("Error downloading {}: response code {}".format(requirement.url, response.code))
                 return None
         except Exception as e:
-            context.append_error("Error downloading {}: {}".format(requirement.url, str(e)))
+            errors.append("Error downloading {}: {}".format(requirement.url, str(e)))
             return None
         finally:
             _ioloop.close()
@@ -118,13 +122,17 @@ class DownloadProvider(EnvVarProvider):
         requirement's env var to that filename.
 
         """
-        super(DownloadProvider, self).provide(requirement, context)
+        super_result = super(DownloadProvider, self).provide(requirement, context)
 
         if context.mode == PROVIDE_MODE_CHECK:
-            return
+            return super_result
         # we do the download in both prod and dev mode
 
+        errors = []
+        logs = []
         if requirement.env_var not in context.environ or context.status.analysis.config['source'] == 'download':
-            filename = self._provide_download(requirement, context)
+            filename = self._provide_download(requirement, context, errors, logs)
             if filename is not None:
                 context.environ[requirement.env_var] = filename
+
+        return super_result.copy_with_additions(errors=errors, logs=logs)

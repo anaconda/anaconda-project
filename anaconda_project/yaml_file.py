@@ -151,6 +151,14 @@ class YamlFile(object):
         """
         return self._change_count
 
+    def use_changes_without_saving(self):
+        """Apply any in-memory changes as if we'd saved, but don't actually save.
+
+        This is used to "try out" a change before we save it. We can load()
+        to undo our changes.
+        """
+        self._change_count = self._change_count + 1
+
     def save(self):
         """Write the file to disk, only if any changes have been made.
 

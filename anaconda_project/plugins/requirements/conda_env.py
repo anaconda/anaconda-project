@@ -83,9 +83,10 @@ class CondaEnvRequirement(EnvVarRequirement):
         else:
             return (True, "Using Conda environment %s." % prefix)
 
-    def check_status(self, environ, local_state_file):
+    def check_status(self, environ, local_state_file, latest_provide_result=None):
         """Override superclass to get our status."""
         return self._create_status_from_analysis(environ,
                                                  local_state_file,
                                                  provider_class_name='CondaEnvProvider',
-                                                 status_getter=self._status_from_analysis)
+                                                 status_getter=self._status_from_analysis,
+                                                 latest_provide_result=latest_provide_result)

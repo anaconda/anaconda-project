@@ -176,14 +176,14 @@ class RedisProvider(EnvVarProvider):
                                       existing_scoped_instance_url=previous,
                                       default_system_exists=systemwide)
 
-    def _provide_system(self, requirement, context):
+    def _provide_system(self, requirement, context, errors, logs):
         if context.status.analysis.default_system_exists:
-            context.append_log("Found system default Redis at %s" % _DEFAULT_SYSTEM_REDIS_URL)
+            logs.append("Found system default Redis at %s" % _DEFAULT_SYSTEM_REDIS_URL)
             return _DEFAULT_SYSTEM_REDIS_URL
         else:
-            context.append_error("Could not connect to system default Redis.")
+            errors.append("Could not connect to system default Redis.")
 
-    def _provide_project(self, requirement, context):
+    def _provide_project(self, requirement, context, errors, logs):
         config = context.status.analysis.config
 
         def ensure_redis(run_state):
@@ -196,7 +196,7 @@ class RedisProvider(EnvVarProvider):
             # care of configuring/starting Chalmers itself.
             url = context.status.analysis.existing_scoped_instance_url
             if url is not None:
-                context.append_log("Using redis-server we started previously at {url}".format(url=url))
+                logs.append("Using redis-server we started previously at {url}".format(url=url))
                 return url
 
             run_state.clear()
@@ -218,9 +218,9 @@ class RedisProvider(EnvVarProvider):
                     break
                 port += 1
             if port > UPPER_PORT:
-                context.append_error(("All ports from {lower} to {upper} were in use, " +
-                                      "could not start redis-server on one of them.").format(lower=LOWER_PORT,
-                                                                                             upper=UPPER_PORT))
+                errors.append(("All ports from {lower} to {upper} were in use, " +
+                               "could not start redis-server on one of them.").format(lower=LOWER_PORT,
+                                                                                      upper=UPPER_PORT))
                 return None
 
             # be sure we don't get confused by an old log file
@@ -233,7 +233,7 @@ class RedisProvider(EnvVarProvider):
 
             command = ['redis-server', '--pidfile', pidfile, '--logfile', logfile, '--daemonize', 'yes', '--port',
                        str(port)]
-            context.append_log("Starting " + repr(command))
+            logs.append("Starting " + repr(command))
 
             # we don't close_fds=True because on Windows that is documented to
             # keep us from collected stderr. But on Unix it's kinda broken not
@@ -266,25 +266,24 @@ class RedisProvider(EnvVarProvider):
                     # note: --port doesn't work, only -p, and the failure with --port is silent.
                     run_state['shutdown_commands'] = [['redis-cli', '-p', str(port), 'shutdown']]
                 else:
-                    context.append_log(
-                        "redis-server started successfully, but we timed out trying to connect to it on port %d" %
-                        (port))
+                    logs.append("redis-server started successfully, but we timed out trying to connect to it on port %d"
+                                % (port))
 
             if url is None:
                 for line in err.split("\n"):
                     if line != "":
-                        context.append_log(line)
+                        logs.append(line)
                 try:
                     with codecs.open(logfile, 'r', 'utf-8') as log:
                         for line in log.readlines():
-                            context.append_log(line)
+                            logs.append(line)
                 except IOError as e:
                     # just be silent if redis-server failed before creating a log file,
                     # that's fine. Hopefully it had some stderr.
                     if e.errno != errno.ENOENT:
-                        context.append_log("Failed to read {logfile}: {error}".format(logfile=logfile, error=e))
+                        logs.append("Failed to read {logfile}: {error}".format(logfile=logfile, error=e))
 
-                context.append_error("redis-server process failed or timed out, exited with code {code}".format(
+                errors.append("redis-server process failed or timed out, exited with code {code}".format(
                     code=popen.returncode))
 
             return url
@@ -303,17 +302,22 @@ class RedisProvider(EnvVarProvider):
         url = None
         source = context.status.analysis.config['source']
 
-        super(RedisProvider, self).provide(requirement, context)
+        super_result = super(RedisProvider, self).provide(requirement, context)
 
         url = context.environ.get(requirement.env_var, None)
 
+        errors = []
+        logs = []
+
         if url is None and (source == 'find_system' or source == 'find_all'):
-            url = self._provide_system(requirement, context)
+            url = self._provide_system(requirement, context, errors, logs)
 
         if url is None and (source == 'find_project' or source == 'find_all'):
             # we will only start a local Redis in "dev" mode, not prod or check mode
             if context.mode == PROVIDE_MODE_DEVELOPMENT:
-                url = self._provide_project(requirement, context)
+                url = self._provide_project(requirement, context, errors, logs)
 
         if url is not None:
             context.environ[requirement.env_var] = url
+
+        return super_result.copy_with_additions(errors=errors, logs=logs)
