@@ -19,6 +19,7 @@ import anaconda_project.commands.prepare as prepare
 import anaconda_project.commands.activate as activate
 import anaconda_project.commands.variable_commands as variable_commands
 import anaconda_project.commands.download_commands as download_commands
+import anaconda_project.commands.environment_commands as environment_commands
 
 
 def _parse_args_and_run_subcommand(argv):
@@ -91,6 +92,17 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
     preset.set_defaults(main=download_commands.main_add)
+
+    preset = subparsers.add_parser('add-environment', help="Add a new environment to the project.")
+    add_project_arg(preset)
+    preset.add_argument('-n',
+                        '--name',
+                        metavar='ENVIRONMENT_NAME',
+                        action='store',
+                        help="Name of the environment under PROJECT_DIR/envs")
+    preset.add_argument('-c', '--channel', metavar='CHANNEL', action='append', help='Channel to search for packages')
+    preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
+    preset.set_defaults(main=environment_commands.main_add)
 
     # argparse doesn't do this for us for whatever reason
     if len(argv) < 2:

@@ -10,6 +10,8 @@ import os
 from tornado import gen
 
 from anaconda_project import project_ops
+from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, push_conda_manager_class,
+                                            pop_conda_manager_class)
 from anaconda_project.project import Project
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.local_state_file import LocalStateFile
@@ -270,3 +272,120 @@ def test_add_download_with_project_file_problems():
         assert project.project_file.get_value(['downloads', 'MYDATA']) is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+# the other add_environment tests use a mock CondaManager, but we want to have
+# one test that does the real thing to be sure it works.
+def test_add_environment_with_real_conda_manager():
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.add_environment(project, name='foo', packages=['bokeh'], channels=['asmeurer'])
+        assert status
+
+        # be sure it was really done
+        project2 = Project(dirname)
+        env_commented_map = project2.project_file.get_value(['environments', 'foo'])
+        assert dict(dependencies=['bokeh'], channels=['asmeurer']) == dict(env_commented_map)
+        assert os.path.isdir(os.path.join(dirname, 'envs', 'foo', 'conda-meta'))
+
+    with_directory_contents(dict(), check)
+
+
+def _push_conda_test(fix_works, missing_packages, wrong_version_packages):
+    class TestCondaManager(CondaManager):
+        def __init__(self):
+            self.fix_works = fix_works
+            self.fixed = False
+            self.deviations = CondaEnvironmentDeviations(summary="test",
+                                                         missing_packages=missing_packages,
+                                                         wrong_version_packages=wrong_version_packages)
+
+        def find_environment_deviations(self, prefix, spec):
+            if self.fixed:
+                return CondaEnvironmentDeviations(summary="fixed", missing_packages=(), wrong_version_packages=())
+            else:
+                return self.deviations
+
+        def fix_environment_deviations(self, prefix, spec, deviations=None):
+            if self.fix_works:
+                self.fixed = True
+
+    push_conda_manager_class(TestCondaManager)
+
+
+def _pop_conda_test():
+    pop_conda_manager_class()
+
+
+def _with_conda_test(f, fix_works=True, missing_packages=(), wrong_version_packages=()):
+    try:
+        _push_conda_test(fix_works, missing_packages, wrong_version_packages)
+        f()
+    finally:
+        _pop_conda_test()
+
+
+def test_add_environment():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_environment(project, name='foo', packages=[], channels=[])
+            assert status
+            # with "None" for the args
+            status = project_ops.add_environment(project, name='bar', packages=None, channels=None)
+            assert status
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert dict(dependencies=[], channels=[]) == dict(project2.project_file.get_value(['environments', 'foo']))
+        assert dict(dependencies=[], channels=[]) == dict(project2.project_file.get_value(['environments', 'bar']))
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_environment_with_packages_and_channels():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_environment(project,
+                                                 name='foo',
+                                                 packages=['a', 'b', 'c'],
+                                                 channels=['c1', 'c2', 'c3'])
+            assert status
+
+        _with_conda_test(attempt)
+
+        # be sure download was added to the file and saved
+        project2 = Project(dirname)
+        assert dict(dependencies=['a', 'b', 'c'],
+                    channels=['c1', 'c2', 'c3']) == dict(project2.project_file.get_value(['environments', 'foo']))
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_environment_extending_existing_lists():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_environment(project,
+                                                 name='foo',
+                                                 packages=['a', 'b', 'c'],
+                                                 channels=['c1', 'c2', 'c3'])
+            assert status
+
+        _with_conda_test(attempt)
+
+        # be sure download was added to the file and saved
+        project2 = Project(dirname)
+        assert dict(dependencies=['b', 'a', 'c'],
+                    channels=['c3', 'c1', 'c2']) == dict(project2.project_file.get_value(['environments', 'foo']))
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+environments:
+  foo:
+    dependencies: [ 'b' ]
+    channels: [ 'c3']
+"""}, check)

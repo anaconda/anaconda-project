@@ -11,6 +11,11 @@ import os
 
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
+all_subcommands = ('init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable', 'add-download',
+                   'add-environment')
+all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
+all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
+
 
 def test_main_no_subcommand(capsys):
     code = _parse_args_and_run_subcommand(['project'])
@@ -19,10 +24,9 @@ def test_main_no_subcommand(capsys):
 
     out, err = capsys.readouterr()
     assert "" == out
-    expected_error_msg = (
-        'Must specify a subcommand.\nusage: anaconda-project [-h] [-v]\n'
-        '                        {init,launch,prepare,activate,add-variable,remove-variable,add-download}\n'
-        '                        ...\n')
+    expected_error_msg = ('Must specify a subcommand.\nusage: anaconda-project [-h] [-v]\n'
+                          '                        %s\n'
+                          '                        ...\n') % all_subcommands_in_curlies
     assert expected_error_msg == err
 
 
@@ -30,11 +34,10 @@ def test_main_bad_subcommand(capsys):
     code = _parse_args_and_run_subcommand(['project', 'foo'])
 
     out, err = capsys.readouterr()
-    expected_error_msg = (
-        "usage: anaconda-project [-h] [-v]\n"
-        "                        {init,launch,prepare,activate,add-variable,remove-variable,add-download}\n"
-        "                        ...\nanaconda-project: error: invalid choice: 'foo' "
-        "(choose from 'init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable', 'add-download')\n")
+    expected_error_msg = ("usage: anaconda-project [-h] [-v]\n"
+                          "                        %s\n"
+                          "                        ...\nanaconda-project: error: invalid choice: 'foo' "
+                          "(choose from %s)\n") % (all_subcommands_in_curlies, all_subcommands_comma_space)
     assert expected_error_msg == err
     assert "" == out
 
@@ -43,13 +46,13 @@ def test_main_bad_subcommand(capsys):
 
 expected_usage_msg = \
         'usage: anaconda-project [-h] [-v]\n' \
-        '                        {init,launch,prepare,activate,add-variable,remove-variable,add-download}\n' \
+        '                        %s\n' \
         '                        ...\n' \
         '\n' \
         'Actions on Anaconda projects.\n' \
         '\n' \
         'positional arguments:\n' \
-        '  {init,launch,prepare,activate,add-variable,remove-variable,add-download}\n' \
+        '  %s\n' \
         '                        Sub-commands\n' \
         '    init                Initializes a directory with default project config.\n' \
         '    launch              Runs the project, setting up requirements first.\n' \
@@ -62,10 +65,12 @@ expected_usage_msg = \
         '    remove-variable     Remove an environment variable and removes it from\n' \
         '                        project\n' \
         '    add-download        Add a URL to be downloaded before running commands\n' \
+        '    add-environment     Add a new environment to the project.\n' \
         '\n' \
         'optional arguments:\n' \
         '  -h, --help            show this help message and exit\n' \
         "  -v, --version         show program's version number and exit\n"
+expected_usage_msg = expected_usage_msg % (all_subcommands_in_curlies, all_subcommands_in_curlies)
 
 
 def test_main_help(capsys):

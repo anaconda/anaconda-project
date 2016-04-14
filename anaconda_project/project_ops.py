@@ -13,6 +13,7 @@ from anaconda_project.project import Project
 from anaconda_project import prepare
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
 def create(directory_path, make_directory=False):
@@ -52,13 +53,13 @@ def create(directory_path, make_directory=False):
     return project
 
 
-def _commit_requirement_if_it_works(project, env_var):
+def _commit_requirement_if_it_works(project, env_var_or_class, default_environment_name=None):
     project.project_file.use_changes_without_saving()
 
     # See if we can perform the download
-    result = prepare.prepare_without_interaction(project, provide_whitelist=(env_var, ))
+    result = prepare.prepare_without_interaction(project, provide_whitelist=(env_var_or_class, ))
 
-    status = result.status_for_env_var(env_var)
+    status = result.status_for(env_var_or_class)
     if status is None or not status:
         # reload from disk, discarding our changes because they did not work
         project.project_file.load()
@@ -96,6 +97,74 @@ def add_download(project, env_var, url):
         project.project_file.set_value(['downloads', env_var], url)
 
     return _commit_requirement_if_it_works(project, env_var)
+
+
+def add_environment(project, name, packages, channels):
+    """Attempt to create the environment and add it to project.yml.
+
+    The returned status would be None if we failed to even check the status for
+    some reason... currently this would happen if the project has non-empty
+    ``project.problems``.
+
+    If the returned status is not None, if it's True we were
+    successful, and if it's false ``status.errors`` may
+    (hopefully) contain a list of useful error strings.
+
+    Args:
+        project (Project): the project
+        name (str): environment name
+        packages (list of str): dependencies (with optional version info, as for conda install)
+        channels (list of str): channels (as they should be passed to conda --channel)
+
+    Returns:
+        RequirementStatus instance for the environment requirement or None
+
+    """
+    if packages is None:
+        packages = []
+    if channels is None:
+        channels = []
+    # Due to https://github.com/Anaconda-Server/anaconda-project/issues/163
+    # we don't have a way to "choose" this environment when we do the prepare
+    # in _commit_requirement_if_it_works, so we will have to hack things and
+    # make a temporary Project here then reload the original project.
+    # Doh.
+    original_project = project
+    project = Project(original_project.directory_path, default_conda_environment=name)
+    env_dict = project.project_file.get_value(['environments', name])
+    if env_dict is None:
+        env_dict = dict()
+        project.project_file.set_value(['environments', name], env_dict)
+
+    # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
+    # so don't convert this thing to a regular list.
+    dependencies = env_dict.get('dependencies', [])
+    old_dependencies_set = set(dependencies)
+    for dep in packages:
+        # note: we aren't smart enough to merge deps with the same
+        # package name but different versions.
+        if dep not in old_dependencies_set:
+            dependencies.append(dep)
+    env_dict['dependencies'] = dependencies
+
+    # channels may be a "CommentedSeq" and we don't want to lose the comments,
+    # so don't convert this thing to a regular list.
+    new_channels = env_dict.get('channels', [])
+    old_channels_set = set(new_channels)
+    for channel in channels:
+        if channel not in old_channels_set:
+            new_channels.append(channel)
+    env_dict['channels'] = new_channels
+
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement)
+
+    # reload original project, hackaround for
+    # https://github.com/Anaconda-Server/anaconda-project/issues/163
+    if status:
+        # reload the new config
+        original_project.project_file.load()
+
+    return status
 
 
 def add_variables(project, vars_to_add):

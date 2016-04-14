@@ -15,6 +15,13 @@ import anaconda_project.internal.conda_api as conda_api
 
 class DefaultCondaManager(CondaManager):
     def find_environment_deviations(self, prefix, spec):
+        if not os.path.isdir(os.path.join(prefix, 'conda-meta')):
+            return CondaEnvironmentDeviations(
+                summary="'%s' doesn't look like it contains a Conda environment yet." % (prefix),
+                missing_packages=tuple(spec.conda_package_names_set),
+                wrong_version_packages=(),
+                broken=True)
+
         try:
             installed = conda_api.installed(prefix)
         except conda_api.CondaError as e:

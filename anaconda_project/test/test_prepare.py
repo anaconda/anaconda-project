@@ -21,6 +21,7 @@ from anaconda_project.prepare import (prepare_without_interaction, prepare_with_
                                       _FunctionPrepareStage)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.plugins.requirement import EnvVarRequirement
 
 
 def test_prepare_empty_directory():
@@ -435,4 +436,5 @@ icon: foo.png
 def test_prepare_success_properties():
     result = PrepareSuccess(logs=["a"], statuses=(), command_exec_info=None, environ=dict())
     assert result.statuses == ()
-    assert result.status_for_env_var('FOO') is None
+    assert result.status_for('FOO') is None
+    assert result.status_for(EnvVarRequirement) is None
