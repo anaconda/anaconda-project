@@ -54,7 +54,7 @@ class RedisProvider(EnvVarProvider):
         return (lower, upper)
 
     def _config_section(self, requirement):
-        return ["runtime", requirement.env_var]
+        return ["service_options", requirement.env_var]
 
     def read_config(self, requirement, environ, local_state_file):
         """Override superclass to return our config."""

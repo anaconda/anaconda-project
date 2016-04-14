@@ -62,7 +62,7 @@ def test_reading_valid_config():
     with_directory_contents(
         {
             DEFAULT_LOCAL_STATE_FILENAME: """
-runtime:
+service_options:
   REDIS_URL:
     port_range: 7389-7421
     autostart: false
@@ -86,7 +86,7 @@ def _read_invalid_port_range(capsys, port_range):
     with_directory_contents(
         {
             DEFAULT_LOCAL_STATE_FILENAME: """
-runtime:
+service_options:
   REDIS_URL:
     port_range: %s
          """ % port_range
@@ -489,7 +489,7 @@ runtime:
   REDIS_URL: {}
 """,
          DEFAULT_LOCAL_STATE_FILENAME: """
-runtime:
+service_options:
   REDIS_URL:
     scope: system
 """}, check_no_autostart)
@@ -516,7 +516,7 @@ runtime:
   REDIS_URL: {}
     """,
          DEFAULT_LOCAL_STATE_FILENAME: """
-runtime:
+service_options:
   REDIS_URL:
     port_range: 7389-7421
 """}, start_local_redis)
