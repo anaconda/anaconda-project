@@ -105,7 +105,7 @@ def test_add_download_with_project_file_problems(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert ('Unable to load project:\n  runtime section contains wrong value type 42,' +
+        assert ('Unable to load project:\n  variables section contains wrong value type 42,' +
                 ' should be dict or list of requirements\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  42"}, check)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)

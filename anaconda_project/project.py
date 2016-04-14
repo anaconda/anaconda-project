@@ -72,11 +72,11 @@ class _ConfigCache(object):
             self._update_name(problems, project_file, conda_meta_file)
             self._update_icon(problems, project_file, conda_meta_file)
             # future: we could un-hardcode this so plugins can add stuff here
-            self._update_runtime(requirements, problems, project_file)
+            self._update_variables(requirements, problems, project_file)
             self._update_downloads(requirements, problems, project_file)
             self._update_conda_environments(problems, project_file)
-            # this MUST be after we _update_runtime since we may get CondaEnvRequirement
-            # options in the runtime section, and after _update_conda_environments
+            # this MUST be after we _update_variables since we may get CondaEnvRequirement
+            # options in the variables section, and after _update_conda_environments
             # since we use those
             self._update_conda_env_requirements(requirements, problems, project_file)
 
@@ -127,27 +127,27 @@ class _ConfigCache(object):
 
         self.icon = icon
 
-    def _update_runtime(self, requirements, problems, project_file):
-        runtime = project_file.get_value("runtime")
+    def _update_variables(self, requirements, problems, project_file):
+        variables = project_file.get_value("variables")
 
         def check_conda_reserved(key):
             if key in ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH'):
                 problems.append(("Environment variable %s is reserved for Conda's use, " +
-                                 "so it can't appear in the runtime section.") % key)
+                                 "so it can't appear in the variables section.") % key)
                 return True
             else:
                 return False
 
-        # runtime: section can contain a list of var names or a dict from
+        # variables: section can contain a list of var names or a dict from
         # var names to options OR default values. it can also be missing
         # entirely which is the same as empty.
-        if runtime is None:
+        if variables is None:
             pass
-        elif isinstance(runtime, dict):
-            for key in runtime.keys():
+        elif isinstance(variables, dict):
+            for key in variables.keys():
                 if check_conda_reserved(key):
                     continue
-                raw_options = runtime[key]
+                raw_options = variables[key]
 
                 if raw_options is None:
                     options = {}
@@ -195,8 +195,8 @@ class _ConfigCache(object):
                                 key=key,
                                 value=raw_default))
 
-        elif isinstance(runtime, list):
-            for item in runtime:
+        elif isinstance(variables, list):
+            for item in variables:
                 if isinstance(item, str):
                     if check_conda_reserved(item):
                         continue
@@ -204,12 +204,12 @@ class _ConfigCache(object):
                     requirements.append(requirement)
                 else:
                     problems.append(
-                        "runtime section should contain environment variable names, {item} is not a string".format(
+                        "variables section should contain environment variable names, {item} is not a string".format(
                             item=item))
         else:
             problems.append(
-                "runtime section contains wrong value type {runtime}, should be dict or list of requirements".format(
-                    runtime=runtime))
+                "variables section contains wrong value type {value}, should be dict or list of requirements".format(
+                    value=variables))
 
     def _update_downloads(self, requirements, problems, project_file):
         downloads = project_file.get_value('downloads')

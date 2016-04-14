@@ -47,13 +47,13 @@ def test_add_variables():
         project = project_no_dedicated_env(dirname)
         project_ops.add_variables(project, [('foo', 'bar'), ('baz', 'qux')])
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
-        assert dict(foo=None, baz=None, preset=None) == re_loaded.get_value(['runtime'])
+        assert dict(foo=None, baz=None, preset=None) == re_loaded.get_value(['variables'])
         local_state = LocalStateFile.load_for_directory(dirname)
 
-        local_state.get_value(['runtime', 'foo']) == 'bar'
-        local_state.get_value(['runtime', 'baz']) == 'qux'
+        local_state.get_value(['variables', 'foo']) == 'bar'
+        local_state.get_value(['variables', 'baz']) == 'qux'
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('runtime:\n' '  preset: null')}, check_set_var)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  preset: null')}, check_set_var)
 
 
 def test_add_variables_existing_download():
@@ -61,7 +61,7 @@ def test_add_variables_existing_download():
         project = project_no_dedicated_env(dirname)
         project_ops.add_variables(project, [('foo', 'bar'), ('baz', 'qux')])
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
-        assert dict(foo=None, baz=None, preset=None) == re_loaded.get_value(['runtime'])
+        assert dict(foo=None, baz=None, preset=None) == re_loaded.get_value(['variables'])
         assert re_loaded.get_value(['downloads', 'datafile']) == 'http://localhost:8000/data.tgz'
         local_state = LocalStateFile.load_for_directory(dirname)
 
@@ -70,7 +70,7 @@ def test_add_variables_existing_download():
         local_state.get_value(['variables', 'datafile']) == 'http://localhost:8000/data.tgz'
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: ('runtime:\n'
+        {DEFAULT_PROJECT_FILENAME: ('variables:\n'
                                     '  preset: null\n'
                                     'downloads:\n'
                                     '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
@@ -82,17 +82,17 @@ def test_add_variables_existing_options():
         project_ops.add_variables(project, [('foo', 'bar'), ('baz', 'qux')])
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
 
-        foo = re_loaded.get_value(['runtime', 'foo'])
+        foo = re_loaded.get_value(['variables', 'foo'])
         assert isinstance(foo, dict)
         assert 'something' in foo
         assert foo['something'] == 42
 
-        baz = re_loaded.get_value(['runtime', 'baz'])
+        baz = re_loaded.get_value(['variables', 'baz'])
         assert isinstance(baz, dict)
         assert 'default' in baz
         assert baz['default'] == 'hello'
 
-        woot = re_loaded.get_value(['runtime', 'woot'])
+        woot = re_loaded.get_value(['variables', 'woot'])
         assert woot == 'world'
 
         assert re_loaded.get_value(['downloads', 'datafile']) == 'http://localhost:8000/data.tgz'
@@ -104,7 +104,7 @@ def test_add_variables_existing_options():
         local_state.get_value(['variables', 'datafile']) == 'http://localhost:8000/data.tgz'
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: ('runtime:\n'
+        {DEFAULT_PROJECT_FILENAME: ('variables:\n'
                                     '  foo: { something: 42 }\n'
                                     '  baz: { default: "hello" }\n'
                                     '  woot: "world"\n'
@@ -117,15 +117,15 @@ def test_remove_variables():
         project = project_no_dedicated_env(dirname)
         project_ops.remove_variables(project, ['foo', 'bar'])
         re_loaded = project.project_file.load_for_directory(project.directory_path)
-        assert dict() == re_loaded.get_value(['runtime'])
-        assert re_loaded.get_value(['runtime', 'foo']) is None
-        assert re_loaded.get_value(['runtime', 'bar']) is None
+        assert dict() == re_loaded.get_value(['variables'])
+        assert re_loaded.get_value(['variables', 'foo']) is None
+        assert re_loaded.get_value(['variables', 'bar']) is None
         local_state = LocalStateFile.load_for_directory(dirname)
 
-        local_state.get_value(['runtime', 'foo']) is None
-        local_state.get_value(['runtime', 'bar']) is None
+        local_state.get_value(['variables', 'foo']) is None
+        local_state.get_value(['variables', 'bar']) is None
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('runtime:\n' '  foo: baz\n  bar: qux')}, check_remove_var)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  foo: baz\n  bar: qux')}, check_remove_var)
 
 
 def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA'):
@@ -269,4 +269,4 @@ def test_add_download_with_project_file_problems():
         # should have been dropped from the original project object also
         assert project.project_file.get_value(['downloads', 'MYDATA']) is None
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  42"}, check)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)

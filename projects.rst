@@ -162,14 +162,14 @@ dependencies will be added to all environments.
 Requiring environment variables to be set
 =========================================
 
-Anything in the ``runtime:`` section will be considered an
+Anything in the ``variables:`` section will be considered an
 environment variable that your project needs. When someone
 launches your project, ``anaconda-project`` will ask them to set
 these variables.
 
 For example:
 
-  runtime:
+  variables:
     - AMAZON_EC2_USERNAME
     - AMAZON_EC2_PASSWORD
 
@@ -193,7 +193,7 @@ that value.
 To force a variable to be encrypted or not, add the ``encrypted``
 option to it, like this:
 
-  runtime:
+  variables:
     # let's be contrary here and encrypt the username but
     # not encrypt the password
     AMAZON_EC2_USERNAME: { encrypted: true }
@@ -207,7 +207,7 @@ to a config file.
 Variables with default values
 =============================
 
-If you make the ``runtime:`` section a dictionary instead of a
+If you make the ``variables:`` section a dictionary instead of a
 list, you can give your variables default values. Anything
 in the environment or in ``project-local.yml`` will override
 these defaults though. To omit a default for a variable, set
@@ -215,7 +215,7 @@ its value to either ``null`` or ``{}``.
 
 For example:
 
-  runtime:
+  variables:
     FOO: "default_value_of_foo"
     BAR: null # no default for BAR
     BAZ: {} # no default for BAZ
@@ -232,7 +232,7 @@ Certain variable names represent the address of a running service;
 
 For example, you can do this:
 
-  runtime:
+  variables:
     - REDIS_URL
 
 Now when someone launches the project, ``anaconda-project`` can

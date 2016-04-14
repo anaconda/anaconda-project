@@ -60,11 +60,11 @@ expected_default_file = """# This is an Anaconda project file.
 #
 commands: {}
 #
-# In the runtime section, list any environment variables your code depends on.
+# In the variables section, list any environment variables your code depends on.
 #
 # For example,
 #
-# runtime:
+# variables:
 #    EC2_PASSWORD: null
 #    NUMBER_OF_ITERATIONS: null
 #
@@ -72,7 +72,7 @@ commands: {}
 # for everyone who runs this project.
 # You can also set a local value (not shared with others) in project-local.yml.
 #
-runtime: {}
+variables: {}
 #
 # In the downloads section, list any URLs to download to local files
 # before your code runs.

@@ -62,7 +62,7 @@ def test_reading_valid_config():
     with_directory_contents(
         {
             DEFAULT_LOCAL_STATE_FILENAME: """
-runtime:
+service_options:
   REDIS_URL:
     port_range: 7389-7421
     autostart: false
@@ -86,7 +86,7 @@ def _read_invalid_port_range(capsys, port_range):
     with_directory_contents(
         {
             DEFAULT_LOCAL_STATE_FILENAME: """
-runtime:
+service_options:
   REDIS_URL:
     port_range: %s
          """ % port_range
@@ -154,7 +154,7 @@ def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
     return can_connect_args
 
 
-def test_prepare_redis_url_with_dict_in_runtime_section(monkeypatch):
+def test_prepare_redis_url_with_dict_in_variables_section(monkeypatch):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def prepare_redis_url(dirname):
@@ -166,12 +166,12 @@ def test_prepare_redis_url_with_dict_in_runtime_section(monkeypatch):
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
 """}, prepare_redis_url)
 
 
-def test_prepare_redis_url_with_list_in_runtime_section(monkeypatch):
+def test_prepare_redis_url_with_list_in_variables_section(monkeypatch):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def prepare_redis_url(dirname):
@@ -183,7 +183,7 @@ def test_prepare_redis_url_with_list_in_runtime_section(monkeypatch):
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   - REDIS_URL
 """}, prepare_redis_url)
 
@@ -250,7 +250,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert dict() == local_state_file.get_service_run_state("redis")
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
 """}, start_local_redis)
 
@@ -322,7 +322,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert dict() == local_state_file.get_service_run_state("redis")
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
 """}, start_local_redis)
 
@@ -384,7 +384,7 @@ def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
         assert "redis-server process failed or timed out, exited with code 0" in err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
 """}, start_local_redis_and_time_out)
 
@@ -415,7 +415,7 @@ def test_fail_to_prepare_local_redis_server_no_port_available(monkeypatch, capsy
         assert 73 == len(can_connect_args_list)
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
 """}, start_local_redis)
 
@@ -436,7 +436,7 @@ def test_do_not_start_local_redis_server_in_prod_mode(monkeypatch, capsys):
         assert 3 == len(can_connect_args_list)
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
 """}, no_start_local_redis)
 
@@ -457,7 +457,7 @@ def test_do_not_start_local_redis_server_in_check_mode(monkeypatch, capsys):
         assert 3 == len(can_connect_args_list)
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
 """}, no_start_local_redis)
 
@@ -485,11 +485,11 @@ def test_fail_to_prepare_local_redis_server_scope_system(monkeypatch, capsys):
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
 """,
          DEFAULT_LOCAL_STATE_FILENAME: """
-runtime:
+service_options:
   REDIS_URL:
     scope: system
 """}, check_no_autostart)
@@ -512,11 +512,11 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
     """,
          DEFAULT_LOCAL_STATE_FILENAME: """
-runtime:
+service_options:
   REDIS_URL:
     port_range: 7389-7421
 """}, start_local_redis)
@@ -574,7 +574,7 @@ sys.exit(1)
         assert not result
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
 """}, start_local_redis)
 
@@ -663,6 +663,6 @@ def test_set_scope_in_local_state(monkeypatch):
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   REDIS_URL: {}
 """}, prepare_after_setting_scope)

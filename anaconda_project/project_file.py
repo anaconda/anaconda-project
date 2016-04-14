@@ -112,9 +112,9 @@ class ProjectFile(YamlFile):
             "In this example, my_notebook was automatically added as a command named\n" +
             "'foo.ipynb' but we've manually added it as 'my_notebook' also.\n")
 
-        sections['runtime'] = (
-            "In the runtime section, list any environment variables your code depends on.\n" + "\n" + "For example,\n" +
-            "\n" + "runtime:\n" + "   EC2_PASSWORD: null\n" + "   NUMBER_OF_ITERATIONS: null\n\n" +
+        sections['variables'] = (
+            "In the variables section, list any environment variables your code depends on.\n" + "\n" +
+            "For example,\n\n" + "variables:\n" + "   EC2_PASSWORD: null\n" + "   NUMBER_OF_ITERATIONS: null\n\n" +
             "If you give a value other than null for the variable, that value will be the default\n" +
             "for everyone who runs this project.\n" +
             "You can also set a local value (not shared with others) in project-local.yml.\n")

@@ -64,7 +64,7 @@ def test_single_env_var_requirement():
             assert "CONDA_ENV_PATH" == project.requirements[1].env_var
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: {}
 """}, check_some_env_var)
 
@@ -86,7 +86,7 @@ def test_single_env_var_requirement_null_for_default():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: null
   BAR: { default: null }
 """}, check_some_env_var)
@@ -106,7 +106,7 @@ def test_single_env_var_requirement_string_for_default():
             assert "CONDA_ENV_PATH" == project.requirements[1].env_var
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: 'hello'
 """}, check_some_env_var)
 
@@ -125,7 +125,7 @@ def test_single_env_var_requirement_number_for_default():
             assert "CONDA_ENV_PATH" == project.requirements[1].env_var
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: 42
 """}, check_some_env_var)
 
@@ -144,7 +144,7 @@ def test_single_env_var_requirement_default_is_in_dict():
             assert "CONDA_ENV_PATH" == project.requirements[1].env_var
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: { default: 42 }
 """}, check_some_env_var)
 
@@ -156,7 +156,7 @@ def test_problem_in_project_file():
         assert 1 == len(project.problems)
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   42
 """}, check_problem)
 
@@ -187,7 +187,7 @@ def test_single_env_var_requirement_with_options():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
     FOO: { default: "hello" }
 """}, check_some_env_var)
 
@@ -199,7 +199,7 @@ def test_override_plugin_registry():
         assert project._config_cache.registry is registry
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: {}
 """}, check_override_plugin_registry)
 
@@ -434,31 +434,31 @@ dependencies:
     """}, check_get_packages)
 
 
-def test_complain_about_conda_env_in_runtime_list():
+def test_complain_about_conda_env_in_variables_list():
     def check_complain_about_conda_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         template = "Environment variable %s is reserved for Conda's use, " + \
-                   "so it can't appear in the runtime section."
+                   "so it can't appear in the variables section."
         assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV'] == project.problems
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   - CONDA_ENV_PATH
   - CONDA_DEFAULT_ENV
     """}, check_complain_about_conda_env_var)
 
 
-def test_complain_about_conda_env_in_runtime_dict():
+def test_complain_about_conda_env_in_variables_dict():
     def check_complain_about_conda_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         template = "Environment variable %s is reserved for Conda's use, " + \
-                   "so it can't appear in the runtime section."
+                   "so it can't appear in the variables section."
         assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV'] == project.problems
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   CONDA_ENV_PATH: {}
   CONDA_DEFAULT_ENV: {}
     """}, check_complain_about_conda_env_var)
@@ -575,7 +575,7 @@ dependencies:
     """}, check_get_packages)
 
 
-def test_load_list_of_runtime_requirements():
+def test_load_list_of_variables_requirements():
     def check_file(dirname):
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
         assert os.path.exists(filename)
@@ -595,10 +595,10 @@ def test_load_list_of_runtime_requirements():
         assert dict() == requirements[2].options
         assert len(project.problems) == 0
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  - FOO\n  - BAR\n"}, check_file)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  - FOO\n  - BAR\n"}, check_file)
 
 
-def test_load_dict_of_runtime_requirements():
+def test_load_dict_of_variables_requirements():
     def check_file(dirname):
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
         assert os.path.exists(filename)
@@ -620,10 +620,10 @@ def test_load_dict_of_runtime_requirements():
         assert dict() == requirements[2].options
         assert len(project.problems) == 0
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  FOO: { a: 1 }\n  BAR: { b: 2 }\n"}, check_file)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  FOO: { a: 1 }\n  BAR: { b: 2 }\n"}, check_file)
 
 
-def test_non_string_runtime_requirements():
+def test_non_string_variables_requirements():
     def check_file(dirname):
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
         assert os.path.exists(filename)
@@ -633,7 +633,7 @@ def test_non_string_runtime_requirements():
         assert "42 is not a string" in project.problems[0]
         assert "43 is not a string" in project.problems[1]
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  - 42\n  - 43\n"}, check_file)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  - 42\n  - 43\n"}, check_file)
 
 
 def test_variable_default_cannot_be_bool():
@@ -646,7 +646,7 @@ def test_variable_default_cannot_be_bool():
 
         assert ("default value for variable FOO must be null, a string, or a number, not True.") == project.problems[0]
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  FOO: true\n"}, check_file)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  FOO: true\n"}, check_file)
 
 
 def test_variable_default_cannot_be_list():
@@ -659,7 +659,7 @@ def test_variable_default_cannot_be_list():
 
         assert ("default value for variable FOO must be null, a string, or a number, not [].") == project.problems[0]
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  FOO: []\n"}, check_file)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  FOO: []\n"}, check_file)
 
 
 def test_variable_default_missing_encrypted_field():
@@ -675,7 +675,7 @@ def test_variable_default_missing_encrypted_field():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO:
     default: { key: 'MASTER_PASSWORD' }
 """}, check)
@@ -694,22 +694,22 @@ def test_variable_default_missing_key_field():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO:
     default: { encrypted: 'abcdefg' }
 """}, check)
 
 
-def test_runtime_requirements_not_a_collection():
+def test_variables_requirements_not_a_collection():
     def check_file(dirname):
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
         assert os.path.exists(filename)
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         assert 0 == len(project.requirements)
-        assert "runtime section contains wrong value type 42" in project.problems[0]
+        assert "variables section contains wrong value type 42" in project.problems[0]
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  42\n"}, check_file)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42\n"}, check_file)
 
 
 def test_corrupted_project_file_and_meta_file():
@@ -723,7 +723,7 @@ def test_corrupted_project_file_and_meta_file():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 ^
-runtime:
+variables:
   FOO
 """,
          DEFAULT_RELATIVE_META_PATH: """
@@ -1341,7 +1341,7 @@ environments:
 downloads:
   FOO: https://example.com/blah
 
-runtime:
+variables:
   SOMETHING: {}
   SOMETHING_ELSE: {}
 

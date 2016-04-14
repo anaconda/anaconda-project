@@ -53,7 +53,7 @@ class MasterPasswordProvider(Provider):
             # Note: not a good idea to put your master password
             # in project.yml, but...
             #
-            # runtime:
+            # variables:
             #   ANACONDA_MASTER_PASSWORD:
             #     default: "foobar"
             value = requirement.options['default']

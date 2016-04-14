@@ -70,7 +70,7 @@ def test_launch_command(monkeypatch):
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: {}
 
 commands:
@@ -124,7 +124,7 @@ def test_launch_command_failed_prepare(capsys):
         assert result is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   - WILL_NOT_BE_SET
 """}, check_launch_failed_prepare)
 

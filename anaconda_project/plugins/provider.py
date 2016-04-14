@@ -495,7 +495,7 @@ class EnvVarProvider(Provider):
         elif 'default' in requirement.options:
             # project.yml
             #
-            # runtime:
+            # variables:
             #   REDIS_URL:
             #     default: "redis://example.com:1234"
             value = requirement.options['default']
