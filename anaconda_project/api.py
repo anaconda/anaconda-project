@@ -227,3 +227,25 @@ class AnacondaProject(object):
            None
         """
         return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove)
+
+    def add_download(self, project, env_var, url):
+        """Attempt to download the URL; if successful, add it as a download to the project.
+
+        The returned status would be None if we failed to even check the status for
+        some reason... currently this would happen if the project has non-empty
+        ``project.problems``.
+
+        If the returned status is not None, if it's True we were
+        successful, and if it's false ``status.errors`` may
+        (hopefully) contain a list of useful error strings.
+
+        Args:
+            project (Project): the project
+            env_var (str): env var to store the local filename
+            url (str): url to download
+
+        Returns:
+            RequirementStatus instance for the download requirement or None
+
+        """
+        return project_ops.add_download(project=project, env_var=env_var, url=url)
