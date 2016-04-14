@@ -57,11 +57,8 @@ class MasterPasswordProvider(Provider):
             #   ANACONDA_MASTER_PASSWORD:
             #     default: "foobar"
             value = requirement.options['default']
-            if isinstance(value, dict) or isinstance(value, list):
-                return ProvideResult(errors=["Value of '%s' should be a string not %r" % (requirement.env_var, value)])
-            else:
-                value = str(value)  # convert number, bool, null to a string
-                context.environ[requirement.env_var] = value
+            assert isinstance(value, str)  # should have been checked on project load
+            context.environ[requirement.env_var] = value
         else:
             pass
 

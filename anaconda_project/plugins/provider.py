@@ -288,18 +288,12 @@ class EnvVarProvider(Provider):
         assert value is not None  # if it's None caller couldn't detect errors
         key = self._key_from_value(value)
         if key is not None:
-            if 'encrypted' not in value:
-                errors.append("No 'encrypted' field in the value of %s" % (requirement.env_var))
-                return None
+            assert 'encrypted' in value  # we were supposed to validate this on project load
             if key not in context.environ:
                 errors.append("Master password %s is not set so can't get value of %s." % (key, requirement.env_var))
                 return None
             value = decrypt_string(value['encrypted'], context.environ[key])
-        if isinstance(value, dict) or isinstance(value, list):
-            errors.append("Value of '%s' should be a string not %r" % (requirement.env_var, value))
-            return None
-        else:
-            value = str(value)  # convert number, bool, null to a string
+        assert isinstance(value, str)  # should have validated this on project load
         return value
 
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):

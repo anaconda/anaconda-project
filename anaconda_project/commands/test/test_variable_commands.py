@@ -95,4 +95,4 @@ def test_remove_variable_project_problem(monkeypatch):
         res = main(args)
         assert res == 1
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("runtime:\n" "  foo: invalid")}, check_problem_remove)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("runtime:\n" "  foo: true")}, check_problem_remove)

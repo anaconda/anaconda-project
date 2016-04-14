@@ -119,6 +119,11 @@ class Requirement(with_metaclass(ABCMeta)):
             self.options = dict()
         else:
             self.options = deepcopy(options)
+            # always convert the default to a string (it's allowed to be a number
+            # in the config file, but env vars have to be strings), unless
+            # it's a dict because we use a dict for encrypted defaults
+            if 'default' in self.options and not isinstance(self.options['default'], (str, dict)):
+                self.options['default'] = str(self.options['default'])
 
     @property
     @abstractmethod
