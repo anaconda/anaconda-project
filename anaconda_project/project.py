@@ -7,6 +7,7 @@
 """Project class representing a project directory."""
 from __future__ import absolute_import
 
+from copy import deepcopy
 import os
 
 from anaconda_project.conda_environment import CondaEnvironment
@@ -137,23 +138,63 @@ class _ConfigCache(object):
             else:
                 return False
 
-        # runtime: section can contain a list of var names
-        # or a dict from var names to options. it can also
-        # be missing
+        # runtime: section can contain a list of var names or a dict from
+        # var names to options OR default values. it can also be missing
+        # entirely which is the same as empty.
         if runtime is None:
             pass
         elif isinstance(runtime, dict):
             for key in runtime.keys():
                 if check_conda_reserved(key):
                     continue
-                options = runtime[key]
-                if isinstance(options, dict):
+                raw_options = runtime[key]
+
+                if raw_options is None:
+                    options = {}
+                elif isinstance(raw_options, dict):
+                    options = deepcopy(raw_options)  # so we can modify it below
+                else:
+                    options = dict(default=raw_options)
+
+                assert (isinstance(options, dict))
+
+                raw_default = options.get('default', None)
+
+                if raw_default is None:
+                    good_default = True
+                elif isinstance(raw_default, bool):
+                    # we have to check bool since it's considered an int apparently
+                    good_default = False
+                elif isinstance(raw_default, (str, int, float)):
+                    good_default = True
+                elif isinstance(raw_default, dict):
+                    # we only allow a dict if it represents an encrypted value
+                    if ('key' in raw_default) and ('encrypted' in raw_default):
+                        good_default = True
+                    else:
+                        good_default = False
+                else:
+                    good_default = False
+
+                if 'default' in options and raw_default is None:
+                    # convert null to be the same as simply missing
+                    del options['default']
+
+                if good_default:
                     requirement = self.registry.find_requirement_by_env_var(key, options)
                     requirements.append(requirement)
                 else:
-                    problems.append(("runtime section has key {key} with value {options}; the value " +
-                                     "must be a dict of options, instead.").format(key=key,
-                                                                                   options=options))
+                    if isinstance(raw_default, dict):
+                        problems.append(
+                            ("default value for variable {key} can be a dict but only if it " +
+                             "contains 'key' and 'encrypted' fields; found {value}").format(key=key,
+                                                                                            value=dict(raw_default)))
+                    else:
+                        problems.append(
+                            "default value for variable {key} must be null, a string, or a number, not {value}.".format(
+                                key=key,
+                                value=raw_default))
+
         elif isinstance(runtime, list):
             for item in runtime:
                 if isinstance(item, str):

@@ -56,6 +56,7 @@ def test_single_env_var_requirement():
         assert [] == project.problems
         assert 2 == len(project.requirements)
         assert "FOO" == project.requirements[0].env_var
+        assert dict() == project.requirements[0].options
 
         if platform.system() == 'Windows':
             assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
@@ -65,6 +66,86 @@ def test_single_env_var_requirement():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 runtime:
   FOO: {}
+"""}, check_some_env_var)
+
+
+def test_single_env_var_requirement_null_for_default():
+    def check_some_env_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        assert 3 == len(project.requirements)
+        assert "FOO" == project.requirements[0].env_var
+        assert dict() == project.requirements[0].options
+        assert "BAR" == project.requirements[1].env_var
+        assert dict() == project.requirements[1].options
+
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[2].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[2].env_var
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+runtime:
+  FOO: null
+  BAR: { default: null }
+"""}, check_some_env_var)
+
+
+def test_single_env_var_requirement_string_for_default():
+    def check_some_env_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        assert 2 == len(project.requirements)
+        assert "FOO" == project.requirements[0].env_var
+        assert dict(default='hello') == project.requirements[0].options
+
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+runtime:
+  FOO: 'hello'
+"""}, check_some_env_var)
+
+
+def test_single_env_var_requirement_number_for_default():
+    def check_some_env_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        assert 2 == len(project.requirements)
+        assert "FOO" == project.requirements[0].env_var
+        assert dict(default='42') == project.requirements[0].options
+
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+runtime:
+  FOO: 42
+"""}, check_some_env_var)
+
+
+def test_single_env_var_requirement_default_is_in_dict():
+    def check_some_env_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        assert 2 == len(project.requirements)
+        assert "FOO" == project.requirements[0].env_var
+        assert dict(default='42') == project.requirements[0].options
+
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+runtime:
+  FOO: { default: 42 }
 """}, check_some_env_var)
 
 
@@ -555,17 +636,68 @@ def test_non_string_runtime_requirements():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  - 42\n  - 43\n"}, check_file)
 
 
-def test_bad_runtime_requirements_options():
+def test_variable_default_cannot_be_bool():
     def check_file(dirname):
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
         assert os.path.exists(filename)
         project = project_no_dedicated_env(dirname)
-        assert 2 == len(project.problems)
-        assert 0 == len(project.requirements)
-        assert "key FOO with value 42; the value must be a dict" in project.problems[0]
-        assert "key BAR with value baz; the value must be a dict" in project.problems[1]
+        assert [] == project.requirements
+        assert 1 == len(project.problems)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  FOO: 42\n  BAR: baz\n"}, check_file)
+        assert ("default value for variable FOO must be null, a string, or a number, not True.") == project.problems[0]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  FOO: true\n"}, check_file)
+
+
+def test_variable_default_cannot_be_list():
+    def check_file(dirname):
+        filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
+        assert os.path.exists(filename)
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.requirements
+        assert 1 == len(project.problems)
+
+        assert ("default value for variable FOO must be null, a string, or a number, not [].") == project.problems[0]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "runtime:\n  FOO: []\n"}, check_file)
+
+
+def test_variable_default_missing_encrypted_field():
+    def check(dirname):
+        filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
+        assert os.path.exists(filename)
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.requirements
+        assert 1 == len(project.problems)
+
+        assert ("default value for variable FOO can be a dict but only if it contains 'key' and 'encrypted' fields; " +
+                "found {'key': 'MASTER_PASSWORD'}") == project.problems[0]
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+runtime:
+  FOO:
+    default: { key: 'MASTER_PASSWORD' }
+"""}, check)
+
+
+def test_variable_default_missing_key_field():
+    def check(dirname):
+        filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
+        assert os.path.exists(filename)
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.requirements
+        assert 1 == len(project.problems)
+
+        assert ("default value for variable FOO can be a dict but only if it contains 'key' and 'encrypted' fields; " +
+                "found {'encrypted': 'abcdefg'}") == project.problems[0]
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+runtime:
+  FOO:
+    default: { encrypted: 'abcdefg' }
+"""}, check)
 
 
 def test_runtime_requirements_not_a_collection():

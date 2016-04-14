@@ -204,6 +204,26 @@ passed to your script; the encryption is only when we save the value
 to a config file.
 
 
+Variables with default values
+=============================
+
+If you make the ``runtime:`` section a dictionary instead of a
+list, you can give your variables default values. Anything
+in the environment or in ``project-local.yml`` will override
+these defaults though. To omit a default for a variable, set
+its value to either ``null`` or ``{}``.
+
+For example:
+
+  runtime:
+    FOO: "default_value_of_foo"
+    BAR: null # no default for BAR
+    BAZ: {} # no default for BAZ
+    # default as part of options dict, needed if you also
+    # want to set some options such as 'encrypted: true'
+    BLAH: { default: "default_value_of_blah" }
+
+
 Variables that imply a running service
 ======================================
 

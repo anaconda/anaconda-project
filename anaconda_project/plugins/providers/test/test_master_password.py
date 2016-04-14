@@ -139,32 +139,6 @@ runtime:
 """}, check_set_in_default)
 
 
-def test_master_password_provider_with_list_set_in_default():
-    def check_list_set_in_default(dirname):
-        provider = MasterPasswordProvider()
-        requirement = _load_master_password_requirement(dirname)
-        local_state_file = LocalStateFile.load_for_directory(dirname)
-        environ = dict()
-        config = provider.read_config(requirement, environ, local_state_file)
-        assert dict() == config
-        environ = dict()
-        status = requirement.check_status(environ, local_state_file)
-        context = ProvideContext(environ=environ,
-                                 local_state_file=local_state_file,
-                                 status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
-        result = provider.provide(requirement, context=context)
-        assert 'ANACONDA_MASTER_PASSWORD' not in context.environ
-        assert ["Value of 'ANACONDA_MASTER_PASSWORD' should be a string not []"] == result.errors
-
-    # set a default to be sure we prefer keyring
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
-runtime:
-  ANACONDA_MASTER_PASSWORD: { default: [] }
-"""}, check_list_set_in_default)
-
-
 def test_master_password_provider_saves_config_in_keyring():
     def check_configure_via_keyring(dirname):
         from anaconda_project.internal import keyring
