@@ -134,7 +134,7 @@ class CondaEnvProvider(EnvVarProvider):
             assert context.status.analysis.config['source'] != 'environ'
 
         # set the env var (but not PATH, etc. to fully activate, that's done below)
-        super(CondaEnvProvider, self).provide(requirement, context)
+        super_result = super(CondaEnvProvider, self).provide(requirement, context)
 
         project_dir = context.environ['PROJECT_DIR']
 
@@ -167,8 +167,7 @@ class CondaEnvProvider(EnvVarProvider):
                 try:
                     self._conda.fix_environment_deviations(prefix, env_spec)
                 except CondaManagerError as e:
-                    context.append_error(str(e))
-                    return
+                    return super_result.copy_with_additions(errors=[str(e)])
 
         context.environ[requirement.env_var] = prefix
         if requirement.env_var != "CONDA_DEFAULT_ENV":
@@ -186,3 +185,5 @@ class CondaEnvProvider(EnvVarProvider):
         #  - we can't set PS1 because it shouldn't be exported.
         #  - we can't run conda activate scripts because they are sourced.
         # We can do these in the output of our activate command, but not here.
+
+        return super_result

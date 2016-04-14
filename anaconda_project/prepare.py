@@ -392,9 +392,9 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             else:
                 did_any_providing = True
                 context = ProvideContext(environ, local_state, status, mode)
-                status.provider.provide(status.requirement, context)
-                logs.extend(context.logs)
-                errors.extend(context.errors)
+                result = status.provider.provide(status.requirement, context)
+                logs.extend(result.logs)
+                errors.extend(result.errors)
 
         if did_any_providing:
             old = rechecked

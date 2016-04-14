@@ -153,9 +153,9 @@ def test_master_password_provider_with_list_set_in_default():
                                  local_state_file=local_state_file,
                                  status=status,
                                  mode=PROVIDE_MODE_DEVELOPMENT)
-        provider.provide(requirement, context=context)
+        result = provider.provide(requirement, context=context)
         assert 'ANACONDA_MASTER_PASSWORD' not in context.environ
-        assert ["Value of 'ANACONDA_MASTER_PASSWORD' should be a string not []"] == context.errors
+        assert ["Value of 'ANACONDA_MASTER_PASSWORD' should be a string not []"] == result.errors
 
     # set a default to be sure we prefer keyring
     with_directory_contents(

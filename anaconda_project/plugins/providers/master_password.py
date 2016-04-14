@@ -7,7 +7,7 @@
 """Master password provider."""
 from __future__ import absolute_import, print_function
 
-from anaconda_project.plugins.provider import Provider
+from anaconda_project.plugins.provider import Provider, ProvideResult
 from anaconda_project.internal import keyring
 
 
@@ -58,9 +58,11 @@ class MasterPasswordProvider(Provider):
             #     default: "foobar"
             value = requirement.options['default']
             if isinstance(value, dict) or isinstance(value, list):
-                context.append_error("Value of '%s' should be a string not %r" % (requirement.env_var, value))
+                return ProvideResult(errors=["Value of '%s' should be a string not %r" % (requirement.env_var, value)])
             else:
                 value = str(value)  # convert number, bool, null to a string
                 context.environ[requirement.env_var] = value
         else:
             pass
+
+        return ProvideResult.empty()
