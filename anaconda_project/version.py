@@ -4,4 +4,6 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-"""Library for working with projects."""
+"""Version information."""
+
+version = "0.1"

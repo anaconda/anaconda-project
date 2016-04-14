@@ -12,7 +12,7 @@ import sys
 from argparse import ArgumentParser, REMAINDER
 
 from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
-from anaconda_project import __version__
+from anaconda_project.version import version
 import anaconda_project.commands.init as init
 import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
@@ -28,7 +28,7 @@ def _parse_args_and_run_subcommand(argv):
 
     subparsers = parser.add_subparsers(help="Sub-commands")
 
-    parser.add_argument('-v', '--version', action='version', version=__version__)
+    parser.add_argument('-v', '--version', action='version', version=version)
 
     def add_project_arg(preset):
         preset.add_argument('--project',
