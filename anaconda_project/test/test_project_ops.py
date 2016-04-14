@@ -13,7 +13,7 @@ from anaconda_project import project_ops
 from anaconda_project.project import Project
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
 from anaconda_project.test.project_utils import project_no_dedicated_env
 
 
@@ -46,25 +46,22 @@ def test_add_variables():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
         project_ops.add_variables(project, [('foo', 'bar'), ('baz', 'qux')])
-        re_loaded = project.project_file.load_for_directory(project.directory_path)
-        assert re_loaded.get_value(['runtime', 'foo']) == {}
-        assert re_loaded.get_value(['runtime', 'baz']) == {}
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        assert dict(foo=None, baz=None, preset=None) == re_loaded.get_value(['runtime'])
         local_state = LocalStateFile.load_for_directory(dirname)
 
         local_state.get_value(['runtime', 'foo']) == 'bar'
         local_state.get_value(['runtime', 'baz']) == 'qux'
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('runtime:\n' '  preset: {}')}, check_set_var)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('runtime:\n' '  preset: null')}, check_set_var)
 
 
-def test_add_variables_existing_req():
+def test_add_variables_existing_download():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
         project_ops.add_variables(project, [('foo', 'bar'), ('baz', 'qux')])
-        re_loaded = project.project_file.load_for_directory(project.directory_path)
-        assert re_loaded.get_value(['runtime', 'foo']) == {}
-        assert re_loaded.get_value(['runtime', 'baz']) == {}
-        assert re_loaded.get_value(['runtime', 'datafile'], None) is None
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        assert dict(foo=None, baz=None, preset=None) == re_loaded.get_value(['runtime'])
         assert re_loaded.get_value(['downloads', 'datafile']) == 'http://localhost:8000/data.tgz'
         local_state = LocalStateFile.load_for_directory(dirname)
 
@@ -74,16 +71,51 @@ def test_add_variables_existing_req():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: ('runtime:\n'
-                                    '  preset: {}\n'
+                                    '  preset: null\n'
                                     'downloads:\n'
                                     '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
 
+def test_add_variables_existing_options():
+    def check_set_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        project_ops.add_variables(project, [('foo', 'bar'), ('baz', 'qux')])
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+
+        foo = re_loaded.get_value(['runtime', 'foo'])
+        assert isinstance(foo, dict)
+        assert 'something' in foo
+        assert foo['something'] == 42
+
+        baz = re_loaded.get_value(['runtime', 'baz'])
+        assert isinstance(baz, dict)
+        assert 'default' in baz
+        assert baz['default'] == 'hello'
+
+        woot = re_loaded.get_value(['runtime', 'woot'])
+        assert woot == 'world'
+
+        assert re_loaded.get_value(['downloads', 'datafile']) == 'http://localhost:8000/data.tgz'
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+
+        local_state.get_value(['variables', 'foo']) == 'bar'
+        local_state.get_value(['variables', 'baz']) == 'qux'
+        local_state.get_value(['variables', 'datafile']) == 'http://localhost:8000/data.tgz'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('runtime:\n'
+                                    '  foo: { something: 42 }\n'
+                                    '  baz: { default: "hello" }\n'
+                                    '  woot: "world"\n'
+                                    'downloads:\n'
+                                    '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
 
 def test_remove_variables():
     def check_remove_var(dirname):
         project = project_no_dedicated_env(dirname)
         project_ops.remove_variables(project, ['foo', 'bar'])
         re_loaded = project.project_file.load_for_directory(project.directory_path)
+        assert dict() == re_loaded.get_value(['runtime'])
         assert re_loaded.get_value(['runtime', 'foo']) is None
         assert re_loaded.get_value(['runtime', 'bar']) is None
         local_state = LocalStateFile.load_for_directory(dirname)
