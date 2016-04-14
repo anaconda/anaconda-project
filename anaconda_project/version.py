@@ -6,4 +6,5 @@
 # ----------------------------------------------------------------------------
 """Version information."""
 
+# Note: this is a generated file, edit setup.py not here.
 version = "0.1"

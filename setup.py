@@ -154,7 +154,9 @@ class AllTestsCommand(TestCommand):
                             handle.flush()
 
     def _update_version_file(self):
-        version_code = '"""Version information."""\n\nversion = "%s"\n' % VERSION
+        version_code = (
+            '"""Version information."""\n\n' + '# Note: this is a generated file, edit setup.py not here.\n' +
+            ('version = "%s"\n' % VERSION))
         content = coding_utf8_header + copyright_header + version_code
         version_py = os.path.join(ROOT, 'anaconda_project', 'version.py')
         old_content = codecs.open(version_py, 'r', 'utf-8').read()
