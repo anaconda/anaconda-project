@@ -203,3 +203,25 @@ def remove_variables(project, vars_to_remove):
         project.project_file.unset_value(['variables', varname])
     project.project_file.save()
     local_state.save()
+
+
+def add_command(project, command_type, name, command):
+    """Add a command to project.yml.
+
+    Args:
+       project (Project): the project
+       command_type: choice of `bokeh_app`, `notebook`, `python`, `shell` or `windows` command
+
+    Returns:
+       None
+    """
+    local_state = LocalStateFile.load_for_directory(project.directory_path)
+    if command_type in ('bokeh_app', 'python', 'notebook'):
+        command_to_set = {command_type: command}
+    elif command_type in ('shell', 'windows', 'other'):
+        command_to_set = {'shell': command, 'windows': command}
+
+    project.project_file.set_value(['commands', name], command_to_set)
+    local_state.set_value(['commands', name], command_to_set)
+    project.project_file.save()
+    local_state.save()

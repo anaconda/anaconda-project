@@ -12,7 +12,7 @@ import os
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
 all_subcommands = ('init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable', 'add-download',
-                   'add-environment')
+                   'add-environment', 'add-command')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -66,6 +66,7 @@ expected_usage_msg = \
         '                        project\n' \
         '    add-download        Add a URL to be downloaded before running commands\n' \
         '    add-environment     Add a new environment to the project.\n' \
+        '    add-command         Add a command to project\n' \
         '\n' \
         'optional arguments:\n' \
         '  -h, --help            show this help message and exit\n' \

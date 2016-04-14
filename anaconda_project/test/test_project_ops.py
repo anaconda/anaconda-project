@@ -130,6 +130,77 @@ def test_remove_variables():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  foo: baz\n  bar: qux')}, check_remove_var)
 
 
+def _test_add_command_shell(command_type):
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        project_ops.add_command(project, command_type, 'default', 'echo "test"')
+
+        re_loaded = project.project_file.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'default'])
+        assert command['shell'] == 'echo "test"'
+        assert command['windows'] == 'echo "test"'
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        command = local_state.get_value(['commands', 'default'])
+        assert command['shell'] == 'echo "test"'
+        assert command['windows'] == 'echo "test"'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check_add_command)
+
+
+def test_add_command_shell():
+    _test_add_command_shell("shell")
+
+
+def test_add_command_windows():
+    _test_add_command_shell("windows")
+
+
+def test_add_command_bokeh():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        project_ops.add_command(project, 'bokeh_app', 'bokeh_test', 'file.py')
+
+        re_loaded = project.project_file.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'bokeh_test'])
+        assert len(command.keys()) == 1
+        assert command['bokeh_app'] == 'file.py'
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        command = local_state.get_value(['commands', 'bokeh_test'])
+        assert len(command.keys()) == 1
+        assert command['bokeh_app'] == 'file.py'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check_add_command)
+
+
+def test_add_command_bokeh_overwrites():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        project_ops.add_command(project, 'bokeh_app', 'bokeh_test', 'file.py')
+
+        re_loaded = project.project_file.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'bokeh_test'])
+        assert len(command.keys()) == 1
+        assert command['bokeh_app'] == 'file.py'
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        command = local_state.get_value(['commands', 'bokeh_test'])
+        assert len(command.keys()) == 1
+        assert command['bokeh_app'] == 'file.py'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  bokeh_test:\n'
+                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+
+
 def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA'):
     @gen.coroutine
     def mock_downloader_run(self, loop):
