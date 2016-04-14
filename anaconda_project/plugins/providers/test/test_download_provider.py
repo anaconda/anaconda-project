@@ -527,7 +527,7 @@ downloads:
 
 def test_browser_ui_choose_download_then_manual_override(monkeypatch):
     directory_contents = {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   # this keeps the prepare from ever ending
   - FOO
 

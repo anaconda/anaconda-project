@@ -50,8 +50,9 @@ def test_master_password_provider_with_value_not_set():
         provider.provide(requirement, context=context)
         assert 'ANACONDA_MASTER_PASSWORD' not in context.environ
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+variables:
   ANACONDA_MASTER_PASSWORD: {}
 """}, check_not_set)
 
@@ -77,7 +78,7 @@ def test_master_password_provider_with_value_set_in_environment():
     # set a default to be sure we prefer 'environ' instead
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   ANACONDA_MASTER_PASSWORD: { default: 'from_default' }
 """}, check_set_in_environment)
 
@@ -108,7 +109,7 @@ def test_master_password_provider_with_value_set_in_keyring():
     # set a default to be sure we prefer keyring
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   ANACONDA_MASTER_PASSWORD: { default: 'from_default' }
 """}, check_set_in_keyring)
 
@@ -134,7 +135,7 @@ def test_master_password_provider_with_value_set_in_default():
     # set a default to be sure we prefer keyring
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   ANACONDA_MASTER_PASSWORD: { default: 'from_default' }
 """}, check_set_in_default)
 
@@ -166,6 +167,6 @@ def test_master_password_provider_saves_config_in_keyring():
     # set a default to be sure we prefer keyring we configure
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   ANACONDA_MASTER_PASSWORD: { default: 'from_default' }
 """}, check_configure_via_keyring)

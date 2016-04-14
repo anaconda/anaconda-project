@@ -80,7 +80,7 @@ def test_prepare_some_env_var_already_set():
         assert dict(FOO='bar') == strip_environ(environ)
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: {}
 """}, prepare_some_env_var)
 
@@ -94,7 +94,7 @@ def test_prepare_some_env_var_not_set():
         assert dict(BAR='bar') == strip_environ(environ)
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: {}
 """}, prepare_some_env_var)
 
@@ -112,7 +112,7 @@ def test_prepare_some_env_var_not_set_keep_going():
         assert dict(BAR='bar') == strip_environ(environ)
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: {}
 """}, prepare_some_env_var_keep_going)
 
@@ -141,7 +141,7 @@ def test_prepare_with_app_entry():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: {}
 
 commands:
@@ -167,7 +167,7 @@ def test_update_environ():
         assert dict(FOO='bar', BAR='baz', PROJECT_DIR=dirname) == strip_environ(other)
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: {}
 """}, prepare_then_update_environ)
 
@@ -304,7 +304,7 @@ def test_prepare_with_browser(monkeypatch):
         assert 200 == http_results['post'].code
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO: {}
 """}, prepare_with_browser)
 
@@ -411,7 +411,7 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
         # local state file
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO_PASSWORD: {}
 """}, prepare_with_browser)
 

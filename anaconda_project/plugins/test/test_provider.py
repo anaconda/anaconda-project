@@ -79,7 +79,7 @@ def test_env_var_provider_with_no_value():
         assert 'FOO' not in context.environ
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   - FOO
 """}, check_env_var_provider)
 
@@ -102,7 +102,7 @@ def test_env_var_provider_with_default_value_in_project_file():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO:
     default: from_default
 """}, check_env_var_provider)
@@ -114,7 +114,7 @@ def test_env_var_provider_with_encrypted_default_value_in_project_file():
         project_file = ProjectFile.load_for_directory(dirname)
         secret = "boo"
         encrypted = encrypt_string("from_default", secret)
-        project_file.set_value(['runtime', 'FOO_SECRET'], dict(default=dict(key='MASTER', encrypted=encrypted)))
+        project_file.set_value(['variables', 'FOO_SECRET'], dict(default=dict(key='MASTER', encrypted=encrypted)))
         project_file.save()
 
         provider = EnvVarProvider()
@@ -144,7 +144,7 @@ def test_env_var_provider_with_encrypted_default_value_in_project_file_no_master
         project_file = ProjectFile.load_for_directory(dirname)
         secret = "boo"
         encrypted = encrypt_string("from_default", secret)
-        project_file.set_value(['runtime', 'FOO_SECRET'], dict(default=dict(key='MASTER', encrypted=encrypted)))
+        project_file.set_value(['variables', 'FOO_SECRET'], dict(default=dict(key='MASTER', encrypted=encrypted)))
         project_file.save()
 
         provider = EnvVarProvider()
@@ -173,7 +173,7 @@ def test_env_var_provider_with_encrypted_default_value_in_project_file_for_non_e
         project_file = ProjectFile.load_for_directory(dirname)
         secret = "boo"
         encrypted = encrypt_string("from_default", secret)
-        project_file.set_value(['runtime', 'FOO'], dict(default=dict(key='MASTER', encrypted=encrypted)))
+        project_file.set_value(['variables', 'FOO'], dict(default=dict(key='MASTER', encrypted=encrypted)))
         project_file.save()
 
         provider = EnvVarProvider()
@@ -218,7 +218,7 @@ def test_env_var_provider_with_unencrypted_default_value_in_project_file_for_enc
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO_SECRET:
     default: from_default
 """}, check_env_var_provider)
@@ -244,7 +244,7 @@ def test_env_var_provider_with_value_set_in_environment():
     # set a default to be sure we prefer 'environ' instead
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO:
     default: from_default
 """}, check_env_var_provider)
@@ -270,7 +270,7 @@ def test_env_var_provider_with_value_set_in_local_state():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO:
     default: from_default
     """,
@@ -311,7 +311,7 @@ def test_env_var_provider_with_encrypted_default_value_in_local_state():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   FOO_SECRET:
     default: from_default
 """}, check_env_var_provider)
@@ -347,7 +347,7 @@ def test_env_var_provider_configure_local_state_value():
         assert local_state_file_3.get_value(['variables', 'FOO']) is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   - FOO
 """}, check_env_var_provider_config_local_state)
 
@@ -379,7 +379,7 @@ def test_env_var_provider_configure_disabled_local_state_value():
         assert config == dict(source='unset', value='bar')
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   - FOO
 """}, check_env_var_provider_config_disabled_local_state)
 
@@ -423,7 +423,7 @@ def test_env_var_provider_config_html():
 
     # set a default to be sure we prefer 'environ' instead
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-runtime:
+variables:
   - FOO
 """}, check_env_var_provider_config)
 

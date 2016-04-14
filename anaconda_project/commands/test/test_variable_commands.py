@@ -41,12 +41,12 @@ def test_add_variable_project_problem(capsys):
         res = main(args)
         assert res == 1
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("runtime:\n" "  42")}, check_problem)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("variables:\n" "  42")}, check_problem)
 
     out, err = capsys.readouterr()
     assert out == ''
     expected_err = ('Unable to load project:\n  '
-                    'runtime section contains wrong value type 42, should be dict or list of requirements\n')
+                    'variables section contains wrong value type 42, should be dict or list of requirements\n')
     assert err == expected_err
 
 
@@ -84,7 +84,7 @@ def test_remove_variable_command(monkeypatch):
         assert len(params) == 1
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: ("runtime:\n"
+        {DEFAULT_PROJECT_FILENAME: ("variables:\n"
                                     "  foo: {default: test}\n"
                                     "  baz: {default: bar}")}, check_remove_variable)
 
@@ -95,4 +95,4 @@ def test_remove_variable_project_problem(monkeypatch):
         res = main(args)
         assert res == 1
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("runtime:\n" "  foo: true")}, check_problem_remove)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("variables:\n" "  foo: true")}, check_problem_remove)

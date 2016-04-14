@@ -113,7 +113,7 @@ def add_variables(project, vars_to_add):
     for varname, value in vars_to_add:
         local_state.set_value(['variables', varname], value)
         if varname not in present_vars:
-            project.project_file.set_value(['runtime', varname], None)
+            project.project_file.set_value(['variables', varname], None)
     project.project_file.save()
     local_state.save()
 
@@ -131,6 +131,6 @@ def remove_variables(project, vars_to_remove):
     local_state = LocalStateFile.load_for_directory(project.directory_path)
     for varname in vars_to_remove:
         local_state.unset_value(['variables', varname])
-        project.project_file.unset_value(['runtime', varname])
+        project.project_file.unset_value(['variables', varname])
     project.project_file.save()
     local_state.save()
