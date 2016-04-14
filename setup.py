@@ -20,6 +20,8 @@ from os.path import dirname, realpath
 from distutils.core import setup
 from setuptools.command.test import test as TestCommand
 
+VERSION = '0.1'
+
 ROOT = dirname(realpath(__file__))
 
 PY2 = sys.version_info[0] == 2
@@ -150,6 +152,18 @@ class AllTestsCommand(TestCommand):
                         print("Creating " + init_py)
                         with codecs.open(init_py, 'w', 'utf-8') as handle:
                             handle.flush()
+
+    def _update_version_file(self):
+        version_code = (
+            '"""Version information."""\n\n' + '# Note: this is a generated file, edit setup.py not here.\n' +
+            ('version = "%s"\n' % VERSION))
+        content = coding_utf8_header + copyright_header + version_code
+        version_py = os.path.join(ROOT, 'anaconda_project', 'version.py')
+        old_content = codecs.open(version_py, 'r', 'utf-8').read()
+        if old_content != content:
+            print("Updating " + version_py)
+            _atomic_replace(version_py, content, 'utf-8')
+            self.failed.append('version-file-updated')
 
     def _headerize_file(self, path):
         with codecs.open(path, 'r', 'utf-8') as file:
@@ -296,6 +310,7 @@ column_limit : 120
 
     def run_tests(self):
         self._add_missing_init_py()
+        self._update_version_file()
         self._headers()
         self._yapf()
         self._flake8()
@@ -318,7 +333,7 @@ column_limit : 120
 
 
 setup(name='anaconda-project',
-      version="0.1",
+      version=VERSION,
       author="Continuum Analytics",
       author_email='info@continuum.io',
       url='http://github.com/Anaconda-Server/anaconda-project',

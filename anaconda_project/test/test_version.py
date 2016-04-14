@@ -4,4 +4,10 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-"""Library for working with projects."""
+from __future__ import absolute_import, print_function
+
+from anaconda_project.version import version
+
+
+def test_version():
+    assert isinstance(version, str)
