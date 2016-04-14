@@ -114,7 +114,10 @@ class ProjectFile(YamlFile):
 
         sections['runtime'] = (
             "In the runtime section, list any environment variables your code depends on.\n" + "\n" + "For example,\n" +
-            "\n" + "runtime:\n" + "   EC2_PASSWORD: {}\n" + "   NUMBER_OF_ITERATIONS: {}\n")
+            "\n" + "runtime:\n" + "   EC2_PASSWORD: null\n" + "   NUMBER_OF_ITERATIONS: null\n\n" +
+            "If you give a value other than null for the variable, that value will be the default\n" +
+            "for everyone who runs this project.\n" +
+            "You can also set a local value (not shared with others) in project-local.yml.\n")
 
         sections['downloads'] = (
             "In the downloads section, list any URLs to download to local files\n" + "before your code runs.\n" +

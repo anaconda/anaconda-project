@@ -65,8 +65,12 @@ commands: {}
 # For example,
 #
 # runtime:
-#    EC2_PASSWORD: {}
-#    NUMBER_OF_ITERATIONS: {}
+#    EC2_PASSWORD: null
+#    NUMBER_OF_ITERATIONS: null
+#
+# If you give a value other than null for the variable, that value will be the default
+# for everyone who runs this project.
+# You can also set a local value (not shared with others) in project-local.yml.
 #
 runtime: {}
 #

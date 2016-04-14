@@ -75,6 +75,7 @@ def test_add_variables_existing_download():
                                     'downloads:\n'
                                     '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
 
+
 def test_add_variables_existing_options():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
@@ -109,6 +110,7 @@ def test_add_variables_existing_options():
                                     '  woot: "world"\n'
                                     'downloads:\n'
                                     '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
+
 
 def test_remove_variables():
     def check_remove_var(dirname):
