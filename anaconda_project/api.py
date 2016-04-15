@@ -271,3 +271,15 @@ class AnacondaProject(object):
             RequirementStatus instance for the environment requirement or None
         """
         return project_ops.add_environment(project=project, name=name, packages=packages, channels=channels)
+
+    def add_command(self, project, command_type, name, command):
+        """Add a command to project.yml.
+
+        Args:
+            project (Project): the project
+            command_type: choice of `bokeh_app`, `notebook`, `python`, `shell` or `windows` command
+
+        Returns:
+            None
+        """
+        return project_ops.add_command(project=project, command_type=command_type, name=name, command=command)

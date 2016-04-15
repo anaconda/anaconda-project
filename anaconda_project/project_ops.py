@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 import os
 
-from anaconda_project.project import Project
+from anaconda_project.project import Project, _COMMAND_CHOICES
 from anaconda_project import prepare
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
@@ -203,3 +203,35 @@ def remove_variables(project, vars_to_remove):
         project.project_file.unset_value(['variables', varname])
     project.project_file.save()
     local_state.save()
+
+
+def add_command(project, command_type, name, command):
+    """Add a command to project.yml.
+
+    Args:
+       project (Project): the project
+       command_type: choice of `bokeh_app`, `notebook`, `shell` or `windows` command
+
+    Returns:
+       None on success, list of error strings otherwise
+    """
+    if command_type not in _COMMAND_CHOICES:
+        raise ValueError("Invalid command type " + command_type + " choose from " + repr(_COMMAND_CHOICES))
+
+    command_dict = project.project_file.get_value(['commands', name])
+    if command_dict is None:
+        command_dict = dict()
+        project.project_file.set_value(['commands', name], command_dict)
+
+    command_dict[command_type] = command
+
+    project.project_file.use_changes_without_saving()
+
+    if len(project.problems) > 0:
+        problems = project.problems
+        # reset, maybe someone added conflicting command line types or something
+        project.project_file.load()
+        return problems
+    else:
+        project.project_file.save()
+        return None

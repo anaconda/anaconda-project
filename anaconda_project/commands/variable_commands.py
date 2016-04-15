@@ -45,7 +45,7 @@ def remove_variables(project_dir, vars_to_remove):
 
 
 def main(args):
-    """Start the prepare command and return exit status code."""
+    """Submit the action to alter the variables in project."""
     if args.action == 'add':
         return add_variables(args.project, args.vars_to_add)
     elif args.action == 'remove':

@@ -156,3 +156,22 @@ def test_add_environment(monkeypatch):
     result = p.add_environment(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
+
+
+def test_add_command(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_add_command(*args, **kwargs):
+        print(args, kwargs)
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.add_command', mock_add_command)
+
+    p = api.AnacondaProject()
+
+    kwargs = dict(project=43, command_type='bokeh_app', name='name', command='file.py')
+    result = p.add_command(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']

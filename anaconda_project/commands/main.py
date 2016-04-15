@@ -13,6 +13,7 @@ from argparse import ArgumentParser, REMAINDER
 
 from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
 from anaconda_project.version import version
+from anaconda_project.project import _COMMAND_CHOICES
 import anaconda_project.commands.init as init
 import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
@@ -20,6 +21,7 @@ import anaconda_project.commands.activate as activate
 import anaconda_project.commands.variable_commands as variable_commands
 import anaconda_project.commands.download_commands as download_commands
 import anaconda_project.commands.environment_commands as environment_commands
+import anaconda_project.commands.command_commands as command_commands
 
 
 def _parse_args_and_run_subcommand(argv):
@@ -103,6 +105,15 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('-c', '--channel', metavar='CHANNEL', action='append', help='Channel to search for packages')
     preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
     preset.set_defaults(main=environment_commands.main_add)
+
+    preset = subparsers.add_parser('add-command', help="Add a new command to the project.")
+    add_project_arg(preset)
+    command_choices = list(_COMMAND_CHOICES) + ['ask']
+    command_choices.remove("conda_app_entry")  # conda_app_entry is sort of silly and may go away
+    preset.add_argument('--type', action="store", choices=command_choices, help="command type to add")
+    preset.add_argument('name', metavar="NAME", help="Command name used to invoke it")
+    preset.add_argument('command', metavar="COMMAND", help="Command line or app filename to add")
+    preset.set_defaults(main=command_commands.main)
 
     # argparse doesn't do this for us for whatever reason
     if len(argv) < 2:

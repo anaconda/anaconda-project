@@ -43,6 +43,9 @@ def console_input(prompt):
         return _input(prompt)
     except EOFError:
         return None
+    except KeyboardInterrupt:
+        print("\nCanceling\n", file=sys.stderr)
+        sys.exit(1)
 
 
 def console_ask_yes_or_no(prompt, default):

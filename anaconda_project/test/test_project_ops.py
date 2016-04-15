@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function
 
 import os
 from tornado import gen
+import pytest
 
 from anaconda_project import project_ops
 from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, push_conda_manager_class,
@@ -128,6 +129,106 @@ def test_remove_variables():
         local_state.get_value(['variables', 'bar']) is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  foo: baz\n  bar: qux')}, check_remove_var)
+
+
+def _test_add_command_line(command_type):
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, command_type, 'default', 'echo "test"')
+        assert result is None
+
+        re_loaded = project.project_file.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'default'])
+        assert command[command_type] == 'echo "test"'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    %s: echo "pass"\n') % command_type}, check_add_command)
+
+
+def test_add_command_shell():
+    _test_add_command_line("shell")
+
+
+def test_add_command_windows():
+    _test_add_command_line("windows")
+
+
+def _test_add_command_windows_to_shell(command_type):
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, 'windows', 'default', 'echo "test"')
+        assert result is None
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'default'])
+        assert command['windows'] == 'echo "test"'
+        assert command['shell'] == 'echo "pass"'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n') % command_type}, check_add_command)
+
+
+def test_add_command_bokeh():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, 'bokeh_app', 'bokeh_test', 'file.py')
+        assert result is None
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'bokeh_test'])
+        assert len(command.keys()) == 1
+        assert command['bokeh_app'] == 'file.py'
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_add_command)
+
+
+def test_add_command_bokeh_overwrites():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, 'bokeh_app', 'bokeh_test', 'file.py')
+        assert result is None
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'bokeh_test'])
+        assert len(command.keys()) == 1
+        assert command['bokeh_app'] == 'file.py'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  bokeh_test:\n'
+                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+
+
+def test_add_command_invalid_type():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        with pytest.raises(ValueError) as excinfo:
+            project_ops.add_command(project, 'foo', 'default', 'echo "test"')
+        assert 'Invalid command type foo' in str(excinfo.value)
+
+    with_directory_contents(dict(), check_add_command)
+
+
+def test_add_command_conflicting_type():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, 'bokeh_app', 'default', 'myapp.py')
+        assert [("%s: command 'default' has conflicting statements, 'bokeh_app' must stand alone" %
+                 project.project_file.filename)] == result
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'default'])
+        assert command['shell'] == 'echo "pass"'
+        assert 'bokeh_app' not in command
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check_add_command)
 
 
 def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA'):
