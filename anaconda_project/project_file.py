@@ -110,7 +110,9 @@ class ProjectFile(YamlFile):
             "      notebook: foo.ipynb\n" + "\n" +
             "Commands may have both a Unix shell version and a Windows cmd.exe version.\n" +
             "In this example, my_notebook was automatically added as a command named\n" +
-            "'foo.ipynb' but we've manually added it as 'my_notebook' also.\n")
+            "'foo.ipynb' but we've manually added it as 'my_notebook' also.\n" + "\n" +
+            "If you prefer, add commands using anaconda-project like this:\n" +
+            "    anaconda-project add-command --type=bokeh_app myappname myappdir\n")
 
         sections['variables'] = (
             "In the variables section, list any environment variables your code depends on.\n" + "\n" +

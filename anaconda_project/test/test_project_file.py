@@ -58,6 +58,9 @@ expected_default_file = """# This is an Anaconda project file.
 # In this example, my_notebook was automatically added as a command named
 # 'foo.ipynb' but we've manually added it as 'my_notebook' also.
 #
+# If you prefer, add commands using anaconda-project like this:
+#     anaconda-project add-command --type=bokeh_app myappname myappdir
+#
 commands: {}
 #
 # In the variables section, list any environment variables your code depends on.
