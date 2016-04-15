@@ -106,13 +106,13 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
     preset.set_defaults(main=environment_commands.main_add)
 
-    preset = subparsers.add_parser('add-command', help="Add a command to project")
+    preset = subparsers.add_parser('add-command', help="Add a new command to the project.")
     add_project_arg(preset)
     command_choices = list(COMMAND_CHOICES) + ['ask']
-    command_choices.remove("conda_app_entry")  # explicitly not supported because of syntax
+    command_choices.remove("conda_app_entry")  # conda_app_entry is sort of silly and may go away
     preset.add_argument('--type', action="store", choices=command_choices, help="command type to add")
-    preset.add_argument('name', help="Command name for reference inside project")
-    preset.add_argument('command', metavar="COMMAND", help="Command to add")
+    preset.add_argument('name', metavar="NAME", help="Command name used to invoke it")
+    preset.add_argument('command', metavar="COMMAND", help="Command line or app filename to add")
     preset.set_defaults(main=command_commands.main)
 
     # argparse doesn't do this for us for whatever reason

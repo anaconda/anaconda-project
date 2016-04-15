@@ -4,7 +4,7 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-"""Commands related to setting and unsetting variables."""
+"""Commands related to the 'commands' section of project.yml."""
 from __future__ import absolute_import, print_function
 
 from anaconda_project.project import Project

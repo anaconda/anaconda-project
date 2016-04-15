@@ -66,7 +66,7 @@ expected_usage_msg = \
         '                        project\n' \
         '    add-download        Add a URL to be downloaded before running commands\n' \
         '    add-environment     Add a new environment to the project.\n' \
-        '    add-command         Add a command to project\n' \
+        '    add-command         Add a new command to the project.\n' \
         '\n' \
         'optional arguments:\n' \
         '  -h, --help            show this help message and exit\n' \
