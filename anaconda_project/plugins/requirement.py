@@ -181,6 +181,47 @@ _secret_suffixes = ('_PASSWORD', '_ENCRYPTED', '_SECRET_KEY', '_SECRET')
 class EnvVarRequirement(Requirement):
     """A requirement that a certain environment variable be set."""
 
+    @classmethod
+    def _parse_default(self, options, env_var, problems):
+        assert (isinstance(options, dict))
+
+        raw_default = options.get('default', None)
+
+        if raw_default is None:
+            good_default = True
+        elif isinstance(raw_default, bool):
+            # we have to check bool since it's considered an int apparently
+            good_default = False
+        elif isinstance(raw_default, (str, int, float)):
+            good_default = True
+        elif isinstance(raw_default, dict):
+            # we only allow a dict if it represents an encrypted value
+            if ('key' in raw_default) and ('encrypted' in raw_default):
+                good_default = True
+            else:
+                good_default = False
+        else:
+            good_default = False
+
+        if 'default' in options and raw_default is None:
+            # convert null to be the same as simply missing
+            del options['default']
+
+        if good_default:
+            return True
+        else:
+            if isinstance(raw_default, dict):
+                problems.append(("default value for variable {env_var} can be a dict but only if it " +
+                                 "contains 'key' and 'encrypted' fields; found {value}").format(env_var=env_var,
+                                                                                                value=dict(
+                                                                                                    raw_default)))
+            else:
+                problems.append(
+                    "default value for variable {env_var} must be null, a string, or a number, not {value}.".format(
+                        env_var=env_var,
+                        value=raw_default))
+            return False
+
     def __init__(self, registry, env_var, options=None):
         """Construct an EnvVarRequirement for the given ``env_var`` with the given options."""
         super(EnvVarRequirement, self).__init__(registry, options)

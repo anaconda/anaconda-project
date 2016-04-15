@@ -6,17 +6,13 @@
 # ----------------------------------------------------------------------------
 """Redis-related requirements."""
 
-from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirements.service import ServiceRequirement
 # don't "import from" network_util or we can't monkeypatch it in tests
 import anaconda_project.plugins.network_util as network_util
 
 
-class RedisRequirement(EnvVarRequirement):
+class RedisRequirement(ServiceRequirement):
     """A requirement for REDIS_URL (or another specified env var) to point to a running Redis."""
-
-    def __init__(self, registry, env_var="REDIS_URL", options=None):
-        """Extend superclass to default to REDIS_URL."""
-        super(RedisRequirement, self).__init__(registry=registry, env_var=env_var, options=options)
 
     @property
     def title(self):

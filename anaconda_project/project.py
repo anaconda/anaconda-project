@@ -16,6 +16,7 @@ from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.plugins.requirements.download import DownloadRequirement
+from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.project_commands import ProjectCommand
 from anaconda_project.project_file import ProjectFile
 
@@ -76,6 +77,7 @@ class _ConfigCache(object):
             # future: we could un-hardcode this so plugins can add stuff here
             self._update_variables(requirements, problems, project_file)
             self._update_downloads(requirements, problems, project_file)
+            self._update_services(requirements, problems, project_file)
             self._update_conda_environments(problems, project_file)
             # this MUST be after we _update_variables since we may get CondaEnvRequirement
             # options in the variables section, and after _update_conda_environments
@@ -160,43 +162,9 @@ class _ConfigCache(object):
 
                 assert (isinstance(options, dict))
 
-                raw_default = options.get('default', None)
-
-                if raw_default is None:
-                    good_default = True
-                elif isinstance(raw_default, bool):
-                    # we have to check bool since it's considered an int apparently
-                    good_default = False
-                elif isinstance(raw_default, (str, int, float)):
-                    good_default = True
-                elif isinstance(raw_default, dict):
-                    # we only allow a dict if it represents an encrypted value
-                    if ('key' in raw_default) and ('encrypted' in raw_default):
-                        good_default = True
-                    else:
-                        good_default = False
-                else:
-                    good_default = False
-
-                if 'default' in options and raw_default is None:
-                    # convert null to be the same as simply missing
-                    del options['default']
-
-                if good_default:
+                if EnvVarRequirement._parse_default(options, key, problems):
                     requirement = self.registry.find_requirement_by_env_var(key, options)
                     requirements.append(requirement)
-                else:
-                    if isinstance(raw_default, dict):
-                        problems.append(
-                            ("default value for variable {key} can be a dict but only if it " +
-                             "contains 'key' and 'encrypted' fields; found {value}").format(key=key,
-                                                                                            value=dict(raw_default)))
-                    else:
-                        problems.append(
-                            "default value for variable {key} must be null, a string, or a number, not {value}.".format(
-                                key=key,
-                                value=raw_default))
-
         elif isinstance(variables, list):
             for item in variables:
                 if isinstance(item, str):
@@ -220,11 +188,26 @@ class _ConfigCache(object):
             return
 
         if not isinstance(downloads, dict):
-            problems.append("'downloads:' section should be a dictionary, found {}".format(repr(downloads)))
+            problems.append("{}: 'downloads:' section should be a dictionary, found {}".format(project_file.filename,
+                                                                                               repr(downloads)))
             return
 
         for varname, item in downloads.items():
-            DownloadRequirement.parse(self.registry, varname, item, problems, requirements)
+            DownloadRequirement._parse(self.registry, varname, item, problems, requirements)
+
+    def _update_services(self, requirements, problems, project_file):
+        services = project_file.get_value('services')
+
+        if services is None:
+            return
+
+        if not isinstance(services, dict):
+            problems.append(("{}: 'services:' section should be a dictionary from environment variable to " +
+                             "service type, found {}").format(project_file.filename, repr(services)))
+            return
+
+        for varname, item in services.items():
+            ServiceRequirement._parse(self.registry, varname, item, problems, requirements)
 
     def _update_conda_environments(self, problems, project_file):
         def _parse_string_list(parent_dict, key, what):
@@ -565,14 +548,18 @@ class Project(object):
         json['environments'] = envs
         variables = dict()
         downloads = dict()
+        services = dict()
         for req in self.requirements:
             if isinstance(req, CondaEnvRequirement):
                 continue
             elif isinstance(req, DownloadRequirement):
                 downloads[req.env_var] = dict(title=req.title, encrypted=req.encrypted, url=req.url)
+            elif isinstance(req, ServiceRequirement):
+                services[req.env_var] = dict(title=req.title, type=req.service_type)
             elif isinstance(req, EnvVarRequirement):
                 variables[req.env_var] = dict(title=req.title, encrypted=req.encrypted)
         json['downloads'] = downloads
         json['variables'] = variables
+        json['services'] = services
 
         return json

@@ -121,6 +121,15 @@ class ProjectFile(YamlFile):
             "for everyone who runs this project.\n" +
             "You can also set a local value (not shared with others) in project-local.yml.\n")
 
+        sections['services'] = (
+            "In the services section, list any services that should be\n" +
+            "available before your code runs. Each service's address\n" +
+            "will be provided to your code in an environment variable.\n" + "\n" + "For example,\n" + "\n" +
+            "services:\n" + "   REDIS_URL: redis\n" + "   # the above can be written more verbosely\n" +
+            "   REDIS_URL2: { type: redis }\n" + "   # in the long form, you can specify options\n" +
+            "   REDIS_URL3: { type: redis, default: \"redis://localhost:123456\" }\n" + "\n" +
+            "Services can be added with anaconda-project:\n" + "   anaconda-project add-service redis\n")
+
         sections['downloads'] = (
             "In the downloads section, list any URLs to download to local files\n" + "before your code runs.\n" +
             "Each local filename is placed in an environment variable.\n" + "\n" + "For example,\n" + "\n" +

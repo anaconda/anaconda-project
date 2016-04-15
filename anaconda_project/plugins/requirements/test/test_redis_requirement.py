@@ -22,7 +22,7 @@ def test_find_by_env_var_redis():
 def test_redis_url_not_set():
     def check_not_set(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        requirement = RedisRequirement(registry=PluginRegistry())
+        requirement = RedisRequirement(registry=PluginRegistry(), env_var="REDIS_URL")
         status = requirement.check_status(dict(), local_state)
         assert not status
         assert "Environment variable REDIS_URL is not set." == status.status_description
@@ -33,7 +33,7 @@ def test_redis_url_not_set():
 def test_redis_url_bad_scheme():
     def check_bad_scheme(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        requirement = RedisRequirement(registry=PluginRegistry())
+        requirement = RedisRequirement(registry=PluginRegistry(), env_var="REDIS_URL")
         status = requirement.check_status(dict(REDIS_URL="http://example.com/"), local_state)
         assert not status
         assert "REDIS_URL value 'http://example.com/' does not have 'redis:' scheme." == status.status_description
@@ -57,7 +57,7 @@ def _monkeypatch_can_connect_to_socket_fails(monkeypatch):
 def test_redis_url_cannot_connect(monkeypatch):
     def check_cannot_connect(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        requirement = RedisRequirement(registry=PluginRegistry())
+        requirement = RedisRequirement(registry=PluginRegistry(), env_var="REDIS_URL")
         can_connect_args_list = _monkeypatch_can_connect_to_socket_fails(monkeypatch)
         status = requirement.check_status(dict(REDIS_URL="redis://example.com:1234/"), local_state)
         assert dict(host='example.com', port=1234, timeout_seconds=0.5) == can_connect_args_list[0]

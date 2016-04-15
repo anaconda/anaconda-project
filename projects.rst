@@ -224,29 +224,6 @@ For example:
     BLAH: { default: "default_value_of_blah" }
 
 
-Variables that imply a running service
-======================================
-
-Certain variable names represent the address of a running service;
-``anaconda-project`` treats these as special.
-
-For example, you can do this:
-
-  variables:
-    - REDIS_URL
-
-Now when someone launches the project, ``anaconda-project`` can
-offer to start a local instance of ``redis-server`` automatically.
-
-The full list of supported services includes:
-
- * REDIS_URL
- * (TODO right now it's only ``REDIS_URL`` of course, haven't added
-more!)
- * TODO DB_URL
- * TODO BLAZE_URL
-
-
 Variables that are always set
 =============================
 
@@ -265,6 +242,41 @@ file from your project directory, try this:
   import os
   project_dir = os.getenv("PROJECT_DIR")
   my_file = os.path.join(project_dir, "my/file.txt")
+
+
+Services
+========
+
+Services can be automatically started, and their address
+provided to your code in an environment variable.
+
+For example, you can do this:
+
+  services:
+    REDIS_URL: redis
+
+Now when someone launches the project, ``anaconda-project`` can
+offer to start a local instance of ``redis-server`` automatically.
+
+There's a long form of the above service config too:
+
+  services:
+    REDIS_URL: { type: redis }
+
+and you can set a default and any options a service may have:
+
+  services:
+    REDIS_URL:
+       type: redis
+       default: "redis://localhost:5895"
+
+The full list of supported services includes:
+
+ * REDIS_URL
+ * (TODO right now it's only ``REDIS_URL`` of course, haven't added
+more!)
+ * TODO DB_URL
+ * TODO BLAZE_URL
 
 
 File Downloads
