@@ -16,28 +16,28 @@ from anaconda_project import project_ops
 from anaconda_project.commands import console_utils
 
 
-def ask_command(command):
-    """Prompt user to enter command type.
+def _ask_command(command):
+    if platform.system() == 'Windows':
+        other = 'windows'
+    else:
+        other = 'shell'
+    choices = {'b': 'bokeh_app', 'c': other, 'n': 'notebook'}
 
-    Returns:
-        command_type string: choice of 'bokeh_app', 'python', 'shell', 'notebook'
-    """
     while True:
         try:
-            data = console_utils.console_input(("Is `{}` a (B)okeh app, (N)otebook, or (O)ther executable file?\n"
-                                                "(enter 'b', 'n', or 'o'): ").format(command))
+            data = console_utils.console_input("Is `{}` a (B)okeh app, (N)otebook, or (C)ommand line? ".format(command))
         except KeyboardInterrupt:
             print("\nCanceling\n")
             return None
         data = data.lower().strip()
-        if data not in ('b', 'p', 'o', 'n'):
-            print("Invalid choice! Please choose between (B)okeh app, (N)otebook, or (O)ther")
+
+        if len(data) == 0 or data[0] not in choices:
+            print("Please enter 'b', 'n', or 'c'.")
+            print("    A Bokeh app is the project-relative path to a Bokeh script or app directory.")
+            print("    A notebook file is the project-relative path to a .ipynb file.")
+            print("    A command line is any command you might type at the command prompt.")
             continue
-        if platform.system() == 'Windows':
-            other = 'windows'
-        else:
-            other = 'shell'
-        choices = {'b': 'bokeh_app', 'o': other, 'n': 'notebook'}
+
         return choices[data]
 
 
@@ -57,7 +57,7 @@ def add_command(project_dir, command_type, name, command):
         command_type = 'notebook'
 
     if command_type is None or command_type == 'ask' and console_utils.stdin_is_interactive():
-        command_type = ask_command(name)
+        command_type = _ask_command(name)
 
     if command_type is None:  # keyboard interrupted
         return 1
@@ -68,6 +68,7 @@ def add_command(project_dir, command_type, name, command):
             print(problem, file=sys.stderr)
         return 1
     else:
+        print("Added a command '%s' to the project. Run it with `anaconda-project launch --command %s`." % (name, name))
         return 0
 
 

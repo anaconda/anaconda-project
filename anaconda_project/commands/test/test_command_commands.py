@@ -62,7 +62,7 @@ def test_add_command_ask_type_interrupted(monkeypatch, capsys):
 def test_add_command_ask_other_shell(monkeypatch):
     def check(dirname):
         def mock_console_input(prompt):
-            return "o"
+            return "c"
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
 
@@ -87,7 +87,7 @@ def test_add_command_ask_other_shell(monkeypatch):
 def test_add_command_ask_other_windows(monkeypatch):
     def check(dirname):
         def mock_console_input(prompt):
-            return "o"
+            return "c"
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
 
@@ -131,7 +131,11 @@ def test_add_command_ask_type_twice(monkeypatch, capsys):
         assert len(command.keys()) == 1
         assert command['bokeh_app'] == 'file.py'
         out, err = capsys.readouterr()
-        assert out == 'Invalid choice! Please choose between (B)okeh app, (N)otebook, or (O)ther\n'
+        assert out == ("Please enter 'b', 'n', or 'c'.\n" +
+                       "    A Bokeh app is the project-relative path to a Bokeh script or app directory.\n" +
+                       "    A notebook file is the project-relative path to a .ipynb file.\n"
+                       "    A command line is any command you might type at the command prompt.\n"
+                       "Added a command 'test' to the project. Run it with `anaconda-project launch --command test`.\n")
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 
