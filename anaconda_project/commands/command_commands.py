@@ -17,6 +17,9 @@ from anaconda_project.commands import console_utils
 
 
 def _ask_command(command):
+    if not console_utils.stdin_is_interactive():
+        return None
+
     if platform.system() == 'Windows':
         other = 'windows'
     else:
@@ -24,11 +27,7 @@ def _ask_command(command):
     choices = {'b': 'bokeh_app', 'c': other, 'n': 'notebook'}
 
     while True:
-        try:
-            data = console_utils.console_input("Is `{}` a (B)okeh app, (N)otebook, or (C)ommand line? ".format(command))
-        except KeyboardInterrupt:
-            print("\nCanceling\n")
-            return None
+        data = console_utils.console_input("Is `{}` a (B)okeh app, (N)otebook, or (C)ommand line? ".format(command))
         data = data.lower().strip()
 
         if len(data) == 0 or data[0] not in choices:
@@ -56,10 +55,11 @@ def add_command(project_dir, command_type, name, command):
     if command_type is None and command.endswith(".ipynb") and os.path.isfile(command_as_filename):
         command_type = 'notebook'
 
-    if command_type is None or command_type == 'ask' and console_utils.stdin_is_interactive():
+    if command_type is None or command_type == 'ask':
         command_type = _ask_command(name)
 
-    if command_type is None:  # keyboard interrupted
+    if command_type is None:  # EOF, probably not an interactive console
+        print("Specify the --type option to add this command.", file=sys.stderr)
         return 1
 
     problems = project_ops.add_command(project, command_type, name, command)

@@ -7,6 +7,7 @@
 from __future__ import absolute_import, print_function
 
 import os
+import pytest
 
 from anaconda_project.commands.command_commands import main
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
@@ -24,6 +25,11 @@ class Args(object):
 
 def test_add_command_ask_type(monkeypatch):
     def check_ask_type(dirname):
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
         def mock_console_input(prompt):
             return "b"
 
@@ -42,25 +48,55 @@ def test_add_command_ask_type(monkeypatch):
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 
 
-def test_add_command_ask_type_interrupted(monkeypatch, capsys):
-    def check_ask_type(dirname):
-        def mock_console_input(prompt):
-            raise KeyboardInterrupt('^C')
+def test_add_command_not_interactive(monkeypatch, capsys):
+    def check(dirname):
+        def mock_is_interactive():
+            return False
 
-        monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
 
         args = Args(None, 'test', 'file.py', project=dirname)
         res = main(args)
         assert res == 1
 
         out, err = capsys.readouterr()
-        assert out == '\nCanceling\n\n'
+        assert '' == out
+        assert 'Specify the --type option to add this command.\n' == err
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
+
+
+def test_add_command_ask_type_interrupted(monkeypatch, capsys):
+    def check_ask_type(dirname):
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
+        def mock_input(prompt):
+            raise KeyboardInterrupt('^C')
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils._input', mock_input)
+
+        args = Args(None, 'test', 'file.py', project=dirname)
+        with pytest.raises(SystemExit) as excinfo:
+            main(args)
+        assert excinfo.value.code == 1
+
+        out, err = capsys.readouterr()
+        assert out == ''
+        assert err == '\nCanceling\n\n'
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 
 
 def test_add_command_ask_other_shell(monkeypatch):
     def check(dirname):
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
         def mock_console_input(prompt):
             return "c"
 
@@ -86,6 +122,11 @@ def test_add_command_ask_other_shell(monkeypatch):
 
 def test_add_command_ask_other_windows(monkeypatch):
     def check(dirname):
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
         def mock_console_input(prompt):
             return "c"
 
@@ -111,6 +152,11 @@ def test_add_command_ask_other_windows(monkeypatch):
 
 def test_add_command_ask_type_twice(monkeypatch, capsys):
     def check_ask_type(dirname):
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
         calls = []
 
         def mock_console_input(prompt):
