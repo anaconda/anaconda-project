@@ -140,11 +140,6 @@ def _test_add_command_shell(command_type):
         assert command['shell'] == 'echo "test"'
         assert command['windows'] == 'echo "test"'
 
-        local_state = LocalStateFile.load_for_directory(dirname)
-        command = local_state.get_value(['commands', 'default'])
-        assert command['shell'] == 'echo "test"'
-        assert command['windows'] == 'echo "test"'
-
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: ('commands:\n'
                                     '  default:\n'
@@ -169,11 +164,6 @@ def test_add_command_bokeh():
         assert len(command.keys()) == 1
         assert command['bokeh_app'] == 'file.py'
 
-        local_state = LocalStateFile.load_for_directory(dirname)
-        command = local_state.get_value(['commands', 'bokeh_test'])
-        assert len(command.keys()) == 1
-        assert command['bokeh_app'] == 'file.py'
-
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: ('commands:\n'
                                     '  default:\n'
@@ -187,11 +177,6 @@ def test_add_command_bokeh_overwrites():
 
         re_loaded = project.project_file.load_for_directory(project.directory_path)
         command = re_loaded.get_value(['commands', 'bokeh_test'])
-        assert len(command.keys()) == 1
-        assert command['bokeh_app'] == 'file.py'
-
-        local_state = LocalStateFile.load_for_directory(dirname)
-        command = local_state.get_value(['commands', 'bokeh_test'])
         assert len(command.keys()) == 1
         assert command['bokeh_app'] == 'file.py'
 
