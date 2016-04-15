@@ -8,6 +8,8 @@
 from __future__ import absolute_import, print_function
 
 import os
+import platform
+import sys
 
 from anaconda_project.project import Project
 from anaconda_project import project_ops
@@ -22,17 +24,20 @@ def ask_command(command):
     """
     while True:
         try:
-            data = console_utils.console_input(
-                ("Is `{}` a (B)okeh app, (N)otebook, (P)ython script, or (O)ther executable file?\n"
-                 "(enter 'b', 'p', 'n', or 'o'): ").format(command))
+            data = console_utils.console_input(("Is `{}` a (B)okeh app, (N)otebook, or (O)ther executable file?\n"
+                                                "(enter 'b', 'n', or 'o'): ").format(command))
         except KeyboardInterrupt:
             print("\nCanceling\n")
             return None
         data = data.lower().strip()
         if data not in ('b', 'p', 'o', 'n'):
-            print("Invalid choice! Please choose between (B)okeh app, (N)otebook, (P)ython script, or (O)ther")
+            print("Invalid choice! Please choose between (B)okeh app, (N)otebook, or (O)ther")
             continue
-        choices = {'b': 'bokeh_app', 'p': 'python', 'o': 'shell', 'n': 'notebook'}
+        if platform.system() == 'Windows':
+            other = 'windows'
+        else:
+            other = 'shell'
+        choices = {'b': 'bokeh_app', 'o': other, 'n': 'notebook'}
         return choices[data]
 
 
@@ -57,8 +62,13 @@ def add_command(project_dir, command_type, name, command):
     if command_type is None:  # keyboard interrupted
         return 1
 
-    project_ops.add_command(project, command_type, name, command)
-    return 0
+    problems = project_ops.add_command(project, command_type, name, command)
+    if problems is not None:
+        for problem in problems:
+            print(problem, file=sys.stderr)
+        return 1
+    else:
+        return 0
 
 
 def main(args):
