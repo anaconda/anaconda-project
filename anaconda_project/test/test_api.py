@@ -139,3 +139,20 @@ def test_add_download(monkeypatch):
     result = p.add_download(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
+
+
+def test_add_environment(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_add_environment(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.add_environment', mock_add_environment)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, name='foo', packages=['a'], channels=['b'])
+    result = p.add_environment(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']

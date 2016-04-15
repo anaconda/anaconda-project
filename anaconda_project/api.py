@@ -249,3 +249,25 @@ class AnacondaProject(object):
 
         """
         return project_ops.add_download(project=project, env_var=env_var, url=url)
+
+    def add_environment(self, project, name, packages, channels):
+        """Attempt to create the environment and add it to project.yml.
+
+        The returned status would be None if we failed to even check the status for
+        some reason... currently this would happen if the project has non-empty
+        ``project.problems``.
+
+        If the returned status is not None, if it's True we were
+        successful, and if it's false ``status.errors`` may
+        (hopefully) contain a list of useful error strings.
+
+        Args:
+            project (Project): the project
+            name (str): environment name
+            packages (list of str): dependencies (with optional version info, as for conda install)
+            channels (list of str): channels (as they should be passed to conda --channel)
+
+        Returns:
+            RequirementStatus instance for the environment requirement or None
+        """
+        return project_ops.add_environment(project=project, name=name, packages=packages, channels=channels)
