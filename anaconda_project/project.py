@@ -21,7 +21,7 @@ from anaconda_project.project_file import ProjectFile
 
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
 
-COMMAND_CHOICES = ('conda_app_entry', 'shell', 'windows', 'notebook', 'bokeh_app')
+_COMMAND_CHOICES = ('conda_app_entry', 'shell', 'windows', 'notebook', 'bokeh_app')
 
 
 class _ConfigCache(object):
@@ -335,7 +335,7 @@ class _ConfigCache(object):
                     copy['conda_app_entry'] = app_entry_from_meta_yaml
 
                 have_command = False
-                for attr in COMMAND_CHOICES:
+                for attr in _COMMAND_CHOICES:
                     if attr not in copy:
                         continue
 
