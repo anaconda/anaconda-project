@@ -84,8 +84,8 @@ def test_add_command_ask_type_twice(monkeypatch, capsys):
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 
 
-def test_add_command(monkeypatch, capsys):
-    def check_ask_type(dirname):
+def test_add_command_specifying_notebook(monkeypatch, capsys):
+    def check_specifying_notebook(dirname):
         args = Args('notebook', 'test', 'file.ipynb', project=dirname)
         res = main(args)
         assert res == 0
@@ -96,7 +96,22 @@ def test_add_command(monkeypatch, capsys):
         assert command['notebook'] == 'file.ipynb'
         assert len(command.keys()) == 1
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_specifying_notebook)
+
+
+def test_add_command_guessing_notebook(monkeypatch, capsys):
+    def check_guessing_notebook(dirname):
+        args = Args(None, 'test', 'file.ipynb', project=dirname)
+        res = main(args)
+        assert res == 0
+
+        project = Project(dirname)
+
+        command = project.project_file.get_value(['commands', 'test'])
+        assert command['notebook'] == 'file.ipynb'
+        assert len(command.keys()) == 1
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: '', 'file.ipynb': ""}, check_guessing_notebook)
 
 
 def test_add_command_project_problem(capsys, monkeypatch):

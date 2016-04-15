@@ -7,6 +7,8 @@
 """Commands related to the 'commands' section of project.yml."""
 from __future__ import absolute_import, print_function
 
+import os
+
 from anaconda_project.project import Project
 from anaconda_project import project_ops
 from anaconda_project.commands import console_utils
@@ -43,6 +45,12 @@ def add_command(project_dir, command_type, name, command):
     project = Project(project_dir)
     if console_utils.print_project_problems(project):
         return 1
+
+    command_as_filename = os.path.join(project.directory_path, command)
+
+    if command_type is None and command.endswith(".ipynb") and os.path.isfile(command_as_filename):
+        command_type = 'notebook'
+
     if command_type is None or command_type == 'ask' and console_utils.stdin_is_interactive():
         command_type = ask_command(name)
 
