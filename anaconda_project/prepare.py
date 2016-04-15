@@ -85,10 +85,14 @@ class PrepareResult(with_metaclass(ABCMeta)):
         """
         return self._statuses
 
-    def status_for_env_var(self, env_var):
-        """Get status for the given env var, or None if unknown."""
+    def status_for(self, env_var_or_class):
+        """Get status for the given env var or class, or None if unknown."""
         for status in self.statuses:
-            if isinstance(status.requirement, EnvVarRequirement) and status.requirement.env_var == env_var:
+            if isinstance(env_var_or_class, str):
+                if isinstance(status.requirement, EnvVarRequirement) and \
+                   status.requirement.env_var == env_var_or_class:
+                    return status
+            elif isinstance(status.requirement, env_var_or_class):
                 return status
         return None
 
@@ -365,6 +369,21 @@ def _sort_statuses(environ, local_state, statuses, missing_vars_getter):
     return toposort_from_dependency_info(statuses, get_node_key, get_dependency_keys, can_ignore_dependency_on_key)
 
 
+def _in_provide_whitelist(provide_whitelist, requirement):
+    if provide_whitelist is None:
+        # whitelist of None means "everything"
+        return True
+
+    for env_var_or_class in provide_whitelist:
+        if isinstance(env_var_or_class, str):
+            if isinstance(requirement, EnvVarRequirement) and requirement.env_var == env_var_or_class:
+                return True
+        else:
+            if isinstance(requirement, env_var_or_class):
+                return True
+    return False
+
+
 def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success, mode,
                            provide_whitelist, extra_command_args):
     def provide_stage(stage):
@@ -384,9 +403,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         results_by_status = dict()
 
         for status in rechecked:
-            if provide_whitelist is not None and \
-               isinstance(status.requirement, EnvVarRequirement) and \
-               status.requirement.env_var not in provide_whitelist:
+            if not _in_provide_whitelist(provide_whitelist, status.requirement):
                 continue
             elif status.has_been_provided:
                 continue

@@ -7,7 +7,6 @@
 """Conda-env-related requirements."""
 from __future__ import absolute_import, print_function
 
-import os
 import platform
 
 from anaconda_project.plugins.requirement import EnvVarRequirement
@@ -61,9 +60,6 @@ class CondaEnvRequirement(EnvVarRequirement):
         # so prefix of None should not be possible.
         # if prefix is None: return (False, "A Conda environment hasn't been chosen for this project.")
         assert prefix is not None
-
-        if not os.path.isdir(os.path.join(prefix, 'conda-meta')):
-            return (False, "'%s' doesn't look like it contains a Conda environment yet." % (prefix))
 
         env_name = config.get('env_name', None)
         if env_name is not None:

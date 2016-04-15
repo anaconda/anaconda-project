@@ -99,9 +99,17 @@ class CondaManager(with_metaclass(ABCMeta)):
 class CondaEnvironmentDeviations(object):
     """Represents differences between actual and desired environment state."""
 
-    def __init__(self, summary, missing_packages, wrong_version_packages):
-        """Construct a ``CondaEnvironmentDeviations``."""
+    def __init__(self, summary, missing_packages, wrong_version_packages, broken=False):
+        """Construct a ``CondaEnvironmentDeviations``.
+
+        Args:
+          summary (str): the most immediate reason the environment deviates
+          missing_packages (iterable of str): packages that aren't in the env
+          wrong_version_packages (iterable of str): packages that are the wrong version
+          broken (bool): True if it's broken for some other reason besides wrong packages
+        """
         self._summary = summary
+        self._broken = broken
         self._missing_packages = tuple(missing_packages)
         self._wrong_version_packages = tuple(wrong_version_packages)
 
@@ -115,7 +123,7 @@ class CondaEnvironmentDeviations(object):
         called.
 
         """
-        return len(self.missing_packages) == 0 and len(self.wrong_version_packages) == 0
+        return len(self.missing_packages) == 0 and len(self.wrong_version_packages) == 0 and not self._broken
 
     @property
     def summary(self):

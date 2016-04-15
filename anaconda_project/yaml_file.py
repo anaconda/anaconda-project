@@ -158,6 +158,7 @@ class YamlFile(object):
         to undo our changes.
         """
         self._change_count = self._change_count + 1
+        self._dirty = True
 
     def save(self):
         """Write the file to disk, only if any changes have been made.
