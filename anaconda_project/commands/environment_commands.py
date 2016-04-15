@@ -19,7 +19,7 @@ def add_environment(project_dir, name, packages, channels):
     project = Project(project_dir)
     if print_project_problems(project):
         return 1
-    status = project_ops.add_environment(project, name=name, packages=packages, channels=channels)
+    status = project_ops.update_environment(project, name=name, packages=packages, channels=channels)
     if status is None:
         # this is bad because it doesn't explain why
         print("Unable to add environment %s" % name, file=sys.stderr)
@@ -37,6 +37,24 @@ def add_environment(project_dir, name, packages, channels):
         return 1
 
 
+def add_packages(project, environment, packages, channels):
+    project = Project(project)
+    if print_project_problems(project):
+        return 1
+    if environment is None:
+        environment = 'default'
+    # TODO: later.
+    # if project.empty():
+    #     return 1
+    res = project_ops.update_environment(project, name=environment, packages=packages, channels=channels, create=False)
+    print(res)
+    return 0
+
+
 def main_add(args):
     """Start the add-environment command and return exit status code."""
     return add_environment(args.project, args.name, args.packages, args.channel)
+
+
+def main_packages(args):
+    return add_packages(args.project, args.environment, args.packages, args.channel)

@@ -99,7 +99,7 @@ def add_download(project, env_var, url):
     return _commit_requirement_if_it_works(project, env_var)
 
 
-def add_environment(project, name, packages, channels):
+def update_environment(project, name, packages, channels, create=True):
     """Attempt to create the environment and add it to project.yml.
 
     The returned status would be None if we failed to even check the status for
@@ -133,6 +133,8 @@ def add_environment(project, name, packages, channels):
     project = Project(original_project.directory_path, default_conda_environment=name)
     env_dict = project.project_file.get_value(['environments', name])
     if env_dict is None:
+        if not create:
+            return False, "Failed to add dependencies because {} environment doesn't exist".format(name)
         env_dict = dict()
         project.project_file.set_value(['environments', name], env_dict)
 
@@ -164,7 +166,7 @@ def add_environment(project, name, packages, channels):
         # reload the new config
         original_project.project_file.load()
 
-    return status
+    return status is None, status
 
 
 def add_variables(project, vars_to_add):

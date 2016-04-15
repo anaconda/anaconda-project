@@ -106,6 +106,18 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
     preset.set_defaults(main=environment_commands.main_add)
 
+    preset = subparsers.add_parser('add-dependencies',
+                                   help="Add packages to either a specific or to all environments of the the project.")
+    add_project_arg(preset)
+    preset.add_argument('-env',
+                        '--environment',
+                        action='store',
+                        default=None,
+                        help="Name of the environment under PROJECT_DIR/envs")
+    preset.add_argument('-c', '--channel', metavar='CHANNEL', action='append', help='Channel to search for packages')
+    preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
+    preset.set_defaults(main=environment_commands.main_packages)
+
     preset = subparsers.add_parser('add-command', help="Add a new command to the project.")
     add_project_arg(preset)
     command_choices = list(_COMMAND_CHOICES) + ['ask']
