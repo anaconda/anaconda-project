@@ -37,15 +37,13 @@ def add_environment(project_dir, name, packages, channels):
         return 1
 
 
-def add_packages(project, environment, packages, channels):
+def add_dependencies(project, environment, packages, channels):
+    """Add dependencies to the project."""
     project = Project(project)
     if print_project_problems(project):
         return 1
     if environment is None:
         environment = 'default'
-    # TODO: later.
-    # if project.empty():
-    #     return 1
     res = project_ops.update_environment(project, name=environment, packages=packages, channels=channels, create=False)
     print(res)
     return 0
@@ -56,5 +54,6 @@ def main_add(args):
     return add_environment(args.project, args.name, args.packages, args.channel)
 
 
-def main_packages(args):
-    return add_packages(args.project, args.environment, args.packages, args.channel)
+def main_add_dependencies(args):
+    """Start the add-dependencies command and return exit status code."""
+    return add_dependencies(args.project, args.environment, args.packages, args.channel)
