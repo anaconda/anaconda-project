@@ -11,9 +11,10 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 
 from anaconda_project.internal.metaclass import with_metaclass
+from anaconda_project.status import Status
 
 
-class RequirementStatus(with_metaclass(ABCMeta)):
+class RequirementStatus(Status):
     """Class describing the status of a requirement.
 
     Values of this class are immutable; to get updated status, you
