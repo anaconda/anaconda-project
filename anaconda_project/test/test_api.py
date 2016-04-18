@@ -158,6 +158,23 @@ def test_add_environment(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_add_dependencies(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_add_dependencies(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.add_dependencies', mock_add_dependencies)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, environment='foo', packages=['a'], channels=['b'])
+    result = p.add_dependencies(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_add_command(monkeypatch):
     params = dict(args=(), kwargs=dict())
 

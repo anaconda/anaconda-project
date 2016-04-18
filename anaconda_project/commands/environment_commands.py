@@ -14,19 +14,14 @@ from anaconda_project import project_ops
 from anaconda_project.commands.console_utils import print_project_problems
 
 
-def add_environment(project_dir, name, packages, channels):
-    """Add an item to the downloads section."""
-    project = Project(project_dir)
-    if print_project_problems(project):
-        return 1
-    status = project_ops.update_environment(project, name=name, packages=packages, channels=channels)
+def _handle_status(status, success_message, fail_message):
     if status is None:
         # this is bad because it doesn't explain why
-        print("Unable to add environment %s" % name, file=sys.stderr)
+        print(fail_message, file=sys.stderr)
         return 1
     elif status:
         print(status.status_description)
-        print("Added environment %s to the project file." % name)
+        print(success_message)
         return 0
     else:
         for log in status.logs:
@@ -37,16 +32,28 @@ def add_environment(project_dir, name, packages, channels):
         return 1
 
 
+def add_environment(project_dir, name, packages, channels):
+    """Add an item to the downloads section."""
+    project = Project(project_dir)
+    if print_project_problems(project):
+        return 1
+    status = project_ops.add_environment(project, name=name, packages=packages, channels=channels)
+    return _handle_status(status, "Added environment %s to the project file." % name,
+                          "Unable to add environment %s." % name)
+
+
 def add_dependencies(project, environment, packages, channels):
     """Add dependencies to the project."""
     project = Project(project)
     if print_project_problems(project):
         return 1
+    status = project_ops.add_dependencies(project, environment=environment, packages=packages, channels=channels)
+    package_list = ", ".join(packages)
     if environment is None:
-        environment = 'default'
-    res = project_ops.update_environment(project, name=environment, packages=packages, channels=channels, create=False)
-    print(res)
-    return 0
+        success_message = "Added dependencies to project file: %s." % (package_list)
+    else:
+        success_message = "Added dependencies to environment %s in project file: %s." % (environment, package_list)
+    return _handle_status(status, success_message, "Unable to add dependencies.")
 
 
 def main_add(args):

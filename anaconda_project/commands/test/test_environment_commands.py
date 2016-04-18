@@ -9,22 +9,7 @@ from __future__ import absolute_import, print_function
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
-
-
-class FakeRequirementStatus(object):
-    def __init__(self, success, status_description):
-        self.status_description = status_description
-        self.success = success
-        self.logs = ["This is a log message."]
-        self.errors = []
-        if not success:
-            self.errors.append("This is an error message.")
-
-    def __bool__(self):
-        return self.success
-
-    def __nonzero__(self):
-        return self.success
+from anaconda_project.internal.simple_status import SimpleStatus
 
 
 def _monkeypatch_pwd(monkeypatch, dirname):
@@ -52,12 +37,23 @@ def _monkeypatch_add_environment(monkeypatch, result):
     return params
 
 
+def _monkeypatch_add_dependencies(monkeypatch, result):
+    params = {}
+
+    def mock_add_dependencies(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return result
+
+    monkeypatch.setattr("anaconda_project.project_ops.add_dependencies", mock_add_dependencies)
+
+    return params
+
+
 def test_add_environment_no_packages(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        _monkeypatch_add_environment(monkeypatch,
-                                     FakeRequirementStatus(success=True,
-                                                           status_description='Environment looks good.'))
+        _monkeypatch_add_environment(monkeypatch, SimpleStatus(success=True, description='Environment looks good.'))
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo'])
         assert code == 0
@@ -73,8 +69,8 @@ def test_add_environment_with_packages(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_add_environment(monkeypatch,
-                                              FakeRequirementStatus(success=True,
-                                                                    status_description='Environment looks good.'))
+                                              SimpleStatus(success=True,
+                                                           description='Environment looks good.'))
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo', '--channel',
                                                'c1', '--channel=c2', 'a', 'b'])
@@ -94,9 +90,10 @@ def test_add_environment_fails(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
         _monkeypatch_add_environment(monkeypatch,
-                                     FakeRequirementStatus(
-                                         success=False,
-                                         status_description='Environment variable MYDATA is not set.'))
+                                     SimpleStatus(success=False,
+                                                  description='Environment variable MYDATA is not set.',
+                                                  logs=['This is a log message.'],
+                                                  errors=['This is an error message.']))
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo'])
         assert code == 1
@@ -119,7 +116,7 @@ def test_add_environment_fails_to_get_status(capsys, monkeypatch):
         out, err = capsys.readouterr()
         assert '' == out
         # this is a TERRIBLE error message but at the moment it doesn't actually happen
-        assert 'Unable to add environment foo\n' == err
+        assert 'Unable to add environment foo.\n' == err
 
     with_directory_contents(dict(), check)
 
@@ -137,3 +134,61 @@ def test_add_environment_with_project_file_problems(capsys, monkeypatch):
                 ' should be dict or list of requirements\n') == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_add_dependencies_with_project_file_problems(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-dependencies', 'foo'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert ('Unable to load project:\n  variables section contains wrong value type 42,' +
+                ' should be dict or list of requirements\n') == err
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_add_dependencies_to_all_environments(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_add_dependencies(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-dependencies', '--channel', 'c1',
+                                               '--channel=c2', 'a', 'b'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Installed ok.\n' + 'Added dependencies to project file: a, b.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(environment=None, packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_dependencies_to_specific_environment(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_add_dependencies(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-dependencies', '--environment', 'foo',
+                                               '--channel', 'c1', '--channel=c2', 'a', 'b'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Installed ok.\n' + 'Added dependencies to environment foo in project file: a, b.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(environment='foo', packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+environments:
+  foo:
+   dependencies:
+     - bar
+"""}, check)
