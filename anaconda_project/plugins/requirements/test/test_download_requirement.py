@@ -142,11 +142,11 @@ def test_download_error_readfile(monkeypatch):
 def test_use_variable_name_for_filename():
     problems = []
     requirements = []
-    DownloadRequirement.parse(PluginRegistry(),
-                              varname='FOO',
-                              item='http://example.com/',
-                              problems=problems,
-                              requirements=requirements)
+    DownloadRequirement._parse(PluginRegistry(),
+                               varname='FOO',
+                               item='http://example.com/',
+                               problems=problems,
+                               requirements=requirements)
     assert [] == problems
     assert len(requirements) == 1
     assert requirements[0].filename == 'FOO'
@@ -156,11 +156,11 @@ def test_use_variable_name_for_filename():
 def test_checksum_is_not_a_string():
     problems = []
     requirements = []
-    DownloadRequirement.parse(PluginRegistry(),
-                              varname='FOO',
-                              item=dict(url='http://example.com/',
-                                        md5=[]),
-                              problems=problems,
-                              requirements=requirements)
+    DownloadRequirement._parse(PluginRegistry(),
+                               varname='FOO',
+                               item=dict(url='http://example.com/',
+                                         md5=[]),
+                               problems=problems,
+                               requirements=requirements)
     assert ['Checksum value for FOO should be a string not [].'] == problems
     assert len(requirements) == 0

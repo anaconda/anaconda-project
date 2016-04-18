@@ -21,7 +21,7 @@ class DownloadRequirement(EnvVarRequirement):
     """A requirement for ``env_var`` to point to a downloaded file."""
 
     @classmethod
-    def parse(cls, registry, varname, item, problems, requirements):
+    def _parse(cls, registry, varname, item, problems, requirements):
         """Parse an item from the downloads: section."""
         url = None
         filename = None

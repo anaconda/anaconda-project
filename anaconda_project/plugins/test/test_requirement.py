@@ -19,6 +19,12 @@ def test_find_by_env_var_unknown():
     assert "EnvVarRequirement(env_var='FOO')" == repr(found)
 
 
+def test_find_by_service_type_unknown():
+    registry = PluginRegistry()
+    found = registry.find_requirement_by_service_type(service_type='blah', env_var='FOO', options=None)
+    assert found is None
+
+
 def test_autoguess_encrypted_option():
     def req(env_var, options=None):
         return EnvVarRequirement(registry=PluginRegistry(), env_var=env_var, options=options)

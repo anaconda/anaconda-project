@@ -756,6 +756,17 @@ def test_non_dict_commands_section():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "commands:\n  42\n"}, check_app_entry)
 
 
+def test_non_dict_services_section():
+    def check_app_entry(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        expected_error = ("%s: 'services:' section should be a dictionary from environment variable " +
+                          "to service type, found %r") % (project.project_file.filename, 42)
+        assert expected_error == project.problems[0]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "services:\n  42\n"}, check_app_entry)
+
+
 def test_non_string_as_value_of_command():
     def check_app_entry(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1270,7 +1281,8 @@ def test_get_publication_info_from_empty_project():
                 }
             },
             'variables': {},
-            'downloads': {}
+            'downloads': {},
+            'services': {}
         }
         assert expected == project.publication_info()
 
@@ -1302,7 +1314,9 @@ def test_get_publication_info_from_complex_project():
             'variables': {'SOMETHING': {'encrypted': False,
                                         'title': 'SOMETHING environment variable must be set'},
                           'SOMETHING_ELSE': {'encrypted': False,
-                                             'title': 'SOMETHING_ELSE environment variable must be set'}}
+                                             'title': 'SOMETHING_ELSE environment variable must be set'}},
+            'services': {'REDIS_URL': {'title': 'A running Redis server, located by a redis: URL set as REDIS_URL',
+                                       'type': 'redis'}}
         }
 
         assert expected == project.publication_info()
@@ -1340,6 +1354,9 @@ environments:
 
 downloads:
   FOO: https://example.com/blah
+
+services:
+  REDIS_URL: redis
 
 variables:
   SOMETHING: {}

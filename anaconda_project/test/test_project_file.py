@@ -77,6 +77,24 @@ commands: {}
 #
 variables: {}
 #
+# In the services section, list any services that should be
+# available before your code runs. Each service's address
+# will be provided to your code in an environment variable.
+#
+# For example,
+#
+# services:
+#    REDIS_URL: redis
+#    # the above can be written more verbosely
+#    REDIS_URL2: { type: redis }
+#    # in the long form, you can specify options
+#    REDIS_URL3: { type: redis, default: "redis://localhost:123456" }
+#
+# Services can be added with anaconda-project:
+#    anaconda-project add-service redis
+#
+services: {}
+#
 # In the downloads section, list any URLs to download to local files
 # before your code runs.
 # Each local filename is placed in an environment variable.

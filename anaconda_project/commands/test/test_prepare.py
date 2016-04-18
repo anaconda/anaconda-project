@@ -51,8 +51,8 @@ def _test_prepare_command(monkeypatch, ui_mode):
         assert result
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-variables:
-  REDIS_URL: {}
+services:
+  REDIS_URL: redis
 """}, prepare_redis_url)
 
 
@@ -98,8 +98,8 @@ def test_main(monkeypatch, capsys):
         main(Args(project=dirname, mode='browser'))
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-variables:
-  REDIS_URL: {}
+services:
+  REDIS_URL: redis
 """}, main_redis_url)
 
     assert can_connect_args['port'] == 6379
@@ -128,8 +128,8 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-variables:
-  REDIS_URL: {}
+services:
+  REDIS_URL: redis
 """}, main_redis_url)
 
     assert can_connect_args['port'] == 6379
@@ -149,8 +149,8 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
         assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-variables:
-  REDIS_URL: {}
+services:
+  REDIS_URL: redis
 """}, main_redis_url)
 
     assert can_connect_args['port'] == 6379
@@ -191,8 +191,8 @@ def test_main_fails_to_redis(monkeypatch, capsys):
         assert 1 == code
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-variables:
-  REDIS_URL: {}
+services:
+  REDIS_URL: redis
 """}, main_redis_url)
 
     out, err = capsys.readouterr()
