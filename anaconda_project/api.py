@@ -259,7 +259,9 @@ class AnacondaProject(object):
 
         If the returned status is not None, if it's True we were
         successful, and if it's false ``status.errors`` may
-        (hopefully) contain a list of useful error strings.
+        (hopefully) contain a list of useful error strings. The
+        status will usually be a ``RequirementStatus`` but may be some
+        other subtype of ``Status``.
 
         Args:
             project (Project): the project
@@ -268,9 +270,41 @@ class AnacondaProject(object):
             channels (list of str): channels (as they should be passed to conda --channel)
 
         Returns:
-            RequirementStatus instance for the environment requirement or None
+            ``Status`` instance for the environment requirement or None
         """
         return project_ops.add_environment(project=project, name=name, packages=packages, channels=channels)
+
+    def add_dependencies(self, project, environment, packages, channels):
+        """Attempt to install dependencies then add them to project.yml.
+
+        If the environment is None rather than an env name,
+        dependencies are added in the global dependencies section (to
+        all environments).
+
+        The returned status would be None if we failed to even check the status for
+        some reason... currently this would happen if the project has non-empty
+        ``project.problems``.
+
+        If the returned status is not None, if it's True we were
+        successful, and if it's false ``status.errors`` may
+        (hopefully) contain a list of useful error strings.  The
+        status will usually be a ``RequirementStatus`` but may be some
+        other subtype of ``Status``.
+
+        Args:
+            project (Project): the project
+            environment (str): environment name or None for all environments
+            packages (list of str): dependencies (with optional version info, as for conda install)
+            channels (list of str): channels (as they should be passed to conda --channel)
+
+        Returns:
+            ``Status`` instance or None
+
+        """
+        return project_ops.add_dependencies(project=project,
+                                            environment=environment,
+                                            packages=packages,
+                                            channels=channels)
 
     def add_command(self, project, command_type, name, command):
         """Add a command to project.yml.

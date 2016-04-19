@@ -14,6 +14,7 @@ from anaconda_project import prepare
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.internal.simple_status import SimpleStatus
 
 
 def create(directory_path, make_directory=False):
@@ -99,31 +100,17 @@ def add_download(project, env_var, url):
     return _commit_requirement_if_it_works(project, env_var)
 
 
-def add_environment(project, name, packages, channels):
-    """Attempt to create the environment and add it to project.yml.
-
-    The returned status would be None if we failed to even check the status for
-    some reason... currently this would happen if the project has non-empty
-    ``project.problems``.
-
-    If the returned status is not None, if it's True we were
-    successful, and if it's false ``status.errors`` may
-    (hopefully) contain a list of useful error strings.
-
-    Args:
-        project (Project): the project
-        name (str): environment name
-        packages (list of str): dependencies (with optional version info, as for conda install)
-        channels (list of str): channels (as they should be passed to conda --channel)
-
-    Returns:
-        RequirementStatus instance for the environment requirement or None
-
-    """
+def _update_environment(project, name, packages, channels, create):
     if packages is None:
         packages = []
     if channels is None:
         channels = []
+
+    if not create and (name is not None):
+        if name not in project.conda_environments:
+            problem = "Environment {} doesn't exist.".format(name)
+            return SimpleStatus(success=False, description=problem)
+
     # Due to https://github.com/Anaconda-Server/anaconda-project/issues/163
     # we don't have a way to "choose" this environment when we do the prepare
     # in _commit_requirement_if_it_works, so we will have to hack things and
@@ -131,10 +118,13 @@ def add_environment(project, name, packages, channels):
     # Doh.
     original_project = project
     project = Project(original_project.directory_path, default_conda_environment=name)
-    env_dict = project.project_file.get_value(['environments', name])
-    if env_dict is None:
-        env_dict = dict()
-        project.project_file.set_value(['environments', name], env_dict)
+    if name is None:
+        env_dict = project.project_file.root
+    else:
+        env_dict = project.project_file.get_value(['environments', name])
+        if env_dict is None:
+            env_dict = dict()
+            project.project_file.set_value(['environments', name], env_dict)
 
     # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
     # so don't convert this thing to a regular list.
@@ -165,6 +155,63 @@ def add_environment(project, name, packages, channels):
         original_project.project_file.load()
 
     return status
+
+
+def add_environment(project, name, packages, channels):
+    """Attempt to create the environment and add it to project.yml.
+
+    The returned status would be None if we failed to even check the status for
+    some reason... currently this would happen if the project has non-empty
+    ``project.problems``.
+
+    If the returned status is not None, if it's True we were
+    successful, and if it's false ``status.errors`` may
+    (hopefully) contain a list of useful error strings.  The
+    status will usually be a ``RequirementStatus`` but may be some
+    other subtype of ``Status``.
+
+    Args:
+        project (Project): the project
+        name (str): environment name
+        packages (list of str): dependencies (with optional version info, as for conda install)
+        channels (list of str): channels (as they should be passed to conda --channel)
+
+    Returns:
+        ``Status`` instance or None
+
+    """
+    assert name is not None
+    return _update_environment(project, name, packages, channels, create=True)
+
+
+def add_dependencies(project, environment, packages, channels):
+    """Attempt to install dependencies then add them to project.yml.
+
+    If the environment is None rather than an env name,
+    dependencies are added in the global dependencies section (to
+    all environments).
+
+    The returned status would be None if we failed to even check the status for
+    some reason... currently this would happen if the project has non-empty
+    ``project.problems``.
+
+    If the returned status is not None, if it's True we were
+    successful, and if it's false ``status.errors`` may
+    (hopefully) contain a list of useful error strings.  The
+    status will usually be a ``RequirementStatus`` but may be some
+    other subtype of ``Status``.
+
+    Args:
+        project (Project): the project
+        environment (str): environment name or None for all environments
+        packages (list of str): dependencies (with optional version info, as for conda install)
+        channels (list of str): channels (as they should be passed to conda --channel)
+
+    Returns:
+        ``Status`` instance or None
+
+    """
+    return _update_environment(project, environment, packages, channels, create=False)
 
 
 def add_variables(project, vars_to_add):

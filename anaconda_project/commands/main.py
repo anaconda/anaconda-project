@@ -40,14 +40,16 @@ def _parse_args_and_run_subcommand(argv):
                             default='.',
                             help="Project directory containing project.yml (defaults to current directory)")
 
-    def add_prepare_args(preset):
-        add_project_arg(preset)
-
+    def add_environment_arg(preset):
         preset.add_argument('--environment',
                             metavar='ENVIRONMENT_NAME',
                             default=None,
                             action='store',
                             help="An environment name from project.yml")
+
+    def add_prepare_args(preset):
+        add_project_arg(preset)
+        add_environment_arg(preset)
         preset.add_argument('--mode',
                             metavar='MODE',
                             default=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
@@ -95,16 +97,29 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
     preset.set_defaults(main=download_commands.main_add)
 
+    def add_package_args(preset):
+        preset.add_argument('-c',
+                            '--channel',
+                            metavar='CHANNEL',
+                            action='append',
+                            help='Channel to search for packages')
+        preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
+
     preset = subparsers.add_parser('add-environment', help="Add a new environment to the project.")
     add_project_arg(preset)
+    add_package_args(preset)
     preset.add_argument('-n',
                         '--name',
                         metavar='ENVIRONMENT_NAME',
                         action='store',
                         help="Name of the environment under PROJECT_DIR/envs")
-    preset.add_argument('-c', '--channel', metavar='CHANNEL', action='append', help='Channel to search for packages')
-    preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
     preset.set_defaults(main=environment_commands.main_add)
+
+    preset = subparsers.add_parser('add-dependencies', help="Add packages to one or all project environments.")
+    add_project_arg(preset)
+    add_environment_arg(preset)
+    add_package_args(preset)
+    preset.set_defaults(main=environment_commands.main_add_dependencies)
 
     preset = subparsers.add_parser('add-command', help="Add a new command to the project.")
     add_project_arg(preset)

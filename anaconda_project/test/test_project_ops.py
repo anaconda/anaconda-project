@@ -490,3 +490,40 @@ environments:
     dependencies: [ 'b' ]
     channels: [ 'c3']
 """}, check)
+
+
+def test_add_dependencies_to_all_environments():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_dependencies(project,
+                                                  environment=None,
+                                                  packages=['foo', 'bar'],
+                                                  channels=['hello', 'world'])
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert ['foo', 'bar'] == list(project2.project_file.get_value('dependencies'))
+        assert ['hello', 'world'] == list(project2.project_file.get_value('channels'))
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_dependencies_nonexistent_environment():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_dependencies(project,
+                                                  environment="not_an_env",
+                                                  packages=['foo', 'bar'],
+                                                  channels=['hello', 'world'])
+            assert not status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+    with_directory_contents(dict(), check)

@@ -5,7 +5,7 @@
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 """YAML file loading and manipulation."""
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 # ruamel.yaml supports round-trip preserving dict ordering,
 # comments, etc., which is why we use it instead of the usual yaml
