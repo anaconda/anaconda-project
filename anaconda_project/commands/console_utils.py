@@ -13,12 +13,22 @@ import sys
 def print_project_problems(project):
     """Print project problems to stderr, and return True if there were problems."""
     if project.problems:
-        print("Unable to load project:", file=sys.stderr)
         for problem in project.problems:
-            print("  %s" % problem, file=sys.stderr)
+            print(problem, file=sys.stderr)
+        print("Unable to load the project.", file=sys.stderr)
         return True
     else:
         return False
+
+
+def print_status_errors(status):
+    """Print errors from the status."""
+    assert status is not None
+    for log in status.logs:
+        print(log, file=sys.stderr)
+    for error in status.errors:
+        print(error, file=sys.stderr)
+    print(status.status_description, file=sys.stderr)
 
 
 def stdin_is_interactive():

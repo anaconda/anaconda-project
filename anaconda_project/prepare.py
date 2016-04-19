@@ -636,9 +636,9 @@ def prepare_in_stages(project,
 def _project_problems_to_prepare_failure(project):
     if project.problems:
         errors = []
-        errors.append("Unable to load project:")
         for problem in project.problems:
-            errors.append("  %s" % problem)
+            errors.append(problem)
+        errors.append("Unable to load the project.")
         return PrepareFailure(logs=[], statuses=(), errors=errors)
     else:
         return None

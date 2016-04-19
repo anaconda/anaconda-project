@@ -105,22 +105,6 @@ def test_add_environment_fails(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def test_add_environment_fails_to_get_status(capsys, monkeypatch):
-    def check(dirname):
-        _monkeypatch_pwd(monkeypatch, dirname)
-        _monkeypatch_add_environment(monkeypatch, None)
-
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo'])
-        assert code == 1
-
-        out, err = capsys.readouterr()
-        assert '' == out
-        # this is a TERRIBLE error message but at the moment it doesn't actually happen
-        assert 'Unable to add environment foo.\n' == err
-
-    with_directory_contents(dict(), check)
-
-
 def test_add_environment_with_project_file_problems(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
@@ -130,8 +114,8 @@ def test_add_environment_with_project_file_problems(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert ('Unable to load project:\n  variables section contains wrong value type 42,' +
-                ' should be dict or list of requirements\n') == err
+        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
+                'Unable to load the project.\n') == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -145,8 +129,8 @@ def test_add_dependencies_with_project_file_problems(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert ('Unable to load project:\n  variables section contains wrong value type 42,' +
-                ' should be dict or list of requirements\n') == err
+        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
+                'Unable to load the project.\n') == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 

@@ -207,37 +207,43 @@ class AnacondaProject(object):
     def add_variables(self, project, vars_to_add):
         """Add variables in project.yml and set their values in local project state.
 
+        Returns a ``Status`` instance which evaluates to True on
+        success and has an ``errors`` property (with a list of error
+        strings) on failure.
+
         Args:
-           project (Project): the project
-           vars_to_add (list of tuple): key-value pairs
+            project (Project): the project
+            vars_to_add (list of tuple): key-value pairs
 
         Returns:
-           None
+            ``Status`` instance
         """
         return project_ops.add_variables(project=project, vars_to_add=vars_to_add)
 
     def remove_variables(self, project, vars_to_remove):
-        """Remove variables in project.yml and remove them from local project state.
+        """Remove variables from project.yml and unset their values in local project state.
+
+        Returns a ``Status`` instance which evaluates to True on
+        success and has an ``errors`` property (with a list of error
+        strings) on failure.
 
         Args:
-           project (Project): the project
-           vars_to_remove (list of strings): variables to remove
+            project (Project): the project
+            vars_to_remove (list of tuple): key-value pairs
 
         Returns:
-           None
+            ``Status`` instance
         """
         return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove)
 
     def add_download(self, project, env_var, url):
         """Attempt to download the URL; if successful, add it as a download to the project.
 
-        The returned status would be None if we failed to even check the status for
-        some reason... currently this would happen if the project has non-empty
-        ``project.problems``.
-
-        If the returned status is not None, if it's True we were
-        successful, and if it's false ``status.errors`` may
-        (hopefully) contain a list of useful error strings.
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the download requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
 
         Args:
             project (Project): the project
@@ -245,23 +251,18 @@ class AnacondaProject(object):
             url (str): url to download
 
         Returns:
-            RequirementStatus instance for the download requirement or None
-
+            ``Status`` instance
         """
         return project_ops.add_download(project=project, env_var=env_var, url=url)
 
     def add_environment(self, project, name, packages, channels):
         """Attempt to create the environment and add it to project.yml.
 
-        The returned status would be None if we failed to even check the status for
-        some reason... currently this would happen if the project has non-empty
-        ``project.problems``.
-
-        If the returned status is not None, if it's True we were
-        successful, and if it's false ``status.errors`` may
-        (hopefully) contain a list of useful error strings. The
-        status will usually be a ``RequirementStatus`` but may be some
-        other subtype of ``Status``.
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the environment requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
 
         Args:
             project (Project): the project
@@ -270,7 +271,7 @@ class AnacondaProject(object):
             channels (list of str): channels (as they should be passed to conda --channel)
 
         Returns:
-            ``Status`` instance for the environment requirement or None
+            ``Status`` instance
         """
         return project_ops.add_environment(project=project, name=name, packages=packages, channels=channels)
 
@@ -281,15 +282,11 @@ class AnacondaProject(object):
         dependencies are added in the global dependencies section (to
         all environments).
 
-        The returned status would be None if we failed to even check the status for
-        some reason... currently this would happen if the project has non-empty
-        ``project.problems``.
-
-        If the returned status is not None, if it's True we were
-        successful, and if it's false ``status.errors`` may
-        (hopefully) contain a list of useful error strings.  The
-        status will usually be a ``RequirementStatus`` but may be some
-        other subtype of ``Status``.
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the environment requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
 
         Args:
             project (Project): the project
@@ -298,8 +295,7 @@ class AnacondaProject(object):
             channels (list of str): channels (as they should be passed to conda --channel)
 
         Returns:
-            ``Status`` instance or None
-
+            ``Status`` instance
         """
         return project_ops.add_dependencies(project=project,
                                             environment=environment,
@@ -309,11 +305,16 @@ class AnacondaProject(object):
     def add_command(self, project, command_type, name, command):
         """Add a command to project.yml.
 
+        Returns a ``Status`` subtype (it won't be a
+        ``RequirementStatus`` as with some other functions, just a
+        plain status).
+
         Args:
-            project (Project): the project
-            command_type: choice of `bokeh_app`, `notebook`, `python`, `shell` or `windows` command
+           project (Project): the project
+           command_type: choice of `bokeh_app`, `notebook`, `shell` or `windows` command
 
         Returns:
-            None
+           a ``Status`` instance
+
         """
         return project_ops.add_command(project=project, command_type=command_type, name=name, command=command)
