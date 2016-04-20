@@ -95,7 +95,7 @@ def test_init_do_not_create_directory(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert ("Create directory '%s'? " % subdir) == out
-        assert ("Unable to load project:\n  Project directory '%s' does not exist.\n" % subdir) == err
+        assert ("Project directory '%s' does not exist.\nUnable to load the project.\n" % subdir) == err
 
     with_directory_contents(dict(), check)
 
@@ -119,6 +119,6 @@ def test_init_do_not_create_directory_not_interactive(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert ("Unable to load project:\n  Project directory '%s' does not exist.\n" % subdir) == err
+        assert ("Project directory '%s' does not exist.\nUnable to load the project.\n" % subdir) == err
 
     with_directory_contents(dict(), check)

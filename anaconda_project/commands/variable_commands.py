@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 
 from anaconda_project.project import Project
 from anaconda_project import project_ops
-from anaconda_project.commands.console_utils import print_project_problems
+from anaconda_project.commands.console_utils import print_status_errors
 
 
 def add_variables(project_dir, vars_to_add):
@@ -25,10 +25,12 @@ def add_variables(project_dir, vars_to_add):
             return 1
         fixed_vars.append(tuple(var.split('=', maxsplit=1)))
     project = Project(project_dir)
-    if print_project_problems(project):
+    status = project_ops.add_variables(project, fixed_vars)
+    if status:
+        return 0
+    else:
+        print_status_errors(status)
         return 1
-    project_ops.add_variables(project, fixed_vars)
-    return 0
 
 
 def remove_variables(project_dir, vars_to_remove):
@@ -38,10 +40,12 @@ def remove_variables(project_dir, vars_to_remove):
         Returns exit code
     """
     project = Project(project_dir)
-    if print_project_problems(project):
+    status = project_ops.remove_variables(project, vars_to_remove)
+    if status:
+        return 0
+    else:
+        print_status_errors(status)
         return 1
-    project_ops.remove_variables(project, vars_to_remove)
-    return 0
 
 
 def main(args):

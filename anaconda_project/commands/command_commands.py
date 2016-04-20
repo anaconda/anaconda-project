@@ -47,8 +47,6 @@ def add_command(project_dir, command_type, name, command):
         int exit code
     """
     project = Project(project_dir)
-    if console_utils.print_project_problems(project):
-        return 1
 
     command_as_filename = os.path.join(project.directory_path, command)
 
@@ -62,10 +60,9 @@ def add_command(project_dir, command_type, name, command):
         print("Specify the --type option to add this command.", file=sys.stderr)
         return 1
 
-    problems = project_ops.add_command(project, command_type, name, command)
-    if problems is not None:
-        for problem in problems:
-            print(problem, file=sys.stderr)
+    status = project_ops.add_command(project, command_type, name, command)
+    if not status:
+        console_utils.print_status_errors(status)
         return 1
     else:
         print("Added a command '%s' to the project. Run it with `anaconda-project launch --command %s`." % (name, name))

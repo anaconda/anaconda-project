@@ -135,7 +135,7 @@ def _test_add_command_line(command_type):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project, command_type, 'default', 'echo "test"')
-        assert result is None
+        assert result
 
         re_loaded = project.project_file.load_for_directory(project.directory_path)
         command = re_loaded.get_value(['commands', 'default'])
@@ -159,7 +159,7 @@ def _test_add_command_windows_to_shell(command_type):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project, 'windows', 'default', 'echo "test"')
-        assert result is None
+        assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
         command = re_loaded.get_value(['commands', 'default'])
@@ -176,7 +176,7 @@ def test_add_command_bokeh():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project, 'bokeh_app', 'bokeh_test', 'file.py')
-        assert result is None
+        assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
         command = re_loaded.get_value(['commands', 'bokeh_test'])
@@ -190,7 +190,7 @@ def test_add_command_bokeh_overwrites():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project, 'bokeh_app', 'bokeh_test', 'file.py')
-        assert result is None
+        assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
         command = re_loaded.get_value(['commands', 'bokeh_test'])
@@ -218,7 +218,7 @@ def test_add_command_conflicting_type():
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project, 'bokeh_app', 'default', 'myapp.py')
         assert [("%s: command 'default' has conflicting statements, 'bokeh_app' must stand alone" %
-                 project.project_file.filename)] == result
+                 project.project_file.filename)] == result.errors
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
         command = re_loaded.get_value(['commands', 'default'])
@@ -364,7 +364,9 @@ def test_add_download_with_project_file_problems():
         status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
-        assert status is None
+        assert not status
+        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
+                ] == status.errors
 
         # be sure download was NOT added to the file
         project2 = Project(dirname)

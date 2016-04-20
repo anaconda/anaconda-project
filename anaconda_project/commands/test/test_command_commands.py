@@ -224,8 +224,8 @@ def test_add_command_project_problem(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert ('Unable to load project:\n  variables section contains wrong value type 42,' +
-                ' should be dict or list of requirements\n') == err
+        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
+                'Unable to load the project.\n') == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ("variables:\n" "  42")}, check_problem_add_cmd)
 
@@ -238,7 +238,7 @@ def test_add_command_breaks_project(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert ("%s: command 'test' has conflicting statements, 'notebook' must stand alone\n" % os.path.join(
-            dirname, DEFAULT_PROJECT_FILENAME)) == err
+        assert (("%s: command 'test' has conflicting statements, 'notebook' must stand alone\n" % os.path.join(
+            dirname, DEFAULT_PROJECT_FILENAME)) + "Unable to add the command.\n") == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    shell: foo\n")}, check_problem_add_cmd)

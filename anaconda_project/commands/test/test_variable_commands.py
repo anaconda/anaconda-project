@@ -45,8 +45,8 @@ def test_add_variable_project_problem(capsys):
 
     out, err = capsys.readouterr()
     assert out == ''
-    expected_err = ('Unable to load project:\n  '
-                    'variables section contains wrong value type 42, should be dict or list of requirements\n')
+    expected_err = ('variables section contains wrong value type 42, should be dict or list of requirements\n'
+                    'Unable to load the project.\n')
     assert err == expected_err
 
 

@@ -425,8 +425,8 @@ def test_prepare_problem_project_with_browser(monkeypatch):
         assert not result
         assert dict(BAR='bar') == strip_environ(environ)
 
-        assert ['Unable to load project:',
-                ('  Icon file %s does not exist.' % os.path.join(dirname, 'foo.png'))] == result.errors
+        assert [('Icon file %s does not exist.' % os.path.join(dirname, 'foo.png')), 'Unable to load the project.'
+                ] == result.errors
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 icon: foo.png

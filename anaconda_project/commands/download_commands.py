@@ -7,33 +7,21 @@
 """Commands related to the downloads section."""
 from __future__ import absolute_import, print_function
 
-import sys
-
 from anaconda_project.project import Project
 from anaconda_project import project_ops
-from anaconda_project.commands.console_utils import print_project_problems
+from anaconda_project.commands.console_utils import print_status_errors
 
 
 def add_download(project_dir, filename_variable, download_url):
     """Add an item to the downloads section."""
     project = Project(project_dir)
-    if print_project_problems(project):
-        return 1
     status = project_ops.add_download(project, env_var=filename_variable, url=download_url)
-    if status is None:
-        # this is bad because it doesn't explain why
-        print("Unable to add download %s" % download_url, file=sys.stderr)
-        return 1
-    elif status:
+    if status:
         print(status.status_description)
         print("Added %s to the project file." % download_url)
         return 0
     else:
-        for log in status.logs:
-            print(log, file=sys.stderr)
-        for error in status.errors:
-            print(error, file=sys.stderr)
-        print(status.status_description, file=sys.stderr)
+        print_status_errors(status)
         return 1
 
 

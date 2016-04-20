@@ -358,8 +358,8 @@ def test_launch_command_nonexistent_name(monkeypatch, capsys):
 
         out, err = capsys.readouterr()
         assert "" == out
-        assert (("Unable to load project:\n  Command name 'nope' is not in %s, " +
-                 "these names were found: bar, default, foo\n") % os.path.join(dirname, 'project.yml')) == err
+        assert (("Command name 'nope' is not in %s, " + "these names were found: bar, default, foo\n" +
+                 "Unable to load the project.\n") % os.path.join(dirname, 'project.yml')) == err
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """

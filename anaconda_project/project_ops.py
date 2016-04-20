@@ -17,6 +17,18 @@ from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.internal.simple_status import SimpleStatus
 
 
+def _project_problems_status(project, description=None):
+    if len(project.problems) > 0:
+        errors = []
+        for problem in project.problems:
+            errors.append(problem)
+        if description is None:
+            description = "Unable to load the project."
+        return SimpleStatus(success=False, description=description, logs=[], errors=errors)
+    else:
+        return None
+
+
 def create(directory_path, make_directory=False):
     """Create a project skeleton in the given directory.
 
@@ -73,13 +85,11 @@ def _commit_requirement_if_it_works(project, env_var_or_class, default_environme
 def add_download(project, env_var, url):
     """Attempt to download the URL; if successful, add it as a download to the project.
 
-    The returned status would be None if we failed to even check the status for
-    some reason... currently this would happen if the project has non-empty
-    ``project.problems``.
-
-    If the returned status is not None, if it's True we were
-    successful, and if it's false ``status.errors`` may
-    (hopefully) contain a list of useful error strings.
+    The returned ``Status`` should be a ``RequirementStatus`` for
+    the download requirement if it evaluates to True (on success),
+    but may be another subtype of ``Status`` on failure. A False
+    status will have an ``errors`` property with a list of error
+    strings.
 
     Args:
         project (Project): the project
@@ -87,9 +97,11 @@ def add_download(project, env_var, url):
         url (str): url to download
 
     Returns:
-        RequirementStatus instance for the download requirement or None
-
+        ``Status`` instance
     """
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
     # Modify the project file _in memory only_, do not save
     existing = project.project_file.get_value(['downloads', env_var])
     if existing is not None and isinstance(existing, dict):
@@ -101,6 +113,10 @@ def add_download(project, env_var, url):
 
 
 def _update_environment(project, name, packages, channels, create):
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+
     if packages is None:
         packages = []
     if channels is None:
@@ -160,15 +176,11 @@ def _update_environment(project, name, packages, channels, create):
 def add_environment(project, name, packages, channels):
     """Attempt to create the environment and add it to project.yml.
 
-    The returned status would be None if we failed to even check the status for
-    some reason... currently this would happen if the project has non-empty
-    ``project.problems``.
-
-    If the returned status is not None, if it's True we were
-    successful, and if it's false ``status.errors`` may
-    (hopefully) contain a list of useful error strings.  The
-    status will usually be a ``RequirementStatus`` but may be some
-    other subtype of ``Status``.
+    The returned ``Status`` should be a ``RequirementStatus`` for
+    the environment requirement if it evaluates to True (on success),
+    but may be another subtype of ``Status`` on failure. A False
+    status will have an ``errors`` property with a list of error
+    strings.
 
     Args:
         project (Project): the project
@@ -177,8 +189,7 @@ def add_environment(project, name, packages, channels):
         channels (list of str): channels (as they should be passed to conda --channel)
 
     Returns:
-        ``Status`` instance or None
-
+        ``Status`` instance
     """
     assert name is not None
     return _update_environment(project, name, packages, channels, create=True)
@@ -191,15 +202,11 @@ def add_dependencies(project, environment, packages, channels):
     dependencies are added in the global dependencies section (to
     all environments).
 
-    The returned status would be None if we failed to even check the status for
-    some reason... currently this would happen if the project has non-empty
-    ``project.problems``.
-
-    If the returned status is not None, if it's True we were
-    successful, and if it's false ``status.errors`` may
-    (hopefully) contain a list of useful error strings.  The
-    status will usually be a ``RequirementStatus`` but may be some
-    other subtype of ``Status``.
+    The returned ``Status`` should be a ``RequirementStatus`` for
+    the environment requirement if it evaluates to True (on success),
+    but may be another subtype of ``Status`` on failure. A False
+    status will have an ``errors`` property with a list of error
+    strings.
 
     Args:
         project (Project): the project
@@ -208,8 +215,7 @@ def add_dependencies(project, environment, packages, channels):
         channels (list of str): channels (as they should be passed to conda --channel)
 
     Returns:
-        ``Status`` instance or None
-
+        ``Status`` instance
     """
     return _update_environment(project, environment, packages, channels, create=False)
 
@@ -217,13 +223,21 @@ def add_dependencies(project, environment, packages, channels):
 def add_variables(project, vars_to_add):
     """Add variables in project.yml and set their values in local project state.
 
+    Returns a ``Status`` instance which evaluates to True on
+    success and has an ``errors`` property (with a list of error
+    strings) on failure.
+
     Args:
         project (Project): the project
         vars_to_add (list of tuple): key-value pairs
 
     Returns:
-        None
+        ``Status`` instance
     """
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+
     local_state = LocalStateFile.load_for_directory(project.directory_path)
     present_vars = {req.env_var for req in project.requirements if isinstance(req, EnvVarRequirement)}
     for varname, value in vars_to_add:
@@ -233,17 +247,27 @@ def add_variables(project, vars_to_add):
     project.project_file.save()
     local_state.save()
 
+    return SimpleStatus(success=True, description="Variables added to the project file.")
+
 
 def remove_variables(project, vars_to_remove):
-    """Add variables in project.yml and set their values in local project state.
+    """Remove variables from project.yml and unset their values in local project state.
+
+    Returns a ``Status`` instance which evaluates to True on
+    success and has an ``errors`` property (with a list of error
+    strings) on failure.
 
     Args:
         project (Project): the project
         vars_to_remove (list of tuple): key-value pairs
 
     Returns:
-        None
+        ``Status`` instance
     """
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+
     local_state = LocalStateFile.load_for_directory(project.directory_path)
     for varname in vars_to_remove:
         local_state.unset_value(['variables', varname])
@@ -251,19 +275,29 @@ def remove_variables(project, vars_to_remove):
     project.project_file.save()
     local_state.save()
 
+    return SimpleStatus(success=True, description="Variables removed from the project file.")
+
 
 def add_command(project, command_type, name, command):
     """Add a command to project.yml.
+
+    Returns a ``Status`` subtype (it won't be a
+    ``RequirementStatus`` as with some other functions, just a
+    plain status).
 
     Args:
        project (Project): the project
        command_type: choice of `bokeh_app`, `notebook`, `shell` or `windows` command
 
     Returns:
-       None on success, list of error strings otherwise
+       a ``Status`` instance
     """
     if command_type not in _COMMAND_CHOICES:
         raise ValueError("Invalid command type " + command_type + " choose from " + repr(_COMMAND_CHOICES))
+
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
 
     command_dict = project.project_file.get_value(['commands', name])
     if command_dict is None:
@@ -274,11 +308,11 @@ def add_command(project, command_type, name, command):
 
     project.project_file.use_changes_without_saving()
 
-    if len(project.problems) > 0:
-        problems = project.problems
+    failed = _project_problems_status(project, "Unable to add the command.")
+    if failed is not None:
         # reset, maybe someone added conflicting command line types or something
         project.project_file.load()
-        return problems
+        return failed
     else:
         project.project_file.save()
-        return None
+        return SimpleStatus(success=True, description="Command added to project file.")
