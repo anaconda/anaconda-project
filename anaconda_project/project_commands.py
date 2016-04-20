@@ -203,16 +203,23 @@ class ProjectCommand(object):
         return description
 
     def _choose_args_and_shell(self, environ, extra_args=None):
-        if self.notebook is not None:
-            path = os.path.join(environ['PROJECT_DIR'], self.notebook)
-            return ['jupyter-notebook', path], False
-
-        if self.bokeh_app is not None:
-            path = os.path.join(environ['PROJECT_DIR'], self.bokeh_app)
-            return ['bokeh', 'serve', path], False
+        assert extra_args is None or isinstance(extra_args, list)
 
         args = None
         shell = False
+
+        if self.notebook is not None:
+            path = os.path.join(environ['PROJECT_DIR'], self.notebook)
+            args = ['jupyter-notebook', path]
+
+        if self.bokeh_app is not None:
+            path = os.path.join(environ['PROJECT_DIR'], self.bokeh_app)
+            args = ['bokeh', 'serve', path]
+
+        if args is not None:
+            if extra_args is not None:
+                args = args + extra_args
+            return args, False
 
         command = self._attributes.get(self._shell_field(), None)
         if command is not None:

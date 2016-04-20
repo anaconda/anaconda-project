@@ -867,6 +867,25 @@ def test_notebook_command():
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check_notebook_command)
 
 
+def test_notebook_command_extra_args():
+    def check_notebook_command_extra_args(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command._attributes == {'notebook': 'test.ipynb'}
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(environ, extra_args=['foo', 'bar'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        jupyter_notebook = find_executable('jupyter-notebook', path)
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), 'foo', 'bar']
+        assert cmd_exec.shell is False
+        assert cmd_exec.notebook == 'test.ipynb'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"},
+        check_notebook_command_extra_args)
+
+
 def test_notebook_guess_command():
     def check_notebook_guess_command(dirname):
         project = project_no_dedicated_env(dirname)
@@ -934,6 +953,24 @@ def test_bokeh_command():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check_bokeh_command)
+
+
+def test_bokeh_command_with_extra_args():
+    def check_bokeh_command_extra_args(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command._attributes == {'bokeh_app': 'test.py'}
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(environ, extra_args=['--show'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        bokeh = find_executable('bokeh', path)
+        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--show']
+        assert cmd_exec.shell is False
+        assert cmd_exec.bokeh_app == 'test.py'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check_bokeh_command_extra_args)
 
 
 def test_launch_argv_from_project_file_app_entry():

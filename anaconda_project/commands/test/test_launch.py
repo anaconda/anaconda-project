@@ -287,6 +287,53 @@ commands:
     assert "" == err
 
 
+def test_launch_command_extra_args_with_double_hyphen(monkeypatch, capsys):
+    executed = {}
+
+    def mock_execvpe(file, args, env):
+        executed['file'] = file
+        executed['args'] = args
+        executed['env'] = env
+
+    monkeypatch.setattr('os.execvpe', mock_execvpe)
+
+    def check_launch_main(dirname):
+        from os.path import abspath as real_abspath
+
+        def mock_abspath(path):
+            if path == ".":
+                return dirname
+            else:
+                return real_abspath(path)
+
+        monkeypatch.setattr('os.path.abspath', mock_abspath)
+
+        project_dir_disable_dedicated_env(dirname)
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'launch', '--project', dirname, '--', '--bar'])
+
+        assert 1 == result
+        assert 'file' in executed
+        assert 'args' in executed
+        assert 'env' in executed
+        assert executed['file'].endswith(python_exe)
+        assert executed['args'][0].endswith(python_exe)
+        assert len(executed['args']) == 3
+        assert '--version' == executed['args'][1]
+        assert '--bar' == executed['args'][2]
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+commands:
+  default:
+    conda_app_entry: python --version
+
+"""}, check_launch_main)
+
+    out, err = capsys.readouterr()
+    assert "" == out
+    assert "" == err
+
+
 def test_launch_command_specify_name(monkeypatch, capsys):
     executed = {}
 
