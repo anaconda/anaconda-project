@@ -35,7 +35,7 @@ else:
     RUAMEL_VERSION = "0.10.14"
 REQUIRES = ['beautifulsoup4 >= 4.3', 'ruamel.yaml >= ' + RUAMEL_VERSION, 'tornado >= 4.3', 'pycrypto', 'bcrypt >= 2.0']
 
-TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf']
+TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2']
 
 # clean up leftover trash as best we can
 BUILD_TMP = os.path.join(ROOT, 'build', 'tmp')
