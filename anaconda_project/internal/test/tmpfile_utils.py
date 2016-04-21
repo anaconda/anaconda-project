@@ -11,6 +11,7 @@ import tempfile
 import shutil
 import os
 import sys
+import zipfile
 
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
 from anaconda_project.local_state_file import LocalStateFile
@@ -85,3 +86,19 @@ def tmp_local_state_file():
     f.close()
     os.remove(f.name)
     return local_state
+
+
+def with_tmp_zipfile(contents, f):
+    """Call 'f' with a zip of 'contents' and an empty working directory name."""
+
+    def using_temporary_file(handle):
+        with zipfile.ZipFile(handle.name, 'w') as zf:
+            for key, value in contents.items():
+                zf.writestr(key, value.encode('utf-8'))
+
+        def using_directory(dirname):
+            f(handle.name, dirname)
+
+        with_directory_contents(dict(), using_directory)
+
+    with_temporary_file(using_temporary_file)

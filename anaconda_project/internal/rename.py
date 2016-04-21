@@ -33,3 +33,5 @@ def rename_over_existing(src, dest):
                     os.remove(backup)
                 except Exception as e:
                     pass
+        else:
+            raise e

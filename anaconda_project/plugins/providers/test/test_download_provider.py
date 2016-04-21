@@ -6,10 +6,13 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import
 
+import codecs
 import os
+import shutil
+import zipfile
 
 from anaconda_project.test.project_utils import project_no_dedicated_env
-from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, with_tmp_zipfile)
 from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
 from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
@@ -25,16 +28,30 @@ from tornado import gen
 
 DATAFILE_CONTENT = ("downloads:\n"
                     "    DATAFILE:\n"
-                    "        url: http://localhost/data.zip\n"
+                    "        url: http://localhost/data.csv\n"
                     "        md5: 12345abcdef\n"
-                    "        filename: data.zip\n")
+                    "        filename: data.csv\n")
+
+ZIPPED_DATAFILE_CONTENT = ("downloads:\n"
+                           "    DATAFILE:\n"
+                           "        url: http://localhost/data.zip\n"
+                           "        filename: data\n")
+
+ZIPPED_DATAFILE_CONTENT_NO_UNZIP = (ZIPPED_DATAFILE_CONTENT + "        unzip: false\n")
+
+# have to specify unzip:true manually here
+ZIPPED_DATAFILE_CONTENT_NO_ZIP_SUFFIX = ("downloads:\n"
+                                         "    DATAFILE:\n"
+                                         "        url: http://localhost/data\n"
+                                         "        unzip: true\n"
+                                         "        filename: data\n")
 
 
 def _download_requirement():
     return DownloadRequirement(registry=PluginRegistry(),
                                env_var="DATAFILE",
-                               url='http://localhost/data.zip',
-                               filename='data.zip')
+                               url='http://localhost/data.csv',
+                               filename='data.csv')
 
 
 def test_prepare_download(monkeypatch):
@@ -46,7 +63,7 @@ def test_prepare_download(monkeypatch):
 
             res = Res()
             res.code = 200
-            with open(os.path.join(dirname, 'data.zip'), 'w') as out:
+            with open(os.path.join(dirname, 'data.csv'), 'w') as out:
                 out.write('data')
             raise gen.Return(res)
 
@@ -81,7 +98,7 @@ def test_prepare_download_exception(monkeypatch):
 
 
 def test_provide_minimal(monkeypatch):
-    MIN_DATAFILE_CONTENT = ("downloads:\n" "    DATAFILE: http://localhost/data.zip\n")
+    MIN_DATAFILE_CONTENT = ("downloads:\n" "    DATAFILE: http://localhost/data.csv\n")
 
     def provide_download(dirname):
         @gen.coroutine
@@ -91,7 +108,7 @@ def test_provide_minimal(monkeypatch):
 
             res = Res()
             res.code = 200
-            with open(os.path.join(dirname, 'data.zip'), 'w') as out:
+            with open(os.path.join(dirname, 'data.csv'), 'w') as out:
                 out.write('data')
             raise gen.Return(res)
 
@@ -110,7 +127,7 @@ def test_provide_minimal(monkeypatch):
 
 
 def test_provide_no_download_in_check_mode(monkeypatch):
-    MIN_DATAFILE_CONTENT = ("downloads:\n" "    DATAFILE: http://localhost/data.zip\n")
+    MIN_DATAFILE_CONTENT = ("downloads:\n" "    DATAFILE: http://localhost/data.csv\n")
 
     def provide_download(dirname):
         @gen.coroutine
@@ -129,7 +146,7 @@ def test_provide_no_download_in_check_mode(monkeypatch):
 
 
 def test_provide_missing_url(monkeypatch):
-    ERR_DATAFILE_CONTENT = ("downloads:\n" "    DATAFILE:\n" "       filename: data.zip\n")
+    ERR_DATAFILE_CONTENT = ("downloads:\n" "    DATAFILE:\n" "       filename: data.csv\n")
 
     def provide_download(dirname):
         project = project_no_dedicated_env(dirname)
@@ -166,12 +183,12 @@ def test_provide_multiple_checksums(monkeypatch):
 
 
 def test_provide_wrong_form(monkeypatch):
-    ERR_DATAFILE_CONTENT = ("downloads:\n" "    - http://localhost/data.zip\n")
+    ERR_DATAFILE_CONTENT = ("downloads:\n" "    - http://localhost/data.csv\n")
 
     def provide_download(dirname):
         project = project_no_dedicated_env(dirname)
         prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
-        assert ("%s: 'downloads:' section should be a dictionary, found ['http://localhost/data.zip']" % os.path.join(
+        assert ("%s: 'downloads:' section should be a dictionary, found ['http://localhost/data.csv']" % os.path.join(
             dirname, DEFAULT_PROJECT_FILENAME)) in project.problems
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
@@ -219,7 +236,7 @@ def test_failed_download_before_connect(monkeypatch):
 
 def test_file_exists(monkeypatch):
     def provide_download(dirname):
-        FILENAME = os.path.join(dirname, 'data.zip')
+        FILENAME = os.path.join(dirname, 'data.csv')
         requirement = _download_requirement()
         local_state_file = LocalStateFile.load_for_directory(dirname)
         local_state_file.set_service_run_state(requirement.env_var, {'filename': FILENAME})
@@ -237,7 +254,7 @@ def test_file_exists(monkeypatch):
         assert hasattr(result, 'environ')
         assert 'DATAFILE' in result.environ
 
-    LOCAL_STATE = ("DATAFILE:\n" "  filename: data.zip")
+    LOCAL_STATE = ("DATAFILE:\n" "  filename: data.csv")
 
     with_directory_contents(
         {
@@ -246,9 +263,152 @@ def test_file_exists(monkeypatch):
         }, provide_download)
 
 
+def test_prepare_download_of_zip_file(monkeypatch):
+    def provide_download_of_zip(zipname, dirname):
+        with codecs.open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME), 'w', 'utf-8') as f:
+            f.write(ZIPPED_DATAFILE_CONTENT)
+
+        @gen.coroutine
+        def mock_downloader_run(self, loop):
+            class Res:
+                pass
+
+            res = Res()
+            res.code = 200
+            assert self._url.endswith(".zip")
+            assert self._filename.endswith(".zip")
+            shutil.copyfile(zipname, self._filename)
+            raise gen.Return(res)
+
+        def mock_checksum(self, fp):
+            return None
+
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        monkeypatch.setattr(
+            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
+        project = project_no_dedicated_env(dirname)
+
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        assert hasattr(result, 'environ')
+        assert 'DATAFILE' in result.environ
+        assert os.path.isdir(os.path.join(dirname, 'data'))
+        assert os.path.isfile(os.path.join(dirname, 'data', 'foo'))
+        assert codecs.open(os.path.join(dirname, 'data', 'foo')).read() == 'hello\n'
+
+    with_tmp_zipfile(dict(foo='hello\n'), provide_download_of_zip)
+
+
+def test_prepare_download_of_zip_file_no_unzip(monkeypatch):
+    def provide_download_of_zip_no_unzip(zipname, dirname):
+        with codecs.open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME), 'w', 'utf-8') as f:
+            f.write(ZIPPED_DATAFILE_CONTENT_NO_UNZIP)
+
+        @gen.coroutine
+        def mock_downloader_run(self, loop):
+            class Res:
+                pass
+
+            res = Res()
+            res.code = 200
+            assert self._url.endswith(".zip")
+            # we aren't going to unzip so we should be downloading straignt to
+            # the specified filename 'data' without the .zip on it
+            assert not self._filename.endswith(".zip")
+            shutil.copyfile(zipname, self._filename)
+            raise gen.Return(res)
+
+        def mock_checksum(self, fp):
+            return None
+
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        monkeypatch.setattr(
+            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
+        project = project_no_dedicated_env(dirname)
+
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        assert hasattr(result, 'environ')
+        assert 'DATAFILE' in result.environ
+        assert os.path.isfile(os.path.join(dirname, 'data'))
+        with zipfile.ZipFile(os.path.join(dirname, 'data')) as zf:
+            assert zf.namelist() == ['foo']
+
+    with_tmp_zipfile(dict(foo='hello\n'), provide_download_of_zip_no_unzip)
+
+
+def test_prepare_download_of_zip_file_no_zip_extension(monkeypatch):
+    def provide_download_of_zip(zipname, dirname):
+        with codecs.open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME), 'w', 'utf-8') as f:
+            f.write(ZIPPED_DATAFILE_CONTENT_NO_ZIP_SUFFIX)
+
+        @gen.coroutine
+        def mock_downloader_run(self, loop):
+            class Res:
+                pass
+
+            res = Res()
+            res.code = 200
+            # we add .zip to the download filename, even though it wasn't in the URL
+            assert not self._url.endswith(".zip")
+            assert self._filename.endswith(".zip")
+            shutil.copyfile(zipname, self._filename)
+            raise gen.Return(res)
+
+        def mock_checksum(self, fp):
+            return None
+
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        monkeypatch.setattr(
+            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
+        project = project_no_dedicated_env(dirname)
+
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        assert hasattr(result, 'environ')
+        assert 'DATAFILE' in result.environ
+        assert os.path.isdir(os.path.join(dirname, 'data'))
+        assert os.path.isfile(os.path.join(dirname, 'data', 'foo'))
+        assert codecs.open(os.path.join(dirname, 'data', 'foo')).read() == 'hello\n'
+
+    with_tmp_zipfile(dict(foo='hello\n'), provide_download_of_zip)
+
+
+def test_prepare_download_of_broken_zip_file(monkeypatch):
+    def provide_download_of_zip(dirname):
+        with codecs.open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME), 'w', 'utf-8') as f:
+            f.write(ZIPPED_DATAFILE_CONTENT)
+
+        @gen.coroutine
+        def mock_downloader_run(self, loop):
+            class Res:
+                pass
+
+            res = Res()
+            res.code = 200
+            assert self._url.endswith(".zip")
+            assert self._filename.endswith(".zip")
+            with codecs.open(self._filename, 'w', 'utf-8') as f:
+                f.write("This is not a zip file.")
+            raise gen.Return(res)
+
+        def mock_checksum(self, fp):
+            return None
+
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        monkeypatch.setattr(
+            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
+        project = project_no_dedicated_env(dirname)
+
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        assert not result
+        assert [("Failed to unzip %s: File is not a zip file" % os.path.join(dirname, "data.zip")),
+                "missing requirement to run this project: A downloaded file which is referenced by DATAFILE",
+                "  Environment variable DATAFILE is not set."] == result.errors
+
+    with_directory_contents(dict(), provide_download_of_zip)
+
+
 def test_config_html(monkeypatch):
     def config_html(dirname):
-        FILENAME = os.path.join(dirname, 'data.zip')
+        FILENAME = os.path.join(dirname, 'data.csv')
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = _download_requirement()
         environ = minimal_environ(PROJECT_DIR=dirname)
