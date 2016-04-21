@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 
 from anaconda_project.project import Project
 from anaconda_project import project_ops
-from anaconda_project.commands.console_utils import print_status_errors
+from anaconda_project.commands import console_utils
 
 
 def _handle_status(status, success_message):
@@ -18,7 +18,7 @@ def _handle_status(status, success_message):
         print(success_message)
         return 0
     else:
-        print_status_errors(status)
+        console_utils.print_status_errors(status)
         return 1
 
 
@@ -41,6 +41,16 @@ def add_dependencies(project, environment, packages, channels):
     return _handle_status(status, success_message)
 
 
+def list_environments(project_dir):
+    """List environments in the project."""
+    project = Project(project_dir)
+    if console_utils.print_project_problems(project):
+        return 1
+    print("Found these environments in project: {}".format(project_dir))
+    print("\n".join(sorted(project.conda_environments.keys())))
+    return 0
+
+
 def main_add(args):
     """Start the add-environment command and return exit status code."""
     return add_environment(args.project, args.name, args.packages, args.channel)
@@ -49,3 +59,8 @@ def main_add(args):
 def main_add_dependencies(args):
     """Start the add-dependencies command and return exit status code."""
     return add_dependencies(args.project, args.environment, args.packages, args.channel)
+
+
+def main_list(args):
+    """Start the list environments command and return exit status code."""
+    return list_environments(args.project)
