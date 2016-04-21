@@ -18,6 +18,7 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
 from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
 
 
 def test_create(monkeypatch):
@@ -379,7 +380,9 @@ def test_add_download_with_project_file_problems():
 
 # the other add_environment tests use a mock CondaManager, but we want to have
 # one test that does the real thing to be sure it works.
-def test_add_environment_with_real_conda_manager():
+def test_add_environment_with_real_conda_manager(monkeypatch):
+    monkeypatch_conda_not_to_use_links(monkeypatch)
+
     def check(dirname):
         project = Project(dirname)
         status = project_ops.add_environment(project, name='foo', packages=['bokeh'], channels=['asmeurer'])
