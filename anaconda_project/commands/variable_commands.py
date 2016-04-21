@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 
 from anaconda_project.project import Project
 from anaconda_project import project_ops
-from anaconda_project.commands.console_utils import print_status_errors
+from anaconda_project.commands import console_utils
 
 
 def add_variables(project_dir, vars_to_add):
@@ -29,7 +29,7 @@ def add_variables(project_dir, vars_to_add):
     if status:
         return 0
     else:
-        print_status_errors(status)
+        console_utils.print_status_errors(status)
         return 1
 
 
@@ -44,8 +44,18 @@ def remove_variables(project_dir, vars_to_remove):
     if status:
         return 0
     else:
-        print_status_errors(status)
+        console_utils.print_status_errors(status)
         return 1
+
+
+def list_variables(project_dir):
+    """List variables present in project."""
+    project = Project(project_dir)
+    if console_utils.print_project_problems(project):
+        return 1
+    print("Variables for project: {}".format(project_dir))
+    print("\n".join(project.variables))
+    return 0
 
 
 def main(args):
@@ -54,3 +64,8 @@ def main(args):
         return add_variables(args.project, args.vars_to_add)
     elif args.action == 'remove':
         return remove_variables(args.project, args.vars_to_remove)
+
+
+def main_list(args):
+    """List the project variable names."""
+    return list_variables(args.project)

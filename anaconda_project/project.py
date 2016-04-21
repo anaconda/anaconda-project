@@ -471,6 +471,11 @@ class Project(object):
         return self._updated_cache().conda_environments
 
     @property
+    def variables(self):
+        """Get a list of strings with the variables names from project requirements."""
+        return [r.env_var for r in self.requirements if isinstance(r, EnvVarRequirement)]
+
+    @property
     def default_conda_environment_name(self):
         """Get the named environment to use by default.
 

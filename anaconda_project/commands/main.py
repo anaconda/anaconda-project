@@ -93,6 +93,10 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('vars_to_remove', metavar='VARS_TO_REMOVE', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main, action="remove")
 
+    preset = subparsers.add_parser('list-variables', help="Lists all variables on the project.")
+    add_project_arg(preset)
+    preset.set_defaults(main=variable_commands.main_list)
+
     preset = subparsers.add_parser('add-download', help="Add a URL to be downloaded before running commands")
     add_project_arg(preset)
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
