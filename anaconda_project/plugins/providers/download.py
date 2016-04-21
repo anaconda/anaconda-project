@@ -12,6 +12,7 @@ import os
 from tornado.ioloop import IOLoop
 
 from anaconda_project.internal.http_client import FileDownloader
+from anaconda_project.internal.ziputils import unpack_zip
 from anaconda_project.plugins.provider import EnvVarProvider, ProviderAnalysis
 from anaconda_project.provide import PROVIDE_MODE_CHECK
 
@@ -95,7 +96,13 @@ class DownloadProvider(EnvVarProvider):
             return filename
 
         filename = os.path.abspath(os.path.join(context.environ['PROJECT_DIR'], requirement.filename))
-        download = FileDownloader(url=requirement.url, filename=filename, hash_algorithm=requirement.hash_algorithm)
+        if requirement.unzip:
+            download_filename = filename + ".zip"
+        else:
+            download_filename = filename
+        download = FileDownloader(url=requirement.url,
+                                  filename=download_filename,
+                                  hash_algorithm=requirement.hash_algorithm)
 
         try:
             _ioloop = IOLoop(make_current=False)
@@ -105,6 +112,12 @@ class DownloadProvider(EnvVarProvider):
                     errors.append(error)
                 return None
             elif response.code == 200:
+                if requirement.unzip:
+                    if unpack_zip(download_filename, filename, errors):
+                        os.remove(download_filename)
+                        return filename
+                    else:
+                        return None
                 return filename
             else:
                 errors.append("Error downloading {}: response code {}".format(requirement.url, response.code))

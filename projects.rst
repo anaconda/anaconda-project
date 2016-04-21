@@ -317,6 +317,25 @@ on Unix, that looks like:
 
   MYDATAFILE=/my/already/downloaded/file.csv anaconda-project launch
 
+Anaconda Project can auto-unzip a zip file when it's
+downloaded. This is the default if the the URL path ends in ".zip"
+unless the filename also ends in ".zip", but for URLs that don't
+end in ".zip" or to change the default you can specify the "unzip"
+flag:
+
+  downloads:
+    MYDATAFILE:
+      url: http://example.com/bigdatafile
+      unzip: true
+
+The ``filename`` will be used as a directory and the zip unpacked
+into it, unless the zip contains a single file or directory with
+the same name as ``filename``, and then the two are
+consolidated. That is, if your zip contains a single directory
+``foo`` with file ``bar`` inside that, and you specify downloading
+to filename ``foo``, then you'll get ``PROJECT_DIR/foo/bar``, not
+``PROJECT_DIR/foo/foo/bar``.
+
 
 Describing the Project
 ======================

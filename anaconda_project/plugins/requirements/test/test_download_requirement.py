@@ -151,6 +151,7 @@ def test_use_variable_name_for_filename():
     assert len(requirements) == 1
     assert requirements[0].filename == 'FOO'
     assert requirements[0].url == 'http://example.com/'
+    assert not requirements[0].unzip
 
 
 def test_checksum_is_not_a_string():
@@ -164,3 +165,79 @@ def test_checksum_is_not_a_string():
                                requirements=requirements)
     assert ['Checksum value for FOO should be a string not [].'] == problems
     assert len(requirements) == 0
+
+
+def test_unzip_is_not_a_bool():
+    problems = []
+    requirements = []
+    DownloadRequirement._parse(PluginRegistry(),
+                               varname='FOO',
+                               item=dict(url='http://example.com/',
+                                         unzip=[]),
+                               problems=problems,
+                               requirements=requirements)
+    assert ["Value of 'unzip' for download item FOO should be a boolean, not []."] == problems
+    assert len(requirements) == 0
+
+
+def test_use_unzip_if_url_ends_in_zip():
+    problems = []
+    requirements = []
+    DownloadRequirement._parse(PluginRegistry(),
+                               varname='FOO',
+                               item='http://example.com/bar.zip',
+                               problems=problems,
+                               requirements=requirements)
+    assert [] == problems
+    assert len(requirements) == 1
+    assert requirements[0].filename == 'bar'
+    assert requirements[0].url == 'http://example.com/bar.zip'
+    assert requirements[0].unzip
+
+
+def test_allow_manual_override_of_use_unzip_if_url_ends_in_zip():
+    problems = []
+    requirements = []
+    DownloadRequirement._parse(PluginRegistry(),
+                               varname='FOO',
+                               item=dict(url='http://example.com/bar.zip',
+                                         unzip=False),
+                               problems=problems,
+                               requirements=requirements)
+    assert [] == problems
+    assert len(requirements) == 1
+    assert requirements[0].filename == 'bar.zip'
+    assert requirements[0].url == 'http://example.com/bar.zip'
+    assert not requirements[0].unzip
+
+
+def test_use_unzip_if_url_ends_in_zip_and_filename_does_not():
+    problems = []
+    requirements = []
+    DownloadRequirement._parse(PluginRegistry(),
+                               varname='FOO',
+                               item=dict(url='http://example.com/bar.zip',
+                                         filename='something'),
+                               problems=problems,
+                               requirements=requirements)
+    assert [] == problems
+    assert len(requirements) == 1
+    assert requirements[0].filename == 'something'
+    assert requirements[0].url == 'http://example.com/bar.zip'
+    assert requirements[0].unzip
+
+
+def test_no_unzip_if_url_ends_in_zip_and_filename_also_does():
+    problems = []
+    requirements = []
+    DownloadRequirement._parse(PluginRegistry(),
+                               varname='FOO',
+                               item=dict(url='http://example.com/bar.zip',
+                                         filename='something.zip'),
+                               problems=problems,
+                               requirements=requirements)
+    assert [] == problems
+    assert len(requirements) == 1
+    assert requirements[0].filename == 'something.zip'
+    assert requirements[0].url == 'http://example.com/bar.zip'
+    assert not requirements[0].unzip

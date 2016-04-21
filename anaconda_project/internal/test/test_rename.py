@@ -193,3 +193,24 @@ def test_rename_target_does_exist_simulating_windows_remove_backup_fails(monkeyp
         assert os.path.exists(saved_backup['path'])
 
     with_directory_contents(dict(foo='stuff-foo', bar='stuff-bar'), do_test)
+
+
+def test_rename_other_error_besides_eexist(monkeypatch):
+    def do_test(dirname):
+        name1 = os.path.join(dirname, "foo")
+        name2 = os.path.join(dirname, "bar")
+        assert os.path.exists(name1)
+        assert os.path.exists(name2)
+        assert open(name1).read() == 'stuff-foo'
+        assert open(name2).read() == 'stuff-bar'
+
+        def mock_rename(src, dst):
+            raise IOError("it all went wrong")
+
+        monkeypatch.setattr('os.rename', mock_rename)
+
+        with pytest.raises(IOError) as excinfo:
+            rename_over_existing(name1, name2)
+        assert 'it all went wrong' in str(excinfo.value)
+
+    with_directory_contents(dict(foo='stuff-foo', bar='stuff-bar'), do_test)
