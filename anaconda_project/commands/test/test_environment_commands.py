@@ -10,6 +10,7 @@ from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.simple_status import SimpleStatus
+from anaconda_project.project import Project
 
 
 def _monkeypatch_pwd(monkeypatch, dirname):
@@ -48,6 +49,23 @@ def _monkeypatch_add_dependencies(monkeypatch, result):
     monkeypatch.setattr("anaconda_project.project_ops.add_dependencies", mock_add_dependencies)
 
     return params
+
+
+def _test_environment_command_with_project_file_problems(capsys, monkeypatch, command, append_dirname=False):
+    def check(dirname):
+        if append_dirname:
+            command.append(dirname)
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(command)
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
+                'Unable to load the project.\n') == err
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_add_environment_no_packages(capsys, monkeypatch):
@@ -106,33 +124,13 @@ def test_add_environment_fails(capsys, monkeypatch):
 
 
 def test_add_environment_with_project_file_problems(capsys, monkeypatch):
-    def check(dirname):
-        _monkeypatch_pwd(monkeypatch, dirname)
-
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo'])
-        assert code == 1
-
-        out, err = capsys.readouterr()
-        assert '' == out
-        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
-                'Unable to load the project.\n') == err
-
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch,
+                                                         ['anaconda-project', 'add-environment', '--name', 'foo'])
 
 
 def test_add_dependencies_with_project_file_problems(capsys, monkeypatch):
-    def check(dirname):
-        _monkeypatch_pwd(monkeypatch, dirname)
-
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-dependencies', 'foo'])
-        assert code == 1
-
-        out, err = capsys.readouterr()
-        assert '' == out
-        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
-                'Unable to load the project.\n') == err
-
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch,
+                                                         ['anaconda-project', 'add-dependencies', 'foo'])
 
 
 def test_add_dependencies_to_all_environments(capsys, monkeypatch):
@@ -210,15 +208,71 @@ def test_list_empty_environments(capsys, monkeypatch):
 
 
 def test_list_environments_with_project_file_problems(capsys, monkeypatch):
-    def check(dirname):
-        _monkeypatch_pwd(monkeypatch, dirname)
+    _test_environment_command_with_project_file_problems(capsys,
+                                                         monkeypatch,
+                                                         ['anaconda-project', 'list-environments', '--project'],
+                                                         append_dirname=True)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-environments', '--project', dirname])
+
+def test_list_dependencies_wrong_env(capsys):
+    def check_missing_env(dirname):
+        env_name = 'not-there'
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-dependencies', '--project', dirname,
+                                               '--environment', env_name])
+
         assert code == 1
 
-        out, err = capsys.readouterr()
-        assert '' == out
-        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
-                'Unable to load the project.\n') == err
+        expected_err = "Project doesn't have an environment called '{}'\n".format(env_name)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+        out, err = capsys.readouterr()
+        assert out == ""
+        assert err == expected_err
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_missing_env)
+
+
+def _test_list_dependencies(capsys, env, expected_deps):
+    def check_list_not_empty(dirname):
+        params = ['anaconda-project', 'list-dependencies', '--project', dirname]
+        if env:
+            params.extend(['--environment', env])
+
+        code = _parse_args_and_run_subcommand(params)
+
+        assert code == 0
+        out, err = capsys.readouterr()
+
+        project = Project(dirname)
+        expected_out = "Dependencies for environment '{}':\n{}".format(
+            (env or project.default_conda_environment_name), expected_deps)
+        assert out == expected_out
+
+    project_contents = ('environments:\n'
+                        '  foo:\n'
+                        '    dependencies:\n'
+                        '      - requests\n'
+                        '      - flask\n'
+                        '  bar:\n'
+                        '    dependencies:\n'
+                        '      - httplib\n'
+                        '      - django\n\n'
+                        'dependencies:\n'
+                        ' - mandatory_dependency\n')
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: project_contents}, check_list_not_empty)
+
+
+def test_list_dependencies_from_env(capsys):
+    _test_list_dependencies(capsys, 'bar', '\ndjango\nhttplib\nmandatory_dependency\n\n')
+    _test_list_dependencies(capsys, 'foo', '\nflask\nmandatory_dependency\nrequests\n\n')
+
+
+def test_list_dependencies_default_env(capsys):
+    _test_list_dependencies(capsys, None, '\nflask\nmandatory_dependency\nrequests\n\n')
+
+
+def test_list_dependencies_with_project_file_problems(capsys, monkeypatch):
+    _test_environment_command_with_project_file_problems(capsys,
+                                                         monkeypatch,
+                                                         ['anaconda-project', 'list-dependencies', '--project'],
+                                                         append_dirname=True)

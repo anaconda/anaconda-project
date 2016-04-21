@@ -11,6 +11,10 @@ from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
+import platform
+
+PLATFORM_ENV_VAR = 'CONDA_DEFAULT_ENV' if platform.system() == 'Windows' else 'CONDA_ENV_PATH'
+
 
 class Args(object):
     def __init__(self, action, vars_to_add=None, vars_to_remove=None, project='.'):
@@ -105,7 +109,7 @@ def test_list_variables(capsys):
 
         assert code == 0
         out, err = capsys.readouterr()
-        expected_out = "Variables for project: {}\ntest\ntrain\nCONDA_ENV_PATH\n".format(dirname)
+        expected_out = "Variables for project: {}\ntest\ntrain\n{}\n".format(dirname, PLATFORM_ENV_VAR)
         assert out == expected_out
 
     with_directory_contents(
@@ -120,7 +124,7 @@ def test_list_empty_environments(capsys):
 
         assert code == 0
         out, err = capsys.readouterr()
-        expected_out = "Variables for project: {}\nCONDA_ENV_PATH\n".format(dirname)
+        expected_out = "Variables for project: {}\n{}\n".format(dirname, PLATFORM_ENV_VAR)
         assert out == expected_out
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)

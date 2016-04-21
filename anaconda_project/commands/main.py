@@ -132,13 +132,18 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('list-environments', help="Lists all environments on the project.")
     add_project_arg(preset)
-    preset.set_defaults(main=environment_commands.main_list)
+    preset.set_defaults(main=environment_commands.main_list_environments)
 
     preset = subparsers.add_parser('add-dependencies', help="Add packages to one or all project environments.")
     add_project_arg(preset)
     add_environment_arg(preset)
     add_package_args(preset)
     preset.set_defaults(main=environment_commands.main_add_dependencies)
+
+    preset = subparsers.add_parser('list-dependencies', help="Lists dependencies for an environment on the project.")
+    add_project_arg(preset)
+    add_environment_arg(preset)
+    preset.set_defaults(main=environment_commands.main_list_dependencies)
 
     preset = subparsers.add_parser('add-command', help="Add a new command to the project.")
     add_project_arg(preset)
