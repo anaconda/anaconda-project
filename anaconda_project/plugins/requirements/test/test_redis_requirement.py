@@ -11,12 +11,13 @@ from anaconda_project.plugins.requirements.redis import RedisRequirement
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 
-def test_find_by_env_var_redis():
+def test_find_by_service_type_redis():
     registry = PluginRegistry()
-    found = registry.find_requirement_by_env_var(env_var='REDIS_URL', options=dict())
+    found = registry.find_requirement_by_service_type(service_type='redis', env_var='MYREDIS', options=dict())
     assert found is not None
     assert isinstance(found, RedisRequirement)
-    assert found.env_var == 'REDIS_URL'
+    assert found.env_var == 'MYREDIS'
+    assert found.service_type == 'redis'
 
 
 def test_redis_url_not_set():

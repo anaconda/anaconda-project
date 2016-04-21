@@ -21,7 +21,7 @@ def test_find_by_env_var_unknown():
 
 def test_find_by_service_type_unknown():
     registry = PluginRegistry()
-    found = registry.find_requirement_by_service_type(service_type='blah', env_var='FOO', options=None)
+    found = registry.find_requirement_by_service_type(service_type='blah', env_var='FOO', options=dict())
     assert found is None
 
 

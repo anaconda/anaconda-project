@@ -14,12 +14,14 @@ from argparse import ArgumentParser, REMAINDER
 from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
 from anaconda_project.version import version
 from anaconda_project.project import _COMMAND_CHOICES
+from anaconda_project.plugins.registry import PluginRegistry
 import anaconda_project.commands.init as init
 import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
 import anaconda_project.commands.activate as activate
 import anaconda_project.commands.variable_commands as variable_commands
 import anaconda_project.commands.download_commands as download_commands
+import anaconda_project.commands.service_commands as service_commands
 import anaconda_project.commands.environment_commands as environment_commands
 import anaconda_project.commands.command_commands as command_commands
 
@@ -96,6 +98,15 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
     preset.set_defaults(main=download_commands.main_add)
+
+    service_types = PluginRegistry().list_service_types()
+    service_choices = list(map(lambda s: s.name, service_types))
+
+    preset = subparsers.add_parser('add-service', help="Add a service to be available before running commands")
+    add_project_arg(preset)
+    preset.add_argument('--variable', metavar='ENV_VAR_FOR_SERVICE_ADDRESS', default=None)
+    preset.add_argument('service_type', metavar='SERVICE_TYPE', default=None, choices=service_choices)
+    preset.set_defaults(main=service_commands.main_add)
 
     def add_package_args(preset):
         preset.add_argument('-c',

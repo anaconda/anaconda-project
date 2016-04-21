@@ -532,3 +532,146 @@ def test_add_dependencies_nonexistent_environment():
         _with_conda_test(attempt)
 
     with_directory_contents(dict(), check)
+
+
+def _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch):
+    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+
+    can_connect_args_list = []
+
+    def mock_can_connect_to_socket(host, port, timeout_seconds=0.5):
+        can_connect_args = dict()
+        can_connect_args['host'] = host
+        can_connect_args['port'] = port
+        can_connect_args['timeout_seconds'] = timeout_seconds
+        can_connect_args_list.append(can_connect_args)
+        if port == 6379:
+            return True
+        else:
+            return real_can_connect_to_socket(host, port, timeout_seconds)
+
+    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+
+    return can_connect_args_list
+
+
+def test_add_service(monkeypatch):
+    def check(dirname):
+        _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
+
+        project = Project(dirname)
+        status = project_ops.add_service(project, service_type='redis')
+
+        assert status
+        assert isinstance(status.logs, list)
+        assert [] == status.errors
+
+        # be sure service was added to the file and saved
+        project2 = Project(dirname)
+        assert 'redis' == project2.project_file.get_value(['services', 'REDIS_URL'])
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_service_nondefault_variable_name(monkeypatch):
+    def check(dirname):
+        _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
+
+        project = Project(dirname)
+        status = project_ops.add_service(project, service_type='redis', variable_name='MY_SPECIAL_REDIS')
+
+        assert status
+        assert isinstance(status.logs, list)
+        assert [] == status.errors
+
+        # be sure service was added to the file and saved
+        project2 = Project(dirname)
+        assert 'redis' == project2.project_file.get_value(['services', 'MY_SPECIAL_REDIS'])
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_service_with_project_file_problems():
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.add_service(project, service_type='redis')
+
+        assert not status
+        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
+                ] == status.errors
+
+        # be sure service was NOT added to the file
+        project2 = Project(dirname)
+        assert project2.project_file.get_value(['services', 'REDIS_URL']) is None
+        # should have been dropped from the original project object also
+        assert project.project_file.get_value(['services', 'REDIS_URL']) is None
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_add_service_already_exists(monkeypatch):
+    def check(dirname):
+        _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
+
+        project = Project(dirname)
+        status = project_ops.add_service(project, service_type='redis')
+
+        assert status
+        assert isinstance(status.logs, list)
+        assert [] == status.errors
+
+        # be sure service was added to the file and saved
+        project2 = Project(dirname)
+        assert 'redis' == project2.project_file.get_value(['services', 'REDIS_URL'])
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+services:
+  REDIS_URL: redis
+"""}, check)
+
+
+def test_add_service_already_exists_with_different_type(monkeypatch):
+    def check(dirname):
+        _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
+
+        project = Project(dirname)
+        status = project_ops.add_service(project, service_type='redis')
+
+        assert not status
+        # Once we have >1 known service types, we should change this test
+        # to use the one other than redis and then this error will change.
+        assert ["Service REDIS_URL has an unknown type 'foo'."] == status.errors
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+services:
+  REDIS_URL: foo
+"""}, check)
+
+
+def test_add_service_already_exists_as_non_service(monkeypatch):
+    def check(dirname):
+        _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
+
+        project = Project(dirname)
+        status = project_ops.add_service(project, service_type='redis')
+
+        assert not status
+        assert ['Variable REDIS_URL is already in use.'] == status.errors
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  REDIS_URL: something
+"""}, check)
+
+
+def test_add_service_bad_service_type(monkeypatch):
+    def check(dirname):
+        _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
+
+        project = Project(dirname)
+        status = project_ops.add_service(project, service_type='not_a_service')
+
+        assert not status
+        assert ["Unknown service type 'not_a_service', we know about: redis"] == status.errors
+
+    with_directory_contents(dict(), check)

@@ -41,6 +41,7 @@ class ServiceRequirement(EnvVarRequirement):
             problems.append("Service {} has an unknown type '{}'.".format(varname, service_type))
         else:
             assert isinstance(requirement, ServiceRequirement)
+            assert 'type' in requirement.options
             requirements.append(requirement)
 
     @property

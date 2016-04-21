@@ -318,3 +318,22 @@ class AnacondaProject(object):
 
         """
         return project_ops.add_command(project=project, command_type=command_type, name=name, command=command)
+
+    def add_service(self, project, service_type, variable_name=None):
+        """Add a service to project.yml.
+
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the service requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            service_type (str): which kind of service
+            variable_name (str): environment variable name (None for default)
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.add_service(project=project, service_type=service_type, variable_name=variable_name)

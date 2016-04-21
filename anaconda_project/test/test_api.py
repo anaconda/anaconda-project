@@ -192,3 +192,20 @@ def test_add_command(monkeypatch):
     result = p.add_command(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
+
+
+def test_add_service(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_add_service(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.add_service', mock_add_service)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, service_type='abc', variable_name='xyz')
+    result = p.add_service(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
