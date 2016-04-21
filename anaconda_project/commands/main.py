@@ -115,6 +115,10 @@ def _parse_args_and_run_subcommand(argv):
                         help="Name of the environment under PROJECT_DIR/envs")
     preset.set_defaults(main=environment_commands.main_add)
 
+    preset = subparsers.add_parser('list-environments', help="Lists all environments on the project.")
+    add_project_arg(preset)
+    preset.set_defaults(main=environment_commands.main_list)
+
     preset = subparsers.add_parser('add-dependencies', help="Add packages to one or all project environments.")
     add_project_arg(preset)
     add_environment_arg(preset)

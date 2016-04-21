@@ -176,3 +176,49 @@ environments:
    dependencies:
      - bar
 """}, check)
+
+
+def test_list_environments(capsys, monkeypatch):
+    def check_list_not_empty(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-environments', '--project', dirname])
+
+        assert code == 0
+        out, err = capsys.readouterr()
+        expected_out = "Found these environments in project: {}\nbar\nfoo\n".format(dirname)
+        assert out == expected_out
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('environments:\n'
+                                    '  foo:\n'
+                                    '    dependencies:\n'
+                                    '      - bar\n'
+                                    '  bar:\n'
+                                    '    dependencies:\n'
+                                    '      - bar\n')}, check_list_not_empty)
+
+
+def test_list_empty_environments(capsys, monkeypatch):
+    def check_list_empty(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-environments', '--project', dirname])
+
+        assert code == 0
+        out, err = capsys.readouterr()
+        expected_out = "Found these environments in project: {}\ndefault\n".format(dirname)
+        assert out == expected_out
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)
+
+
+def test_list_environments_with_project_file_problems(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-environments', '--project', dirname])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
+                'Unable to load the project.\n') == err
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)

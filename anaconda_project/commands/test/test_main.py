@@ -12,7 +12,7 @@ import os
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
 all_subcommands = ('init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable', 'add-download',
-                   'add-environment', 'add-dependencies', 'add-command')
+                   'add-environment', 'list-environments', 'add-dependencies', 'add-command')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -66,6 +66,7 @@ expected_usage_msg = \
         '                        project\n' \
         '    add-download        Add a URL to be downloaded before running commands\n' \
         '    add-environment     Add a new environment to the project.\n' \
+        '    list-environments   Lists all environments on the project.\n' \
         '    add-dependencies    Add packages to one or all project environments.\n' \
         '    add-command         Add a new command to the project.\n' \
         '\n' \
