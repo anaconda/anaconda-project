@@ -385,13 +385,16 @@ def test_add_environment_with_real_conda_manager(monkeypatch):
 
     def check(dirname):
         project = Project(dirname)
-        status = project_ops.add_environment(project, name='foo', packages=['bokeh'], channels=['asmeurer'])
+        status = project_ops.add_environment(project, name='foo', packages=['numpy'], channels=['asmeurer'])
+        if not status:
+            print(status.status_description)
+            print(repr(status.errors))
         assert status
 
         # be sure it was really done
         project2 = Project(dirname)
         env_commented_map = project2.project_file.get_value(['environments', 'foo'])
-        assert dict(dependencies=['bokeh'], channels=['asmeurer']) == dict(env_commented_map)
+        assert dict(dependencies=['numpy'], channels=['asmeurer']) == dict(env_commented_map)
         assert os.path.isdir(os.path.join(dirname, 'envs', 'foo', 'conda-meta'))
 
     with_directory_contents(dict(), check)
