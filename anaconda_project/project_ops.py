@@ -14,6 +14,7 @@ from anaconda_project import prepare
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.internal.simple_status import SimpleStatus
 
 
@@ -316,3 +317,70 @@ def add_command(project, command_type, name, command):
     else:
         project.project_file.save()
         return SimpleStatus(success=True, description="Command added to project file.")
+
+
+def add_service(project, service_type, variable_name=None):
+    """Add a service to project.yml.
+
+    The returned ``Status`` should be a ``RequirementStatus`` for
+    the service requirement if it evaluates to True (on success),
+    but may be another subtype of ``Status`` on failure. A False
+    status will have an ``errors`` property with a list of error
+    strings.
+
+    Args:
+        project (Project): the project
+        service_type (str): which kind of service
+        variable_name (str): environment variable name (None for default)
+
+    Returns:
+        ``Status`` instance
+    """
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+
+    known_types = project.plugin_registry.list_service_types()
+    found = None
+    for known in known_types:
+        if known.name == service_type:
+            found = known
+            break
+
+    if found is None:
+        return SimpleStatus(success=False,
+                            description="Unable to add service.",
+                            logs=[],
+                            errors=["Unknown service type '%s', we know about: %s" % (service_type, ", ".join(map(
+                                lambda s: s.name, known_types)))])
+
+    if variable_name is None:
+        variable_name = found.default_variable
+
+    assert len(known_types) == 1  # when this fails, see change needed in the loop below
+
+    requirement_already_exists = False
+    for requirement in project.requirements:
+        if isinstance(requirement, EnvVarRequirement) and requirement.env_var == variable_name:
+            if isinstance(requirement, ServiceRequirement):
+                assert requirement.service_type == service_type
+                # when the above assertion fails, add the second known type besides
+                # redis in test_project_ops.py::test_add_service_already_exists_with_different_type
+                # and then uncomment the below code.
+                # if requirement.service_type != service_type:
+                #    return SimpleStatus(success=False, description="Unable to add service.", logs=[],
+                #                            errors=["Service %s already exists but with type '%s'" %
+                #                              (variable_name, requirement.service_type)])
+                # else:
+                requirement_already_exists = True
+                break
+            else:
+                return SimpleStatus(success=False,
+                                    description="Unable to add service.",
+                                    logs=[],
+                                    errors=["Variable %s is already in use." % variable_name])
+
+    if not requirement_already_exists:
+        project.project_file.set_value(['services', variable_name], service_type)
+
+    return _commit_requirement_if_it_works(project, variable_name)

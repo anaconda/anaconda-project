@@ -171,23 +171,6 @@ services:
 """}, prepare_redis_url)
 
 
-def test_prepare_redis_url_with_list_in_variables_section(monkeypatch):
-    can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
-
-    def prepare_redis_url(dirname):
-        project = project_no_dedicated_env(dirname)
-        result = _prepare_printing_errors(project, environ=minimal_environ())
-        assert result
-        assert dict(REDIS_URL="redis://localhost:6379",
-                    PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
-        assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
-
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-variables:
-  - REDIS_URL
-"""}, prepare_redis_url)
-
-
 def _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket):
     can_connect_args_list = []
 

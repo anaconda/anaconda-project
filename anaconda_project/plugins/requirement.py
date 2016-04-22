@@ -226,6 +226,7 @@ class EnvVarRequirement(Requirement):
     def __init__(self, registry, env_var, options=None):
         """Construct an EnvVarRequirement for the given ``env_var`` with the given options."""
         super(EnvVarRequirement, self).__init__(registry, options)
+        assert env_var is not None
         self.env_var = env_var
 
     def __repr__(self):

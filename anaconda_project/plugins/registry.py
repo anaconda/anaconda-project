@@ -7,6 +7,10 @@
 """The plugin registry (used to locate plugins)."""
 from __future__ import absolute_import, print_function
 
+from collections import namedtuple
+
+ServiceType = namedtuple('ServiceType', ['name', 'default_variable', 'description'])
+
 
 class PluginRegistry(object):
     """Allows creating Requirement and Provider instances."""
@@ -22,10 +26,7 @@ class PluginRegistry(object):
             instance of Requirement
         """
         # future goal will be to un-hardcode this
-        if env_var == 'REDIS_URL':
-            from .requirements.redis import RedisRequirement
-            return RedisRequirement(registry=self, env_var=env_var, options=options)
-        elif env_var == 'ANACONDA_MASTER_PASSWORD':
+        if env_var == 'ANACONDA_MASTER_PASSWORD':
             from .requirements.master_password import MasterPasswordRequirement
             return MasterPasswordRequirement(registry=self, options=options)
         else:
@@ -43,12 +44,24 @@ class PluginRegistry(object):
         Returns:
             instance of ServiceRequirement
         """
+        if 'type' not in options or options['type'] != service_type:
+            options = options.copy()
+            options['type'] = service_type
+
         # future goal will be to un-hardcode this
         if service_type == 'redis':
             from .requirements.redis import RedisRequirement
             return RedisRequirement(registry=self, env_var=env_var, options=options)
         else:
             return None
+
+    def list_service_types(self):
+        """List known service types.
+
+        Returns:
+           iterable of ``ServiceType`` named tuples with (name,default_variable,description)
+        """
+        return [ServiceType(name='redis', default_variable='REDIS_URL', description='A Redis server')]
 
     def find_provider_by_class_name(self, class_name):
         """Look up a provider by class name.
