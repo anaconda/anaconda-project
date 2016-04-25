@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 
 from anaconda_project.project import Project
 from anaconda_project import project_ops
-from anaconda_project.commands.console_utils import print_status_errors
+from anaconda_project.commands import console_utils
 
 
 def add_service(project_dir, service_type, variable_name):
@@ -22,10 +22,30 @@ def add_service(project_dir, service_type, variable_name):
               (status.requirement.service_type, status.requirement.env_var))
         return 0
     else:
-        print_status_errors(status)
+        console_utils.print_status_errors(status)
         return 1
+
+
+def list_services(project_dir):
+    """List the services listed on the project."""
+    project = Project(project_dir)
+    if console_utils.print_project_problems(project):
+        return 1
+
+    services = project.services
+    if services:
+        print("Services for project: {}\n".format(project_dir))
+        print("\n".join(sorted(services)))
+    else:
+        print("No services found for project: {}".format(project_dir))
+    return 0
 
 
 def main_add(args):
     """Start the add-service command and return exit status code."""
     return add_service(args.project, args.service_type, args.variable)
+
+
+def main_list(args):
+    """Start the list the services command and return exit status code."""
+    return list_services(args.project)

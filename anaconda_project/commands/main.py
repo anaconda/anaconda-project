@@ -112,6 +112,10 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('service_type', metavar='SERVICE_TYPE', default=None, choices=service_choices)
     preset.set_defaults(main=service_commands.main_add)
 
+    preset = subparsers.add_parser('list-services', help="List services present in project")
+    add_project_arg(preset)
+    preset.set_defaults(main=service_commands.main_list)
+
     def add_package_args(preset):
         preset.add_argument('-c',
                             '--channel',

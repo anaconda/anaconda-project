@@ -476,6 +476,11 @@ class Project(object):
         return [r.env_var for r in self.requirements if isinstance(r, EnvVarRequirement)]
 
     @property
+    def services(self):
+        """Get a list of strings with the variable names for the project services requirements."""
+        return [r.env_var for r in self.requirements if isinstance(r, ServiceRequirement)]
+
+    @property
     def default_conda_environment_name(self):
         """Get the named environment to use by default.
 
