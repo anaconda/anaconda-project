@@ -10,6 +10,7 @@ import os
 import pytest
 
 from anaconda_project.commands.command_commands import main
+from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project import Project
@@ -242,3 +243,46 @@ def test_add_command_breaks_project(capsys, monkeypatch):
             dirname, DEFAULT_PROJECT_FILENAME)) + "Unable to add the command.\n") == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    shell: foo\n")}, check_problem_add_cmd)
+
+
+def test_list_commands_with_project_file_problems(capsys):
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--project', dirname])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
+                'Unable to load the project.\n') == err
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_list_commands_empty_project(capsys):
+    def check_empty_project(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--project', dirname])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert '' == err
+        assert ("No commands found for project: {}\n\n".format(dirname)) == out
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_empty_project)
+
+
+def test_list_commands(capsys):
+    def check_empty_project(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--project', dirname])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert '' == err
+        commands = '\n'.join(('default', 'run_notebook'))
+        assert ("Commands for project: {}\n\n{}\n".format(dirname, commands)) == out
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ("commands:\n"
+                                    "  default:\n"
+                                    "    bokeh_app: test.py\n"
+                                    "  run_notebook:\n"
+                                    "    notebook: test.ipynb\n")}, check_empty_project)
