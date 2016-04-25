@@ -7,6 +7,8 @@
 """Commands related to the environments section."""
 from __future__ import absolute_import, print_function
 
+import sys
+
 from anaconda_project.project import Project
 from anaconda_project import project_ops
 from anaconda_project.commands import console_utils
@@ -51,6 +53,22 @@ def list_environments(project_dir):
     return 0
 
 
+def list_dependencies(project_dir, environment):
+    """List the dependencies for an environment in the project."""
+    project = Project(project_dir)
+    if console_utils.print_project_problems(project):
+        return 1
+    if environment is None:
+        environment = project.default_conda_environment_name
+    env = project.conda_environments.get(environment, None)
+    if env is None:
+        print("Project doesn't have an environment called '{}'".format(environment), file=sys.stderr)
+        return 1
+    print("Dependencies for environment '{}':\n".format(env.name))
+    print("\n".join(sorted(env.dependencies)), end='\n\n')
+    return 0
+
+
 def main_add(args):
     """Start the add-environment command and return exit status code."""
     return add_environment(args.project, args.name, args.packages, args.channel)
@@ -61,6 +79,11 @@ def main_add_dependencies(args):
     return add_dependencies(args.project, args.environment, args.packages, args.channel)
 
 
-def main_list(args):
+def main_list_environments(args):
     """Start the list environments command and return exit status code."""
     return list_environments(args.project)
+
+
+def main_list_dependencies(args):
+    """Start the list dependencies command and return exit status code."""
+    return list_dependencies(args.project, args.environment)
