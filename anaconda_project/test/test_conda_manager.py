@@ -20,11 +20,17 @@ def test_use_non_default_conda_manager():
         def fix_environment_deviations(self, *args):
             called['fix_environment_deviations'] = args
 
+        def remove_packages(self, *args):
+            called['remove_packages'] = args
+
     push_conda_manager_class(MyCondaManager)
     try:
         manager = new_conda_manager()
         manager.find_environment_deviations(None, None)
         manager.fix_environment_deviations(None, None)
-        assert dict(find_environment_deviations=(None, None), fix_environment_deviations=(None, None)) == called
+        manager.remove_packages(None, None)
+        assert dict(find_environment_deviations=(None, None),
+                    fix_environment_deviations=(None, None),
+                    remove_packages=(None, None)) == called
     finally:
         pop_conda_manager_class()

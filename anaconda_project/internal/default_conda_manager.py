@@ -65,3 +65,9 @@ class DefaultCondaManager(CondaManager):
                 conda_api.create(prefix=prefix, pkgs=list(command_line_packages), channels=spec.channels)
             except conda_api.CondaError as e:
                 raise CondaManagerError("Failed to create environment at %s: %s" % (prefix, str(e)))
+
+    def remove_packages(self, prefix, packages):
+        try:
+            conda_api.remove(prefix, packages)
+        except conda_api.CondaError as e:
+            raise CondaManagerError("Failed to remove packages from %s: %s" % (prefix, str(e)))

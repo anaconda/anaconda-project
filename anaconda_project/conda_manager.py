@@ -95,6 +95,29 @@ class CondaManager(with_metaclass(ABCMeta)):
         """
         pass  # pragma: no cover
 
+    @abstractmethod
+    def remove_packages(self, prefix, packages):
+        """Remove the given package name from the environment in prefix.
+
+        This method ideally would not exist. The ideal approach is
+        that in find_enviroment_deviations, the generated
+        deviation could include "pruned" or "unnecessary" packages
+        that are in the prefix but aren't needed for the
+        spec. fix_environment_deviations would then remove any
+        extra packages. In effect we'd always force the
+        environment to be the fresh env we would install from
+        scratch, given the spec.
+
+        Args:
+           prefix (str): environment path
+           package (list of str): package names
+
+        Returns:
+           None
+
+        """
+        pass  # pragma: no cover
+
 
 class CondaEnvironmentDeviations(object):
     """Represents differences between actual and desired environment state."""

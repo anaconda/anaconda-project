@@ -11,8 +11,8 @@ from tornado import gen
 import pytest
 
 from anaconda_project import project_ops
-from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, push_conda_manager_class,
-                                            pop_conda_manager_class)
+from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaManagerError,
+                                            push_conda_manager_class, pop_conda_manager_class)
 from anaconda_project.project import Project
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.local_state_file import LocalStateFile
@@ -400,7 +400,7 @@ def test_add_environment_with_real_conda_manager(monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def _push_conda_test(fix_works, missing_packages, wrong_version_packages):
+def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove_error):
     class TestCondaManager(CondaManager):
         def __init__(self):
             self.fix_works = fix_works
@@ -419,6 +419,10 @@ def _push_conda_test(fix_works, missing_packages, wrong_version_packages):
             if self.fix_works:
                 self.fixed = True
 
+        def remove_packages(self, prefix, packages):
+            if remove_error is not None:
+                raise CondaManagerError(remove_error)
+
     push_conda_manager_class(TestCondaManager)
 
 
@@ -426,9 +430,9 @@ def _pop_conda_test():
     pop_conda_manager_class()
 
 
-def _with_conda_test(f, fix_works=True, missing_packages=(), wrong_version_packages=()):
+def _with_conda_test(f, fix_works=True, missing_packages=(), wrong_version_packages=(), remove_error=None):
     try:
-        _push_conda_test(fix_works, missing_packages, wrong_version_packages)
+        _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove_error)
         f()
     finally:
         _pop_conda_test()
@@ -535,6 +539,105 @@ def test_add_dependencies_nonexistent_environment():
         _with_conda_test(attempt)
 
     with_directory_contents(dict(), check)
+
+
+def test_remove_dependencies_from_all_environments():
+    def check(dirname):
+        def attempt():
+            os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
+            project = Project(dirname)
+            assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('dependencies'))
+            assert ['foo', 'woot'] == list(project.project_file.get_value(
+                ['environments', 'hello', 'dependencies'], []))
+            status = project_ops.remove_dependencies(project, environment=None, packages=['foo', 'bar'])
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt, remove_error="Removal fail")
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert ['baz'] == list(project2.project_file.get_value('dependencies'))
+        assert ['woot'] == list(project2.project_file.get_value(['environments', 'hello', 'dependencies']))
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+dependencies:
+  - foo
+  - bar
+  - baz
+environments:
+  hello:
+    dependencies:
+     - foo
+     - woot
+"""}, check)
+
+
+def test_remove_dependencies_from_one_environment():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            assert ['foo', 'bar'] == list(project.project_file.get_value('dependencies'))
+            assert ['foo'] == list(project.project_file.get_value(['environments', 'hello', 'dependencies'], []))
+            status = project_ops.remove_dependencies(project, environment='hello', packages=['foo', 'bar'])
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        # note that hello will still inherit the deps from the global dependencies,
+        # and that's fine
+        assert ['foo', 'bar'] == list(project2.project_file.get_value('dependencies'))
+        assert [] == list(project2.project_file.get_value(['environments', 'hello', 'dependencies'], []))
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+dependencies:
+  - foo
+  - bar
+environments:
+  hello:
+    dependencies:
+     - foo
+"""}, check)
+
+
+def test_remove_dependencies_from_nonexistent_environment():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            assert ['foo', 'bar'] == list(project.project_file.get_value('dependencies'))
+            status = project_ops.remove_dependencies(project, environment='not_an_environment', packages=['foo', 'bar'])
+            assert not status
+            assert [] == status.errors
+            assert "Environment not_an_environment doesn't exist." == status.status_description
+
+        _with_conda_test(attempt)
+
+        # be sure we didn't make the config changes
+        project2 = Project(dirname)
+        assert ['foo', 'bar'] == list(project2.project_file.get_value('dependencies'))
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+dependencies:
+  - foo
+  - bar
+"""}, check)
+
+
+def test_remove_dependencies_with_project_file_problems():
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.remove_dependencies(project, environment=None, packages=['foo'])
+
+        assert not status
+        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
+                ] == status.errors
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch):

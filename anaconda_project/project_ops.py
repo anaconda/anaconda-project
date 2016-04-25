@@ -16,6 +16,7 @@ from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.internal.simple_status import SimpleStatus
+import anaconda_project.conda_manager as conda_manager
 
 
 def _project_problems_status(project, description=None):
@@ -219,6 +220,116 @@ def add_dependencies(project, environment, packages, channels):
         ``Status`` instance
     """
     return _update_environment(project, environment, packages, channels, create=False)
+
+
+# there are lots of builtin ways to do this but they wouldn't keep
+# comments properly in ruamel.yaml's CommentedSeq. We don't want to
+# copy or wholesale replace "items"
+def _filter_inplace(predicate, items):
+    i = 0
+    while i < len(items):
+        if predicate(items[i]):
+            i += 1
+        else:
+            del items[i]
+
+
+def remove_dependencies(project, environment, packages):
+    """Attempt to remove dependencies from an environment in project.yml.
+
+    If the environment is None rather than an env name,
+    dependencies are removed from the global dependencies section
+    (from all environments).
+
+    The returned ``Status`` should be a ``RequirementStatus`` for
+    the environment requirement if it evaluates to True (on success),
+    but may be another subtype of ``Status`` on failure. A False
+    status will have an ``errors`` property with a list of error
+    strings.
+
+    Args:
+        project (Project): the project
+        environment (str): environment name or None for all environments
+        packages (list of str): dependencies
+
+    Returns:
+        ``Status`` instance
+    """
+    # This is sort of one big ugly. What we SHOULD be able to do
+    # is simply remove the dependency from project.yml then re-run
+    # prepare, and if the packages aren't pulled in as deps of
+    # something else, they get removed. This would work if our
+    # approach was to always force the env to exactly the env
+    # we'd have created from scratch, given our env config.
+    # But that isn't our approach right now.
+    #
+    # So what we do right now is remove the package from the env,
+    # and then remove it from project.yml, and then see if we can
+    # still prepare the project.
+
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+
+    assert packages is not None
+    assert len(packages) > 0
+
+    if environment is None:
+        envs = project.conda_environments.values()
+    else:
+        env = project.conda_environments.get(environment, None)
+        if env is None:
+            problem = "Environment {} doesn't exist.".format(environment)
+            return SimpleStatus(success=False, description=problem)
+        else:
+            envs = [env]
+
+    assert len(envs) > 0
+
+    conda = conda_manager.new_conda_manager()
+
+    for env in envs:
+        prefix = env.path(project.directory_path)
+        try:
+            if os.path.isdir(prefix):
+                conda.remove_packages(prefix, packages)
+        except conda_manager.CondaManagerError:
+            pass  # ignore errors; not all the envs will exist or have the package installed perhaps
+
+    # Due to https://github.com/Anaconda-Server/anaconda-project/issues/163
+    # we don't have a way to "choose" this environment when we do the prepare
+    # in _commit_requirement_if_it_works, so we will have to hack things and
+    # make a temporary Project here then reload the original project.
+    # Doh.
+    original_project = project
+    project = Project(original_project.directory_path, default_conda_environment=environment)
+    env_dicts = []
+    for env in envs:
+        env_dict = project.project_file.get_value(['environments', env.name])
+        if env_dict is not None:  # it can be None for the default environment (which doesn't have to be listed)
+            env_dicts.append(env_dict)
+    if environment is None:
+        env_dicts.append(project.project_file.root)
+
+    assert len(env_dicts) > 0
+
+    for env_dict in env_dicts:
+        # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
+        # so don't convert this thing to a regular list.
+        dependencies = env_dict.get('dependencies', [])
+        removed_set = set(packages)
+        _filter_inplace(lambda dep: dep not in removed_set, dependencies)
+        env_dict['dependencies'] = dependencies
+
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement)
+
+    # reload original project, hackaround for
+    # https://github.com/Anaconda-Server/anaconda-project/issues/163
+    if status:
+        # reload the new config
+        original_project.project_file.load()
+
+    return status
 
 
 def add_variables(project, vars_to_add):
