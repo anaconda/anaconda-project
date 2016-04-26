@@ -14,6 +14,7 @@ import os
 import platform
 import re
 import shutil
+import subprocess
 import sys
 import uuid
 from os.path import dirname, realpath
@@ -106,7 +107,8 @@ copyright_re = re.compile('# *Copyright ')
 class AllTestsCommand(TestCommand):
     # `py.test --durations=5` == `python setup.py test -a "--durations=5"`
     user_options = [('pytest-args=', 'a', "Arguments to pass to py.test"),
-                    ('format-only', None, "Only run the linters and formatters not the actual tests")]
+                    ('format-only', None, "Only run the linters and formatters not the actual tests"),
+                    ('git-staged-only', None, "Only run the linters and formatters on files added to the commit")]
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
@@ -124,8 +126,10 @@ class AllTestsCommand(TestCommand):
         if platform.system() != 'Windows':
             self.pytest_args = self.pytest_args + coverage_args
         self.pyfiles = None
+        self.git_staged_pyfiles = None
         self.failed = []
         self.format_only = False
+        self.git_staged_only = False
 
     def _py_files(self):
         if self.pyfiles is None:
@@ -140,6 +144,24 @@ class AllTestsCommand(TestCommand):
                         pyfiles.append(os.path.join(root, f))
             self.pyfiles = pyfiles
         return self.pyfiles
+
+    def _git_staged_py_files(self):
+        if self.git_staged_pyfiles is None:
+            # --diff-filter=AM means "added" and "modified"
+            # -z means nul-separated names
+            out = subprocess.check_output(['git', 'diff', '--cached', '--name-only', '--diff-filter=AM', '-z'])
+            git_changed = set(out.decode('utf-8').split('\x00'))
+            git_changed.discard('')  # there's an empty line or something in the git output
+            print("Found %d added/modified files: %r" % (len(git_changed), git_changed))
+            git_changed = {os.path.join(ROOT, filename) for filename in git_changed}
+            self.git_staged_pyfiles = [filename for filename in self._py_files() if filename in git_changed]
+        return self.git_staged_pyfiles
+
+    def _git_staged_or_all_py_files(self):
+        if self.git_staged_only:
+            return self._git_staged_py_files()
+        else:
+            return self._py_files()
 
     def _add_missing_init_py(self):
         root_modules = ['anaconda_project']
@@ -204,7 +226,7 @@ class AllTestsCommand(TestCommand):
 
     def _headers(self):
         print("Checking file headers...")
-        for pyfile in self._py_files():
+        for pyfile in self._git_staged_or_all_py_files():
             self._headerize_file(pyfile)
 
     def _format_file(self, path):
@@ -248,12 +270,12 @@ column_limit : 120
 
     def _yapf(self):
         print("Formatting files...")
-        for pyfile in self._py_files():
+        for pyfile in self._git_staged_or_all_py_files():
             self._format_file(pyfile)
 
     def _flake8(self):
         from flake8.engine import get_style_guide
-        flake8_style = get_style_guide(paths=self._py_files(),
+        flake8_style = get_style_guide(paths=self._git_staged_or_all_py_files(),
                                        max_line_length=120,
                                        ignore=[
                                            'E126',  # complains about this list's indentation
@@ -309,6 +331,9 @@ column_limit : 120
             self.failed.append('pytest-coverage')
 
     def run_tests(self):
+        if self.git_staged_only:
+            print("Only formatting %d git-staged python files, skipping %d files" %
+                  (len(self._git_staged_py_files()), len(self._py_files())))
         self._add_missing_init_py()
         self._update_version_file()
         self._headers()
@@ -321,6 +346,8 @@ column_limit : 120
             print("Failures in: " + repr(self.failed))
             sys.exit(1)
         else:
+            if self.git_staged_only:
+                print("Skipped some files (only checked %d added/modified files)." % len(self._git_staged_py_files()))
             if self.format_only:
                 print("Formatting looks good, but didn't run tests.")
             else:
