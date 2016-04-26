@@ -68,11 +68,11 @@ def test_add_service_fails(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def test_add_service_with_project_file_problems(capsys, monkeypatch):
+def _test_service_command_with_project_file_problems(capsys, monkeypatch, command):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-service', 'redis'])
+        code = _parse_args_and_run_subcommand(command)
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -81,3 +81,37 @@ def test_add_service_with_project_file_problems(capsys, monkeypatch):
                 'Unable to load the project.\n') == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_add_service_with_project_file_problems(capsys, monkeypatch):
+    _test_service_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'add-service', 'redis'])
+
+
+def test_list_service_with_project_file_problems(capsys, monkeypatch):
+    _test_service_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'list-services'])
+
+
+def test_list_service(capsys, monkeypatch):
+    def check_list(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-services'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert err == ''
+        assert out == "Services for project: {}\n\n{}\n".format(dirname, 'REDIS_URL')
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis\n"}, check_list)
+
+
+def test_list_service_with_empty_project(capsys, monkeypatch):
+    def check_empty(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-services'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert err == ''
+        assert out == "No services found for project: {}\n".format(dirname)
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_empty)
