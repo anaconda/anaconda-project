@@ -919,6 +919,25 @@ def test_notebook_guess_command():
     # anaconda-project launch --command data.ipynb
 
 
+def test_notebook_guess_command_can_be_default():
+    def check_notebook_guess_command_can_be_default(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert len(project.commands) == 4
+        assert project.default_command is not None
+        assert project.default_command.notebook == 'a.ipynb'
+
+    with_directory_contents(
+        {
+            # we pick the first command alphabetically in this case
+            # so the test looks for that
+            'a.ipynb': 'pretend there is notebook data here',
+            'b.ipynb': 'pretend there is notebook data here',
+            'c.ipynb': 'pretend there is notebook data here',
+            'd.ipynb': 'pretend there is notebook data here'
+        },
+        check_notebook_guess_command_can_be_default)
+
+
 def test_notebook_command_conflict():
     def check_notebook_conflict_command(dirname):
         project = project_no_dedicated_env(dirname)
