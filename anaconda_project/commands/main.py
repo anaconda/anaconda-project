@@ -97,11 +97,15 @@ def _parse_args_and_run_subcommand(argv):
     add_project_arg(preset)
     preset.set_defaults(main=variable_commands.main_list)
 
-    preset = subparsers.add_parser('add-download', help="Add a URL to be downloaded before running commands")
+    preset = subparsers.add_parser('add-download', help="Add a URL to be downloaded before running commands.")
     add_project_arg(preset)
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
     preset.set_defaults(main=download_commands.main_add)
+
+    preset = subparsers.add_parser('list-downloads', help="Lists all downloads on the project.")
+    add_project_arg(preset)
+    preset.set_defaults(main=download_commands.main_list)
 
     service_types = PluginRegistry().list_service_types()
     service_choices = list(map(lambda s: s.name, service_types))
