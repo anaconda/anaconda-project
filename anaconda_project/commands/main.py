@@ -144,6 +144,12 @@ def _parse_args_and_run_subcommand(argv):
     add_package_args(preset)
     preset.set_defaults(main=environment_commands.main_add_dependencies)
 
+    preset = subparsers.add_parser('remove-dependencies', help="Remove packages from one or all project environments.")
+    add_project_arg(preset)
+    add_environment_arg(preset)
+    preset.add_argument('packages', metavar='PACKAGE_NAME', default=None, nargs='+')
+    preset.set_defaults(main=environment_commands.main_remove_dependencies)
+
     preset = subparsers.add_parser('list-dependencies', help="Lists dependencies for an environment on the project.")
     add_project_arg(preset)
     add_environment_arg(preset)

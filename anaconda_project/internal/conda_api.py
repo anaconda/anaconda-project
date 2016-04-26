@@ -119,6 +119,18 @@ def install(prefix, pkgs=None, channels=()):
     return _call_conda(cmd_list)
 
 
+def remove(prefix, pkgs=None):
+    """Remove packages from an environment either by name or path."""
+    if not pkgs or not isinstance(pkgs, (list, tuple)):
+        raise TypeError('must specify a list of one or more packages to remove from existing environment')
+
+    cmd_list = ['remove', '--yes', '--quiet']
+    cmd_list.extend(['--prefix', prefix])
+
+    cmd_list.extend(pkgs)
+    return _call_conda(cmd_list)
+
+
 def installed(prefix):
     """Get a dict of package names to (name, version, build) tuples."""
     meta_dir = os.path.join(prefix, 'conda-meta')

@@ -58,7 +58,7 @@ def test_conda_info():
     assert 'envs' in json
 
 
-def test_conda_create_and_install(monkeypatch):
+def test_conda_create_and_install_and_remove(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
     def do_test(dirname):
@@ -80,6 +80,10 @@ def test_conda_create_and_install(monkeypatch):
         assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
         conda_api.install(prefix=envdir, pkgs=['ipython'])
         assert os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
+
+        # test that we can remove it again
+        conda_api.remove(prefix=envdir, pkgs=['ipython'])
+        assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
 
     with_directory_contents(dict(), do_test)
 
@@ -120,6 +124,21 @@ def test_conda_install_no_packages(monkeypatch):
 
         with pytest.raises(TypeError) as excinfo:
             conda_api.install(prefix=envdir, pkgs=[])
+        assert 'must specify a list' in repr(excinfo.value)
+
+    with_directory_contents(dict(), do_test)
+
+
+def test_conda_remove_no_packages(monkeypatch):
+    monkeypatch_conda_not_to_use_links(monkeypatch)
+
+    def do_test(dirname):
+        envdir = os.path.join(dirname, "myenv")
+
+        conda_api.create(prefix=envdir, pkgs=['python'])
+
+        with pytest.raises(TypeError) as excinfo:
+            conda_api.remove(prefix=envdir, pkgs=[])
         assert 'must specify a list' in repr(excinfo.value)
 
     with_directory_contents(dict(), do_test)

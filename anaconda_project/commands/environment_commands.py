@@ -43,6 +43,18 @@ def add_dependencies(project, environment, packages, channels):
     return _handle_status(status, success_message)
 
 
+def remove_dependencies(project, environment, packages):
+    """Remove dependencies from the project."""
+    project = Project(project)
+    status = project_ops.remove_dependencies(project, environment=environment, packages=packages)
+    package_list = ", ".join(packages)
+    if environment is None:
+        success_message = "Removed dependencies from project file: %s." % (package_list)
+    else:
+        success_message = "Removed dependencies from environment %s in project file: %s." % (environment, package_list)
+    return _handle_status(status, success_message)
+
+
 def list_environments(project_dir):
     """List environments in the project."""
     project = Project(project_dir)
@@ -77,6 +89,11 @@ def main_add(args):
 def main_add_dependencies(args):
     """Start the add-dependencies command and return exit status code."""
     return add_dependencies(args.project, args.environment, args.packages, args.channel)
+
+
+def main_remove_dependencies(args):
+    """Start the remove-dependencies command and return exit status code."""
+    return remove_dependencies(args.project, args.environment, args.packages)
 
 
 def main_list_environments(args):

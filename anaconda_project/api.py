@@ -302,6 +302,29 @@ class AnacondaProject(object):
                                             packages=packages,
                                             channels=channels)
 
+    def remove_dependencies(self, project, environment, packages):
+        """Attempt to remove dependencies from an environment in project.yml.
+
+        If the environment is None rather than an env name,
+        dependencies are removed from the global dependencies section
+        (from all environments).
+
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the environment requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            environment (str): environment name or None for all environments
+            packages (list of str): dependencies
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.remove_dependencies(project=project, environment=environment, packages=packages)
+
     def add_command(self, project, command_type, name, command):
         """Add a command to project.yml.
 
