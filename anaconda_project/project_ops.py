@@ -31,7 +31,7 @@ def _project_problems_status(project, description=None):
         return None
 
 
-def create(directory_path, make_directory=False):
+def create(directory_path, make_directory=False, name=None, icon=None):
     """Create a project skeleton in the given directory.
 
     Returns a Project instance even if creation fails or the directory
@@ -46,6 +46,8 @@ def create(directory_path, make_directory=False):
     Args:
         directory_path (str): directory to contain project.yml
         make_directory (bool): True to create the directory if it doesn't exist
+        name (str): Name of the new project or None to leave unset (uses directory name)
+        icon (str): Icon for the new project or None to leave unset (uses no icon)
 
     Returns:
         a Project instance
@@ -58,6 +60,11 @@ def create(directory_path, make_directory=False):
             pass
 
     project = Project(directory_path)
+
+    if name is not None:
+        project.project_file.set_value('name', name)
+    if icon is not None:
+        project.project_file.set_value('icon', icon)
 
     # write out the project.yml; note that this will try to create
     # the directory which we may not want... so only do it if

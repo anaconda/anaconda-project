@@ -53,7 +53,7 @@ class AnacondaProject(object):
                                default_conda_environment=default_conda_environment,
                                default_command=default_command)
 
-    def create_project(self, directory_path, make_directory=False):
+    def create_project(self, directory_path, make_directory=False, name=None, icon=None):
         """Create a project skeleton in the given directory.
 
         Returns a Project instance even if creation fails or the directory
@@ -68,6 +68,8 @@ class AnacondaProject(object):
         Args:
             directory_path (str): directory to contain project.yml
             make_directory (bool): True to create the directory if it doesn't exist
+            name (str): Name of the new project or None to leave unset (uses directory name)
+            icon (str): Icon for the new project or None to leave unset (uses no icon)
 
         Returns:
             a Project instance

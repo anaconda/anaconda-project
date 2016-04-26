@@ -46,6 +46,17 @@ def test_create(monkeypatch):
     with_directory_contents(dict(), check_create)
 
 
+def test_create_with_name_and_icon():
+    def check_create(dirname):
+        project = project_ops.create(dirname, make_directory=False, name='hello', icon='something.png')
+        assert [] == project.problems
+        assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+        assert project.name == 'hello'
+        assert project.icon == os.path.join(dirname, 'something.png')
+
+    with_directory_contents({'something.png': 'not a real png'}, check_create)
+
+
 def test_add_variables():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
