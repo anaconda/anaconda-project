@@ -49,6 +49,11 @@ class _ConfigCache(object):
             self.default_default_conda_environment_name = default_default_conda_environment_name
         self.default_conda_environment_name = None
 
+        # future: this can get fancier and look at an ignore file
+        # and stuff like that
+        self.ignored_files = {os.path.join(self.directory_path, relative_name)
+                              for relative_name in ('envs', 'services')}
+
     def update(self, project_file, conda_meta_file):
         if project_file.change_count == self.project_file_count and \
            conda_meta_file.change_count == self.conda_meta_file_count:
@@ -374,6 +379,14 @@ class _ConfigCache(object):
 
     def _add_notebook_commands(self, commands):
         for dirpath, dirnames, filenames in os.walk(self.directory_path):
+            # chop out hidden directories and ignored files. The
+            # main reason to ignore dot directories is that they
+            # might contain packages or git cache data or other
+            # such gunk, not because we really care about
+            # ".foo.ipynb" per se.
+            filenames = [f for f in filenames if not f[0] == '.']
+            dirnames[:] = [d for d in dirnames if (d[0] != '.' and os.path.join(dirpath, d) not in self.ignored_files)]
+
             for fname in filenames:
                 if fname.endswith('.ipynb'):
                     relative_name = subdirectory_relative_to_directory(

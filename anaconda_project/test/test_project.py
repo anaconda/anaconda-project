@@ -890,6 +890,10 @@ def test_notebook_guess_command():
     def check_notebook_guess_command(dirname):
         project = project_no_dedicated_env(dirname)
         assert 'test.ipynb' in project.commands
+        assert 'default' in project.commands
+        assert len(project.commands) == 2  # we should have ignored all the ignored ones
+        assert project.default_command.name == 'default'
+
         command = project.commands['test.ipynb']
         assert command._attributes == {'notebook': 'test.ipynb'}
 
@@ -905,7 +909,11 @@ def test_notebook_guess_command():
     with_directory_contents(
         {
             DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    shell: echo 'pass'",
-            'test.ipynb': 'pretend there is notebook data here'
+            'test.ipynb': 'pretend there is notebook data here',
+            'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            '.should_ignore_dotfile.ipynb': 'moar fake notebook',
+            '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
         }, check_notebook_guess_command)
 
     # anaconda-project launch --command data.ipynb
