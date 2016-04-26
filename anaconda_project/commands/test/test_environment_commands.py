@@ -51,6 +51,19 @@ def _monkeypatch_add_dependencies(monkeypatch, result):
     return params
 
 
+def _monkeypatch_remove_dependencies(monkeypatch, result):
+    params = {}
+
+    def mock_remove_dependencies(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return result
+
+    monkeypatch.setattr("anaconda_project.project_ops.remove_dependencies", mock_remove_dependencies)
+
+    return params
+
+
 def _test_environment_command_with_project_file_problems(capsys, monkeypatch, command, append_dirname=False):
     def check(dirname):
         if append_dirname:
@@ -133,6 +146,11 @@ def test_add_dependencies_with_project_file_problems(capsys, monkeypatch):
                                                          ['anaconda-project', 'add-dependencies', 'foo'])
 
 
+def test_remove_dependencies_with_project_file_problems(capsys, monkeypatch):
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch,
+                                                         ['anaconda-project', 'remove-dependencies', 'foo'])
+
+
 def test_add_dependencies_to_all_environments(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
@@ -174,6 +192,43 @@ environments:
    dependencies:
      - bar
 """}, check)
+
+
+def test_remove_dependencies_from_all_environments(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_remove_dependencies(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-dependencies', 'bar'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Installed ok.\n' + 'Removed dependencies from project file: bar.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(environment=None, packages=['bar']) == params['kwargs']
+
+    with_directory_contents(dict(), check)
+
+
+def test_remove_dependencies_from_specific_environment(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_remove_dependencies(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-dependencies', '--environment', 'foo', 'bar'
+                                               ])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Installed ok.\n' + 'Removed dependencies from environment foo in project file: bar.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(environment='foo', packages=['bar']) == params['kwargs']
+
+    with_directory_contents(dict(), check)
 
 
 def test_list_environments(capsys, monkeypatch):
