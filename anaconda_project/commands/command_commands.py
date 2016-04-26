@@ -69,6 +69,29 @@ def add_command(project_dir, command_type, name, command):
         return 0
 
 
+def list_commands(project_dir):
+    """List the commands on the project.
+
+    Returns:
+        int exit code
+    """
+    project = Project(project_dir)
+    if console_utils.print_project_problems(project):
+        return 1
+
+    if project.commands:
+        print("Commands for project: {}\n".format(project_dir))
+        print('\n'.join(sorted(project.commands.keys())))
+    else:
+        print("No commands found for project: {}\n".format(project_dir))
+    return 0
+
+
 def main(args):
     """Submit the add command with args and returns exit code."""
     return add_command(args.project, args.type, args.name, args.command)
+
+
+def main_list(args):
+    """Start the list command with args and return exit code."""
+    return list_commands(args.project)

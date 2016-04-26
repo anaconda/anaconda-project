@@ -13,7 +13,7 @@ from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
 all_subcommands = ('init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable', 'list-variables',
                    'add-download', 'add-service', 'add-environment', 'list-environments', 'add-dependencies',
-                   'list-dependencies', 'add-command')
+                   'list-dependencies', 'add-command', 'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -73,6 +73,7 @@ expected_usage_msg = \
         '    add-dependencies    Add packages to one or all project environments.\n' \
         '    list-dependencies   Lists dependencies for an environment on the project.\n' \
         '    add-command         Add a new command to the project.\n' \
+        '    list-commands       List the commands on the project.\n' \
         '\n' \
         'optional arguments:\n' \
         '  -h, --help            show this help message and exit\n' \

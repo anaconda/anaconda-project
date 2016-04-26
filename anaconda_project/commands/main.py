@@ -153,6 +153,9 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('name', metavar="NAME", help="Command name used to invoke it")
     preset.add_argument('command', metavar="COMMAND", help="Command line or app filename to add")
     preset.set_defaults(main=command_commands.main)
+    preset = subparsers.add_parser('list-commands', help="List the commands on the project.")
+    add_project_arg(preset)
+    preset.set_defaults(main=command_commands.main_list)
 
     # argparse doesn't do this for us for whatever reason
     if len(argv) < 2:
