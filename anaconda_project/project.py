@@ -359,6 +359,11 @@ class _ConfigCache(object):
 
             self.commands = commands
 
+        if first_command_name is None and len(commands) > 0:
+            # this happens if we created a command automatically
+            # from a notebook file or conda meta.yaml
+            first_command_name = sorted(commands.keys())[0]
+
         if self.default_default_command_name in self.commands:
             self.default_command_name = self.default_default_command_name
         else:
