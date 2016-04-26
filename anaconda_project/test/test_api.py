@@ -90,6 +90,23 @@ def test_prepare_project_browser(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_set_properties(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_set_properties(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.set_properties', mock_set_properties)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, name='foo', icon='bar')
+    result = p.set_properties(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_add_variables(monkeypatch):
     params = dict(args=(), kwargs=dict())
 

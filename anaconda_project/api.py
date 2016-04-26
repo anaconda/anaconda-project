@@ -206,6 +206,25 @@ class AnacondaProject(object):
                                                io_loop=io_loop,
                                                show_url=show_url)
 
+    def set_properties(self, project, name=None, icon=None):
+        """Set simple properties on a project.
+
+        This doesn't support properties which require prepare()
+        actions to check their effects; see other calls such as
+        ``add_dependencies()`` for those.
+
+        This will fail if project.problems is non-empty.
+
+        Args:
+            project (``Project``): the project instance
+            name (str): Name of the new project or None to leave unmodified
+            icon (str): Icon for the new project or None to leave unmodified
+
+        Returns:
+            a ``Status`` instance indicating success or failure
+        """
+        return project_ops.set_properties(project=project, name=name, icon=icon)
+
     def add_variables(self, project, vars_to_add):
         """Add variables in project.yml and set their values in local project state.
 

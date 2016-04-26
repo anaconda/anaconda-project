@@ -69,10 +69,53 @@ def create(directory_path, make_directory=False, name=None, icon=None):
     # write out the project.yml; note that this will try to create
     # the directory which we may not want... so only do it if
     # we're problem-free.
+    project.project_file.use_changes_without_saving()
     if len(project.problems) == 0:
         project.project_file.save()
 
     return project
+
+
+def set_properties(project, name=None, icon=None):
+    """Set simple properties on a project.
+
+    This doesn't support properties which require prepare()
+    actions to check their effects; see other calls such as
+    ``add_dependencies()`` for those.
+
+    This will fail if project.problems is non-empty.
+
+    Args:
+        project (``Project``): the project instance
+        name (str): Name of the new project or None to leave unmodified
+        icon (str): Icon for the new project or None to leave unmodified
+
+    Returns:
+        a ``Status`` instance indicating success or failure
+    """
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+
+    if name is not None:
+        project.project_file.set_value('name', name)
+
+    if icon is not None:
+        project.project_file.set_value('icon', icon)
+
+    project.project_file.use_changes_without_saving()
+
+    if len(project.problems) == 0:
+        # write out the project.yml if it looks like we're safe.
+        project.project_file.save()
+        return SimpleStatus(success=True, description="Project properties updated.")
+    else:
+        # revert to previous state (after extracting project.problems)
+        status = SimpleStatus(success=False,
+                              description="Failed to set project properties.",
+                              errors=list(project.problems))
+        project.project_file.load()
+        return status
 
 
 def _commit_requirement_if_it_works(project, env_var_or_class, default_environment_name=None):

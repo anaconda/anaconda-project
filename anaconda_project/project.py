@@ -96,9 +96,13 @@ class _ConfigCache(object):
 
     def _update_name(self, problems, project_file, conda_meta_file):
         name = project_file.name
-        if name is not None and not isinstance(name, str):
-            problems.append("%s: name: field should have a string value not %r" % (project_file.filename, name))
-            name = None
+        if name is not None:
+            if not isinstance(name, str):
+                problems.append("%s: name: field should have a string value not %r" % (project_file.filename, name))
+                name = None
+            elif len(name.strip()) == 0:
+                problems.append("%s: name: field is an empty or all-whitespace string." % (project_file.filename))
+                name = None
 
         if name is None:
             name = conda_meta_file.name

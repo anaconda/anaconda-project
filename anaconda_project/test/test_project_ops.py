@@ -57,6 +57,79 @@ def test_create_with_name_and_icon():
     with_directory_contents({'something.png': 'not a real png'}, check_create)
 
 
+def test_set_name_and_icon():
+    def check(dirname):
+        project = project_ops.create(dirname, make_directory=False)
+        assert [] == project.problems
+        assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+
+        assert project.name == os.path.basename(dirname)
+        assert project.icon is None
+
+        result = project_ops.set_properties(project, name='hello', icon='something.png')
+        assert result
+
+        assert project.name == 'hello'
+        assert project.icon == os.path.join(dirname, 'something.png')
+
+    with_directory_contents({'something.png': 'not a real png'}, check)
+
+
+def test_set_properties_with_project_file_problems():
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.set_properties(project, name='foo')
+        assert not status
+        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
+                ] == status.errors
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_set_invalid_name():
+    def check(dirname):
+        project = project_ops.create(dirname, make_directory=False)
+        assert [] == project.problems
+        assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+
+        assert project.name == os.path.basename(dirname)
+        assert project.icon is None
+
+        result = project_ops.set_properties(project, name=' ')
+        print(repr(result))
+        assert not result
+        assert 'Failed to set project properties.' == result.status_description
+        assert ["%s: name: field is an empty or all-whitespace string." %
+                (os.path.join(dirname, DEFAULT_PROJECT_FILENAME))] == result.errors
+
+        assert [] == project.problems
+        assert project.name == os.path.basename(dirname)
+        assert project.icon is None
+
+    with_directory_contents(dict(), check)
+
+
+def test_set_invalid_icon():
+    def check(dirname):
+        project = project_ops.create(dirname, make_directory=False)
+        assert [] == project.problems
+        assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+
+        assert project.name == os.path.basename(dirname)
+        assert project.icon is None
+
+        result = project_ops.set_properties(project, icon='foobar')
+        assert not result
+        assert 'Failed to set project properties.' == result.status_description
+        assert ["Icon file %s does not exist." % os.path.join(dirname, 'foobar')] == result.errors
+
+        assert [] == project.problems
+        assert project.name == os.path.basename(dirname)
+        assert project.icon is None
+
+    with_directory_contents(dict(), check)
+
+
 def test_add_variables():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
