@@ -74,7 +74,7 @@ class AnacondaProject(object):
         Returns:
             a Project instance
         """
-        return project_ops.create(directory_path=directory_path, make_directory=make_directory)
+        return project_ops.create(directory_path=directory_path, make_directory=make_directory, name=name, icon=icon)
 
     def prepare_project_locally(self, project, environ, extra_command_args=None):
         """Prepare a project to run one of its commands.

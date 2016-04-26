@@ -21,7 +21,7 @@ def test_create_project(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.create', mock_create_project)
 
     p = api.AnacondaProject()
-    kwargs = dict(directory_path=1, make_directory=2)
+    kwargs = dict(directory_path=1, make_directory=2, name='foo', icon='bar')
     result = p.create_project(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
