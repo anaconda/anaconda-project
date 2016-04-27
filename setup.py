@@ -35,7 +35,7 @@ else:
     RUAMEL_VERSION = "0.10.14"
 REQUIRES = ['beautifulsoup4 >= 4.3', 'ruamel.yaml >= ' + RUAMEL_VERSION, 'tornado >= 4.3', 'pycrypto', 'bcrypt >= 2.0']
 
-TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2']
+TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2', 'pytest-xdist']
 
 # clean up leftover trash as best we can
 BUILD_TMP = os.path.join(ROOT, 'build', 'tmp')
@@ -59,6 +59,13 @@ copyright_header = """
 """.lstrip()
 
 copyright_re = re.compile('# *Copyright ')
+
+try:
+    import multiprocessing
+    CPU_COUNT = multiprocessing.cpu_count()
+except Exception:
+    print("Using fallback CPU count", file=sys.stderr)
+    CPU_COUNT = 4
 
 
 class Profiler(object):
@@ -94,7 +101,7 @@ class AllTestsCommand(TestCommand):
         # To see stdout "live" instead of capturing it, use -s.
         coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=anaconda_project',
                          '--cov-report=term-missing', '--cov-report=html']
-        self.pytest_args = ['-v', '-rw', '--durations=10']
+        self.pytest_args = ['-v', '-rw', '--durations=10', '-n', str(CPU_COUNT)]
         # 100% coverage on Windows requires us to do extra mocks because generally Windows
         # can't run all the servers, such as redis-server. So we relax the coverage requirement
         # for Windows only.
@@ -229,13 +236,7 @@ class AllTestsCommand(TestCommand):
         # very very slow and CPU-bound.
         # Not using a multiprocessing because not sure how its "magic"
         # (pickling, __main__ import) really works.
-        try:
-            import multiprocessing
-            cpu_count = multiprocessing.cpu_count()
-        except Exception:
-            print("Using fallback CPU count", file=sys.stderr)
-            cpu_count = 4
-        print("%d CPUs to run yapf processes" % cpu_count)
+        print("%d CPUs to run yapf processes" % CPU_COUNT)
         processes = []
 
         def await_one_process():
@@ -267,8 +268,8 @@ class AllTestsCommand(TestCommand):
             some_files = take_n(all_files, 3)
             processes.append(self._start_format_files(some_files))
             # don't run too many at once, this is a goofy algorithm
-            if len(processes) > (cpu_count * 3):
-                while len(processes) > cpu_count:
+            if len(processes) > (CPU_COUNT * 3):
+                while len(processes) > CPU_COUNT:
                     await_one_process()
         assert [] == all_files
         await_all_processes()
