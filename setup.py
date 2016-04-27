@@ -104,11 +104,29 @@ copyright_header = """
 copyright_re = re.compile('# *Copyright ')
 
 
+class Profiler(object):
+    def __init__(self):
+        import cProfile
+        self._profiler = cProfile.Profile()
+
+    def enable(self):
+        self._profiler.enable()
+
+    def disable(self):
+        self._profiler.disable()
+
+    def print_report(self):
+        import pstats
+        ps = pstats.Stats(self._profiler, stream=sys.stdout).sort_stats('cumulative')
+        ps.print_stats()
+
+
 class AllTestsCommand(TestCommand):
     # `py.test --durations=5` == `python setup.py test -a "--durations=5"`
     user_options = [('pytest-args=', 'a', "Arguments to pass to py.test"),
                     ('format-only', None, "Only run the linters and formatters not the actual tests"),
-                    ('git-staged-only', None, "Only run the linters and formatters on files added to the commit")]
+                    ('git-staged-only', None, "Only run the linters and formatters on files added to the commit"),
+                    ('profile-formatting', None, "Profile the linter and formatter steps")]
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
@@ -130,6 +148,19 @@ class AllTestsCommand(TestCommand):
         self.failed = []
         self.format_only = False
         self.git_staged_only = False
+        self.profile_formatting = False
+
+    def _with_profile(self, f):
+        if self.profile_formatting:
+            profiler = Profiler()
+            profiler.enable()
+            try:
+                return f()
+            finally:
+                profiler.disable()
+                profiler.print_report()
+        else:
+            return f()
 
     def _py_files(self):
         if self.pyfiles is None:
@@ -334,14 +365,11 @@ column_limit : 120
         if self.git_staged_only:
             print("Only formatting %d git-staged python files, skipping %d files" %
                   (len(self._git_staged_py_files()), len(self._py_files())))
-        self._add_missing_init_py()
-        self._update_version_file()
-        self._headers()
-        self._yapf()
-        self._flake8()
+        for step in (self._add_missing_init_py, self._update_version_file, self._headers, self._yapf, self._flake8):
+            self._with_profile(step)
         if not self.format_only:
             self._pytest()
-        self._pep257()
+        self._with_profile(self._pep257)
         if len(self.failed) > 0:
             print("Failures in: " + repr(self.failed))
             sys.exit(1)
