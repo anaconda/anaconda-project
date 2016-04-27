@@ -171,9 +171,9 @@ class ProjectFile(YamlFile):
 
         to_parse = comment_out(header)
         for section_name, comment in sections.items():
-            if section_name == 'name' or section_name == 'icon':
+            if section_name in ('name', 'icon'):
                 section_body = ""
-            elif section_name == 'channels' or section_name == 'dependencies':
+            elif section_name in ('channels', 'dependencies'):
                 section_body = "  []"
             else:
                 section_body = "  {}"
