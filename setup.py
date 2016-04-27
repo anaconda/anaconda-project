@@ -9,17 +9,16 @@
 from __future__ import print_function
 
 import codecs
-import errno
 import os
 import platform
 import re
 import shutil
 import subprocess
 import sys
-import uuid
 from os.path import dirname, realpath
 from distutils.core import setup
 from setuptools.command.test import test as TestCommand
+from setup_atomic_replace import atomic_replace
 
 VERSION = '0.1'
 
@@ -48,48 +47,6 @@ if os.path.isdir(BUILD_TMP):
         print("Failed to remove %s: %s" % (BUILD_TMP, str(e)))
     else:
         print("Done removing " + BUILD_TMP)
-
-
-def _rename_over_existing(src, dest):
-    try:
-        # On Windows, this will throw EEXIST, on Linux it won't.
-        os.rename(src, dest)
-    except IOError as e:
-        if e.errno == errno.EEXIST:
-            # Clearly this song-and-dance is not in fact atomic,
-            # but if something goes wrong putting the new file in
-            # place at least the backup file might still be
-            # around.
-            backup = dest + ".bak-" + str(uuid.uuid4())
-            os.rename(dest, backup)
-            try:
-                os.rename(src, dest)
-            except Exception as e:
-                os.rename(backup, dest)
-                raise e
-            finally:
-                try:
-                    os.remove(backup)
-                except Exception as e:
-                    pass
-
-
-def _atomic_replace(path, contents, encoding):
-    import uuid
-
-    tmp = path + "tmp-" + str(uuid.uuid4())
-    try:
-        with codecs.open(tmp, 'w', encoding) as file:
-            file.write(contents)
-            file.flush()
-            file.close()
-        _rename_over_existing(tmp, path)
-    finally:
-        try:
-            os.remove(tmp)
-        except (IOError, OSError):
-            pass
-
 
 coding_utf8_header = "# -*- coding: utf-8 -*-\n"
 
@@ -215,7 +172,7 @@ class AllTestsCommand(TestCommand):
         old_content = codecs.open(version_py, 'r', 'utf-8').read()
         if old_content != content:
             print("Updating " + version_py)
-            _atomic_replace(version_py, content, 'utf-8')
+            atomic_replace(version_py, content, 'utf-8')
             self.failed.append('version-file-updated')
 
     def _headerize_file(self, path):
@@ -253,56 +210,69 @@ class AllTestsCommand(TestCommand):
             print("Adding encoding header to: " + path)
             contents = coding_utf8_header + contents
 
-        _atomic_replace(path, contents, 'utf-8')
+        atomic_replace(path, contents, 'utf-8')
 
     def _headers(self):
         print("Checking file headers...")
         for pyfile in self._git_staged_or_all_py_files():
             self._headerize_file(pyfile)
 
-    def _format_file(self, path):
-        import platform
-        from yapf.yapflib.yapf_api import FormatFile
-        config = """{
-column_limit : 120
-}"""
-
-        try:
-            # It might be tempting to use the "inplace" option to
-            # FormatFile, but it doesn't do an atomic replace, which
-            # is dangerous, so don't use it unless you submit a fix to
-            # yapf.
-            (contents, encoding, changed) = FormatFile(path, style_config=config)
-            if platform.system() == 'Windows':
-                # yapf screws up line endings on windows
-                with codecs.open(path, 'r', encoding) as file:
-                    old_contents = file.read()
-                contents = contents.replace("\r\n", "\n")
-                if len(old_contents) == 0:
-                    # windows yapf seems to force a newline? I dunno
-                    contents = ""
-                changed = (old_contents != contents)
-        except Exception as e:
-            error = "yapf crashed on {path}: {error}".format(path=path, error=e)
-            print(error, file=sys.stderr)
-            self.failed.append(error)
-            return
-
-        if changed:
-            _atomic_replace(path, contents, encoding)
-            print("Reformatted:     " + path)
-            # we fail the tests if we reformat anything, because
-            # we want CI to complain if a PR didn't run yapf
-            if len(self.failed) == 0 or self.failed[-1] != 'yapf':
-                self.failed.append("yapf")
-        else:
-            pass
-            # print("No reformatting: " + path)
+    def _start_format_files(self, paths):
+        import subprocess
+        proc = subprocess.Popen([sys.executable, os.path.join(ROOT, 'setup_yapf_task.py')] + paths)
+        return proc
 
     def _yapf(self):
         print("Formatting files...")
-        for pyfile in self._git_staged_or_all_py_files():
-            self._format_file(pyfile)
+
+        # this uses some silly multi-process stuff because Yapf is
+        # very very slow and CPU-bound.
+        # Not using a multiprocessing because not sure how its "magic"
+        # (pickling, __main__ import) really works.
+        try:
+            import multiprocessing
+            cpu_count = multiprocessing.cpu_count()
+        except Exception:
+            print("Using fallback CPU count", file=sys.stderr)
+            cpu_count = 4
+        print("%d CPUs to run yapf processes" % cpu_count)
+        processes = []
+
+        def await_one_process():
+            if processes:
+                # we pop(0) because the first process is the oldest
+                proc = processes.pop(0)
+                proc.wait()
+                if proc.returncode != 0:
+                    # we fail the tests if we reformat anything, because
+                    # we want CI to complain if a PR didn't run yapf
+                    if len(self.failed) == 0 or self.failed[-1] != 'yapf':
+                        self.failed.append("yapf")
+
+        def await_all_processes():
+            while processes:
+                await_one_process()
+
+        def take_n(items, n):
+            result = []
+            while n > 0 and items:
+                result.append(items.pop())
+                n = n - 1
+            return result
+
+        all_files = list(self._git_staged_or_all_py_files())
+        while all_files:
+            # we send a few files to each process to try to reduce
+            # per-process setup time
+            some_files = take_n(all_files, 3)
+            processes.append(self._start_format_files(some_files))
+            # don't run too many at once, this is a goofy algorithm
+            if len(processes) > (cpu_count * 3):
+                while len(processes) > cpu_count:
+                    await_one_process()
+        assert [] == all_files
+        await_all_processes()
+        assert [] == processes
 
     def _flake8(self):
         from flake8.engine import get_style_guide
