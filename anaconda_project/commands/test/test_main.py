@@ -12,9 +12,9 @@ import os
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
 all_subcommands = ('init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable', 'list-variables',
-                   'add-download', 'list-downloads', 'add-service', 'list-services', 'add-environment',
-                   'list-environments', 'add-dependencies', 'remove-dependencies', 'list-dependencies', 'add-command',
-                   'list-commands')
+                   'add-download', 'remove-download', 'list-downloads', 'add-service', 'list-services',
+                   'add-environment', 'list-environments', 'add-dependencies', 'remove-dependencies',
+                   'list-dependencies', 'add-command', 'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -68,6 +68,7 @@ expected_usage_msg = \
         '                        project\n' \
         '    list-variables      Lists all variables on the project.\n' \
         '    add-download        Add a URL to be downloaded before running commands.\n' \
+        '    remove-download     Removes a download from project and filesystem.\n' \
         '    list-downloads      Lists all downloads on the project.\n' \
         '    add-service         Add a service to be available before running commands\n' \
         '    list-services       List services present in project\n' \

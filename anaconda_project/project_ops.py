@@ -14,6 +14,7 @@ from anaconda_project import prepare
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
@@ -162,6 +163,38 @@ def add_download(project, env_var, url):
         project.project_file.set_value(['downloads', env_var], url)
 
     return _commit_requirement_if_it_works(project, env_var)
+
+
+def remove_download(project, env_var):
+    """Remove download from project and from the filesystem if downloaded previously.
+
+    The returned ``Status`` should be a ``RequirementStatus`` for
+    the download requirement if it evaluates to True (on success),
+    but may be another subtype of ``Status`` on failure. A False
+    status will have an ``errors`` property with a list of error
+    strings.
+
+    Args:
+        project (Project): the project
+        env_var (str): env var to store the local filename
+
+    Returns:
+        ``Status`` instance
+    """
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+    # Modify the project file _in memory only_, do not save
+    project.project_file.unset_value(['downloads', env_var])
+    for requirement in project.requirements:
+        if not isinstance(requirement, DownloadRequirement) or requirement.env_var != env_var:
+            continue
+        filepath = os.path.join(project.directory_path, requirement.filename)
+        if os.path.exists(filepath):
+            os.unlink(filepath)
+        project.project_file.save()
+        return SimpleStatus(success=True, description="Removed file '{}' from project.".format(requirement.filename))
+    return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
 
 
 def _update_environment(project, name, packages, channels, create):
