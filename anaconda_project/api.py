@@ -53,7 +53,7 @@ class AnacondaProject(object):
                                default_conda_environment=default_conda_environment,
                                default_command=default_command)
 
-    def create_project(self, directory_path, make_directory=False):
+    def create_project(self, directory_path, make_directory=False, name=None, icon=None):
         """Create a project skeleton in the given directory.
 
         Returns a Project instance even if creation fails or the directory
@@ -68,11 +68,13 @@ class AnacondaProject(object):
         Args:
             directory_path (str): directory to contain project.yml
             make_directory (bool): True to create the directory if it doesn't exist
+            name (str): Name of the new project or None to leave unset (uses directory name)
+            icon (str): Icon for the new project or None to leave unset (uses no icon)
 
         Returns:
             a Project instance
         """
-        return project_ops.create(directory_path=directory_path, make_directory=make_directory)
+        return project_ops.create(directory_path=directory_path, make_directory=make_directory, name=name, icon=icon)
 
     def prepare_project_locally(self, project, environ, extra_command_args=None):
         """Prepare a project to run one of its commands.
@@ -203,6 +205,25 @@ class AnacondaProject(object):
                                                extra_command_args=extra_command_args,
                                                io_loop=io_loop,
                                                show_url=show_url)
+
+    def set_properties(self, project, name=None, icon=None):
+        """Set simple properties on a project.
+
+        This doesn't support properties which require prepare()
+        actions to check their effects; see other calls such as
+        ``add_dependencies()`` for those.
+
+        This will fail if project.problems is non-empty.
+
+        Args:
+            project (``Project``): the project instance
+            name (str): Name of the new project or None to leave unmodified
+            icon (str): Icon for the new project or None to leave unmodified
+
+        Returns:
+            a ``Status`` instance indicating success or failure
+        """
+        return project_ops.set_properties(project=project, name=name, icon=icon)
 
     def add_variables(self, project, vars_to_add):
         """Add variables in project.yml and set their values in local project state.

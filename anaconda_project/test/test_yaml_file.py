@@ -521,3 +521,24 @@ q: 4
         assert not yaml._dirty
 
     with_file_contents(original_content, unset_values)
+
+
+def test_read_yaml_file_and_set_get_empty_string():
+    def check(filename):
+        yaml = YamlFile(filename)
+        assert not yaml.corrupted
+        assert yaml.corrupted_error_message is None
+        assert yaml.change_count == 1
+        value = yaml.get_value("a", None)
+        assert value is None
+
+        yaml.set_value("a", '')
+        value = yaml.get_value("a", None)
+        assert value == ''
+
+        # only-whitespace string
+        yaml.set_value("a", ' ')
+        value = yaml.get_value("a", None)
+        assert value == ' '
+
+    with_file_contents("", check)

@@ -22,16 +22,17 @@ expected_default_file = """# This is an Anaconda project file.
 # (But often you don't have to edit this file by hand!
 # Try the anaconda-project command or Anaconda Navigator to set up your project.)
 #
-# If you want to edit by hand, here are some of the things you can set.
+
 #
 # Set the 'name' key to name your project:
 # name: myproject
 #
+name:
+#
 # Set the 'icon' key to give your project an icon in Navigator:
 # icon: myicon.png
 #
-#
-
+icon:
 #
 # In the commands section, list your runnable scripts, notebooks, and other code.
 # You can give each item a name, and use it with anaconda-project launch, like this:

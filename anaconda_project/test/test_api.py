@@ -21,7 +21,7 @@ def test_create_project(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.create', mock_create_project)
 
     p = api.AnacondaProject()
-    kwargs = dict(directory_path=1, make_directory=2)
+    kwargs = dict(directory_path=1, make_directory=2, name='foo', icon='bar')
     result = p.create_project(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
@@ -86,6 +86,23 @@ def test_prepare_project_browser(monkeypatch):
     p = api.AnacondaProject()
     kwargs = dict(project=43, environ=57, extra_command_args=['1', '2'], io_loop=156, show_url=8909)
     result = p.prepare_project_browser(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
+def test_set_properties(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_set_properties(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.set_properties', mock_set_properties)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, name='foo', icon='bar')
+    result = p.set_properties(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
 

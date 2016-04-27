@@ -89,12 +89,13 @@ class ProjectFile(YamlFile):
                   "about checking for and meeting your requirements.\n" + "\n" +
                   "The file is in YAML format, please see http://www.yaml.org/start.html for more.\n" +
                   "(But often you don't have to edit this file by hand!\n" +
-                  "Try the anaconda-project command or Anaconda Navigator to set up your project.)\n" + "\n" +
-                  "If you want to edit by hand, here are some of the things you can set.\n" + "\n" +
-                  "Set the 'name' key to name your project:\n" + "name: myproject\n" + "\n" +
-                  "Set the 'icon' key to give your project an icon in Navigator:\n" + "icon: myicon.png\n" + "\n")
+                  "Try the anaconda-project command or Anaconda Navigator to set up your project.)\n")
 
         sections = OrderedDict()
+
+        sections['name'] = ("Set the 'name' key to name your project:\n" + "name: myproject\n")
+
+        sections['icon'] = ("Set the 'icon' key to give your project an icon in Navigator:\n" + "icon: myicon.png\n")
 
         sections['commands'] = (
             "In the commands section, list your runnable scripts, notebooks, and other code.\n" +
@@ -170,7 +171,9 @@ class ProjectFile(YamlFile):
 
         to_parse = comment_out(header)
         for section_name, comment in sections.items():
-            if section_name == 'channels' or section_name == 'dependencies':
+            if section_name in ('name', 'icon'):
+                section_body = ""
+            elif section_name in ('channels', 'dependencies'):
                 section_body = "  []"
             else:
                 section_body = "  {}"
