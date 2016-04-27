@@ -63,23 +63,6 @@ def test_add_download(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def test_add_download_fails(capsys, monkeypatch):
-    def check(dirname):
-        _monkeypatch_pwd(monkeypatch, dirname)
-        _monkeypatch_add_download(monkeypatch,
-                                  FakeRequirementStatus(success=False,
-                                                        status_description='Environment variable MYDATA is not set.'))
-
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456'])
-        assert code == 1
-
-        out, err = capsys.readouterr()
-        assert '' == out
-        assert 'This is a log message.\nThis is an error message.\nEnvironment variable MYDATA is not set.\n' == err
-
-    with_directory_contents(dict(), check)
-
-
 def test_add_download_with_project_file_problems(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
@@ -93,3 +76,46 @@ def test_add_download_with_project_file_problems(capsys, monkeypatch):
                 'Unable to load the project.\n') == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_list_downloads_with_project_file_problems(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-downloads'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
+                'Unable to load the project.\n') == err
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_list_empty_downloads(capsys, monkeypatch):
+    def check_list_empty(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-downloads'])
+
+        assert code == 0
+        out, err = capsys.readouterr()
+        expected_out = "No downloads found in project.\n"
+        assert out == expected_out
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)
+
+
+def test_list_downloads(capsys, monkeypatch):
+    def check_list_not_empty(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-downloads'])
+        assert code == 0
+        out, err = capsys.readouterr()
+        expected_out = "Found these downloads in project:\ntest\ntrain\n"
+        assert out == expected_out
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('downloads:\n'
+                                    '  test: http://localhost:8000/test.tgz\n'
+                                    '  train: http://localhost:8000/train.tgz\n')}, check_list_not_empty)
