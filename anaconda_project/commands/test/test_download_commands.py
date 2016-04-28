@@ -142,11 +142,11 @@ def test_remove_download_file_error(capsys, monkeypatch):
         # later, when cleaning up TEST directory, allow removal
         mock_called = []
 
-        def mock_remove(arg):
+        def mock_remove(arg, *args, **kwargs):
             if arg == test_filename and not mock_called:
                 mock_called.append(True)
                 raise Exception('Error')
-            return real_unlink(arg)
+            return real_unlink(arg, *args, **kwargs)
 
         monkeypatch.setattr('os.unlink', mock_remove)
 
@@ -155,7 +155,7 @@ def test_remove_download_file_error(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert "Failed to remove: {}.\n".format(test_filename) == err
+        assert "Failed to remove {}: Error.\n".format(test_filename) == err
 
     with_directory_contents(
         {
@@ -188,7 +188,7 @@ def test_remove_download_directory_error(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert "Failed to remove: {}.\n".format(test_filename) == err
+        assert "Failed to remove {}: Error.\n".format(test_filename) == err
 
     with_directory_contents(
         {

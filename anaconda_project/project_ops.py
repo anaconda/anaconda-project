@@ -169,9 +169,7 @@ def add_download(project, env_var, url):
 def remove_download(project, env_var):
     """Remove download from project and from the filesystem if downloaded previously.
 
-    The returned ``Status`` should be a ``RequirementStatus`` for
-    the download requirement if it evaluates to True (on success),
-    but may be another subtype of ``Status`` on failure. A False
+    The returned ``Status`` will be an instance of ``SimpleStatus``. A False
     status will have an ``errors`` property with a list of error
     strings.
 
@@ -186,13 +184,13 @@ def remove_download(project, env_var):
     if failed is not None:
         return failed
     # Modify the project file _in memory only_, do not save
-    requirement = next(
-        (req for req in project.requirements if isinstance(req, DownloadRequirement) and req.env_var == env_var), None)
+    requirement = project.find_requirements(env_var, klass=DownloadRequirement)
+    if not requirement:
+        return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
+    requirement = requirement[0]
+
     project.project_file.unset_value(['downloads', env_var])
     project.project_file.use_changes_without_saving()
-    if requirement is None:
-        project.project_file.load()
-        return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
 
     filepath = os.path.join(project.directory_path, requirement.filename)
     label = 'file'
@@ -203,9 +201,9 @@ def remove_download(project, env_var):
                 shutil.rmtree(filepath)
             else:
                 os.unlink(filepath)
-        except Exception:
+        except Exception as e:
             project.project_file.load()
-            return SimpleStatus(success=False, description="Failed to remove: {}.".format(filepath))
+            return SimpleStatus(success=False, description="Failed to remove {}: {}.".format(filepath, str(e)))
     project.project_file.save()
     return SimpleStatus(success=True, description="Removed {} '{}' from project.".format(label, requirement.filename))
 
