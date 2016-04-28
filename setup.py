@@ -113,13 +113,6 @@ class AllTestsCommand(TestCommand):
         self.git_staged_only = False
         self.profile_formatting = False
 
-    def _with_profile(self, f):
-        if self.profile_formatting:
-            with Profiler():
-                return f()
-        else:
-            return f()
-
     def _py_files(self):
         if self.pyfiles is None:
             pyfiles = []
@@ -330,11 +323,17 @@ class AllTestsCommand(TestCommand):
         if self.git_staged_only:
             print("Only formatting %d git-staged python files, skipping %d files" %
                   (len(self._git_staged_py_files()), len(self._py_files())))
-        for step in (self._add_missing_init_py, self._update_version_file, self._headers, self._yapf, self._flake8):
-            self._with_profile(step)
+        self._add_missing_init_py()
+        self._update_version_file()
+        self._headers()
+        # only yapf is slow enough to really be worth profiling
+        if self.profile_formatting:
+            with Profiler():
+                self._yapf()
+        self._flake8()
         if not self.format_only:
             self._pytest()
-        self._with_profile(self._pep257)
+        self._pep257()
         if len(self.failed) > 0:
             print("Failures in: " + repr(self.failed))
             sys.exit(1)
