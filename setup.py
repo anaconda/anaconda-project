@@ -73,16 +73,15 @@ class Profiler(object):
         import cProfile
         self._profiler = cProfile.Profile()
 
-    def enable(self):
-        self._profiler.enable()
-
-    def disable(self):
+    def __exit__(self, type, value, traceback):
         self._profiler.disable()
 
-    def print_report(self):
         import pstats
         ps = pstats.Stats(self._profiler, stream=sys.stdout).sort_stats('cumulative')
         ps.print_stats()
+
+    def __enter__(self):
+        self._profiler.enable()
 
 
 class AllTestsCommand(TestCommand):
@@ -116,13 +115,8 @@ class AllTestsCommand(TestCommand):
 
     def _with_profile(self, f):
         if self.profile_formatting:
-            profiler = Profiler()
-            profiler.enable()
-            try:
+            with Profiler():
                 return f()
-            finally:
-                profiler.disable()
-                profiler.print_report()
         else:
             return f()
 
