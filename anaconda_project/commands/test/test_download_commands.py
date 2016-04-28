@@ -6,6 +6,8 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import os
+
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project import Project
@@ -99,13 +101,99 @@ def test_remove_download(capsys, monkeypatch):
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert ("Removed file 'foo.tgz' from project.\nRemoved TEST_FILE to the project file.\n") == out
+        assert ("Removed file 'foo.tgz' from project.\nRemoved TEST_FILE from the project file.\n") == out
         assert '' == err
 
     with_directory_contents(
         {
             DEFAULT_PROJECT_FILENAME: "downloads:\n  TEST_FILE: http://localhost/foo.tgz",
             'foo.tgz': 'data here'
+        }, check)
+
+
+def test_remove_download_dir(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
+        project = Project(dirname)
+        assert not project.downloads
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ("Removed directory 'foo' from project.\nRemoved TEST_FILE from the project file.\n") == out
+        assert '' == err
+
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: "downloads:\n  TEST_FILE: http://localhost/foo.zip",
+            'foo/data.txt': 'data here'
+        }, check)
+
+
+def test_remove_download_file_error(capsys, monkeypatch):
+    def check(dirname):
+        from os import unlink as real_unlink
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        test_filename = os.path.join(dirname, 'foo.tgz')
+
+        # only allow mock to have side effect once
+        # later, when cleaning up TEST directory, allow removal
+        mock_called = []
+
+        def mock_remove(arg):
+            if arg == test_filename and not mock_called:
+                mock_called.append(True)
+                raise Exception('Error')
+            return real_unlink(arg)
+
+        monkeypatch.setattr('os.unlink', mock_remove)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert "Failed to remove: {}.\n".format(test_filename) == err
+
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: "downloads:\n  TEST_FILE: http://localhost/foo.tgz",
+            'foo.tgz': 'data here'
+        }, check)
+
+
+def test_remove_download_directory_error(capsys, monkeypatch):
+    def check(dirname):
+        from shutil import rmtree as real_rmtree
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        test_filename = os.path.join(dirname, 'foo')
+
+        # only allow mock to have side effect once
+        # later, when cleaning up directory, allow removal
+        mock_called = []
+
+        def mock_remove(path, ignore_errors=False, onerror=None):
+            if path == test_filename and not mock_called:
+                mock_called.append(True)
+                raise Exception('Error')
+            return real_rmtree(path, ignore_errors, onerror)
+
+        monkeypatch.setattr('shutil.rmtree', mock_remove)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert "Failed to remove: {}.\n".format(test_filename) == err
+
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: "downloads:\n  TEST_FILE: http://localhost/foo.zip",
+            'foo/data.txt': 'data here'
         }, check)
 
 

@@ -31,7 +31,7 @@ def remove_download(project_dir, filename_variable):
     status = project_ops.remove_download(project, env_var=filename_variable)
     if status:
         print(status.status_description)
-        print("Removed {} to the project file.".format(filename_variable))
+        print("Removed {} from the project file.".format(filename_variable))
         return 0
     else:
         console_utils.print_status_errors(status)

@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import os
+import shutil
 
 from anaconda_project.project import Project, _COMMAND_CHOICES
 from anaconda_project import prepare
@@ -185,16 +186,28 @@ def remove_download(project, env_var):
     if failed is not None:
         return failed
     # Modify the project file _in memory only_, do not save
+    requirement = next(
+        (req for req in project.requirements if isinstance(req, DownloadRequirement) and req.env_var == env_var), None)
     project.project_file.unset_value(['downloads', env_var])
-    for requirement in project.requirements:
-        if not isinstance(requirement, DownloadRequirement) or requirement.env_var != env_var:
-            continue
-        filepath = os.path.join(project.directory_path, requirement.filename)
-        if os.path.exists(filepath):
-            os.unlink(filepath)
-        project.project_file.save()
-        return SimpleStatus(success=True, description="Removed file '{}' from project.".format(requirement.filename))
-    return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
+    project.project_file.use_changes_without_saving()
+    if requirement is None:
+        project.project_file.load()
+        return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
+
+    filepath = os.path.join(project.directory_path, requirement.filename)
+    label = 'file'
+    if os.path.exists(filepath):
+        try:
+            if os.path.isdir(filepath):
+                label = 'directory'
+                shutil.rmtree(filepath)
+            else:
+                os.unlink(filepath)
+        except Exception:
+            project.project_file.load()
+            return SimpleStatus(success=False, description="Failed to remove: {}.".format(filepath))
+    project.project_file.save()
+    return SimpleStatus(success=True, description="Removed {} '{}' from project.".format(label, requirement.filename))
 
 
 def _update_environment(project, name, packages, channels, create):
