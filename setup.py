@@ -334,6 +334,13 @@ class AllTestsCommand(TestCommand):
         if not self.format_only:
             self._pytest()
         self._pep257()
+
+        if os.path.exists(os.path.join(ROOT, '.eggs')):
+            print(".eggs directory exists which means some dependency was not installed via conda/pip")
+            print("  (if this happens on binstar, this may need fixing in .binstar.yml)")
+            print("  (if this happens on your workstation, try conda/pip installing the deps and deleting .eggs")
+            self.failed.append("eggs-directory-exists")
+
         if len(self.failed) > 0:
             print("Failures in: " + repr(self.failed))
             sys.exit(1)
