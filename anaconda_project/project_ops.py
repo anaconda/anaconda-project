@@ -521,25 +521,25 @@ def add_service(project, service_type, variable_name=None):
     assert len(known_types) == 1  # when this fails, see change needed in the loop below
 
     requirement_already_exists = False
-    for requirement in project.requirements:
-        if isinstance(requirement, EnvVarRequirement) and requirement.env_var == variable_name:
-            if isinstance(requirement, ServiceRequirement):
-                assert requirement.service_type == service_type
-                # when the above assertion fails, add the second known type besides
-                # redis in test_project_ops.py::test_add_service_already_exists_with_different_type
-                # and then uncomment the below code.
-                # if requirement.service_type != service_type:
-                #    return SimpleStatus(success=False, description="Unable to add service.", logs=[],
-                #                            errors=["Service %s already exists but with type '%s'" %
-                #                              (variable_name, requirement.service_type)])
-                # else:
-                requirement_already_exists = True
-                break
-            else:
-                return SimpleStatus(success=False,
-                                    description="Unable to add service.",
-                                    logs=[],
-                                    errors=["Variable %s is already in use." % variable_name])
+    existing_requirements = project.find_requirements(env_var=variable_name)
+    if len(existing_requirements) > 0:
+        requirement = existing_requirements[0]
+        if isinstance(requirement, ServiceRequirement):
+            assert requirement.service_type == service_type
+            # when the above assertion fails, add the second known type besides
+            # redis in test_project_ops.py::test_add_service_already_exists_with_different_type
+            # and then uncomment the below code.
+            # if requirement.service_type != service_type:
+            #    return SimpleStatus(success=False, description="Unable to add service.", logs=[],
+            #                            errors=["Service %s already exists but with type '%s'" %
+            #                              (variable_name, requirement.service_type)])
+            # else:
+            requirement_already_exists = True
+        else:
+            return SimpleStatus(success=False,
+                                description="Unable to add service.",
+                                logs=[],
+                                errors=["Variable %s is already in use." % variable_name])
 
     if not requirement_already_exists:
         project.project_file.set_value(['services', variable_name], service_type)

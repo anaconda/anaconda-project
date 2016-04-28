@@ -459,6 +459,27 @@ class Project(object):
         """Required items in order to run this project (list of ``Requirement`` instances)."""
         return self._updated_cache().requirements
 
+    def find_requirements(self, env_var=None, klass=None):
+        """Find requirements that match the given env var and class.
+
+        If env_var and klass are both provided, BOTH must match.
+
+        Args:
+           env_var (str): if not None, filter requirements that have this env_var
+           klass (class): if not None, filter requirements that are an instance of this class
+
+        Returns:
+           list of matching requirements (may be empty)
+        """
+        found = []
+        for req in self.requirements:
+            if env_var is not None and not (isinstance(req, EnvVarRequirement) and req.env_var == env_var):
+                continue
+            if klass is not None and not isinstance(req, klass):
+                continue
+            found.append(req)
+        return found
+
     @property
     def problems(self):
         """List of strings describing problems with the project configuration.
