@@ -15,8 +15,6 @@ from anaconda_project.commands import console_utils
 def add_download(project_dir, filename_variable, download_url):
     """Add an item to the downloads section."""
     project = Project(project_dir)
-    if console_utils.print_project_problems(project):
-        return 1
     status = project_ops.add_download(project, env_var=filename_variable, url=download_url)
     if status:
         print(status.status_description)

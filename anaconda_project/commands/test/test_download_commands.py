@@ -79,7 +79,7 @@ def _test_download_command_with_project_file_problems(capsys, monkeypatch, comma
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
-def test_add_download_with_project_file_problems(capsys, monkeypatch):
+def test_add_download_command_with_project_file_problems(capsys, monkeypatch):
     _test_download_command_with_project_file_problems(
         capsys, monkeypatch, ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456'])
 
