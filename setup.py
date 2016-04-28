@@ -9,17 +9,16 @@
 from __future__ import print_function
 
 import codecs
-import errno
 import os
 import platform
 import re
 import shutil
 import subprocess
 import sys
-import uuid
 from os.path import dirname, realpath
 from distutils.core import setup
 from setuptools.command.test import test as TestCommand
+from setup_atomic_replace import atomic_replace
 
 VERSION = '0.1'
 
@@ -36,7 +35,7 @@ else:
     RUAMEL_VERSION = "0.10.14"
 REQUIRES = ['beautifulsoup4 >= 4.3', 'ruamel.yaml >= ' + RUAMEL_VERSION, 'tornado >= 4.3', 'pycrypto', 'bcrypt >= 2.0']
 
-TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2']
+TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2', 'pytest-xdist']
 
 # clean up leftover trash as best we can
 BUILD_TMP = os.path.join(ROOT, 'build', 'tmp')
@@ -48,48 +47,6 @@ if os.path.isdir(BUILD_TMP):
         print("Failed to remove %s: %s" % (BUILD_TMP, str(e)))
     else:
         print("Done removing " + BUILD_TMP)
-
-
-def _rename_over_existing(src, dest):
-    try:
-        # On Windows, this will throw EEXIST, on Linux it won't.
-        os.rename(src, dest)
-    except IOError as e:
-        if e.errno == errno.EEXIST:
-            # Clearly this song-and-dance is not in fact atomic,
-            # but if something goes wrong putting the new file in
-            # place at least the backup file might still be
-            # around.
-            backup = dest + ".bak-" + str(uuid.uuid4())
-            os.rename(dest, backup)
-            try:
-                os.rename(src, dest)
-            except Exception as e:
-                os.rename(backup, dest)
-                raise e
-            finally:
-                try:
-                    os.remove(backup)
-                except Exception as e:
-                    pass
-
-
-def _atomic_replace(path, contents, encoding):
-    import uuid
-
-    tmp = path + "tmp-" + str(uuid.uuid4())
-    try:
-        with codecs.open(tmp, 'w', encoding) as file:
-            file.write(contents)
-            file.flush()
-            file.close()
-        _rename_over_existing(tmp, path)
-    finally:
-        try:
-            os.remove(tmp)
-        except (IOError, OSError):
-            pass
-
 
 coding_utf8_header = "# -*- coding: utf-8 -*-\n"
 
@@ -103,12 +60,36 @@ copyright_header = """
 
 copyright_re = re.compile('# *Copyright ')
 
+try:
+    import multiprocessing
+    CPU_COUNT = multiprocessing.cpu_count()
+except Exception:
+    print("Using fallback CPU count", file=sys.stderr)
+    CPU_COUNT = 4
+
+
+class Profiler(object):
+    def __init__(self):
+        import cProfile
+        self._profiler = cProfile.Profile()
+
+    def __exit__(self, type, value, traceback):
+        self._profiler.disable()
+
+        import pstats
+        ps = pstats.Stats(self._profiler, stream=sys.stdout).sort_stats('cumulative')
+        ps.print_stats()
+
+    def __enter__(self):
+        self._profiler.enable()
+
 
 class AllTestsCommand(TestCommand):
     # `py.test --durations=5` == `python setup.py test -a "--durations=5"`
     user_options = [('pytest-args=', 'a', "Arguments to pass to py.test"),
                     ('format-only', None, "Only run the linters and formatters not the actual tests"),
-                    ('git-staged-only', None, "Only run the linters and formatters on files added to the commit")]
+                    ('git-staged-only', None, "Only run the linters and formatters on files added to the commit"),
+                    ('profile-formatting', None, "Profile the linter and formatter steps")]
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
@@ -119,7 +100,7 @@ class AllTestsCommand(TestCommand):
         # To see stdout "live" instead of capturing it, use -s.
         coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=anaconda_project',
                          '--cov-report=term-missing', '--cov-report=html']
-        self.pytest_args = ['-v', '-rw', '--durations=10']
+        self.pytest_args = ['-v', '-rw', '--durations=10', '-n', str(CPU_COUNT)]
         # 100% coverage on Windows requires us to do extra mocks because generally Windows
         # can't run all the servers, such as redis-server. So we relax the coverage requirement
         # for Windows only.
@@ -130,6 +111,7 @@ class AllTestsCommand(TestCommand):
         self.failed = []
         self.format_only = False
         self.git_staged_only = False
+        self.profile_formatting = False
 
     def _py_files(self):
         if self.pyfiles is None:
@@ -184,7 +166,7 @@ class AllTestsCommand(TestCommand):
         old_content = codecs.open(version_py, 'r', 'utf-8').read()
         if old_content != content:
             print("Updating " + version_py)
-            _atomic_replace(version_py, content, 'utf-8')
+            atomic_replace(version_py, content, 'utf-8')
             self.failed.append('version-file-updated')
 
     def _headerize_file(self, path):
@@ -222,56 +204,63 @@ class AllTestsCommand(TestCommand):
             print("Adding encoding header to: " + path)
             contents = coding_utf8_header + contents
 
-        _atomic_replace(path, contents, 'utf-8')
+        atomic_replace(path, contents, 'utf-8')
 
     def _headers(self):
         print("Checking file headers...")
         for pyfile in self._git_staged_or_all_py_files():
             self._headerize_file(pyfile)
 
-    def _format_file(self, path):
-        import platform
-        from yapf.yapflib.yapf_api import FormatFile
-        config = """{
-column_limit : 120
-}"""
-
-        try:
-            # It might be tempting to use the "inplace" option to
-            # FormatFile, but it doesn't do an atomic replace, which
-            # is dangerous, so don't use it unless you submit a fix to
-            # yapf.
-            (contents, encoding, changed) = FormatFile(path, style_config=config)
-            if platform.system() == 'Windows':
-                # yapf screws up line endings on windows
-                with codecs.open(path, 'r', encoding) as file:
-                    old_contents = file.read()
-                contents = contents.replace("\r\n", "\n")
-                if len(old_contents) == 0:
-                    # windows yapf seems to force a newline? I dunno
-                    contents = ""
-                changed = (old_contents != contents)
-        except Exception as e:
-            error = "yapf crashed on {path}: {error}".format(path=path, error=e)
-            print(error, file=sys.stderr)
-            self.failed.append(error)
-            return
-
-        if changed:
-            _atomic_replace(path, contents, encoding)
-            print("Reformatted:     " + path)
-            # we fail the tests if we reformat anything, because
-            # we want CI to complain if a PR didn't run yapf
-            if len(self.failed) == 0 or self.failed[-1] != 'yapf':
-                self.failed.append("yapf")
-        else:
-            pass
-            # print("No reformatting: " + path)
+    def _start_format_files(self, paths):
+        import subprocess
+        proc = subprocess.Popen([sys.executable, os.path.join(ROOT, 'setup_yapf_task.py')] + paths)
+        return proc
 
     def _yapf(self):
         print("Formatting files...")
-        for pyfile in self._git_staged_or_all_py_files():
-            self._format_file(pyfile)
+
+        # this uses some silly multi-process stuff because Yapf is
+        # very very slow and CPU-bound.
+        # Not using a multiprocessing because not sure how its "magic"
+        # (pickling, __main__ import) really works.
+        print("%d CPUs to run yapf processes" % CPU_COUNT)
+        processes = []
+
+        def await_one_process():
+            if processes:
+                # we pop(0) because the first process is the oldest
+                proc = processes.pop(0)
+                proc.wait()
+                if proc.returncode != 0:
+                    # we fail the tests if we reformat anything, because
+                    # we want CI to complain if a PR didn't run yapf
+                    if len(self.failed) == 0 or self.failed[-1] != 'yapf':
+                        self.failed.append("yapf")
+
+        def await_all_processes():
+            while processes:
+                await_one_process()
+
+        def take_n(items, n):
+            result = []
+            while n > 0 and items:
+                result.append(items.pop())
+                n = n - 1
+            return result
+
+        all_files = list(self._git_staged_or_all_py_files())
+        while all_files:
+            # we send a few files to each process to try to reduce
+            # per-process setup time
+            some_files = take_n(all_files, 3)
+            processes.append(self._start_format_files(some_files))
+            # don't run too many at once, this is a goofy algorithm
+            if len(processes) > (CPU_COUNT * 3):
+                while len(processes) > CPU_COUNT:
+                    await_one_process()
+        assert [] == all_files
+        await_all_processes()
+        assert [] == processes
 
     def _flake8(self):
         from flake8.engine import get_style_guide
@@ -337,11 +326,21 @@ column_limit : 120
         self._add_missing_init_py()
         self._update_version_file()
         self._headers()
-        self._yapf()
+        # only yapf is slow enough to really be worth profiling
+        if self.profile_formatting:
+            with Profiler():
+                self._yapf()
         self._flake8()
         if not self.format_only:
             self._pytest()
         self._pep257()
+
+        if os.path.exists(os.path.join(ROOT, '.eggs')):
+            print(".eggs directory exists which means some dependency was not installed via conda/pip")
+            print("  (if this happens on binstar, this may need fixing in .binstar.yml)")
+            print("  (if this happens on your workstation, try conda/pip installing the deps and deleting .eggs")
+            self.failed.append("eggs-directory-exists")
+
         if len(self.failed) > 0:
             print("Failures in: " + repr(self.failed))
             sys.exit(1)
