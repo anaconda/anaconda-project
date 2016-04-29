@@ -330,6 +330,8 @@ class AllTestsCommand(TestCommand):
         if self.profile_formatting:
             with Profiler():
                 self._yapf()
+        else:
+            self._yapf()
         self._flake8()
         if not self.format_only:
             self._pytest()
