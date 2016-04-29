@@ -1396,40 +1396,7 @@ def test_get_publication_info_from_empty_project():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_publication_info_from_empty)
 
 
-def test_get_publication_info_from_complex_project():
-    def check_publication_info_from_complex(dirname):
-        project = project_no_dedicated_env(dirname)
-
-        expected = {
-            'name': 'foobar',
-            'commands': {'bar': {'description': 'echo boo'},
-                         'baz': {'description': 'echo blah'},
-                         'foo': {'description': 'echo hi'},
-                         'myapp': {'description': 'Bokeh app main.py',
-                                   'bokeh_app': 'main.py'},
-                         'foo.ipynb': {'description': 'Notebook foo.ipynb',
-                                       'notebook': 'foo.ipynb'}},
-            'downloads': {'FOO': {'encrypted': False,
-                                  'title': 'A downloaded file which is referenced by FOO',
-                                  'url': 'https://example.com/blah'}},
-            'environments': {'lol': {'channels': ['bar'],
-                                     'dependencies': ['foo']},
-                             'w00t': {'channels': ['bar'],
-                                      'dependencies': ['foo', 'something']},
-                             'woot': {'channels': ['bar', 'woohoo'],
-                                      'dependencies': ['foo', 'blah']}},
-            'variables': {'SOMETHING': {'encrypted': False,
-                                        'title': 'SOMETHING environment variable must be set'},
-                          'SOMETHING_ELSE': {'encrypted': False,
-                                             'title': 'SOMETHING_ELSE environment variable must be set'}},
-            'services': {'REDIS_URL': {'title': 'A running Redis server, located by a redis: URL set as REDIS_URL',
-                                       'type': 'redis'}}
-        }
-
-        assert expected == project.publication_info()
-
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+_complicated_project_contents = """
 name: foobar
 
 commands:
@@ -1469,6 +1436,64 @@ variables:
   SOMETHING: {}
   SOMETHING_ELSE: {}
 
-""",
+"""
+
+
+def test_get_publication_info_from_complex_project():
+    def check_publication_info_from_complex(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        expected = {
+            'name': 'foobar',
+            'commands': {'bar': {'description': 'echo boo'},
+                         'baz': {'description': 'echo blah'},
+                         'foo': {'description': 'echo hi'},
+                         'myapp': {'description': 'Bokeh app main.py',
+                                   'bokeh_app': 'main.py'},
+                         'foo.ipynb': {'description': 'Notebook foo.ipynb',
+                                       'notebook': 'foo.ipynb'}},
+            'downloads': {'FOO': {'encrypted': False,
+                                  'title': 'A downloaded file which is referenced by FOO',
+                                  'url': 'https://example.com/blah'}},
+            'environments': {'lol': {'channels': ['bar'],
+                                     'dependencies': ['foo']},
+                             'w00t': {'channels': ['bar'],
+                                      'dependencies': ['foo', 'something']},
+                             'woot': {'channels': ['bar', 'woohoo'],
+                                      'dependencies': ['foo', 'blah']}},
+            'variables': {'SOMETHING': {'encrypted': False,
+                                        'title': 'SOMETHING environment variable must be set'},
+                          'SOMETHING_ELSE': {'encrypted': False,
+                                             'title': 'SOMETHING_ELSE environment variable must be set'}},
+            'services': {'REDIS_URL': {'title': 'A running Redis server, located by a redis: URL set as REDIS_URL',
+                                       'type': 'redis'}}
+        }
+
+        assert expected == project.publication_info()
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
          "main.py": "",
          "foo.ipynb": ""}, check_publication_info_from_complex)
+
+
+def test_find_requirements():
+    def check_find_requirements(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        reqs = project.find_requirements(env_var='SOMETHING')
+        assert len(reqs) == 1
+        assert reqs[0].env_var == 'SOMETHING'
+
+        reqs = project.find_requirements(klass=CondaEnvRequirement)
+        assert len(reqs) == 1
+        assert isinstance(reqs[0], CondaEnvRequirement)
+
+        # the klass and env_var kwargs must be "AND"-ed together
+        reqs = project.find_requirements(klass=CondaEnvRequirement, env_var='SOMETHING')
+        assert [] == reqs
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+         "main.py": "",
+         "foo.ipynb": ""}, check_find_requirements)
