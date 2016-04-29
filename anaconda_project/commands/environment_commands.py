@@ -25,10 +25,17 @@ def _handle_status(status, success_message):
 
 
 def add_environment(project_dir, name, packages, channels):
-    """Add an item to the downloads section."""
+    """Add an environment with packages from specified channels to the project."""
     project = Project(project_dir)
     status = project_ops.add_environment(project, name=name, packages=packages, channels=channels)
-    return _handle_status(status, "Added environment %s to the project file." % name)
+    return _handle_status(status, "Added environment {} to the project file.".format(name))
+
+
+def remove_environment(project_dir, name):
+    """Remove an environment with packages from the project."""
+    project = Project(project_dir)
+    status = project_ops.remove_environment(project, name=name)
+    return _handle_status(status, "Removed environment {} from the project file.".format(name))
 
 
 def add_dependencies(project, environment, packages, channels):
@@ -84,6 +91,11 @@ def list_dependencies(project_dir, environment):
 def main_add(args):
     """Start the add-environment command and return exit status code."""
     return add_environment(args.project, args.name, args.packages, args.channel)
+
+
+def main_remove(args):
+    """Start the remove-environment command and return exit status code."""
+    return remove_environment(args.project, args.name)
 
 
 def main_add_dependencies(args):

@@ -143,6 +143,15 @@ def _parse_args_and_run_subcommand(argv):
                         help="Name of the environment under PROJECT_DIR/envs")
     preset.set_defaults(main=environment_commands.main_add)
 
+    preset = subparsers.add_parser('remove-environment', help="Remove an environment from the project.")
+    add_project_arg(preset)
+    preset.add_argument('-n',
+                        '--name',
+                        metavar='ENVIRONMENT_NAME',
+                        action='store',
+                        help="Name of the environment under PROJECT_DIR/envs")
+    preset.set_defaults(main=environment_commands.main_remove)
+
     preset = subparsers.add_parser('list-environments', help="Lists all environments on the project.")
     add_project_arg(preset)
     preset.set_defaults(main=environment_commands.main_list_environments)

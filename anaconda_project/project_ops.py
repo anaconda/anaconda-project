@@ -291,6 +291,43 @@ def add_environment(project, name, packages, channels):
     return _update_environment(project, name, packages, channels, create=True)
 
 
+def remove_environment(project, name):
+    """Remove the environment from project directory and remove from project.yml.
+
+    Returns a ``Status`` subtype (it won't be a
+    ``RequirementStatus`` as with some other functions, just a
+    plain status).
+
+    Args:
+        project (Project): the project
+        name (str): environment name
+
+    Returns:
+        ``Status`` instance
+    """
+    assert name is not None
+
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+
+    if name not in project.conda_environments:
+        problem = "Environment {} doesn't exist.".format(name)
+        return SimpleStatus(success=False, description=problem)
+
+    env_path = os.path.join(project.directory_path, 'envs', name)
+    if os.path.exists(env_path):
+        try:
+            shutil.rmtree(env_path)
+        except Exception as e:
+            problem = "Failed to remove environment {}: {}".format(name, str(e))
+            return SimpleStatus(success=False, description=problem)
+
+    project.project_file.unset_value(['environments', name])
+    project.project_file.save()
+    return SimpleStatus(success=False, description="Remove environment: {}".format(name))
+
+
 def add_dependencies(project, environment, packages, channels):
     """Attempt to install dependencies then add them to project.yml.
 
