@@ -375,5 +375,6 @@ setup(name='anaconda-project',
           'bin/anaconda-project'
       ],
       packages=[
-          'anaconda_project', 'anaconda_project.internal'
+          'anaconda_project', 'anaconda_project.internal', 'anaconda_project.commands', 'anaconda_project.plugins',
+          'anaconda_project.plugins.providers', 'anaconda_project.plugins.requirements'
       ])
