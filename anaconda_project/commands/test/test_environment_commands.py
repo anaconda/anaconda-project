@@ -6,6 +6,8 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import os
+
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
@@ -136,9 +138,77 @@ def test_add_environment_fails(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
+def test_remove_environment_missing(capsys, monkeypatch):
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'foo'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert "Environment foo doesn't exist.\n" == err
+
+    with_directory_contents(dict(), check)
+
+
+def test_remove_environment_fails(capsys, monkeypatch):
+    def check(dirname):
+        from shutil import rmtree as real_rmtree
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        test_filename = os.path.join(dirname, 'envs', 'foo')
+
+        # only allow mock to have side effect once
+        # later, when cleaning up directory, allow removal
+        mock_called = []
+
+        def mock_remove(path, ignore_errors=False, onerror=None):
+            if path == test_filename and not mock_called:
+                mock_called.append(True)
+                raise Exception('Error')
+            return real_rmtree(path, ignore_errors, onerror)
+
+        monkeypatch.setattr('shutil.rmtree', mock_remove)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'foo'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert "Failed to remove environment foo: Error.\n" == err
+
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: 'environments:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
+            'envs/foo/bin/test': 'code here'
+        }, check)
+
+
+def test_remove_environment(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'foo'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert "Removed environment: foo.\n" == err
+
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: 'environments:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
+            'envs/foo/bin/test': 'code here'
+        }, check)
+
+
 def test_add_environment_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys, monkeypatch,
                                                          ['anaconda-project', 'add-environment', '--name', 'foo'])
+
+
+def test_remove_environment_with_project_file_problems(capsys, monkeypatch):
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch,
+                                                         ['anaconda-project', 'remove-environment', '--name', 'foo'])
 
 
 def test_add_dependencies_with_project_file_problems(capsys, monkeypatch):

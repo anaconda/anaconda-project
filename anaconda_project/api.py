@@ -295,9 +295,7 @@ class AnacondaProject(object):
     def add_environment(self, project, name, packages, channels):
         """Attempt to create the environment and add it to project.yml.
 
-        The returned ``Status`` should be a ``RequirementStatus`` for
-        the environment requirement if it evaluates to True (on success),
-        but may be another subtype of ``Status`` on failure. A False
+        The returned ``Status`` will be an instance of ``SimpleStatus``. A False
         status will have an ``errors`` property with a list of error
         strings.
 
@@ -311,6 +309,22 @@ class AnacondaProject(object):
             ``Status`` instance
         """
         return project_ops.add_environment(project=project, name=name, packages=packages, channels=channels)
+
+    def remove_environment(self, project, name):
+        """Remove environment referenced by ``name`` from file system and the project.
+
+        The returned ``Status`` will be an instance of ``SimpleStatus``. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            env_var (str): env var to store the local filename
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.remove_environment(project=project, name=name)
 
     def add_dependencies(self, project, environment, packages, channels):
         """Attempt to install dependencies then add them to project.yml.

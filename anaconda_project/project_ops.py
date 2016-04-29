@@ -320,12 +320,12 @@ def remove_environment(project, name):
         try:
             shutil.rmtree(env_path)
         except Exception as e:
-            problem = "Failed to remove environment {}: {}".format(name, str(e))
+            problem = "Failed to remove environment {}: {}.".format(name, str(e))
             return SimpleStatus(success=False, description=problem)
 
     project.project_file.unset_value(['environments', name])
     project.project_file.save()
-    return SimpleStatus(success=False, description="Remove environment: {}".format(name))
+    return SimpleStatus(success=False, description="Removed environment: {}.".format(name))
 
 
 def add_dependencies(project, environment, packages, channels):
