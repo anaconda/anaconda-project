@@ -158,6 +158,23 @@ def test_add_download(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_remove_download(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_remove_download(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.remove_download', mock_remove_download)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, env_var='boo')
+    result = p.remove_download(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_add_environment(monkeypatch):
     params = dict(args=(), kwargs=dict())
 

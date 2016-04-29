@@ -276,6 +276,22 @@ class AnacondaProject(object):
         """
         return project_ops.add_download(project=project, env_var=env_var, url=url)
 
+    def remove_download(self, project, env_var):
+        """Remove file or directory referenced by ``env_var`` from file system and the project.
+
+        The returned ``Status`` will be an instance of ``SimpleStatus``. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            env_var (str): env var to store the local filename
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.remove_download(project=project, env_var=env_var)
+
     def add_environment(self, project, name, packages, channels):
         """Attempt to create the environment and add it to project.yml.
 

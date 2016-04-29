@@ -167,7 +167,7 @@ def add_download(project, env_var, url):
 
 
 def remove_download(project, env_var):
-    """Remove download from project and from the filesystem if downloaded previously.
+    """Remove file or directory referenced by ``env_var`` from file system and the project.
 
     The returned ``Status`` will be an instance of ``SimpleStatus``. A False
     status will have an ``errors`` property with a list of error
