@@ -103,6 +103,11 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
     preset.set_defaults(main=download_commands.main_add)
 
+    preset = subparsers.add_parser('remove-download', help="Removes a download from project and filesystem.")
+    add_project_arg(preset)
+    preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
+    preset.set_defaults(main=download_commands.main_remove)
+
     preset = subparsers.add_parser('list-downloads', help="Lists all downloads on the project.")
     add_project_arg(preset)
     preset.set_defaults(main=download_commands.main_list)

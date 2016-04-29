@@ -8,12 +8,14 @@
 from __future__ import absolute_import
 
 import os
+import shutil
 
 from anaconda_project.project import Project, _COMMAND_CHOICES
 from anaconda_project import prepare
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
@@ -162,6 +164,48 @@ def add_download(project, env_var, url):
         project.project_file.set_value(['downloads', env_var], url)
 
     return _commit_requirement_if_it_works(project, env_var)
+
+
+def remove_download(project, env_var):
+    """Remove file or directory referenced by ``env_var`` from file system and the project.
+
+    The returned ``Status`` will be an instance of ``SimpleStatus``. A False
+    status will have an ``errors`` property with a list of error
+    strings.
+
+    Args:
+        project (Project): the project
+        env_var (str): env var to store the local filename
+
+    Returns:
+        ``Status`` instance
+    """
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+    # Modify the project file _in memory only_, do not save
+    requirement = project.find_requirements(env_var, klass=DownloadRequirement)
+    if not requirement:
+        return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
+    requirement = requirement[0]
+
+    project.project_file.unset_value(['downloads', env_var])
+    project.project_file.use_changes_without_saving()
+
+    filepath = os.path.join(project.directory_path, requirement.filename)
+    label = 'file'
+    if os.path.exists(filepath):
+        try:
+            if os.path.isdir(filepath):
+                label = 'directory'
+                shutil.rmtree(filepath)
+            else:
+                os.unlink(filepath)
+        except Exception as e:
+            project.project_file.load()
+            return SimpleStatus(success=False, description="Failed to remove {}: {}.".format(filepath, str(e)))
+    project.project_file.save()
+    return SimpleStatus(success=True, description="Removed {} '{}' from project.".format(label, requirement.filename))
 
 
 def _update_environment(project, name, packages, channels, create):
