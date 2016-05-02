@@ -306,6 +306,8 @@ def remove_environment(project, name):
         ``Status`` instance
     """
     assert name is not None
+    if name == 'default':
+        return SimpleStatus(success=False, description="Cannot remove default environment.")
 
     failed = _project_problems_status(project)
     if failed is not None:
@@ -315,7 +317,7 @@ def remove_environment(project, name):
         problem = "Environment {} doesn't exist.".format(name)
         return SimpleStatus(success=False, description=problem)
 
-    env_path = os.path.join(project.directory_path, 'envs', name)
+    env_path = project.conda_environments[name].path(project.directory_path)
     if os.path.exists(env_path):
         try:
             shutil.rmtree(env_path)
@@ -324,8 +326,11 @@ def remove_environment(project, name):
             return SimpleStatus(success=False, description=problem)
 
     project.project_file.unset_value(['environments', name])
+    project.project_file.use_changes_without_saving()
+    failed = _project_problems_status(project)
+    assert project.problems == []
     project.project_file.save()
-    return SimpleStatus(success=False, description="Removed environment: {}.".format(name))
+    return SimpleStatus(success=True, description="Removed environment: {}.".format(name))
 
 
 def add_dependencies(project, environment, packages, channels):

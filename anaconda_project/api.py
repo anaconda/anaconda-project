@@ -311,15 +311,15 @@ class AnacondaProject(object):
         return project_ops.add_environment(project=project, name=name, packages=packages, channels=channels)
 
     def remove_environment(self, project, name):
-        """Remove environment referenced by ``name`` from file system and the project.
+        """Remove the environment from project directory and remove from project.yml.
 
-        The returned ``Status`` will be an instance of ``SimpleStatus``. A False
-        status will have an ``errors`` property with a list of error
-        strings.
+        Returns a ``Status`` subtype (it won't be a
+        ``RequirementStatus`` as with some other functions, just a
+        plain status).
 
         Args:
             project (Project): the project
-            env_var (str): env var to store the local filename
+            name (str): environment name
 
         Returns:
             ``Status`` instance

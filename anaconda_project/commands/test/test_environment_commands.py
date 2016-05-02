@@ -188,17 +188,31 @@ def test_remove_environment(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'foo'])
-        assert code == 1
+        assert code == 0
 
         out, err = capsys.readouterr()
-        assert '' == out
-        assert "Removed environment: foo.\n" == err
+        assert '' == err
+        assert 'Removed environment: foo.\nRemoved environment foo from the project file.\n' == out
 
     with_directory_contents(
         {
             DEFAULT_PROJECT_FILENAME: 'environments:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
             'envs/foo/bin/test': 'code here'
         }, check)
+
+
+def test_remove_environment_default(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'default'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert "Cannot remove default environment.\n" == err
+
+    with_directory_contents({}, check)
 
 
 def test_add_environment_with_project_file_problems(capsys, monkeypatch):
