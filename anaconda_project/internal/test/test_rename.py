@@ -14,6 +14,13 @@ import os
 import pytest
 
 
+def _raise_file_exists(dst):
+    try:
+        raise FileExistsError(errno.EEXIST, "Cannot create a file when that file already exists", dst)
+    except NameError:
+        raise IOError(errno.EEXIST, "Cannot create a file when that file already exists")
+
+
 def test_rename_target_does_not_exist():
     def do_test(dirname):
         name1 = os.path.join(dirname, "foo")
@@ -66,7 +73,7 @@ def test_rename_target_does_exist_simulating_windows(monkeypatch):
             if '.bak' in dst:
                 saved_backup['path'] = dst
             if os.path.exists(dst):
-                raise FileExistsError(errno.EEXIST, "Cannot create a file when that file already exists", dst)
+                _raise_file_exists(dst)
             else:
                 real_rename(src, dst)
 
@@ -95,7 +102,7 @@ def test_rename_target_to_backup_fails(monkeypatch):
 
         def mock_rename(src, dst):
             if os.path.exists(dst):
-                raise FileExistsError(errno.EEXIST, "Cannot create a file when that file already exists", dst)
+                _raise_file_exists(dst)
             elif '.bak' in dst:
                 raise OSError("Failing rename to backup")
             else:
@@ -132,7 +139,7 @@ def test_rename_after_backup_fails(monkeypatch):
             if '.bak' in dst:
                 saved_backup['path'] = dst
             if os.path.exists(dst):
-                raise FileExistsError(errno.EEXIST, "Cannot create a file when that file already exists", dst)
+                _raise_file_exists(dst)
             elif 'path' in saved_backup and os.path.exists(saved_backup['path']) and src != saved_backup['path']:
                 assert not os.path.exists(name2)
                 assert os.path.exists(saved_backup['path'])
@@ -172,7 +179,7 @@ def test_rename_target_does_exist_simulating_windows_remove_backup_fails(monkeyp
             if '.bak' in dst:
                 saved_backup['path'] = dst
             if os.path.exists(dst):
-                raise FileExistsError(errno.EEXIST, "Cannot create a file when that file already exists", dst)
+                _raise_file_exists(dst)
             else:
                 real_rename(src, dst)
 
@@ -191,6 +198,10 @@ def test_rename_target_does_exist_simulating_windows_remove_backup_fails(monkeyp
         assert open(name2).read() == 'stuff-foo'
         # backup file gets left around
         assert os.path.exists(saved_backup['path'])
+
+        # otherwise the os.remove monkeypatch affects cleaning up the tmp
+        # directory - but only on python 2.
+        monkeypatch.undo()
 
     with_directory_contents(dict(foo='stuff-foo', bar='stuff-bar'), do_test)
 
