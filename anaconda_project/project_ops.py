@@ -327,7 +327,6 @@ def remove_environment(project, name):
 
     project.project_file.unset_value(['environments', name])
     project.project_file.use_changes_without_saving()
-    failed = _project_problems_status(project)
     assert project.problems == []
     project.project_file.save()
     return SimpleStatus(success=True, description="Removed environment: {}.".format(name))
