@@ -588,6 +588,8 @@ class Project(object):
                 commands[key]['bokeh_app'] = command.bokeh_app
             if command.notebook is not None:
                 commands[key]['notebook'] = command.notebook
+            if command is self.default_command:
+                commands[key]['default'] = True
         json['commands'] = commands
         envs = dict()
         for key, env in self.conda_environments.items():
