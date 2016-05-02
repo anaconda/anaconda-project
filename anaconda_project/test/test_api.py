@@ -262,6 +262,25 @@ def test_add_command(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_remove_command(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_remove_command(*args, **kwargs):
+        print(args, kwargs)
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.remove_command', mock_remove_command)
+
+    p = api.AnacondaProject()
+
+    kwargs = dict(project=43, name='name')
+    result = p.remove_command(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_add_service(monkeypatch):
     params = dict(args=(), kwargs=dict())
 

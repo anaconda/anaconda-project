@@ -393,6 +393,22 @@ class AnacondaProject(object):
         """
         return project_ops.add_command(project=project, command_type=command_type, name=name, command=command)
 
+    def remove_command(self, project, name):
+        """Remove a command from project.yml.
+
+        Returns a ``Status`` subtype (it won't be a
+        ``RequirementStatus`` as with some other functions, just a
+        plain status).
+
+        Args:
+           project (Project): the project
+           name (string): name of the command to be removed
+
+        Returns:
+           a ``Status`` instance
+        """
+        return project_ops.add_command(project=project, name=name)
+
     def add_service(self, project, service_type, variable_name=None):
         """Add a service to project.yml.
 
