@@ -14,7 +14,7 @@ from anaconda_project.commands.main import _parse_args_and_run_subcommand
 all_subcommands = ('init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable', 'list-variables',
                    'add-download', 'remove-download', 'list-downloads', 'add-service', 'list-services',
                    'add-environment', 'remove-environment', 'list-environments', 'add-dependencies',
-                   'remove-dependencies', 'list-dependencies', 'add-command', 'list-commands')
+                   'remove-dependencies', 'list-dependencies', 'add-command', 'remove-command', 'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -80,6 +80,7 @@ expected_usage_msg = \
         '                        Remove packages from one or all project environments.\n' \
         '    list-dependencies   Lists dependencies for an environment on the project.\n' \
         '    add-command         Add a new command to the project.\n' \
+        '    remove-command      Remove a command from the project.\n' \
         '    list-commands       List the commands on the project.\n' \
         '\n' \
         'optional arguments:\n' \

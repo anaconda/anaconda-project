@@ -895,7 +895,7 @@ def test_notebook_guess_command():
         assert project.default_command.name == 'default'
 
         command = project.commands['test.ipynb']
-        assert command._attributes == {'notebook': 'test.ipynb'}
+        assert command._attributes == {'notebook': 'test.ipynb', 'auto_generated': True}
 
         expected_nb_path = os.path.join(dirname, 'test.ipynb')
         environ = minimal_environ(PROJECT_DIR=dirname)

@@ -403,7 +403,8 @@ class _ConfigCache(object):
 
                     if relative_name not in commands:
                         commands[relative_name] = ProjectCommand(name=relative_name,
-                                                                 attributes={'notebook': relative_name})
+                                                                 attributes={'notebook': relative_name,
+                                                                             'auto_generated': True})
 
 
 class Project(object):
