@@ -32,6 +32,7 @@ def test_prepare_empty_directory():
         assert result
         assert dict(PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict() == strip_environ(environ)
+        assert result.command_exec_info is None
 
     with_directory_contents(dict(), prepare_empty)
 
@@ -154,6 +155,31 @@ from __future__ import print_function
 import sys
 print(repr(sys.argv))
 """}, prepare_with_app_entry)
+
+
+def test_prepare_choose_command():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ, command_name='foo')
+        assert result
+        assert result.command_exec_info.bokeh_app == 'foo.py'
+
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ, command_name='bar')
+        assert result
+        assert result.command_exec_info.bokeh_app == 'bar.py'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+commands:
+    foo:
+       bokeh_app: foo.py
+    bar:
+       bokeh_app: bar.py
+""",
+         "foo.py": "# foo",
+         "bar.py": "# bar"}, check)
 
 
 def test_update_environ():

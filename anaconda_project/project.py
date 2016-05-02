@@ -26,7 +26,7 @@ _COMMAND_CHOICES = ('conda_app_entry', 'shell', 'windows', 'notebook', 'bokeh_ap
 
 
 class _ConfigCache(object):
-    def __init__(self, directory_path, registry, default_default_conda_environment_name, default_default_command_name):
+    def __init__(self, directory_path, registry, default_default_conda_environment_name):
         self.directory_path = directory_path
         if registry is None:
             registry = PluginRegistry()
@@ -35,10 +35,6 @@ class _ConfigCache(object):
         self.name = None
         self.icon = None
         self.commands = dict()
-        if default_default_command_name is None:
-            self.default_default_command_name = 'default'
-        else:
-            self.default_default_command_name = default_default_command_name
         self.default_command_name = None
         self.project_file_count = 0
         self.conda_meta_file_count = 0
@@ -373,18 +369,12 @@ class _ConfigCache(object):
             # from a notebook file or conda meta.yaml
             first_command_name = sorted(commands.keys())[0]
 
-        if self.default_default_command_name in self.commands:
-            self.default_command_name = self.default_default_command_name
+        if 'default' in self.commands:
+            self.default_command_name = 'default'
         else:
             # 'default' is always mapped to the first-listed if none is named 'default'
-            if self.default_default_command_name == 'default':
-                # note: this may be None
-                self.default_command_name = first_command_name
-            else:
-                problems.append("Command name '%s' is not in %s, these names were found: %s" %
-                                (self.default_default_command_name, project_file.filename,
-                                 ", ".join(sorted(self.commands.keys()))))
-                self.default_command_name = None
+            # note: this may be None
+            self.default_command_name = first_command_name
 
     def _add_notebook_commands(self, commands):
         for dirpath, dirnames, filenames in os.walk(self.directory_path):
@@ -414,21 +404,19 @@ class Project(object):
     the project directory or global user configuration.
     """
 
-    def __init__(self, directory_path, plugin_registry=None, default_conda_environment=None, default_command=None):
+    def __init__(self, directory_path, plugin_registry=None, default_conda_environment=None):
         """Construct a Project with the given directory and plugin registry.
 
         Args:
             directory_path (str): path to the project directory
             plugin_registry (PluginRegistry): where to look up Requirement and Provider instances, None for default
             default_conda_environment (str): name of conda environment spec to use by default
-            default_command (str): name of command from commands section to use by default
         """
         self._directory_path = os.path.realpath(directory_path)
         self._project_file = ProjectFile.load_for_directory(directory_path)
         self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
-        self._config_cache = _ConfigCache(self._directory_path, plugin_registry, default_conda_environment,
-                                          default_command)
+        self._config_cache = _ConfigCache(self._directory_path, plugin_registry, default_conda_environment)
 
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._conda_meta_file)
@@ -561,20 +549,21 @@ class Project(object):
         else:
             return cache.commands[cache.default_command_name]
 
-    def exec_info_for_environment(self, environ, extra_args=None):
+    def exec_info_for_environment(self, environ, command_name=None, extra_args=None):
         """Get the information needed to run the project.
 
         Args:
             environ (dict): the environment
+            command_name (str): the command to get info for, None for the default
             extra_args (list of str): extra args to append to the command line
         Returns:
             argv as list of strings, or None if no commands are configured that work on our platform
         """
-        # we use ANACONDA_PROJECT_COMMAND if configured and otherwise
-        # the default command
-        command_name = environ.get('ANACONDA_PROJECT_COMMAND', self._updated_cache().default_command_name)
+        if command_name is None:
+            command_name = self._updated_cache().default_command_name
         if command_name is None:
             return None
+        assert command_name in self._updated_cache().commands
         command = self._updated_cache().commands[command_name]
 
         return command.exec_info_for_environment(environ, extra_args)

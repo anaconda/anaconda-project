@@ -939,48 +939,6 @@ def test_notebook_guess_command_can_be_default():
         check_notebook_guess_command_can_be_default)
 
 
-def test_notebook_guess_command_can_be_default_fails_on_nonexistent_constructor_default():
-    def check_notebook_guess_command_can_be_default(dirname):
-        project = project_no_dedicated_env(dirname, default_command='nope')
-        assert ["Command name 'nope' is not in %s, these names were found: a.ipynb, b.ipynb, c.ipynb, d.ipynb" %
-                (os.path.join(dirname, DEFAULT_PROJECT_FILENAME))] == project.problems
-        # both of these are considered "undefined" given project.problems, but
-        # confirm their current behavior, why not.
-        assert len(project.commands) == 4
-        assert project.default_command is None
-
-    with_directory_contents(
-        {
-            # we pick the first command alphabetically in this case
-            # so the test looks for that
-            'a.ipynb': 'pretend there is notebook data here',
-            'b.ipynb': 'pretend there is notebook data here',
-            'c.ipynb': 'pretend there is notebook data here',
-            'd.ipynb': 'pretend there is notebook data here'
-        },
-        check_notebook_guess_command_can_be_default)
-
-
-def test_notebook_guess_command_can_be_default_uses_existent_constructor_default():
-    def check_notebook_guess_command_can_be_default(dirname):
-        project = project_no_dedicated_env(dirname, default_command='c.ipynb')
-        assert [] == project.problems
-        assert len(project.commands) == 4
-        assert project.default_command is not None
-        assert project.default_command.notebook == 'c.ipynb'
-
-    with_directory_contents(
-        {
-            # we pick the first command alphabetically in this case
-            # so the test looks for that
-            'a.ipynb': 'pretend there is notebook data here',
-            'b.ipynb': 'pretend there is notebook data here',
-            'c.ipynb': 'pretend there is notebook data here',
-            'd.ipynb': 'pretend there is notebook data here'
-        },
-        check_notebook_guess_command_can_be_default)
-
-
 def test_notebook_command_conflict():
     def check_notebook_conflict_command(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1212,7 +1170,7 @@ def _launch_argv_for_environment(environ,
         try:
             project = project_no_dedicated_env(dirname)
             assert [] == project.problems
-            exec_info = project.exec_info_for_environment(environ, extra_args)
+            exec_info = project.exec_info_for_environment(environ, extra_args=extra_args)
             if exec_info.shell:
                 args = exec_info.args[0]
             else:
