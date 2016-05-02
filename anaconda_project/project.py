@@ -26,7 +26,7 @@ _COMMAND_CHOICES = ('conda_app_entry', 'shell', 'windows', 'notebook', 'bokeh_ap
 
 
 class _ConfigCache(object):
-    def __init__(self, directory_path, registry, default_default_conda_environment_name):
+    def __init__(self, directory_path, registry):
         self.directory_path = directory_path
         if registry is None:
             registry = PluginRegistry()
@@ -39,10 +39,6 @@ class _ConfigCache(object):
         self.project_file_count = 0
         self.conda_meta_file_count = 0
         self.conda_environments = dict()
-        if default_default_conda_environment_name is None:
-            self.default_default_conda_environment_name = 'default'
-        else:
-            self.default_default_conda_environment_name = default_default_conda_environment_name
         self.default_conda_environment_name = None
 
         # future: this can get fancier and look at an ignore file
@@ -264,21 +260,17 @@ class _ConfigCache(object):
         # environment; it doesn't have to be named 'default' but
         # we name it that if no named environment was created.
         if len(self.conda_environments) == 0:
+            assert first_listed_name is None
+            first_listed_name = 'default'
             self.conda_environments['default'] = CondaEnvironment(name='default',
                                                                   dependencies=shared_deps,
                                                                   channels=shared_channels)
 
-        if self.default_default_conda_environment_name in self.conda_environments:
-            self.default_conda_environment_name = self.default_default_conda_environment_name
+        assert first_listed_name is not None
+        if 'default' in self.conda_environments:
+            self.default_conda_environment_name = 'default'
         else:
-            # 'default' is always mapped to the first-listed if none is named 'default'
-            if self.default_default_conda_environment_name == 'default':
-                self.default_conda_environment_name = first_listed_name
-            else:
-                self.default_conda_environment_name = None
-                problems.append("Environment name '%s' is not in %s, these names were found: %s" %
-                                (self.default_default_conda_environment_name, project_file.filename,
-                                 ", ".join(sorted(self.conda_environments.keys()))))
+            self.default_conda_environment_name = first_listed_name
 
     def _update_conda_env_requirements(self, requirements, problems, project_file):
         if problems:
@@ -404,19 +396,18 @@ class Project(object):
     the project directory or global user configuration.
     """
 
-    def __init__(self, directory_path, plugin_registry=None, default_conda_environment=None):
+    def __init__(self, directory_path, plugin_registry=None):
         """Construct a Project with the given directory and plugin registry.
 
         Args:
             directory_path (str): path to the project directory
             plugin_registry (PluginRegistry): where to look up Requirement and Provider instances, None for default
-            default_conda_environment (str): name of conda environment spec to use by default
         """
         self._directory_path = os.path.realpath(directory_path)
         self._project_file = ProjectFile.load_for_directory(directory_path)
         self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
-        self._config_cache = _ConfigCache(self._directory_path, plugin_registry, default_conda_environment)
+        self._config_cache = _ConfigCache(self._directory_path, plugin_registry)
 
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._conda_meta_file)

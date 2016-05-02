@@ -9,6 +9,7 @@ import os
 
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirement import UserConfigOverrides
 from anaconda_project.plugins.requirements.download import DownloadRequirement
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
@@ -23,7 +24,7 @@ def test_filename_not_set():
                                           env_var=ENV_VAR,
                                           url='http://example.com',
                                           filename=ENV_VAR)
-        status = requirement.check_status(dict(PROJECT_DIR=dirname), local_state)
+        status = requirement.check_status(dict(PROJECT_DIR=dirname), local_state, UserConfigOverrides())
         assert not status
         assert "Environment variable {} is not set.".format(ENV_VAR) == status.status_description
 
@@ -38,7 +39,8 @@ def test_download_filename_missing():
                                           env_var=ENV_VAR,
                                           url='http://localhost/data.zip',
                                           filename='data.zip')
-        status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
+        status = requirement.check_status({ENV_VAR: filename,
+                                           'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
         assert not status
         assert 'File not found: {}'.format(filename) == status.status_description
 
@@ -68,7 +70,8 @@ def test_download_checksum():
                                           filename='data.zip',
                                           hash_algorithm='md5',
                                           hash_value=digest)
-        status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
+        status = requirement.check_status({ENV_VAR: filename,
+                                           'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
         assert 'File downloaded to {}'.format(filename) == status.status_description
         assert status
 
@@ -85,7 +88,8 @@ def test_download_with_no_checksum():
                                           env_var=ENV_VAR,
                                           url='http://localhost/data.zip',
                                           filename='data.zip')
-        status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
+        status = requirement.check_status({ENV_VAR: filename,
+                                           'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
         assert status
         assert 'File downloaded to {}'.format(filename) == status.status_description
 
@@ -105,7 +109,8 @@ def test_download_wrong_checksum():
                                           filename='data.zip',
                                           hash_algorithm='md5',
                                           hash_value=digest)
-        status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
+        status = requirement.check_status({ENV_VAR: filename,
+                                           'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
         assert not status
         assert 'File checksum error for {}, expected {} but was {}'.format(
             filename, 'aeca3c870b9de245e8f8c2d27ce85763_BROKEN',
@@ -132,7 +137,8 @@ def test_download_error_readfile(monkeypatch):
                                           hash_value=digest)
         monkeypatch.setattr(
             'anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none', checksum_mock)
-        status = requirement.check_status({ENV_VAR: filename, 'PROJECT_DIR': dirname}, local_state)
+        status = requirement.check_status({ENV_VAR: filename,
+                                           'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
         assert not status
         assert 'File referenced by: {} cannot be read ({})'.format(ENV_VAR, filename) == status.status_description
 

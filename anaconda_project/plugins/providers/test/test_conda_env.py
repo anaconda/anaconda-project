@@ -168,7 +168,12 @@ dependencies:
 """}, prepare_project_scoped_env_with_packages)
 
 
-def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_actions, final_result_check):
+def _run_browser_ui_test(monkeypatch,
+                         directory_contents,
+                         initial_environ,
+                         http_actions,
+                         final_result_check,
+                         conda_environment_override=None):
     from tornado.ioloop import IOLoop
     io_loop = IOLoop()
 
@@ -177,7 +182,7 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
         metadir = os.path.join(prefix, "conda-meta")
         makedirs_ok_if_exists(metadir)
         for p in pkgs:
-            pkgmeta = os.path.join(metadir, "%s-0.1.json" % p)
+            pkgmeta = os.path.join(metadir, "%s-0.1-pyNN.json" % p)
             open(pkgmeta, 'a').close()
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_conda_create)
@@ -208,7 +213,11 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
             environ = initial_environ(dirname)
         else:
             environ = initial_environ
-        result = prepare_with_browser_ui(project, environ=environ, io_loop=io_loop, keep_going_until_success=True)
+        result = prepare_with_browser_ui(project,
+                                         environ=environ,
+                                         io_loop=io_loop,
+                                         keep_going_until_success=True,
+                                         conda_environment_name=conda_environment_override)
 
         # finish up the last http action if prepare_ui.py stopped the loop before we did
         while 'done' not in http_done:
@@ -576,3 +585,56 @@ environments:
                          initial_environ=initial_environ,
                          http_actions=[get_initial, post_choosing_second],
                          final_result_check=final_result_check)
+
+
+def test_browser_ui_two_envs_user_override(monkeypatch):
+    directory_contents = {DEFAULT_PROJECT_FILENAME: """
+environments:
+  first_env: {}
+  second_env:
+    dependencies:
+      - python
+"""}
+    initial_environ = minimal_environ_no_conda_env()
+
+    @gen.coroutine
+    def get_initial(url):
+        response = yield http_get_async(url)
+        assert response.code == 200
+        body = response.body.decode('utf-8')
+        # print("BODY: " + body)
+        assert "second_env' doesn't look like it contains a Conda environment yet." in body
+        _verify_choices(response,
+                        (
+                            # by default, use the user override specifying a project-defined named env
+                            ('project', True),
+                            # allow typing in a manual value
+                            ('variables', False)))
+
+    @gen.coroutine
+    def post_empty_form(url):
+        response = yield http_post_async(url, body='')
+        assert response.code == 200
+        body = response.body.decode('utf-8')
+        print(repr(body))
+        assert "Done!" in body
+        assert "Using Conda environment" in body
+        assert "second_env" in body
+        _verify_choices(response, ())
+
+    def final_result_check(dirname, result):
+        assert result
+        expected_env_path = os.path.join(dirname, 'envs', 'second_env')
+        expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
+        if platform.system() == 'Windows':
+            del expected['CONDA_ENV_PATH']
+        assert expected == strip_environ_keeping_conda_env(result.environ)
+        bindir = os.path.join(expected_env_path, script_dir)
+        assert bindir in result.environ.get("PATH")
+
+    _run_browser_ui_test(monkeypatch=monkeypatch,
+                         directory_contents=directory_contents,
+                         initial_environ=initial_environ,
+                         http_actions=[get_initial, post_empty_form],
+                         final_result_check=final_result_check,
+                         conda_environment_override='second_env')

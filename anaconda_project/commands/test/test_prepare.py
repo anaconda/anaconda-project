@@ -200,12 +200,29 @@ services:
     assert "All ports from 6380 to 6449 were in use" in err
 
 
-def test_prepare_command_choose_environment(capsys):
+def test_prepare_command_choose_environment(capsys, monkeypatch):
+    def mock_conda_create(prefix, pkgs, channels):
+        from anaconda_project.internal.makedirs import makedirs_ok_if_exists
+        metadir = os.path.join(prefix, "conda-meta")
+        makedirs_ok_if_exists(metadir)
+        for p in pkgs:
+            pkgmeta = os.path.join(metadir, "%s-0.1-pyNN.json" % p)
+            open(pkgmeta, 'a').close()
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_conda_create)
+
     def check_prepare_choose_environment(dirname):
-        project_dir_disable_dedicated_env(dirname)
+        wrong_envdir = os.path.join(dirname, "envs", "foo")
+        envdir = os.path.join(dirname, "envs", "bar")
         result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname,
                                                  '--environment=bar'])
-        assert result == 1
+        assert result == 0
+
+        assert os.path.isdir(envdir)
+        assert not os.path.isdir(wrong_envdir)
+
+        package_json = os.path.join(envdir, "conda-meta", "nonexistent_bar-0.1-pyNN.json")
+        assert os.path.isfile(package_json)
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
@@ -220,7 +237,7 @@ environments:
 
     out, err = capsys.readouterr()
     assert out == ""
-    assert 'Conda environment is missing packages: nonexistent_bar' in err
+    assert err == ""
 
 
 def test_prepare_command_choose_environment_does_not_exist(capsys):

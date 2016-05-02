@@ -15,7 +15,7 @@ from anaconda_project.internal.crypto import encrypt_string
 from anaconda_project.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
 from anaconda_project.plugins.provider import (Provider, ProvideContext, EnvVarProvider, ProvideResult)
 from anaconda_project.plugins.registry import PluginRegistry
-from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
 from anaconda_project.project import Project
 from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
 from anaconda_project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME
@@ -40,7 +40,7 @@ def test_provider_default_method_implementations():
         def title(self):
             return ""
 
-        def read_config(self, requirement, environ, local_state_file):
+        def read_config(self, requirement, environ, local_state_file, overrides):
             return dict()
 
         def provide(self, requirement, context):
@@ -49,7 +49,11 @@ def test_provider_default_method_implementations():
     provider = UselessProvider()
     # this method is supposed to do nothing by default (ignore
     # unknown names, in particular)
-    provider.set_config_values_as_strings(requirement=None, environ=None, local_state_file=None, values=dict())
+    provider.set_config_values_as_strings(requirement=None,
+                                          environ=None,
+                                          local_state_file=None,
+                                          overrides=None,
+                                          values=dict())
     # this is supposed to return None by default
     provider.config_html(requirement=None, environ=None, local_state_file=None, status=None) is None
 
@@ -69,7 +73,7 @@ def test_env_var_provider_with_no_value():
         provider = EnvVarProvider()
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        status = requirement.check_status(dict(), local_state_file)
+        status = requirement.check_status(dict(), local_state_file, UserConfigOverrides())
         context = ProvideContext(environ=dict(),
                                  local_state_file=local_state_file,
                                  status=status,
@@ -90,7 +94,7 @@ def test_env_var_provider_with_default_value_in_project_file():
         requirement = _load_env_var_requirement(dirname, "FOO")
         assert dict(default='from_default') == requirement.options
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        status = requirement.check_status(dict(), local_state_file)
+        status = requirement.check_status(dict(), local_state_file, UserConfigOverrides())
         context = ProvideContext(environ=dict(),
                                  local_state_file=local_state_file,
                                  status=status,
@@ -123,7 +127,7 @@ def test_env_var_provider_with_encrypted_default_value_in_project_file():
         assert dict(default=dict(key='MASTER', encrypted=encrypted)) == requirement.options
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict(MASTER=secret)
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         assert ('ANACONDA_MASTER_PASSWORD', ) == status.analysis.missing_env_vars_to_configure
         assert ('MASTER', ) == status.analysis.missing_env_vars_to_provide
         context = ProvideContext(environ=environ,
@@ -153,7 +157,7 @@ def test_env_var_provider_with_encrypted_default_value_in_project_file_no_master
         assert dict(default=dict(key='MASTER', encrypted=encrypted)) == requirement.options
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict()
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         assert ('ANACONDA_MASTER_PASSWORD', ) == status.analysis.missing_env_vars_to_configure
         assert ('MASTER', ) == status.analysis.missing_env_vars_to_provide
         context = ProvideContext(environ=environ,
@@ -182,7 +186,7 @@ def test_env_var_provider_with_encrypted_default_value_in_project_file_for_non_e
         assert dict(default=dict(key='MASTER', encrypted=encrypted)) == requirement.options
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict(MASTER=secret)
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
                                  status=status,
@@ -206,7 +210,7 @@ def test_env_var_provider_with_unencrypted_default_value_in_project_file_for_enc
         assert dict(default='from_default') == requirement.options
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict()
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
                                  status=status,
@@ -230,7 +234,7 @@ def test_env_var_provider_with_value_set_in_environment():
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict(FOO='from_environ')
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         assert dict(source='environ') == status.analysis.config
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
@@ -257,7 +261,7 @@ def test_env_var_provider_with_value_set_in_local_state():
         local_state_file = LocalStateFile.load_for_directory(dirname)
         # set in environ to be sure we override it with local state
         environ = dict(FOO='from_environ')
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         assert dict(value="from_local_state", source="variables") == status.analysis.config
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
@@ -299,7 +303,7 @@ def test_env_var_provider_with_encrypted_default_value_in_local_state():
         environ = dict(MASTER=secret)
         assert () == provider.missing_env_vars_to_configure(requirement, environ, local_state_file)
         assert () == provider.missing_env_vars_to_provide(requirement, environ, local_state_file)
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
                                  status=status,
@@ -322,14 +326,18 @@ def test_env_var_provider_configure_local_state_value():
         provider = EnvVarProvider()
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        status = requirement.check_status(dict(), local_state_file)
+        status = requirement.check_status(dict(), local_state_file, UserConfigOverrides())
         assert dict(source='unset') == status.analysis.config
 
         assert local_state_file.get_value(['variables', 'FOO']) is None
 
         environ = dict()
 
-        provider.set_config_values_as_strings(requirement, environ, local_state_file, dict(value="bar"))
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state_file,
+                                              UserConfigOverrides(),
+                                              dict(value="bar"))
 
         assert local_state_file.get_value(['variables', 'FOO']) == "bar"
         local_state_file.save()
@@ -338,7 +346,11 @@ def test_env_var_provider_configure_local_state_value():
         assert local_state_file_2.get_value(['variables', 'FOO']) == "bar"
 
         # setting empty string = unset
-        provider.set_config_values_as_strings(requirement, environ, local_state_file, dict(value=""))
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state_file,
+                                              UserConfigOverrides(),
+                                              dict(value=""))
         assert local_state_file.get_value(['variables', 'FOO']) is None
 
         local_state_file.save()
@@ -357,7 +369,7 @@ def test_env_var_provider_configure_disabled_local_state_value():
         provider = EnvVarProvider()
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        status = requirement.check_status(dict(), local_state_file)
+        status = requirement.check_status(dict(), local_state_file, UserConfigOverrides())
         assert dict(source='unset') == status.analysis.config
 
         assert local_state_file.get_value(['variables', 'FOO']) is None
@@ -369,13 +381,14 @@ def test_env_var_provider_configure_disabled_local_state_value():
         provider.set_config_values_as_strings(requirement,
                                               environ,
                                               local_state_file,
+                                              UserConfigOverrides(),
                                               dict(source='environ',
                                                    value="bar"))
 
         assert local_state_file.get_value(['variables', 'FOO']) is None
         assert local_state_file.get_value(['disabled_variables', 'FOO']) == "bar"
 
-        config = provider.read_config(requirement, environ, local_state_file)
+        config = provider.read_config(requirement, environ, local_state_file, UserConfigOverrides())
         assert config == dict(source='unset', value='bar')
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -390,25 +403,25 @@ def test_env_var_provider_config_html():
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict()
-        config = provider.read_config(requirement, environ, local_state_file)
+        config = provider.read_config(requirement, environ, local_state_file, UserConfigOverrides())
         assert dict(source='unset') == config
 
         # config html when variable is unset
-        status = requirement.check_status(dict(), local_state_file)
+        status = requirement.check_status(dict(), local_state_file, UserConfigOverrides())
         html = provider.config_html(requirement, environ, local_state_file, status)
         assert "Keep" not in html
         assert 'Use this value:' in html
 
         # config html when variable is unset and we have a default
         requirement.options['default'] = 'from_default'
-        status = requirement.check_status(dict(), local_state_file)
+        status = requirement.check_status(dict(), local_state_file, UserConfigOverrides())
         html = provider.config_html(requirement, environ, local_state_file, status)
         assert "Keep default 'from_default'" in html
         assert 'Use this value instead:' in html
 
         # config html when variable is set
         environ = dict(FOO='from_environ')
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         html = provider.config_html(requirement, environ, local_state_file, status)
         assert "Keep value 'from_environ'" in html
         assert 'Use this value instead:' in html
@@ -416,7 +429,7 @@ def test_env_var_provider_config_html():
         # config html when local state override is present
         environ = dict(FOO='from_environ')
         local_state_file.set_value(['variables', 'FOO'], 'from_local_state')
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         html = provider.config_html(requirement, environ, local_state_file, status)
         assert "Keep value 'from_environ'" in html
         assert 'Use this value instead:' in html
@@ -433,7 +446,7 @@ def test_provide_context_properties():
         environ = dict(foo='bar')
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
                                  status=status,
@@ -471,7 +484,7 @@ def test_provide_context_ensure_work_directory():
         environ = dict()
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
                                  status=status,
@@ -502,7 +515,7 @@ def test_provide_context_ensure_work_directory_cannot_create(monkeypatch):
         environ = dict()
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
                                  status=status,
@@ -520,7 +533,7 @@ def test_provide_context_transform_service_run_state():
         local_state_file = LocalStateFile.load_for_directory(dirname)
         local_state_file.set_service_run_state("myservice", dict(port=42))
         requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
                                  status=status,

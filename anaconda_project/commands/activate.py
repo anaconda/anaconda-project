@@ -26,8 +26,8 @@ def activate(dirname, ui_mode, conda_environment):
     Returns:
         None on failure or a list of lines to print.
     """
-    project = Project(dirname, default_conda_environment=conda_environment)
-    result = prepare_with_ui_mode_printing_errors(project, ui_mode=ui_mode)
+    project = Project(dirname)
+    result = prepare_with_ui_mode_printing_errors(project, ui_mode=ui_mode, conda_environment_name=conda_environment)
     if result.failed:
         return None
 

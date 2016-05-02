@@ -19,9 +19,10 @@ def launch_command(project_dir, ui_mode, conda_environment, command, extra_comma
     Returns:
         Does not return if successful.
     """
-    project = Project(project_dir, default_conda_environment=conda_environment)
+    project = Project(project_dir)
     result = prepare_with_ui_mode_printing_errors(project,
                                                   ui_mode=ui_mode,
+                                                  conda_environment_name=conda_environment,
                                                   command_name=command,
                                                   extra_command_args=extra_command_args)
 

@@ -18,6 +18,7 @@ from anaconda_project.internal.test.http_utils import http_get_async, http_post_
 from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirement import UserConfigOverrides
 from anaconda_project.plugins.providers.download import DownloadProvider
 from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.prepare import prepare_without_interaction, prepare_with_browser_ui
@@ -412,7 +413,7 @@ def test_config_html(monkeypatch):
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = _download_requirement()
         environ = minimal_environ(PROJECT_DIR=dirname)
-        status = requirement.check_status(environ, local_state_file)
+        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
         provider = DownloadProvider()
         html = provider.config_html(requirement, environ, local_state_file, status)
         assert 'Download {} to {}'.format(requirement.url, requirement.filename) in html
@@ -421,7 +422,7 @@ def test_config_html(monkeypatch):
             f.write('boo')
 
         env = minimal_environ(PROJECT_DIR=dirname)
-        status = requirement.check_status(env, local_state_file)
+        status = requirement.check_status(env, local_state_file, UserConfigOverrides())
         html = provider.config_html(requirement, env, local_state_file, status)
         expected_choice = 'Use already-downloaded file {}'.format(FILENAME)
         assert expected_choice in html

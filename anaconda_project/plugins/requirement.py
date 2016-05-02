@@ -14,6 +14,24 @@ from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.status import Status
 
 
+class UserConfigOverrides(object):
+    """Class containing user-forced configuration for the prepare process."""
+
+    def __init__(self, conda_environment_name=None):
+        """Construct a set of user overrides for the prepare process."""
+        self._conda_environment_name = conda_environment_name
+
+    @property
+    def conda_environment_name(self):
+        """The user-specified name of the conda environment spec to use, or None if not specified."""
+        return self._conda_environment_name
+
+    @conda_environment_name.setter
+    def conda_environment_name(self, value):
+        """Change the conda environment name override."""
+        self._conda_environment_name = value
+
+
 class RequirementStatus(Status):
     """Class describing the status of a requirement.
 
@@ -85,7 +103,7 @@ class RequirementStatus(Status):
         else:
             return self.latest_provide_result.errors
 
-    def recheck(self, environ, local_state_file, latest_provide_result=None):
+    def recheck(self, environ, local_state_file, conda_environment_name_override=None, latest_provide_result=None):
         """Get a new ``RequirementStatus`` reflecting the current state.
 
         This calls ``Requirement.check_status()`` which can do network and filesystem IO,
@@ -93,7 +111,8 @@ class RequirementStatus(Status):
         """
         if latest_provide_result is None:
             latest_provide_result = self._latest_provide_result
-        return self.requirement.check_status(environ, local_state_file, latest_provide_result)
+        return self.requirement.check_status(environ, local_state_file, conda_environment_name_override,
+                                             latest_provide_result)
 
 
 class Requirement(with_metaclass(ABCMeta)):
@@ -132,10 +151,10 @@ class Requirement(with_metaclass(ABCMeta)):
         """Human-readable title of the requirement."""
         pass  # pragma: no cover
 
-    def _create_status(self, environ, local_state_file, latest_provide_result, has_been_provided, status_description,
-                       provider_class_name):
+    def _create_status(self, environ, local_state_file, overrides, latest_provide_result, has_been_provided,
+                       status_description, provider_class_name):
         provider = self.registry.find_provider_by_class_name(provider_class_name)
-        analysis = provider.analyze(self, environ, local_state_file)
+        analysis = provider.analyze(self, environ, local_state_file, overrides)
         return RequirementStatus(self,
                                  has_been_provided=has_been_provided,
                                  status_description=status_description,
@@ -143,10 +162,10 @@ class Requirement(with_metaclass(ABCMeta)):
                                  analysis=analysis,
                                  latest_provide_result=latest_provide_result)
 
-    def _create_status_from_analysis(self, environ, local_state_file, latest_provide_result, provider_class_name,
-                                     status_getter):
+    def _create_status_from_analysis(self, environ, local_state_file, overrides, latest_provide_result,
+                                     provider_class_name, status_getter):
         provider = self.registry.find_provider_by_class_name(provider_class_name)
-        analysis = provider.analyze(self, environ, local_state_file)
+        analysis = provider.analyze(self, environ, local_state_file, overrides)
         (has_been_provided, status_description) = status_getter(environ, local_state_file, analysis)
         return RequirementStatus(self,
                                  has_been_provided=has_been_provided,
@@ -156,7 +175,7 @@ class Requirement(with_metaclass(ABCMeta)):
                                  latest_provide_result=latest_provide_result)
 
     @abstractmethod
-    def check_status(self, environ, local_state_file, latest_provide_result=None):
+    def check_status(self, environ, local_state_file, overrides, latest_provide_result=None):
         """Check on the requirement and return a ``RequirementStatus`` with the current status.
 
         This may attempt to talk to servers, check that files
@@ -167,6 +186,7 @@ class Requirement(with_metaclass(ABCMeta)):
         Args:
             environ (dict): use this rather than the system environment directly
             local_state_file (LocalStateFile): project local state
+            overrides (UserConfigOverrides): user-supplied forced choices
             latest_provide_result (ProvideResult): most recent result of ``provide()`` or None
 
         Returns:
@@ -266,7 +286,7 @@ class EnvVarRequirement(Requirement):
             return "Environment variable {env_var} set to '{value}'".format(env_var=self.env_var,
                                                                             value=self._get_value_of_env_var(environ))
 
-    def check_status(self, environ, local_state_file, latest_provide_result=None):
+    def check_status(self, environ, local_state_file, overrides, latest_provide_result=None):
         """Override superclass to get our status."""
         value = self._get_value_of_env_var(environ)
 
@@ -278,6 +298,7 @@ class EnvVarRequirement(Requirement):
 
         return self._create_status(environ,
                                    local_state_file,
+                                   overrides=overrides,
                                    has_been_provided=has_been_provided,
                                    status_description=status_description,
                                    provider_class_name='EnvVarProvider',

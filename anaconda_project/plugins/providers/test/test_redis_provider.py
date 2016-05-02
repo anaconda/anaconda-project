@@ -16,6 +16,7 @@ from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirement import UserConfigOverrides
 from anaconda_project.plugins.providers.redis import RedisProvider
 from anaconda_project.plugins.requirements.redis import RedisRequirement
 from anaconda_project.prepare import prepare_without_interaction, unprepare
@@ -42,7 +43,7 @@ def test_reading_default_config():
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
         provider = RedisProvider()
-        config = provider.read_config(requirement, dict(), local_state)
+        config = provider.read_config(requirement, dict(), local_state, UserConfigOverrides())
         assert 6380 == config['lower_port']
         assert 6449 == config['upper_port']
 
@@ -54,7 +55,7 @@ def test_reading_valid_config():
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
         provider = RedisProvider()
-        config = provider.read_config(requirement, dict(), local_state)
+        config = provider.read_config(requirement, dict(), local_state, UserConfigOverrides())
         assert 7389 == config['lower_port']
         assert 7421 == config['upper_port']
         assert 'find_all' == config['source']
@@ -75,7 +76,7 @@ def _read_invalid_port_range(capsys, port_range):
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
         provider = RedisProvider()
-        config = provider.read_config(requirement, dict(), local_state)
+        config = provider.read_config(requirement, dict(), local_state, UserConfigOverrides())
         # revert to defaults
         assert 6380 == config['lower_port']
         assert 6449 == config['upper_port']
@@ -118,22 +119,31 @@ def test_set_config_values_as_strings():
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
         provider = RedisProvider()
-        provider.set_config_values_as_strings(requirement, dict(), local_state, dict(lower_port="6001"))
-        config = provider.read_config(requirement, dict(), local_state)
+        provider.set_config_values_as_strings(requirement,
+                                              dict(),
+                                              local_state,
+                                              UserConfigOverrides(),
+                                              dict(lower_port="6001"))
+        config = provider.read_config(requirement, dict(), local_state, UserConfigOverrides())
         assert config['lower_port'] == 6001
         assert config['upper_port'] == 6449
 
-        provider.set_config_values_as_strings(requirement, dict(), local_state, dict(upper_port="6700"))
-        config2 = provider.read_config(requirement, dict(), local_state)
+        provider.set_config_values_as_strings(requirement,
+                                              dict(),
+                                              local_state,
+                                              UserConfigOverrides(),
+                                              dict(upper_port="6700"))
+        config2 = provider.read_config(requirement, dict(), local_state, UserConfigOverrides())
         assert config2['lower_port'] == 6001
         assert config2['upper_port'] == 6700
 
         provider.set_config_values_as_strings(requirement,
                                               dict(),
                                               local_state,
+                                              UserConfigOverrides(),
                                               dict(lower_port="5500",
                                                    upper_port="6800"))
-        config2 = provider.read_config(requirement, dict(), local_state)
+        config2 = provider.read_config(requirement, dict(), local_state, UserConfigOverrides())
         assert config2['lower_port'] == 5500
         assert config2['upper_port'] == 6800
 
@@ -274,7 +284,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
 
         # be sure we generate the config html that would use the old one
         requirement = _redis_requirement()
-        status = requirement.check_status(result.environ, local_state_file)
+        status = requirement.check_status(result.environ, local_state_file, UserConfigOverrides())
         html = RedisProvider().config_html(requirement, result.environ, local_state_file, status)
         assert 'Use the redis-server we started earlier' in html
 
@@ -600,26 +610,47 @@ def test_set_scope_in_local_state(monkeypatch):
         requirement = _redis_requirement()
         provider = RedisProvider()
         environ = minimal_environ()
-        config = provider.read_config(requirement, environ, local_state)
+        config = provider.read_config(requirement, environ, local_state, UserConfigOverrides())
         assert config['source'] == 'find_all'
-        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='find_project'))
-        config = provider.read_config(requirement, environ, local_state)
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state,
+                                              UserConfigOverrides(),
+                                              dict(source='find_project'))
+        config = provider.read_config(requirement, environ, local_state, UserConfigOverrides())
         assert config['source'] == 'find_project'
-        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='find_all'))
-        config = provider.read_config(requirement, environ, local_state)
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state,
+                                              UserConfigOverrides(),
+                                              dict(source='find_all'))
+        config = provider.read_config(requirement, environ, local_state, UserConfigOverrides())
         assert config['source'] == 'find_all'
-        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='environ'))
-        config = provider.read_config(requirement, environ, local_state)
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state,
+                                              UserConfigOverrides(),
+                                              dict(source='environ'))
+        config = provider.read_config(requirement, environ, local_state, UserConfigOverrides())
         assert config['source'] == 'find_all'  # default if no env var set
-        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='environ'))
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state,
+                                              UserConfigOverrides(),
+                                              dict(source='environ'))
         environ_with_redis_url = environ.copy()
         environ_with_redis_url['REDIS_URL'] = 'blah'
-        config = provider.read_config(requirement, environ_with_redis_url, local_state)
+        config = provider.read_config(requirement, environ_with_redis_url, local_state, UserConfigOverrides())
         assert config['source'] == 'environ'  # default when the env var IS set
 
         # use local variable when env var not set
-        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='variables', value='foo'))
-        config = provider.read_config(requirement, environ, local_state)
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state,
+                                              UserConfigOverrides(),
+                                              dict(source='variables',
+                                                   value='foo'))
+        config = provider.read_config(requirement, environ, local_state, UserConfigOverrides())
         assert config['source'] == 'variables'
         assert config['value'] == 'foo'
 
@@ -627,15 +658,20 @@ def test_set_scope_in_local_state(monkeypatch):
         provider.set_config_values_as_strings(requirement,
                                               environ_with_redis_url,
                                               local_state,
+                                              UserConfigOverrides(),
                                               dict(source='variables',
                                                    value='foo'))
-        config = provider.read_config(requirement, environ, local_state)
+        config = provider.read_config(requirement, environ, local_state, UserConfigOverrides())
         assert config['source'] == 'variables'
         assert config['value'] == 'foo'
 
         # set to use system, which should override using the local state
-        provider.set_config_values_as_strings(requirement, environ, local_state, dict(source='find_system'))
-        config = provider.read_config(requirement, environ, local_state)
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state,
+                                              UserConfigOverrides(),
+                                              dict(source='find_system'))
+        config = provider.read_config(requirement, environ, local_state, UserConfigOverrides())
         assert config['source'] == 'find_system'
 
         project = project_no_dedicated_env(dirname)

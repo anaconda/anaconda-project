@@ -183,23 +183,25 @@ class Provider(with_metaclass(ABCMeta)):
         return ()
 
     @abstractmethod
-    def read_config(self, requirement, environ, local_state_file):
+    def read_config(self, requirement, environ, local_state_file, overrides):
         """Read a config dict from the local state file for the given requirement.
 
         Args:
             requirement (Requirement): the requirement we're providing
             environ (dict): current environment variables
             local_state_file (LocalStateFile): file to read from
+            overrides (UserConfigOverrides): user-supplied forced config
         """
         pass  # pragma: no cover
 
-    def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, overrides, values):
         """Set some config values in the state file (should not save the file).
 
         Args:
             requirement (Requirement): the requirement we're providing
             environ (dict): current environment variables
             local_state_file (LocalStateFile): file to save to
+            overrides (UserConfigOverrides): if any values in here change, delete the override
             values (dict): dict from string to string
         """
         pass  # silently ignore unknown config values
@@ -233,7 +235,7 @@ class Provider(with_metaclass(ABCMeta)):
         """
         return None
 
-    def analyze(self, requirement, environ, local_state_file):
+    def analyze(self, requirement, environ, local_state_file, overrides):
         """Analyze whether and how we'll be able to provide the requirement.
 
         This is used to show the situation in the UI, and also to
@@ -243,7 +245,7 @@ class Provider(with_metaclass(ABCMeta)):
         Returns:
           A ``ProviderAnalysis`` instance.
         """
-        config = self.read_config(requirement, environ, local_state_file)
+        config = self.read_config(requirement, environ, local_state_file, overrides)
         missing_to_configure = self.missing_env_vars_to_configure(requirement, environ, local_state_file)
         missing_to_provide = self.missing_env_vars_to_provide(requirement, environ, local_state_file)
         return ProviderAnalysis(config=config,
@@ -335,7 +337,7 @@ class EnvVarProvider(Provider):
             else:
                 return ()
 
-    def read_config(self, requirement, environ, local_state_file):
+    def read_config(self, requirement, environ, local_state_file, overrides):
         """Override superclass to read env var value."""
         config = dict()
         value = self._local_state_override(requirement, local_state_file)
@@ -364,7 +366,7 @@ class EnvVarProvider(Provider):
         config['source'] = source
         return config
 
-    def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, overrides, values):
         """Override superclass to set env var value."""
         override_path = ["variables", requirement.env_var]
         disabled_path = ["disabled_variables", requirement.env_var]

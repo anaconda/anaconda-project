@@ -19,9 +19,12 @@ from anaconda_project.internal.crypto import decrypt_string
 from anaconda_project.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare,
                                       prepare_in_stages, PrepareSuccess, PrepareFailure, _after_stage_success,
                                       _FunctionPrepareStage)
+from anaconda_project.project import Project
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.conda_manager import (push_conda_manager_class, pop_conda_manager_class, CondaManager,
+                                            CondaEnvironmentDeviations)
 
 
 def test_prepare_empty_directory():
@@ -180,6 +183,54 @@ commands:
 """,
          "foo.py": "# foo",
          "bar.py": "# bar"}, check)
+
+
+def _push_fake_env_creator():
+    class HappyCondaManager(CondaManager):
+        def find_environment_deviations(self, prefix, spec):
+            return CondaEnvironmentDeviations(summary="all good", missing_packages=(), wrong_version_packages=())
+
+        def fix_environment_deviations(self, prefix, spec, deviations=None):
+            pass
+
+        def remove_packages(self, prefix, packages):
+            pass
+
+    push_conda_manager_class(HappyCondaManager)
+
+
+def _pop_fake_env_creator():
+    pop_conda_manager_class()
+
+
+def test_prepare_choose_environment():
+    def check(dirname):
+        if platform.system() == 'Windows':
+            env_var = "CONDA_DEFAULT_ENV"
+        else:
+            env_var = "CONDA_ENV_PATH"
+
+        try:
+            _push_fake_env_creator()
+            project = Project(dirname)
+            environ = minimal_environ()
+            result = prepare_without_interaction(project, environ=environ, conda_environment_name='foo')
+            expected_path = project.conda_environments['foo'].path(project.directory_path)
+            assert result.environ[env_var] == expected_path
+
+            environ = minimal_environ()
+            result = prepare_without_interaction(project, environ=environ, conda_environment_name='bar')
+            assert result
+            expected_path = project.conda_environments['bar'].path(project.directory_path)
+            assert result.environ[env_var] == expected_path
+        finally:
+            _pop_fake_env_creator()
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+environments:
+    foo: {}
+    bar: {}
+"""}, check)
 
 
 def test_update_environ():

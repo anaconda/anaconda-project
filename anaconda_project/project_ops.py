@@ -120,11 +120,13 @@ def set_properties(project, name=None, icon=None):
         return status
 
 
-def _commit_requirement_if_it_works(project, env_var_or_class, default_environment_name=None):
+def _commit_requirement_if_it_works(project, env_var_or_class, conda_environment_name=None):
     project.project_file.use_changes_without_saving()
 
     # See if we can perform the download
-    result = prepare.prepare_without_interaction(project, provide_whitelist=(env_var_or_class, ))
+    result = prepare.prepare_without_interaction(project,
+                                                 provide_whitelist=(env_var_or_class, ),
+                                                 conda_environment_name=conda_environment_name)
 
     status = result.status_for(env_var_or_class)
     if status is None or not status:
@@ -223,13 +225,6 @@ def _update_environment(project, name, packages, channels, create):
             problem = "Environment {} doesn't exist.".format(name)
             return SimpleStatus(success=False, description=problem)
 
-    # Due to https://github.com/Anaconda-Server/anaconda-project/issues/163
-    # we don't have a way to "choose" this environment when we do the prepare
-    # in _commit_requirement_if_it_works, so we will have to hack things and
-    # make a temporary Project here then reload the original project.
-    # Doh.
-    original_project = project
-    project = Project(original_project.directory_path, default_conda_environment=name)
     if name is None:
         env_dict = project.project_file.root
     else:
@@ -258,13 +253,7 @@ def _update_environment(project, name, packages, channels, create):
             new_channels.append(channel)
     env_dict['channels'] = new_channels
 
-    status = _commit_requirement_if_it_works(project, CondaEnvRequirement)
-
-    # reload original project, hackaround for
-    # https://github.com/Anaconda-Server/anaconda-project/issues/163
-    if status:
-        # reload the new config
-        original_project.project_file.load()
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, conda_environment_name=name)
 
     return status
 
@@ -431,13 +420,6 @@ def remove_dependencies(project, environment, packages):
         except conda_manager.CondaManagerError:
             pass  # ignore errors; not all the envs will exist or have the package installed perhaps
 
-    # Due to https://github.com/Anaconda-Server/anaconda-project/issues/163
-    # we don't have a way to "choose" this environment when we do the prepare
-    # in _commit_requirement_if_it_works, so we will have to hack things and
-    # make a temporary Project here then reload the original project.
-    # Doh.
-    original_project = project
-    project = Project(original_project.directory_path, default_conda_environment=environment)
     env_dicts = []
     for env in envs:
         env_dict = project.project_file.get_value(['environments', env.name])
@@ -456,13 +438,7 @@ def remove_dependencies(project, environment, packages):
         _filter_inplace(lambda dep: dep not in removed_set, dependencies)
         env_dict['dependencies'] = dependencies
 
-    status = _commit_requirement_if_it_works(project, CondaEnvRequirement)
-
-    # reload original project, hackaround for
-    # https://github.com/Anaconda-Server/anaconda-project/issues/163
-    if status:
-        # reload the new config
-        original_project.project_file.load()
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, conda_environment_name=environment)
 
     return status
 
