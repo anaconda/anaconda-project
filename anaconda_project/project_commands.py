@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 from copy import copy
+from copy import deepcopy
 from distutils.spawn import find_executable
 
 import os
@@ -157,7 +158,7 @@ class ProjectCommand(object):
             attributes (dict): named attributes of the command
         """
         self._name = name
-        self._attributes = attributes.copy()
+        self._attributes = deepcopy(attributes)
 
     @property
     def name(self):

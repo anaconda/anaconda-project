@@ -309,7 +309,7 @@ class _ConfigCache(object):
                                     (project_file.filename, name, attrs))
                     continue
 
-                copy = attrs.copy()
+                copy = deepcopy(attrs)
                 # default conda_app_entry to the one from meta.yaml
                 if 'conda_app_entry' not in copy and app_entry_from_meta_yaml is not None:
                     copy['conda_app_entry'] = app_entry_from_meta_yaml
