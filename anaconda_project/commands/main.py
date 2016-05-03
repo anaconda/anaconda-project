@@ -172,14 +172,23 @@ def _parse_args_and_run_subcommand(argv):
     add_environment_arg(preset)
     preset.set_defaults(main=environment_commands.main_list_dependencies)
 
+    def add_command_name_arg(preset):
+        preset.add_argument('name', metavar="NAME", help="Command name used to invoke it")
+
     preset = subparsers.add_parser('add-command', help="Add a new command to the project.")
     add_project_arg(preset)
     command_choices = list(_COMMAND_CHOICES) + ['ask']
     command_choices.remove("conda_app_entry")  # conda_app_entry is sort of silly and may go away
     preset.add_argument('--type', action="store", choices=command_choices, help="command type to add")
-    preset.add_argument('name', metavar="NAME", help="Command name used to invoke it")
+    add_command_name_arg(preset)
     preset.add_argument('command', metavar="COMMAND", help="Command line or app filename to add")
     preset.set_defaults(main=command_commands.main)
+
+    preset = subparsers.add_parser('remove-command', help="Remove a command from the project.")
+    add_project_arg(preset)
+    add_command_name_arg(preset)
+    preset.set_defaults(main=command_commands.main_remove)
+
     preset = subparsers.add_parser('list-commands', help="List the commands on the project.")
     add_project_arg(preset)
     preset.set_defaults(main=command_commands.main_list)

@@ -352,7 +352,8 @@ class _ConfigCache(object):
             # if no commands and we have a meta.yaml app entry, use the meta.yaml
             if app_entry_from_meta_yaml is not None and len(commands) == 0:
                 commands['default'] = ProjectCommand(name='default',
-                                                     attributes=dict(conda_app_entry=app_entry_from_meta_yaml))
+                                                     attributes=dict(conda_app_entry=app_entry_from_meta_yaml,
+                                                                     auto_generated=True))
 
             self.commands = commands
 
@@ -385,7 +386,8 @@ class _ConfigCache(object):
 
                     if relative_name not in commands:
                         commands[relative_name] = ProjectCommand(name=relative_name,
-                                                                 attributes={'notebook': relative_name})
+                                                                 attributes={'notebook': relative_name,
+                                                                             'auto_generated': True})
 
 
 class Project(object):

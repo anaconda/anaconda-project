@@ -541,6 +541,39 @@ def add_command(project, command_type, name, command):
         return SimpleStatus(success=True, description="Command added to project file.")
 
 
+def remove_command(project, name):
+    """Remove a command from project.yml.
+
+    Returns a ``Status`` subtype (it won't be a
+    ``RequirementStatus`` as with some other functions, just a
+    plain status).
+
+    Args:
+       project (Project): the project
+       name (string): name of the command to be removed
+
+    Returns:
+       a ``Status`` instance
+    """
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+
+    if name not in project.commands:
+        return SimpleStatus(success=False, description="Command: '{}' not found in project file.".format(name))
+
+    command = project.commands[name]
+    if command.auto_generated:
+        return SimpleStatus(success=False, description="Cannot remove auto-generated command: '{}'.".format(name))
+
+    project.project_file.unset_value(['commands', name])
+    project.project_file.use_changes_without_saving()
+    assert project.problems == []
+    project.project_file.save()
+
+    return SimpleStatus(success=True, description="Command: '{}' removed from project file.".format(name))
+
+
 def add_service(project, service_type, variable_name=None):
     """Add a service to project.yml.
 

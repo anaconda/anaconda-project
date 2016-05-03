@@ -217,18 +217,29 @@ def test_add_command_guessing_notebook(monkeypatch, capsys):
     with_directory_contents({DEFAULT_PROJECT_FILENAME: '', 'file.ipynb': ""}, check_guessing_notebook)
 
 
-def test_add_command_project_problem(capsys, monkeypatch):
-    def check_problem_add_cmd(dirname):
-        args = Args('notebook', 'test', 'file.ipynb', project=dirname)
-        res = main(args)
-        assert res == 1
+def _test_command_command_project_problem(capsys, monkeypatch, command, append_dir=False):
+    def check(dirname):
+        if append_dir:
+            command.extend(['--project', dirname])
+        code = _parse_args_and_run_subcommand(command)
+        assert code == 1
 
         out, err = capsys.readouterr()
         assert '' == out
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("variables:\n" "  42")}, check_problem_add_cmd)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_add_command_project_problem(capsys, monkeypatch):
+    _test_command_command_project_problem(capsys,
+                                          monkeypatch,
+                                          [
+                                              'anaconda-project', 'add-command', '--type', 'notebook', 'test',
+                                              'file.ipynb'
+                                          ],
+                                          append_dir=True)
 
 
 def test_add_command_breaks_project(capsys, monkeypatch):
@@ -245,17 +256,63 @@ def test_add_command_breaks_project(capsys, monkeypatch):
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    shell: foo\n")}, check_problem_add_cmd)
 
 
-def test_list_commands_with_project_file_problems(capsys):
+def test_remove_command_with_project_file_problems(capsys, monkeypatch):
+    _test_command_command_project_problem(capsys,
+                                          monkeypatch,
+                                          ['anaconda-project', 'remove-command', 'test'],
+                                          append_dir=True)
+
+
+def test_remove_command(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'test', '--project', dirname])
+        assert code == 0
+
+        project = Project(dirname)
+
+        command = project.project_file.get_value(['commands', 'test'])
+        assert command is None
+
+        out, err = capsys.readouterr()
+        assert out == "Removed the command 'test' from the project.\n"
+        assert err == ''
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'commands:\n  test:\n    notebook: file.ipynb'}, check)
+
+
+def test_remove_command_missing(monkeypatch, capsys):
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'test', '--project', dirname])
         assert code == 1
 
         out, err = capsys.readouterr()
-        assert '' == out
-        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
-                'Unable to load the project.\n') == err
+        assert err == "Command: 'test' not found in project file.\n"
+        assert out == ''
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
+
+
+def test_remove_command_auto_generated(monkeypatch, capsys):
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'file.ipynb', '--project', dirname
+                                               ])
+        assert code == 1
+
+        project = Project(dirname)
+        assert 'file.ipynb' in project.commands
+        command = project.commands['file.ipynb']
+        assert command is not None
+        assert command.notebook == 'file.ipynb'
+
+        out, err = capsys.readouterr()
+        assert err == "Cannot remove auto-generated command: 'file.ipynb'.\n"
+        assert out == ''
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: '', 'file.ipynb': ""}, check)
+
+
+def test_list_commands_with_project_file_problems(capsys, monkeypatch):
+    _test_command_command_project_problem(capsys, monkeypatch, ['anaconda-project', 'list-commands'], append_dir=True)
 
 
 def test_list_commands_empty_project(capsys):

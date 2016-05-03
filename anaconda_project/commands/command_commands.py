@@ -69,6 +69,23 @@ def add_command(project_dir, command_type, name, command):
         return 0
 
 
+def remove_command(project_dir, name):
+    """Remove a command from the project.
+
+    Returns:
+        int exit code
+    """
+    project = Project(project_dir)
+
+    status = project_ops.remove_command(project, name)
+    if not status:
+        console_utils.print_status_errors(status)
+        return 1
+    else:
+        print("Removed the command '{}' from the project.".format(name))
+        return 0
+
+
 def list_commands(project_dir):
     """List the commands on the project.
 
@@ -90,6 +107,11 @@ def list_commands(project_dir):
 def main(args):
     """Submit the add command with args and returns exit code."""
     return add_command(args.project, args.type, args.name, args.command)
+
+
+def main_remove(args):
+    """Submit the remove command with args and returns exit code."""
+    return remove_command(args.project, args.name)
 
 
 def main_list(args):
