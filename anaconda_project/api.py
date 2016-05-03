@@ -407,7 +407,7 @@ class AnacondaProject(object):
         Returns:
            a ``Status`` instance
         """
-        return project_ops.add_command(project=project, name=name)
+        return project_ops.remove_command(project=project, name=name)
 
     def add_service(self, project, service_type, variable_name=None):
         """Add a service to project.yml.
