@@ -21,7 +21,7 @@ from anaconda_project.test.project_utils import project_dir_disable_dedicated_en
 class Args(object):
     def __init__(self, **kwargs):
         self.project = "."
-        self.environment = 'default'
+        self.environment = None
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -92,6 +92,11 @@ def _monkeypatch_open_new_tab(monkeypatch):
 def test_main(monkeypatch, capsys):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
     _monkeypatch_open_new_tab(monkeypatch)
+
+    def mock_conda_create(prefix, pkgs, channels):
+        raise RuntimeError("this test should not create an environment in %s with pkgs %r" % (prefix, pkgs))
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_conda_create)
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
