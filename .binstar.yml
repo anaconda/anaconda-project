@@ -48,3 +48,4 @@ script:
 
 build_targets: [conda]
 
+iotimeout: 600
