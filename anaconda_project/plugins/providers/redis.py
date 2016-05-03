@@ -56,9 +56,9 @@ class RedisProvider(EnvVarProvider):
     def _config_section(self, requirement):
         return ["service_options", requirement.env_var]
 
-    def read_config(self, requirement, environ, local_state_file):
+    def read_config(self, requirement, environ, local_state_file, overrides):
         """Override superclass to return our config."""
-        config = super(RedisProvider, self).read_config(requirement, environ, local_state_file)
+        config = super(RedisProvider, self).read_config(requirement, environ, local_state_file, overrides)
 
         assert 'source' in config
 
@@ -84,9 +84,9 @@ class RedisProvider(EnvVarProvider):
 
         return config
 
-    def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, overrides, values):
         """Override superclass to set our config values."""
-        config = self.read_config(requirement, environ, local_state_file)
+        config = self.read_config(requirement, environ, local_state_file, overrides=None)
         section = self._config_section(requirement)
         upper_port = config['upper_port']
         lower_port = config['lower_port']
@@ -120,7 +120,8 @@ class RedisProvider(EnvVarProvider):
                 environ.pop(requirement.env_var, None)
 
         # set a manually-specified value
-        super(RedisProvider, self).set_config_values_as_strings(requirement, environ, local_state_file, values)
+        super(RedisProvider, self).set_config_values_as_strings(requirement, environ, local_state_file, overrides,
+                                                                values)
 
     def _previously_run_redis_url_if_alive(self, run_state):
         if 'port' in run_state and network_util.can_connect_to_socket(host='localhost', port=run_state['port']):
@@ -163,9 +164,9 @@ class RedisProvider(EnvVarProvider):
   </div>
 """ % (system_option, project_option)
 
-    def analyze(self, requirement, environ, local_state_file):
+    def analyze(self, requirement, environ, local_state_file, overrides):
         """Override superclass to store additional fields in the analysis."""
-        analysis = super(RedisProvider, self).analyze(requirement, environ, local_state_file)
+        analysis = super(RedisProvider, self).analyze(requirement, environ, local_state_file, overrides)
         run_state = local_state_file.get_service_run_state('redis')
         previous = self._previously_run_redis_url_if_alive(run_state)
         systemwide = self._can_connect_to_system_default()

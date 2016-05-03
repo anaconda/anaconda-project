@@ -54,7 +54,11 @@ def _monkeypatch_prepare_without_interaction(monkeypatch):
 def _test_prepare_without_interaction(monkeypatch, api_method, provide_mode):
     params = _monkeypatch_prepare_without_interaction(monkeypatch)
     p = api.AnacondaProject()
-    kwargs = dict(project=43, environ=57, extra_command_args=['1', '2'])
+    kwargs = dict(project=43,
+                  environ=57,
+                  conda_environment_name='someenv',
+                  command_name='foo',
+                  extra_command_args=['1', '2'])
     result = getattr(p, api_method)(**kwargs)
     assert 42 == result
     assert params['kwargs']['mode'] == provide_mode
@@ -84,7 +88,13 @@ def test_prepare_project_browser(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.prepare.prepare_with_browser_ui', mock_prepare_with_browser_ui)
     p = api.AnacondaProject()
-    kwargs = dict(project=43, environ=57, extra_command_args=['1', '2'], io_loop=156, show_url=8909)
+    kwargs = dict(project=43,
+                  environ=57,
+                  conda_environment_name='someenv',
+                  command_name='foo',
+                  extra_command_args=['1', '2'],
+                  io_loop=156,
+                  show_url=8909)
     result = p.prepare_project_browser(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

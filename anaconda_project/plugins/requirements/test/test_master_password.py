@@ -5,6 +5,7 @@
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirement import UserConfigOverrides
 from anaconda_project.plugins.requirements.master_password import MasterPasswordRequirement
 from anaconda_project.plugins.providers.master_password import MasterPasswordProvider
 
@@ -22,7 +23,7 @@ def test_find_by_env_var_master_password():
 
 def test_master_password_not_set():
     requirement = MasterPasswordRequirement(registry=PluginRegistry())
-    status = requirement.check_status(dict(), tmp_local_state_file())
+    status = requirement.check_status(dict(), tmp_local_state_file(), UserConfigOverrides())
     assert not status
     expected = "Anaconda master password isn't set as the ANACONDA_MASTER_PASSWORD environment variable."
     assert expected == status.status_description
@@ -30,6 +31,6 @@ def test_master_password_not_set():
 
 def test_master_password_provider():
     requirement = MasterPasswordRequirement(registry=PluginRegistry())
-    status = requirement.check_status(dict(), tmp_local_state_file())
+    status = requirement.check_status(dict(), tmp_local_state_file(), UserConfigOverrides())
     assert status.provider is not None
     assert isinstance(status.provider, MasterPasswordProvider)

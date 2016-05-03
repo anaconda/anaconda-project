@@ -20,7 +20,7 @@ from anaconda_project.internal.toposort import toposort_from_dependency_info
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT)
 from anaconda_project.plugins.provider import ProvideContext
-from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
 
 
 def _update_environ(dest, src):
@@ -157,10 +157,11 @@ class PrepareFailure(PrepareResult):
 class ConfigurePrepareContext(object):
     """Information needed to configure a stage."""
 
-    def __init__(self, environ, local_state_file, statuses):
+    def __init__(self, environ, local_state_file, overrides, statuses):
         """Construct a ConfigurePrepareContext."""
         self.environ = environ
         self.local_state_file = local_state_file
+        self.overrides = overrides
         self.statuses = statuses
         if len(statuses) > 0:
             from anaconda_project.plugins.requirement import RequirementStatus
@@ -385,7 +386,7 @@ def _in_provide_whitelist(provide_whitelist, requirement):
 
 
 def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success, mode,
-                           provide_whitelist, extra_command_args):
+                           provide_whitelist, overrides, command_name, extra_command_args):
     def provide_stage(stage):
         def get_missing_to_provide(status):
             return status.analysis.missing_env_vars_to_provide
@@ -395,7 +396,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         # we have to recheck all the statuses in case configuration happened
         rechecked = []
         for status in sorted:
-            rechecked.append(status.recheck(environ, local_state))
+            rechecked.append(status.recheck(environ, local_state, overrides))
 
         logs = []
         errors = []
@@ -421,6 +422,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             for status in old:
                 rechecked.append(status.recheck(environ,
                                                 local_state,
+                                                overrides,
                                                 latest_provide_result=results_by_status.get(status)))
 
         failed = False
@@ -439,7 +441,9 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             else:
                 return None
         else:
-            exec_info = project.exec_info_for_environment(environ, extra_command_args)
+            exec_info = project.exec_info_for_environment(environ,
+                                                          command_name=command_name,
+                                                          extra_args=extra_command_args)
             stage.set_result(
                 PrepareSuccess(logs=logs,
                                statuses=result_statuses,
@@ -451,6 +455,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
     def _start_over(updated_all_statuses, updated_statuses):
         configure_context = ConfigurePrepareContext(environ=environ,
                                                     local_state_file=local_state,
+                                                    overrides=overrides,
                                                     statuses=updated_statuses)
         return _FunctionPrepareStage("Set up project.", updated_all_statuses, provide_stage, configure_context)
 
@@ -490,7 +495,8 @@ def _partition_first_group_to_configure(environ, local_state, statuses):
 
 
 def _process_requirement_statuses(project, environ, local_state, current_statuses, all_statuses,
-                                  keep_going_until_success, mode, provide_whitelist, extra_command_args):
+                                  keep_going_until_success, mode, provide_whitelist, overrides, command_name,
+                                  extra_command_args):
     (initial, remaining) = _partition_first_group_to_configure(environ, local_state, current_statuses)
 
     # a surprising thing here is that the "stages" from
@@ -503,7 +509,7 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
 
     def _stages_for(statuses):
         return _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success,
-                                      mode, provide_whitelist, extra_command_args)
+                                      mode, provide_whitelist, overrides, command_name, extra_command_args)
 
     if len(initial) > 0 and len(remaining) > 0:
 
@@ -511,7 +517,8 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
             # get the new status for each remaining requirement
             updated = _refresh_status_list(remaining, updated_all_statuses)
             return _process_requirement_statuses(project, environ, local_state, updated, updated_all_statuses,
-                                                 keep_going_until_success, mode, provide_whitelist, extra_command_args)
+                                                 keep_going_until_success, mode, provide_whitelist, overrides,
+                                                 command_name, extra_command_args)
 
         return _after_stage_success(_stages_for(initial), process_remaining)
     elif len(initial) > 0:
@@ -520,7 +527,7 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
         return _stages_for(remaining)
 
 
-def _add_missing_env_var_requirements(project, environ, local_state, statuses):
+def _add_missing_env_var_requirements(project, environ, local_state, overrides, statuses):
     by_env_var = dict()
     for status in statuses:
         # if we add requirements with no env_var, change this to
@@ -539,21 +546,22 @@ def _add_missing_env_var_requirements(project, environ, local_state, statuses):
         if env_var not in by_env_var:
             created_anything = True
             requirement = project.plugin_registry.find_requirement_by_env_var(env_var, options=dict())
-            statuses.append(requirement.check_status(environ, local_state, latest_provide_result=None))
+            statuses.append(requirement.check_status(environ, local_state, overrides, latest_provide_result=None))
 
     if created_anything:
         # run the whole above again to find any transitive requirements of the new providers
-        _add_missing_env_var_requirements(project, environ, local_state, statuses)
+        _add_missing_env_var_requirements(project, environ, local_state, overrides, statuses)
 
 
-def _first_stage(project, environ, local_state, statuses, keep_going_until_success, mode, provide_whitelist,
-                 extra_command_args):
+def _first_stage(project, environ, local_state, statuses, keep_going_until_success, mode, provide_whitelist, overrides,
+                 command_name, extra_command_args):
     assert 'PROJECT_DIR' in environ
 
-    _add_missing_env_var_requirements(project, environ, local_state, statuses)
+    _add_missing_env_var_requirements(project, environ, local_state, overrides, statuses)
 
     first_stage = _process_requirement_statuses(project, environ, local_state, statuses, statuses,
-                                                keep_going_until_success, mode, provide_whitelist, extra_command_args)
+                                                keep_going_until_success, mode, provide_whitelist, overrides,
+                                                command_name, extra_command_args)
 
     return first_stage
 
@@ -563,6 +571,8 @@ def prepare_in_stages(project,
                       keep_going_until_success=False,
                       mode=PROVIDE_MODE_DEVELOPMENT,
                       provide_whitelist=None,
+                      conda_environment_name=None,
+                      command_name=None,
                       extra_command_args=None):
     """Get a chain of all steps needed to get a project ready to execute.
 
@@ -576,12 +586,18 @@ def prepare_in_stages(project,
     services, run scripts, load configuration, install
     packages... it can do anything. Expect side effects.
 
+    Before calling this function, command_name must be validated
+    (must be in ``project.commands``, or be ``None``) and
+    ``project.problems`` must be empty.
+
     Args:
         project (Project): the project
         environ (dict): the environment to start from (None to use os.environ)
         keep_going_until_success (bool): keep returning new stages until all requirements are met
         mode (str): One of ``PROVIDE_MODE_PRODUCTION``, ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_CHECK``
         provide_whitelist (iterable of str): ONLY call provide() for the listed env vars' requirements
+        conda_environment_name (str): the environment spec name to require, or None for default
+        command_name (str): which named command to choose from the project, None for default
         extra_command_args (list of str): extra args for the command we prepare
 
     Returns:
@@ -592,6 +608,9 @@ def prepare_in_stages(project,
         raise ValueError("invalid provide mode " + mode)
 
     assert not project.problems
+
+    assert command_name is None or command_name in project.commands
+    assert conda_environment_name is None or conda_environment_name in project.conda_environments
 
     if environ is None:
         environ = os.environ
@@ -624,13 +643,15 @@ def prepare_in_stages(project,
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
+    overrides = UserConfigOverrides(conda_environment_name=conda_environment_name)
+
     statuses = []
     for requirement in project.requirements:
-        status = requirement.check_status(environ_copy, local_state, latest_provide_result=None)
+        status = requirement.check_status(environ_copy, local_state, overrides, latest_provide_result=None)
         statuses.append(status)
 
     return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode, provide_whitelist,
-                        extra_command_args)
+                        overrides, command_name, extra_command_args)
 
 
 def _project_problems_to_prepare_failure(project):
@@ -644,10 +665,40 @@ def _project_problems_to_prepare_failure(project):
         return None
 
 
+def _prepare_failure_on_bad_command_name(project, command_name):
+    if command_name is not None and command_name not in project.commands:
+        error = ("Command name '%s' is not in %s, these names were found: %s" %
+                 (command_name, project.project_file.filename, ", ".join(sorted(project.commands.keys()))))
+        return PrepareFailure(logs=[], statuses=(), errors=[error])
+    else:
+        return None
+
+
+def _prepare_failure_on_bad_conda_environment_name(project, conda_environment_name):
+    if conda_environment_name is not None and conda_environment_name not in project.conda_environments:
+        error = ("Environment name '%s' is not in %s, these names were found: %s" %
+                 (conda_environment_name, project.project_file.filename,
+                  ", ".join(sorted(project.conda_environments.keys()))))
+        return PrepareFailure(logs=[], statuses=(), errors=[error])
+    else:
+        return None
+
+
+def _check_prepare_prerequisites(project, conda_environment_name, command_name):
+    failed = _project_problems_to_prepare_failure(project)
+    if failed is None:
+        failed = _prepare_failure_on_bad_conda_environment_name(project, conda_environment_name)
+    if failed is None:
+        failed = _prepare_failure_on_bad_command_name(project, command_name)
+    return failed
+
+
 def prepare_without_interaction(project,
                                 environ=None,
                                 mode=PROVIDE_MODE_DEVELOPMENT,
                                 provide_whitelist=None,
+                                conda_environment_name=None,
+                                command_name=None,
                                 extra_command_args=None):
     """Prepare a project to run one of its commands.
 
@@ -685,13 +736,15 @@ def prepare_without_interaction(project,
         environ (dict): os.environ or the previously-prepared environ; not modified in-place
         mode (str): mode from ``PROVIDE_MODE_PRODUCTION``, ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_CHECK``
         provide_whitelist (iterable of str): ONLY call provide() for the listed env vars' requirements
+        conda_environment_name (str): the environment spec name to require, or None for default
+        command_name (str): which named command to choose from the project, None for default
         extra_command_args (list): extra args to include in the returned command argv
 
     Returns:
         a ``PrepareResult`` instance, which has a ``failed`` flag
 
     """
-    failure = _project_problems_to_prepare_failure(project)
+    failure = _check_prepare_prerequisites(project, conda_environment_name, command_name)
     if failure is not None:
         return failure
 
@@ -700,6 +753,8 @@ def prepare_without_interaction(project,
                               keep_going_until_success=False,
                               mode=mode,
                               provide_whitelist=provide_whitelist,
+                              conda_environment_name=conda_environment_name,
+                              command_name=command_name,
                               extra_command_args=extra_command_args)
 
     return prepare_execute_without_interaction(stage)
@@ -707,6 +762,8 @@ def prepare_without_interaction(project,
 
 def prepare_with_browser_ui(project,
                             environ=None,
+                            conda_environment_name=None,
+                            command_name=None,
                             extra_command_args=None,
                             keep_going_until_success=True,
                             io_loop=None,
@@ -741,6 +798,8 @@ def prepare_with_browser_ui(project,
     Args:
         project (Project): from the ``load_project`` method
         environ (dict): os.environ or the previously-prepared environ; not modified in-place
+        conda_environment_name (str): the environment spec name to require, or None for default
+        command_name (str): which named command to choose from the project, None for default
         extra_command_args (list): extra args to include in the returned command argv
         keep_going_until_success (bool): whether to loop until requirements are met
         io_loop (IOLoop): tornado IOLoop to use, None for default
@@ -750,7 +809,7 @@ def prepare_with_browser_ui(project,
         a ``PrepareResult`` instance, which has a ``failed`` flag
 
     """
-    failure = _project_problems_to_prepare_failure(project)
+    failure = _check_prepare_prerequisites(project, conda_environment_name, command_name)
     if failure is not None:
         return failure
 
@@ -758,6 +817,8 @@ def prepare_with_browser_ui(project,
                               environ,
                               keep_going_until_success=keep_going_until_success,
                               mode=PROVIDE_MODE_DEVELOPMENT,
+                              conda_environment_name=conda_environment_name,
+                              command_name=command_name,
                               extra_command_args=extra_command_args)
 
     return prepare_execute_with_browser_ui(project, stage, io_loop=io_loop, show_url=show_url)

@@ -22,12 +22,18 @@ class CondaEnvProvider(EnvVarProvider):
         super(CondaEnvProvider, self).__init__()
         self._conda = new_conda_manager()
 
-    def read_config(self, requirement, environ, local_state_file):
+    def read_config(self, requirement, environ, local_state_file, overrides):
         """Override superclass to add a choice to create a project-scoped environment."""
-        config = super(CondaEnvProvider, self).read_config(requirement, environ, local_state_file)
-
         assert 'PROJECT_DIR' in environ
         project_dir = environ['PROJECT_DIR']
+
+        if overrides.conda_environment_name is not None:
+            # short-circuit this whole party
+            env = requirement.environments.get(overrides.conda_environment_name)
+            config = dict(source='project', env_name=overrides.conda_environment_name, value=env.path(project_dir))
+            return config
+
+        config = super(CondaEnvProvider, self).read_config(requirement, environ, local_state_file, overrides)
 
         assert 'source' in config
 
@@ -55,7 +61,6 @@ class CondaEnvProvider(EnvVarProvider):
         if 'value' in config:
             config['value'] = os.path.normpath(config['value'])
 
-        # set env_name
         config['env_name'] = requirement.default_environment_name
 
         if 'value' in config:
@@ -72,10 +77,16 @@ class CondaEnvProvider(EnvVarProvider):
 
         return config
 
-    def set_config_values_as_strings(self, requirement, environ, local_state_file, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, overrides, values):
         """Override superclass to support 'project' source option."""
-        super(CondaEnvProvider, self).set_config_values_as_strings(requirement, environ, local_state_file, values)
-        # print("Setting values: " + repr(values))
+        super(CondaEnvProvider, self).set_config_values_as_strings(requirement, environ, local_state_file, overrides,
+                                                                   values)
+
+        # We have to clear out the user override or it will
+        # never stop overriding the user's new choice, if they
+        # have changed to another env.
+        overrides.conda_environment_name = None
+
         if 'source' in values:
             if values['source'] == 'project':
                 project_dir = environ['PROJECT_DIR']

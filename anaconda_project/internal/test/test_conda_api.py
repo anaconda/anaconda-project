@@ -179,7 +179,7 @@ def test_conda_invoke_zero_returncode_with_stuff_on_stderr(monkeypatch, capsys):
         monkeypatch.setattr('anaconda_project.internal.conda_api._get_conda_command', get_command)
         conda_api.info()
         (out, err) = capsys.readouterr()
-        assert 'Conda: TEST_ERROR\n' == err
+        assert 'bash -c: TEST_ERROR\n' == err
 
     with_directory_contents(dict(), do_test)
 

@@ -17,7 +17,7 @@ from anaconda_project.internal.test.multipart import MultipartEncoder
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.ui_server import UIServer, UIServerDoneEvent
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
 
 
 def _no_op_prepare(config_context):
@@ -40,7 +40,7 @@ def test_ui_server_empty():
 
         project = Project(dirname)
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        context = ConfigurePrepareContext(dict(), local_state_file, [])
+        context = ConfigurePrepareContext(dict(), local_state_file, UserConfigOverrides(), [])
         server = UIServer(project, _no_op_prepare(context), event_handler, io_loop)
 
         get_response = http_get(io_loop, server.url)
@@ -73,8 +73,8 @@ def test_ui_server_with_form():
 
         project = Project(dirname)
         requirement = EnvVarRequirement(registry=project.plugin_registry, env_var="FOO")
-        status = requirement.check_status(dict(), local_state_file)
-        context = ConfigurePrepareContext(dict(), local_state_file, [status])
+        status = requirement.check_status(dict(), local_state_file, UserConfigOverrides())
+        context = ConfigurePrepareContext(dict(), local_state_file, UserConfigOverrides(), [status])
         server = UIServer(project, _no_op_prepare(context), event_handler, io_loop)
 
         get_response = http_get(io_loop, server.url)
@@ -117,8 +117,8 @@ def _ui_server_bad_form_name_test(capsys, name_template, expected_err):
         local_state_file = LocalStateFile.load_for_directory(dirname)
 
         requirement = EnvVarRequirement(registry=project.plugin_registry, env_var="FOO")
-        status = requirement.check_status(dict(), local_state_file)
-        context = ConfigurePrepareContext(dict(), local_state_file, [status])
+        status = requirement.check_status(dict(), local_state_file, UserConfigOverrides())
+        context = ConfigurePrepareContext(dict(), local_state_file, UserConfigOverrides(), [status])
         server = UIServer(project, _no_op_prepare(context), event_handler, io_loop)
 
         # do a get so that _requirements_by_id below exists

@@ -45,7 +45,7 @@ def _call_conda(extra_args):
         raise CondaError('%s: %s' % (" ".join(cmd_list), errstr))
     elif errstr != '':
         for line in errstr.split("\n"):
-            print("Conda: %s" % line, file=sys.stderr)
+            print("%s %s: %s" % (cmd_list[0], cmd_list[1], line), file=sys.stderr)
     return out
 
 

@@ -23,7 +23,7 @@ from anaconda_project.test.project_utils import project_dir_disable_dedicated_en
 class Args(object):
     def __init__(self, **kwargs):
         self.project = "."
-        self.environment = 'default'
+        self.environment = None
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         self.command = None
         self.extra_args_for_command = None
@@ -134,6 +134,11 @@ variables:
 
 
 def test_main(monkeypatch, capsys):
+    def mock_conda_create(prefix, pkgs, channels):
+        raise RuntimeError("this test should not create an environment in %s with pkgs %r" % (prefix, pkgs))
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_conda_create)
+
     executed = {}
 
     def mock_execvpe(file, args, env):
@@ -405,8 +410,8 @@ def test_launch_command_nonexistent_name(monkeypatch, capsys):
 
         out, err = capsys.readouterr()
         assert "" == out
-        assert (("Command name 'nope' is not in %s, " + "these names were found: bar, default, foo\n" +
-                 "Unable to load the project.\n") % os.path.join(dirname, 'project.yml')) == err
+        assert (("Command name 'nope' is not in %s, these names were found: bar, default, foo\n") %
+                (os.path.join(dirname, 'project.yml'))) == err
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """

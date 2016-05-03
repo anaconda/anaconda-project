@@ -5,9 +5,16 @@
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 from anaconda_project.plugins.registry import PluginRegistry
-from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
 
 from anaconda_project.internal.test.tmpfile_utils import tmp_local_state_file
+
+
+def test_user_config_overrides():
+    overrides = UserConfigOverrides()
+    assert overrides.conda_environment_name is None
+    overrides = UserConfigOverrides(conda_environment_name='foo')
+    assert overrides.conda_environment_name == 'foo'
 
 
 def test_find_by_env_var_unknown():
@@ -45,7 +52,7 @@ def test_autoguess_encrypted_option():
 
 def test_empty_variable_treated_as_unset():
     requirement = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO')
-    status = requirement.check_status(dict(FOO=''), tmp_local_state_file())
+    status = requirement.check_status(dict(FOO=''), tmp_local_state_file(), UserConfigOverrides())
     assert not status
     assert "Environment variable FOO is not set." == status.status_description
     assert [] == status.logs
