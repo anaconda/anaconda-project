@@ -383,7 +383,11 @@ def _windows_monkeypatch(monkeypatch):
         from os import makedirs as real_makedirs
 
         def mock_makedirs(path, mode=int('0777', 8), exist_ok=True):
-            return real_makedirs(path.replace("\\", "/"), mode, exist_ok)
+
+            if os.path.exists(path) and exist_ok:
+                return None
+            else:
+                return real_makedirs(path.replace("\\", "/"), mode)
 
         monkeypatch.setattr('os.makedirs', mock_makedirs)
 
