@@ -15,6 +15,11 @@ from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
 from anaconda_project.internal.crypto import encrypt_string, decrypt_string
 
+# py27/py3 compatibility
+try:
+  basestring
+except NameError:
+  basestring = str
 
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""
@@ -295,7 +300,7 @@ class EnvVarProvider(Provider):
                 errors.append("Master password %s is not set so can't get value of %s." % (key, requirement.env_var))
                 return None
             value = decrypt_string(value['encrypted'], context.environ[key])
-        assert isinstance(value, str)  # should have validated this on project load
+        assert isinstance(value, basestring)  # should have validated this on project load
         return value
 
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
