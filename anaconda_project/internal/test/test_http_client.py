@@ -13,6 +13,7 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from tornado.ioloop import IOLoop
 
 import os
+import sys
 import platform
 import stat
 
@@ -157,7 +158,10 @@ def test_download_fail_to_write_file(monkeypatch):
             def mock_open(filename, mode):
                 return _FakeFileFailsToWrite()
 
-            monkeypatch.setattr('builtins.open', mock_open)
+            if sys.version_info > (3, 0):
+                monkeypatch.setattr('builtins.open', mock_open)
+            else:
+                monkeypatch.setattr('__builtin__.open', mock_open)
 
             response = IOLoop.current().run_sync(lambda: download.run(IOLoop.current()))
             assert ["Failed to write to %s: FAIL" % (filename + ".part")] == download.errors
