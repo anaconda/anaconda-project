@@ -642,13 +642,11 @@ def add_service(project, service_type, variable_name=None):
 
 
 def remove_service(project, variable_name):
-    """Remove a service from project.yml.
+    """Remove a service to project.yml.
 
-    The returned ``Status`` should be a ``RequirementStatus`` for
-    the service requirement if it evaluates to True (on success),
-    but may be another subtype of ``Status`` on failure. A False
-    status will have an ``errors`` property with a list of error
-    strings.
+    Returns a ``Status`` instance which evaluates to True on
+    success and has an ``errors`` property (with a list of error
+    strings) on failure.
 
     Args:
         project (Project): the project
