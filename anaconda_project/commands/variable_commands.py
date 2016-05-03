@@ -23,7 +23,8 @@ def add_variables(project_dir, vars_to_add):
         if '=' not in var:
             print("Error: {} doesn't define a name=value pair".format(var))
             return 1
-        fixed_vars.append(tuple(var.split('=', maxsplit=1)))
+        # maxsplit=1 -- no maxplist keywork in py27
+        fixed_vars.append(tuple(var.split('=', 1)))
     project = Project(project_dir)
     status = project_ops.add_variables(project, fixed_vars)
     if status:
