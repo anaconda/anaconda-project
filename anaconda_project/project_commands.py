@@ -15,6 +15,11 @@ import os
 import platform
 import sys
 
+try:
+    from shlex import quote
+except ImportError:
+    from pipes import quote
+
 
 def _is_windows():
     # it's tempting to cache this but it hoses our test monkeypatching so don't.
@@ -140,10 +145,10 @@ def _append_extra_args_to_command_line(command, extra_args):
             args = windows_split_command_line(command)
             return windows_join_command_line(args + extra_args)
         else:
-            import shlex
+
             new_command = command
             for arg in extra_args:
-                new_command = new_command + " " + shlex.quote(arg)
+                new_command = new_command + " " + quote(arg)
             return new_command
 
 
