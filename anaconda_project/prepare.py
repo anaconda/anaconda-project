@@ -860,7 +860,7 @@ def prepare_execute_with_browser_ui(project, stage, io_loop=None, show_url=None)
     return prepare_ui.prepare_browser(project=project, stage=stage, io_loop=io_loop, show_url=show_url)
 
 
-def unprepare(project):
+def unprepare(project, whitelist=None):
     """Attempt to clean up project-scoped resources allocated by prepare().
 
     This will retain any user configuration choices about how to
@@ -870,12 +870,15 @@ def unprepare(project):
 
     Args:
         project (Project): the project
+        whitelist (iterable of str): ONLY call shutdown commands for the listed env vars' requirements
 
     """
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
     run_states = local_state.get_all_service_run_states()
     for service_name in copy(run_states):
+        if whitelist is not None and service_name not in whitelist:
+            continue
         state = run_states[service_name]
         if 'shutdown_commands' in state:
             commands = state['shutdown_commands']

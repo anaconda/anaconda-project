@@ -26,6 +26,19 @@ def add_service(project_dir, service_type, variable_name):
         return 1
 
 
+def remove_service(project_dir, variable_name):
+    """Remove an item from the services section."""
+    project = Project(project_dir)
+    status = project_ops.remove_service(project, variable_name=variable_name)
+    if status:
+        print(status.status_description)
+        print("Removed service {} from the project file.".format(variable_name))
+        return 0
+    else:
+        console_utils.print_status_errors(status)
+        return 1
+
+
 def list_services(project_dir):
     """List the services listed on the project."""
     project = Project(project_dir)
@@ -44,6 +57,11 @@ def list_services(project_dir):
 def main_add(args):
     """Start the add-service command and return exit status code."""
     return add_service(args.project, args.service_type, args.variable)
+
+
+def main_remove(args):
+    """Start the remove-service command and return exit status code."""
+    return remove_service(args.project, args.variable)
 
 
 def main_list(args):

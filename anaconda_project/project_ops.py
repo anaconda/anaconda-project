@@ -639,3 +639,37 @@ def add_service(project, service_type, variable_name=None):
         project.project_file.set_value(['services', variable_name], service_type)
 
     return _commit_requirement_if_it_works(project, variable_name)
+
+
+def remove_service(project, variable_name):
+    """Remove a service from project.yml.
+
+    The returned ``Status`` should be a ``RequirementStatus`` for
+    the service requirement if it evaluates to True (on success),
+    but may be another subtype of ``Status`` on failure. A False
+    status will have an ``errors`` property with a list of error
+    strings.
+
+    Args:
+        project (Project): the project
+        variable_name (str): environment variable name (None for default)
+
+    Returns:
+        ``Status`` instance
+    """
+    failed = _project_problems_status(project)
+    if failed is not None:
+        return failed
+
+    requirements = project.find_requirements(variable_name, ServiceRequirement)
+    if not requirements:
+        return SimpleStatus(success=False,
+                            description="Service requirement referenced by '{}' not found".format(variable_name))
+
+    project.project_file.unset_value(['services', variable_name])
+    project.project_file.use_changes_without_saving()
+    assert project.problems == []
+    prepare.unprepare(project, whitelist=[variable_name])
+    project.project_file.save()
+    return SimpleStatus(success=True,
+                        description="Removed service requirement referenced by '{}'".format(variable_name))

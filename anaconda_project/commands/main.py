@@ -122,13 +122,21 @@ def _parse_args_and_run_subcommand(argv):
     service_types = PluginRegistry().list_service_types()
     service_choices = list(map(lambda s: s.name, service_types))
 
-    preset = subparsers.add_parser('add-service', help="Add a service to be available before running commands")
+    def add_service_variable_name(preset):
+        preset.add_argument('--variable', metavar='ENV_VAR_FOR_SERVICE_ADDRESS', default=None)
+
+    preset = subparsers.add_parser('add-service', help="Add a service to be available before running commands.")
     add_project_arg(preset)
-    preset.add_argument('--variable', metavar='ENV_VAR_FOR_SERVICE_ADDRESS', default=None)
+    add_service_variable_name(preset)
     preset.add_argument('service_type', metavar='SERVICE_TYPE', default=None, choices=service_choices)
     preset.set_defaults(main=service_commands.main_add)
 
-    preset = subparsers.add_parser('list-services', help="List services present in project")
+    preset = subparsers.add_parser('remove-service', help="Remove a service from the project.")
+    add_project_arg(preset)
+    add_service_variable_name(preset)
+    preset.set_defaults(main=service_commands.main_remove)
+
+    preset = subparsers.add_parser('list-services', help="List services present in project.")
     add_project_arg(preset)
     preset.set_defaults(main=service_commands.main_list)
 

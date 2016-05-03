@@ -12,6 +12,7 @@ from anaconda_project.plugins.requirements.redis import RedisRequirement
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.simple_status import SimpleStatus
+from anaconda_project.local_state_file import LocalStateFile
 
 
 def _monkeypatch_pwd(monkeypatch, dirname):
@@ -68,6 +69,43 @@ def test_add_service_fails(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
+def test_remove_service(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        local_state = LocalStateFile.load_for_directory(dirname)
+        local_state.set_service_run_state('ABC', {'shutdown_commands': [['echo', '"shutting down ABC"']]})
+        local_state.set_service_run_state('TEST', {'shutdown_commands': [['echo', '"shutting down TEST"']]})
+        local_state.save()
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'TEST'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert '' == err
+        expected_out = ('Running [\'echo\', \'"shutting down TEST"\']\n'
+                        '  exited with 0\n'
+                        'Removed service requirement referenced by \'TEST\'\n'
+                        'Removed service TEST from the project file.\n')
+        assert expected_out == out
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
+
+
+def test_remove_service_missing_variable(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'TEST'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+
+        assert "Service requirement referenced by 'TEST' not found\n" == err
+        assert '' == out
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
+
+
 def _test_service_command_with_project_file_problems(capsys, monkeypatch, command):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
@@ -85,6 +123,11 @@ def _test_service_command_with_project_file_problems(capsys, monkeypatch, comman
 
 def test_add_service_with_project_file_problems(capsys, monkeypatch):
     _test_service_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'add-service', 'redis'])
+
+
+def test_remove_service_with_project_file_problems(capsys, monkeypatch):
+    _test_service_command_with_project_file_problems(capsys, monkeypatch,
+                                                     ['anaconda-project', 'remove-service', '--variable', 'TEST'])
 
 
 def test_list_service_with_project_file_problems(capsys, monkeypatch):
