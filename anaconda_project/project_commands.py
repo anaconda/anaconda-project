@@ -174,6 +174,11 @@ class ProjectCommand(object):
         """Bokeh app filename relative to project directory, or None."""
         return self._attributes.get('bokeh_app', None)
 
+    @property
+    def auto_generated(self):
+        """Get the boolean indicating if the command is auto generated."""
+        return self._attributes.get('auto_generated', False)
+
     def _shell_field(self):
         if _is_windows():
             return 'windows'

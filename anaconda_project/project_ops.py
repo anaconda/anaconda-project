@@ -587,7 +587,7 @@ def remove_command(project, name):
         return SimpleStatus(success=False, description="Command: '{}' not found in project file.".format(name))
 
     command = project.commands[name]
-    if command._attributes.get('auto_generated'):
+    if command.auto_generated:
         return SimpleStatus(success=False, description="Cannot remove auto-generated command: '{}'.".format(name))
 
     project.project_file.unset_value(['commands', name])
