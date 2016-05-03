@@ -16,10 +16,11 @@ from anaconda_project.internal.makedirs import makedirs_ok_if_exists
 from anaconda_project.internal.crypto import encrypt_string, decrypt_string
 
 # py27/py3 compatibility
-try:
-  basestring
-except NameError:
-  basestring = str
+try:  # pragma: no cover
+    basestring  # pragma: no cover
+except NameError:  # pragma: no cover
+    basestring = str  # pragma: no cover
+
 
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""

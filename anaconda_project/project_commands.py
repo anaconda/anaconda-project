@@ -15,10 +15,10 @@ import os
 import platform
 import sys
 
-try:
-    from shlex import quote
-except ImportError:
-    from pipes import quote
+try:  # pragma: no cover
+    from shlex import quote  # pragma: no cover
+except ImportError:  # pragma: no cover
+    from pipes import quote  # pragma: no cover
 
 
 def _is_windows():
