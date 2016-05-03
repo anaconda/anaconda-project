@@ -6,6 +6,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import codecs
 import os
 from tornado import gen
 import pytest
@@ -662,7 +663,7 @@ def test_remove_dependencies_from_one_environment():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            assert ['foo', 'bar'] == list(project.project_file.get_value('dependencies'))
+            assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('dependencies'))
             assert ['foo'] == list(project.project_file.get_value(['environments', 'hello', 'dependencies'], []))
             status = project_ops.remove_dependencies(project, environment='hello', packages=['foo', 'bar'])
             assert status
@@ -674,18 +675,68 @@ def test_remove_dependencies_from_one_environment():
         project2 = Project(dirname)
         # note that hello will still inherit the deps from the global dependencies,
         # and that's fine
-        assert ['foo', 'bar'] == list(project2.project_file.get_value('dependencies'))
+        assert ['qbert'] == list(project2.project_file.get_value('dependencies'))
         assert [] == list(project2.project_file.get_value(['environments', 'hello', 'dependencies'], []))
+
+        # be sure we didn't delete comments from global dependencies section
+        content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
+        assert '# this is a pre comment' in content
+        assert '# this is a post comment' in content
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 dependencies:
+  # this is a pre comment
+  - qbert # this is a post comment
   - foo
   - bar
 environments:
   hello:
     dependencies:
      - foo
+"""}, check)
+
+
+def test_remove_dependencies_from_one_environment_leaving_others_unaffected():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('dependencies'))
+            assert ['foo'] == list(project.project_file.get_value(['environments', 'hello', 'dependencies'], []))
+            status = project_ops.remove_dependencies(project, environment='hello', packages=['foo', 'bar'])
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert ['qbert'] == list(project2.project_file.get_value('dependencies'))
+        assert [] == list(project2.project_file.get_value(['environments', 'hello', 'dependencies'], []))
+        assert set(['baz', 'foo', 'bar']) == set(project2.project_file.get_value(
+            ['environments', 'another', 'dependencies'], []))
+        assert project2.conda_environments['another'].conda_package_names_set == set(['qbert', 'foo', 'bar', 'baz'])
+        assert project2.conda_environments['hello'].conda_package_names_set == set(['qbert'])
+
+        # be sure we didn't delete comments from the env
+        content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
+        assert '# this is a pre comment' in content
+        assert '# this is a post comment' in content
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+dependencies:
+  - qbert
+  - foo
+  - bar
+environments:
+  hello:
+    dependencies:
+     - foo
+  another:
+    dependencies:
+     # this is a pre comment
+     - baz # this is a post comment
 """}, check)
 
 

@@ -400,6 +400,7 @@ def remove_dependencies(project, environment, packages):
 
     if environment is None:
         envs = project.conda_environments.values()
+        unaffected_envs = []
     else:
         env = project.conda_environments.get(environment, None)
         if env is None:
@@ -407,6 +408,9 @@ def remove_dependencies(project, environment, packages):
             return SimpleStatus(success=False, description=problem)
         else:
             envs = [env]
+            unaffected_envs = list(project.conda_environments.values())
+            unaffected_envs.remove(env)
+            assert len(unaffected_envs) == (len(project.conda_environments) - 1)
 
     assert len(envs) > 0
 
@@ -420,15 +424,22 @@ def remove_dependencies(project, environment, packages):
         except conda_manager.CondaManagerError:
             pass  # ignore errors; not all the envs will exist or have the package installed perhaps
 
-    env_dicts = []
-    for env in envs:
-        env_dict = project.project_file.get_value(['environments', env.name])
-        if env_dict is not None:  # it can be None for the default environment (which doesn't have to be listed)
-            env_dicts.append(env_dict)
-    if environment is None:
-        env_dicts.append(project.project_file.root)
+    def envs_to_their_dicts(envs):
+        env_dicts = []
+        for env in envs:
+            env_dict = project.project_file.get_value(['environments', env.name])
+            if env_dict is not None:  # it can be None for the default environment (which doesn't have to be listed)
+                env_dicts.append(env_dict)
+        return env_dicts
+
+    env_dicts = envs_to_their_dicts(envs)
+    env_dicts.append(project.project_file.root)
+
+    unaffected_env_dicts = envs_to_their_dicts(unaffected_envs)
 
     assert len(env_dicts) > 0
+
+    previous_global_deps = set(project.project_file.root.get('dependencies', []))
 
     for env_dict in env_dicts:
         # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
@@ -436,6 +447,17 @@ def remove_dependencies(project, environment, packages):
         dependencies = env_dict.get('dependencies', [])
         removed_set = set(packages)
         _filter_inplace(lambda dep: dep not in removed_set, dependencies)
+        env_dict['dependencies'] = dependencies
+
+    # if we removed any deps from global, add them to the
+    # individual envs that were not supposed to be affected.
+    new_global_deps = set(project.project_file.root.get('dependencies', []))
+    removed_from_global = (previous_global_deps - new_global_deps)
+    for env_dict in unaffected_env_dicts:
+        # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
+        # so don't convert this thing to a regular list.
+        dependencies = env_dict.get('dependencies', [])
+        dependencies.extend(list(removed_from_global))
         env_dict['dependencies'] = dependencies
 
     status = _commit_requirement_if_it_works(project, CondaEnvRequirement, conda_environment_name=environment)
