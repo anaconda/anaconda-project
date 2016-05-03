@@ -20,6 +20,8 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.plugins.requirements.service import ServiceRequirement
+from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.project import Project
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.test.environ_utils import minimal_environ
@@ -1480,6 +1482,7 @@ def test_get_publication_info_from_complex_project():
 def test_find_requirements():
     def check_find_requirements(dirname):
         project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
 
         reqs = project.find_requirements(env_var='SOMETHING')
         assert len(reqs) == 1
@@ -1489,6 +1492,14 @@ def test_find_requirements():
         assert len(reqs) == 1
         assert isinstance(reqs[0], CondaEnvRequirement)
 
+        reqs = project.find_requirements(klass=ServiceRequirement)
+        assert len(reqs) == 1
+        assert isinstance(reqs[0], ServiceRequirement)
+
+        reqs = project.find_requirements(klass=DownloadRequirement)
+        assert len(reqs) == 1
+        assert isinstance(reqs[0], DownloadRequirement)
+
         # the klass and env_var kwargs must be "AND"-ed together
         reqs = project.find_requirements(klass=CondaEnvRequirement, env_var='SOMETHING')
         assert [] == reqs
@@ -1497,3 +1508,57 @@ def test_find_requirements():
         {DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
          "main.py": "",
          "foo.ipynb": ""}, check_find_requirements)
+
+
+def test_requirements_subsets():
+    def check_requirements_subsets(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        services = project.service_requirements
+        assert len(services) == 1
+        assert isinstance(services[0], ServiceRequirement)
+        assert services[0].env_var == 'REDIS_URL'
+
+        downloads = project.download_requirements
+        assert len(downloads) == 1
+        assert isinstance(downloads[0], DownloadRequirement)
+        assert downloads[0].env_var == 'FOO'
+
+        everything = project.all_variable_requirements
+        everything_names = [req.env_var for req in everything]
+        # the first element is CONDA_ENV_PATH or the Windows equivalent CONDA_DEFAULT_ENV
+        assert ['FOO', 'REDIS_URL', 'SOMETHING', 'SOMETHING_ELSE'] == sorted(everything_names)[1:]
+
+        plain = project.plain_variable_requirements
+        plain_names = [req.env_var for req in plain]
+        assert ['SOMETHING', 'SOMETHING_ELSE'] == sorted(plain_names)
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+         "main.py": "",
+         "foo.ipynb": ""}, check_requirements_subsets)
+
+
+def test_env_var_name_list_properties():
+    def check_env_var_name_list_properties(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        services = project.services
+        assert ['REDIS_URL'] == services
+
+        downloads = project.downloads
+        assert ['FOO'] == downloads
+
+        everything = project.all_variables
+        # the first element is CONDA_ENV_PATH or the Windows equivalent CONDA_DEFAULT_ENV
+        assert ['FOO', 'REDIS_URL', 'SOMETHING', 'SOMETHING_ELSE'] == sorted(everything)[1:]
+
+        plain = project.plain_variables
+        assert ['SOMETHING', 'SOMETHING_ELSE'] == sorted(plain)
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+         "main.py": "",
+         "foo.ipynb": ""}, check_env_var_name_list_properties)

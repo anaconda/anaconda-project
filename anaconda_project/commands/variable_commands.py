@@ -54,7 +54,7 @@ def list_variables(project_dir):
     if console_utils.print_project_problems(project):
         return 1
     print("Variables for project: {}".format(project_dir))
-    print("\n".join(project.variables))
+    print("\n".join(project.all_variables))
     return 0
 
 

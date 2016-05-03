@@ -459,6 +459,32 @@ class Project(object):
         """Required items in order to run this project (list of ``Requirement`` instances)."""
         return self._updated_cache().requirements
 
+    @property
+    def service_requirements(self):
+        """All requirements that are ServiceRequirement instances."""
+        return self.find_requirements(klass=ServiceRequirement)
+
+    @property
+    def download_requirements(self):
+        """All requirements that are DownloadRequirement instances."""
+        return self.find_requirements(klass=DownloadRequirement)
+
+    @property
+    def all_variable_requirements(self):
+        """All requirements that have an associated environment variable.
+
+        Note: this will include services, downloads, and even CondaEnvRequirement.
+        """
+        return self.find_requirements(klass=EnvVarRequirement)
+
+    @property
+    def plain_variable_requirements(self):
+        """All 'plain' variables (that aren't services, downloads, or a Conda environment for example).
+
+        Use the ``all_variable_requirements`` property to get every variable.
+        """
+        return [req for req in self.all_variable_requirements if req.__class__ is EnvVarRequirement]
+
     def find_requirements(self, env_var=None, klass=None):
         """Find requirements that match the given env var and class.
 
@@ -514,19 +540,24 @@ class Project(object):
         return self._updated_cache().conda_environments
 
     @property
-    def variables(self):
-        """Get a list of strings with the variables names from project requirements."""
-        return [r.env_var for r in self.requirements if isinstance(r, EnvVarRequirement)]
+    def all_variables(self):
+        """Get a list of strings with the variables names from ``all_variable_requirements``."""
+        return [r.env_var for r in self.all_variable_requirements]
+
+    @property
+    def plain_variables(self):
+        """Get a list of strings with the variables names from ``plain_variable_requirements``."""
+        return [r.env_var for r in self.plain_variable_requirements]
 
     @property
     def services(self):
         """Get a list of strings with the variable names for the project services requirements."""
-        return [r.env_var for r in self.requirements if isinstance(r, ServiceRequirement)]
+        return [r.env_var for r in self.service_requirements]
 
     @property
     def downloads(self):
         """Get a list of strings with the variable names for the project download requirements."""
-        return [r.env_var for r in self.requirements if isinstance(r, DownloadRequirement)]
+        return [r.env_var for r in self.download_requirements]
 
     @property
     def default_conda_environment_name(self):
