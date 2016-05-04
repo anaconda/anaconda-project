@@ -479,7 +479,7 @@ def test_provide_result_properties():
     assert ['c', 'd', 'z'] == extended.logs
 
 
-def test_provide_context_ensure_work_directory():
+def test_provide_context_ensure_service_directory():
     def check_provide_contents(dirname):
         environ = dict()
         local_state_file = LocalStateFile.load_for_directory(dirname)
@@ -489,7 +489,7 @@ def test_provide_context_ensure_work_directory():
                                  local_state_file=local_state_file,
                                  status=status,
                                  mode=PROVIDE_MODE_DEVELOPMENT)
-        workpath = context.ensure_work_directory("foo")
+        workpath = context.ensure_service_directory("foo")
         assert os.path.isdir(workpath)
         assert workpath.endswith("foo")
         parent = os.path.dirname(workpath)
@@ -498,14 +498,14 @@ def test_provide_context_ensure_work_directory():
         assert parent == dirname
 
         # be sure we can create if it already exists
-        workpath2 = context.ensure_work_directory("foo")
+        workpath2 = context.ensure_service_directory("foo")
         assert os.path.isdir(workpath2)
         assert workpath == workpath2
 
     with_directory_contents(dict(), check_provide_contents)
 
 
-def test_provide_context_ensure_work_directory_cannot_create(monkeypatch):
+def test_provide_context_ensure_service_directory_cannot_create(monkeypatch):
     def mock_makedirs(path, mode=0):
         raise IOError("this is not EEXIST")
 
@@ -521,7 +521,7 @@ def test_provide_context_ensure_work_directory_cannot_create(monkeypatch):
                                  status=status,
                                  mode=PROVIDE_MODE_DEVELOPMENT)
         with pytest.raises(IOError) as excinfo:
-            context.ensure_work_directory("foo")
+            context.ensure_service_directory("foo")
         assert "this is not EEXIST" in repr(excinfo.value)
 
     with_directory_contents(dict(), check_provide_contents)

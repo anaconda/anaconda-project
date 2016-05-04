@@ -167,7 +167,7 @@ class RedisProvider(EnvVarProvider):
     def analyze(self, requirement, environ, local_state_file, overrides):
         """Override superclass to store additional fields in the analysis."""
         analysis = super(RedisProvider, self).analyze(requirement, environ, local_state_file, overrides)
-        run_state = local_state_file.get_service_run_state('redis')
+        run_state = local_state_file.get_service_run_state(requirement.env_var)
         previous = self._previously_run_redis_url_if_alive(run_state)
         systemwide = self._can_connect_to_system_default()
 
@@ -202,7 +202,7 @@ class RedisProvider(EnvVarProvider):
 
             run_state.clear()
 
-            workdir = context.ensure_work_directory("redis")
+            workdir = context.ensure_service_directory(requirement.env_var)
             pidfile = os.path.join(workdir, "redis.pid")
             logfile = os.path.join(workdir, "redis.log")
 
@@ -289,7 +289,7 @@ class RedisProvider(EnvVarProvider):
 
             return url
 
-        return context.transform_service_run_state('redis', ensure_redis)
+        return context.transform_service_run_state(requirement.env_var, ensure_redis)
 
     def provide(self, requirement, context):
         """Override superclass to start a project-scoped redis-server.
