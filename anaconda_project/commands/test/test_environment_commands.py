@@ -321,7 +321,7 @@ def test_list_environments(capsys, monkeypatch):
 
         assert code == 0
         out, err = capsys.readouterr()
-        expected_out = "Found these environments in project: {}\nbar\nfoo\n".format(dirname)
+        expected_out = "Found these environments in project: {}\nbar\ndefault\nfoo\n".format(dirname)
         assert out == expected_out
 
     with_directory_contents(
@@ -407,7 +407,7 @@ def test_list_dependencies_from_env(capsys):
 
 
 def test_list_dependencies_default_env(capsys):
-    _test_list_dependencies(capsys, None, '\nflask\nmandatory_dependency\nrequests\n\n')
+    _test_list_dependencies(capsys, None, '\nmandatory_dependency\n\n')
 
 
 def test_list_dependencies_with_project_file_problems(capsys, monkeypatch):

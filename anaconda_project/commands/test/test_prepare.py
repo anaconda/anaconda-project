@@ -252,8 +252,8 @@ def test_prepare_command_choose_environment_does_not_exist(capsys):
                                                  '--environment=nope'])
         assert result == 1
 
-        expected_error = "Environment name 'nope' is not in %s, these names were found: bar, foo" % os.path.join(
-            dirname, DEFAULT_PROJECT_FILENAME)
+        expected_error = ("Environment name 'nope' is not in %s, these names were found: bar, default, foo" %
+                          os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
         out, err = capsys.readouterr()
         assert out == ""
         assert expected_error in err
