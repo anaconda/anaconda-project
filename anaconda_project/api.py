@@ -465,3 +465,19 @@ class AnacondaProject(object):
             ``Status`` instance
         """
         return project_ops.add_service(project=project, service_type=service_type, variable_name=variable_name)
+
+    def remove_service(self, project, variable_name=None):
+        """Remove a service to project.yml.
+
+        Returns a ``Status`` instance which evaluates to True on
+        success and has an ``errors`` property (with a list of error
+        strings) on failure.
+
+        Args:
+            project (Project): the project
+            variable_name (str): environment variable name (None for default)
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.remove_service(project=project, variable_name=variable_name)

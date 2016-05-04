@@ -6,12 +6,18 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import os
+import platform
+
+from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.plugins.requirements.redis import RedisRequirement
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.simple_status import SimpleStatus
+from anaconda_project.local_state_file import LocalStateFile
 
 
 def _monkeypatch_pwd(monkeypatch, dirname):
@@ -68,6 +74,91 @@ def test_add_service_fails(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
+def test_remove_service(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        local_state = LocalStateFile.load_for_directory(dirname)
+        local_state.set_service_run_state('ABC', {'shutdown_commands': [['echo', '"shutting down ABC"']]})
+        local_state.set_service_run_state('TEST', {'shutdown_commands': [['echo', '"shutting down TEST"']]})
+        local_state.save()
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'TEST'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert '' == err
+        expected_out = ('Running [\'echo\', \'"shutting down TEST"\']\n'
+                        '  exited with 0\n'
+                        'Removed service requirement referenced by \'TEST\'\n'
+                        'Removed service TEST from the project file.\n')
+        assert expected_out == out
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
+
+
+def test_remove_service_running_redis(monkeypatch):
+    # this test will fail if you don't have Redis installed, since
+    # it actually starts it.
+    if platform.system() == 'Windows':
+        print("Cannot start redis-server on Windows")
+        return
+
+    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+    from anaconda_project.plugins.providers.test import test_redis_provider
+
+    can_connect_args_list = test_redis_provider._monkeypatch_can_connect_to_socket_on_nonstandard_port_only(
+        monkeypatch, real_can_connect_to_socket)
+
+    def start_local_redis(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = test_redis_provider._prepare_printing_errors(project, environ=minimal_environ())
+        assert result
+
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        state = local_state_file.get_service_run_state('REDIS_URL')
+        assert 'port' in state
+        port = state['port']
+
+        assert dict(REDIS_URL=("redis://localhost:" + str(port)),
+                    PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert len(can_connect_args_list) >= 2
+
+        pidfile = os.path.join(dirname, "services/REDIS_URL/redis.pid")
+        logfile = os.path.join(dirname, "services/REDIS_URL/redis.log")
+        assert os.path.exists(pidfile)
+        assert os.path.exists(logfile)
+
+        assert real_can_connect_to_socket(host='localhost', port=port)
+
+        # now clean it up
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'REDIS_URL',
+                                               '--project', dirname])
+        assert code == 0
+
+        assert not os.path.exists(pidfile)
+        assert not real_can_connect_to_socket(host='localhost', port=port)
+
+        local_state_file.load()
+        assert dict() == local_state_file.get_service_run_state("REDIS_URL")
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis"}, start_local_redis)
+
+
+def test_remove_service_missing_variable(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'TEST'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+
+        assert "Service requirement referenced by 'TEST' not found\n" == err
+        assert '' == out
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
+
+
 def _test_service_command_with_project_file_problems(capsys, monkeypatch, command):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
@@ -85,6 +176,11 @@ def _test_service_command_with_project_file_problems(capsys, monkeypatch, comman
 
 def test_add_service_with_project_file_problems(capsys, monkeypatch):
     _test_service_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'add-service', 'redis'])
+
+
+def test_remove_service_with_project_file_problems(capsys, monkeypatch):
+    _test_service_command_with_project_file_problems(capsys, monkeypatch,
+                                                     ['anaconda-project', 'remove-service', '--variable', 'TEST'])
 
 
 def test_list_service_with_project_file_problems(capsys, monkeypatch):

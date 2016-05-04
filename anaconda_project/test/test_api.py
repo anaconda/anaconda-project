@@ -306,3 +306,20 @@ def test_add_service(monkeypatch):
     result = p.add_service(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
+
+
+def test_remove_service(monkeypatch):
+    params = dict(args=(), kwargs=dict())
+
+    def mock_remove_service(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.remove_service', mock_remove_service)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, variable_name='xyz')
+    result = p.remove_service(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
