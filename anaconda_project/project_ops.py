@@ -668,6 +668,7 @@ def remove_service(project, variable_name):
     project.project_file.use_changes_without_saving()
     assert project.problems == []
     prepare.unprepare(project, whitelist=[variable_name])
+
     project.project_file.save()
     return SimpleStatus(success=True,
                         description="Removed service requirement referenced by '{}'".format(variable_name))

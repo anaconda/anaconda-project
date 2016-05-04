@@ -6,6 +6,11 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import os
+import platform
+
+from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.plugins.requirements.redis import RedisRequirement
@@ -89,6 +94,54 @@ def test_remove_service(capsys, monkeypatch):
         assert expected_out == out
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
+
+
+def test_remove_service_running_redis(monkeypatch):
+    # this test will fail if you don't have Redis installed, since
+    # it actually starts it.
+    if platform.system() == 'Windows':
+        print("Cannot start redis-server on Windows")
+        return
+
+    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+    from anaconda_project.plugins.providers.test import test_redis_provider
+
+    can_connect_args_list = test_redis_provider._monkeypatch_can_connect_to_socket_on_nonstandard_port_only(
+        monkeypatch, real_can_connect_to_socket)
+
+    def start_local_redis(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = test_redis_provider._prepare_printing_errors(project, environ=minimal_environ())
+        assert result
+
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        state = local_state_file.get_service_run_state('REDIS_URL')
+        assert 'port' in state
+        port = state['port']
+
+        assert dict(REDIS_URL=("redis://localhost:" + str(port)),
+                    PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert len(can_connect_args_list) >= 2
+
+        pidfile = os.path.join(dirname, "services/REDIS_URL/redis.pid")
+        logfile = os.path.join(dirname, "services/REDIS_URL/redis.log")
+        assert os.path.exists(pidfile)
+        assert os.path.exists(logfile)
+
+        assert real_can_connect_to_socket(host='localhost', port=port)
+
+        # now clean it up
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'REDIS_URL',
+                                               '--project', dirname])
+        assert code == 0
+
+        assert not os.path.exists(pidfile)
+        assert not real_can_connect_to_socket(host='localhost', port=port)
+
+        local_state_file.load()
+        assert dict() == local_state_file.get_service_run_state("REDIS_URL")
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis"}, start_local_redis)
 
 
 def test_remove_service_missing_variable(capsys, monkeypatch):
