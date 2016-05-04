@@ -32,8 +32,6 @@ platform: win-64
 
 engine:
   - python=3.5
-  - python=2.7
-
 
 install:
   - conda install -y -q pip
