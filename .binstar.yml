@@ -9,6 +9,7 @@ platform: linux-64
 
 engine:
   - python=3.5
+  - python=2.7
 
 install:
   - conda install -y -q pip
@@ -45,8 +46,4 @@ script:
 
 build_targets: [conda]
 
---- # disable Linux python2; I don't know where this comes from in the first place
-
-platform: linux-64
-engine: python=2
-exclude: true
+iotimeout: 600

@@ -8,11 +8,17 @@
 from __future__ import absolute_import
 
 from copy import copy
+from copy import deepcopy
 from distutils.spawn import find_executable
 
 import os
 import platform
 import sys
+
+try:  # pragma: no cover
+    from shlex import quote  # pragma: no cover
+except ImportError:  # pragma: no cover
+    from pipes import quote  # pragma: no cover
 
 
 def _is_windows():
@@ -139,10 +145,10 @@ def _append_extra_args_to_command_line(command, extra_args):
             args = windows_split_command_line(command)
             return windows_join_command_line(args + extra_args)
         else:
-            import shlex
+
             new_command = command
             for arg in extra_args:
-                new_command = new_command + " " + shlex.quote(arg)
+                new_command = new_command + " " + quote(arg)
             return new_command
 
 
@@ -157,7 +163,7 @@ class ProjectCommand(object):
             attributes (dict): named attributes of the command
         """
         self._name = name
-        self._attributes = attributes.copy()
+        self._attributes = deepcopy(attributes)
 
     @property
     def name(self):

@@ -48,9 +48,9 @@ if os.path.isdir(BUILD_TMP):
     else:
         print("Done removing " + BUILD_TMP)
 
-coding_utf8_header = "# -*- coding: utf-8 -*-\n"
+coding_utf8_header = u"# -*- coding: utf-8 -*-\n"
 
-copyright_header = """
+copyright_header = u"""
 # ----------------------------------------------------------------------------
 # Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
 #
