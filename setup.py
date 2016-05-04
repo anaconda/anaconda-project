@@ -26,14 +26,7 @@ ROOT = dirname(realpath(__file__))
 
 PY2 = sys.version_info[0] == 2
 
-# ruamel.yaml has a Py3 bug when saving files, fixed in 0.10.14;
-# Py2 conda only has 0.10.13.  this hack can go away when
-# everything is on 0.10.14 anyway.
-if PY2:
-    RUAMEL_VERSION = "0.10.13"
-else:
-    RUAMEL_VERSION = "0.10.14"
-REQUIRES = ['beautifulsoup4 >= 4.3', 'ruamel.yaml >= ' + RUAMEL_VERSION, 'tornado >= 4.3', 'pycrypto', 'bcrypt >= 2.0']
+REQUIRES = ['beautifulsoup4 >= 4.3', 'tornado >= 4.3', 'pycrypto', 'bcrypt >= 2.0']
 
 TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2', 'pytest-xdist']
 

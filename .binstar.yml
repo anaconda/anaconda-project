@@ -13,8 +13,8 @@ engine:
 
 install:
   - conda install -y -q pip
-  - pip install coverage flake8 pep257 pytest pytest-cov yapf==0.6.2 beautifulsoup4 ruamel.yaml tornado pytest-xdist
-  - conda install -y -q redis pycrypto bcrypt ipython-notebook bokeh libffi
+  - pip install coverage flake8 pep257 pytest pytest-cov yapf==0.6.2 beautifulsoup4 tornado pytest-xdist
+  - conda install -y -q redis pycrypto bcrypt ipython-notebook bokeh libffi ruamel_yaml
 
 test:
   - LANG=en_US.UTF-8 python setup.py test
@@ -35,8 +35,8 @@ engine:
 
 install:
   - conda install -y -q pip
-  - pip install coverage flake8 pep257 pytest pytest-cov yapf==0.6.2 beautifulsoup4 ruamel.yaml tornado pytest-xdist
-  - conda install -y -q pycrypto bcrypt ipython-notebook bokeh
+  - pip install coverage flake8 pep257 pytest pytest-cov yapf==0.6.2 beautifulsoup4 tornado pytest-xdist
+  - conda install -y -q pycrypto bcrypt ipython-notebook bokeh ruamel_yaml
 
 test:
   - python setup.py test
