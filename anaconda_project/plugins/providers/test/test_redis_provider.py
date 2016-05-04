@@ -218,7 +218,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert result
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        state = local_state_file.get_service_run_state("redis")
+        state = local_state_file.get_service_run_state('REDIS_URL')
         assert 'port' in state
         port = state['port']
 
@@ -226,8 +226,8 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
                     PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert len(can_connect_args_list) >= 2
 
-        pidfile = os.path.join(dirname, "services/redis/redis.pid")
-        logfile = os.path.join(dirname, "services/redis/redis.log")
+        pidfile = os.path.join(dirname, "services/REDIS_URL/redis.pid")
+        logfile = os.path.join(dirname, "services/REDIS_URL/redis.log")
         assert os.path.exists(pidfile)
         assert os.path.exists(logfile)
 
@@ -240,7 +240,7 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert not real_can_connect_to_socket(host='localhost', port=port)
 
         local_state_file.load()
-        assert dict() == local_state_file.get_service_run_state("redis")
+        assert dict() == local_state_file.get_service_run_state("REDIS_URL")
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 services:
@@ -267,7 +267,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert 'REDIS_URL' in result.environ
 
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        state = local_state_file.get_service_run_state("redis")
+        state = local_state_file.get_service_run_state("REDIS_URL")
         assert 'port' in state
         port = state['port']
 
@@ -275,8 +275,8 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
                     PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert len(can_connect_args_list) >= 2
 
-        pidfile = os.path.join(dirname, "services/redis/redis.pid")
-        logfile = os.path.join(dirname, "services/redis/redis.log")
+        pidfile = os.path.join(dirname, "services/REDIS_URL/redis.pid")
+        logfile = os.path.join(dirname, "services/REDIS_URL/redis.log")
         assert os.path.exists(pidfile)
         assert os.path.exists(logfile)
 
@@ -312,7 +312,7 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert not real_can_connect_to_socket(host='localhost', port=port)
 
         local_state_file.load()
-        assert dict() == local_state_file.get_service_run_state("redis")
+        assert dict() == local_state_file.get_service_run_state("REDIS_URL")
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 services:
@@ -345,7 +345,7 @@ def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
             if 'done' in killed:
                 return
 
-            pidfile = os.path.join(dirname, "services", "redis", "redis.pid")
+            pidfile = os.path.join(dirname, "services", "REDIS_URL", "redis.pid")
             count = 0
             while count < 15:
                 if os.path.exists(pidfile):
@@ -529,7 +529,7 @@ def _fail_to_prepare_local_redis_server_exec_fails(monkeypatch, capsys, logfile_
     _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
 
     def start_local_redis(dirname):
-        logfile = os.path.join(dirname, "services/redis/redis.log")
+        logfile = os.path.join(dirname, "services/REDIS_URL/redis.log")
 
         from subprocess import Popen as real_Popen
 

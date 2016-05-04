@@ -75,7 +75,7 @@ class LocalStateFile(YamlFile):
         This method does not save the file, call ``save()`` to do that.
 
         Args:
-            service_name (str): some sort of unique name for the service
+            service_name (str): environment variable identifying the service
             state (dict): state for the running service process
         """
         if not isinstance(state, dict):
@@ -86,7 +86,7 @@ class LocalStateFile(YamlFile):
         """Get the running instance state for a service.
 
         Args:
-            service_name (str): some sort of unique name for the service
+            service_name (str): environment variable identifying the service
 
         Returns:
             The state dict (empty dict if no state was saved)

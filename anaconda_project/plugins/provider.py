@@ -33,11 +33,14 @@ class ProvideContext(object):
         self._status = status
         self._mode = mode
 
-    def ensure_work_directory(self, relative_name):
-        """Create a project-scoped work directory with the given name.
+    def ensure_service_directory(self, relative_name):
+        """Create a directory in PROJECT_DIR/services with the given name.
+
+        The name should be unique to the ServiceRequirement creating the directory,
+        so usually the requirement's env var.
 
         Args:
-            relative_name (str): name to distinguish this dir from other work directories
+            relative_name (str): name to distinguish this dir from other service directories
         """
         path = os.path.join(os.path.dirname(self._local_state_file.filename), "services", relative_name)
         makedirs_ok_if_exists(path)
