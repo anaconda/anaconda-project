@@ -295,7 +295,7 @@ class AnacondaProject(object):
         """
         return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove)
 
-    def add_download(self, project, env_var, url):
+    def add_download(self, project, env_var, url, filename=None):
         """Attempt to download the URL; if successful, add it as a download to the project.
 
         The returned ``Status`` should be a ``RequirementStatus`` for
@@ -308,11 +308,12 @@ class AnacondaProject(object):
             project (Project): the project
             env_var (str): env var to store the local filename
             url (str): url to download
+            filename (optional, str): Name to give file or directory after downloading
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.add_download(project=project, env_var=env_var, url=url)
+        return project_ops.add_download(project=project, env_var=env_var, url=url, filename=filename)
 
     def remove_download(self, project, env_var):
         """Remove file or directory referenced by ``env_var`` from file system and the project.

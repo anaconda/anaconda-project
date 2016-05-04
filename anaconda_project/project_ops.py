@@ -138,7 +138,7 @@ def _commit_requirement_if_it_works(project, env_var_or_class, conda_environment
     return status
 
 
-def add_download(project, env_var, url):
+def add_download(project, env_var, url, filename=None):
     """Attempt to download the URL; if successful, add it as a download to the project.
 
     The returned ``Status`` should be a ``RequirementStatus`` for
@@ -151,6 +151,7 @@ def add_download(project, env_var, url):
         project (Project): the project
         env_var (str): env var to store the local filename
         url (str): url to download
+        filename (optional, str): Name to give file or directory after downloading
 
     Returns:
         ``Status`` instance
@@ -162,8 +163,13 @@ def add_download(project, env_var, url):
     existing = project.project_file.get_value(['downloads', env_var])
     if existing is not None and isinstance(existing, dict):
         project.project_file.set_value(['downloads', env_var, 'url'], url)
+        if filename:
+            project.project_file.set_value(['downloads', env_var, 'filename'], filename)
     else:
-        project.project_file.set_value(['downloads', env_var], url)
+        requirement = {'url': url}
+        if filename:
+            requirement['filename'] = filename
+        project.project_file.set_value(['downloads', env_var], requirement)
 
     return _commit_requirement_if_it_works(project, env_var)
 
