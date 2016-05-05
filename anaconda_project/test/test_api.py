@@ -34,7 +34,7 @@ def test_load_project(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.project.Project', MockProject)
     p = api.AnacondaProject()
-    kwargs = dict(directory_path='foo', default_conda_environment='bar', default_command='baz')
+    kwargs = dict(directory_path='foo')
     project = p.load_project(**kwargs)
     assert kwargs == project.kwargs
 
