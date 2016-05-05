@@ -30,7 +30,7 @@ class AnacondaProject(object):
         """Construct an API instance."""
         pass
 
-    def load_project(self, directory_path, default_conda_environment=None, default_command=None):
+    def load_project(self, directory_path):
         """Load a project from the given directory.
 
         If there's a problem, the returned Project instance will
@@ -42,16 +42,12 @@ class AnacondaProject(object):
 
         Args:
             directory_path (str): path to the project directory
-            default_conda_environment (str): name of conda environment spec to use by default
-            default_command (str): name of command from commands section to use by default
 
         Returns:
             a Project instance
 
         """
-        return project.Project(directory_path=directory_path,
-                               default_conda_environment=default_conda_environment,
-                               default_command=default_command)
+        return project.Project(directory_path=directory_path)
 
     def create_project(self, directory_path, make_directory=False, name=None, icon=None):
         """Create a project skeleton in the given directory.
