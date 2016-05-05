@@ -399,7 +399,7 @@ def test_add_download_which_already_exists(monkeypatch):
     def check(dirname):
         _monkeypatch_download_file(monkeypatch, dirname, filename='foobar')
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
         assert dict(url='http://localhost:56789',
@@ -414,7 +414,7 @@ def test_add_download_which_already_exists(monkeypatch):
 
         # be sure download was added to the file and saved, and
         # the filename attribute was kept
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert dict(url='http://localhost:123456',
                     filename='foobar') == dict(project2.project_file.get_value(['downloads', 'MYDATA']))
 
@@ -427,7 +427,7 @@ def test_add_download_which_already_exists_with_fname(monkeypatch):
     def check(dirname):
         _monkeypatch_download_file(monkeypatch, dirname, filename='bazqux')
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
         assert dict(url='http://localhost:56789',
@@ -442,7 +442,7 @@ def test_add_download_which_already_exists_with_fname(monkeypatch):
 
         # be sure download was added to the file and saved, and
         # the filename attribute was kept
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert dict(url='http://localhost:123456',
                     filename='bazqux') == dict(project2.project_file.get_value(['downloads', 'MYDATA']))
 
