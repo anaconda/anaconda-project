@@ -317,6 +317,18 @@ def test_add_command_conflicting_type():
                                     '    shell: echo "pass"\n')}, check_add_command)
 
 
+def test_update_command_with_project_file_problems():
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.update_command(project, 'foo', 'shell', 'echo hello')
+
+        assert not status
+        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
+                ] == status.errors
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
 def test_update_command_invalid_type():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -483,6 +495,31 @@ def test_update_command_empty_update():
 
         result = project_ops.update_command(project, 'default')
         assert result
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.unix_shell_commandline == 'echo "pass"'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check)
+
+
+def test_update_command_to_non_string_value():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.bokeh_app is None
+        assert command.unix_shell_commandline == 'echo "pass"'
+
+        result = project_ops.update_command(project, 'default', 'notebook', 42)
+        assert not result
+        assert [("%s: command 'default' attribute 'notebook' should be a string not '42'" %
+                 project.project_file.filename)] == result.errors
 
         assert 'default' in project.commands
         command = project.commands['default']
