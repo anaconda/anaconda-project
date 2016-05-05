@@ -429,6 +429,24 @@ class AnacondaProject(object):
         """
         return project_ops.add_command(project=project, name=name, command_type=command_type, command=command)
 
+    def update_command(self, project, name, command_type=None, command=None):
+        """Update attributes of a command in project.yml.
+
+        Returns a ``Status`` subtype (it won't be a
+        ``RequirementStatus`` as with some other functions, just a
+        plain status).
+
+        Args:
+           project (Project): the project
+           name (str): name of the command
+           command_type (str or None): choice of `bokeh_app`, `notebook`, `shell` or `windows` command
+           command (str or None): the command line or filename itself; command_type must also be specified
+
+        Returns:
+           a ``Status`` instance
+        """
+        return project_ops.update_command(project=project, name=name, command_type=command_type, command=command)
+
     def remove_command(self, project, name):
         """Remove a command from project.yml.
 
