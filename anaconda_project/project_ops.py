@@ -10,7 +10,7 @@ from __future__ import absolute_import
 import os
 import shutil
 
-from anaconda_project.project import Project, _COMMAND_CHOICES
+from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import prepare
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
@@ -539,8 +539,8 @@ def add_command(project, name, command_type, command):
     Returns:
        a ``Status`` instance
     """
-    if command_type not in _COMMAND_CHOICES:
-        raise ValueError("Invalid command type " + command_type + " choose from " + repr(_COMMAND_CHOICES))
+    if command_type not in ALL_COMMAND_TYPES:
+        raise ValueError("Invalid command type " + command_type + " choose from " + repr(ALL_COMMAND_TYPES))
 
     failed = _project_problems_status(project)
     if failed is not None:
@@ -588,8 +588,8 @@ def update_command(project, name, command_type=None, command=None):
     if command_type is None:
         return SimpleStatus(success=True, description=("Nothing to change about command %s" % name))
 
-    if command_type not in _COMMAND_CHOICES:
-        raise ValueError("Invalid command type " + command_type + " choose from " + repr(_COMMAND_CHOICES))
+    if command_type not in ALL_COMMAND_TYPES:
+        raise ValueError("Invalid command type " + command_type + " choose from " + repr(ALL_COMMAND_TYPES))
 
     if command is None:
         raise ValueError("If specifying the command_type, must also specify the command")

@@ -22,7 +22,16 @@ from anaconda_project.project_file import ProjectFile
 
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
 
-_COMMAND_CHOICES = ('conda_app_entry', 'shell', 'windows', 'notebook', 'bokeh_app')
+# These strings are used in the command line options to anaconda-project,
+# so changing them has back-compat consequences.
+COMMAND_TYPE_CONDA_APP_ENTRY = 'conda_app_entry'
+COMMAND_TYPE_SHELL = 'shell'
+COMMAND_TYPE_WINDOWS = 'windows'
+COMMAND_TYPE_NOTEBOOK = 'notebook'
+COMMAND_TYPE_BOKEH_APP = 'bokeh_app'
+
+ALL_COMMAND_TYPES = (COMMAND_TYPE_CONDA_APP_ENTRY, COMMAND_TYPE_SHELL, COMMAND_TYPE_WINDOWS, COMMAND_TYPE_NOTEBOOK,
+                     COMMAND_TYPE_BOKEH_APP)
 
 
 class _ConfigCache(object):
@@ -312,7 +321,7 @@ class _ConfigCache(object):
                 copy = deepcopy(attrs)
 
                 have_command = False
-                for attr in _COMMAND_CHOICES:
+                for attr in ALL_COMMAND_TYPES:
                     if attr not in copy:
                         continue
 
