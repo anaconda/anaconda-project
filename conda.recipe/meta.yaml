@@ -9,7 +9,9 @@ source:
 #  git_tag: {% if environ.get('PRERELEASE', '') %} HEAD {% else %} {{ environ.get('GIT_DESCRIBE_TAG') }} {% endif %}
 
 build:
-  number: {{ environ.get('BINSTAR_BUILD', 1) }}
+  number: {{ environ.get('BINSTAR_BUILD', '1').split('.')[0] }}
+  string: py_{{ environ.get("GIT_DESCRIBE_NUMBER", 0) }}
+  noarch_python: True
   entry_points:
     - anaconda-project = anaconda_project.commands.main:main
 
@@ -17,7 +19,6 @@ requirements:
   build:
     - python
     - setuptools
-    - bcrypt
 
   run:
     - redis
