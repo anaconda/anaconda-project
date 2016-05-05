@@ -6,8 +6,23 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import
 
+import inspect
+
 from anaconda_project import api
 from anaconda_project import provide
+
+
+def _verify_args_match(function1, function2, ignored=('self', )):
+    f1spec = inspect.getargspec(function1)
+    f2spec = inspect.getargspec(function2)
+    args1 = list(f1spec.args)
+    args2 = list(f2spec.args)
+    for param in ignored:
+        if param in args1:
+            args1.remove(param)
+        if param in args2:
+            args2.remove(param)
+    assert args1 == args2
 
 
 def test_create_project(monkeypatch):
@@ -28,6 +43,9 @@ def test_create_project(monkeypatch):
 
 
 def test_load_project(monkeypatch):
+    from anaconda_project.project import Project
+    _verify_args_match(api.AnacondaProject.load_project, Project.__init__, ignored=['self', 'plugin_registry'])
+
     class MockProject(object):
         def __init__(self, *args, **kwargs):
             self.kwargs = kwargs
@@ -52,6 +70,12 @@ def _monkeypatch_prepare_without_interaction(monkeypatch):
 
 
 def _test_prepare_without_interaction(monkeypatch, api_method, provide_mode):
+    from anaconda_project.prepare import prepare_without_interaction
+    _verify_args_match(
+        getattr(api.AnacondaProject, api_method),
+        prepare_without_interaction,
+        ignored=['self', 'mode', 'provide_whitelist'])
+
     params = _monkeypatch_prepare_without_interaction(monkeypatch)
     p = api.AnacondaProject()
     kwargs = dict(project=43,
@@ -79,6 +103,11 @@ def test_prepare_project_check(monkeypatch):
 
 
 def test_prepare_project_browser(monkeypatch):
+    from anaconda_project.prepare import prepare_with_browser_ui
+    _verify_args_match(api.AnacondaProject.prepare_project_browser,
+                       prepare_with_browser_ui,
+                       ignored=['self', 'keep_going_until_success'])
+
     params = dict(args=(), kwargs=dict())
 
     def mock_prepare_with_browser_ui(*args, **kwargs):
@@ -101,6 +130,9 @@ def test_prepare_project_browser(monkeypatch):
 
 
 def test_set_properties(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.set_properties, project_ops.set_properties)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_set_properties(*args, **kwargs):
@@ -118,6 +150,9 @@ def test_set_properties(monkeypatch):
 
 
 def test_add_variables(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.add_variables, project_ops.add_variables)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_add_variables(*args, **kwargs):
@@ -135,6 +170,9 @@ def test_add_variables(monkeypatch):
 
 
 def test_remove_variables(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.remove_variables, project_ops.remove_variables)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_remove_variables(*args, **kwargs):
@@ -152,6 +190,9 @@ def test_remove_variables(monkeypatch):
 
 
 def test_add_download(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.add_download, project_ops.add_download)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_add_download(*args, **kwargs):
@@ -169,6 +210,9 @@ def test_add_download(monkeypatch):
 
 
 def test_remove_download(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.remove_download, project_ops.remove_download)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_remove_download(*args, **kwargs):
@@ -186,6 +230,9 @@ def test_remove_download(monkeypatch):
 
 
 def test_add_environment(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.add_environment, project_ops.add_environment)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_add_environment(*args, **kwargs):
@@ -203,6 +250,9 @@ def test_add_environment(monkeypatch):
 
 
 def test_remove_environment(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.remove_environment, project_ops.remove_environment)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_remove_environment(*args, **kwargs):
@@ -220,6 +270,9 @@ def test_remove_environment(monkeypatch):
 
 
 def test_add_dependencies(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.add_dependencies, project_ops.add_dependencies)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_add_dependencies(*args, **kwargs):
@@ -237,6 +290,9 @@ def test_add_dependencies(monkeypatch):
 
 
 def test_remove_dependencies(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.remove_dependencies, project_ops.remove_dependencies)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_remove_dependencies(*args, **kwargs):
@@ -254,6 +310,9 @@ def test_remove_dependencies(monkeypatch):
 
 
 def test_add_command(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.add_command, project_ops.add_command)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_add_command(*args, **kwargs):
@@ -273,6 +332,9 @@ def test_add_command(monkeypatch):
 
 
 def test_remove_command(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.remove_command, project_ops.remove_command)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_remove_command(*args, **kwargs):
@@ -292,6 +354,9 @@ def test_remove_command(monkeypatch):
 
 
 def test_add_service(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.add_service, project_ops.add_service)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_add_service(*args, **kwargs):
@@ -309,6 +374,9 @@ def test_add_service(monkeypatch):
 
 
 def test_remove_service(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.remove_service, project_ops.remove_service)
+
     params = dict(args=(), kwargs=dict())
 
     def mock_remove_service(*args, **kwargs):
