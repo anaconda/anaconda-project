@@ -21,7 +21,7 @@ requirements:
     - setuptools
 
   run:
-    - redis
+    - redis [not win]
     - bcrypt
     - tornado
     - pycrypto
