@@ -135,8 +135,6 @@ def test_download_error_readfile(monkeypatch):
                                           filename='data.zip',
                                           hash_algorithm='md5',
                                           hash_value=digest)
-        monkeypatch.setattr(
-            'anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none', checksum_mock)
         status = requirement.check_status({ENV_VAR: filename,
                                            'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
         assert not status
