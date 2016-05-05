@@ -181,6 +181,36 @@ class ProjectCommand(object):
         return self._attributes.get('bokeh_app', None)
 
     @property
+    def unix_shell_commandline(self):
+        """Unix shell command line string, or None.
+
+        This property is here to support displaying the command in
+        a UI, but shouldn't be used to execute the command; use
+        ``exec_info_for_environment()`` for executing.
+        """
+        return self._attributes.get('shell', None)
+
+    @property
+    def windows_cmd_commandline(self):
+        """cmd.exe command line string, or None.
+
+        This property is here to support displaying the command in
+        a UI, but shouldn't be used to execute the command; use
+        ``exec_info_for_environment()`` for executing.
+        """
+        return self._attributes.get('windows', None)
+
+    @property
+    def conda_app_entry(self):
+        """Conda "app entry" style command line.
+
+        This property is here to support displaying the command in
+        a UI, but shouldn't be used to execute the command; use
+        ``exec_info_for_environment()`` for executing.
+        """
+        return self._attributes.get('conda_app_entry', None)
+
+    @property
     def auto_generated(self):
         """Get the boolean indicating if the command is auto generated."""
         return self._attributes.get('auto_generated', False)

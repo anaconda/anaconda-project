@@ -807,8 +807,11 @@ def test_command_with_bogus_key_and_ok_key():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
-        command.name == 'default'
-        command._attributes == dict(shell="bar")
+        assert command.name == 'default'
+        assert command.unix_shell_commandline == 'bar'
+        assert not command.auto_generated
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n\n    shell: 'bar'\n"}, check_app_entry)
@@ -855,7 +858,11 @@ def test_notebook_command():
     def check_notebook_command(dirname):
         project = project_no_dedicated_env(dirname)
         command = project.default_command
-        assert command._attributes == {'notebook': 'test.ipynb'}
+        assert command.notebook == 'test.ipynb'
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
@@ -873,7 +880,11 @@ def test_notebook_command_extra_args():
     def check_notebook_command_extra_args(dirname):
         project = project_no_dedicated_env(dirname)
         command = project.default_command
-        assert command._attributes == {'notebook': 'test.ipynb'}
+        assert command.notebook == 'test.ipynb'
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ, extra_args=['foo', 'bar'])
@@ -897,7 +908,11 @@ def test_notebook_guess_command():
         assert project.default_command.name == 'default'
 
         command = project.commands['test.ipynb']
-        assert command._attributes == {'notebook': 'test.ipynb', 'auto_generated': True}
+        assert command.notebook == 'test.ipynb'
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert command.auto_generated
 
         expected_nb_path = os.path.join(dirname, 'test.ipynb')
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -971,7 +986,12 @@ def test_bokeh_command():
     def check_bokeh_command(dirname):
         project = project_no_dedicated_env(dirname)
         command = project.default_command
-        assert command._attributes == {'bokeh_app': 'test.py'}
+        assert command.bokeh_app == 'test.py'
+        assert command.notebook is None
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
@@ -989,7 +1009,12 @@ def test_bokeh_command_with_extra_args():
     def check_bokeh_command_extra_args(dirname):
         project = project_no_dedicated_env(dirname)
         command = project.default_command
-        assert command._attributes == {'bokeh_app': 'test.py'}
+        assert command.bokeh_app == 'test.py'
+        assert command.notebook is None
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ, extra_args=['--show'])
@@ -1008,8 +1033,9 @@ def test_launch_argv_from_project_file_app_entry():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
-        command.name == 'foo'
-        command._attributes == dict(conda_app_entry="foo bar ${PREFIX}")
+        assert command.name == 'foo'
+        assert command.conda_app_entry == "foo bar ${PREFIX}"
+        assert not command.auto_generated
 
         assert 1 == len(project.commands)
         assert 'foo' in project.commands
@@ -1028,8 +1054,9 @@ def test_launch_argv_from_project_file_shell():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
-        command.name == 'foo'
-        command._attributes == dict(shell="foo bar ${PREFIX}")
+        assert command.name == 'foo'
+        assert command.unix_shell_commandline == "foo bar ${PREFIX}"
+        assert not command.auto_generated
 
         assert 1 == len(project.commands)
         assert 'foo' in project.commands
@@ -1048,8 +1075,10 @@ def test_launch_argv_from_project_file_windows(monkeypatch):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
-        command.name == 'foo'
-        command._attributes == dict(shell="foo bar ${PREFIX}")
+        assert command.name == 'foo'
+        assert command.windows_cmd_commandline == "foo bar %CONDA_DEFAULT_ENV%"
+        assert command.unix_shell_commandline is None
+        assert not command.auto_generated
 
         assert 1 == len(project.commands)
         assert 'foo' in project.commands
@@ -1118,8 +1147,11 @@ def test_launch_argv_from_meta_file():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
-        command.name == 'default'
-        command._attributes == dict(conda_app_entry="foo bar ${PREFIX}")
+        assert command.name == 'default'
+        assert command.conda_app_entry == 'foo bar ${PREFIX}'
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.auto_generated
 
     with_directory_contents({DEFAULT_RELATIVE_META_PATH: """
 app:
@@ -1127,13 +1159,16 @@ app:
 """}, check_launch_argv)
 
 
+# FIXME: this is nuts, why do we support filling in an empty command from
+# meta.yaml?
 def test_launch_argv_from_meta_file_with_name_in_project_file():
     def check_launch_argv(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
-        command.name == 'foo'
-        command._attributes == dict(conda_app_entry="foo bar ${PREFIX}")
+        assert command.name == 'foo'
+        assert command.conda_app_entry == "foo bar ${PREFIX}"
+        assert not command.auto_generated
 
     with_directory_contents(
         {
