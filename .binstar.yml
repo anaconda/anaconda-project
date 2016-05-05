@@ -48,6 +48,9 @@ before_script:
 script:
   - conda build conda.recipe
 
-build_targets: [conda]
+---
+platform: linux-64
+engine: python=2.7
+build_targets: /opt/miniconda/conda-bld/noarch/*.tar.bz2
 
 iotimeout: 600
