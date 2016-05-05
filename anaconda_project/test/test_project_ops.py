@@ -220,7 +220,7 @@ def test_remove_variables():
 def _test_add_command_line(command_type):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project, command_type, 'default', 'echo "test"')
+        result = project_ops.add_command(project, 'default', command_type, 'echo "test"')
         assert result
 
         re_loaded = project.project_file.load_for_directory(project.directory_path)
@@ -244,7 +244,7 @@ def test_add_command_windows():
 def _test_add_command_windows_to_shell(command_type):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project, 'windows', 'default', 'echo "test"')
+        result = project_ops.add_command(project, 'default', 'windows', 'echo "test"')
         assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
@@ -261,7 +261,7 @@ def _test_add_command_windows_to_shell(command_type):
 def test_add_command_bokeh():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project, 'bokeh_app', 'bokeh_test', 'file.py')
+        result = project_ops.add_command(project, 'bokeh_test', 'bokeh_app', 'file.py')
         assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
@@ -275,7 +275,7 @@ def test_add_command_bokeh():
 def test_add_command_bokeh_overwrites():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project, 'bokeh_app', 'bokeh_test', 'file.py')
+        result = project_ops.add_command(project, 'bokeh_test', 'bokeh_app', 'file.py')
         assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
@@ -293,7 +293,7 @@ def test_add_command_invalid_type():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         with pytest.raises(ValueError) as excinfo:
-            project_ops.add_command(project, 'foo', 'default', 'echo "test"')
+            project_ops.add_command(project, 'default', 'foo', 'echo "test"')
         assert 'Invalid command type foo' in str(excinfo.value)
 
     with_directory_contents(dict(), check_add_command)
@@ -302,7 +302,7 @@ def test_add_command_invalid_type():
 def test_add_command_conflicting_type():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project, 'bokeh_app', 'default', 'myapp.py')
+        result = project_ops.add_command(project, 'default', 'bokeh_app', 'myapp.py')
         assert [("%s: command 'default' has conflicting statements, 'bokeh_app' must stand alone" %
                  project.project_file.filename)] == result.errors
 

@@ -523,7 +523,7 @@ def remove_variables(project, vars_to_remove):
     return SimpleStatus(success=True, description="Variables removed from the project file.")
 
 
-def add_command(project, command_type, name, command):
+def add_command(project, name, command_type, command):
     """Add a command to project.yml.
 
     Returns a ``Status`` subtype (it won't be a
@@ -532,7 +532,9 @@ def add_command(project, command_type, name, command):
 
     Args:
        project (Project): the project
-       command_type: choice of `bokeh_app`, `notebook`, `shell` or `windows` command
+       name (str): name of the command
+       command_type (str): choice of `bokeh_app`, `notebook`, `shell` or `windows` command
+       command (str): the command line or filename itself
 
     Returns:
        a ``Status`` instance
