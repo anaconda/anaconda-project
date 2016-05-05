@@ -12,10 +12,10 @@ from anaconda_project import project_ops
 from anaconda_project.commands import console_utils
 
 
-def add_download(project_dir, filename_variable, download_url):
+def add_download(project_dir, filename_variable, download_url, filename):
     """Add an item to the downloads section."""
     project = Project(project_dir)
-    status = project_ops.add_download(project, env_var=filename_variable, url=download_url)
+    status = project_ops.add_download(project, env_var=filename_variable, url=download_url, filename=filename)
     if status:
         print(status.status_description)
         print("Added %s to the project file." % download_url)
@@ -55,7 +55,7 @@ def list_downloads(project_dir):
 
 def main_add(args):
     """Start the download command and return exit status code."""
-    return add_download(args.project, args.filename_variable, args.download_url)
+    return add_download(args.project, args.filename_variable, args.download_url, args.filename)
 
 
 def main_remove(args):
