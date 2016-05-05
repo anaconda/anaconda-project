@@ -140,6 +140,7 @@ def test_add_environment_fails(capsys, monkeypatch):
 
 def test_remove_environment_missing(capsys, monkeypatch):
     def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'foo'])
         assert code == 1
 

@@ -1,8 +1,17 @@
 package:
   name: anaconda_project
   version: 0.1
+#  version: {{ environ.get('GIT_DESCRIBE_TAG', '').replace('v', '') }}
+
+source:
+  git_url: ../
+# will add when git tag has been applied
+#  git_tag: {% if environ.get('PRERELEASE', '') %} HEAD {% else %} {{ environ.get('GIT_DESCRIBE_TAG') }} {% endif %}
 
 build:
+  number: {{ environ.get('BINSTAR_BUILD', '1').split('.')[0] }}
+  string: py_{{ environ.get("GIT_DESCRIBE_NUMBER", 0) }}
+  noarch_python: True
   entry_points:
     - anaconda-project = anaconda_project.commands.main:main
 
@@ -10,12 +19,20 @@ requirements:
   build:
     - python
     - setuptools
-    - bcrypt
 
   run:
-    - beautifulsoup4
-    - ruamel.yaml
+    - bcrypt
     - tornado
     - pycrypto
-    - bcrypt
-    - redis
+    - ruamel_yaml
+    - beautifulsoup4
+
+test:
+  imports:
+    - anaconda_project
+  commands:
+    - anaconda-project --help
+
+about:
+  home: https://github.com/Anaconda-Platform/anaconda-project/
+  license: BSD

@@ -11,8 +11,18 @@ from __future__ import absolute_import, print_function
 # comments, etc., which is why we use it instead of the usual yaml
 # module. Remember the project file is intended to go into source
 # control.
-import ruamel.yaml as ryaml
-from ruamel.yaml.error import YAMLError
+try:
+    # this is the conda-packaged version of ruamel.yaml which has the
+    # module renamed
+    import ruamel_yaml as ryaml
+    from ruamel_yaml.error import YAMLError
+    from ruamel_yaml.comments import CommentedMap
+except ImportError:  # pragma: no cover
+    # this is the upstream version
+    import ruamel.yaml as ryaml  # pragma: no cover
+    from ruamel.yaml.error import YAMLError  # pragma: no cover
+    from ruamel.yaml.comments import CommentedMap  # pragma: no cover
+
 import codecs
 import errno
 import os
@@ -108,7 +118,6 @@ class YamlFile(object):
     def _default_content(self):
         # ruamel.yaml returns None if you load an empty file,
         # so we have to build this ourselves
-        from ruamel.yaml.comments import CommentedMap
         root = CommentedMap()
         root.yaml_set_start_comment(self._default_comment())
         return root

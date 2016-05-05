@@ -12,7 +12,13 @@ from collections import OrderedDict
 
 from anaconda_project.yaml_file import YamlFile
 
-import ruamel.yaml as ryaml
+try:
+    # this is the conda-packaged version of ruamel.yaml which has the
+    # module renamed
+    import ruamel_yaml as ryaml
+except ImportError:  # pragma: no cover
+    # this is the upstream version
+    import ruamel.yaml as ryaml  # pragma: no cover
 
 # these are in the order we'll use them if multiple are present
 possible_project_file_names = ("project.yml", "project.yaml")
