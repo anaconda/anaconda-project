@@ -47,7 +47,7 @@ def with_directory_contents(contents, func):
             makedirs_ok_if_exists(os.path.dirname(path))
             with codecs.open(path, 'w', 'utf-8') as f:
                 f.write(file_content)
-        func(os.path.realpath(dirname))
+        return func(os.path.realpath(dirname))
 
 
 def with_temporary_file(func, dir=None):

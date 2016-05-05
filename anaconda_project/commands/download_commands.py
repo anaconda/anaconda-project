@@ -12,7 +12,7 @@ from anaconda_project import project_ops
 from anaconda_project.commands import console_utils
 
 
-def add_download(project_dir, filename_variable, download_url, filename=None):
+def add_download(project_dir, filename_variable, download_url, filename):
     """Add an item to the downloads section."""
     project = Project(project_dir)
     status = project_ops.add_download(project, env_var=filename_variable, url=download_url, filename=filename)

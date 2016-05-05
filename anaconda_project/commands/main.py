@@ -108,10 +108,7 @@ def _parse_args_and_run_subcommand(argv):
     add_project_arg(preset)
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
-    preset.add_argument('--filename',
-                        metavar='ENV_VAR_FOR_FILENAME',
-                        help="The name to give the file/folder after downloading it.",
-                        default=None)
+    preset.add_argument('--filename', help="The name to give the file/folder after downloading it.", default=None)
     preset.set_defaults(main=download_commands.main_add)
 
     preset = subparsers.add_parser('remove-download', help="Removes a download from project and filesystem.")

@@ -43,18 +43,23 @@ def _monkeypatch_pwd(monkeypatch, dirname):
 
 
 def _monkeypatch_add_download(monkeypatch, result):
+    params = {'args': (), 'kwargs': {}}
+
     def mock_add_download(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
         return result
 
     monkeypatch.setattr("anaconda_project.project_ops.add_download", mock_add_download)
+    return params
 
 
 def _test_add_download(capsys, monkeypatch, command):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        _monkeypatch_add_download(monkeypatch,
-                                  FakeRequirementStatus(success=True,
-                                                        status_description='File downloaded.'))
+        params = _monkeypatch_add_download(monkeypatch,
+                                           FakeRequirementStatus(success=True,
+                                                                 status_description='File downloaded.'))
 
         code = _parse_args_and_run_subcommand(command)
         assert code == 0
@@ -62,17 +67,24 @@ def _test_add_download(capsys, monkeypatch, command):
         out, err = capsys.readouterr()
         assert ('File downloaded.\n' + 'Added http://localhost:123456 to the project file.\n') == out
         assert '' == err
+        return params
 
-    with_directory_contents(dict(), check)
+    return with_directory_contents(dict(), check)
 
 
 def test_add_download(capsys, monkeypatch):
-    _test_add_download(capsys, monkeypatch, ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456'])
+    called_params = _test_add_download(capsys, monkeypatch,
+                                       ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456'])
+    assert len(called_params['args']) == 1
+    assert called_params['kwargs'] == {'env_var': 'MYDATA', 'filename': None, 'url': 'http://localhost:123456'}
 
 
 def test_add_download_with_filename(capsys, monkeypatch):
-    _test_add_download(capsys, monkeypatch,
-                       ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--filename', 'foo'])
+    called_params = _test_add_download(
+        capsys, monkeypatch,
+        ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--filename', 'foo'])
+    assert len(called_params['args']) == 1
+    assert called_params['kwargs'] == {'env_var': 'MYDATA', 'filename': 'foo', 'url': 'http://localhost:123456'}
 
 
 def _test_download_command_with_project_file_problems(capsys, monkeypatch, command):
