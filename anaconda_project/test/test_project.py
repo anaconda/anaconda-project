@@ -1159,16 +1159,12 @@ app:
 """}, check_launch_argv)
 
 
-# FIXME: this is nuts, why do we support filling in an empty command from
-# meta.yaml?
+# we used to fill in empty commands from meta.yaml, but no more,
 def test_launch_argv_from_meta_file_with_name_in_project_file():
     def check_launch_argv(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [] == project.problems
-        command = project.default_command
-        assert command.name == 'foo'
-        assert command.conda_app_entry == "foo bar ${PREFIX}"
-        assert not command.auto_generated
+        assert ["%s: command 'foo' does not have a command line in it" % project.project_file.filename
+                ] == project.problems
 
     with_directory_contents(
         {
