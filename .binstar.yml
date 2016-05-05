@@ -35,11 +35,15 @@ engine:
 
 install:
   - conda install -y -q pip
-  - pip install coverage flake8 pep257 pytest pytest-cov yapf==0.6.2 beautifulsoup4 tornado pytest-xdist
-  - conda install -y -q pycrypto bcrypt ipython-notebook bokeh ruamel_yaml
+  - pip install pep257 yapf==0.6.2 pytest-xdist
+  - conda install -y -q pycrypto bcrypt ipython-notebook bokeh ruamel_yaml coverage beautifulsoup4 tornado pytest pytest-cov flake8
 
 test:
   - python setup.py test
+
+before_script:
+  - conda info
+  - python -V
 
 script:
   - conda build conda.recipe
