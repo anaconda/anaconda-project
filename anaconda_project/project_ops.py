@@ -743,7 +743,7 @@ def add_service(project, service_type, variable_name=None):
     return _commit_requirement_if_it_works(project, variable_name)
 
 
-def remove_service(project, variable_name):
+def remove_service(project, prepare_result, variable_name):
     """Remove a service to project.yml.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -752,7 +752,8 @@ def remove_service(project, variable_name):
 
     Args:
         project (Project): the project
-        variable_name (str): environment variable name (None for default)
+        prepare_result (PrepareResult): result of a previous prepare
+        variable_name (str): environment variable name for the service requirement
 
     Returns:
         ``Status`` instance
@@ -764,13 +765,15 @@ def remove_service(project, variable_name):
     requirements = project.find_requirements(variable_name, ServiceRequirement)
     if not requirements:
         return SimpleStatus(success=False,
-                            description="Service requirement referenced by '{}' not found".format(variable_name))
+                            description="Service '{}' not found in the project file.".format(variable_name))
+
+    status = prepare.unprepare(project, prepare_result, whitelist=[variable_name])
+    if not status:
+        return status
 
     project.project_file.unset_value(['services', variable_name])
     project.project_file.use_changes_without_saving()
     assert project.problems == []
-    prepare.unprepare(project, whitelist=[variable_name])
 
     project.project_file.save()
-    return SimpleStatus(success=True,
-                        description="Removed service requirement referenced by '{}'".format(variable_name))
+    return SimpleStatus(success=True, description="Removed service '{}' from the project file.".format(variable_name))

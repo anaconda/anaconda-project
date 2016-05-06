@@ -10,6 +10,8 @@ from __future__ import absolute_import, print_function
 from anaconda_project.project import Project
 from anaconda_project import project_ops
 from anaconda_project.commands import console_utils
+from anaconda_project.prepare import prepare_without_interaction
+from anaconda_project.provide import PROVIDE_MODE_CHECK
 
 
 def add_service(project_dir, service_type, variable_name):
@@ -29,10 +31,10 @@ def add_service(project_dir, service_type, variable_name):
 def remove_service(project_dir, variable_name):
     """Remove an item from the services section."""
     project = Project(project_dir)
-    status = project_ops.remove_service(project, variable_name=variable_name)
+    result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
+    status = project_ops.remove_service(project, result, variable_name=variable_name)
     if status:
         print(status.status_description)
-        print("Removed service {} from the project file.".format(variable_name))
         return 0
     else:
         console_utils.print_status_errors(status)

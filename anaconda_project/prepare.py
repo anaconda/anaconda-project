@@ -10,12 +10,12 @@ from __future__ import print_function
 
 from abc import ABCMeta, abstractmethod
 import os
-import subprocess
 import sys
-from copy import copy, deepcopy
+from copy import deepcopy
 
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal import prepare_ui
+from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.toposort import toposort_from_dependency_info
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT)
@@ -860,7 +860,7 @@ def prepare_execute_with_browser_ui(project, stage, io_loop=None, show_url=None)
     return prepare_ui.prepare_browser(project=project, stage=stage, io_loop=io_loop, show_url=show_url)
 
 
-def unprepare(project, whitelist=None):
+def unprepare(project, prepare_result, whitelist=None):
     """Attempt to clean up project-scoped resources allocated by prepare().
 
     This will retain any user configuration choices about how to
@@ -870,22 +870,35 @@ def unprepare(project, whitelist=None):
 
     Args:
         project (Project): the project
-        whitelist (iterable of str): ONLY call shutdown commands for the listed env vars' requirements
+        prepare_result (PrepareResult): result from the previous prepare
+        whitelist (iterable of str or type): ONLY call shutdown commands for the listed env vars' requirements
 
     """
-    local_state = LocalStateFile.load_for_directory(project.directory_path)
+    local_state_file = LocalStateFile.load_for_directory(project.directory_path)
 
-    run_states = local_state.get_all_service_run_states()
-    for service_name in copy(run_states):
-        if whitelist is not None and service_name not in whitelist:
+    # note: if the prepare_result was a failure before statuses
+    # were even checked, then statuses could be empty
+    failed_statuses = []
+    failed_requirements = []
+    for status in prepare_result.statuses:
+        requirement = status.requirement
+        if not _in_provide_whitelist(whitelist, requirement):
             continue
-        state = run_states[service_name]
-        if 'shutdown_commands' in state:
-            commands = state['shutdown_commands']
-            for command in commands:
-                print("Running " + repr(command))
-                code = subprocess.call(command)
-                print("  exited with " + str(code))
-        # clear out the run state once we try to shut it down
-        local_state.set_service_run_state(service_name, dict())
-        local_state.save()
+
+        provider = status.provider
+        unprovide_status = provider.unprovide(requirement, local_state_file, status)
+        if not unprovide_status:
+            failed_requirements.append(requirement)
+            failed_statuses.append(unprovide_status)
+
+    if not failed_statuses:
+        return SimpleStatus(success=True, description="Success.")
+    elif len(failed_statuses) == 1:
+        return failed_statuses[0]
+    else:
+        all_errors = [error for status in failed_statuses for error in status.errors]
+        all_names = sorted([requirement.env_var
+                            for requirement in failed_requirements if isinstance(requirement, EnvVarRequirement)])
+        return SimpleStatus(success=False,
+                            description=("Failed to clean up %s." % ", ".join(all_names)),
+                            errors=all_errors)

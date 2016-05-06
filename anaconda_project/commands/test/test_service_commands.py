@@ -87,11 +87,28 @@ def test_remove_service(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == err
-        expected_out = ('Running [\'echo\', \'"shutting down TEST"\']\n'
-                        '  exited with 0\n'
-                        'Removed service requirement referenced by \'TEST\'\n'
-                        'Removed service TEST from the project file.\n')
+        expected_out = ("Removed service 'TEST' from the project file.\n")
         assert expected_out == out
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
+
+
+def test_remove_service_shutdown_fails(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        local_state = LocalStateFile.load_for_directory(dirname)
+        local_state.set_service_run_state('ABC', {'shutdown_commands': [['echo', '"shutting down ABC"']]})
+        local_state.set_service_run_state('TEST', {'shutdown_commands': [['false']]})
+        local_state.save()
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'TEST'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        expected_err = (
+            "Shutting down TEST, command ['false'] failed with code 1.\n" + "Shutdown commands failed for TEST.\n")
+        assert expected_err == err
+        assert '' == out
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
 
@@ -136,6 +153,7 @@ def test_remove_service_running_redis(monkeypatch):
         assert code == 0
 
         assert not os.path.exists(pidfile)
+        assert not os.path.exists(os.path.join(dirname, "services"))
         assert not real_can_connect_to_socket(host='localhost', port=port)
 
         local_state_file.load()
@@ -153,7 +171,7 @@ def test_remove_service_missing_variable(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
 
-        assert "Service requirement referenced by 'TEST' not found\n" == err
+        assert "Service 'TEST' not found in the project file.\n" == err
         assert '' == out
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)

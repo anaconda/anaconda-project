@@ -54,8 +54,11 @@ def test_prepare_bad_provide_mode():
 def test_unprepare_empty_directory():
     def unprepare_empty(dirname):
         project = project_no_dedicated_env(dirname)
-        result = unprepare(project)
-        assert result is None
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ)
+        assert result
+        status = unprepare(project, result)
+        assert status
 
     with_directory_contents(dict(), unprepare_empty)
 

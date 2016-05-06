@@ -483,7 +483,7 @@ class AnacondaProject(object):
         """
         return project_ops.add_service(project=project, service_type=service_type, variable_name=variable_name)
 
-    def remove_service(self, project, variable_name=None):
+    def remove_service(self, project, prepare_result, variable_name):
         """Remove a service to project.yml.
 
         Returns a ``Status`` instance which evaluates to True on
@@ -492,9 +492,10 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
-            variable_name (str): environment variable name (None for default)
+            prepare_result (PrepareResult): result of a previous prepare
+            variable_name (str): environment variable name for the service requirement
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_service(project=project, variable_name=variable_name)
+        return project_ops.remove_service(project=project, prepare_result=prepare_result, variable_name=variable_name)
