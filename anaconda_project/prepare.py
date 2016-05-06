@@ -897,8 +897,11 @@ def unprepare(project, prepare_result, whitelist=None):
             success_statuses.append(unprovide_status)
 
     if not failed_statuses:
-        logs = [status.status_description for status in success_statuses]
-        return SimpleStatus(success=True, description="Success.", logs=logs)
+        if len(success_statuses) > 1:
+            logs = [status.status_description for status in success_statuses]
+            return SimpleStatus(success=True, description="Success.", logs=logs)
+        else:
+            return success_statuses[0]
     elif len(failed_statuses) == 1:
         return failed_statuses[0]
     else:

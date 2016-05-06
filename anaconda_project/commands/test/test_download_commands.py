@@ -122,7 +122,8 @@ def test_remove_download(capsys, monkeypatch):
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert ("Removed file 'foo.tgz' from project.\nRemoved TEST_FILE from the project file.\n") == out
+        filename = os.path.join(dirname, 'foo.tgz')
+        assert ("Removed downloaded file %s.\nRemoved TEST_FILE from the project file.\n" % filename) == out
         assert '' == err
 
     with_directory_contents(
@@ -142,7 +143,8 @@ def test_remove_download_dir(capsys, monkeypatch):
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert ("Removed directory 'foo' from project.\nRemoved TEST_FILE from the project file.\n") == out
+        filename = os.path.join(dirname, 'foo')
+        assert ("Removed downloaded file %s.\nRemoved TEST_FILE from the project file.\n" % filename) == out
         assert '' == err
 
     with_directory_contents(
@@ -154,7 +156,7 @@ def test_remove_download_dir(capsys, monkeypatch):
 
 def test_remove_download_file_error(capsys, monkeypatch):
     def check(dirname):
-        from os import unlink as real_unlink
+        from os import remove as real_remove
         _monkeypatch_pwd(monkeypatch, dirname)
 
         test_filename = os.path.join(dirname, 'foo.tgz')
@@ -167,9 +169,9 @@ def test_remove_download_file_error(capsys, monkeypatch):
             if arg == test_filename and not mock_called:
                 mock_called.append(True)
                 raise Exception('Error')
-            return real_unlink(arg, *args, **kwargs)
+            return real_remove(arg, *args, **kwargs)
 
-        monkeypatch.setattr('os.unlink', mock_remove)
+        monkeypatch.setattr('os.remove', mock_remove)
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
         assert code == 1

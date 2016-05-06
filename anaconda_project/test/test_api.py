@@ -242,7 +242,7 @@ def test_remove_download(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.remove_download', mock_remove_download)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, env_var='boo')
+    kwargs = dict(project=43, prepare_result='winnebago', env_var='boo')
     result = p.remove_download(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

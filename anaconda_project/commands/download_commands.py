@@ -10,6 +10,8 @@ from __future__ import absolute_import, print_function
 from anaconda_project.project import Project
 from anaconda_project import project_ops
 from anaconda_project.commands import console_utils
+from anaconda_project.prepare import prepare_without_interaction
+from anaconda_project.provide import PROVIDE_MODE_CHECK
 
 
 def add_download(project_dir, filename_variable, download_url, filename):
@@ -28,7 +30,8 @@ def add_download(project_dir, filename_variable, download_url, filename):
 def remove_download(project_dir, filename_variable):
     """Remove a download requirement from project and from file system."""
     project = Project(project_dir)
-    status = project_ops.remove_download(project, env_var=filename_variable)
+    result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
+    status = project_ops.remove_download(project, result, env_var=filename_variable)
     if status:
         print(status.status_description)
         print("Removed {} from the project file.".format(filename_variable))

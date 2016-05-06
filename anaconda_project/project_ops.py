@@ -174,7 +174,7 @@ def add_download(project, env_var, url, filename=None):
     return _commit_requirement_if_it_works(project, env_var)
 
 
-def remove_download(project, env_var):
+def remove_download(project, prepare_result, env_var):
     """Remove file or directory referenced by ``env_var`` from file system and the project.
 
     The returned ``Status`` will be an instance of ``SimpleStatus``. A False
@@ -183,6 +183,7 @@ def remove_download(project, env_var):
 
     Args:
         project (Project): the project
+        prepare_result (PrepareResult): result of a previous prepare
         env_var (str): env var to store the local filename
 
     Returns:
@@ -195,25 +196,17 @@ def remove_download(project, env_var):
     requirement = project.find_requirements(env_var, klass=DownloadRequirement)
     if not requirement:
         return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
+    assert len(requirement) == 1  # duplicate env vars aren't allowed
     requirement = requirement[0]
 
-    project.project_file.unset_value(['downloads', env_var])
-    project.project_file.use_changes_without_saving()
+    status = prepare.unprepare(project, prepare_result, whitelist=[env_var])
+    if status:
+        project.project_file.unset_value(['downloads', env_var])
+        project.project_file.use_changes_without_saving()
+        assert project.problems == []
+        project.project_file.save()
 
-    filepath = os.path.join(project.directory_path, requirement.filename)
-    label = 'file'
-    if os.path.exists(filepath):
-        try:
-            if os.path.isdir(filepath):
-                label = 'directory'
-                shutil.rmtree(filepath)
-            else:
-                os.unlink(filepath)
-        except Exception as e:
-            project.project_file.load()
-            return SimpleStatus(success=False, description="Failed to remove {}: {}.".format(filepath, str(e)))
-    project.project_file.save()
-    return SimpleStatus(success=True, description="Removed {} '{}' from project.".format(label, requirement.filename))
+    return status
 
 
 def _update_environment(project, name, packages, channels, create):
