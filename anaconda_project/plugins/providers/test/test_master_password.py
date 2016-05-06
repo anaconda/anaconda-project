@@ -7,6 +7,9 @@
 from __future__ import absolute_import, print_function
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.test.environ_utils import minimal_environ
+from anaconda_project.prepare import (prepare_without_interaction, unprepare)
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.provider import ProvideContext
 from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
@@ -175,3 +178,25 @@ def test_master_password_provider_saves_config_in_keyring():
 variables:
   ANACONDA_MASTER_PASSWORD: { default: 'from_default' }
 """}, check_configure_via_keyring)
+
+
+def test_master_password_provider_prepare_and_unprepare():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = prepare_without_interaction(project,
+                                             environ=minimal_environ(PROJECT_DIR=dirname,
+                                                                     ANACONDA_MASTER_PASSWORD='from_environ'))
+        assert 'ANACONDA_MASTER_PASSWORD' in result.environ
+        assert 'from_environ' == result.environ['ANACONDA_MASTER_PASSWORD']
+
+        status = unprepare(project, result)
+        assert status
+        assert status.status_description == 'Success.'
+        assert status.logs == ['Nothing to clean up for master password.', 'Not cleaning up environments.']
+
+    # set a default to be sure we prefer 'environ' instead
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+variables:
+  ANACONDA_MASTER_PASSWORD: { default: 'from_default' }
+"""}, check)

@@ -882,6 +882,7 @@ def unprepare(project, prepare_result, whitelist=None):
     # were even checked, then statuses could be empty
     failed_statuses = []
     failed_requirements = []
+    success_statuses = []
     for status in prepare_result.statuses:
         requirement = status.requirement
         if not _in_provide_whitelist(whitelist, requirement):
@@ -892,9 +893,12 @@ def unprepare(project, prepare_result, whitelist=None):
         if not unprovide_status:
             failed_requirements.append(requirement)
             failed_statuses.append(unprovide_status)
+        else:
+            success_statuses.append(unprovide_status)
 
     if not failed_statuses:
-        return SimpleStatus(success=True, description="Success.")
+        logs = [status.status_description for status in success_statuses]
+        return SimpleStatus(success=True, description="Success.", logs=logs)
     elif len(failed_statuses) == 1:
         return failed_statuses[0]
     else:

@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 
 from anaconda_project.plugins.provider import Provider, ProvideResult
 from anaconda_project.internal import keyring
+from anaconda_project.internal.simple_status import SimpleStatus
 
 
 class MasterPasswordProvider(Provider):
@@ -63,3 +64,7 @@ class MasterPasswordProvider(Provider):
             pass
 
         return ProvideResult.empty()
+
+    def unprovide(self, requirement, local_state_file, requirement_status=None):
+        """Override superclass to return success always."""
+        return SimpleStatus(success=True, description=("Nothing to clean up for master password."))

@@ -351,6 +351,7 @@ class Provider(with_metaclass(ABCMeta)):
         """
         pass  # pragma: no cover
 
+    @abstractmethod
     def unprovide(self, requirement, local_state_file, requirement_status=None):
         """Undo the provide, cleaning up any files or processes we created.
 
@@ -365,7 +366,7 @@ class Provider(with_metaclass(ABCMeta)):
         Returns:
             a `Status` instance describing the (non)success of the unprovision
         """
-        return SimpleStatus(success=True, description="Nothing to clean up.")
+        pass  # pragma: no cover
 
 
 class EnvVarProvider(Provider):
@@ -606,3 +607,7 @@ class EnvVarProvider(Provider):
             pass
 
         return ProvideResult.empty().copy_with_additions(errors, logs)
+
+    def unprovide(self, requirement, local_state_file, requirement_status=None):
+        """Override superclass to return success always."""
+        return SimpleStatus(success=True, description=("Nothing to clean up for %s." % requirement.env_var))

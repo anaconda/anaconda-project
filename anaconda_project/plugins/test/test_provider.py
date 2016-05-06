@@ -20,6 +20,9 @@ from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOv
 from anaconda_project.project import Project
 from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
 from anaconda_project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME
+from anaconda_project.prepare import (prepare_without_interaction, unprepare)
+from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.test.environ_utils import minimal_environ
 
 
 def test_find_provider_by_class_name():
@@ -45,6 +48,9 @@ def test_provider_default_method_implementations():
             return dict()
 
         def provide(self, requirement, context):
+            pass
+
+        def unprovide(self, requirement, local_state_file, requirement_status=None):
             pass
 
     provider = UselessProvider()
@@ -440,6 +446,22 @@ def test_env_var_provider_config_html():
 variables:
   - FOO
 """}, check_env_var_provider_config)
+
+
+def test_env_var_provider_prepare_unprepare():
+    def check_env_var_provider_prepare(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = prepare_without_interaction(project, environ=minimal_environ(FOO='bar'))
+        assert result
+        status = unprepare(project, result)
+        assert status
+        assert status.status_description == 'Success.'
+        assert status.logs == ["Nothing to clean up for FOO.", "Not cleaning up environments."]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: null
+"""}, check_env_var_provider_prepare)
 
 
 def test_provide_context_properties():

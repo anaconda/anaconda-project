@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
+from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.conda_manager import new_conda_manager, CondaManagerError
 from anaconda_project.plugins.provider import EnvVarProvider
 from anaconda_project.provide import PROVIDE_MODE_CHECK
@@ -198,3 +199,8 @@ class CondaEnvProvider(EnvVarProvider):
         # We can do these in the output of our activate command, but not here.
 
         return super_result
+
+    def unprovide(self, requirement, local_state_file, requirement_status=None):
+        """Override superclass to delete project-scoped envs directory."""
+        # TODO
+        return SimpleStatus(success=True, description=("Not cleaning up environments."))
