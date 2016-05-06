@@ -220,7 +220,7 @@ def test_remove_variables():
 def _test_add_command_line(command_type):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project, command_type, 'default', 'echo "test"')
+        result = project_ops.add_command(project, 'default', command_type, 'echo "test"')
         assert result
 
         re_loaded = project.project_file.load_for_directory(project.directory_path)
@@ -244,7 +244,7 @@ def test_add_command_windows():
 def _test_add_command_windows_to_shell(command_type):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project, 'windows', 'default', 'echo "test"')
+        result = project_ops.add_command(project, 'default', 'windows', 'echo "test"')
         assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
@@ -261,7 +261,7 @@ def _test_add_command_windows_to_shell(command_type):
 def test_add_command_bokeh():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project, 'bokeh_app', 'bokeh_test', 'file.py')
+        result = project_ops.add_command(project, 'bokeh_test', 'bokeh_app', 'file.py')
         assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
@@ -275,7 +275,7 @@ def test_add_command_bokeh():
 def test_add_command_bokeh_overwrites():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project, 'bokeh_app', 'bokeh_test', 'file.py')
+        result = project_ops.add_command(project, 'bokeh_test', 'bokeh_app', 'file.py')
         assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
@@ -293,7 +293,7 @@ def test_add_command_invalid_type():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         with pytest.raises(ValueError) as excinfo:
-            project_ops.add_command(project, 'foo', 'default', 'echo "test"')
+            project_ops.add_command(project, 'default', 'foo', 'echo "test"')
         assert 'Invalid command type foo' in str(excinfo.value)
 
     with_directory_contents(dict(), check_add_command)
@@ -302,7 +302,7 @@ def test_add_command_invalid_type():
 def test_add_command_conflicting_type():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project, 'bokeh_app', 'default', 'myapp.py')
+        result = project_ops.add_command(project, 'default', 'bokeh_app', 'myapp.py')
         assert [("%s: command 'default' has conflicting statements, 'bokeh_app' must stand alone" %
                  project.project_file.filename)] == result.errors
 
@@ -315,6 +315,220 @@ def test_add_command_conflicting_type():
         {DEFAULT_PROJECT_FILENAME: ('commands:\n'
                                     '  default:\n'
                                     '    shell: echo "pass"\n')}, check_add_command)
+
+
+def test_update_command_with_project_file_problems():
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.update_command(project, 'foo', 'shell', 'echo hello')
+
+        assert not status
+        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
+                ] == status.errors
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_update_command_invalid_type():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        with pytest.raises(ValueError) as excinfo:
+            project_ops.update_command(project, 'default', 'foo', 'echo "test"')
+        assert 'Invalid command type foo' in str(excinfo.value)
+
+    with_directory_contents(dict(), check)
+
+
+def test_update_command_no_command():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        with pytest.raises(ValueError) as excinfo:
+            project_ops.update_command(project, 'default', 'bokeh_app')
+        assert 'must also specify the command' in str(excinfo.value)
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check)
+
+
+def test_update_command_does_not_exist():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        result = project_ops.update_command(project, 'myapp', 'bokeh_app', 'myapp.py')
+        assert not result
+
+        assert ["No command 'myapp' found."] == result.errors
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check)
+
+
+def test_update_command_autogenerated():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        result = project_ops.update_command(project, 'foo.ipynb', 'bokeh_app', 'myapp.py')
+        assert not result
+
+        assert ["Autogenerated command 'foo.ipynb' can't be modified."] == result.errors
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n'),
+         "foo.ipynb": "stuff"}, check)
+
+
+def test_update_command_conflicting_type():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.bokeh_app is None
+        assert command.unix_shell_commandline == 'echo "pass"'
+
+        result = project_ops.update_command(project, 'default', 'bokeh_app', 'myapp.py')
+        assert result
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.bokeh_app == 'myapp.py'
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'default'])
+        assert command['bokeh_app'] == 'myapp.py'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check)
+
+
+def test_update_command_same_type():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.unix_shell_commandline == 'echo "pass"'
+
+        result = project_ops.update_command(project, 'default', 'shell', 'echo "blah"')
+        assert result
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.unix_shell_commandline == 'echo "blah"'
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'default'])
+        assert command['shell'] == 'echo "blah"'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check)
+
+
+def test_update_command_add_windows_alongside_shell():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.unix_shell_commandline == 'echo "pass"'
+
+        result = project_ops.update_command(project, 'default', 'windows', 'echo "blah"')
+        assert result
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.unix_shell_commandline == 'echo "pass"'
+        assert command.windows_cmd_commandline == 'echo "blah"'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check)
+
+
+def test_update_command_add_shell_alongside_windows():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.windows_cmd_commandline == 'echo "blah"'
+
+        result = project_ops.update_command(project, 'default', 'shell', 'echo "pass"')
+        assert result
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.unix_shell_commandline == 'echo "pass"'
+        assert command.windows_cmd_commandline == 'echo "blah"'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    windows: echo "blah"\n')}, check)
+
+
+def test_update_command_empty_update():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.unix_shell_commandline == 'echo "pass"'
+
+        result = project_ops.update_command(project, 'default')
+        assert result
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.unix_shell_commandline == 'echo "pass"'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check)
+
+
+def test_update_command_to_non_string_value():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.bokeh_app is None
+        assert command.unix_shell_commandline == 'echo "pass"'
+
+        result = project_ops.update_command(project, 'default', 'notebook', 42)
+        assert not result
+        assert [("%s: command 'default' attribute 'notebook' should be a string not '42'" %
+                 project.project_file.filename)] == result.errors
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.unix_shell_commandline == 'echo "pass"'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  default:\n'
+                                    '    shell: echo "pass"\n')}, check)
 
 
 def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA'):

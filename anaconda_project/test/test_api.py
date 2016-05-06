@@ -331,6 +331,28 @@ def test_add_command(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_update_command(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.update_command, project_ops.update_command)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_update_command(*args, **kwargs):
+        print(args, kwargs)
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.update_command', mock_update_command)
+
+    p = api.AnacondaProject()
+
+    kwargs = dict(project=43, command_type='bokeh_app', name='name', command='file.py')
+    result = p.update_command(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_remove_command(monkeypatch):
     import anaconda_project.project_ops as project_ops
     _verify_args_match(api.AnacondaProject.remove_command, project_ops.remove_command)

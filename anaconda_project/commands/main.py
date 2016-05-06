@@ -13,7 +13,7 @@ from argparse import ArgumentParser, REMAINDER
 
 from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
 from anaconda_project.version import version
-from anaconda_project.project import _COMMAND_CHOICES
+from anaconda_project.project import ALL_COMMAND_TYPES
 from anaconda_project.plugins.registry import PluginRegistry
 import anaconda_project.commands.init as init
 import anaconda_project.commands.launch as launch
@@ -186,7 +186,7 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('add-command', help="Add a new command to the project.")
     add_project_arg(preset)
-    command_choices = list(_COMMAND_CHOICES) + ['ask']
+    command_choices = list(ALL_COMMAND_TYPES) + ['ask']
     command_choices.remove("conda_app_entry")  # conda_app_entry is sort of silly and may go away
     preset.add_argument('--type', action="store", choices=command_choices, help="command type to add")
     add_command_name_arg(preset)
