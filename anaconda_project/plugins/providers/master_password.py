@@ -65,6 +65,6 @@ class MasterPasswordProvider(Provider):
 
         return ProvideResult.empty()
 
-    def unprovide(self, requirement, local_state_file, requirement_status=None):
+    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
         """Override superclass to return success always."""
         return SimpleStatus(success=True, description=("Nothing to clean up for master password."))

@@ -200,7 +200,7 @@ class CondaEnvProvider(EnvVarProvider):
 
         return super_result
 
-    def unprovide(self, requirement, local_state_file, requirement_status=None):
+    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
         """Override superclass to delete project-scoped envs directory."""
         # TODO
         return SimpleStatus(success=True, description=("Not cleaning up environments."))

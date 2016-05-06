@@ -324,7 +324,7 @@ class RedisProvider(EnvVarProvider):
 
         return super_result.copy_with_additions(errors=errors, logs=logs)
 
-    def unprovide(self, requirement, local_state_file, requirement_status=None):
+    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
         """Override superclass to shut down any redis-server we started."""
         status = shutdown_service_run_state(local_state_file, requirement.env_var)
         delete_service_directory(local_state_file, requirement.env_var)

@@ -352,7 +352,7 @@ class Provider(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @abstractmethod
-    def unprovide(self, requirement, local_state_file, requirement_status=None):
+    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
         """Undo the provide, cleaning up any files or processes we created.
 
         The requirement may still be met after this, if our providing wasn't
@@ -360,6 +360,7 @@ class Provider(with_metaclass(ABCMeta)):
 
         Args:
             requirement (Requirement): requirement we want to de-provide
+            environ (dict): current env vars, often from a previous prepare
             local_state_file (LocalStateFile): the local state
             requirement_status (RequirementStatus or None): requirement status if available
 
@@ -608,6 +609,6 @@ class EnvVarProvider(Provider):
 
         return ProvideResult.empty().copy_with_additions(errors, logs)
 
-    def unprovide(self, requirement, local_state_file, requirement_status=None):
+    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
         """Override superclass to return success always."""
         return SimpleStatus(success=True, description=("Nothing to clean up for %s." % requirement.env_var))

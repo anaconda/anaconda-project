@@ -112,10 +112,12 @@ def test_prepare_some_env_var_not_set_keep_going():
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(BAR='bar')
         stage = prepare_in_stages(project, environ=environ, keep_going_until_success=True)
+        assert stage.environ['PROJECT_DIR'] == dirname
         for i in range(1, 10):
             next_stage = stage.execute()
             assert next_stage is not None
             assert stage.failed
+            assert stage.environ['PROJECT_DIR'] == dirname
             stage = next_stage
         assert dict(BAR='bar') == strip_environ(environ)
 
@@ -286,17 +288,18 @@ def test_skip_after_success_function_when_second_stage_fails():
         def last(stage):
             assert state['state'] == 'first'
             state['state'] = 'second'
-            stage.set_result(PrepareFailure(logs=[], statuses=(), errors=[]), [])
+            stage.set_result(PrepareFailure(logs=[], statuses=(), errors=[], environ=dict()), [])
             return None
 
-        return _FunctionPrepareStage("second", [], last)
+        return _FunctionPrepareStage(dict(), "second", [], last)
 
-    first_stage = _FunctionPrepareStage("first", [], do_first)
+    first_stage = _FunctionPrepareStage(dict(), "first", [], do_first)
 
     def after(updated_statuses):
         raise RuntimeError("should not have been called")
 
     stage = _after_stage_success(first_stage, after)
+    assert isinstance(stage.environ, dict)
     while stage is not None:
         next_stage = stage.execute()
         result = stage.result
@@ -324,9 +327,9 @@ def test_run_after_success_function_when_second_stage_succeeds():
             stage.set_result(PrepareSuccess(logs=[], statuses=(), command_exec_info=None, environ=dict()), [])
             return None
 
-        return _FunctionPrepareStage("second", [], last)
+        return _FunctionPrepareStage(dict(), "second", [], last)
 
-    first_stage = _FunctionPrepareStage("first", [], do_first)
+    first_stage = _FunctionPrepareStage(dict(), "first", [], do_first)
 
     def after(updated_statuses):
         assert state['state'] == 'second'
