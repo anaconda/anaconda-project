@@ -129,6 +129,25 @@ def test_prepare_project_browser(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_unprepare(monkeypatch):
+    from anaconda_project.prepare import unprepare
+    _verify_args_match(api.AnacondaProject.unprepare, unprepare)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_unprepare(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.prepare.unprepare', mock_unprepare)
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, prepare_result=44, whitelist=45)
+    result = p.unprepare(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_set_properties(monkeypatch):
     import anaconda_project.project_ops as project_ops
     _verify_args_match(api.AnacondaProject.set_properties, project_ops.set_properties)

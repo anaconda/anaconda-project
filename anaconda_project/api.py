@@ -240,6 +240,24 @@ class AnacondaProject(object):
                                                io_loop=io_loop,
                                                show_url=show_url)
 
+    def unprepare(self, project, prepare_result, whitelist=None):
+        """Attempt to clean up project-scoped resources allocated by prepare().
+
+        This will retain any user configuration choices about how to
+        provide requirements, but it stops project-scoped services.
+        Global system services or other services potentially shared
+        among projects will not be stopped.
+
+        To stop a single service, use ``whitelist=["SERVICE_VARIABLE"]``.
+
+        Args:
+            project (Project): the project
+            prepare_result (PrepareResult): result from the previous prepare
+            whitelist (iterable of str or type): ONLY call shutdown commands for the listed env vars' requirements
+
+        """
+        return prepare.unprepare(project=project, prepare_result=prepare_result, whitelist=whitelist)
+
     def set_properties(self, project, name=None, icon=None):
         """Set simple properties on a project.
 

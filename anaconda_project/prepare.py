@@ -868,6 +868,8 @@ def unprepare(project, prepare_result, whitelist=None):
     Global system services or other services potentially shared
     among projects will not be stopped.
 
+    To stop a single service, use ``whitelist=["SERVICE_VARIABLE"]``.
+
     Args:
         project (Project): the project
         prepare_result (PrepareResult): result from the previous prepare
