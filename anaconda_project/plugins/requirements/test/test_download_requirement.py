@@ -96,53 +96,6 @@ def test_download_with_no_checksum():
     with_directory_contents({'data.zip': datafile}, downloaded_file_valid)
 
 
-def test_download_wrong_checksum():
-    datafile, digest = make_file_with_checksum()
-    digest += '_BROKEN'
-
-    def downloaded_file_valid(dirname):
-        local_state = LocalStateFile.load_for_directory(dirname)
-        filename = os.path.join(dirname, 'data.zip')
-        requirement = DownloadRequirement(registry=PluginRegistry(),
-                                          env_var=ENV_VAR,
-                                          url='http://localhost/data.zip',
-                                          filename='data.zip',
-                                          hash_algorithm='md5',
-                                          hash_value=digest)
-        status = requirement.check_status({ENV_VAR: filename,
-                                           'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
-        assert not status
-        assert 'File checksum error for {}, expected {} but was {}'.format(
-            filename, 'aeca3c870b9de245e8f8c2d27ce85763_BROKEN',
-            'aeca3c870b9de245e8f8c2d27ce85763') == status.status_description
-
-    with_directory_contents({'data.zip': datafile}, downloaded_file_valid)
-
-
-def test_download_error_readfile(monkeypatch):
-    datafile, digest = make_file_with_checksum()
-    digest += '1'
-
-    def checksum_mock(self, fp):
-        raise OSError()
-
-    def downloaded_file_valid(dirname):
-        local_state = LocalStateFile.load_for_directory(dirname)
-        filename = os.path.join(dirname, 'data.zip')
-        requirement = DownloadRequirement(registry=PluginRegistry(),
-                                          env_var=ENV_VAR,
-                                          url='http://localhost/data.zip',
-                                          filename='data.zip',
-                                          hash_algorithm='md5',
-                                          hash_value=digest)
-        status = requirement.check_status({ENV_VAR: filename,
-                                           'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
-        assert not status
-        assert 'File referenced by: {} cannot be read ({})'.format(ENV_VAR, filename) == status.status_description
-
-    with_directory_contents({'data.zip': datafile}, downloaded_file_valid)
-
-
 def test_use_variable_name_for_filename():
     problems = []
     requirements = []
