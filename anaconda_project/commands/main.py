@@ -15,6 +15,7 @@ from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_
 from anaconda_project.version import version
 from anaconda_project.project import ALL_COMMAND_TYPES
 from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.requirements.download import _hash_algorithms
 import anaconda_project.commands.init as init
 import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
@@ -109,6 +110,11 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
     preset.add_argument('--filename', help="The name to give the file/folder after downloading it.", default=None)
+    preset.add_argument('--hash-algorithm',
+                        help="Defines which hash algorithm to use.",
+                        default=None,
+                        choices=_hash_algorithms)
+    preset.add_argument('--hash-value', help="Defines the value of hash algorithm to use.", default=None)
     preset.set_defaults(main=download_commands.main_add)
 
     preset = subparsers.add_parser('remove-download', help="Removes a download from project and filesystem.")

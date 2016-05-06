@@ -76,7 +76,14 @@ def test_add_download(capsys, monkeypatch):
     called_params = _test_add_download(capsys, monkeypatch,
                                        ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456'])
     assert len(called_params['args']) == 1
-    assert called_params['kwargs'] == {'env_var': 'MYDATA', 'filename': None, 'url': 'http://localhost:123456'}
+    expected_kwargs = {
+        'env_var': 'MYDATA',
+        'filename': None,
+        'url': 'http://localhost:123456',
+        'hash_algorithm': None,
+        'hash_value': None
+    }
+    assert called_params['kwargs'] == expected_kwargs
 
 
 def test_add_download_with_filename(capsys, monkeypatch):
@@ -84,7 +91,64 @@ def test_add_download_with_filename(capsys, monkeypatch):
         capsys, monkeypatch,
         ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--filename', 'foo'])
     assert len(called_params['args']) == 1
-    assert called_params['kwargs'] == {'env_var': 'MYDATA', 'filename': 'foo', 'url': 'http://localhost:123456'}
+    expected_kwargs = {
+        'env_var': 'MYDATA',
+        'filename': 'foo',
+        'url': 'http://localhost:123456',
+        'hash_algorithm': None,
+        'hash_value': None
+    }
+    assert called_params['kwargs'] == expected_kwargs
+
+
+def test_add_download_with_checksum(capsys, monkeypatch):
+    called_params = _test_add_download(capsys, monkeypatch, [
+        'anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-algorithm', 'md5',
+        '--hash-value', 'foo'
+    ])
+    assert len(called_params['args']) == 1
+    expected_kwargs = {
+        'env_var': 'MYDATA',
+        'hash_algorithm': 'md5',
+        'hash_value': 'foo',
+        'url': 'http://localhost:123456',
+        'filename': None
+    }
+    assert called_params['kwargs'] == expected_kwargs
+
+
+def _test_add_download_with_only_one_hash_param(capsys, monkeypatch, command):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_add_download(monkeypatch,
+                                           FakeRequirementStatus(success=True,
+                                                                 status_description='File downloaded.'))
+
+        code = _parse_args_and_run_subcommand(command)
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert "Error: mutually dependant parameters: hash_algorithm and hash_value.\n" == err
+        assert '' == out
+        return params
+
+    return with_directory_contents(dict(), check)
+
+
+def test_add_download_with_only_hash_algorithm(capsys, monkeypatch):
+    called_params = _test_add_download_with_only_one_hash_param(capsys, monkeypatch, [
+        'anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-algorithm', 'md5'
+    ])
+    assert len(called_params['args']) == 0
+    assert called_params['kwargs'] == {}
+
+
+def test_add_download_with_only_hash_value(capsys, monkeypatch):
+    called_params = _test_add_download_with_only_one_hash_param(capsys, monkeypatch, [
+        'anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-value', 'foo'
+    ])
+    assert len(called_params['args']) == 0
+    assert called_params['kwargs'] == {}
 
 
 def _test_download_command_with_project_file_problems(capsys, monkeypatch, command):
