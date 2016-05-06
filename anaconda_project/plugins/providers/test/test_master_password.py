@@ -192,7 +192,8 @@ def test_master_password_provider_prepare_and_unprepare():
         status = unprepare(project, result)
         assert status
         assert status.status_description == 'Success.'
-        assert status.logs == ['Nothing to clean up for master password.', 'Not cleaning up environments.']
+        assert status.logs == ['Nothing to clean up for master password.',
+                               ("Current environment is not in %s, no need to delete it." % dirname)]
 
     # set a default to be sure we prefer 'environ' instead
     with_directory_contents(

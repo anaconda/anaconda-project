@@ -456,7 +456,8 @@ def test_env_var_provider_prepare_unprepare():
         status = unprepare(project, result)
         assert status
         assert status.status_description == 'Success.'
-        assert status.logs == ["Nothing to clean up for FOO.", "Not cleaning up environments."]
+        assert status.logs == ["Nothing to clean up for FOO.",
+                               ("Current environment is not in %s, no need to delete it." % dirname)]
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 variables:

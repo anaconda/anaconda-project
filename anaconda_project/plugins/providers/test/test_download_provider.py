@@ -82,7 +82,8 @@ def test_prepare_and_unprepare_download(monkeypatch):
         assert os.path.exists(filename)
 
         status = unprepare(project, result)
-        assert status.logs == ["Removed downloaded file %s." % filename, "Not cleaning up environments."]
+        assert status.logs == ["Removed downloaded file %s." % filename,
+                               ("Current environment is not in %s, no need to delete it." % dirname)]
         assert status.status_description == 'Success.'
         assert status
         assert not os.path.exists(filename)
@@ -106,7 +107,7 @@ def test_prepare_download_exception(monkeypatch):
         status = unprepare(project, result)
         filename = os.path.join(dirname, 'data.csv')
         assert status.logs == ["No need to remove %s which wasn't downloaded." % filename,
-                               "Not cleaning up environments."]
+                               ("Current environment is not in %s, no need to delete it." % dirname)]
         assert status.status_description == 'Success.'
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
@@ -355,7 +356,8 @@ def test_prepare_download_of_zip_file(monkeypatch):
 
         status = unprepare(project, result)
         filename = os.path.join(dirname, 'data')
-        assert status.logs == ["Removed downloaded file %s." % filename, 'Not cleaning up environments.']
+        assert status.logs == ["Removed downloaded file %s." % filename,
+                               ("Current environment is not in %s, no need to delete it." % dirname)]
         assert status.status_description == "Success."
 
     with_tmp_zipfile(dict(foo='hello\n'), provide_download_of_zip)
