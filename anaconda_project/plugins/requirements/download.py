@@ -8,7 +8,6 @@
 
 from __future__ import absolute_import, print_function
 
-import hashlib
 import os
 
 from anaconda_project.plugins.requirement import EnvVarRequirement
@@ -118,38 +117,12 @@ class DownloadRequirement(EnvVarRequirement):
         """Override superclass to supply our title."""
         return "A downloaded file which is referenced by {}".format(self.env_var)  # pragma: no cover
 
-    def _checksum_error_or_none(self, filename):
-        if self.hash_algorithm is None:
-            return None
-
-        # future: keep track of how much of the file was read in %
-        # st = os.stat(filename)
-        # size = st.st_size
-
-        read_size = 1024 * 1024
-        checksum = getattr(hashlib, self.hash_algorithm)()
-        with open(filename, 'rb') as f:
-            data = f.read(read_size)
-            while data:
-                checksum.update(data)
-                data = f.read(read_size)
-        digest = checksum.hexdigest()
-        if digest == self.hash_value:
-            return None
-        else:
-            return 'File checksum error for {}, expected {} but was {}'.format(filename, self.hash_value, digest)
-
     def _why_not_provided(self, environ):
         if self.env_var not in environ:
             return self._unset_message()
         filename = environ[self.env_var]
         if not os.path.exists(filename):
             return 'File not found: {}'.format(filename)
-
-        try:
-            return self._checksum_error_or_none(filename)
-        except OSError:
-            return 'File referenced by: {} cannot be read ({})'.format(self.env_var, filename)
 
     def check_status(self, environ, local_state_file, overrides, latest_provide_result=None):
         """Override superclass to get our status."""
