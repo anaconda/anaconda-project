@@ -339,6 +339,21 @@ def test_update_command_invalid_type():
     with_directory_contents(dict(), check)
 
 
+def test_update_command_rename():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.update_command(project, 'foo', new_name='bar')
+        print(status.status_description)
+        print(status.errors)
+        assert status
+
+        project.project_file.load()
+        assert project.commands['bar']
+        assert 'foo' not in project.commands
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('commands:\n' '  foo:\n' '    shell: echo "pass"\n')}, check)
+
+
 def test_update_command_no_command():
     def check(dirname):
         project = project_no_dedicated_env(dirname)

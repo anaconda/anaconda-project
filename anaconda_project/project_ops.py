@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import os
 import shutil
+from copy import deepcopy
 
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import prepare
@@ -571,7 +572,7 @@ def add_command(project, name, command_type, command):
         return SimpleStatus(success=True, description="Command added to project file.")
 
 
-def update_command(project, name, command_type=None, command=None):
+def update_command(project, name, command_type=None, command=None, new_name=None):
     """Update attributes of a command in project.yml.
 
     Returns a ``Status`` subtype (it won't be a
@@ -591,13 +592,13 @@ def update_command(project, name, command_type=None, command=None):
     # no new command), this is because in theory it might let you
     # update other properties too, when/if commands have more
     # properties.
-    if command_type is None:
+    if command_type is None and new_name is None:
         return SimpleStatus(success=True, description=("Nothing to change about command %s" % name))
 
-    if command_type not in ALL_COMMAND_TYPES:
+    if command_type not in (list(ALL_COMMAND_TYPES) + [None]):
         raise ValueError("Invalid command type " + command_type + " choose from " + repr(ALL_COMMAND_TYPES))
 
-    if command is None:
+    if command is None and command_type is not None:
         raise ValueError("If specifying the command_type, must also specify the command")
 
     failed = _project_problems_status(project)
@@ -618,6 +619,11 @@ def update_command(project, name, command_type=None, command=None):
     command_dict = project.project_file.get_value(['commands', name])
     assert command_dict is not None
 
+    if new_name:
+        command_dict = deepcopy(command_dict)
+        project.project_file.set_value(['commands', new_name], command_dict)
+        project.project_file.unset_value(['commands', name])
+
     existing_types = set(command_dict.keys())
     conflicting_types = existing_types - set([command_type])
     # 'shell' and 'windows' don't conflict with one another
@@ -626,10 +632,11 @@ def update_command(project, name, command_type=None, command=None):
     elif command_type == 'windows':
         conflicting_types = conflicting_types - set(['shell'])
 
-    for conflicting in conflicting_types:
-        del command_dict[conflicting]
+    if command_type is not None:
+        for conflicting in conflicting_types:
+            del command_dict[conflicting]
 
-    command_dict[command_type] = command
+        command_dict[command_type] = command
 
     project.project_file.use_changes_without_saving()
 
