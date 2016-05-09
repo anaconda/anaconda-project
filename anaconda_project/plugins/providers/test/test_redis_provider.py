@@ -602,6 +602,40 @@ def test_fail_to_prepare_local_redis_server_exec_fails_logfile_is_dir(monkeypatc
     _fail_to_prepare_local_redis_server_exec_fails(monkeypatch, capsys, logfile_fail_mode='is_dir')
 
 
+def test_fail_to_prepare_local_redis_server_not_on_path(monkeypatch, capsys):
+    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+
+    _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
+
+    def start_local_redis(dirname):
+        from subprocess import Popen as real_Popen
+
+        def mock_Popen(*args, **kwargs):
+            if 'args' not in kwargs:
+                raise RuntimeError("this mock only works if 'args' provided")
+            kwargs['args'] = ['this-is-not-on-the-path']
+            return real_Popen(*args, **kwargs)
+
+        monkeypatch.setattr("subprocess.Popen", mock_Popen)
+
+        project = project_no_dedicated_env(dirname)
+        result = _prepare_printing_errors(project, environ=minimal_environ())
+        assert not result
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+services:
+  REDIS_URL: redis
+"""}, start_local_redis)
+
+    # this doesn't capture "It did not work stdout" because
+    # of some pytest detail I don't understand.
+    out, err = capsys.readouterr()
+
+    assert "REDIS_URL" in err
+    assert "missing requirement" in err
+    assert "Error executing redis-server: " in err
+
+
 def test_set_scope_in_local_state(monkeypatch):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
