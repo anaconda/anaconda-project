@@ -904,6 +904,8 @@ def unprepare(project, prepare_result, whitelist=None):
         prepare_result (PrepareResult): result from the previous prepare
         whitelist (iterable of str or type): ONLY call shutdown commands for the listed env vars' requirements
 
+    Returns:
+        a ``Status`` instance
     """
     local_state_file = LocalStateFile.load_for_directory(project.directory_path)
 

@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import os
+import shutil
 
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import prepare
@@ -773,3 +774,49 @@ def remove_service(project, prepare_result, variable_name):
 
     project.project_file.save()
     return SimpleStatus(success=True, description="Removed service '{}' from the project file.".format(variable_name))
+
+
+def clean(project, prepare_result):
+    """Blow away auto-provided state for the project.
+
+    This should not remove any potential "user data" such as
+    project-local.yml.
+
+    This includes a call to ``anaconda_project.prepare.unprepare``
+    but also removes the entire services/ and envs/ directories
+    even if they contain leftovers that we didn't prepare in the
+    most recent prepare() call.
+
+    Args:
+        project (Project): the project instance
+        prepare_result (PrepareResult): result of a previous prepare
+
+    Returns:
+        a ``Status`` instance
+
+    """
+    status = prepare.unprepare(project, prepare_result)
+    logs = status.logs
+    errors = status.errors
+    if status:
+        logs = logs + [status.status_description]
+    else:
+        errors = errors + [status.status_description]
+
+    # we also nuke any "debris" from non-current choices, like old
+    # environments or services
+    def cleanup_dir(dirname):
+        if os.path.isdir(dirname):
+            logs.append("Removing %s." % dirname)
+            try:
+                shutil.rmtree(dirname)
+            except Exception as e:
+                errors.append("Error removing %s: %s." % (dirname, str(e)))
+
+    cleanup_dir(os.path.join(project.directory_path, "services"))
+    cleanup_dir(os.path.join(project.directory_path, "envs"))
+
+    if status and len(errors) == 0:
+        return SimpleStatus(success=True, description="Cleaned.", logs=logs, errors=errors)
+    else:
+        return SimpleStatus(success=False, description="Failed to clean everything up.", logs=logs, errors=errors)

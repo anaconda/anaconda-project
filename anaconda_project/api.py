@@ -518,3 +518,19 @@ class AnacondaProject(object):
             ``Status`` instance
         """
         return project_ops.remove_service(project=project, prepare_result=prepare_result, variable_name=variable_name)
+
+    def clean(self, project, prepare_result):
+        """Blow away auto-provided state for the project.
+
+        This should not remove any potential "user data" such as
+        project-local.yml.
+
+        Args:
+            project (Project): the project instance
+            prepare_result (PrepareResult): result of a previous prepare
+
+        Returns:
+            a ``Status`` instance
+
+        """
+        return project_ops.clean(project=project, prepare_result=prepare_result)

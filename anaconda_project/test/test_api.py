@@ -432,3 +432,23 @@ def test_remove_service(monkeypatch):
     result = p.remove_service(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
+
+
+def test_clean(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.clean, project_ops.clean)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_clean(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.clean', mock_clean)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, prepare_result=123)
+    result = p.clean(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
