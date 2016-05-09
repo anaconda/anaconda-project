@@ -114,7 +114,7 @@ def _parse_args_and_run_subcommand(argv):
                         help="Defines which hash algorithm to use.",
                         default=None,
                         choices=_hash_algorithms)
-    preset.add_argument('--hash-value', help="Defines the value of hash algorithm to use.", default=None)
+    preset.add_argument('--hash-value', help="The expected checksum hash of the downloaded file.", default=None)
     preset.set_defaults(main=download_commands.main_add)
 
     preset = subparsers.add_parser('remove-download', help="Removes a download from project and filesystem.")

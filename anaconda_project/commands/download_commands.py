@@ -18,7 +18,7 @@ def add_download(project_dir, filename_variable, download_url, filename, hash_al
     """Add an item to the downloads section."""
     project = Project(project_dir)
     if (hash_algorithm or hash_value) and not bool(hash_algorithm and hash_value):
-        print("Error: mutually dependant parameters: hash_algorithm and hash_value.", file=sys.stderr)
+        print("Error: mutually dependant parameters: --hash-algorithm and --hash-value.", file=sys.stderr)
         return 1
     status = project_ops.add_download(project,
                                       env_var=filename_variable,

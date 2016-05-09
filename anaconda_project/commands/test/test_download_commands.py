@@ -128,7 +128,7 @@ def _test_add_download_with_only_one_hash_param(capsys, monkeypatch, command):
         assert code == 1
 
         out, err = capsys.readouterr()
-        assert "Error: mutually dependant parameters: hash_algorithm and hash_value.\n" == err
+        assert "Error: mutually dependant parameters: --hash-algorithm and --hash-value.\n" == err
         assert '' == out
         return params
 

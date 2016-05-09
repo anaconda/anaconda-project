@@ -164,7 +164,11 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
     failed = _project_problems_status(project)
     if failed is not None:
         return failed
-    requirement = project.project_file.get_value(['downloads', env_var], {})
+    requirement = project.project_file.get_value(['downloads', env_var])
+    if requirement is None or not isinstance(requirement, dict):
+        requirement = {}
+        project.project_file.set_value(['downloads', env_var], requirement)
+
     requirement['url'] = url
     if filename:
         requirement['filename'] = filename
@@ -173,9 +177,6 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
         for _hash in _hash_algorithms:
             requirement.pop(_hash, None)
         requirement[hash_algorithm] = hash_value
-
-    # Modify the project file _in memory only_, do not save
-    project.project_file.set_value(['downloads', env_var], requirement)
 
     return _commit_requirement_if_it_works(project, env_var)
 
