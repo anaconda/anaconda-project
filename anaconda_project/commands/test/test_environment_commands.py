@@ -175,7 +175,7 @@ def test_remove_environment_fails(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert "Failed to remove environment foo: Error.\n" == err
+        assert ("Failed to remove environment files in %s: Error.\n" % os.path.join(dirname, "envs", "foo")) == err
 
     with_directory_contents(
         {
@@ -193,7 +193,8 @@ def test_remove_environment(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == err
-        assert 'Removed environment: foo.\nRemoved environment foo from the project file.\n' == out
+        assert ('Deleted environment files in %s.\nRemoved environment foo from the project file.\n' % os.path.join(
+            dirname, "envs", "foo")) == out
 
     with_directory_contents(
         {

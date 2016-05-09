@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 import os
-import shutil
 
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import prepare
@@ -17,6 +16,7 @@ from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.plugins.requirements.service import ServiceRequirement
+from anaconda_project.plugins.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
 
@@ -306,18 +306,21 @@ def remove_environment(project, name):
         return SimpleStatus(success=False, description=problem)
 
     env_path = project.conda_environments[name].path(project.directory_path)
-    if os.path.exists(env_path):
-        try:
-            shutil.rmtree(env_path)
-        except Exception as e:
-            problem = "Failed to remove environment {}: {}.".format(name, str(e))
-            return SimpleStatus(success=False, description=problem)
 
-    project.project_file.unset_value(['environments', name])
-    project.project_file.use_changes_without_saving()
-    assert project.problems == []
-    project.project_file.save()
-    return SimpleStatus(success=True, description="Removed environment: {}.".format(name))
+    # For remove_service and remove_download, we use unprepare()
+    # to do the cleanup; for the environment, it's awkward to do
+    # that because the env we want to remove may not be the one
+    # that was prepared. So instead we share some code with the
+    # CondaEnvProvider but don't try to go through the unprepare
+    # machinery.
+    status = _remove_env_path(env_path)
+    if status:
+        project.project_file.unset_value(['environments', name])
+        project.project_file.use_changes_without_saving()
+        assert project.problems == []
+        project.project_file.save()
+
+    return status
 
 
 def add_dependencies(project, environment, packages, channels):

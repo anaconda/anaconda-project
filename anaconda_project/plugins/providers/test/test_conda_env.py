@@ -137,7 +137,7 @@ def test_unprepare_gets_error_on_delete(monkeypatch):
         monkeypatch.setattr('shutil.rmtree', mock_rmtree)
 
         status = unprepare(project, result)
-        assert status.status_description == ('Failed to remove environment %s: I will never rm the tree!.' %
+        assert status.status_description == ('Failed to remove environment files in %s: I will never rm the tree!.' %
                                              (expected_env))
         assert not status
 
