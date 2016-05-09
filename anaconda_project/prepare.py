@@ -907,6 +907,12 @@ def unprepare(project, prepare_result, whitelist=None):
     Returns:
         a ``Status`` instance
     """
+    if project.problems:
+        errors = []
+        for problem in project.problems:
+            errors.append(problem)
+        return SimpleStatus(success=False, description="Unable to load the project.", errors=errors)
+
     local_state_file = LocalStateFile.load_for_directory(project.directory_path)
 
     # note: if the prepare_result was a failure before statuses
@@ -931,8 +937,10 @@ def unprepare(project, prepare_result, whitelist=None):
         if len(success_statuses) > 1:
             logs = [status.status_description for status in success_statuses]
             return SimpleStatus(success=True, description="Success.", logs=logs)
-        else:
+        elif len(success_statuses) > 0:
             return success_statuses[0]
+        else:
+            return SimpleStatus(success=True, description="Nothing to clean up.")
     elif len(failed_statuses) == 1:
         return failed_statuses[0]
     else:

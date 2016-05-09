@@ -63,6 +63,34 @@ def test_unprepare_empty_directory():
     with_directory_contents(dict(), unprepare_empty)
 
 
+def test_unprepare_problem_project():
+    def unprepare_problems(dirname):
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ)
+        assert not result
+        status = unprepare(project, result)
+        assert not status
+        assert status.status_description == 'Unable to load the project.'
+        assert status.errors == ['variables section contains wrong value type 42, ' +
+                                 'should be dict or list of requirements']
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, unprepare_problems)
+
+
+def test_unprepare_nothing_to_do():
+    def unprepare_nothing(dirname):
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ)
+        assert result
+        status = unprepare(project, result, whitelist=[])
+        assert status
+        assert status.status_description == 'Nothing to clean up.'
+
+    with_directory_contents(dict(), unprepare_nothing)
+
+
 def test_default_to_system_environ():
     def prepare_system_environ(dirname):
         project = project_no_dedicated_env(dirname)
