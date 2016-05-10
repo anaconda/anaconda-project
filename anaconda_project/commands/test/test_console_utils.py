@@ -12,17 +12,8 @@ import anaconda_project.commands.console_utils as console_utils
 
 
 def test_stdin_is_interactive(monkeypatch):
-    def mock_isatty_true():
-        return True
-
-    monkeypatch.setattr('sys.stdin.isatty', mock_isatty_true)
-    assert console_utils.stdin_is_interactive()
-
-    def mock_isatty_false():
-        return False
-
-    monkeypatch.setattr('sys.stdin.isatty', mock_isatty_false)
-    assert not console_utils.stdin_is_interactive()
+    result = console_utils.stdin_is_interactive()
+    assert result is True or result is False
 
 
 def _monkeypatch_input(monkeypatch, answer):
@@ -48,7 +39,8 @@ def test_console_yes_or_no(monkeypatch, capsys):
     def mock_isatty_true():
         return True
 
-    monkeypatch.setattr('sys.stdin.isatty', mock_isatty_true)
+    # python 2 can throw a "readonly" error if you try to patch sys.stdin.isatty itself
+    monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_isatty_true)
 
     for answer in ("y", "Y", "yes", "Yes", "YES", "yoyo"):
         _monkeypatch_input(monkeypatch, answer)

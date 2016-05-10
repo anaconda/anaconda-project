@@ -30,7 +30,8 @@ def _monkeypatch_isatty(monkeypatch, value):
     def mock_isatty():
         return value
 
-    monkeypatch.setattr('sys.stdin.isatty', mock_isatty)
+    # python 2 can throw a "readonly" error if you try to patch sys.stdin.isatty itself
+    monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_isatty)
 
 
 def test_init_in_pwd(capsys, monkeypatch):
