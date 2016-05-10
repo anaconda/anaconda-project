@@ -90,12 +90,12 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=activate.main)
 
     preset = subparsers.add_parser('add-variable',
-                                   help="Add an environment variable and add it to project if not present")
+                                   help="Add an environment variable and add it to the project if not present")
     preset.add_argument('vars_to_add', metavar='VARS_TO_ADD', default=None, nargs=REMAINDER)
     add_project_arg(preset)
     preset.set_defaults(main=variable_commands.main, action="add")
 
-    preset = subparsers.add_parser('remove-variable', help="Remove an environment variable and remove it from project")
+    preset = subparsers.add_parser('remove-variable', help="Remove an environment variable and remove it from the project")
     add_project_arg(preset)
     preset.add_argument('vars_to_remove', metavar='VARS_TO_REMOVE', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main, action="remove")
@@ -137,7 +137,7 @@ def _parse_args_and_run_subcommand(argv):
     add_service_variable_name(preset)
     preset.set_defaults(main=service_commands.main_remove)
 
-    preset = subparsers.add_parser('list-services', help="List services present in project")
+    preset = subparsers.add_parser('list-services', help="List services present in the project")
     add_project_arg(preset)
     preset.set_defaults(main=service_commands.main_list)
 
