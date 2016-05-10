@@ -348,10 +348,13 @@ def test_update_command_rename():
         assert status
 
         project.project_file.load()
+        with open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME)) as proj_file:
+            assert '# this is a comment' in proj_file.read()
         assert project.commands['bar']
         assert 'foo' not in project.commands
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('commands:\n' '  foo:\n' '    shell: echo "pass"\n')}, check)
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n  # this is a comment\n  foo:\n    shell: echo "pass"\n')}, check)
 
 
 def test_update_command_no_command():
