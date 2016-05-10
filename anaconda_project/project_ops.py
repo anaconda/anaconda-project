@@ -769,7 +769,7 @@ def remove_service(project, variable_name):
                             description="Service requirement referenced by '{}' not found".format(variable_name))
     if len(requirements) > 1:
         return SimpleStatus(success=False,
-                            description=("Conflicting results, found {} matches, use --list-services"
+                            description=("Conflicting results, found {} matches, use list-services"
                                          " to identify which service you want to remove").format(len(requirements)))
 
     env_var = requirements[0].env_var

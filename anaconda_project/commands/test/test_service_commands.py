@@ -130,7 +130,7 @@ def test_remove_service_duplicate(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        expected_err = ("Conflicting results, found 2 matches, use --list-services"
+        expected_err = ("Conflicting results, found 2 matches, use list-services"
                         " to identify which service you want to remove\n")
         assert expected_err == err
 
