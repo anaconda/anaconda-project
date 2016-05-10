@@ -945,8 +945,7 @@ def unprepare(project, prepare_result, whitelist=None):
         return failed_statuses[0]
     else:
         all_errors = [error for status in failed_statuses for error in status.errors]
-        all_names = sorted([requirement.env_var
-                            for requirement in failed_requirements if isinstance(requirement, EnvVarRequirement)])
+        all_names = sorted([req.env_var for req in failed_requirements if isinstance(req, EnvVarRequirement)])
         return SimpleStatus(success=False,
                             description=("Failed to clean up %s." % ", ".join(all_names)),
                             errors=all_errors)
