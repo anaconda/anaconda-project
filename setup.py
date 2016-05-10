@@ -93,7 +93,13 @@ class AllTestsCommand(TestCommand):
         # To see stdout "live" instead of capturing it, use -s.
         coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=anaconda_project',
                          '--cov-report=term-missing', '--cov-report=html']
-        self.pytest_args = ['-v', '-rw', '--durations=10', '-n', str(CPU_COUNT)]
+        if PY2:
+            # xdist appears to lock up the test suite with python
+            # 2, maybe due to an interaction with coverage
+            enable_xdist = []
+        else:
+            enable_xdist = ['-n', str(CPU_COUNT)]
+        self.pytest_args = ['-v', '-rw', '--durations=10'] + enable_xdist
         # 100% coverage on Windows requires us to do extra mocks because generally Windows
         # can't run all the servers, such as redis-server. So we relax the coverage requirement
         # for Windows only.
