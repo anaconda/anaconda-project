@@ -9,7 +9,6 @@ from __future__ import absolute_import
 
 import os
 import shutil
-from copy import deepcopy
 
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import prepare
@@ -620,9 +619,8 @@ def update_command(project, name, command_type=None, command=None, new_name=None
     assert command_dict is not None
 
     if new_name:
-        command_dict = deepcopy(command_dict)
-        project.project_file.set_value(['commands', new_name], command_dict)
         project.project_file.unset_value(['commands', name])
+        project.project_file.set_value(['commands', new_name], command_dict)
 
     existing_types = set(command_dict.keys())
     conflicting_types = existing_types - set([command_type])

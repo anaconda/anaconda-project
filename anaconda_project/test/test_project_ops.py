@@ -340,6 +340,8 @@ def test_update_command_invalid_type():
 
 
 def test_update_command_rename():
+    file_content = 'commands:\n  # this is a comment\n  foo:\n    # another comment\n    shell: echo "pass"\n'
+
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         status = project_ops.update_command(project, 'foo', new_name='bar')
@@ -349,12 +351,14 @@ def test_update_command_rename():
 
         project.project_file.load()
         with open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME)) as proj_file:
-            assert '# this is a comment' in proj_file.read()
+            contents = proj_file.read()
+            assert file_content.replace('foo:', 'bar:') == contents
+            assert '# this is a comment' in contents
+            assert '# another comment' in contents
         assert project.commands['bar']
         assert 'foo' not in project.commands
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n  # this is a comment\n  foo:\n    shell: echo "pass"\n')}, check)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: file_content}, check)
 
 
 def test_update_command_no_command():
