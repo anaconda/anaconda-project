@@ -96,6 +96,47 @@ def test_remove_service(capsys, monkeypatch):
     with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
 
 
+def test_remove_service_by_type(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        local_state = LocalStateFile.load_for_directory(dirname)
+        local_state.set_service_run_state('TEST', {'shutdown_commands': [['echo', '"shutting down TEST"']]})
+        local_state.save()
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'redis'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert '' == err
+        expected_out = ('Running [\'echo\', \'"shutting down TEST"\']\n'
+                        '  exited with 0\n'
+                        'Removed service requirement referenced by \'TEST\'\n'
+                        'Removed service redis from the project file.\n')
+        assert expected_out == out
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  TEST: redis'}, check)
+
+
+def test_remove_service_duplicate(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        local_state = LocalStateFile.load_for_directory(dirname)
+        local_state.set_service_run_state('ABC', {'shutdown_commands': [['echo', '"shutting down ABC"']]})
+        local_state.set_service_run_state('TEST', {'shutdown_commands': [['echo', '"shutting down TEST"']]})
+        local_state.save()
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'redis'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        expected_err = ("Conflicting results, found 2 matches, use list-services"
+                        " to identify which service you want to remove\n")
+        assert expected_err == err
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
+
+
 def test_remove_service_running_redis(monkeypatch):
     # this test will fail if you don't have Redis installed, since
     # it actually starts it.
