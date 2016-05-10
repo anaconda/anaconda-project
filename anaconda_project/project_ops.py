@@ -761,16 +761,23 @@ def remove_service(project, variable_name):
     if failed is not None:
         return failed
 
-    requirements = project.find_requirements(variable_name, ServiceRequirement)
+    requirements = [req
+                    for req in project.find_requirements(klass=ServiceRequirement)
+                    if req.service_type == variable_name or req.env_var == variable_name]
     if not requirements:
         return SimpleStatus(success=False,
                             description="Service requirement referenced by '{}' not found".format(variable_name))
+    if len(requirements) > 1:
+        return SimpleStatus(success=False,
+                            description=("Conflicting results, found {} matches, use --list-services"
+                                         " to identify which service you want to remove").format(len(requirements)))
 
-    project.project_file.unset_value(['services', variable_name])
+    env_var = requirements[0].env_var
+
+    project.project_file.unset_value(['services', env_var])
     project.project_file.use_changes_without_saving()
     assert project.problems == []
-    prepare.unprepare(project, whitelist=[variable_name])
+    prepare.unprepare(project, whitelist=[env_var])
 
     project.project_file.save()
-    return SimpleStatus(success=True,
-                        description="Removed service requirement referenced by '{}'".format(variable_name))
+    return SimpleStatus(success=True, description="Removed service requirement referenced by '{}'".format(env_var))
