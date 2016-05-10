@@ -16,6 +16,7 @@ from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.plugins.requirements.download import DownloadRequirement
+from anaconda_project.plugins.requirements.download import _hash_algorithms
 from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
@@ -138,7 +139,7 @@ def _commit_requirement_if_it_works(project, env_var_or_class, conda_environment
     return status
 
 
-def add_download(project, env_var, url, filename=None):
+def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
     """Attempt to download the URL; if successful, add it as a download to the project.
 
     The returned ``Status`` should be a ``RequirementStatus`` for
@@ -152,24 +153,30 @@ def add_download(project, env_var, url, filename=None):
         env_var (str): env var to store the local filename
         url (str): url to download
         filename (optional, str): Name to give file or directory after downloading
-
+        hash_algorithm (optional, str): Name of the algorithm to use for checksum verification
+                                       must be present if hash_value is entered
+        hash_value (optional, str): Checksum value to use for verification
+                                       must be present if hash_algorithm is entered
     Returns:
         ``Status`` instance
     """
+    assert ((hash_algorithm and hash_value) or (hash_algorithm is None and hash_value is None))
     failed = _project_problems_status(project)
     if failed is not None:
         return failed
-    # Modify the project file _in memory only_, do not save
-    existing = project.project_file.get_value(['downloads', env_var])
-    if existing is not None and isinstance(existing, dict):
-        project.project_file.set_value(['downloads', env_var, 'url'], url)
-        if filename:
-            project.project_file.set_value(['downloads', env_var, 'filename'], filename)
-    else:
-        requirement = {'url': url}
-        if filename:
-            requirement['filename'] = filename
+    requirement = project.project_file.get_value(['downloads', env_var])
+    if requirement is None or not isinstance(requirement, dict):
+        requirement = {}
         project.project_file.set_value(['downloads', env_var], requirement)
+
+    requirement['url'] = url
+    if filename:
+        requirement['filename'] = filename
+
+    if hash_algorithm:
+        for _hash in _hash_algorithms:
+            requirement.pop(_hash, None)
+        requirement[hash_algorithm] = hash_value
 
     return _commit_requirement_if_it_works(project, env_var)
 
