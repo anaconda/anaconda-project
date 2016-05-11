@@ -291,7 +291,7 @@ class AnacondaProject(object):
         """
         return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove)
 
-    def add_download(self, project, env_var, url, filename=None):
+    def add_download(self, project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
         """Attempt to download the URL; if successful, add it as a download to the project.
 
         The returned ``Status`` should be a ``RequirementStatus`` for
@@ -305,11 +305,19 @@ class AnacondaProject(object):
             env_var (str): env var to store the local filename
             url (str): url to download
             filename (optional, str): Name to give file or directory after downloading
-
+            hash_algorithm (optional, str): Name of the algorithm to use for checksum verification
+                                       must be present if hash_value is entered
+            hash_value (optional, str): Checksum value to use for verification
+                                           must be present if hash_algorithm is entered
         Returns:
             ``Status`` instance
         """
-        return project_ops.add_download(project=project, env_var=env_var, url=url, filename=filename)
+        return project_ops.add_download(project=project,
+                                        env_var=env_var,
+                                        url=url,
+                                        filename=filename,
+                                        hash_algorithm=hash_algorithm,
+                                        hash_value=hash_value)
 
     def remove_download(self, project, env_var):
         """Remove file or directory referenced by ``env_var`` from file system and the project.
@@ -430,7 +438,7 @@ class AnacondaProject(object):
         """
         return project_ops.add_command(project=project, name=name, command_type=command_type, command=command)
 
-    def update_command(self, project, name, command_type=None, command=None):
+    def update_command(self, project, name, command_type=None, command=None, new_name=None):
         """Update attributes of a command in project.yml.
 
         Returns a ``Status`` subtype (it won't be a
@@ -442,11 +450,16 @@ class AnacondaProject(object):
            name (str): name of the command
            command_type (str or None): choice of `bokeh_app`, `notebook`, `shell` or `windows` command
            command (str or None): the command line or filename itself; command_type must also be specified
+           new_name (str or None): a new name to reference the command
 
         Returns:
            a ``Status`` instance
         """
-        return project_ops.update_command(project=project, name=name, command_type=command_type, command=command)
+        return project_ops.update_command(project=project,
+                                          name=name,
+                                          command_type=command_type,
+                                          command=command,
+                                          new_name=new_name)
 
     def remove_command(self, project, name):
         """Remove a command from project.yml.

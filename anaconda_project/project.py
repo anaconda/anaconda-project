@@ -245,11 +245,8 @@ class _ConfigCache(object):
         shared_deps = _parse_dependencies(project_file.root)
         shared_channels = _parse_channels(project_file.root)
         environments = project_file.get_value('environments', default={})
-        first_listed_name = None
         if isinstance(environments, dict):
             for (name, attrs) in environments.items():
-                if first_listed_name is None:
-                    first_listed_name = name
                 deps = _parse_dependencies(attrs)
                 channels = _parse_channels(attrs)
                 # ideally we would merge same-name packages here, choosing the
@@ -265,21 +262,16 @@ class _ConfigCache(object):
                 "%s: environments should be a dictionary from environment name to environment attributes, not %r" %
                 (project_file.filename, environments))
 
-        # invariant is that we always have at least one
-        # environment; it doesn't have to be named 'default' but
-        # we name it that if no named environment was created.
-        if len(self.conda_environments) == 0:
-            assert first_listed_name is None
-            first_listed_name = 'default'
+        # We ALWAYS have an environment named 'default' which is the default,
+        # even if not explicitly listed.
+        if 'default' not in self.conda_environments:
             self.conda_environments['default'] = CondaEnvironment(name='default',
                                                                   dependencies=shared_deps,
                                                                   channels=shared_channels)
 
-        assert first_listed_name is not None
-        if 'default' in self.conda_environments:
-            self.default_conda_environment_name = 'default'
-        else:
-            self.default_conda_environment_name = first_listed_name
+        # since this never varies now, it's a little pointless, but we'll leave it here
+        # as an abstraction in case we change our mind again.
+        self.default_conda_environment_name = 'default'
 
     def _update_conda_env_requirements(self, requirements, problems, project_file):
         if problems:
