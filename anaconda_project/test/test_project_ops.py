@@ -532,7 +532,7 @@ def test_update_command_to_non_string_value():
                                     '    shell: echo "pass"\n')}, check)
 
 
-def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA'):
+def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA', checksum=None):
     @gen.coroutine
     def mock_downloader_run(self, loop):
         class Res:
@@ -542,6 +542,8 @@ def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA'):
         res.code = 200
         with open(os.path.join(dirname, filename), 'w') as out:
             out.write('data')
+        if checksum:
+            self._hash = checksum
         raise gen.Return(res)
 
     monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
@@ -606,6 +608,31 @@ def test_add_download_with_filename(monkeypatch):
         requirement = project2.project_file.get_value(['downloads', 'MYDATA'])
         assert requirement['url'] == 'http://localhost:123456'
         assert requirement['filename'] == FILENAME
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_download_with_checksum(monkeypatch):
+    def check(dirname):
+        FILENAME = 'MYDATA'
+        _monkeypatch_download_file(monkeypatch, dirname, checksum='DIGEST')
+
+        project = Project(dirname)
+        status = project_ops.add_download(project,
+                                          'MYDATA',
+                                          'http://localhost:123456',
+                                          hash_algorithm='md5',
+                                          hash_value='DIGEST')
+        assert os.path.isfile(os.path.join(dirname, FILENAME))
+        assert status
+        assert isinstance(status.logs, list)
+        assert [] == status.errors
+
+        # be sure download was added to the file and saved
+        project2 = Project(dirname)
+        requirement = project2.project_file.get_value(['downloads', 'MYDATA'])
+        assert requirement['url'] == 'http://localhost:123456'
+        assert requirement['md5'] == 'DIGEST'
 
     with_directory_contents(dict(), check)
 

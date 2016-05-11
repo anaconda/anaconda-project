@@ -309,7 +309,7 @@ class AnacondaProject(object):
         """
         return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove)
 
-    def add_download(self, project, env_var, url, filename=None):
+    def add_download(self, project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
         """Attempt to download the URL; if successful, add it as a download to the project.
 
         The returned ``Status`` should be a ``RequirementStatus`` for
@@ -323,11 +323,19 @@ class AnacondaProject(object):
             env_var (str): env var to store the local filename
             url (str): url to download
             filename (optional, str): Name to give file or directory after downloading
-
+            hash_algorithm (optional, str): Name of the algorithm to use for checksum verification
+                                       must be present if hash_value is entered
+            hash_value (optional, str): Checksum value to use for verification
+                                           must be present if hash_algorithm is entered
         Returns:
             ``Status`` instance
         """
-        return project_ops.add_download(project=project, env_var=env_var, url=url, filename=filename)
+        return project_ops.add_download(project=project,
+                                        env_var=env_var,
+                                        url=url,
+                                        filename=filename,
+                                        hash_algorithm=hash_algorithm,
+                                        hash_value=hash_value)
 
     def remove_download(self, project, prepare_result, env_var):
         """Remove file or directory referenced by ``env_var`` from file system and the project.

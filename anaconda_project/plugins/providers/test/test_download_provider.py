@@ -38,6 +38,8 @@ ZIPPED_DATAFILE_CONTENT = ("downloads:\n"
                            "        url: http://localhost/data.zip\n"
                            "        filename: data\n")
 
+ZIPPED_DATAFILE_CONTENT_CHECKSUM = (ZIPPED_DATAFILE_CONTENT + "        md5: 12345abcdef\n")
+
 ZIPPED_DATAFILE_CONTENT_NO_UNZIP = (ZIPPED_DATAFILE_CONTENT + "        unzip: false\n")
 
 # have to specify unzip:true manually here
@@ -66,14 +68,10 @@ def test_prepare_and_unprepare_download(monkeypatch):
             res.code = 200
             with open(os.path.join(dirname, 'data.csv'), 'w') as out:
                 out.write('data')
+            self._hash = '12345abcdef'
             raise gen.Return(res)
 
-        def mock_checksum(self, fp):
-            return None
-
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr(
-            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
         project = project_no_dedicated_env(dirname)
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
@@ -87,6 +85,31 @@ def test_prepare_and_unprepare_download(monkeypatch):
         assert status.status_description == 'Success.'
         assert status
         assert not os.path.exists(filename)
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
+
+
+def test_prepare_download_mismatched_checksum_after_download(monkeypatch):
+    def provide_download(dirname):
+        @gen.coroutine
+        def mock_downloader_run(self, loop):
+            class Res:
+                pass
+
+            res = Res()
+            res.code = 200
+            with open(os.path.join(dirname, 'data.csv'), 'w') as out:
+                out.write('data')
+            self._hash = 'mismatched'
+            raise gen.Return(res)
+
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+
+        project = project_no_dedicated_env(dirname)
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        assert not result
+        assert ('Error downloading http://localhost/data.csv: mismatched hashes. '
+                'Expected: 12345abcdef, calculated: mismatched') in result.errors
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
@@ -124,14 +147,10 @@ def test_unprepare_download_fails(monkeypatch):
             res.code = 200
             with open(os.path.join(dirname, 'data.csv'), 'w') as out:
                 out.write('data')
+            self._hash = '12345abcdef'
             raise gen.Return(res)
 
-        def mock_checksum(self, fp):
-            return None
-
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr(
-            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
         project = project_no_dedicated_env(dirname)
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
@@ -171,12 +190,7 @@ def test_provide_minimal(monkeypatch):
                 out.write('data')
             raise gen.Return(res)
 
-        def mock_checksum(self, fp):
-            return None
-
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr(
-            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
         project = project_no_dedicated_env(dirname)
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
@@ -304,11 +318,6 @@ def test_file_exists(monkeypatch):
             out.write('data')
         project = project_no_dedicated_env(dirname)
 
-        def mock_checksum(self, fp):
-            return None
-
-        monkeypatch.setattr(
-            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
         assert 'DATAFILE' in result.environ
@@ -339,12 +348,39 @@ def test_prepare_download_of_zip_file(monkeypatch):
             shutil.copyfile(zipname, self._filename)
             raise gen.Return(res)
 
-        def mock_checksum(self, fp):
-            return None
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+
+        project = project_no_dedicated_env(dirname)
+
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        assert hasattr(result, 'environ')
+        assert 'DATAFILE' in result.environ
+        assert os.path.isdir(os.path.join(dirname, 'data'))
+        assert os.path.isfile(os.path.join(dirname, 'data', 'foo'))
+        assert codecs.open(os.path.join(dirname, 'data', 'foo')).read() == 'hello\n'
+
+    with_tmp_zipfile(dict(foo='hello\n'), provide_download_of_zip)
+
+
+def test_prepare_download_of_zip_file_checksum(monkeypatch):
+    def provide_download_of_zip(zipname, dirname):
+        with codecs.open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME), 'w', 'utf-8') as f:
+            f.write(ZIPPED_DATAFILE_CONTENT_CHECKSUM)
+
+        @gen.coroutine
+        def mock_downloader_run(self, loop):
+            class Res:
+                pass
+
+            res = Res()
+            res.code = 200
+            assert self._url.endswith(".zip")
+            assert self._filename.endswith(".zip")
+            shutil.copyfile(zipname, self._filename)
+            self._hash = '12345abcdef'
+            raise gen.Return(res)
 
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr(
-            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
         project = project_no_dedicated_env(dirname)
 
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
@@ -382,12 +418,8 @@ def test_prepare_download_of_zip_file_no_unzip(monkeypatch):
             shutil.copyfile(zipname, self._filename)
             raise gen.Return(res)
 
-        def mock_checksum(self, fp):
-            return None
-
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr(
-            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
+
         project = project_no_dedicated_env(dirname)
 
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
@@ -418,12 +450,8 @@ def test_prepare_download_of_zip_file_no_zip_extension(monkeypatch):
             shutil.copyfile(zipname, self._filename)
             raise gen.Return(res)
 
-        def mock_checksum(self, fp):
-            return None
-
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr(
-            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
+
         project = project_no_dedicated_env(dirname)
 
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
@@ -454,12 +482,8 @@ def test_prepare_download_of_broken_zip_file(monkeypatch):
                 f.write("This is not a zip file.")
             raise gen.Return(res)
 
-        def mock_checksum(self, fp):
-            return None
-
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
-        monkeypatch.setattr(
-            "anaconda_project.plugins.requirements.download.DownloadRequirement._checksum_error_or_none", mock_checksum)
+
         project = project_no_dedicated_env(dirname)
 
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))

@@ -7,6 +7,8 @@
 """Commands related to the downloads section."""
 from __future__ import absolute_import, print_function
 
+import sys
+
 from anaconda_project.project import Project
 from anaconda_project import project_ops
 from anaconda_project.commands import console_utils
@@ -14,10 +16,18 @@ from anaconda_project.prepare import prepare_without_interaction
 from anaconda_project.provide import PROVIDE_MODE_CHECK
 
 
-def add_download(project_dir, filename_variable, download_url, filename):
+def add_download(project_dir, filename_variable, download_url, filename, hash_algorithm, hash_value):
     """Add an item to the downloads section."""
     project = Project(project_dir)
-    status = project_ops.add_download(project, env_var=filename_variable, url=download_url, filename=filename)
+    if (hash_algorithm or hash_value) and not bool(hash_algorithm and hash_value):
+        print("Error: mutually dependant parameters: --hash-algorithm and --hash-value.", file=sys.stderr)
+        return 1
+    status = project_ops.add_download(project,
+                                      env_var=filename_variable,
+                                      url=download_url,
+                                      filename=filename,
+                                      hash_algorithm=hash_algorithm,
+                                      hash_value=hash_value)
     if status:
         print(status.status_description)
         print("Added %s to the project file." % download_url)
@@ -58,7 +68,8 @@ def list_downloads(project_dir):
 
 def main_add(args):
     """Start the download command and return exit status code."""
-    return add_download(args.project, args.filename_variable, args.download_url, args.filename)
+    return add_download(args.project, args.filename_variable, args.download_url, args.filename, args.hash_algorithm,
+                        args.hash_value)
 
 
 def main_remove(args):

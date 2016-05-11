@@ -115,6 +115,10 @@ class DownloadProvider(EnvVarProvider):
                     errors.append(error)
                 return None
             elif response.code == 200:
+                if requirement.hash_value is not None and requirement.hash_value != download.hash:
+                    errors.append("Error downloading {}: mismatched hashes. Expected: {}, calculated: {}".format(
+                        requirement.url, requirement.hash_value, download.hash))
+                    return None
                 if requirement.unzip:
                     if unpack_zip(download_filename, filename, errors):
                         os.remove(download_filename)

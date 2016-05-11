@@ -222,7 +222,7 @@ def test_add_download(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.add_download', mock_add_download)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, env_var='boo', url='baz', filename="fname")
+    kwargs = dict(project=43, env_var='boo', url='baz', filename="fname", hash_algorithm="md5", hash_value="foo")
     result = p.add_download(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

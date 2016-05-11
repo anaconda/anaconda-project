@@ -240,7 +240,12 @@ class RedisProvider(EnvVarProvider):
             # we don't close_fds=True because on Windows that is documented to
             # keep us from collected stderr. But on Unix it's kinda broken not
             # to close_fds. Hmm.
-            popen = subprocess.Popen(args=command, stderr=subprocess.PIPE, env=context.environ)
+            try:
+                popen = subprocess.Popen(args=command, stderr=subprocess.PIPE, env=context.environ)
+            except Exception as e:
+                errors.append("Error executing redis-server: %s" % (str(e)))
+                return None
+
             # communicate() waits for the process to exit, which
             # is supposed to happen immediately due to --daemonize
             (out, err) = popen.communicate()

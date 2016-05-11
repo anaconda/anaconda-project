@@ -3,3 +3,4 @@ omit = */test/*,*/windows_cmdline.py
 
 [report]
 fail_under=100
+precision=2
