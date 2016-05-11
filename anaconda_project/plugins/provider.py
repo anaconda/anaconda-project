@@ -155,13 +155,13 @@ def delete_service_directory(local_state_file, relative_name):
     path = _service_directory(local_state_file, relative_name)
     try:
         shutil.rmtree(path=path)
-    except Exception:
+    except OSError:
         pass
     # also delete the services directory itself, if it's now empty
     try:
         # this fails on non-empty dir
         os.rmdir(os.path.dirname(path))
-    except Exception:
+    except OSError:
         pass
 
 
