@@ -95,7 +95,8 @@ def _parse_args_and_run_subcommand(argv):
     add_project_arg(preset)
     preset.set_defaults(main=variable_commands.main, action="add")
 
-    preset = subparsers.add_parser('remove-variable', help="Remove an environment variable and remove it from the project")
+    preset = subparsers.add_parser('remove-variable',
+                                   help="Remove an environment variable and remove it from the project")
     add_project_arg(preset)
     preset.add_argument('vars_to_remove', metavar='VARS_TO_REMOVE', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main, action="remove")
