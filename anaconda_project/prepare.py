@@ -10,12 +10,12 @@ from __future__ import print_function
 
 from abc import ABCMeta, abstractmethod
 import os
-import subprocess
 import sys
-from copy import copy, deepcopy
+from copy import deepcopy
 
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal import prepare_ui
+from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.toposort import toposort_from_dependency_info
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.local_state_file import LocalStateFile
@@ -39,10 +39,11 @@ def _update_environ(dest, src):
 class PrepareResult(with_metaclass(ABCMeta)):
     """Abstract class describing the result of preparing the project to run."""
 
-    def __init__(self, logs, statuses):
+    def __init__(self, logs, statuses, environ):
         """Construct an abstract PrepareResult."""
         self._logs = logs
         self._statuses = tuple(statuses)
+        self._environ = environ
 
     def __bool__(self):
         """True if we were successful."""
@@ -97,15 +98,23 @@ class PrepareResult(with_metaclass(ABCMeta)):
                 return status
         return None
 
+    @property
+    def environ(self):
+        """Computed environment variables for the project.
+
+        If ``failed`` is True, this environ dict may be unmodified
+        from the original provided to the prepare function.
+        """
+        return self._environ
+
 
 class PrepareSuccess(PrepareResult):
     """Class describing the successful result of preparing the project to run."""
 
     def __init__(self, logs, statuses, command_exec_info, environ):
         """Construct a PrepareSuccess indicating a successful prepare stage."""
-        super(PrepareSuccess, self).__init__(logs, statuses)
+        super(PrepareSuccess, self).__init__(logs, statuses, environ)
         self._command_exec_info = command_exec_info
-        self._environ = environ
 
     @property
     def failed(self):
@@ -116,11 +125,6 @@ class PrepareSuccess(PrepareResult):
     def command_exec_info(self):
         """``CommandExecInfo`` instance if available, None if not."""
         return self._command_exec_info
-
-    @property
-    def environ(self):
-        """Computed environment variables for the project."""
-        return self._environ
 
     def update_environ(self, environ):
         """Overwrite ``environ`` with any additions from the prepared environ.
@@ -133,9 +137,9 @@ class PrepareSuccess(PrepareResult):
 class PrepareFailure(PrepareResult):
     """Class describing the failed result of preparing the project to run."""
 
-    def __init__(self, logs, statuses, errors):
+    def __init__(self, logs, statuses, errors, environ):
         """Construct a PrepareFailure indicating a failed prepare stage."""
-        super(PrepareFailure, self).__init__(logs, statuses)
+        super(PrepareFailure, self).__init__(logs, statuses, environ)
         self._errors = errors
 
     @property
@@ -208,6 +212,12 @@ class PrepareStage(with_metaclass(ABCMeta)):
 
     @property
     @abstractmethod
+    def environ(self):
+        """The latest environment variables (from the result if any, otherwise the pre-execute ones)."""
+        pass  # pragma: no cover
+
+    @property
+    @abstractmethod
     def statuses_before_execute(self):
         """``RequirementStatus`` list before execution.
 
@@ -245,7 +255,10 @@ def _refresh_status_list(old_statuses, rechecked_statuses):
 class _FunctionPrepareStage(PrepareStage):
     """A stage chain where the description and the execute function are passed in to the constructor."""
 
-    def __init__(self, description, statuses, execute, config_context=None):
+    def __init__(self, environ, description, statuses, execute, config_context=None):
+        assert isinstance(environ, dict)
+        assert config_context is None or isinstance(config_context, ConfigurePrepareContext)
+        self._environ = environ
         # the execute function is supposed to set these two (via accessor)
         self._result = None
         self._statuses_after_execute = None
@@ -277,6 +290,13 @@ class _FunctionPrepareStage(PrepareStage):
         if self._result is None:
             raise RuntimeError("result property isn't available until after execute()")
         return self._result
+
+    @property
+    def environ(self):
+        if self._result is None:
+            return self._environ
+        else:
+            return self.result.environ
 
     @property
     def statuses_before_execute(self):
@@ -328,6 +348,10 @@ class _AndThenPrepareStage(PrepareStage):
     @property
     def result(self):
         return self._stage.result
+
+    @property
+    def environ(self):
+        return self._stage.environ
 
     @property
     def statuses_before_execute(self):
@@ -436,7 +460,12 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
 
         result_statuses = _refresh_status_list(all_statuses, rechecked)
         if failed:
-            stage.set_result(PrepareFailure(logs=logs, statuses=result_statuses, errors=errors), rechecked)
+            stage.set_result(
+                PrepareFailure(logs=logs,
+                               statuses=result_statuses,
+                               errors=errors,
+                               environ=environ),
+                rechecked)
             if keep_going_until_success:
                 return _start_over(stage.statuses_after_execute, rechecked)
             else:
@@ -458,7 +487,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                                                     local_state_file=local_state,
                                                     overrides=overrides,
                                                     statuses=updated_statuses)
-        return _FunctionPrepareStage("Set up project.", updated_all_statuses, provide_stage, configure_context)
+        return _FunctionPrepareStage(environ, "Set up project.", updated_all_statuses, provide_stage, configure_context)
 
     return _start_over(all_statuses, statuses)
 
@@ -655,42 +684,42 @@ def prepare_in_stages(project,
                         overrides, command_name, extra_command_args)
 
 
-def _project_problems_to_prepare_failure(project):
+def _project_problems_to_prepare_failure(project, environ):
     if project.problems:
         errors = []
         for problem in project.problems:
             errors.append(problem)
         errors.append("Unable to load the project.")
-        return PrepareFailure(logs=[], statuses=(), errors=errors)
+        return PrepareFailure(logs=[], statuses=(), errors=errors, environ=environ)
     else:
         return None
 
 
-def _prepare_failure_on_bad_command_name(project, command_name):
+def _prepare_failure_on_bad_command_name(project, command_name, environ):
     if command_name is not None and command_name not in project.commands:
         error = ("Command name '%s' is not in %s, these names were found: %s" %
                  (command_name, project.project_file.filename, ", ".join(sorted(project.commands.keys()))))
-        return PrepareFailure(logs=[], statuses=(), errors=[error])
+        return PrepareFailure(logs=[], statuses=(), errors=[error], environ=environ)
     else:
         return None
 
 
-def _prepare_failure_on_bad_conda_environment_name(project, conda_environment_name):
+def _prepare_failure_on_bad_conda_environment_name(project, conda_environment_name, environ):
     if conda_environment_name is not None and conda_environment_name not in project.conda_environments:
         error = ("Environment name '%s' is not in %s, these names were found: %s" %
                  (conda_environment_name, project.project_file.filename,
                   ", ".join(sorted(project.conda_environments.keys()))))
-        return PrepareFailure(logs=[], statuses=(), errors=[error])
+        return PrepareFailure(logs=[], statuses=(), errors=[error], environ=environ)
     else:
         return None
 
 
-def _check_prepare_prerequisites(project, conda_environment_name, command_name):
-    failed = _project_problems_to_prepare_failure(project)
+def _check_prepare_prerequisites(project, conda_environment_name, command_name, environ):
+    failed = _project_problems_to_prepare_failure(project, environ)
     if failed is None:
-        failed = _prepare_failure_on_bad_conda_environment_name(project, conda_environment_name)
+        failed = _prepare_failure_on_bad_conda_environment_name(project, conda_environment_name, environ)
     if failed is None:
-        failed = _prepare_failure_on_bad_command_name(project, command_name)
+        failed = _prepare_failure_on_bad_command_name(project, command_name, environ)
     return failed
 
 
@@ -745,7 +774,7 @@ def prepare_without_interaction(project,
         a ``PrepareResult`` instance, which has a ``failed`` flag
 
     """
-    failure = _check_prepare_prerequisites(project, conda_environment_name, command_name)
+    failure = _check_prepare_prerequisites(project, conda_environment_name, command_name, environ)
     if failure is not None:
         return failure
 
@@ -810,7 +839,7 @@ def prepare_with_browser_ui(project,
         a ``PrepareResult`` instance, which has a ``failed`` flag
 
     """
-    failure = _check_prepare_prerequisites(project, conda_environment_name, command_name)
+    failure = _check_prepare_prerequisites(project, conda_environment_name, command_name, environ)
     if failure is not None:
         return failure
 
@@ -861,7 +890,7 @@ def prepare_execute_with_browser_ui(project, stage, io_loop=None, show_url=None)
     return prepare_ui.prepare_browser(project=project, stage=stage, io_loop=io_loop, show_url=show_url)
 
 
-def unprepare(project, whitelist=None):
+def unprepare(project, prepare_result, whitelist=None):
     """Attempt to clean up project-scoped resources allocated by prepare().
 
     This will retain any user configuration choices about how to
@@ -869,24 +898,55 @@ def unprepare(project, whitelist=None):
     Global system services or other services potentially shared
     among projects will not be stopped.
 
+    To stop a single service, use ``whitelist=["SERVICE_VARIABLE"]``.
+
     Args:
         project (Project): the project
-        whitelist (iterable of str): ONLY call shutdown commands for the listed env vars' requirements
+        prepare_result (PrepareResult): result from the previous prepare
+        whitelist (iterable of str or type): ONLY call shutdown commands for the listed env vars' requirements
 
+    Returns:
+        a ``Status`` instance
     """
-    local_state = LocalStateFile.load_for_directory(project.directory_path)
+    if project.problems:
+        errors = []
+        for problem in project.problems:
+            errors.append(problem)
+        return SimpleStatus(success=False, description="Unable to load the project.", errors=errors)
 
-    run_states = local_state.get_all_service_run_states()
-    for service_name in copy(run_states):
-        if whitelist is not None and service_name not in whitelist:
+    local_state_file = LocalStateFile.load_for_directory(project.directory_path)
+
+    # note: if the prepare_result was a failure before statuses
+    # were even checked, then statuses could be empty
+    failed_statuses = []
+    failed_requirements = []
+    success_statuses = []
+    for status in prepare_result.statuses:
+        requirement = status.requirement
+        if not _in_provide_whitelist(whitelist, requirement):
             continue
-        state = run_states[service_name]
-        if 'shutdown_commands' in state:
-            commands = state['shutdown_commands']
-            for command in commands:
-                print("Running " + repr(command))
-                code = subprocess.call(command)
-                print("  exited with " + str(code))
-        # clear out the run state once we try to shut it down
-        local_state.set_service_run_state(service_name, dict())
-        local_state.save()
+
+        provider = status.provider
+        unprovide_status = provider.unprovide(requirement, prepare_result.environ, local_state_file, status)
+        if not unprovide_status:
+            failed_requirements.append(requirement)
+            failed_statuses.append(unprovide_status)
+        else:
+            success_statuses.append(unprovide_status)
+
+    if not failed_statuses:
+        if len(success_statuses) > 1:
+            logs = [status.status_description for status in success_statuses]
+            return SimpleStatus(success=True, description="Success.", logs=logs)
+        elif len(success_statuses) > 0:
+            return success_statuses[0]
+        else:
+            return SimpleStatus(success=True, description="Nothing to clean up.")
+    elif len(failed_statuses) == 1:
+        return failed_statuses[0]
+    else:
+        all_errors = [error for status in failed_statuses for error in status.errors]
+        all_names = sorted([req.env_var for req in failed_requirements if isinstance(req, EnvVarRequirement)])
+        return SimpleStatus(success=False,
+                            description=("Failed to clean up %s." % ", ".join(all_names)),
+                            errors=all_errors)

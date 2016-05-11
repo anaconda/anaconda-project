@@ -129,6 +129,25 @@ def test_prepare_project_browser(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_unprepare(monkeypatch):
+    from anaconda_project.prepare import unprepare
+    _verify_args_match(api.AnacondaProject.unprepare, unprepare)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_unprepare(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.prepare.unprepare', mock_unprepare)
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, prepare_result=44, whitelist=45)
+    result = p.unprepare(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_set_properties(monkeypatch):
     import anaconda_project.project_ops as project_ops
     _verify_args_match(api.AnacondaProject.set_properties, project_ops.set_properties)
@@ -223,7 +242,7 @@ def test_remove_download(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.remove_download', mock_remove_download)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, env_var='boo')
+    kwargs = dict(project=43, prepare_result='winnebago', env_var='boo')
     result = p.remove_download(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
@@ -409,7 +428,27 @@ def test_remove_service(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.remove_service', mock_remove_service)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, variable_name='xyz')
+    kwargs = dict(project=43, prepare_result=123, variable_name='xyz')
     result = p.remove_service(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
+def test_clean(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.clean, project_ops.clean)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_clean(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.clean', mock_clean)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, prepare_result=123)
+    result = p.clean(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

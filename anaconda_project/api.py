@@ -240,6 +240,24 @@ class AnacondaProject(object):
                                                io_loop=io_loop,
                                                show_url=show_url)
 
+    def unprepare(self, project, prepare_result, whitelist=None):
+        """Attempt to clean up project-scoped resources allocated by prepare().
+
+        This will retain any user configuration choices about how to
+        provide requirements, but it stops project-scoped services.
+        Global system services or other services potentially shared
+        among projects will not be stopped.
+
+        To stop a single service, use ``whitelist=["SERVICE_VARIABLE"]``.
+
+        Args:
+            project (Project): the project
+            prepare_result (PrepareResult): result from the previous prepare
+            whitelist (iterable of str or type): ONLY call shutdown commands for the listed env vars' requirements
+
+        """
+        return prepare.unprepare(project=project, prepare_result=prepare_result, whitelist=whitelist)
+
     def set_properties(self, project, name=None, icon=None):
         """Set simple properties on a project.
 
@@ -319,7 +337,7 @@ class AnacondaProject(object):
                                         hash_algorithm=hash_algorithm,
                                         hash_value=hash_value)
 
-    def remove_download(self, project, env_var):
+    def remove_download(self, project, prepare_result, env_var):
         """Remove file or directory referenced by ``env_var`` from file system and the project.
 
         The returned ``Status`` will be an instance of ``SimpleStatus``. A False
@@ -328,12 +346,13 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
+            prepare_result (PrepareResult): result of a previous prepare
             env_var (str): env var to store the local filename
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_download(project=project, env_var=env_var)
+        return project_ops.remove_download(project=project, prepare_result=prepare_result, env_var=env_var)
 
     def add_environment(self, project, name, packages, channels):
         """Attempt to create the environment and add it to project.yml.
@@ -496,7 +515,7 @@ class AnacondaProject(object):
         """
         return project_ops.add_service(project=project, service_type=service_type, variable_name=variable_name)
 
-    def remove_service(self, project, variable_name=None):
+    def remove_service(self, project, prepare_result, variable_name):
         """Remove a service to project.yml.
 
         Returns a ``Status`` instance which evaluates to True on
@@ -505,9 +524,26 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
-            variable_name (str): environment variable name (None for default)
+            prepare_result (PrepareResult): result of a previous prepare
+            variable_name (str): environment variable name for the service requirement
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_service(project=project, variable_name=variable_name)
+        return project_ops.remove_service(project=project, prepare_result=prepare_result, variable_name=variable_name)
+
+    def clean(self, project, prepare_result):
+        """Blow away auto-provided state for the project.
+
+        This should not remove any potential "user data" such as
+        project-local.yml.
+
+        Args:
+            project (Project): the project instance
+            prepare_result (PrepareResult): result of a previous prepare
+
+        Returns:
+            a ``Status`` instance
+
+        """
+        return project_ops.clean(project=project, prepare_result=prepare_result)

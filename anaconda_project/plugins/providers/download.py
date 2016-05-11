@@ -8,11 +8,13 @@
 from __future__ import print_function
 
 import os
+import shutil
 
 from tornado.ioloop import IOLoop
 
 from anaconda_project.internal.http_client import FileDownloader
 from anaconda_project.internal.ziputils import unpack_zip
+from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.plugins.provider import EnvVarProvider, ProviderAnalysis
 from anaconda_project.provide import PROVIDE_MODE_CHECK
 
@@ -154,3 +156,19 @@ class DownloadProvider(EnvVarProvider):
                 context.environ[requirement.env_var] = filename
 
         return super_result.copy_with_additions(errors=errors, logs=logs)
+
+    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
+        """Override superclass to delete the downloaded file."""
+        project_dir = environ['PROJECT_DIR']
+        filename = os.path.abspath(os.path.join(project_dir, requirement.filename))
+        try:
+            if os.path.isdir(filename):
+                shutil.rmtree(filename)
+            elif os.path.isfile(filename):
+                os.remove(filename)
+            else:
+                return SimpleStatus(success=True,
+                                    description=("No need to remove %s which wasn't downloaded." % filename))
+            return SimpleStatus(success=True, description=("Removed downloaded file %s." % filename))
+        except Exception as e:
+            return SimpleStatus(success=False, description=("Failed to remove %s: %s." % (filename, str(e))))

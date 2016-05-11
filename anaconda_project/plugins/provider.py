@@ -10,11 +10,18 @@ from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 import os
+import shutil
+import subprocess
 
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
 from anaconda_project.internal.crypto import encrypt_string, decrypt_string
 from anaconda_project.internal.py2_compat import is_string
+from anaconda_project.internal.simple_status import SimpleStatus
+
+
+def _service_directory(local_state_file, relative_name):
+    return os.path.join(os.path.dirname(local_state_file.filename), "services", relative_name)
 
 
 class ProvideContext(object):
@@ -43,7 +50,7 @@ class ProvideContext(object):
         Args:
             relative_name (str): name to distinguish this dir from other service directories
         """
-        path = os.path.join(os.path.dirname(self._local_state_file.filename), "services", relative_name)
+        path = _service_directory(self._local_state_file, relative_name)
         makedirs_ok_if_exists(path)
         return path
 
@@ -86,6 +93,71 @@ class ProvideContext(object):
         Value should be ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_PRODUCTION``, or ``PROVIDE_MODE_CHECK``.
         """
         return self._mode
+
+
+def shutdown_service_run_state(local_state_file, service_name):
+    """Run any shutdown commands from the local state file for the given service.
+
+    Also remove the shutdown commands from the file.
+
+    Args:
+        local_state_file (LocalStateFile): local state
+        service_name (str): the name of the service, usually a
+            variable name, should be specific enough to uniquely
+            identify the provider
+
+    Returns:
+        a `Status` instance potentially containing errors
+    """
+    run_states = local_state_file.get_all_service_run_states()
+    if service_name not in run_states:
+        return SimpleStatus(success=True, description=("Nothing to do to shut down %s." % service_name))
+
+    errors = []
+    state = run_states[service_name]
+    if 'shutdown_commands' in state:
+        commands = state['shutdown_commands']
+        for command in commands:
+            code = subprocess.call(command)
+            if code != 0:
+                errors.append("Shutting down %s, command %s failed with code %d." % (service_name, repr(command), code))
+    # clear out the run state once we try to shut it down
+    local_state_file.set_service_run_state(service_name, dict())
+    local_state_file.save()
+
+    if errors:
+        return SimpleStatus(success=False,
+                            description=("Shutdown commands failed for %s." % service_name),
+                            errors=errors)
+    else:
+        return SimpleStatus(success=True, description=("Successfully shut down %s." % service_name))
+
+
+def delete_service_directory(local_state_file, relative_name):
+    """Delete a directory in PROJECT_DIR/services with the given name.
+
+    The name should be unique to the ServiceRequirement creating the directory,
+    so usually the requirement's env var.
+
+    IF this fails, it does so silently (returns no errors).
+
+    Args:
+        relative_name (str): name to distinguish this dir from other service directories
+
+    Returns:
+        None
+    """
+    path = _service_directory(local_state_file, relative_name)
+    try:
+        shutil.rmtree(path=path)
+    except OSError:
+        pass
+    # also delete the services directory itself, if it's now empty
+    try:
+        # this fails on non-empty dir
+        os.rmdir(os.path.dirname(path))
+    except OSError:
+        pass
 
 
 class ProviderAnalysis(object):
@@ -271,6 +343,24 @@ class Provider(with_metaclass(ABCMeta)):
         Returns:
             a ``ProvideResult`` instance
 
+        """
+        pass  # pragma: no cover
+
+    @abstractmethod
+    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
+        """Undo the provide, cleaning up any files or processes we created.
+
+        The requirement may still be met after this, if our providing wasn't
+        really needed.
+
+        Args:
+            requirement (Requirement): requirement we want to de-provide
+            environ (dict): current env vars, often from a previous prepare
+            local_state_file (LocalStateFile): the local state
+            requirement_status (RequirementStatus or None): requirement status if available
+
+        Returns:
+            a `Status` instance describing the (non)success of the unprovision
         """
         pass  # pragma: no cover
 
@@ -513,3 +603,7 @@ class EnvVarProvider(Provider):
             pass
 
         return ProvideResult.empty().copy_with_additions(errors, logs)
+
+    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
+        """Override superclass to return success always."""
+        return SimpleStatus(success=True, description=("Nothing to clean up for %s." % requirement.env_var))

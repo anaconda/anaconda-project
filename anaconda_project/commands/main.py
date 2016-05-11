@@ -19,6 +19,7 @@ from anaconda_project.plugins.requirements.download import _hash_algorithms
 import anaconda_project.commands.init as init
 import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
+import anaconda_project.commands.clean as clean
 import anaconda_project.commands.activate as activate
 import anaconda_project.commands.variable_commands as variable_commands
 import anaconda_project.commands.download_commands as download_commands
@@ -67,11 +68,11 @@ def _parse_args_and_run_subcommand(argv):
                             action='store',
                             help="Name of the environment under PROJECT_DIR/envs")
 
-    preset = subparsers.add_parser('init', help="Initializes a directory with default project config.")
+    preset = subparsers.add_parser('init', help="Initialize a directory with default project configuration")
     add_project_arg(preset)
     preset.set_defaults(main=init.main)
 
-    preset = subparsers.add_parser('launch', help="Runs the project, setting up requirements first.")
+    preset = subparsers.add_parser('launch', help="Run the project, setting up requirements first")
     add_prepare_args(preset)
     preset.add_argument('--command',
                         metavar="COMMAND_NAME",
@@ -81,48 +82,54 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('extra_args_for_command', metavar='EXTRA_ARGS_FOR_COMMAND', default=None, nargs=REMAINDER)
     preset.set_defaults(main=launch.main)
 
-    preset = subparsers.add_parser('prepare', help="Sets up project requirements but does not run the project.")
+    preset = subparsers.add_parser('prepare', help="Set up the project requirements, but does not run the project")
     add_prepare_args(preset)
     preset.set_defaults(main=prepare.main)
 
+    preset = subparsers.add_parser('clean',
+                                   help="Removes generated state (stops services, deletes environment files, etc)")
+    add_project_arg(preset)
+    preset.set_defaults(main=clean.main)
+
     preset = subparsers.add_parser('activate',
-                                   help="Sets up project and outputs shell export commands reflecting the setup.")
+                                   help="Set up the project and output shell export commands reflecting the setup")
     add_prepare_args(preset)
     preset.set_defaults(main=activate.main)
 
     preset = subparsers.add_parser('add-variable',
-                                   help="Add an environment variable and adds it to project if not present")
+                                   help="Add an environment variable and add it to the project if not present")
     preset.add_argument('vars_to_add', metavar='VARS_TO_ADD', default=None, nargs=REMAINDER)
     add_project_arg(preset)
     preset.set_defaults(main=variable_commands.main, action="add")
 
-    preset = subparsers.add_parser('remove-variable', help="Remove an environment variable and removes it from project")
+    preset = subparsers.add_parser('remove-variable',
+                                   help="Remove an environment variable and remove it from the project")
     add_project_arg(preset)
     preset.add_argument('vars_to_remove', metavar='VARS_TO_REMOVE', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main, action="remove")
 
-    preset = subparsers.add_parser('list-variables', help="Lists all variables on the project.")
+    preset = subparsers.add_parser('list-variables', help="List all variables on the project")
     add_project_arg(preset)
     preset.set_defaults(main=variable_commands.main_list)
 
-    preset = subparsers.add_parser('add-download', help="Add a URL to be downloaded before running commands.")
+    preset = subparsers.add_parser('add-download', help="Add a URL to be downloaded before running commands")
     add_project_arg(preset)
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
-    preset.add_argument('--filename', help="The name to give the file/folder after downloading it.", default=None)
+    preset.add_argument('--filename', help="The name to give the file/folder after downloading it", default=None)
     preset.add_argument('--hash-algorithm',
-                        help="Defines which hash algorithm to use.",
+                        help="Defines which hash algorithm to use",
                         default=None,
                         choices=_hash_algorithms)
-    preset.add_argument('--hash-value', help="The expected checksum hash of the downloaded file.", default=None)
+    preset.add_argument('--hash-value', help="The expected checksum hash of the downloaded file", default=None)
     preset.set_defaults(main=download_commands.main_add)
 
-    preset = subparsers.add_parser('remove-download', help="Removes a download from project and filesystem.")
+    preset = subparsers.add_parser('remove-download', help="Remove a download from the project and from the filesystem")
     add_project_arg(preset)
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.set_defaults(main=download_commands.main_remove)
 
-    preset = subparsers.add_parser('list-downloads', help="Lists all downloads on the project.")
+    preset = subparsers.add_parser('list-downloads', help="List all downloads on the project")
     add_project_arg(preset)
     preset.set_defaults(main=download_commands.main_list)
 
@@ -132,18 +139,18 @@ def _parse_args_and_run_subcommand(argv):
     def add_service_variable_name(preset):
         preset.add_argument('--variable', metavar='ENV_VAR_FOR_SERVICE_ADDRESS', default=None)
 
-    preset = subparsers.add_parser('add-service', help="Add a service to be available before running commands.")
+    preset = subparsers.add_parser('add-service', help="Add a service to be available before running commands")
     add_project_arg(preset)
     add_service_variable_name(preset)
     preset.add_argument('service_type', metavar='SERVICE_TYPE', default=None, choices=service_choices)
     preset.set_defaults(main=service_commands.main_add)
 
-    preset = subparsers.add_parser('remove-service', help="Remove a service from the project.")
+    preset = subparsers.add_parser('remove-service', help="Remove a service from the project")
     add_project_arg(preset)
     add_service_variable_name(preset)
     preset.set_defaults(main=service_commands.main_remove)
 
-    preset = subparsers.add_parser('list-services', help="List services present in project.")
+    preset = subparsers.add_parser('list-services', help="List services present in the project")
     add_project_arg(preset)
     preset.set_defaults(main=service_commands.main_list)
 
@@ -155,34 +162,34 @@ def _parse_args_and_run_subcommand(argv):
                             help='Channel to search for packages')
         preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
 
-    preset = subparsers.add_parser('add-environment', help="Add a new environment to the project.")
+    preset = subparsers.add_parser('add-environment', help="Add a new environment to the project")
     add_project_arg(preset)
     add_package_args(preset)
     add_environment_name_arg(preset)
     preset.set_defaults(main=environment_commands.main_add)
 
-    preset = subparsers.add_parser('remove-environment', help="Remove an environment from the project.")
+    preset = subparsers.add_parser('remove-environment', help="Remove an environment from the project")
     add_project_arg(preset)
     add_environment_name_arg(preset)
     preset.set_defaults(main=environment_commands.main_remove)
 
-    preset = subparsers.add_parser('list-environments', help="Lists all environments on the project.")
+    preset = subparsers.add_parser('list-environments', help="List all environments on the project")
     add_project_arg(preset)
     preset.set_defaults(main=environment_commands.main_list_environments)
 
-    preset = subparsers.add_parser('add-dependencies', help="Add packages to one or all project environments.")
+    preset = subparsers.add_parser('add-dependencies', help="Add packages to one or all project environments")
     add_project_arg(preset)
     add_environment_arg(preset)
     add_package_args(preset)
     preset.set_defaults(main=environment_commands.main_add_dependencies)
 
-    preset = subparsers.add_parser('remove-dependencies', help="Remove packages from one or all project environments.")
+    preset = subparsers.add_parser('remove-dependencies', help="Remove packages from one or all project environments")
     add_project_arg(preset)
     add_environment_arg(preset)
     preset.add_argument('packages', metavar='PACKAGE_NAME', default=None, nargs='+')
     preset.set_defaults(main=environment_commands.main_remove_dependencies)
 
-    preset = subparsers.add_parser('list-dependencies', help="Lists dependencies for an environment on the project.")
+    preset = subparsers.add_parser('list-dependencies', help="List dependencies for an environment on the project")
     add_project_arg(preset)
     add_environment_arg(preset)
     preset.set_defaults(main=environment_commands.main_list_dependencies)
@@ -190,21 +197,21 @@ def _parse_args_and_run_subcommand(argv):
     def add_command_name_arg(preset):
         preset.add_argument('name', metavar="NAME", help="Command name used to invoke it")
 
-    preset = subparsers.add_parser('add-command', help="Add a new command to the project.")
+    preset = subparsers.add_parser('add-command', help="Add a new command to the project")
     add_project_arg(preset)
     command_choices = list(ALL_COMMAND_TYPES) + ['ask']
     command_choices.remove("conda_app_entry")  # conda_app_entry is sort of silly and may go away
-    preset.add_argument('--type', action="store", choices=command_choices, help="command type to add")
+    preset.add_argument('--type', action="store", choices=command_choices, help="Command type to add")
     add_command_name_arg(preset)
     preset.add_argument('command', metavar="COMMAND", help="Command line or app filename to add")
     preset.set_defaults(main=command_commands.main)
 
-    preset = subparsers.add_parser('remove-command', help="Remove a command from the project.")
+    preset = subparsers.add_parser('remove-command', help="Remove a command from the project")
     add_project_arg(preset)
     add_command_name_arg(preset)
     preset.set_defaults(main=command_commands.main_remove)
 
-    preset = subparsers.add_parser('list-commands', help="List the commands on the project.")
+    preset = subparsers.add_parser('list-commands', help="List the commands on the project")
     add_project_arg(preset)
     preset.set_defaults(main=command_commands.main_list)
 
