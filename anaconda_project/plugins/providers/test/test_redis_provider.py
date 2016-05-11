@@ -226,17 +226,24 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
                     PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert len(can_connect_args_list) >= 2
 
-        pidfile = os.path.join(dirname, "services/REDIS_URL/redis.pid")
-        logfile = os.path.join(dirname, "services/REDIS_URL/redis.log")
+        servicedir = os.path.join(dirname, "services")
+        redisdir = os.path.join(servicedir, "REDIS_URL")
+
+        pidfile = os.path.join(redisdir, "redis.pid")
+        logfile = os.path.join(redisdir, "redis.log")
         assert os.path.exists(pidfile)
         assert os.path.exists(logfile)
 
         assert real_can_connect_to_socket(host='localhost', port=port)
 
         # now clean it up
-        unprepare(project)
+        status = unprepare(project, result)
+        assert status
 
         assert not os.path.exists(pidfile)
+        assert not os.path.exists(logfile)
+        assert not os.path.exists(redisdir)
+        assert not os.path.exists(servicedir)
         assert not real_can_connect_to_socket(host='localhost', port=port)
 
         local_state_file.load()
@@ -245,6 +252,69 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
+"""}, start_local_redis)
+
+
+def test_prepare_and_unprepare_local_redis_server_with_failed_unprovide(monkeypatch):
+    # this test will fail if you don't have Redis installed, since
+    # it actually starts it.
+    if platform.system() == 'Windows':
+        print("Cannot start redis-server on Windows")
+        return
+
+    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+
+    _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
+
+    def start_local_redis(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = _prepare_printing_errors(project, environ=minimal_environ())
+        assert result
+
+        # now clean it up, but arrange for that to fail
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        local_state_file.set_service_run_state('REDIS_URL', {'shutdown_commands': [['false']]})
+        local_state_file.save()
+        status = unprepare(project, result)
+        assert not status
+        assert status.status_description == 'Shutdown commands failed for REDIS_URL.'
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+services:
+  REDIS_URL: redis
+"""}, start_local_redis)
+
+
+def test_prepare_and_unprepare_two_local_redis_servers_with_failed_unprovide(monkeypatch):
+    # this test will fail if you don't have Redis installed, since
+    # it actually starts it.
+    if platform.system() == 'Windows':
+        print("Cannot start redis-server on Windows")
+        return
+
+    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+
+    _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
+
+    def start_local_redis(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = _prepare_printing_errors(project, environ=minimal_environ())
+        assert result
+
+        # now clean it up, but arrange for that to double-fail
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        local_state_file.set_service_run_state('REDIS_URL', {'shutdown_commands': [['false']]})
+        local_state_file.set_service_run_state('REDIS_URL_2', {'shutdown_commands': [['false']]})
+        local_state_file.save()
+        status = unprepare(project, result)
+        assert not status
+        assert status.status_description == 'Failed to clean up REDIS_URL, REDIS_URL_2.'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+services:
+  REDIS_URL: redis
+  REDIS_URL_2: redis
 """}, start_local_redis)
 
 
@@ -306,7 +376,8 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert pidfile_content == pidfile_content2
 
         # now clean it up
-        unprepare(project)
+        status = unprepare(project, result2)
+        assert status
 
         assert not os.path.exists(pidfile)
         assert not real_can_connect_to_socket(host='localhost', port=port)

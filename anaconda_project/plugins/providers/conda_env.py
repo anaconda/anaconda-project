@@ -8,10 +8,26 @@
 from __future__ import absolute_import, print_function
 
 import os
+import shutil
 
+from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.conda_manager import new_conda_manager, CondaManagerError
 from anaconda_project.plugins.provider import EnvVarProvider
 from anaconda_project.provide import PROVIDE_MODE_CHECK
+
+
+def _remove_env_path(env_path):
+    """Also used by project_ops.py to delete environment files."""
+    if os.path.exists(env_path):
+        try:
+            shutil.rmtree(env_path)
+            return SimpleStatus(success=True, description=("Deleted environment files in %s." % env_path))
+        except Exception as e:
+            problem = "Failed to remove environment files in {}: {}.".format(env_path, str(e))
+            return SimpleStatus(success=False, description=problem)
+    else:
+        return SimpleStatus(success=True,
+                            description=("Nothing to clean up for environment '%s'." % os.path.basename(env_path)))
 
 
 class CondaEnvProvider(EnvVarProvider):
@@ -198,3 +214,14 @@ class CondaEnvProvider(EnvVarProvider):
         # We can do these in the output of our activate command, but not here.
 
         return super_result
+
+    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
+        """Override superclass to delete project-scoped envs directory."""
+        env_path = environ.get('CONDA_ENV_PATH', environ.get('CONDA_DEFAULT_ENV', None))
+        assert env_path is not None  # can we be called outside of any activated env? let's say no
+        project_dir = environ['PROJECT_DIR']
+        if not env_path.startswith(project_dir):
+            return SimpleStatus(success=True,
+                                description=("Current environment is not in %s, no need to delete it." % project_dir))
+
+        return _remove_env_path(env_path)

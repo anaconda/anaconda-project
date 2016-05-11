@@ -21,7 +21,7 @@ from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import UserConfigOverrides
 from anaconda_project.plugins.providers.download import DownloadProvider
 from anaconda_project.plugins.requirements.download import DownloadRequirement
-from anaconda_project.prepare import prepare_without_interaction, prepare_with_browser_ui
+from anaconda_project.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare)
 from anaconda_project import provide
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
@@ -57,7 +57,7 @@ def _download_requirement():
                                filename='data.csv')
 
 
-def test_prepare_download(monkeypatch):
+def test_prepare_and_unprepare_download(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
         def mock_downloader_run(self, loop):
@@ -76,6 +76,15 @@ def test_prepare_download(monkeypatch):
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert hasattr(result, 'environ')
         assert 'DATAFILE' in result.environ
+        filename = os.path.join(dirname, 'data.csv')
+        assert os.path.exists(filename)
+
+        status = unprepare(project, result)
+        assert status.logs == ["Removed downloaded file %s." % filename,
+                               ("Current environment is not in %s, no need to delete it." % dirname)]
+        assert status.status_description == 'Success.'
+        assert status
+        assert not os.path.exists(filename)
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
@@ -117,6 +126,51 @@ def test_prepare_download_exception(monkeypatch):
         assert not result
         assert ('missing requirement to run this project: '
                 'A downloaded file which is referenced by DATAFILE') in result.errors
+
+        status = unprepare(project, result)
+        filename = os.path.join(dirname, 'data.csv')
+        assert status.logs == ["No need to remove %s which wasn't downloaded." % filename,
+                               ("Current environment is not in %s, no need to delete it." % dirname)]
+        assert status.status_description == 'Success.'
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
+
+
+def test_unprepare_download_fails(monkeypatch):
+    def provide_download(dirname):
+        @gen.coroutine
+        def mock_downloader_run(self, loop):
+            class Res:
+                pass
+
+            res = Res()
+            res.code = 200
+            with open(os.path.join(dirname, 'data.csv'), 'w') as out:
+                out.write('data')
+            self._hash = '12345abcdef'
+            raise gen.Return(res)
+
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+        project = project_no_dedicated_env(dirname)
+        result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
+        assert hasattr(result, 'environ')
+        assert 'DATAFILE' in result.environ
+        filename = os.path.join(dirname, 'data.csv')
+        assert os.path.exists(filename)
+
+        def mock_remove(path):
+            raise IOError("Not gonna remove this")
+
+        monkeypatch.setattr("os.remove", mock_remove)
+
+        status = unprepare(project, result)
+        assert status.logs == []
+        assert status.status_description == ('Failed to remove %s: Not gonna remove this.' % filename)
+        assert status.errors == []
+        assert not status
+        assert os.path.exists(filename)
+
+        monkeypatch.undo()  # so os.remove isn't broken during directory cleanup
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
@@ -335,6 +389,12 @@ def test_prepare_download_of_zip_file_checksum(monkeypatch):
         assert os.path.isdir(os.path.join(dirname, 'data'))
         assert os.path.isfile(os.path.join(dirname, 'data', 'foo'))
         assert codecs.open(os.path.join(dirname, 'data', 'foo')).read() == 'hello\n'
+
+        status = unprepare(project, result)
+        filename = os.path.join(dirname, 'data')
+        assert status.logs == ["Removed downloaded file %s." % filename,
+                               ("Current environment is not in %s, no need to delete it." % dirname)]
+        assert status.status_description == "Success."
 
     with_tmp_zipfile(dict(foo='hello\n'), provide_download_of_zip)
 

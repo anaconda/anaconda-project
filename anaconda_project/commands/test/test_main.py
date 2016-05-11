@@ -11,10 +11,11 @@ import os
 
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
-all_subcommands = ('init', 'launch', 'prepare', 'activate', 'add-variable', 'remove-variable', 'list-variables',
-                   'add-download', 'remove-download', 'list-downloads', 'add-service', 'remove-service',
-                   'list-services', 'add-environment', 'remove-environment', 'list-environments', 'add-dependencies',
-                   'remove-dependencies', 'list-dependencies', 'add-command', 'remove-command', 'list-commands')
+all_subcommands = ('init', 'launch', 'prepare', 'clean', 'activate', 'add-variable', 'remove-variable',
+                   'list-variables', 'add-download', 'remove-download', 'list-downloads', 'add-service',
+                   'remove-service', 'list-services', 'add-environment', 'remove-environment', 'list-environments',
+                   'add-dependencies', 'remove-dependencies', 'list-dependencies', 'add-command', 'remove-command',
+                   'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -61,6 +62,8 @@ expected_usage_msg = \
         '    launch              Run the project, setting up requirements first\n' \
         '    prepare             Set up the project requirements, but does not run the\n' \
         '                        project\n' \
+        '    clean               Removes generated state (stops services, deletes\n' \
+        '                        environment files, etc)\n' \
         '    activate            Set up the project and output shell export commands\n' \
         '                        reflecting the setup\n' \
         '    add-variable        Add an environment variable and add it to the project\n' \
