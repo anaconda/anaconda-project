@@ -188,8 +188,8 @@ script, which can be a security risk.
 Variables that contain credentials
 ==================================
 
-TODO this section is about project-local.yml despite the intro that
-says we will only discuss project.yml in this document.
+TODO this section is partly about project-local.yml despite the
+intro that says we will only discuss project.yml in this document.
 
 Variables that end in ``_PASSWORD``, ``_ENCRYPTED``,
 ``_SECRET_KEY``, or ``_SECRET`` are treated sensitively by
@@ -199,7 +199,7 @@ that value is encrypted. NOTE: ``project-local.yml stores and
 encrypts the value that you enter when prompted.
 
 To force a variable to be encrypted or not encrypted, add the 
-``encrypted`` option to it, like this:
+``encrypted`` option to it in ``project.yml``, like this:
 
   variables:
     # let's encrypt the password but not the username
@@ -368,12 +368,11 @@ when showing a list of projects.
 No need to edit ``project.yml`` directly
 ========================================
 
-TODO this is not true yet; see
-https://github.com/Anaconda-Server/anaconda-project/issues/20
+You can edit ``project.yml`` with the ``anaconda-project`` command.
 
 To add a download to ``project.yml``:
 
-  anaconda-project download http://example.com/myfile
+  anaconda-project add-download MYFILE http://example.com/myfile
 
 To add a dependency:
 
