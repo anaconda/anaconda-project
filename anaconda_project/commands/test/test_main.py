@@ -57,35 +57,37 @@ expected_usage_msg = \
         'positional arguments:\n' \
         '  %s\n' \
         '                        Sub-commands\n' \
-        '    init                Initializes a directory with default project config.\n' \
-        '    launch              Runs the project, setting up requirements first.\n' \
-        '    prepare             Sets up project requirements but does not run the\n' \
-        '                        project.\n' \
-        '    clean               Removes generated state (stops services, deletes\n' \
-        '                        environment files, etc).\n' \
-        '    activate            Sets up project and outputs shell export commands\n' \
-        '                        reflecting the setup.\n' \
-        '    add-variable        Add an environment variable and adds it to project if\n' \
-        '                        not present\n' \
-        '    remove-variable     Remove an environment variable and removes it from\n' \
+        '    init                Initialize a directory with default project\n' \
+        '                        configuration\n' \
+        '    launch              Run the project, setting up requirements first\n' \
+        '    prepare             Set up the project requirements, but does not run the\n' \
         '                        project\n' \
-        '    list-variables      Lists all variables on the project.\n' \
-        '    add-download        Add a URL to be downloaded before running commands.\n' \
-        '    remove-download     Removes a download from project and filesystem.\n' \
-        '    list-downloads      Lists all downloads on the project.\n' \
-        '    add-service         Add a service to be available before running commands.\n' \
-        '    remove-service      Remove a service from the project.\n' \
-        '    list-services       List services present in project.\n' \
-        '    add-environment     Add a new environment to the project.\n' \
-        '    remove-environment  Remove an environment from the project.\n' \
-        '    list-environments   Lists all environments on the project.\n' \
-        '    add-dependencies    Add packages to one or all project environments.\n' \
+        '    clean               Removes generated state (stops services, deletes\n' \
+        '                        environment files, etc)\n' \
+        '    activate            Set up the project and output shell export commands\n' \
+        '                        reflecting the setup\n' \
+        '    add-variable        Add an environment variable and add it to the project\n' \
+        '                        if not present\n' \
+        '    remove-variable     Remove an environment variable and remove it from the\n' \
+        '                        project\n' \
+        '    list-variables      List all variables on the project\n' \
+        '    add-download        Add a URL to be downloaded before running commands\n' \
+        '    remove-download     Remove a download from the project and from the\n' \
+        '                        filesystem\n' \
+        '    list-downloads      List all downloads on the project\n' \
+        '    add-service         Add a service to be available before running commands\n' \
+        '    remove-service      Remove a service from the project\n' \
+        '    list-services       List services present in the project\n' \
+        '    add-environment     Add a new environment to the project\n' \
+        '    remove-environment  Remove an environment from the project\n' \
+        '    list-environments   List all environments on the project\n' \
+        '    add-dependencies    Add packages to one or all project environments\n' \
         '    remove-dependencies\n' \
-        '                        Remove packages from one or all project environments.\n' \
-        '    list-dependencies   Lists dependencies for an environment on the project.\n' \
-        '    add-command         Add a new command to the project.\n' \
-        '    remove-command      Remove a command from the project.\n' \
-        '    list-commands       List the commands on the project.\n' \
+        '                        Remove packages from one or all project environments\n' \
+        '    list-dependencies   List dependencies for an environment on the project\n' \
+        '    add-command         Add a new command to the project\n' \
+        '    remove-command      Remove a command from the project\n' \
+        '    list-commands       List the commands on the project\n' \
         '\n' \
         'optional arguments:\n' \
         '  -h, --help            show this help message and exit\n' \
