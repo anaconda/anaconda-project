@@ -2,13 +2,17 @@
 Projects
 ========
 
-The Anaconda platform works with directories called *projects*,
-which can contain whatever you like (scripts, notebooks, data
-files, whatever you need for your project).
+The Anaconda platform works with directories named *projects*,
+which can contain scripts, notebooks, data files, and anything
+that is related to your project.
 
-Any directory can work as a project, but you can tell Anaconda
-more about your project with a configuration file called
+Any directory can function as a project, and you tell Anaconda
+about your project with a configuration file named
 ``project.yml``.
+
+``.yml`` files are in the YAML format and follow the YAML syntax.
+
+TIP: Read more about YAML syntax at http://yaml.org/start.html
 
 ``project.yml`` and ``project-local.yml``
 =========================================
@@ -16,38 +20,33 @@ more about your project with a configuration file called
 Project directories are affected by two configuration files,
 ``project.yml`` and ``project-local.yml``.
 
-``.yml`` files are in YAML format. Read more about YAML syntax
-here: http://www.yaml.org/start.html (Useful hint about YAML: it's
-a JSON superset, so if in doubt, write JSON instead of trying to
-use the YAML syntax. For example you can always put quotes on a
-string.)
-
-``project.yml`` contains information about a project that's
-intended to be shared across users and machines; if you're using
-source control, you'll probably want to put ``project.yml`` in
+The file ``project.yml`` contains information about a project that
+is intended to be shared across users and machines. If you use
+source control, the file ``project.yml`` should probably be put in
 source control.
 
-``project-local.yml``, on the other hand, would go in
+The file ``project-local.yml``, on the other hand, goes in
 ``.gitignore`` (or ``.svnignore`` or equivalent), because it
-contains your local configuration state rather than anything you'd
-want to share with others. Typically, the tools maintain
-``project-local.yml`` for you and there's rarely a reason to edit
-it by hand, so we'll focus on ``project.yml`` in this document.
+contains your local configuration state that you do not
+want to share with others. Typically, the tools maintain the file
+``project-local.yml`` for you and there are few reasons to edit
+it by hand, so in this document we'll discuss editing the file
+``project.yml``.
 
 Commands and Requirements
 =========================
 
-In ``project.yml`` you can define *commands* and *requirements*
-that the commands have in order to run them.
+In the ``project.yml`` file you can define the *commands* and
+*requirements* that the commands need in order to run them.
 
-For example, say you have a script called ``analyze.py``, your
-project directory contains this script and a ``project.yml``:
+For example, let's say you have a script named ``analyze.py``
+in your project directory along with a file ``project.yml``:
 
   myproject/
      analyze.py
      project.yml
 
-In ``project.yml`` you can tell the Anaconda platform how to run
+The file ``project.yml`` tells Anaconda platform how to run
 your project:
 
   commands:
@@ -55,14 +54,14 @@ your project:
       shell: "python ${PROJECT_DIR}/analyze.py"
       windows: "python %PROJECT_DIR%\analyze.py"
 
-Note that there are separate command lines for Unix shell (Linux,
+There are separate command lines for Unix shell (Linux and
 Mac) and for Windows. If you only care about one platform, you
-don't have to provide both of these.
+are not required to provide command lines for other platforms.
 
-Now when you send your project to someone else, they can type
-``anaconda-project launch`` and your script will run. Kinda boring
-so far, but the cool part is that ``anaconda-project launch`` can
-be sure all prerequisites are set up *before* it runs the script.
+When you send your project to someone else, they can type
+``anaconda-project launch`` to run your script. The cool part
+is that ``anaconda-project launch`` makes sure that all
+prerequisites are set up *before* it runs the script.
 
 Let's say your script requires a certain conda package to be
 installed. Add the ``redis-py`` package to ``project.yml`` as a
@@ -71,7 +70,7 @@ dependency:
   dependencies:
     - redis-py
 
-Now when someone does ``anaconda-project launch`` the script will
+Now when someone runs ``anaconda-project launch`` the script is
 automatically run in a conda environment that has ``redis-py``
 installed.
 
@@ -80,19 +79,21 @@ launch`` just complains, while ``anaconda-project prepare`` runs
 the UI to set up the environment. See also
 https://github.com/Anaconda-Server/anaconda-project/issues/54)
 
-Or let's say your script requires a huge data file that you don't
-want to put in source control or don't want to email around. You
-can add a requirement that it's downloaded locally:
+Here's another example. Let's say your script requires a huge
+data file that you don't want to put in source control and
+you don't want to email. You can add a requirement to be
+downloaded locally:
 
   downloads:
     MYDATAFILE:
       url: http://example.com/bigdatafile
       sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
 
-Now when someone does ``anaconda-project launch``, the file will
-be downloaded if it hasn't been, and the environment variable
-``MYDATAFILE`` will be set to the local filename of the data.
-In your ``analyze.py`` you could write something like this:
+Now when someone runs ``anaconda-project launch``, the file is
+downloaded if it hasn't been downloaded already, and the
+environment variable ``MYDATAFILE`` is set to the local
+filename of the data. In your ``analyze.py`` file you can write
+something like this:
 
    import os
    filename = os.getenv('MYDATAFILE')
@@ -102,10 +103,11 @@ In your ``analyze.py`` you could write something like this:
      data = input.read()
      # and so on
 
-``anaconda-project`` supports lots of other requirements,
-too. Instead of writing documentation about how to set up your
-script before running it, put the requirements in ``project.yml``
-and let ``anaconda-project`` check them.
+``anaconda-project`` supports many other requirements,
+too. Instead of writing long documentation about how to set up
+your script before others can run it, simply put the requirements in
+a ``project.yml`` file and let ``anaconda-project`` check the setup
+automatically.
 
 Multiple Commands
 =================
@@ -118,22 +120,23 @@ when those are implemented
 Environments and Channels
 =========================
 
-You can configure dependencies in a toplevel ``dependencies``
-section, as shown earlier:
+You can configure dependencies in a top level ``dependencies``
+section of the ``project.yml`` file, as we discussed earlier:
 
   dependencies:
     - redis-py
 
-You can also add Conda channels which will be searched for
+You can also add specific conda channels to be searched for
 dependencies:
 
   channels:
     - https://conda.anaconda.org/asmeurer
 
-``anaconda-project`` will create an environment in
-``envs/default`` by default. But if you like, you can have
+``anaconda-project`` creates an environment in ``envs/default``
+by default. But if you prefer, you can have
 multiple named environments available in the ``envs``
-directory. To do that, specify an ``environments:`` section:
+directory. To do that, specify an ``environments:`` section of
+your ``project.yml`` file:
 
   environments:
     default:
@@ -148,24 +151,27 @@ directory. To do that, specify an ``environments:`` section:
       channels:
         - https://example.com/somechannel
 
-This means we can create two environments, ``envs/default`` and
-``envs/python27``.
+In the above example we create two environments, ``envs/default``
+and ``envs/python27``.
 
-To run a project in a certain environment, use:
+To run a project in a specific environment, use the ``environment`` option:
+
+  anaconda-project launch --environment myenvname
+
 https://github.com/Anaconda-Server/anaconda-project/issues/97
 
-If there are toplevel ``channels`` or ``dependencies`` sections
-(not underneath the ``environments`` section), those channels and
-dependencies will be added to all environments.
+If you have top level ``channels`` or ``dependencies`` sections
+in your ``project.yml`` file (not in the ``environments:`` section),
+those channels and dependencies are added to all environments.
 
 
 Requiring environment variables to be set
 =========================================
 
-Anything in the ``variables:`` section will be considered an
-environment variable that your project needs. When someone
-launches your project, ``anaconda-project`` will ask them to set
-these variables.
+Anything in the ``variables:`` section of a ``project.yml`` file
+is considered an environment variable needed by your project.
+When someone launches your project, ``anaconda-project`` asks
+them to set these variables.
 
 For example:
 
@@ -175,33 +181,34 @@ For example:
 
 Now in your script, you can ``os.getenv()`` these variables.
 
-This is a much better option than hardcoding passwords in your
-script, because it means you don't have to put passwords in source
-control. Malicious people are constantly scanning sites such as
-GitHub for accidentally-checked-in credentials; don't be a victim.
+NOTE: This is a much better option than hardcoding passwords into your
+script, which can be a security risk.
 
 
 Variables that contain credentials
 ==================================
 
-Variables which end in ``_PASSWORD``, ``_ENCRYPTED``,
-``_SECRET_KEY``, or ``_SECRET`` will be treated sensitively by
-default. This means that if ``anaconda-project`` stores a value
-for them in ``project-local.yml`` or elsewhere, it will encrypt
-that value.
+TODO this section is partly about project-local.yml despite the
+intro that says we will only discuss project.yml in this document.
 
-To force a variable to be encrypted or not, add the ``encrypted``
-option to it, like this:
+Variables that end in ``_PASSWORD``, ``_ENCRYPTED``,
+``_SECRET_KEY``, or ``_SECRET`` are treated sensitively by
+default. This means that if ``anaconda-project`` stores a value
+for them in ``project.yml`` or ``project-local.yml`` or elsewhere,
+that value is encrypted. NOTE: ``project-local.yml stores and
+encrypts the value that you enter when prompted.
+
+To force a variable to be encrypted or not encrypted, add the
+``encrypted`` option to it in ``project.yml``, like this:
 
   variables:
-    # let's be contrary here and encrypt the username but
-    # not encrypt the password
-    AMAZON_EC2_USERNAME: { encrypted: true }
-    AMAZON_EC2_PASSWORD: { encrypted: false }
+    # let's encrypt the password but not the username
+    AMAZON_EC2_USERNAME: { encrypted: false }
+    AMAZON_EC2_PASSWORD: { encrypted: true }
 
-The value of the environment variable will NOT be encrypted when
-passed to your script; the encryption is only when we save the value
-to a config file.
+NOTE: The value of the environment variable is NOT encrypted
+when passed to your script; the encryption happens only when we
+save the value to a config file.
 
 
 Variables with default values
@@ -209,8 +216,8 @@ Variables with default values
 
 If you make the ``variables:`` section a dictionary instead of a
 list, you can give your variables default values. Anything
-in the environment or in ``project-local.yml`` will override
-these defaults though. To omit a default for a variable, set
+in the environment or in ``project-local.yml`` overrides
+these defaults. To omit a default for a variable, set
 its value to either ``null`` or ``{}``.
 
 For example:
@@ -227,17 +234,19 @@ For example:
 Variables that are always set
 =============================
 
-``anaconda-project`` ensures that the following are always set:
+``anaconda-project`` ensures that the following variables
+are always set:
 
- * ``PROJECT_DIR`` will be set to the toplevel directory of your
+ * ``PROJECT_DIR`` is set to the top level directory of your
    project
- * ``CONDA_ENV_PATH`` will be set to the filesystem location of
-   the current Conda environment
- * ``PATH`` will include the binary directory from the current
-   Conda environment
+ * ``CONDA_ENV_PATH`` is set to the filesystem location of
+   the current conda environment
+ * ``PATH`` includes the binary directory from the current
+   conda environment
 
-You can rely on these variables existing, for example to grab a
-file from your project directory, try this:
+These variables always exist, so for example to get a
+file from your project directory, try this in your Python code
+(notebook or script):
 
   import os
   project_dir = os.getenv("PROJECT_DIR")
@@ -248,17 +257,17 @@ Services
 ========
 
 Services can be automatically started, and their address
-provided to your code in an environment variable.
+can be provided to your code by using an environment variable.
 
-For example, you can do this:
+For example, you can add a services section to your ``project.yml`` file:
 
   services:
     REDIS_URL: redis
 
-Now when someone launches the project, ``anaconda-project`` can
-offer to start a local instance of ``redis-server`` automatically.
+Now when someone else launches your project, ``anaconda-project``
+offers to start a local instance of ``redis-server`` automatically.
 
-There's a long form of the above service config too:
+There is also a long form of the above service configuration:
 
   services:
     REDIS_URL: { type: redis }
@@ -282,8 +291,8 @@ more!)
 File Downloads
 ==============
 
-The ``downloads:`` section lets you define environment variables
-pointing to downloaded files. For example:
+The ``downloads:`` section of the ``project.yml`` file lets you define
+environment variables that point to downloaded files. For example:
 
   downloads:
     MYDATAFILE:
@@ -292,9 +301,9 @@ pointing to downloaded files. For example:
 
 Rather than `sha1`, you can use whatever integrity hash you have;
 supported hashes are ``md5``, ``sha1``, ``sha224``, ``sha256``,
-``sha384``, ``sha512``. If you don't specify a hash, the download
-won't be checked for integrity. It's up to you whether to live on
-the edge like this.
+``sha384``, ``sha512``.
+
+NOTE: The download is checked for integrity ONLY if you specify a hash.
 
 You can also specify a filename to download to, relative to your
 project directory. For example:
@@ -304,23 +313,23 @@ project directory. For example:
       url: http://example.com/bigdatafile
       filename: myfile.csv
 
-This will download to ``myfile.csv``, so if your project is in
+This downloads to ``myfile.csv``, so if your project is in
 ``/home/mystuff/foo`` and the download succeeds, ``MYDATAFILE``
-would be set to ``/home/mystuff/foo/myfile.csv``.
+is set to ``/home/mystuff/foo/myfile.csv``.
 
-If you don't specify a filename, ``anaconda-project`` picks a
+If you do not specify a filename, ``anaconda-project`` picks a
 reasonable default based on the URL.
 
 To avoid the automated download, it's also possible for someone to
 launch your project with an existing file path in the environment;
-on Unix, that looks like:
+on Linux or Mac, that looks like:
 
   MYDATAFILE=/my/already/downloaded/file.csv anaconda-project launch
 
-Anaconda Project can auto-unzip a zip file when it's
-downloaded. This is the default if the the URL path ends in ".zip"
-unless the filename also ends in ".zip", but for URLs that don't
-end in ".zip" or to change the default you can specify the "unzip"
+Anaconda Project can auto-unzip a zip file as it is downloaded.
+This is the default if the the URL path ends in ".zip"
+unless the filename also ends in ".zip". For URLs that do not
+end in ".zip", or to change the default, you can specify the "unzip"
 flag:
 
   downloads:
@@ -328,10 +337,12 @@ flag:
       url: http://example.com/bigdatafile
       unzip: true
 
-The ``filename`` will be used as a directory and the zip unpacked
-into it, unless the zip contains a single file or directory with
-the same name as ``filename``, and then the two are
-consolidated. That is, if your zip contains a single directory
+The ``filename`` is used as a directory and the zip file is unpacked
+into the same directory, unless the zip contains a
+single file or directory with the same name as ``filename``. In that
+case, then the two are consolidated.
+
+EXAMPLE: If your zip file contains a single directory
 ``foo`` with file ``bar`` inside that, and you specify downloading
 to filename ``foo``, then you'll get ``PROJECT_DIR/foo/bar``, not
 ``PROJECT_DIR/foo/foo/bar``.
@@ -340,9 +351,9 @@ to filename ``foo``, then you'll get ``PROJECT_DIR/foo/bar``, not
 Describing the Project
 ======================
 
-By default, Anaconda will name your project after the directory
-it's inside. You can give it a different name though in
-``project.yml``:
+By default, Anaconda names your project with the same name as
+the directory in which it is located. You can give it a
+different name though in ``project.yml``:
 
   name: myproject
 
@@ -350,43 +361,40 @@ You can also have an icon file, relative to the project directory:
 
   icon: images/myicon.png
 
-This will be used by graphical tools in the Anaconda platform,
+This is used by graphical tools in the Anaconda platform,
 when showing a list of projects.
 
 
 No need to edit ``project.yml`` directly
 ========================================
 
-TODO this is not true yet; see
-https://github.com/Anaconda-Server/anaconda-project/issues/20
+You can edit ``project.yml`` with the ``anaconda-project`` command.
 
-To add a download to ``project.yml`` try this:
+To add a download to ``project.yml``:
 
-  anaconda-project download http://example.com/myfile
+  anaconda-project add-download MYFILE http://example.com/myfile
 
-To add a dependency, try this:
+To add a dependency:
 
-  anaconda-project install redis-py
+  anaconda-project add-dependencies redis-py
 
-To ask for a running Redis instance, try this:
+To ask for a running Redis instance:
 
-  anaconda-project service-start redis
+  anaconda-project add-service redis
 
 
 Fallback to meta.yaml
 =====================
 
-If you package your project with Conda, you may have some
+If you package your project with conda, you may have some
 information already in ``conda.recipe/meta.yaml``;
-``anaconda-project`` will use some of this information too, so you
-don't have to duplicate it in ``project.yml``.
+``anaconda-project`` uses some of this information too, so you
+do not need to duplicate this information in ``project.yml``.
 
-For more on ``meta.yaml`` see http://conda.pydata.org/docs/building/meta-yaml.html
-
-``anaconda-project`` currently pays attention to these fields in
-``meta.yaml``:
+``anaconda-project`` currently reads these fields in ``meta.yaml``:
 
  * `package: name:`
  * `app: entry:`
  * `app: icon:`
 
+For more about ``meta.yaml`` see http://conda.pydata.org/docs/building/meta-yaml.html
