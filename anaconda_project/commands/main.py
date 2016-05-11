@@ -147,7 +147,7 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('remove-service', help="Remove a service from the project")
     add_project_arg(preset)
-    add_service_variable_name(preset)
+    preset.add_argument('variable', metavar='SERVICE_REFERENCE', default=None)
     preset.set_defaults(main=service_commands.main_remove)
 
     preset = subparsers.add_parser('list-services', help="List services present in the project")
