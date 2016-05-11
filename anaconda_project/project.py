@@ -21,6 +21,7 @@ from anaconda_project.project_commands import ProjectCommand
 from anaconda_project.project_file import ProjectFile
 
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
+from anaconda_project.internal.py2_compat import is_string
 
 # These strings are used in the command line options to anaconda-project,
 # so changing them has back-compat consequences.
@@ -98,7 +99,7 @@ class _ConfigCache(object):
     def _update_name(self, problems, project_file, conda_meta_file):
         name = project_file.name
         if name is not None:
-            if not isinstance(name, str):
+            if not is_string(name):
                 problems.append("%s: name: field should have a string value not %r" % (project_file.filename, name))
                 name = None
             elif len(name.strip()) == 0:
@@ -107,7 +108,7 @@ class _ConfigCache(object):
 
         if name is None:
             name = conda_meta_file.name
-            if name is not None and not isinstance(name, str):
+            if name is not None and not is_string(name):
                 problems.append("%s: package: name: field should have a string value not %r" %
                                 (conda_meta_file.filename, name))
                 name = None
@@ -119,13 +120,13 @@ class _ConfigCache(object):
 
     def _update_icon(self, problems, project_file, conda_meta_file):
         icon = project_file.icon
-        if icon is not None and not isinstance(icon, str):
+        if icon is not None and not is_string(icon):
             problems.append("%s: icon: field should have a string value not %r" % (project_file.filename, icon))
             icon = None
 
         if icon is None:
             icon = conda_meta_file.icon
-            if icon is not None and not isinstance(icon, str):
+            if icon is not None and not is_string(icon):
                 problems.append("%s: app: icon: field should have a string value not %r" %
                                 (conda_meta_file.filename, icon))
                 icon = None
@@ -177,7 +178,7 @@ class _ConfigCache(object):
                     requirements.append(requirement)
         elif isinstance(variables, list):
             for item in variables:
-                if isinstance(item, str):
+                if is_string(item):
                     if check_conda_reserved(item):
                         continue
                     requirement = self.registry.find_requirement_by_env_var(item, options=dict())
@@ -228,7 +229,7 @@ class _ConfigCache(object):
                 return []
             cleaned = []
             for item in items:
-                if isinstance(item, str):
+                if is_string(item):
                     cleaned.append(item.strip())
                 else:
                     problems.append("%s: %s: value should be a %s (as a string) not '%r'" %
@@ -287,7 +288,7 @@ class _ConfigCache(object):
 
         app_entry_from_meta_yaml = conda_meta_file.app_entry
         if app_entry_from_meta_yaml is not None:
-            if not isinstance(app_entry_from_meta_yaml, str):
+            if not is_string(app_entry_from_meta_yaml):
                 problems.append("%s: app: entry: should be a string not '%r'" %
                                 (conda_meta_file.filename, app_entry_from_meta_yaml))
                 app_entry_from_meta_yaml = None
@@ -323,7 +324,7 @@ class _ConfigCache(object):
                     # it's broken
                     have_command = True
 
-                    if not isinstance(copy[attr], str):
+                    if not is_string(copy[attr]):
                         problems.append("%s: command '%s' attribute '%s' should be a string not '%r'" %
                                         (project_file.filename, name, attr, copy[attr]))
                         failed = True

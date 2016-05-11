@@ -11,6 +11,7 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 
 from anaconda_project.internal.metaclass import with_metaclass
+from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.status import Status
 
 
@@ -142,7 +143,8 @@ class Requirement(with_metaclass(ABCMeta)):
             # always convert the default to a string (it's allowed to be a number
             # in the config file, but env vars have to be strings), unless
             # it's a dict because we use a dict for encrypted defaults
-            if 'default' in self.options and not isinstance(self.options['default'], (str, dict)):
+            if 'default' in self.options and not (is_string(self.options['default']) or isinstance(
+                    self.options['default'], dict)):
                 self.options['default'] = str(self.options['default'])
 
     @property
@@ -213,7 +215,7 @@ class EnvVarRequirement(Requirement):
         elif isinstance(raw_default, bool):
             # we have to check bool since it's considered an int apparently
             good_default = False
-        elif isinstance(raw_default, (str, int, float)):
+        elif is_string(raw_default) or isinstance(raw_default, (int, float)):
             good_default = True
         elif isinstance(raw_default, dict):
             # we only allow a dict if it represents an encrypted value

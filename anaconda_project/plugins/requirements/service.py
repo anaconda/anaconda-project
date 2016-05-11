@@ -9,6 +9,8 @@
 from copy import deepcopy
 from anaconda_project.plugins.requirement import EnvVarRequirement
 
+from anaconda_project.internal.py2_compat import is_string
+
 
 class ServiceRequirement(EnvVarRequirement):
     """Abstract base class for a requirement from the services section of the project file."""
@@ -17,7 +19,7 @@ class ServiceRequirement(EnvVarRequirement):
     def _parse(cls, registry, varname, item, problems, requirements):
         """Parse an item from the services: section."""
         service_type = None
-        if isinstance(item, str):
+        if is_string(item):
             service_type = item
             options = dict(type=service_type)
         elif isinstance(item, dict):

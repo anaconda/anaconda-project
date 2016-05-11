@@ -13,6 +13,8 @@ import os
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.network_util import urlparse
 
+from anaconda_project.internal.py2_compat import is_string
+
 _hash_algorithms = ('md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512')
 
 
@@ -27,7 +29,7 @@ class DownloadRequirement(EnvVarRequirement):
         hash_algorithm = None
         hash_value = None
         unzip = None
-        if isinstance(item, str):
+        if is_string(item):
             url = item
         elif isinstance(item, dict):
             url = item.get('url', None)
@@ -45,7 +47,7 @@ class DownloadRequirement(EnvVarRequirement):
                     return
                 else:
                     hash_value = item[method]
-                    if isinstance(hash_value, str):
+                    if is_string(hash_value):
                         hash_algorithm = method
                     else:
                         problems.append("Checksum value for {} should be a string not {}.".format(varname, hash_value))

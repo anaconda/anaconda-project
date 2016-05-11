@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 
 from anaconda_project.plugins.provider import Provider, ProvideResult
 from anaconda_project.internal import keyring
+from anaconda_project.internal.py2_compat import is_string
 
 
 class MasterPasswordProvider(Provider):
@@ -57,7 +58,7 @@ class MasterPasswordProvider(Provider):
             #   ANACONDA_MASTER_PASSWORD:
             #     default: "foobar"
             value = requirement.options['default']
-            assert isinstance(value, str)  # should have been checked on project load
+            assert is_string(value)  # should have been checked on project load
             context.environ[requirement.env_var] = value
         else:
             pass
