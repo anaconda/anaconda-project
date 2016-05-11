@@ -470,12 +470,15 @@ def test_load_environments():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.conda_environments) == 2
+        assert len(project.conda_environments) == 3
+        assert 'default' in project.conda_environments
         assert 'foo' in project.conda_environments
         assert 'bar' in project.conda_environments
-        assert project.default_conda_environment_name == 'foo'
+        assert project.default_conda_environment_name == 'default'
+        default = project.conda_environments['default']
         foo = project.conda_environments['foo']
         bar = project.conda_environments['bar']
+        assert default.dependencies == ()
         assert foo.dependencies == ('python', 'dog', 'cat', 'zebra')
         assert bar.dependencies == ()
 
@@ -496,14 +499,18 @@ def test_load_environments_merging_in_global():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.conda_environments) == 2
+        assert len(project.conda_environments) == 3
+        assert 'default' in project.conda_environments
         assert 'foo' in project.conda_environments
         assert 'bar' in project.conda_environments
-        assert project.default_conda_environment_name == 'foo'
+        assert project.default_conda_environment_name == 'default'
+        default = project.conda_environments['default']
         foo = project.conda_environments['foo']
         bar = project.conda_environments['bar']
+        assert default.dependencies == ('dead-parrot', 'elephant', 'lion')
         assert foo.dependencies == ('dead-parrot', 'elephant', 'python', 'dog', 'cat', 'zebra')
         assert bar.dependencies == ('dead-parrot', 'elephant')
+        assert default.channels == ('mtv', 'cartoons')
         assert foo.channels == ('mtv', 'hbo')
         assert bar.channels == ('mtv', )
 
@@ -526,6 +533,11 @@ environments:
     channels:
        - hbo
   bar: {}
+  default:
+    dependencies:
+      - lion
+    channels:
+      - cartoons
     """}, check_environments)
 
 
@@ -1447,7 +1459,9 @@ def test_get_publication_info_from_complex_project():
             'downloads': {'FOO': {'encrypted': False,
                                   'title': 'A downloaded file which is referenced by FOO',
                                   'url': 'https://example.com/blah'}},
-            'environments': {'lol': {'channels': ['bar'],
+            'environments': {'default': {'channels': ['bar'],
+                                         'dependencies': ['foo']},
+                             'lol': {'channels': ['bar'],
                                      'dependencies': ['foo']},
                              'w00t': {'channels': ['bar'],
                                       'dependencies': ['foo', 'something']},
