@@ -284,6 +284,9 @@ def add_environment(project, name, packages, channels):
         ``Status`` instance
     """
     assert name is not None
+    name = name.strip()
+    if not name:
+        return SimpleStatus(success=False, description="Environment name cannot be empty or just spaces.")
     return _update_environment(project, name, packages, channels, create=True)
 
 
@@ -551,6 +554,10 @@ def add_command(project, name, command_type, command):
     """
     if command_type not in ALL_COMMAND_TYPES:
         raise ValueError("Invalid command type " + command_type + " choose from " + repr(ALL_COMMAND_TYPES))
+
+    name = name.strip()
+    if not name:
+        return SimpleStatus(success=False, description="Command name cannot be empty or just spaces.")
 
     failed = _project_problems_status(project)
     if failed is not None:

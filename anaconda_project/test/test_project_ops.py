@@ -280,6 +280,16 @@ def test_add_command_bokeh():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_add_command)
 
 
+def test_add_command_empty_name():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, ' ', 'bokeh_app', 'file.py')
+        assert not result
+        assert result.status_description == 'Command name cannot be empty or just spaces.'
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_add_command)
+
+
 def test_add_command_bokeh_overwrites():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
@@ -800,6 +810,16 @@ def test_add_environment_with_real_conda_manager(monkeypatch):
         env_commented_map = project2.project_file.get_value(['environments', 'foo'])
         assert dict(dependencies=['numpy'], channels=[]) == dict(env_commented_map)
         assert os.path.isdir(os.path.join(dirname, 'envs', 'foo', 'conda-meta'))
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_environment_with_empty_name(monkeypatch):
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.add_environment(project, name=' ', packages=['numpy'], channels=[])
+        assert not status
+        assert status.status_description == 'Environment name cannot be empty or just spaces.'
 
     with_directory_contents(dict(), check)
 
