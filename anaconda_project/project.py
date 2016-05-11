@@ -162,6 +162,9 @@ class _ConfigCache(object):
             for key in variables.keys():
                 if check_conda_reserved(key):
                     continue
+                if key.strip() == '':
+                    problems.append("Variable name cannot be empty string, found: '{}' as name".format(key))
+                    continue
                 raw_options = variables[key]
 
                 if raw_options is None:
@@ -179,6 +182,9 @@ class _ConfigCache(object):
         elif isinstance(variables, list):
             for item in variables:
                 if is_string(item):
+                    if item.strip() == '':
+                        problems.append("Variable name cannot be empty string, found: '{}' as name".format(item))
+                        continue
                     if check_conda_reserved(item):
                         continue
                     requirement = self.registry.find_requirement_by_env_var(item, options=dict())
@@ -204,6 +210,9 @@ class _ConfigCache(object):
             return
 
         for varname, item in downloads.items():
+            if varname.strip() == '':
+                problems.append("Download name cannot be empty string, found: '{}' as name".format(varname))
+                continue
             DownloadRequirement._parse(self.registry, varname, item, problems, requirements)
 
     def _update_services(self, requirements, problems, project_file):
@@ -218,6 +227,9 @@ class _ConfigCache(object):
             return
 
         for varname, item in services.items():
+            if varname.strip() == '':
+                problems.append("Service name cannot be empty string, found: '{}' as name".format(varname))
+                continue
             ServiceRequirement._parse(self.registry, varname, item, problems, requirements)
 
     def _update_conda_environments(self, problems, project_file):
@@ -248,6 +260,10 @@ class _ConfigCache(object):
         environments = project_file.get_value('environments', default={})
         if isinstance(environments, dict):
             for (name, attrs) in environments.items():
+                if name.strip() == '':
+                    problems.append("Environment variable name cannot be empty string, found: '{}' as name".format(
+                        name))
+                    continue
                 deps = _parse_dependencies(attrs)
                 channels = _parse_channels(attrs)
                 # ideally we would merge same-name packages here, choosing the
@@ -303,6 +319,9 @@ class _ConfigCache(object):
             failed = True
         elif commands_section is not None:
             for (name, attrs) in commands_section.items():
+                if name.strip() == '':
+                    problems.append("Command variable name cannot be empty string, found: '{}' as name".format(name))
+                    continue
                 if first_command_name is None:
                     first_command_name = name
 
