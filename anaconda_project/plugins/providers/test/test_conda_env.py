@@ -533,9 +533,10 @@ def test_browser_ui_keeping_env_var_set(monkeypatch):
                          final_result_check=final_result_check)
 
 
-def test_browser_ui_two_envs_defaulting_to_first(monkeypatch):
+def test_browser_ui_three_envs_defaulting_to_first(monkeypatch):
     directory_contents = {DEFAULT_PROJECT_FILENAME: """
 environments:
+  default: {} # this is auto-created anyway, but here for clarity
   first_env: {}
   second_env:
     dependencies:
@@ -549,7 +550,7 @@ environments:
         assert response.code == 200
         body = response.body.decode('utf-8')
         # print("BODY: " + body)
-        assert "first_env' doesn't look like it contains a Conda environment yet." in body
+        assert "default' doesn't look like it contains a Conda environment yet." in body
         _verify_choices(response,
                         (
                             # by default, use one of the project-defined named envs
@@ -564,12 +565,12 @@ environments:
         body = response.body.decode('utf-8')
         assert "Done!" in body
         assert "Using Conda environment" in body
-        assert "first_env" in body
+        assert "default" in body
         _verify_choices(response, ())
 
     def final_result_check(dirname, result):
         assert result
-        expected_env_path = os.path.join(dirname, 'envs', 'first_env')
+        expected_env_path = os.path.join(dirname, 'envs', 'default')
         expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
         if platform.system() == 'Windows':
             del expected['CONDA_ENV_PATH']
@@ -584,9 +585,10 @@ environments:
                          final_result_check=final_result_check)
 
 
-def test_browser_ui_two_envs_choosing_second(monkeypatch):
+def test_browser_ui_three_envs_choosing_second(monkeypatch):
     directory_contents = {DEFAULT_PROJECT_FILENAME: """
 environments:
+  default: {} # this is auto-created anyway, but here for clarity
   first_env:
     dependencies:
       - python
@@ -603,7 +605,7 @@ environments:
         body = response.body.decode('utf-8')
         stuff['form_names'] = _form_names(response)
         # print("BODY: " + body)
-        assert "first_env' doesn't look like it contains a Conda environment yet." in body
+        assert "default' doesn't look like it contains a Conda environment yet." in body
         _verify_choices(response,
                         (
                             # by default, use one of the project-defined named envs
