@@ -154,7 +154,10 @@ your ``project.yml`` file:
 In the above example we create two environments, ``envs/default`` 
 and ``envs/python27``.
 
-To run a project in a specific environment, use:
+To run a project in a specific environment, use the ``environment`` option: 
+
+  anaconda-project launch --environment myenvname
+
 https://github.com/Anaconda-Server/anaconda-project/issues/97
 
 If you have top level ``channels`` or ``dependencies`` sections
@@ -191,8 +194,9 @@ says we will only discuss project.yml in this document.
 Variables that end in ``_PASSWORD``, ``_ENCRYPTED``,
 ``_SECRET_KEY``, or ``_SECRET`` are treated sensitively by
 default. This means that if ``anaconda-project`` stores a value
-for them in ``project-local.yml`` or elsewhere, that value is 
-encrypted.
+for them in ``project.yml`` or ``project-local.yml`` or elsewhere, 
+that value is encrypted. NOTE: ``project-local.yml stores and
+encrypts the value that you enter when prompted.
 
 To force a variable to be encrypted or not encrypted, add the 
 ``encrypted`` option to it, like this:
@@ -241,7 +245,8 @@ are always set:
    conda environment
 
 These variables always exist, so for example to get a
-file from your project directory, try this in your ``project.yml`` file:
+file from your project directory, try this in your Python code 
+(notebook or script):
 
   import os
   project_dir = os.getenv("PROJECT_DIR")
@@ -317,7 +322,7 @@ reasonable default based on the URL.
 
 To avoid the automated download, it's also possible for someone to
 launch your project with an existing file path in the environment;
-on Linux, that looks like:
+on Linux or Mac, that looks like:
 
   MYDATAFILE=/my/already/downloaded/file.csv anaconda-project launch
 
@@ -372,11 +377,11 @@ To add a download to ``project.yml``:
 
 To add a dependency:
 
-  anaconda-project install redis-py
+  anaconda-project add-dependencies redis-py
 
 To ask for a running Redis instance:
 
-  anaconda-project service-start redis
+  anaconda-project add-service redis
 
 
 Fallback to meta.yaml
