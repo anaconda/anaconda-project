@@ -347,7 +347,7 @@ def test_update_command(monkeypatch):
 
     p = api.AnacondaProject()
 
-    kwargs = dict(project=43, command_type='bokeh_app', name='name', command='file.py')
+    kwargs = dict(project=43, command_type='bokeh_app', name='name', command='file.py', new_name='foo')
     result = p.update_command(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
