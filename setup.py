@@ -77,6 +77,23 @@ class Profiler(object):
         self._profiler.enable()
 
 
+try:
+    # Attempt to force coverage to skip_covered, which pytest-cov
+    # doesn't expose as an option (.coveragerc option for this is
+    # ignored by pytest-cov)
+    from coverage.summary import SummaryReporter
+    original_init = SummaryReporter.__init__
+
+    def modified_init(self, coverage, config):
+        config.skip_covered = True
+        original_init(self, coverage, config)
+
+    SummaryReporter.__init__ = modified_init
+    print("Coverage monkeypatched to skip_covered")
+except Exception as e:
+    print("Failed to monkeypatch coverage: " + str(e), file=sys.stderr)
+
+
 class AllTestsCommand(TestCommand):
     # `py.test --durations=5` == `python setup.py test -a "--durations=5"`
     user_options = [('pytest-args=', 'a', "Arguments to pass to py.test"),
