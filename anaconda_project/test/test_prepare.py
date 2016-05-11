@@ -54,10 +54,41 @@ def test_prepare_bad_provide_mode():
 def test_unprepare_empty_directory():
     def unprepare_empty(dirname):
         project = project_no_dedicated_env(dirname)
-        result = unprepare(project)
-        assert result is None
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ)
+        assert result
+        status = unprepare(project, result)
+        assert status
 
     with_directory_contents(dict(), unprepare_empty)
+
+
+def test_unprepare_problem_project():
+    def unprepare_problems(dirname):
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ)
+        assert not result
+        status = unprepare(project, result)
+        assert not status
+        assert status.status_description == 'Unable to load the project.'
+        assert status.errors == ['variables section contains wrong value type 42, ' +
+                                 'should be dict or list of requirements']
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, unprepare_problems)
+
+
+def test_unprepare_nothing_to_do():
+    def unprepare_nothing(dirname):
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ)
+        assert result
+        status = unprepare(project, result, whitelist=[])
+        assert status
+        assert status.status_description == 'Nothing to clean up.'
+
+    with_directory_contents(dict(), unprepare_nothing)
 
 
 def test_default_to_system_environ():
@@ -109,10 +140,12 @@ def test_prepare_some_env_var_not_set_keep_going():
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(BAR='bar')
         stage = prepare_in_stages(project, environ=environ, keep_going_until_success=True)
+        assert stage.environ['PROJECT_DIR'] == dirname
         for i in range(1, 10):
             next_stage = stage.execute()
             assert next_stage is not None
             assert stage.failed
+            assert stage.environ['PROJECT_DIR'] == dirname
             stage = next_stage
         assert dict(BAR='bar') == strip_environ(environ)
 
@@ -283,17 +316,18 @@ def test_skip_after_success_function_when_second_stage_fails():
         def last(stage):
             assert state['state'] == 'first'
             state['state'] = 'second'
-            stage.set_result(PrepareFailure(logs=[], statuses=(), errors=[]), [])
+            stage.set_result(PrepareFailure(logs=[], statuses=(), errors=[], environ=dict()), [])
             return None
 
-        return _FunctionPrepareStage("second", [], last)
+        return _FunctionPrepareStage(dict(), "second", [], last)
 
-    first_stage = _FunctionPrepareStage("first", [], do_first)
+    first_stage = _FunctionPrepareStage(dict(), "first", [], do_first)
 
     def after(updated_statuses):
         raise RuntimeError("should not have been called")
 
     stage = _after_stage_success(first_stage, after)
+    assert isinstance(stage.environ, dict)
     while stage is not None:
         next_stage = stage.execute()
         result = stage.result
@@ -321,9 +355,9 @@ def test_run_after_success_function_when_second_stage_succeeds():
             stage.set_result(PrepareSuccess(logs=[], statuses=(), command_exec_info=None, environ=dict()), [])
             return None
 
-        return _FunctionPrepareStage("second", [], last)
+        return _FunctionPrepareStage(dict(), "second", [], last)
 
-    first_stage = _FunctionPrepareStage("first", [], do_first)
+    first_stage = _FunctionPrepareStage(dict(), "first", [], do_first)
 
     def after(updated_statuses):
         assert state['state'] == 'second'

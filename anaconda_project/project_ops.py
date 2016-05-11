@@ -18,6 +18,7 @@ from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.plugins.requirements.download import _hash_algorithms
 from anaconda_project.plugins.requirements.service import ServiceRequirement
+from anaconda_project.plugins.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
 
@@ -181,7 +182,7 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
     return _commit_requirement_if_it_works(project, env_var)
 
 
-def remove_download(project, env_var):
+def remove_download(project, prepare_result, env_var):
     """Remove file or directory referenced by ``env_var`` from file system and the project.
 
     The returned ``Status`` will be an instance of ``SimpleStatus``. A False
@@ -190,6 +191,7 @@ def remove_download(project, env_var):
 
     Args:
         project (Project): the project
+        prepare_result (PrepareResult): result of a previous prepare
         env_var (str): env var to store the local filename
 
     Returns:
@@ -202,25 +204,17 @@ def remove_download(project, env_var):
     requirement = project.find_requirements(env_var, klass=DownloadRequirement)
     if not requirement:
         return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
+    assert len(requirement) == 1  # duplicate env vars aren't allowed
     requirement = requirement[0]
 
-    project.project_file.unset_value(['downloads', env_var])
-    project.project_file.use_changes_without_saving()
+    status = prepare.unprepare(project, prepare_result, whitelist=[env_var])
+    if status:
+        project.project_file.unset_value(['downloads', env_var])
+        project.project_file.use_changes_without_saving()
+        assert project.problems == []
+        project.project_file.save()
 
-    filepath = os.path.join(project.directory_path, requirement.filename)
-    label = 'file'
-    if os.path.exists(filepath):
-        try:
-            if os.path.isdir(filepath):
-                label = 'directory'
-                shutil.rmtree(filepath)
-            else:
-                os.unlink(filepath)
-        except Exception as e:
-            project.project_file.load()
-            return SimpleStatus(success=False, description="Failed to remove {}: {}.".format(filepath, str(e)))
-    project.project_file.save()
-    return SimpleStatus(success=True, description="Removed {} '{}' from project.".format(label, requirement.filename))
+    return status
 
 
 def _update_environment(project, name, packages, channels, create):
@@ -320,18 +314,21 @@ def remove_environment(project, name):
         return SimpleStatus(success=False, description=problem)
 
     env_path = project.conda_environments[name].path(project.directory_path)
-    if os.path.exists(env_path):
-        try:
-            shutil.rmtree(env_path)
-        except Exception as e:
-            problem = "Failed to remove environment {}: {}.".format(name, str(e))
-            return SimpleStatus(success=False, description=problem)
 
-    project.project_file.unset_value(['environments', name])
-    project.project_file.use_changes_without_saving()
-    assert project.problems == []
-    project.project_file.save()
-    return SimpleStatus(success=True, description="Removed environment: {}.".format(name))
+    # For remove_service and remove_download, we use unprepare()
+    # to do the cleanup; for the environment, it's awkward to do
+    # that because the env we want to remove may not be the one
+    # that was prepared. So instead we share some code with the
+    # CondaEnvProvider but don't try to go through the unprepare
+    # machinery.
+    status = _remove_env_path(env_path)
+    if status:
+        project.project_file.unset_value(['environments', name])
+        project.project_file.use_changes_without_saving()
+        assert project.problems == []
+        project.project_file.save()
+
+    return status
 
 
 def add_dependencies(project, environment, packages, channels):
@@ -755,7 +752,7 @@ def add_service(project, service_type, variable_name=None):
     return _commit_requirement_if_it_works(project, variable_name)
 
 
-def remove_service(project, variable_name):
+def remove_service(project, prepare_result, variable_name):
     """Remove a service to project.yml.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -764,7 +761,8 @@ def remove_service(project, variable_name):
 
     Args:
         project (Project): the project
-        variable_name (str): environment variable name (None for default)
+        prepare_result (PrepareResult): result of a previous prepare
+        variable_name (str): environment variable name for the service requirement
 
     Returns:
         ``Status`` instance
@@ -778,7 +776,8 @@ def remove_service(project, variable_name):
                     if req.service_type == variable_name or req.env_var == variable_name]
     if not requirements:
         return SimpleStatus(success=False,
-                            description="Service requirement referenced by '{}' not found".format(variable_name))
+                            description="Service '{}' not found in the project file.".format(variable_name))
+
     if len(requirements) > 1:
         return SimpleStatus(success=False,
                             description=("Conflicting results, found {} matches, use list-services"
@@ -786,10 +785,59 @@ def remove_service(project, variable_name):
 
     env_var = requirements[0].env_var
 
+    status = prepare.unprepare(project, prepare_result, whitelist=[env_var])
+    if not status:
+        return status
+
     project.project_file.unset_value(['services', env_var])
     project.project_file.use_changes_without_saving()
     assert project.problems == []
-    prepare.unprepare(project, whitelist=[env_var])
 
     project.project_file.save()
-    return SimpleStatus(success=True, description="Removed service requirement referenced by '{}'".format(env_var))
+    return SimpleStatus(success=True, description="Removed service '{}' from the project file.".format(variable_name))
+
+
+def clean(project, prepare_result):
+    """Blow away auto-provided state for the project.
+
+    This should not remove any potential "user data" such as
+    project-local.yml.
+
+    This includes a call to ``anaconda_project.prepare.unprepare``
+    but also removes the entire services/ and envs/ directories
+    even if they contain leftovers that we didn't prepare in the
+    most recent prepare() call.
+
+    Args:
+        project (Project): the project instance
+        prepare_result (PrepareResult): result of a previous prepare
+
+    Returns:
+        a ``Status`` instance
+
+    """
+    status = prepare.unprepare(project, prepare_result)
+    logs = status.logs
+    errors = status.errors
+    if status:
+        logs = logs + [status.status_description]
+    else:
+        errors = errors + [status.status_description]
+
+    # we also nuke any "debris" from non-current choices, like old
+    # environments or services
+    def cleanup_dir(dirname):
+        if os.path.isdir(dirname):
+            logs.append("Removing %s." % dirname)
+            try:
+                shutil.rmtree(dirname)
+            except Exception as e:
+                errors.append("Error removing %s: %s." % (dirname, str(e)))
+
+    cleanup_dir(os.path.join(project.directory_path, "services"))
+    cleanup_dir(os.path.join(project.directory_path, "envs"))
+
+    if status and len(errors) == 0:
+        return SimpleStatus(success=True, description="Cleaned.", logs=logs, errors=errors)
+    else:
+        return SimpleStatus(success=False, description="Failed to clean everything up.", logs=logs, errors=errors)

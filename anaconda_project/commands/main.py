@@ -19,6 +19,7 @@ from anaconda_project.plugins.requirements.download import _hash_algorithms
 import anaconda_project.commands.init as init
 import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
+import anaconda_project.commands.clean as clean
 import anaconda_project.commands.activate as activate
 import anaconda_project.commands.variable_commands as variable_commands
 import anaconda_project.commands.download_commands as download_commands
@@ -84,6 +85,11 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser('prepare', help="Sets up project requirements but does not run the project.")
     add_prepare_args(preset)
     preset.set_defaults(main=prepare.main)
+
+    preset = subparsers.add_parser('clean',
+                                   help="Removes generated state (stops services, deletes environment files, etc).")
+    add_project_arg(preset)
+    preset.set_defaults(main=clean.main)
 
     preset = subparsers.add_parser('activate',
                                    help="Sets up project and outputs shell export commands reflecting the setup.")

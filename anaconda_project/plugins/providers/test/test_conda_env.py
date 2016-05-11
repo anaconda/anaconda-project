@@ -15,7 +15,7 @@ from anaconda_project.test.environ_utils import (minimal_environ, minimal_enviro
 from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
-from anaconda_project.prepare import prepare_without_interaction, prepare_with_browser_ui
+from anaconda_project.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project import Project
 from anaconda_project import provide
@@ -39,7 +39,7 @@ def test_find_by_class_name_conda_env():
     assert isinstance(found, CondaEnvProvider)
 
 
-def test_prepare_project_scoped_env(monkeypatch):
+def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
     def prepare_project_scoped_env(dirname):
@@ -85,6 +85,13 @@ def test_prepare_project_scoped_env(monkeypatch):
         assert expected == result.environ
         assert conda_meta_mtime == os.path.getmtime(os.path.join(expected_env, "conda-meta"))
 
+        # Now unprepare
+        status = unprepare(project, result)
+        assert status
+        assert status.status_description == ('Deleted environment files in %s.' % (expected_env))
+        assert status.errors == []
+        assert not os.path.exists(expected_env)
+
     with_directory_contents(dict(), prepare_project_scoped_env)
 
 
@@ -100,7 +107,46 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
         result = prepare_without_interaction(project, environ=environ)
         assert not result
 
+        # unprepare should not have anything to do
+        status = unprepare(project, result)
+        assert status
+        assert status.errors == []
+        assert status.status_description == ('Current environment is not in %s, no need to delete it.' % dirname)
+
     with_directory_contents(dict(), prepare_project_scoped_env_fails)
+
+
+def test_unprepare_gets_error_on_delete(monkeypatch):
+    def mock_create(prefix, pkgs, channels):
+        os.makedirs(os.path.join(prefix, "conda-meta"))
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
+
+    def prepare_project_scoped_env(dirname):
+        project = Project(dirname)
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        result = prepare_without_interaction(project, environ=environ)
+        assert result
+        expected_env = os.path.join(dirname, "envs", "default")
+
+        # Now unprepare
+
+        def mock_rmtree(path):
+            raise IOError("I will never rm the tree!")
+
+        monkeypatch.setattr('shutil.rmtree', mock_rmtree)
+
+        status = unprepare(project, result)
+        assert status.status_description == ('Failed to remove environment files in %s: I will never rm the tree!.' %
+                                             (expected_env))
+        assert not status
+
+        assert os.path.exists(expected_env)
+
+        # so we can rmtree our tmp directory
+        monkeypatch.undo()
+
+    with_directory_contents(dict(), prepare_project_scoped_env)
 
 
 def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
@@ -117,6 +163,12 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
         expected_env_path = os.path.join(dirname, "envs", "default")
         assert ['missing requirement to run this project: A Conda environment',
                 "  '%s' doesn't look like it contains a Conda environment yet." % expected_env_path] == result.errors
+
+        # unprepare should not have anything to do
+        status = unprepare(project, result)
+        assert status
+        assert status.errors == []
+        assert status.status_description == ("Nothing to clean up for environment 'default'.")
 
     with_directory_contents(dict(), prepare_project_scoped_env_not_attempted)
 

@@ -14,7 +14,8 @@ import subprocess
 import sys
 import time
 
-from anaconda_project.plugins.provider import EnvVarProvider, ProviderAnalysis
+from anaconda_project.plugins.provider import (EnvVarProvider, ProviderAnalysis, shutdown_service_run_state,
+                                               delete_service_directory)
 import anaconda_project.plugins.network_util as network_util
 from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
 
@@ -327,3 +328,9 @@ class RedisProvider(EnvVarProvider):
             context.environ[requirement.env_var] = url
 
         return super_result.copy_with_additions(errors=errors, logs=logs)
+
+    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
+        """Override superclass to shut down any redis-server we started."""
+        status = shutdown_service_run_state(local_state_file, requirement.env_var)
+        delete_service_directory(local_state_file, requirement.env_var)
+        return status

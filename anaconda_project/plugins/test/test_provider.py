@@ -13,12 +13,16 @@ import pytest
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.crypto import encrypt_string
 from anaconda_project.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
-from anaconda_project.plugins.provider import (Provider, ProvideContext, EnvVarProvider, ProvideResult)
+from anaconda_project.plugins.provider import (Provider, ProvideContext, EnvVarProvider, ProvideResult,
+                                               shutdown_service_run_state)
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
 from anaconda_project.project import Project
 from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
 from anaconda_project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME
+from anaconda_project.prepare import (prepare_without_interaction, unprepare)
+from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.test.environ_utils import minimal_environ
 
 
 def test_find_provider_by_class_name():
@@ -44,6 +48,9 @@ def test_provider_default_method_implementations():
             return dict()
 
         def provide(self, requirement, context):
+            pass
+
+        def unprovide(self, requirement, local_state_file, requirement_status=None):
             pass
 
     provider = UselessProvider()
@@ -441,6 +448,23 @@ variables:
 """}, check_env_var_provider_config)
 
 
+def test_env_var_provider_prepare_unprepare():
+    def check_env_var_provider_prepare(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = prepare_without_interaction(project, environ=minimal_environ(FOO='bar'))
+        assert result
+        status = unprepare(project, result)
+        assert status
+        assert status.status_description == 'Success.'
+        assert status.logs == ["Nothing to clean up for FOO.",
+                               ("Current environment is not in %s, no need to delete it." % dirname)]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: null
+"""}, check_env_var_provider_prepare)
+
+
 def test_provide_context_properties():
     def check_provide_contents(dirname):
         environ = dict(foo='bar')
@@ -550,3 +574,36 @@ def test_provide_context_transform_service_run_state():
         assert dict(port=43, foo='bar') == local_state_file.get_service_run_state("myservice")
 
     with_directory_contents(dict(), check_provide_contents)
+
+
+def test_shutdown_service_run_state_nothing_to_do():
+    def check(dirname):
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        status = shutdown_service_run_state(local_state_file, 'foo')
+        assert status
+        assert status.status_description == 'Nothing to do to shut down foo.'
+
+    with_directory_contents(dict(), check)
+
+
+def test_shutdown_service_run_state_command_success():
+    def check(dirname):
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        local_state_file.set_service_run_state('FOO', {'shutdown_commands': [['true']]})
+        status = shutdown_service_run_state(local_state_file, 'FOO')
+        assert status
+        assert status.status_description == "Successfully shut down FOO."
+
+    with_directory_contents(dict(), check)
+
+
+def test_shutdown_service_run_state_command_failure():
+    def check(dirname):
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        local_state_file.set_service_run_state('FOO', {'shutdown_commands': [['false']]})
+        status = shutdown_service_run_state(local_state_file, 'FOO')
+        assert not status
+        assert status.status_description == "Shutdown commands failed for FOO."
+        assert status.errors == ["Shutting down FOO, command ['false'] failed with code 1."]
+
+    with_directory_contents(dict(), check)

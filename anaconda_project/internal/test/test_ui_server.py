@@ -25,7 +25,7 @@ def _no_op_prepare(config_context):
         stage.set_result(PrepareSuccess(logs=[], statuses=(), command_exec_info=None, environ=dict()), [])
         return None
 
-    return _FunctionPrepareStage("Do Nothing", [], _do_nothing, config_context)
+    return _FunctionPrepareStage(dict(), "Do Nothing", [], _do_nothing, config_context)
 
 
 def test_ui_server_empty():
