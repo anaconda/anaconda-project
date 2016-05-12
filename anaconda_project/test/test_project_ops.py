@@ -74,6 +74,13 @@ def test_set_name_and_icon():
         assert project.name == 'hello'
         assert project.icon == os.path.join(dirname, 'something.png')
 
+        # set to Unicode
+        result = project_ops.set_properties(project, name=u'hello', icon=u'something.png')
+        assert result
+
+        assert project.name == u'hello'
+        assert project.icon == os.path.join(dirname, 'something.png')
+
     with_directory_contents({'something.png': 'not a real png'}, check)
 
 

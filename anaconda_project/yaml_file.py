@@ -31,6 +31,7 @@ import uuid
 
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
 from anaconda_project.internal.rename import rename_over_existing
+from anaconda_project.internal.py2_compat import is_string
 
 
 def _atomic_replace(path, contents, encoding='utf-8'):
@@ -228,7 +229,7 @@ class YamlFile(object):
 
     @classmethod
     def _path(cls, path):
-        if isinstance(path, str):
+        if is_string(path):
             return (path, )
         else:
             try:

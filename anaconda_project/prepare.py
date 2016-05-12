@@ -17,6 +17,7 @@ from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal import prepare_ui
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.toposort import toposort_from_dependency_info
+from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT)
 from anaconda_project.plugins.provider import ProvideContext
@@ -89,7 +90,7 @@ class PrepareResult(with_metaclass(ABCMeta)):
     def status_for(self, env_var_or_class):
         """Get status for the given env var or class, or None if unknown."""
         for status in self.statuses:
-            if isinstance(env_var_or_class, str):
+            if is_string(env_var_or_class):
                 if isinstance(status.requirement, EnvVarRequirement) and \
                    status.requirement.env_var == env_var_or_class:
                     return status
@@ -400,7 +401,7 @@ def _in_provide_whitelist(provide_whitelist, requirement):
         return True
 
     for env_var_or_class in provide_whitelist:
-        if isinstance(env_var_or_class, str):
+        if is_string(env_var_or_class):
             if isinstance(requirement, EnvVarRequirement) and requirement.env_var == env_var_or_class:
                 return True
         else:

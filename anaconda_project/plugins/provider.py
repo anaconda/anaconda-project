@@ -16,13 +16,8 @@ import subprocess
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
 from anaconda_project.internal.crypto import encrypt_string, decrypt_string
+from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.internal.simple_status import SimpleStatus
-
-# py27/py3 compatibility
-try:  # pragma: no cover
-    basestring  # pragma: no cover
-except NameError:  # pragma: no cover
-    basestring = str  # pragma: no cover
 
 
 def _service_directory(local_state_file, relative_name):
@@ -394,7 +389,7 @@ class EnvVarProvider(Provider):
                 errors.append("Master password %s is not set so can't get value of %s." % (key, requirement.env_var))
                 return None
             value = decrypt_string(value['encrypted'], context.environ[key])
-        assert isinstance(value, basestring)  # should have validated this on project load
+        assert is_string(value)  # should have validated this on project load
         return value
 
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
