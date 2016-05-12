@@ -51,7 +51,7 @@ your project:
 
   commands:
     default:
-      shell: "python ${PROJECT_DIR}/analyze.py"
+      unix: "python ${PROJECT_DIR}/analyze.py"
       windows: "python %PROJECT_DIR%\analyze.py"
 
 There are separate command lines for Unix shell (Linux and

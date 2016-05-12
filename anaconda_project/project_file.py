@@ -111,8 +111,8 @@ class ProjectFile(YamlFile):
             "'default', or the first command listed.\n" +
             "Any .ipynb files in the project directory are added automatically and don't need\n" +
             "to be listed here, but you can if you like.\n" + "\n" + "For example,\n" + "\n" + "commands:\n" +
-            "   default:\n" + "      shell: echo \"This project is in $PROJECT_DIR\"\n" +
-            "      windows: echo \"This project is in \"%PROJECT_DIR%\n" + "   myscript:\n" + "      shell: main.py\n" +
+            "   default:\n" + "      unix: echo \"This project is in $PROJECT_DIR\"\n" +
+            "      windows: echo \"This project is in \"%PROJECT_DIR%\n" + "   myscript:\n" + "      unix: main.py\n" +
             "   my_bokeh_app:\n" + "      bokeh_app: the_app_directory_name\n" + "   my_notebook:\n" +
             "      notebook: foo.ipynb\n" + "\n" +
             "Commands may have both a Unix shell version and a Windows cmd.exe version.\n" +

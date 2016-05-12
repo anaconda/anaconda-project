@@ -145,7 +145,6 @@ def _append_extra_args_to_command_line(command, extra_args):
             args = windows_split_command_line(command)
             return windows_join_command_line(args + extra_args)
         else:
-
             new_command = command
             for arg in extra_args:
                 new_command = new_command + " " + quote(arg)
@@ -188,7 +187,7 @@ class ProjectCommand(object):
         a UI, but shouldn't be used to execute the command; use
         ``exec_info_for_environment()`` for executing.
         """
-        return self._attributes.get('shell', None)
+        return self._attributes.get('unix', None)
 
     @property
     def windows_cmd_commandline(self):
@@ -219,7 +218,7 @@ class ProjectCommand(object):
         if _is_windows():
             return 'windows'
         else:
-            return 'shell'
+            return 'unix'
 
     @property
     def description(self):
@@ -234,7 +233,7 @@ class ProjectCommand(object):
         # publication_info() and it'd be weird if it mattered
         # what platform you publish from.
         if description is None:
-            description = self._attributes.get('shell', None)
+            description = self._attributes.get('unix', None)
         if description is None:
             description = self._attributes.get('windows', None)
         if description is None:

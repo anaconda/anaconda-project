@@ -543,7 +543,7 @@ def add_command(project, name, command_type, command):
     Args:
        project (Project): the project
        name (str): name of the command
-       command_type (str): choice of `bokeh_app`, `notebook`, `shell` or `windows` command
+       command_type (str): choice of `bokeh_app`, `notebook`, `unix` or `windows` command
        command (str): the command line or filename itself
 
     Returns:
@@ -585,7 +585,7 @@ def update_command(project, name, command_type=None, command=None, new_name=None
     Args:
        project (Project): the project
        name (str): name of the command
-       command_type (str or None): choice of `bokeh_app`, `notebook`, `shell` or `windows` command
+       command_type (str or None): choice of `bokeh_app`, `notebook`, `unix` or `windows` command
        command (str or None): the command line or filename itself; command_type must also be specified
 
     Returns:
@@ -628,11 +628,11 @@ def update_command(project, name, command_type=None, command=None, new_name=None
 
     existing_types = set(command_dict.keys())
     conflicting_types = existing_types - set([command_type])
-    # 'shell' and 'windows' don't conflict with one another
-    if command_type == 'shell':
+    # 'unix' and 'windows' don't conflict with one another
+    if command_type == 'unix':
         conflicting_types = conflicting_types - set(['windows'])
     elif command_type == 'windows':
-        conflicting_types = conflicting_types - set(['shell'])
+        conflicting_types = conflicting_types - set(['unix'])
 
     if command_type is not None:
         for conflicting in conflicting_types:
