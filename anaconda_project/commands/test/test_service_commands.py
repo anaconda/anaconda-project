@@ -82,7 +82,7 @@ def test_remove_service(capsys, monkeypatch):
         local_state.set_service_run_state('TEST', {'shutdown_commands': [['echo', '"shutting down TEST"']]})
         local_state.save()
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'TEST'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'TEST'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -100,7 +100,7 @@ def test_remove_service_shutdown_fails(capsys, monkeypatch):
         local_state.set_service_run_state('TEST', {'shutdown_commands': [['false']]})
         local_state.save()
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'TEST'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'TEST'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -119,7 +119,7 @@ def test_remove_service_by_type(capsys, monkeypatch):
         local_state.set_service_run_state('TEST', {'shutdown_commands': [['echo', '"shutting down TEST"']]})
         local_state.save()
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'redis'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'redis'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -138,7 +138,7 @@ def test_remove_service_duplicate(capsys, monkeypatch):
         local_state.set_service_run_state('TEST', {'shutdown_commands': [['echo', '"shutting down TEST"']]})
         local_state.save()
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'redis'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'redis'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -185,8 +185,7 @@ def test_remove_service_running_redis(monkeypatch):
         assert real_can_connect_to_socket(host='localhost', port=port)
 
         # now clean it up
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'REDIS_URL',
-                                               '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'REDIS_URL', '--project', dirname])
         assert code == 0
 
         assert not os.path.exists(pidfile)
@@ -203,7 +202,7 @@ def test_remove_service_missing_variable(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', '--variable', 'TEST'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'TEST'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -235,7 +234,7 @@ def test_add_service_with_project_file_problems(capsys, monkeypatch):
 
 def test_remove_service_with_project_file_problems(capsys, monkeypatch):
     _test_service_command_with_project_file_problems(capsys, monkeypatch,
-                                                     ['anaconda-project', 'remove-service', '--variable', 'TEST'])
+                                                     ['anaconda-project', 'remove-service', 'TEST'])
 
 
 def test_list_service_with_project_file_problems(capsys, monkeypatch):
