@@ -163,6 +163,44 @@ variables:
 """}, check_problem)
 
 
+def test_problem_empty_names():
+    def check_problem(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert "Variable name cannot be empty string, found: ' ' as name" in project.problems
+        assert "Download name cannot be empty string, found: ' ' as name" in project.problems
+        assert "Service name cannot be empty string, found: ' ' as name" in project.problems
+        assert "Environment variable name cannot be empty string, found: ' ' as name" in project.problems
+        assert "Command variable name cannot be empty string, found: ' ' as name" in project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+variables:
+  ' ': 'thing'
+downloads:
+  ' ': 'http://localhost:8000/foo.tgz'
+services:
+  ' ': redis
+environments:
+  ' ':
+    dependencies:
+       - python
+commands:
+  ' ':
+    shell: echo 'foo'
+"""}, check_problem)
+
+
+def test_problem_empty_names_var_list():
+    def check_problem(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert "Variable name cannot be empty string, found: ' ' as name" in project.problems
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  - ' '
+"""}, check_problem)
+
+
 def test_project_dir_does_not_exist():
     def check_does_not_exist(dirname):
         project_dir = os.path.join(dirname, 'foo')
