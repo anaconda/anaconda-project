@@ -448,7 +448,7 @@ class AnacondaProject(object):
         Args:
            project (Project): the project
            name (str): name of the command
-           command_type (str): choice of `bokeh_app`, `notebook`, `shell` or `windows` command
+           command_type (str): choice of `bokeh_app`, `notebook`, `unix` or `windows` command
            command (str): the command line or filename itself
 
         Returns:
@@ -467,7 +467,7 @@ class AnacondaProject(object):
         Args:
            project (Project): the project
            name (str): name of the command
-           command_type (str or None): choice of `bokeh_app`, `notebook`, `shell` or `windows` command
+           command_type (str or None): choice of `bokeh_app`, `notebook`, `unix` or `windows` command
            command (str or None): the command line or filename itself; command_type must also be specified
            new_name (str or None): a new name to reference the command
 

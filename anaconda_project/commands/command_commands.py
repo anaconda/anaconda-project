@@ -23,7 +23,7 @@ def _ask_command(command):
     if platform.system() == 'Windows':
         other = 'windows'
     else:
-        other = 'shell'
+        other = 'unix'
     choices = {'b': 'bokeh_app', 'c': other, 'n': 'notebook'}
 
     while True:

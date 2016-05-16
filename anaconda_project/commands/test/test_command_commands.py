@@ -116,7 +116,7 @@ def test_add_command_ask_other_shell(monkeypatch):
 
         command = project.project_file.get_value(['commands', 'test'])
         assert len(command.keys()) == 1
-        assert command['shell'] == 'echo hello'
+        assert command['unix'] == 'echo hello'
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
 
@@ -253,7 +253,7 @@ def test_add_command_breaks_project(capsys, monkeypatch):
         assert (("%s: command 'test' has conflicting statements, 'notebook' must stand alone\n" % os.path.join(
             dirname, DEFAULT_PROJECT_FILENAME)) + "Unable to add the command.\n") == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    shell: foo\n")}, check_problem_add_cmd)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    unix: foo\n")}, check_problem_add_cmd)
 
 
 def test_remove_command_with_project_file_problems(capsys, monkeypatch):

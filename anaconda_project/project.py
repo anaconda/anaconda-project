@@ -26,7 +26,7 @@ from anaconda_project.internal.py2_compat import is_string
 # These strings are used in the command line options to anaconda-project,
 # so changing them has back-compat consequences.
 COMMAND_TYPE_CONDA_APP_ENTRY = 'conda_app_entry'
-COMMAND_TYPE_SHELL = 'shell'
+COMMAND_TYPE_SHELL = 'unix'
 COMMAND_TYPE_WINDOWS = 'windows'
 COMMAND_TYPE_NOTEBOOK = 'notebook'
 COMMAND_TYPE_BOKEH_APP = 'bokeh_app'

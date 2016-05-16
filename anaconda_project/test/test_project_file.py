@@ -46,10 +46,10 @@ icon:
 #
 # commands:
 #    default:
-#       shell: echo "This project is in $PROJECT_DIR"
+#       unix: echo "This project is in $PROJECT_DIR"
 #       windows: echo "This project is in "%PROJECT_DIR%
 #    myscript:
-#       shell: main.py
+#       unix: main.py
 #    my_bokeh_app:
 #       bokeh_app: the_app_directory_name
 #    my_notebook:

@@ -826,7 +826,7 @@ def test_command_with_bogus_key_and_ok_key():
         assert command.conda_app_entry is None
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n\n    shell: 'bar'\n"}, check_app_entry)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n\n    unix: 'bar'\n"}, check_app_entry)
 
 
 def test_two_empty_commands():
@@ -860,10 +860,10 @@ def test_non_string_as_value_of_shell():
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         expected_error = "%s: command '%s' attribute '%s' should be a string not '%r'" % (project.project_file.filename,
-                                                                                          'default', 'shell', 42)
+                                                                                          'default', 'unix', 42)
         assert expected_error == project.problems[0]
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    shell: 42\n"}, check_shell_non_dict)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: 42\n"}, check_shell_non_dict)
 
 
 def test_notebook_command():
@@ -937,7 +937,7 @@ def test_notebook_guess_command():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    shell: echo 'pass'",
+            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: echo 'pass'",
             'test.ipynb': 'pretend there is notebook data here',
             'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
             'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
@@ -977,7 +977,7 @@ def test_notebook_command_conflict():
         assert expected_error == project.problems[0]
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n    shell: echo 'pass'"},
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n    unix: echo 'pass'"},
         check_notebook_conflict_command)
 
 
@@ -990,7 +990,7 @@ def test_bokeh_command_conflict():
         assert expected_error == project.problems[0]
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: app.py\n    shell: echo 'pass'"},
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: app.py\n    unix: echo 'pass'"},
         check_bokeh_conflict_command)
 
 
@@ -1078,7 +1078,7 @@ def test_launch_argv_from_project_file_shell():
         {DEFAULT_PROJECT_FILENAME: """
 commands:
   foo:
-    shell: foo bar ${PREFIX}
+    unix: foo bar ${PREFIX}
 """}, check_launch_argv)
 
 
@@ -1146,7 +1146,7 @@ def test_exec_info_is_none_when_command_not_for_our_platform():
     import platform
     not_us = 'windows'
     if platform.system() == 'Windows':
-        not_us = 'shell'
+        not_us = 'unix'
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 commands:
   foo:
@@ -1261,7 +1261,7 @@ def test_launch_command_in_project_dir_with_shell(monkeypatch):
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
     _launch_argv_for_environment(dict(),
                                  "%s foo bar" % (prefix),
-                                 command_line='shell: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"')
+                                 command_line='unix: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"')
 
 
 def test_launch_command_in_project_dir_with_shell_extra_args(monkeypatch):
@@ -1271,7 +1271,7 @@ def test_launch_command_in_project_dir_with_shell_extra_args(monkeypatch):
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
     _launch_argv_for_environment(dict(),
                                  "%s foo bar baz" % (prefix),
-                                 command_line='shell: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"',
+                                 command_line='unix: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"',
                                  extra_args=["baz"])
 
 
@@ -1404,7 +1404,7 @@ name: foobar
 
 commands:
   foo:
-    shell: echo hi
+    unix: echo hi
   bar:
     windows: echo boo
   baz:
