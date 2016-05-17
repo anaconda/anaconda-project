@@ -22,6 +22,7 @@ from anaconda_project.project_file import ProjectFile
 
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
 from anaconda_project.internal.py2_compat import is_string
+from anaconda_project.internal.simple_status import SimpleStatus
 
 # These strings are used in the command line options to anaconda-project,
 # so changing them has back-compat consequences.
@@ -514,6 +515,18 @@ class Project(object):
         problems.
         """
         return self._updated_cache().problems
+
+    def problems_status(self, description=None):
+        """Get a ``Status`` describing project problems, or ``None`` if no problems."""
+        if len(self.problems) > 0:
+            errors = []
+            for problem in self.problems:
+                errors.append(problem)
+            if description is None:
+                description = "Unable to load the project."
+            return SimpleStatus(success=False, description=description, logs=[], errors=errors)
+        else:
+            return None
 
     @property
     def name(self):

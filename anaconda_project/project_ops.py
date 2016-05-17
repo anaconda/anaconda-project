@@ -23,18 +23,6 @@ from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
 
 
-def _project_problems_status(project, description=None):
-    if len(project.problems) > 0:
-        errors = []
-        for problem in project.problems:
-            errors.append(problem)
-        if description is None:
-            description = "Unable to load the project."
-        return SimpleStatus(success=False, description=description, logs=[], errors=errors)
-    else:
-        return None
-
-
 def create(directory_path, make_directory=False, name=None, icon=None):
     """Create a project skeleton in the given directory.
 
@@ -97,7 +85,7 @@ def set_properties(project, name=None, icon=None):
     Returns:
         a ``Status`` instance indicating success or failure
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -162,7 +150,7 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
         ``Status`` instance
     """
     assert ((hash_algorithm and hash_value) or (hash_algorithm is None and hash_value is None))
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
     requirement = project.project_file.get_value(['downloads', env_var])
@@ -197,7 +185,7 @@ def remove_download(project, prepare_result, env_var):
     Returns:
         ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
     # Modify the project file _in memory only_, do not save
@@ -218,7 +206,7 @@ def remove_download(project, prepare_result, env_var):
 
 
 def _update_environment(project, name, packages, channels, create):
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -306,7 +294,7 @@ def remove_environment(project, name):
     if name == 'default':
         return SimpleStatus(success=False, description="Cannot remove default environment.")
 
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -402,7 +390,7 @@ def remove_dependencies(project, environment, packages):
     # and then remove it from project.yml, and then see if we can
     # still prepare the project.
 
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -490,7 +478,7 @@ def add_variables(project, vars_to_add):
     Returns:
         ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -520,7 +508,7 @@ def remove_variables(project, vars_to_remove):
     Returns:
         ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -555,7 +543,7 @@ def add_command(project, name, command_type, command):
 
     name = name.strip()
 
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -568,7 +556,7 @@ def add_command(project, name, command_type, command):
 
     project.project_file.use_changes_without_saving()
 
-    failed = _project_problems_status(project, "Unable to add the command.")
+    failed = project.problems_status(description="Unable to add the command.")
     if failed is not None:
         # reset, maybe someone added conflicting command line types or something
         project.project_file.load()
@@ -607,7 +595,7 @@ def update_command(project, name, command_type=None, command=None, new_name=None
     if command is None and command_type is not None:
         raise ValueError("If specifying the command_type, must also specify the command")
 
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -645,7 +633,7 @@ def update_command(project, name, command_type=None, command=None, new_name=None
 
     project.project_file.use_changes_without_saving()
 
-    failed = _project_problems_status(project, "Unable to add the command.")
+    failed = project.problems_status(description="Unable to add the command.")
     if failed is not None:
         # reset, maybe someone added a nonexistent bokeh app or something
         project.project_file.load()
@@ -669,7 +657,7 @@ def remove_command(project, name):
     Returns:
        a ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -705,7 +693,7 @@ def add_service(project, service_type, variable_name=None):
     Returns:
         ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -770,7 +758,7 @@ def remove_service(project, prepare_result, variable_name):
     Returns:
         ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
