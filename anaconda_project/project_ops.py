@@ -12,6 +12,7 @@ import shutil
 
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import prepare
+from anaconda_project import bundler
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
@@ -832,3 +833,16 @@ def clean(project, prepare_result):
         return SimpleStatus(success=True, description="Cleaned.", logs=logs, errors=errors)
     else:
         return SimpleStatus(success=False, description="Failed to clean everything up.", logs=logs, errors=errors)
+
+
+def bundle(project, filename):
+    """Make an archive of the non-ignored files in the project.
+
+    Args:
+        project (``Project``): the project
+        filename (str): name of a zip, tar.gz, or tar.bz2 archive file
+
+    Returns:
+        a ``Status``, if failed has ``errors``
+    """
+    return bundler._bundle_project(project, filename)

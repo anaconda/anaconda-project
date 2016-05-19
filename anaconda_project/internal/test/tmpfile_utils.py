@@ -44,9 +44,13 @@ def with_directory_contents(contents, func):
     with (TmpDir(prefix="test-")) as dirname:
         for filename, file_content in contents.items():
             path = os.path.join(dirname, filename)
-            makedirs_ok_if_exists(os.path.dirname(path))
-            with codecs.open(path, 'w', 'utf-8') as f:
-                f.write(file_content)
+            if file_content is None:
+                # make a directory
+                makedirs_ok_if_exists(path)
+            else:
+                makedirs_ok_if_exists(os.path.dirname(path))
+                with codecs.open(path, 'w', 'utf-8') as f:
+                    f.write(file_content)
         return func(os.path.realpath(dirname))
 
 

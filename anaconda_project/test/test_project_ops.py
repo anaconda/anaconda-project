@@ -10,6 +10,8 @@ import codecs
 import os
 from tornado import gen
 import pytest
+import tarfile
+import zipfile
 
 from anaconda_project import project_ops
 from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaManagerError,
@@ -1311,3 +1313,318 @@ environments:
    foo: {}
    bar: {}
 """}, check)
+
+
+def _assert_zip_contains(zip_path, filenames):
+    with zipfile.ZipFile(zip_path, mode='r') as zf:
+        assert set(zf.namelist()) == set(filenames)
+
+
+def _assert_tar_contains(tar_path, filenames):
+    with tarfile.open(tar_path, mode='r') as tf:
+        assert set(tf.getnames()) == set(filenames)
+
+
+def test_bundle_zip():
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    """, "foo.py": "print('hello')\n"}, check)
+
+    with_directory_contents(dict(), bundletest)
+
+
+def test_bundle_tar_gz():
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.tar.gz")
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_tar_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    """, "foo.py": "print('hello')\n"}, check)
+
+    with_directory_contents(dict(), bundletest)
+
+
+def test_bundle_tar_bz2():
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.tar.bz2")
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_tar_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    """, "foo.py": "print('hello')\n"}, check)
+
+    with_directory_contents(dict(), bundletest)
+
+
+def test_bundle_cannot_write_destination_path():
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+
+        with codecs.open(bundlefile, 'w', 'utf-8') as f:
+            f.write("\n")
+        os.chmod(bundlefile, 0)
+        os.chmod(bundle_dest_dir, 0)
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.bundle(project, bundlefile)
+
+            assert not status
+            assert status.status_description == ('Failed to write project bundle %s.' % bundlefile)
+            assert len(status.errors) > 0  # exact text varies by OS
+
+        try:
+            with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    """, "foo.py": "print('hello')\n"}, check)
+        finally:
+            # so we can clean up
+            os.chmod(bundle_dest_dir, 0o777)
+            os.chmod(bundlefile, 0o777)
+
+    with_directory_contents(dict(), bundletest)
+
+
+def _add_empty_git(contents):
+    contents.update({
+        # I'm not sure these are all really needed for git to
+        # recognize the directory as a git repo, but this is what
+        # "git init" creates.
+        '.git/branches': None,
+        '.git/hooks': None,
+        '.git/info': None,
+        '.git/objects/info': None,
+        '.git/objects/pack': None,
+        '.git/refs/heads': None,
+        '.git/refs/tags': None,
+        '.git/config': """
+[core]
+        repositoryformatversion = 0
+        filemode = true
+        bare = false
+        logallrefupdates = true
+        """,
+        '.git/description': "TestingGitRepository\n",
+        '.git/HEAD': 'ref: refs/heads/master\n'
+    })
+    return contents
+
+
+def test_bundle_zip_with_gitignore():
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_zip_contains(bundlefile, ['foo.py', '.gitignore', 'project.yml', 'project-local.yml'])
+
+        with_directory_contents(
+            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+        """,
+                            "foo.py": "print('hello')\n",
+                            '.gitignore': "/ignored.py\n",
+                            'ignored.py': 'print("ignore me!")'}), check)
+
+    with_directory_contents(dict(), bundletest)
+
+
+def test_bundle_zip_with_failing_git_command(monkeypatch):
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_no_dedicated_env(dirname)
+
+            from subprocess import check_output as real_check_output
+
+            def mock_check_output(args, cwd):
+                return real_check_output(['false'])
+
+            monkeypatch.setattr('subprocess.check_output', mock_check_output)
+
+            status = project_ops.bundle(project, bundlefile)
+
+            assert not status
+            assert not os.path.exists(bundlefile)
+            # before the "." is the command output, but "false" has no output.
+            assert status.errors == ["'git ls-files' failed to list ignored files: ."]
+
+        with_directory_contents(
+            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+        """,
+                            "foo.py": "print('hello')\n"}), check)
+
+    with_directory_contents(dict(), bundletest)
+
+
+def test_bundle_zip_with_exception_executing_git_command(monkeypatch):
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_no_dedicated_env(dirname)
+
+            from subprocess import check_output as real_check_output
+
+            def mock_check_output(args, cwd):
+                return real_check_output(args=['this-is-not-a-real-command'], cwd=cwd)
+
+            monkeypatch.setattr('subprocess.check_output', mock_check_output)
+
+            status = project_ops.bundle(project, bundlefile)
+
+            assert not status
+            assert not os.path.exists(bundlefile)
+            assert len(status.errors) == 1
+            # full error message is platform-dependent
+            assert status.errors[0].startswith("Failed to run 'git ls-files'")
+
+        with_directory_contents(
+            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+        """,
+                            "foo.py": "print('hello')\n"}), check)
+
+    with_directory_contents(dict(), bundletest)
+
+
+def test_bundle_zip_with_inability_to_walk_directory(monkeypatch):
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_no_dedicated_env(dirname)
+            assert project.problems == []
+
+            def mock_os_walk(dirname):
+                raise OSError("NOPE")
+
+            monkeypatch.setattr('os.walk', mock_os_walk)
+
+            status = project_ops.bundle(project, bundlefile)
+
+            assert not status
+            assert not os.path.exists(bundlefile)
+            assert status.status_description == "Failed to list files in the project."
+            assert len(status.errors) > 0
+            assert status.errors[0].startswith("Could not list files in")
+
+        with_directory_contents(
+            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+        """,
+                            "foo.py": "print('hello')\n"}), check)
+
+    with_directory_contents(dict(), bundletest)
+
+
+def test_bundle_zip_with_unreadable_projectignore(monkeypatch):
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_no_dedicated_env(dirname)
+
+            ignorefile = os.path.join(dirname, ".projectignore")
+            with codecs.open(ignorefile, 'w', 'utf-8') as f:
+                f.write("\n")
+            os.chmod(ignorefile, 0)
+
+            status = project_ops.bundle(project, bundlefile)
+
+            assert not status
+            assert not os.path.exists(bundlefile)
+            assert len(status.errors) > 0
+            assert status.errors[0].startswith("Failed to read %s" % ignorefile)
+
+            # enable cleaning it up
+            os.chmod(ignorefile, 0o777)
+
+        with_directory_contents(
+            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+        """,
+                            "foo.py": "print('hello')\n"}), check)
+
+    with_directory_contents(dict(), bundletest)
+
+
+def test_bundle_with_bogus_filename(monkeypatch):
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.bar")
+
+        def check(dirname):
+            project = project_no_dedicated_env(dirname)
+
+            status = project_ops.bundle(project, bundlefile)
+
+            assert not status
+            assert not os.path.exists(bundlefile)
+            assert status.status_description == "Project bundle filename must be a .zip, .tar.gz, or .tar.bz2."
+            assert status.errors == ["Unsupported bundle filename %s." % bundlefile]
+
+        with_directory_contents(
+            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+        """,
+                            "foo.py": "print('hello')\n"}), check)
+
+    with_directory_contents(dict(), bundletest)

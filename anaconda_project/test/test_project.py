@@ -213,6 +213,23 @@ def test_project_dir_does_not_exist():
     with_directory_contents(dict(), check_does_not_exist)
 
 
+def test_project_dir_not_readable(monkeypatch):
+    def check_not_readable(dirname):
+        project_dir = os.path.join(dirname, 'foo')
+        os.makedirs(project_dir)
+
+        def mock_os_walk(dirname):
+            raise OSError("NOPE")
+
+        monkeypatch.setattr('os.walk', mock_os_walk)
+
+        project = Project(project_dir)
+
+        assert ["Could not list files in %s: NOPE." % project_dir] == project.problems
+
+    with_directory_contents(dict(), check_not_readable)
+
+
 def test_single_env_var_requirement_with_options():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
