@@ -1628,3 +1628,27 @@ def test_bundle_with_bogus_filename(monkeypatch):
                             "foo.py": "print('hello')\n"}), check)
 
     with_directory_contents(dict(), bundletest)
+
+
+def test_bundle_zip_with_downloaded_file():
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+
+        def check(dirname):
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+
+        with_directory_contents(
+            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+downloads:
+   MYDOWNLOAD: "http://example.com/downloaded.py"
+""",
+                            "foo.py": "print('hello')\n",
+                            'downloaded.py': 'print("ignore me!")',
+                            'downloaded.py.part': ''}), check)
+
+    with_directory_contents(dict(), bundletest)

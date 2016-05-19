@@ -146,7 +146,7 @@ def _git_ignored_files(project_directory, errors):
         return None
 
 
-def _enumerate_bundle_files(project_directory, errors):
+def _enumerate_bundle_files(project_directory, errors, download_requirements):
     infos = _list_project(project_directory, errors)
     if infos is None:
         assert errors
@@ -183,6 +183,16 @@ def _enumerate_bundle_files(project_directory, errors):
 
     infos = [info for info in infos if not matches_some_pattern(info)]
 
+    def is_downloaded_file(info):
+        for req in download_requirements:
+            if req.filename == info.relative_path:
+                return True
+            if (req.filename + ".part") == info.relative_path:
+                return True
+        return False
+
+    infos = [info for info in infos if not is_downloaded_file(info)]
+
     return infos
 
 
@@ -199,8 +209,8 @@ def _write_zip(infos, filename, logs):
 
 
 # function exported for project.py
-def _list_relative_paths_for_unignored_project_files(project_directory, errors):
-    infos = _enumerate_bundle_files(project_directory, errors)
+def _list_relative_paths_for_unignored_project_files(project_directory, errors, download_requirements):
+    infos = _enumerate_bundle_files(project_directory, errors, download_requirements=download_requirements)
     if infos is None:
         return None
     return [info.relative_path for info in infos]
@@ -222,11 +232,9 @@ def _bundle_project(project, filename):
         return failed
 
     errors = []
-    infos = _enumerate_bundle_files(project.directory_path, errors)
+    infos = _enumerate_bundle_files(project.directory_path, errors, download_requirements=project.download_requirements)
     if infos is None:
         return SimpleStatus(success=False, description="Failed to list files in the project.", errors=errors)
-
-    # TODO: strip out download filenames
 
     logs = []
     try:

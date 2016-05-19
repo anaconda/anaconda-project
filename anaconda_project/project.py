@@ -87,7 +87,9 @@ class _ConfigCache(object):
             # since we use those
             self._update_conda_env_requirements(requirements, problems, project_file)
 
-            self._update_commands(problems, project_file, conda_meta_file)
+            download_requirements = [req for req in requirements if isinstance(req, DownloadRequirement)]
+
+            self._update_commands(problems, project_file, conda_meta_file, download_requirements)
 
         self.requirements = requirements
         self.problems = problems
@@ -295,7 +297,7 @@ class _ConfigCache(object):
                                               default_environment_name=self.default_conda_environment_name)
         requirements.append(env_requirement)
 
-    def _update_commands(self, problems, project_file, conda_meta_file):
+    def _update_commands(self, problems, project_file, conda_meta_file, download_requirements):
         failed = False
 
         app_entry_from_meta_yaml = conda_meta_file.app_entry
@@ -357,7 +359,7 @@ class _ConfigCache(object):
 
                 commands[name] = ProjectCommand(name=name, attributes=copy)
 
-        self._add_notebook_commands(commands, problems)
+        self._add_notebook_commands(commands, problems, download_requirements)
 
         if failed:
             self.commands = dict()
@@ -383,8 +385,10 @@ class _ConfigCache(object):
             # note: this may be None
             self.default_command_name = first_command_name
 
-    def _add_notebook_commands(self, commands, problems):
-        files = _list_relative_paths_for_unignored_project_files(self.directory_path, problems)
+    def _add_notebook_commands(self, commands, problems, download_requirements):
+        files = _list_relative_paths_for_unignored_project_files(self.directory_path,
+                                                                 problems,
+                                                                 download_requirements=download_requirements)
         if files is None:
             assert problems != []
             return
