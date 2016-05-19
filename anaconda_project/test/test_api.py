@@ -335,7 +335,6 @@ def test_add_command(monkeypatch):
     params = dict(args=(), kwargs=dict())
 
     def mock_add_command(*args, **kwargs):
-        print(args, kwargs)
         params['args'] = args
         params['kwargs'] = kwargs
         return 42
@@ -357,7 +356,6 @@ def test_update_command(monkeypatch):
     params = dict(args=(), kwargs=dict())
 
     def mock_update_command(*args, **kwargs):
-        print(args, kwargs)
         params['args'] = args
         params['kwargs'] = kwargs
         return 42
@@ -379,7 +377,6 @@ def test_remove_command(monkeypatch):
     params = dict(args=(), kwargs=dict())
 
     def mock_remove_command(*args, **kwargs):
-        print(args, kwargs)
         params['args'] = args
         params['kwargs'] = kwargs
         return 42
