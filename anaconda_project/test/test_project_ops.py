@@ -1420,14 +1420,14 @@ services:
     with_directory_contents(dict(), bundletest)
 
 
-def test_bundle_cannot_write_destination_path():
+def test_bundle_cannot_write_destination_path(monkeypatch):
     def bundletest(bundle_dest_dir):
         bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
 
-        with codecs.open(bundlefile, 'w', 'utf-8') as f:
-            f.write("\n")
-        os.chmod(bundlefile, 0)
-        os.chmod(bundle_dest_dir, 0)
+        def mock_ZipFile(*args, **kwargs):
+            raise IOError("NOPE")
+
+        monkeypatch.setattr('zipfile.ZipFile', mock_ZipFile)
 
         def check(dirname):
             # be sure we ignore this
@@ -1438,15 +1438,10 @@ def test_bundle_cannot_write_destination_path():
 
             assert not status
             assert status.status_description == ('Failed to write project bundle %s.' % bundlefile)
-            assert len(status.errors) > 0  # exact text varies by OS
+            assert ['NOPE'] == status.errors
 
-        try:
-            with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
     """, "foo.py": "print('hello')\n"}, check)
-        finally:
-            # so we can clean up
-            os.chmod(bundle_dest_dir, 0o777)
-            os.chmod(bundlefile, 0o777)
 
     with_directory_contents(dict(), bundletest)
 
@@ -1614,17 +1609,22 @@ def test_bundle_zip_with_unreadable_projectignore(monkeypatch):
             ignorefile = os.path.join(dirname, ".projectignore")
             with codecs.open(ignorefile, 'w', 'utf-8') as f:
                 f.write("\n")
-            os.chmod(ignorefile, 0)
+
+            from codecs import open as real_open
+
+            def mock_codecs_open(*args, **kwargs):
+                if args[0].endswith(".projectignore"):
+                    raise IOError("NOPE")
+                else:
+                    return real_open(*args, **kwargs)
+
+            monkeypatch.setattr('codecs.open', mock_codecs_open)
 
             status = project_ops.bundle(project, bundlefile)
 
             assert not status
             assert not os.path.exists(bundlefile)
-            assert len(status.errors) > 0
-            assert status.errors[0].startswith("Failed to read %s" % ignorefile)
-
-            # enable cleaning it up
-            os.chmod(ignorefile, 0o777)
+            assert ["Failed to read %s: NOPE" % ignorefile] == status.errors
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """

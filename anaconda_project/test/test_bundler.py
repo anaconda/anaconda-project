@@ -54,14 +54,24 @@ def test_parse_missing_ignore_file():
     with_directory_contents(dict(), check)
 
 
-def test_parse_ignore_file_with_io_error():
+def test_parse_ignore_file_with_io_error(monkeypatch):
     def check(dirname):
         errors = []
         ignorefile = os.path.join(dirname, ".projectignore")
-        os.chmod(ignorefile, 0)
+
+        from codecs import open as real_open
+
+        def mock_codecs_open(*args, **kwargs):
+            if args[0].endswith(".projectignore"):
+                raise IOError("NOPE")
+            else:
+                return real_open(*args, **kwargs)
+
+        monkeypatch.setattr('codecs.open', mock_codecs_open)
+
         patterns = bundler._parse_ignore_file(ignorefile, errors)
         assert patterns is None
-        assert len(errors) == 1  # exact message varies by OS
+        assert ["Failed to read %s: NOPE" % ignorefile] == errors
 
         # enable cleaning it up
         os.chmod(ignorefile, 0o777)
