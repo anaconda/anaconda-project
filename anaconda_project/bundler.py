@@ -199,12 +199,14 @@ def _enumerate_bundle_files(project_directory, errors, download_requirements):
 def _write_tar(infos, filename, compression, logs):
     with tarfile.open(filename, ('w:%s' % compression)) as tf:
         for info in infos:
+            logs.append("  added %s" % info.relative_path)
             tf.add(info.full_path, arcname=info.relative_path)
 
 
 def _write_zip(infos, filename, logs):
     with zipfile.ZipFile(filename, 'w') as zf:
         for info in infos:
+            logs.append("  added %s" % info.relative_path)
             zf.write(info.full_path, arcname=info.relative_path)
 
 
