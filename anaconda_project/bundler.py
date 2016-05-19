@@ -74,8 +74,8 @@ class _FilePattern(object):
         # have fixed up unixified_relative_path to have / instead of \, so that
         # it will match patterns specified with /.
         def match(path, pattern):
-            while path != '':
-                assert path[0] != '/'  # this would put us in an infinite loop
+            assert path.startswith("/")
+            while path != '/':
                 if fnmatch.fnmatch(path, pattern):
                     return True
                 # this assumes that on Windows, dirname on a unixified path
@@ -85,19 +85,22 @@ class _FilePattern(object):
 
         if self.pattern.startswith("/"):
             # we have to match the full path or one of its parents exactly
-            pattern = self.pattern[1:]
+            pattern = self.pattern
         else:
-            # we only have to match the end of the path (implicit "*")
-            pattern = "*" + self.pattern
+            # we only have to match the end of the path (implicit "*/")
+            pattern = "*/" + self.pattern
+
+        # So that */ matches even plain "foo" we need to start with /
+        match_against = "/" + info.unixified_relative_path
 
         # ending with / means only match directories
         if pattern.endswith("/"):
             if info.is_directory:
-                return match(info.unixified_relative_path, pattern[:-1])
+                return match(match_against, pattern[:-1])
             else:
                 return False
         else:
-            return match(info.unixified_relative_path, pattern)
+            return match(match_against, pattern)
 
 
 def _parse_ignore_file(filename, errors):

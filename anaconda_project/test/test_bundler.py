@@ -112,8 +112,8 @@ def _test_file_pattern_matcher(tests, is_directory):
 def test_file_pattern_matcher_non_directories():
     tests = {
         'foo': {
-            'yes': ['foo', 'barfoo', 'bar/foo', 'foo/bar'],
-            'no': ['bar', 'foobar']
+            'yes': ['foo', 'bar/foo', 'foo/bar'],
+            'no': ['bar', 'foobar', 'barfoo']
         },
         '/foo': {
             'yes': ['foo', 'foo/bar'],
@@ -135,8 +135,8 @@ def test_file_pattern_matcher_non_directories():
 def test_file_pattern_matcher_with_directories():
     tests = {
         'foo': {
-            'yes': ['foo', 'barfoo', 'bar/foo', 'foo/bar'],
-            'no': ['bar', 'foobar']
+            'yes': ['foo', 'bar/foo', 'foo/bar'],
+            'no': ['bar', 'foobar', 'barfoo']
         },
         '/foo': {
             'yes': ['foo', 'foo/bar'],
