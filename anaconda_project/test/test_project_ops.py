@@ -42,10 +42,27 @@ def test_create(monkeypatch):
         assert [("Project directory '%s' does not exist." % subdir)] == project.problems
         monkeypatch.undo()
 
-        # create the dir and project.yml successfully
+        # failing to create the .projectignore, but still create dir and project.yml
+        from codecs import open as real_open
+
+        def mock_codecs_open(*args, **kwargs):
+            if args[0].endswith(".projectignore") and args[1] == 'w':
+                raise IOError("nope")
+            else:
+                return real_open(*args, **kwargs)
+
+        monkeypatch.setattr('codecs.open', mock_codecs_open)
+        project = project_ops.create(subdir, make_directory=True)
+        monkeypatch.undo()
+        assert [] == project.problems
+        assert os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))
+        assert not os.path.isfile(os.path.join(subdir, ".projectignore"))
+
+        # add .projectignore if we create again and it isn't there
         project = project_ops.create(subdir, make_directory=True)
         assert [] == project.problems
         assert os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))
+        assert os.path.isfile(os.path.join(subdir, ".projectignore"))
 
     with_directory_contents(dict(), check_create)
 
@@ -1681,3 +1698,31 @@ def test_bundle_zip_overwrites_but_does_not_include_the_dest_zip():
 """,
                         "foo.py": "print('hello')\n",
                         'foo.zip': ""}), check)
+
+
+def test_bundle_zip_with_projectignore():
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_ops.create(dirname)
+            assert [] == project.problems
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', '.projectignore', 'bar/'])
+
+        with_directory_contents(
+            {DEFAULT_PROJECT_FILENAME: """
+        """,
+             "foo.py": "print('hello')\n",
+             "foo.pyc": "",
+             ".ipynb_checkpoints": "",
+             "bar/blah.pyc": ""}, check)
+
+    with_directory_contents(dict(), bundletest)

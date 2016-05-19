@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 import os
 
 from anaconda_project import bundler
+from anaconda_project import project_ops
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 default_patterns = ['/envs', '/services']
@@ -73,6 +74,24 @@ def test_parse_ignore_file_with_io_error():
         os.chmod(ignorefile, 0o777)
 
     with_directory_contents({".projectignore": ""}, check)
+
+
+def test_parse_default_ignore_file():
+    def check(dirname):
+        project_ops._add_projectignore_if_none(dirname)
+        ignorefile = os.path.join(dirname, ".projectignore")
+        assert os.path.isfile(ignorefile)
+
+        errors = []
+        patterns = bundler._parse_ignore_file(ignorefile, errors)
+        assert [] == errors
+
+        pattern_strings = [pattern.pattern for pattern in patterns]
+
+        assert pattern_strings == default_patterns + ['/project-local.yml', '__pycache__', '*.pyc', '*.pyo', '*.pyd',
+                                                      '/.ipynb_checkpoints', '/.spyderproject']
+
+    with_directory_contents(dict(), check)
 
 
 def test_file_pattern_matcher():

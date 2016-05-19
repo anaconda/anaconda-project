@@ -7,6 +7,7 @@
 """High-level operations on a project."""
 from __future__ import absolute_import
 
+import codecs
 import os
 import shutil
 
@@ -22,6 +23,33 @@ from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.plugins.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
+
+_default_projectignore = """
+# project-local contains your personal configuration choices and state
+/project-local.yml
+
+# Files autocreated by Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Notebook stuff
+/.ipynb_checkpoints
+
+# Spyder stuff
+/.spyderproject
+""".lstrip()
+
+
+def _add_projectignore_if_none(project_directory):
+    filename = os.path.join(project_directory, ".projectignore")
+    if not os.path.exists(filename):
+        try:
+            with codecs.open(filename, 'w', 'utf-8') as f:
+                f.write(_default_projectignore)
+        except IOError:
+            pass
 
 
 def create(directory_path, make_directory=False, name=None, icon=None):
@@ -51,6 +79,9 @@ def create(directory_path, make_directory=False, name=None, icon=None):
         except (IOError, OSError):  # py3=IOError, py2=OSError
             # allow project.problems to report the issue
             pass
+
+    # do this first so Project constructor can load it
+    _add_projectignore_if_none(directory_path)
 
     project = Project(directory_path)
 
