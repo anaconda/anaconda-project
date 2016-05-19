@@ -78,13 +78,9 @@ class _FilePattern(object):
             # we only have to match the end of the path (implicit "*")
             return match(info.unixified_relative_path, "*" + self.pattern)
 
-# These are ALWAYS ignored with no way to unignore, so we should only
-# put stuff here we _know_ should be ignored
-_builtin_ignore_patterns = ['/envs', '/services']
-
 
 def _parse_ignore_file(filename, errors):
-    patterns = [_FilePattern(pattern=pattern) for pattern in _builtin_ignore_patterns]
+    patterns = []
     try:
         with codecs.open(filename, 'r', 'utf-8') as f:
             for line in f:
@@ -147,7 +143,7 @@ def _git_ignored_files(project_directory, errors):
         return None
 
 
-def _enumerate_bundle_files(project_directory, errors, download_requirements):
+def _enumerate_bundle_files(project_directory, errors, requirements):
     infos = _list_project(project_directory, errors)
     if infos is None:
         assert errors
@@ -184,15 +180,18 @@ def _enumerate_bundle_files(project_directory, errors, download_requirements):
 
     infos = [info for info in infos if not matches_some_pattern(info)]
 
-    def is_downloaded_file(info):
-        for req in download_requirements:
-            if req.filename == info.relative_path:
-                return True
-            if (req.filename + ".part") == info.relative_path:
+    plugin_patterns = set()
+    for req in requirements:
+        plugin_patterns = plugin_patterns.union(req.ignore_patterns)
+    plugin_patterns = [_FilePattern(s) for s in plugin_patterns]
+
+    def is_plugin_generated(info):
+        for pattern in plugin_patterns:
+            if pattern.matches(info):
                 return True
         return False
 
-    infos = [info for info in infos if not is_downloaded_file(info)]
+    infos = [info for info in infos if not is_plugin_generated(info)]
 
     return infos
 
@@ -212,8 +211,8 @@ def _write_zip(infos, filename, logs):
 
 
 # function exported for project.py
-def _list_relative_paths_for_unignored_project_files(project_directory, errors, download_requirements):
-    infos = _enumerate_bundle_files(project_directory, errors, download_requirements=download_requirements)
+def _list_relative_paths_for_unignored_project_files(project_directory, errors, requirements):
+    infos = _enumerate_bundle_files(project_directory, errors, requirements=requirements)
     if infos is None:
         return None
     return [info.relative_path for info in infos]
@@ -235,7 +234,7 @@ def _bundle_project(project, filename):
         return failed
 
     errors = []
-    infos = _enumerate_bundle_files(project.directory_path, errors, download_requirements=project.download_requirements)
+    infos = _enumerate_bundle_files(project.directory_path, errors, requirements=project.requirements)
     if infos is None:
         return SimpleStatus(success=False, description="Failed to list files in the project.", errors=errors)
 

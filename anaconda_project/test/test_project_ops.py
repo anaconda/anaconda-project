@@ -1358,8 +1358,12 @@ def test_bundle_zip():
             assert os.path.exists(bundlefile)
             _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
 
-        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-    """, "foo.py": "print('hello')\n"}, check)
+        with_directory_contents(
+            {DEFAULT_PROJECT_FILENAME: """
+services:
+   REDIS_URL: redis
+    """,
+             "foo.py": "print('hello')\n"}, check)
 
     with_directory_contents(dict(), bundletest)
 
@@ -1380,8 +1384,12 @@ def test_bundle_tar_gz():
             assert os.path.exists(bundlefile)
             _assert_tar_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
 
-        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-    """, "foo.py": "print('hello')\n"}, check)
+        with_directory_contents(
+            {DEFAULT_PROJECT_FILENAME: """
+services:
+   REDIS_URL: redis
+    """,
+             "foo.py": "print('hello')\n"}, check)
 
     with_directory_contents(dict(), bundletest)
 
@@ -1402,8 +1410,12 @@ def test_bundle_tar_bz2():
             assert os.path.exists(bundlefile)
             _assert_tar_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
 
-        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-    """, "foo.py": "print('hello')\n"}, check)
+        with_directory_contents(
+            {DEFAULT_PROJECT_FILENAME: """
+services:
+   REDIS_URL: redis
+    """,
+             "foo.py": "print('hello')\n"}, check)
 
     with_directory_contents(dict(), bundletest)
 
@@ -1418,8 +1430,7 @@ def test_bundle_cannot_write_destination_path():
         os.chmod(bundle_dest_dir, 0)
 
         def check(dirname):
-            # be sure we ignore these
-            os.makedirs(os.path.join(dirname, "services"))
+            # be sure we ignore this
             os.makedirs(os.path.join(dirname, "envs"))
 
             project = project_no_dedicated_env(dirname)
@@ -1470,8 +1481,7 @@ def test_bundle_zip_with_gitignore():
         bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
 
         def check(dirname):
-            # be sure we ignore these
-            os.makedirs(os.path.join(dirname, "services"))
+            # be sure we ignore this
             os.makedirs(os.path.join(dirname, "envs"))
 
             project = project_no_dedicated_env(dirname)
@@ -1496,8 +1506,7 @@ def test_bundle_zip_with_failing_git_command(monkeypatch):
         bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
 
         def check(dirname):
-            # be sure we ignore these
-            os.makedirs(os.path.join(dirname, "services"))
+            # be sure we ignore this
             os.makedirs(os.path.join(dirname, "envs"))
 
             project = project_no_dedicated_env(dirname)
@@ -1705,8 +1714,7 @@ def test_bundle_zip_with_projectignore():
         bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
 
         def check(dirname):
-            # be sure we ignore these
-            os.makedirs(os.path.join(dirname, "services"))
+            # be sure we ignore this
             os.makedirs(os.path.join(dirname, "envs"))
 
             project = project_ops.create(dirname)

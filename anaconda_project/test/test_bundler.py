@@ -12,12 +12,6 @@ from anaconda_project import bundler
 from anaconda_project import project_ops
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
-default_patterns = ['/envs', '/services']
-
-
-def test_default_patterns():
-    assert default_patterns == bundler._builtin_ignore_patterns
-
 
 def test_parse_ignore_file():
     def check(dirname):
@@ -27,9 +21,8 @@ def test_parse_ignore_file():
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
-        assert pattern_strings == default_patterns + ['bar', '/baz', 'whitespace_surrounding',
-                                                      'foo # this comment will be part of the pattern',
-                                                      '#patternwithhash', 'hello']
+        assert pattern_strings == ['bar', '/baz', 'whitespace_surrounding',
+                                   'foo # this comment will be part of the pattern', '#patternwithhash', 'hello']
 
     with_directory_contents(
         {".projectignore": """
@@ -56,7 +49,7 @@ def test_parse_missing_ignore_file():
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
-        assert pattern_strings == default_patterns
+        assert pattern_strings == []
 
     with_directory_contents(dict(), check)
 
@@ -88,8 +81,8 @@ def test_parse_default_ignore_file():
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
-        assert pattern_strings == default_patterns + ['/project-local.yml', '__pycache__', '*.pyc', '*.pyo', '*.pyd',
-                                                      '/.ipynb_checkpoints', '/.spyderproject']
+        assert pattern_strings == ['/project-local.yml', '__pycache__', '*.pyc', '*.pyo', '*.pyd',
+                                   '/.ipynb_checkpoints', '/.spyderproject']
 
     with_directory_contents(dict(), check)
 

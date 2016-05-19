@@ -119,6 +119,11 @@ class DownloadRequirement(EnvVarRequirement):
         """Override superclass to supply our title."""
         return "A downloaded file which is referenced by {}".format(self.env_var)  # pragma: no cover
 
+    @property
+    def ignore_patterns(self):
+        """Override superclass with our ignore patterns."""
+        return set(['/' + self.filename, '/' + self.filename + ".part"])
+
     def _why_not_provided(self, environ):
         if self.env_var not in environ:
             return self._unset_message()

@@ -992,7 +992,7 @@ def test_notebook_guess_command():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: echo 'pass'",
+            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\n",
             'test.ipynb': 'pretend there is notebook data here',
             'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
             'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
