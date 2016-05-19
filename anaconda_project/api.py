@@ -547,3 +547,15 @@ class AnacondaProject(object):
 
         """
         return project_ops.clean(project=project, prepare_result=prepare_result)
+
+    def bundle(self, project, filename):
+        """Make an archive of the non-ignored files in the project.
+
+        Args:
+            project (``Project``): the project
+            filename (str): name of a zip, tar.gz, or tar.bz2 archive file
+
+        Returns:
+            a ``Status``, if failed has ``errors``
+        """
+        return project_ops.bundle(project=project, filename=filename)
