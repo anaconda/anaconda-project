@@ -20,6 +20,7 @@ import anaconda_project.commands.init as init
 import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
 import anaconda_project.commands.clean as clean
+import anaconda_project.commands.bundle as bundle
 import anaconda_project.commands.activate as activate
 import anaconda_project.commands.variable_commands as variable_commands
 import anaconda_project.commands.download_commands as download_commands
@@ -95,6 +96,12 @@ def _parse_args_and_run_subcommand(argv):
                                    help="Set up the project and output shell export commands reflecting the setup")
     add_prepare_args(preset)
     preset.set_defaults(main=activate.main)
+
+    preset = subparsers.add_parser('bundle',
+                                   help="Create a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
+    add_project_arg(preset)
+    preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
+    preset.set_defaults(main=bundle.main)
 
     preset = subparsers.add_parser('add-variable',
                                    help="Add an environment variable and add it to the project if not present")

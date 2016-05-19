@@ -11,7 +11,7 @@ import os
 
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
-all_subcommands = ('init', 'launch', 'prepare', 'clean', 'activate', 'add-variable', 'remove-variable',
+all_subcommands = ('init', 'launch', 'prepare', 'clean', 'activate', 'bundle', 'add-variable', 'remove-variable',
                    'list-variables', 'add-download', 'remove-download', 'list-downloads', 'add-service',
                    'remove-service', 'list-services', 'add-environment', 'remove-environment', 'list-environments',
                    'add-dependencies', 'remove-dependencies', 'list-dependencies', 'add-command', 'remove-command',
@@ -66,6 +66,8 @@ expected_usage_msg = \
         '                        environment files, etc)\n' \
         '    activate            Set up the project and output shell export commands\n' \
         '                        reflecting the setup\n' \
+        '    bundle              Create a .zip, .tar.gz, or .tar.bz2 archive with\n' \
+        '                        project files in it\n'\
         '    add-variable        Add an environment variable and add it to the project\n' \
         '                        if not present\n' \
         '    remove-variable     Remove an environment variable and remove it from the\n' \
