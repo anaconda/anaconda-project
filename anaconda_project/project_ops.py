@@ -29,7 +29,7 @@ _default_projectignore = """
 /project-local.yml
 
 # Files autocreated by Python
-__pycache__
+__pycache__/
 *.pyc
 *.pyo
 *.pyd

@@ -54,4 +54,4 @@ class ServiceRequirement(EnvVarRequirement):
     @property
     def ignore_patterns(self):
         """Override superclass with our ignore patterns."""
-        return set(['/services'])
+        return set(['/services/'])

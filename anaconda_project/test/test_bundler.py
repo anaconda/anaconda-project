@@ -81,16 +81,58 @@ def test_parse_default_ignore_file():
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
-        assert pattern_strings == ['/project-local.yml', '__pycache__', '*.pyc', '*.pyo', '*.pyd',
+        assert pattern_strings == ['/project-local.yml', '__pycache__/', '*.pyc', '*.pyo', '*.pyd',
                                    '/.ipynb_checkpoints', '/.spyderproject']
 
     with_directory_contents(dict(), check)
 
 
-def test_file_pattern_matcher():
+def _test_file_pattern_matcher(tests, is_directory):
     class FakeInfo(object):
         pass
 
+    for pattern_string in tests.keys():
+        pattern = bundler._FilePattern(pattern_string)
+        should_match = tests[pattern_string]['yes']
+        should_not_match = tests[pattern_string]['no']
+        matched = []
+        did_not_match = []
+        for filename in (should_match + should_not_match):
+            info = FakeInfo()
+            setattr(info, 'unixified_relative_path', filename)
+            setattr(info, 'is_directory', is_directory)
+            if pattern.matches(info):
+                matched.append(filename)
+            else:
+                did_not_match.append(filename)
+        assert should_match == matched
+        assert should_not_match == did_not_match
+
+
+def test_file_pattern_matcher_non_directories():
+    tests = {
+        'foo': {
+            'yes': ['foo', 'barfoo', 'bar/foo', 'foo/bar'],
+            'no': ['bar', 'foobar']
+        },
+        '/foo': {
+            'yes': ['foo', 'foo/bar'],
+            'no': ['barfoo', 'bar/foo', 'bar', 'foobar']
+        },
+        'foo/': {
+            'yes': [],
+            'no': ['foo', 'barfoo', 'bar/foo', 'foo/bar', 'bar', 'foobar']
+        },
+        '/foo/': {
+            'yes': [],
+            'no': ['foo', 'barfoo', 'bar/foo', 'foo/bar', 'bar', 'foobar']
+        },
+    }
+
+    _test_file_pattern_matcher(tests, is_directory=False)
+
+
+def test_file_pattern_matcher_with_directories():
     tests = {
         'foo': {
             'yes': ['foo', 'barfoo', 'bar/foo', 'foo/bar'],
@@ -102,18 +144,8 @@ def test_file_pattern_matcher():
         }
     }
 
-    for pattern_string in tests.keys():
-        should_match = tests[pattern_string]['yes']
-        should_not_match = tests[pattern_string]['no']
-        pattern = bundler._FilePattern(pattern_string)
-        matched = []
-        did_not_match = []
-        for filename in (should_match + should_not_match):
-            info = FakeInfo()
-            setattr(info, 'unixified_relative_path', filename)
-            if pattern.matches(info):
-                matched.append(filename)
-            else:
-                did_not_match.append(filename)
-        assert should_match == matched
-        assert should_not_match == did_not_match
+    # we'll say these are all dirs, so trailing / shouldn't matter
+    tests['foo/'] = tests['foo']
+    tests['/foo/'] = tests['/foo']
+
+    _test_file_pattern_matcher(tests, is_directory=True)

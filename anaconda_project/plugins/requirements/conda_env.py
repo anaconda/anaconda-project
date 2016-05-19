@@ -46,7 +46,7 @@ class CondaEnvRequirement(EnvVarRequirement):
     @property
     def ignore_patterns(self):
         """Override superclass with our ignore patterns."""
-        return set(['/envs'])
+        return set(['/envs/'])
 
     def _status_from_analysis(self, environ, local_state_file, analysis):
         config = analysis.config

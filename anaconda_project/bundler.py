@@ -85,10 +85,19 @@ class _FilePattern(object):
 
         if self.pattern.startswith("/"):
             # we have to match the full path or one of its parents exactly
-            return match(info.unixified_relative_path, self.pattern[1:])
+            pattern = self.pattern[1:]
         else:
             # we only have to match the end of the path (implicit "*")
-            return match(info.unixified_relative_path, "*" + self.pattern)
+            pattern = "*" + self.pattern
+
+        # ending with / means only match directories
+        if pattern.endswith("/"):
+            if info.is_directory:
+                return match(info.unixified_relative_path, pattern[:-1])
+            else:
+                return False
+        else:
+            return match(info.unixified_relative_path, pattern)
 
 
 def _parse_ignore_file(filename, errors):
