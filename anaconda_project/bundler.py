@@ -17,6 +17,7 @@ import tarfile
 import zipfile
 
 from anaconda_project.internal.simple_status import SimpleStatus
+from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
 
 
 class _FileInfo(object):
@@ -237,6 +238,12 @@ def _bundle_project(project, filename):
     infos = _enumerate_bundle_files(project.directory_path, errors, download_requirements=project.download_requirements)
     if infos is None:
         return SimpleStatus(success=False, description="Failed to list files in the project.", errors=errors)
+
+    # don't put the destination zip into itself, since it's fairly natural to
+    # create a bundle right in the project directory
+    relative_dest_file = subdirectory_relative_to_directory(filename, project.directory_path)
+    if not os.path.isabs(relative_dest_file):
+        infos = [info for info in infos if info.relative_path != relative_dest_file]
 
     logs = []
     try:

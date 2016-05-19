@@ -1652,3 +1652,32 @@ downloads:
                             'downloaded.py.part': ''}), check)
 
     with_directory_contents(dict(), bundletest)
+
+
+def test_bundle_zip_overwrites_but_does_not_include_the_dest_zip():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        bundlefile = os.path.join(dirname, "foo.zip")
+        assert os.path.isfile(bundlefile)
+
+        status = project_ops.bundle(project, bundlefile)
+
+        assert status
+        assert os.path.exists(bundlefile)
+
+        _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+
+        # re-bundle to the same file
+        status = project_ops.bundle(project, bundlefile)
+
+        assert status
+        assert os.path.exists(bundlefile)
+
+        _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+
+    with_directory_contents(
+        _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+""",
+                        "foo.py": "print('hello')\n",
+                        'foo.zip': ""}), check)
