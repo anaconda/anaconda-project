@@ -32,18 +32,30 @@ class _FileInfo(object):
         self.is_directory = is_directory
 
 
-def _list_project(project_directory, errors):
+def _list_project(project_directory, ignore_filter, errors):
     try:
         file_infos = []
         for root, dirs, files in os.walk(project_directory):
+            filtered_dirs = []
+            for d in dirs:
+                info = _FileInfo(project_directory=project_directory, filename=os.path.join(root, d), is_directory=True)
+                if ignore_filter(info):
+                    continue
+                else:
+                    filtered_dirs.append(d)
+                    file_infos.append(info)
+
+            # don't even recurse into filtered-out directories, mostly because recursing into
+            # "envs" is very slow
+            dirs[:] = filtered_dirs
+
             for f in files:
                 info = _FileInfo(project_directory=project_directory,
                                  filename=os.path.join(root, f),
                                  is_directory=False)
-                file_infos.append(info)
-            for d in dirs:
-                info = _FileInfo(project_directory=project_directory, filename=os.path.join(root, d), is_directory=True)
-                file_infos.append(info)
+                if not ignore_filter(info):
+                    file_infos.append(info)
+
         return file_infos
     except OSError as e:
         errors.append("Could not list files in %s: %s." % (project_directory, str(e)))
@@ -143,12 +155,7 @@ def _git_ignored_files(project_directory, errors):
         return None
 
 
-def _enumerate_bundle_files(project_directory, errors, requirements):
-    infos = _list_project(project_directory, errors)
-    if infos is None:
-        assert errors
-        return None
-
+def _git_filter(project_directory, errors):
     git_ignored = _git_ignored_files(project_directory, errors)
     if git_ignored is None:
         assert errors
@@ -165,8 +172,10 @@ def _enumerate_bundle_files(project_directory, errors, requirements):
             path = os.path.dirname(path)
         return False
 
-    infos = [info for info in infos if not is_git_ignored(info)]
+    return is_git_ignored
 
+
+def _ignore_file_filter(project_directory, errors):
     patterns = _load_ignore_file(project_directory, errors)
     if patterns is None:
         assert errors
@@ -178,7 +187,15 @@ def _enumerate_bundle_files(project_directory, errors, requirements):
                 return True
         return False
 
-    infos = [info for info in infos if not matches_some_pattern(info)]
+    return matches_some_pattern
+
+
+def _enumerate_bundle_files(project_directory, errors, requirements):
+    git_filter = _git_filter(project_directory, errors)
+    ignore_file_filter = _ignore_file_filter(project_directory, errors)
+    if git_filter is None or ignore_file_filter is None:
+        assert errors
+        return None
 
     plugin_patterns = set()
     for req in requirements:
@@ -191,7 +208,13 @@ def _enumerate_bundle_files(project_directory, errors, requirements):
                 return True
         return False
 
-    infos = [info for info in infos if not is_plugin_generated(info)]
+    def all_filters(info):
+        return git_filter(info) or ignore_file_filter(info) or is_plugin_generated(info)
+
+    infos = _list_project(project_directory, all_filters, errors)
+    if infos is None:
+        assert errors
+        return None
 
     return infos
 
