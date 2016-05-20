@@ -249,7 +249,11 @@ def _leaf_infos(infos):
 
 
 def _write_tar(infos, filename, compression, logs):
-    with tarfile.open(filename, ('w:%s' % compression)) as tf:
+    if compression is None:
+        compression = ""
+    else:
+        compression = ":" + compression
+    with tarfile.open(filename, ('w%s' % compression)) as tf:
         for info in _leaf_infos(infos):
             logs.append("  added %s" % info.relative_path)
             tf.add(info.full_path, arcname=info.relative_path)
@@ -305,6 +309,8 @@ def _bundle_project(project, filename):
             _write_tar(infos, tmp_filename, compression="gz", logs=logs)
         elif filename.lower().endswith(".tar.bz2"):
             _write_tar(infos, tmp_filename, compression="bz2", logs=logs)
+        elif filename.lower().endswith(".tar"):
+            _write_tar(infos, tmp_filename, compression=None, logs=logs)
         else:
             return SimpleStatus(success=False,
                                 description="Project bundle filename must be a .zip, .tar.gz, or .tar.bz2.",

@@ -10,10 +10,12 @@ from __future__ import absolute_import
 import codecs
 import os
 import shutil
+import tempfile
 
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import prepare
 from anaconda_project import bundler
+from anaconda_project import client
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
@@ -877,3 +879,28 @@ def bundle(project, filename):
         a ``Status``, if failed has ``errors``
     """
     return bundler._bundle_project(project, filename)
+
+
+def upload(project, site=None):
+    """Upload the project to the Anaconda server.
+
+    Args:
+        project (``Project``): the project
+        site (str): site alias from Anaconda config
+
+    Returns:
+        a ``Status``, if failed has ``errors``
+    """
+    # delete=True breaks on windows if you use tmp_tarfile.name to re-open the file,
+    # so don't use delete=True.
+    # future: change suffix to .tar.bz2 once server can handle it...
+    tmp_tarfile = tempfile.NamedTemporaryFile(delete=False, prefix="anaconda_upload_", suffix=".tar")
+    try:
+        status = bundle(project, tmp_tarfile.name)
+        if not status:
+            return status
+        status = client._upload(project, tmp_tarfile.name, site=site)
+        return status
+    finally:
+        tmp_tarfile.close()
+        os.remove(tmp_tarfile.name)
