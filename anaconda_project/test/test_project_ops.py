@@ -1334,12 +1334,12 @@ environments:
 
 def _assert_zip_contains(zip_path, filenames):
     with zipfile.ZipFile(zip_path, mode='r') as zf:
-        assert set(zf.namelist()) == set(filenames)
+        assert sorted(zf.namelist()) == sorted(filenames)
 
 
 def _assert_tar_contains(tar_path, filenames):
     with tarfile.open(tar_path, mode='r') as tf:
-        assert set(tf.getnames()) == set(filenames)
+        assert sorted(tf.getnames()) == sorted(filenames)
 
 
 def test_bundle_zip():
@@ -1356,14 +1356,26 @@ def test_bundle_zip():
 
             assert status
             assert os.path.exists(bundlefile)
-            _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+            _assert_zip_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'project.yml',
+                                              'project-local.yml'])
+
+            # overwriting should work
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_zip_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'project.yml',
+                                              'project-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
 services:
    REDIS_URL: redis
     """,
-             "foo.py": "print('hello')\n"}, check)
+             "foo.py": "print('hello')\n",
+             "emptydir": None,
+             "a/b/c/d.py": "",
+             "a/b/c/e.py": ""}, check)
 
     with_directory_contents(dict(), bundletest)
 
@@ -1382,14 +1394,26 @@ def test_bundle_tar_gz():
 
             assert status
             assert os.path.exists(bundlefile)
-            _assert_tar_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                              'project-local.yml'])
+
+            # overwriting should work
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                              'project-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
 services:
    REDIS_URL: redis
     """,
-             "foo.py": "print('hello')\n"}, check)
+             "foo.py": "print('hello')\n",
+             "emptydir": None,
+             "a/b/c/d.py": "",
+             "a/b/c/e.py": ""}, check)
 
     with_directory_contents(dict(), bundletest)
 
@@ -1408,14 +1432,26 @@ def test_bundle_tar_bz2():
 
             assert status
             assert os.path.exists(bundlefile)
-            _assert_tar_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                              'project-local.yml'])
+
+            # overwriting should work
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                              'project-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
 services:
    REDIS_URL: redis
     """,
-             "foo.py": "print('hello')\n"}, check)
+             "foo.py": "print('hello')\n",
+             "emptydir": None,
+             "a/b/c/d.py": "",
+             "a/b/c/e.py": ""}, check)
 
     with_directory_contents(dict(), bundletest)
 

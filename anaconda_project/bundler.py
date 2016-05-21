@@ -14,10 +14,12 @@ import os
 import platform
 import subprocess
 import tarfile
+import uuid
 import zipfile
 
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
+from anaconda_project.internal.rename import rename_over_existing
 
 
 class _FileInfo(object):
@@ -231,16 +233,31 @@ def _enumerate_bundle_files(project_directory, errors, requirements):
     return infos
 
 
+def _leaf_infos(infos):
+    all_by_name = dict()
+    for info in infos:
+        all_by_name[info.relative_path] = info
+    for info in infos:
+        parent = os.path.dirname(info.relative_path)
+        while parent != '':
+            assert parent != '/'  # would be infinite loop
+            if parent in all_by_name:
+                del all_by_name[parent]
+            parent = os.path.dirname(parent)
+
+    return all_by_name.values()
+
+
 def _write_tar(infos, filename, compression, logs):
     with tarfile.open(filename, ('w:%s' % compression)) as tf:
-        for info in infos:
+        for info in _leaf_infos(infos):
             logs.append("  added %s" % info.relative_path)
             tf.add(info.full_path, arcname=info.relative_path)
 
 
 def _write_zip(infos, filename, logs):
     with zipfile.ZipFile(filename, 'w') as zf:
-        for info in infos:
+        for info in _leaf_infos(infos):
             logs.append("  added %s" % info.relative_path)
             zf.write(info.full_path, arcname=info.relative_path)
 
@@ -280,20 +297,27 @@ def _bundle_project(project, filename):
         infos = [info for info in infos if info.relative_path != relative_dest_file]
 
     logs = []
+    tmp_filename = filename + ".tmp-" + str(uuid.uuid4())
     try:
         if filename.lower().endswith(".zip"):
-            _write_zip(infos, filename, logs)
+            _write_zip(infos, tmp_filename, logs)
         elif filename.lower().endswith(".tar.gz"):
-            _write_tar(infos, filename, compression="gz", logs=logs)
+            _write_tar(infos, tmp_filename, compression="gz", logs=logs)
         elif filename.lower().endswith(".tar.bz2"):
-            _write_tar(infos, filename, compression="bz2", logs=logs)
+            _write_tar(infos, tmp_filename, compression="bz2", logs=logs)
         else:
             return SimpleStatus(success=False,
                                 description="Project bundle filename must be a .zip, .tar.gz, or .tar.bz2.",
                                 errors=["Unsupported bundle filename %s." % (filename)])
+        rename_over_existing(tmp_filename, filename)
     except IOError as e:
         return SimpleStatus(success=False,
                             description=("Failed to write project bundle %s." % (filename)),
                             errors=[str(e)])
+    finally:
+        try:
+            os.remove(tmp_filename)
+        except (IOError, OSError):
+            pass
 
     return SimpleStatus(success=True, description=("Created project bundle %s" % filename), logs=logs)
