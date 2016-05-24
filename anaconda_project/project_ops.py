@@ -7,11 +7,13 @@
 """High-level operations on a project."""
 from __future__ import absolute_import
 
+import codecs
 import os
 import shutil
 
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import prepare
+from anaconda_project import bundler
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
@@ -22,17 +24,32 @@ from anaconda_project.plugins.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
 
+_default_projectignore = """
+# project-local contains your personal configuration choices and state
+/project-local.yml
 
-def _project_problems_status(project, description=None):
-    if len(project.problems) > 0:
-        errors = []
-        for problem in project.problems:
-            errors.append(problem)
-        if description is None:
-            description = "Unable to load the project."
-        return SimpleStatus(success=False, description=description, logs=[], errors=errors)
-    else:
-        return None
+# Files autocreated by Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Notebook stuff
+/.ipynb_checkpoints
+
+# Spyder stuff
+/.spyderproject
+""".lstrip()
+
+
+def _add_projectignore_if_none(project_directory):
+    filename = os.path.join(project_directory, ".projectignore")
+    if not os.path.exists(filename):
+        try:
+            with codecs.open(filename, 'w', 'utf-8') as f:
+                f.write(_default_projectignore)
+        except IOError:
+            pass
 
 
 def create(directory_path, make_directory=False, name=None, icon=None):
@@ -62,6 +79,9 @@ def create(directory_path, make_directory=False, name=None, icon=None):
         except (IOError, OSError):  # py3=IOError, py2=OSError
             # allow project.problems to report the issue
             pass
+
+    # do this first so Project constructor can load it
+    _add_projectignore_if_none(directory_path)
 
     project = Project(directory_path)
 
@@ -97,7 +117,7 @@ def set_properties(project, name=None, icon=None):
     Returns:
         a ``Status`` instance indicating success or failure
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -162,7 +182,7 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
         ``Status`` instance
     """
     assert ((hash_algorithm and hash_value) or (hash_algorithm is None and hash_value is None))
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
     requirement = project.project_file.get_value(['downloads', env_var])
@@ -197,7 +217,7 @@ def remove_download(project, prepare_result, env_var):
     Returns:
         ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
     # Modify the project file _in memory only_, do not save
@@ -218,7 +238,7 @@ def remove_download(project, prepare_result, env_var):
 
 
 def _update_environment(project, name, packages, channels, create):
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -306,7 +326,7 @@ def remove_environment(project, name):
     if name == 'default':
         return SimpleStatus(success=False, description="Cannot remove default environment.")
 
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -402,7 +422,7 @@ def remove_dependencies(project, environment, packages):
     # and then remove it from project.yml, and then see if we can
     # still prepare the project.
 
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -490,7 +510,7 @@ def add_variables(project, vars_to_add):
     Returns:
         ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -520,7 +540,7 @@ def remove_variables(project, vars_to_remove):
     Returns:
         ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -555,7 +575,7 @@ def add_command(project, name, command_type, command):
 
     name = name.strip()
 
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -568,7 +588,7 @@ def add_command(project, name, command_type, command):
 
     project.project_file.use_changes_without_saving()
 
-    failed = _project_problems_status(project, "Unable to add the command.")
+    failed = project.problems_status(description="Unable to add the command.")
     if failed is not None:
         # reset, maybe someone added conflicting command line types or something
         project.project_file.load()
@@ -607,7 +627,7 @@ def update_command(project, name, command_type=None, command=None, new_name=None
     if command is None and command_type is not None:
         raise ValueError("If specifying the command_type, must also specify the command")
 
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -645,7 +665,7 @@ def update_command(project, name, command_type=None, command=None, new_name=None
 
     project.project_file.use_changes_without_saving()
 
-    failed = _project_problems_status(project, "Unable to add the command.")
+    failed = project.problems_status(description="Unable to add the command.")
     if failed is not None:
         # reset, maybe someone added a nonexistent bokeh app or something
         project.project_file.load()
@@ -669,7 +689,7 @@ def remove_command(project, name):
     Returns:
        a ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -705,7 +725,7 @@ def add_service(project, service_type, variable_name=None):
     Returns:
         ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -770,7 +790,7 @@ def remove_service(project, prepare_result, variable_name):
     Returns:
         ``Status`` instance
     """
-    failed = _project_problems_status(project)
+    failed = project.problems_status()
     if failed is not None:
         return failed
 
@@ -844,3 +864,16 @@ def clean(project, prepare_result):
         return SimpleStatus(success=True, description="Cleaned.", logs=logs, errors=errors)
     else:
         return SimpleStatus(success=False, description="Failed to clean everything up.", logs=logs, errors=errors)
+
+
+def bundle(project, filename):
+    """Make an archive of the non-ignored files in the project.
+
+    Args:
+        project (``Project``): the project
+        filename (str): name of a zip, tar.gz, or tar.bz2 archive file
+
+    Returns:
+        a ``Status``, if failed has ``errors``
+    """
+    return bundler._bundle_project(project, filename)

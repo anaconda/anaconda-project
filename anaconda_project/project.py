@@ -19,9 +19,10 @@ from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.project_commands import ProjectCommand
 from anaconda_project.project_file import ProjectFile
+from anaconda_project.bundler import _list_relative_paths_for_unignored_project_files
 
-from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
 from anaconda_project.internal.py2_compat import is_string
+from anaconda_project.internal.simple_status import SimpleStatus
 
 # These strings are used in the command line options to anaconda-project,
 # so changing them has back-compat consequences.
@@ -50,11 +51,6 @@ class _ConfigCache(object):
         self.conda_meta_file_count = 0
         self.conda_environments = dict()
         self.default_conda_environment_name = None
-
-        # future: this can get fancier and look at an ignore file
-        # and stuff like that
-        self.ignored_files = {os.path.join(self.directory_path, relative_name)
-                              for relative_name in ('envs', 'services')}
 
     def update(self, project_file, conda_meta_file):
         if project_file.change_count == self.project_file_count and \
@@ -91,7 +87,7 @@ class _ConfigCache(object):
             # since we use those
             self._update_conda_env_requirements(requirements, problems, project_file)
 
-            self._update_commands(problems, project_file, conda_meta_file)
+            self._update_commands(problems, project_file, conda_meta_file, requirements)
 
         self.requirements = requirements
         self.problems = problems
@@ -299,7 +295,7 @@ class _ConfigCache(object):
                                               default_environment_name=self.default_conda_environment_name)
         requirements.append(env_requirement)
 
-    def _update_commands(self, problems, project_file, conda_meta_file):
+    def _update_commands(self, problems, project_file, conda_meta_file, requirements):
         failed = False
 
         app_entry_from_meta_yaml = conda_meta_file.app_entry
@@ -361,7 +357,7 @@ class _ConfigCache(object):
 
                 commands[name] = ProjectCommand(name=name, attributes=copy)
 
-        self._add_notebook_commands(commands)
+        self._add_notebook_commands(commands, problems, requirements)
 
         if failed:
             self.commands = dict()
@@ -387,25 +383,27 @@ class _ConfigCache(object):
             # note: this may be None
             self.default_command_name = first_command_name
 
-    def _add_notebook_commands(self, commands):
-        for dirpath, dirnames, filenames in os.walk(self.directory_path):
-            # chop out hidden directories and ignored files. The
-            # main reason to ignore dot directories is that they
-            # might contain packages or git cache data or other
-            # such gunk, not because we really care about
-            # ".foo.ipynb" per se.
-            filenames = [f for f in filenames if not f[0] == '.']
-            dirnames[:] = [d for d in dirnames if (d[0] != '.' and os.path.join(dirpath, d) not in self.ignored_files)]
+    def _add_notebook_commands(self, commands, problems, requirements):
+        files = _list_relative_paths_for_unignored_project_files(self.directory_path,
+                                                                 problems,
+                                                                 requirements=requirements)
+        if files is None:
+            assert problems != []
+            return
 
-            for fname in filenames:
-                if fname.endswith('.ipynb'):
-                    relative_name = subdirectory_relative_to_directory(
-                        os.path.join(dirpath, fname), self.directory_path)
+        # chop out hidden directories. The
+        # main reason to ignore dot directories is that they
+        # might contain packages or git cache data or other
+        # such gunk, not because we really care about
+        # ".foo.ipynb" per se.
+        files = [f for f in files if not f[0] == '.']
 
-                    if relative_name not in commands:
-                        commands[relative_name] = ProjectCommand(name=relative_name,
-                                                                 attributes={'notebook': relative_name,
-                                                                             'auto_generated': True})
+        for relative_name in files:
+            if relative_name.endswith('.ipynb'):
+                if relative_name not in commands:
+                    commands[relative_name] = ProjectCommand(name=relative_name,
+                                                             attributes={'notebook': relative_name,
+                                                                         'auto_generated': True})
 
 
 class Project(object):
@@ -514,6 +512,18 @@ class Project(object):
         problems.
         """
         return self._updated_cache().problems
+
+    def problems_status(self, description=None):
+        """Get a ``Status`` describing project problems, or ``None`` if no problems."""
+        if len(self.problems) > 0:
+            errors = []
+            for problem in self.problems:
+                errors.append(problem)
+            if description is None:
+                description = "Unable to load the project."
+            return SimpleStatus(success=False, description=description, logs=[], errors=errors)
+        else:
+            return None
 
     @property
     def name(self):

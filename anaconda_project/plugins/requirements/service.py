@@ -50,3 +50,8 @@ class ServiceRequirement(EnvVarRequirement):
     def service_type(self):
         """Get service type string."""
         return self.options['type']
+
+    @property
+    def ignore_patterns(self):
+        """Override superclass with our ignore patterns."""
+        return set(['/services/'])

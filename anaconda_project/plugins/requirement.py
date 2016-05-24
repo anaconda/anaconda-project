@@ -153,6 +153,11 @@ class Requirement(with_metaclass(ABCMeta)):
         """Human-readable title of the requirement."""
         pass  # pragma: no cover
 
+    @property
+    def ignore_patterns(self):
+        """Set of ignore patterns for files this requirement's provider might autogenerate."""
+        return set()
+
     def _create_status(self, environ, local_state_file, overrides, latest_provide_result, has_been_provided,
                        status_description, provider_class_name):
         provider = self.registry.find_provider_by_class_name(provider_class_name)
