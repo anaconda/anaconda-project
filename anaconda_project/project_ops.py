@@ -23,6 +23,7 @@ from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.plugins.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
+from anaconda_project.internal.conda_api import parse_spec
 
 _default_projectignore = """
 # project-local contains your personal configuration choices and state
@@ -237,6 +238,18 @@ def remove_download(project, prepare_result, env_var):
     return status
 
 
+# there are lots of builtin ways to do this but they wouldn't keep
+# comments properly in ruamel.yaml's CommentedSeq. We don't want to
+# copy or wholesale replace "items"
+def _filter_inplace(predicate, items):
+    i = 0
+    while i < len(items):
+        if predicate(items[i]):
+            i += 1
+        else:
+            del items[i]
+
+
 def _update_environment(project, name, packages, channels, create):
     failed = project.problems_status()
     if failed is not None:
@@ -263,12 +276,34 @@ def _update_environment(project, name, packages, channels, create):
     # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
     # so don't convert this thing to a regular list.
     dependencies = env_dict.get('dependencies', [])
-    old_dependencies_set = set(dependencies)
+    old_dependencies_set = set(parse_spec(dep).name for dep in dependencies)
+    bad_specs = []
+    updated_packages = []
+    new_specs = []
     for dep in packages:
-        # note: we aren't smart enough to merge deps with the same
-        # package name but different versions.
-        if dep not in old_dependencies_set:
-            dependencies.append(dep)
+        if dep in dependencies:
+            # no-op adding the EXACT same thing (don't move it around)
+            continue
+        parsed = parse_spec(dep)
+        if parsed is None:
+            bad_specs.append(dep)
+        else:
+            if parsed.name in old_dependencies_set:
+                updated_packages.append(parsed.name)
+            new_specs.append(dep)
+
+    if len(bad_specs) > 0:
+        bad_specs_string = ", ".join(bad_specs)
+        return SimpleStatus(success=False,
+                            description="Could not add packages.",
+                            errors=[("Bad package specifications: %s." % bad_specs_string)])
+
+    # remove everything that we are changing the spec for
+    _filter_inplace(lambda dep: parse_spec(dep).name not in updated_packages, dependencies)
+    # add all the new ones
+    for added in new_specs:
+        dependencies.append(added)
+
     env_dict['dependencies'] = dependencies
 
     # channels may be a "CommentedSeq" and we don't want to lose the comments,
@@ -375,18 +410,6 @@ def add_dependencies(project, environment, packages, channels):
         ``Status`` instance
     """
     return _update_environment(project, environment, packages, channels, create=False)
-
-
-# there are lots of builtin ways to do this but they wouldn't keep
-# comments properly in ruamel.yaml's CommentedSeq. We don't want to
-# copy or wholesale replace "items"
-def _filter_inplace(predicate, items):
-    i = 0
-    while i < len(items):
-        if predicate(items[i]):
-            i += 1
-        else:
-            del items[i]
 
 
 def remove_dependencies(project, environment, packages):
