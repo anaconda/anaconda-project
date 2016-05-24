@@ -23,6 +23,7 @@ from anaconda_project.bundler import _list_relative_paths_for_unignored_project_
 
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.internal.simple_status import SimpleStatus
+from anaconda_project.internal.conda_api import parse_spec
 
 # These strings are used in the command line options to anaconda-project,
 # so changing them has back-compat consequences.
@@ -248,7 +249,12 @@ class _ConfigCache(object):
             return _parse_string_list(parent_dict, 'channels', 'channel name')
 
         def _parse_dependencies(parent_dict):
-            return _parse_string_list(parent_dict, 'dependencies', 'package name')
+            deps = _parse_string_list(parent_dict, 'dependencies', 'package name')
+            for dep in deps:
+                parsed = parse_spec(dep)
+                if parsed is None:
+                    problems.append("%s: invalid package specification: %s" % (project_file.filename, dep))
+            return deps
 
         self.conda_environments = dict()
         shared_deps = _parse_dependencies(project_file.root)
