@@ -518,3 +518,26 @@ def test_set_conda_env_in_path_windows_trailing_slashes(monkeypatch):
         assert (env1path_no_slashes + os.pathsep + random_stuff) == path
 
     with_directory_contents(dict(), check_conda_env_in_path_windows_trailing_slashes)
+
+
+def test_invalid_specs():
+    invalids = ['=', 'foo 1.0', '>']
+    for invalid in invalids:
+        assert conda_api.parse_spec(invalid) is None
+
+
+def test_conda_style_specs():
+    cases = [('foo', ('foo', None, None)), ('foo=1.0', ('foo', '=1.0', None)), ('foo=1.0*', ('foo', '=1.0*', None)),
+             ('foo=1.0|1.2', ('foo', '=1.0|1.2', None)), ('foo=1.0=2', ('foo', '=1.0=2', None))]
+    for case in cases:
+        assert conda_api.parse_spec(case[0]) == case[1]
+
+
+def test_pip_style_specs():
+    cases = [('foo>=1.0', ('foo', None, '>=1.0')), ('foo >=1.0', ('foo', None, '>=1.0')), ('FOO-Bar >=1.0',
+                                                                                           ('foo-bar', None, '>=1.0')),
+             ('foo >= 1.0', ('foo', None, '>=1.0')), ('foo > 1.0', ('foo', None, '>1.0')),
+             ('foo != 1.0', ('foo', None, '!=1.0')), ('foo <1.0', ('foo', None, '<1.0')), ('foo >=1.0 , < 2.0',
+                                                                                           ('foo', None, '>=1.0,<2.0'))]
+    for case in cases:
+        assert conda_api.parse_spec(case[0]) == case[1]
