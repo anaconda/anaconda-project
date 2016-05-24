@@ -250,6 +250,13 @@ def _filter_inplace(predicate, items):
             del items[i]
 
 
+def _map_inplace(f, items):
+    i = 0
+    while i < len(items):
+        items[i] = f(items[i])
+        i += 1
+
+
 def _update_environment(project, name, packages, channels, create):
     failed = project.problems_status()
     if failed is not None:
@@ -278,7 +285,7 @@ def _update_environment(project, name, packages, channels, create):
     dependencies = env_dict.get('dependencies', [])
     old_dependencies_set = set(parse_spec(dep).name for dep in dependencies)
     bad_specs = []
-    updated_packages = []
+    updated_specs = []
     new_specs = []
     for dep in packages:
         if dep in dependencies:
@@ -289,8 +296,9 @@ def _update_environment(project, name, packages, channels, create):
             bad_specs.append(dep)
         else:
             if parsed.name in old_dependencies_set:
-                updated_packages.append(parsed.name)
-            new_specs.append(dep)
+                updated_specs.append((parsed.name, dep))
+            else:
+                new_specs.append(dep)
 
     if len(bad_specs) > 0:
         bad_specs_string = ", ".join(bad_specs)
@@ -299,7 +307,14 @@ def _update_environment(project, name, packages, channels, create):
                             errors=[("Bad package specifications: %s." % bad_specs_string)])
 
     # remove everything that we are changing the spec for
-    _filter_inplace(lambda dep: parse_spec(dep).name not in updated_packages, dependencies)
+    def replace_spec(old):
+        name = parse_spec(old).name
+        for (replaced_name, new_spec) in updated_specs:
+            if replaced_name == name:
+                return new_spec
+        return old
+
+    _map_inplace(replace_spec, dependencies)
     # add all the new ones
     for added in new_specs:
         dependencies.append(added)

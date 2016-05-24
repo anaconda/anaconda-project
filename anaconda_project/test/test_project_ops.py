@@ -920,7 +920,7 @@ def test_add_environment_extending_existing_lists_with_versions():
 
         # be sure download was added to the file and saved
         project2 = Project(dirname)
-        assert dict(dependencies=['a', 'b=2.0', 'c'],
+        assert dict(dependencies=['b=2.0', 'a', 'c'],
                     channels=['c3', 'c1', 'c2']) == dict(project2.project_file.get_value(['environments', 'foo']))
 
     with_directory_contents(
