@@ -23,6 +23,7 @@ from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
+from anaconda_project.test.fake_server import fake_server
 
 
 def test_create(monkeypatch):
@@ -1420,6 +1421,44 @@ services:
     with_directory_contents(dict(), bundletest)
 
 
+def test_bundle_tar():
+    def bundletest(bundle_dest_dir):
+        bundlefile = os.path.join(bundle_dest_dir, "foo.tar")
+
+        def check(dirname):
+            # be sure we ignore these
+            os.makedirs(os.path.join(dirname, "services"))
+            os.makedirs(os.path.join(dirname, "envs"))
+
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                              'project-local.yml'])
+
+            # overwriting should work
+            status = project_ops.bundle(project, bundlefile)
+
+            assert status
+            assert os.path.exists(bundlefile)
+            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                              'project-local.yml'])
+
+        with_directory_contents(
+            {DEFAULT_PROJECT_FILENAME: """
+services:
+   REDIS_URL: redis
+    """,
+             "foo.py": "print('hello')\n",
+             "emptydir": None,
+             "a/b/c/d.py": "",
+             "a/b/c/e.py": ""}, check)
+
+    with_directory_contents(dict(), bundletest)
+
+
 def test_bundle_tar_gz():
     def bundletest(bundle_dest_dir):
         bundlefile = os.path.join(bundle_dest_dir, "foo.tar.gz")
@@ -1810,3 +1849,31 @@ def test_bundle_zip_with_projectignore():
              "bar/blah.pyc": ""}, check)
 
     with_directory_contents(dict(), bundletest)
+
+
+def test_upload(monkeypatch):
+    def check(dirname):
+        with fake_server(monkeypatch):
+            project = project_no_dedicated_env(dirname)
+            assert [] == project.problems
+            status = project_ops.upload(project, site='unit_test')
+            assert status
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\n", "foo.py": "print('hello')\n"}, check)
+
+
+def test_upload_cannot_walk_directory(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        def mock_os_walk(dirname):
+            raise OSError("NOPE")
+
+        monkeypatch.setattr('os.walk', mock_os_walk)
+
+        status = project_ops.upload(project, site='unit_test')
+        assert not status
+        assert status.errors[0].startswith("Could not list files in")
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\n", "foo.py": "print('hello')\n"}, check)

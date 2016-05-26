@@ -559,3 +559,15 @@ class AnacondaProject(object):
             a ``Status``, if failed has ``errors``
         """
         return project_ops.bundle(project=project, filename=filename)
+
+    def upload(self, project, site=None):
+        """Upload the project to the Anaconda server.
+
+        Args:
+            project (``Project``): the project
+            site (str): site alias from Anaconda config
+
+        Returns:
+            a ``Status``, if failed has ``errors``
+        """
+        return project_ops.upload(project=project, site=site)

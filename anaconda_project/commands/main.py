@@ -21,6 +21,7 @@ import anaconda_project.commands.launch as launch
 import anaconda_project.commands.prepare as prepare
 import anaconda_project.commands.clean as clean
 import anaconda_project.commands.bundle as bundle
+import anaconda_project.commands.upload as upload
 import anaconda_project.commands.activate as activate
 import anaconda_project.commands.variable_commands as variable_commands
 import anaconda_project.commands.download_commands as download_commands
@@ -102,6 +103,11 @@ def _parse_args_and_run_subcommand(argv):
     add_project_arg(preset)
     preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
     preset.set_defaults(main=bundle.main)
+
+    preset = subparsers.add_parser('upload', help="Upload the project to Anaconda Cloud")
+    add_project_arg(preset)
+    preset.add_argument('-s', '--site', metavar='SITE', help='Select the site to use')
+    preset.set_defaults(main=upload.main)
 
     preset = subparsers.add_parser('add-variable',
                                    help="Add an environment variable and add it to the project if not present")
