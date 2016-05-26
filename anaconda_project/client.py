@@ -106,16 +106,17 @@ class _Client(object):
         s3data['Content-Length'] = size
         s3data['Content-MD5'] = b64md5
 
-        data_stream, headers = binstar_requests_ext.stream_multipart(
-            s3data,
-            files={'file': (os.path.basename(bundle_filename), open(bundle_filename, 'rb'))})
+        with open(bundle_filename, 'rb') as bundle_file_object:
+            data_stream, headers = binstar_requests_ext.stream_multipart(
+                s3data,
+                files={'file': (os.path.basename(bundle_filename), bundle_file_object)})
 
-        res = requests.post(url,
-                            data=data_stream,
-                            verify=self._api.session.verify,
-                            timeout=10 * 60 * 60,
-                            headers=headers)
-        self._check_response(res)
+            res = requests.post(url,
+                                data=data_stream,
+                                verify=self._api.session.verify,
+                                timeout=10 * 60 * 60,
+                                headers=headers)
+            self._check_response(res)
         return res
 
     def upload(self, project, bundle_filename):

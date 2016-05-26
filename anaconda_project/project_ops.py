@@ -895,6 +895,7 @@ def upload(project, site=None):
     # so don't use delete=True.
     # future: change suffix to .tar.bz2 once server can handle it...
     tmp_tarfile = tempfile.NamedTemporaryFile(delete=False, prefix="anaconda_upload_", suffix=".tar")
+    tmp_tarfile.close()  # immediately un-use it to avoid file-in-use errors on Windows
     try:
         status = bundle(project, tmp_tarfile.name)
         if not status:
@@ -902,5 +903,4 @@ def upload(project, site=None):
         status = client._upload(project, tmp_tarfile.name, site=site)
         return status
     finally:
-        tmp_tarfile.close()
         os.remove(tmp_tarfile.name)
