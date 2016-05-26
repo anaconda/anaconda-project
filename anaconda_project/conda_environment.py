@@ -9,6 +9,8 @@ from __future__ import absolute_import
 
 import os
 
+from anaconda_project.internal.conda_api import parse_spec
+
 
 class CondaEnvironment(object):
     """Represents an environment specification which we could potentially create."""
@@ -45,9 +47,7 @@ class CondaEnvironment(object):
         """Conda package names that the environment must contain, as a set."""
         names = set()
         for spec in self.dependencies:
-            pieces = spec.split(' ', 2)
-            name = pieces[0]
-            names.add(name)
+            names.add(parse_spec(spec).name)
         return names
 
     def path(self, project_dir):

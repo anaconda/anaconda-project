@@ -906,6 +906,32 @@ environments:
 """}, check)
 
 
+def test_add_environment_extending_existing_lists_with_versions():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_environment(project,
+                                                 name='foo',
+                                                 packages=['a', 'b=2.0', 'c'],
+                                                 channels=['c1', 'c2', 'c3'])
+            assert status
+
+        _with_conda_test(attempt)
+
+        # be sure download was added to the file and saved
+        project2 = Project(dirname)
+        assert dict(dependencies=['b=2.0', 'a', 'c'],
+                    channels=['c3', 'c1', 'c2']) == dict(project2.project_file.get_value(['environments', 'foo']))
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+environments:
+  foo:
+    dependencies: [ 'b=1.0' ]
+    channels: [ 'c3']
+"""}, check)
+
+
 def test_add_dependencies_to_all_environments():
     def check(dirname):
         def attempt():
@@ -937,6 +963,20 @@ def test_add_dependencies_nonexistent_environment():
                                                   channels=['hello', 'world'])
             assert not status
             assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+    with_directory_contents(dict(), check)
+
+
+def test_add_dependencies_invalid_spec():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_dependencies(project, environment=None, packages=['='], channels=[])
+            assert not status
+            assert 'Could not add packages.' == status.status_description
+            assert ['Bad package specifications: =.'] == status.errors
 
         _with_conda_test(attempt)
 

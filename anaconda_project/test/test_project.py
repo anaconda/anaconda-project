@@ -491,6 +491,21 @@ dependencies:
     """}, check_get_packages)
 
 
+def test_complain_about_dependencies_bad_spec():
+    def check_get_packages(dirname):
+        project = project_no_dedicated_env(dirname)
+        filename = project.project_file.filename
+        assert ["%s: invalid package specification: =" % filename, "%s: invalid package specification: foo bar" %
+                filename] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+dependencies:
+    - "="
+    - foo bar
+    """}, check_get_packages)
+
+
 def test_complain_about_conda_env_in_variables_list():
     def check_complain_about_conda_env_var(dirname):
         project = project_no_dedicated_env(dirname)
