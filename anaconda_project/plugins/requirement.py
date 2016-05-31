@@ -147,6 +147,13 @@ class Requirement(with_metaclass(ABCMeta)):
                     self.options['default'], dict)):
                 self.options['default'] = str(self.options['default'])
 
+    def _title(self, default):
+        """Use this in subclasses to implement the title property."""
+        if 'help' in self.options:
+            return self.options['help']
+        else:
+            return default
+
     @property
     @abstractmethod
     def title(self):
@@ -263,7 +270,7 @@ class EnvVarRequirement(Requirement):
     @property
     def title(self):
         """Override superclass title."""
-        return "%s environment variable must be set" % (self.env_var)
+        return self._title("%s environment variable must be set" % (self.env_var))
 
     @property
     def encrypted(self):

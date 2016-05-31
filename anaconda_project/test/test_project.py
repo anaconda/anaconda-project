@@ -71,6 +71,27 @@ variables:
 """}, check_some_env_var)
 
 
+def test_single_env_var_requirement_with_help():
+    def check_some_env_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        assert 2 == len(project.requirements)
+        assert "FOO" == project.requirements[0].env_var
+        assert {'help': "Set FOO to the value of your foo"} == project.requirements[0].options
+        assert "Set FOO to the value of your foo" == project.requirements[0].title
+
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: { help: "Set FOO to the value of your foo" }
+"""}, check_some_env_var)
+
+
 def test_single_env_var_requirement_null_for_default():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)

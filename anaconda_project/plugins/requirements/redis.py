@@ -17,7 +17,7 @@ class RedisRequirement(ServiceRequirement):
     @property
     def title(self):
         """Override superclass to supply our title."""
-        return "A running Redis server, located by a redis: URL set as %s" % (self.env_var)
+        return self._title("A running Redis server, located by a redis: URL set as %s" % (self.env_var))
 
     def _why_not_provided(self, environ):
         url = self._get_value_of_env_var(environ)
