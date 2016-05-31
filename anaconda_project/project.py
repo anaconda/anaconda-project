@@ -660,11 +660,11 @@ class Project(object):
             if isinstance(req, CondaEnvRequirement):
                 continue
             elif isinstance(req, DownloadRequirement):
-                downloads[req.env_var] = dict(title=req.title, encrypted=req.encrypted, url=req.url)
+                downloads[req.env_var] = dict(title=req.title, help=req.help, encrypted=req.encrypted, url=req.url)
             elif isinstance(req, ServiceRequirement):
-                services[req.env_var] = dict(title=req.title, type=req.service_type)
+                services[req.env_var] = dict(title=req.title, help=req.help, type=req.service_type)
             elif isinstance(req, EnvVarRequirement):
-                variables[req.env_var] = dict(title=req.title, encrypted=req.encrypted)
+                variables[req.env_var] = dict(title=req.title, help=req.help, encrypted=req.encrypted)
         json['downloads'] = downloads
         json['variables'] = variables
         json['services'] = services

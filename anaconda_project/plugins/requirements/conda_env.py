@@ -41,7 +41,12 @@ class CondaEnvRequirement(EnvVarRequirement):
     @property
     def title(self):
         """Override superclass to provide our title."""
-        return self._title("A Conda environment")
+        return "A Conda environment"
+
+    @property
+    def help(self):
+        """Override superclass to provide our help."""
+        return "The project needs a Conda environment containing all required packages."
 
     @property
     def ignore_patterns(self):

@@ -148,7 +148,8 @@ def test_help_sets_the_title():
                                requirements=requirements)
     assert [] == problems
     assert len(requirements) == 1
-    assert requirements[0].title == 'hi'
+    assert requirements[0].title == 'FOO'
+    assert requirements[0].help == 'hi'
 
 
 def test_download_item_is_a_list_not_a_string_or_dict():

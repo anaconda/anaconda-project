@@ -78,7 +78,8 @@ def test_single_env_var_requirement_with_help():
         assert 2 == len(project.requirements)
         assert "FOO" == project.requirements[0].env_var
         assert {'help': "Set FOO to the value of your foo"} == project.requirements[0].options
-        assert "Set FOO to the value of your foo" == project.requirements[0].title
+        assert "Set FOO to the value of your foo" == project.requirements[0].help
+        assert "FOO" == project.requirements[0].title
 
         if platform.system() == 'Windows':
             assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
@@ -1548,7 +1549,8 @@ def test_get_publication_info_from_complex_project():
                          'foo.ipynb': {'description': 'Notebook foo.ipynb',
                                        'notebook': 'foo.ipynb'}},
             'downloads': {'FOO': {'encrypted': False,
-                                  'title': 'A downloaded file which is referenced by FOO',
+                                  'title': 'FOO',
+                                  'help': 'A downloaded file which is referenced by FOO.',
                                   'url': 'https://example.com/blah'}},
             'environments': {'default': {'channels': ['bar'],
                                          'dependencies': ['foo']},
@@ -1559,10 +1561,13 @@ def test_get_publication_info_from_complex_project():
                              'woot': {'channels': ['bar', 'woohoo'],
                                       'dependencies': ['foo', 'blah']}},
             'variables': {'SOMETHING': {'encrypted': False,
-                                        'title': 'SOMETHING environment variable must be set'},
+                                        'title': 'SOMETHING',
+                                        'help': 'SOMETHING environment variable must be set.'},
                           'SOMETHING_ELSE': {'encrypted': False,
-                                             'title': 'SOMETHING_ELSE environment variable must be set'}},
-            'services': {'REDIS_URL': {'title': 'A running Redis server, located by a redis: URL set as REDIS_URL',
+                                             'title': 'SOMETHING_ELSE',
+                                             'help': 'SOMETHING_ELSE environment variable must be set.'}},
+            'services': {'REDIS_URL': {'title': 'REDIS_URL',
+                                       'help': 'A running Redis server, located by a redis: URL set as REDIS_URL.',
                                        'type': 'redis'}}
         }
 

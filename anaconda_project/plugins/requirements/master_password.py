@@ -19,9 +19,9 @@ class MasterPasswordRequirement(EnvVarRequirement):
                                                         options=options)
 
     @property
-    def title(self):
-        """Override superclass title."""
-        return self._title("Anaconda master password (used to encrypt other passwords and credentials)")
+    def help(self):
+        """Override superclass help."""
+        return self._help("Anaconda master password (used to encrypt other passwords and credentials).")
 
     @property
     def encrypted(self):

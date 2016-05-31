@@ -29,7 +29,7 @@ class DownloadRequirement(EnvVarRequirement):
         hash_algorithm = None
         hash_value = None
         unzip = None
-        title = None
+        help = None
         if is_string(item):
             url = item
         elif isinstance(item, dict):
@@ -38,8 +38,8 @@ class DownloadRequirement(EnvVarRequirement):
                 problems.append("Download item {} doesn't contain a 'url' field.".format(varname))
                 return
 
-            title = item.get('help', None)
-            if title is not None and not is_string(title):
+            help = item.get('help', None)
+            if help is not None and not is_string(help):
                 problems.append("'help' field for download item {} is not a string".format(varname))
                 return
 
@@ -110,13 +110,13 @@ class DownloadRequirement(EnvVarRequirement):
                                                 hash_algorithm=hash_algorithm,
                                                 hash_value=hash_value,
                                                 unzip=unzip,
-                                                title=title))
+                                                help=help))
 
-    def __init__(self, registry, env_var, url, filename, hash_algorithm=None, hash_value=None, unzip=False, title=None):
+    def __init__(self, registry, env_var, url, filename, hash_algorithm=None, hash_value=None, unzip=False, help=None):
         """Extend init to accept url and hash parameters."""
         options = None
-        if title is not None:
-            options = dict(help=title)
+        if help is not None:
+            options = dict(help=help)
         super(DownloadRequirement, self).__init__(registry=registry, env_var=env_var, options=options)
         assert url is not None
         assert filename is not None
@@ -130,9 +130,9 @@ class DownloadRequirement(EnvVarRequirement):
         self.unzip = unzip
 
     @property
-    def title(self):
-        """Override superclass to supply our title."""
-        return self._title("A downloaded file which is referenced by {}".format(self.env_var))
+    def help(self):
+        """Override superclass to supply our help."""
+        return self._help("A downloaded file which is referenced by {}.".format(self.env_var))
 
     @property
     def ignore_patterns(self):

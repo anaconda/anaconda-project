@@ -50,9 +50,10 @@ def test_env_var_on_linux(monkeypatch):
     assert requirement.env_var == 'CONDA_ENV_PATH'
 
 
-def test_conda_env_title():
+def test_conda_env_title_and_help():
     requirement = _empty_default_requirement()
     assert requirement.title == 'A Conda environment'
+    assert requirement.help == 'The project needs a Conda environment containing all required packages.'
 
 
 def test_conda_default_env_not_set():
