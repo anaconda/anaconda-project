@@ -11,11 +11,11 @@ import os
 
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
-all_subcommands = ('init', 'launch', 'prepare', 'clean', 'activate', 'bundle', 'upload', 'add-variable',
-                   'remove-variable', 'list-variables', 'add-download', 'remove-download', 'list-downloads',
-                   'add-service', 'remove-service', 'list-services', 'add-environment', 'remove-environment',
-                   'list-environments', 'add-dependencies', 'remove-dependencies', 'list-dependencies', 'add-command',
-                   'remove-command', 'list-commands')
+all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'bundle', 'upload', 'add-variable', 'remove-variable',
+                   'list-variables', 'add-download', 'remove-download', 'list-downloads', 'add-service',
+                   'remove-service', 'list-services', 'add-environment', 'remove-environment', 'list-environments',
+                   'add-dependencies', 'remove-dependencies', 'list-dependencies', 'add-command', 'remove-command',
+                   'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -59,7 +59,7 @@ expected_usage_msg = \
         '                        Sub-commands\n' \
         '    init                Initialize a directory with default project\n' \
         '                        configuration\n' \
-        '    launch              Run the project, setting up requirements first\n' \
+        '    run                 Run the project, setting up requirements first\n' \
         '    prepare             Set up the project requirements, but does not run the\n' \
         '                        project\n' \
         '    clean               Removes generated state (stops services, deletes\n' \
@@ -141,8 +141,8 @@ def _main_calls_subcommand(monkeypatch, capsys, subcommand):
     assert "" == err
 
 
-def test_main_calls_launch(monkeypatch, capsys):
-    _main_calls_subcommand(monkeypatch, capsys, 'launch')
+def test_main_calls_run(monkeypatch, capsys):
+    _main_calls_subcommand(monkeypatch, capsys, 'run')
 
 
 def test_main_calls_prepare(monkeypatch, capsys):

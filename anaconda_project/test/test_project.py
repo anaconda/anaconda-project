@@ -1078,7 +1078,7 @@ def test_notebook_guess_command():
             '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
         }, check_notebook_guess_command)
 
-    # anaconda-project launch --command data.ipynb
+    # anaconda-project run --command data.ipynb
 
 
 def test_notebook_guess_command_can_be_default():
@@ -1173,8 +1173,8 @@ def test_bokeh_command_with_extra_args():
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check_bokeh_command_extra_args)
 
 
-def test_launch_argv_from_project_file_app_entry():
-    def check_launch_argv(dirname):
+def test_run_argv_from_project_file_app_entry():
+    def check_run_argv(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
@@ -1191,11 +1191,11 @@ def test_launch_argv_from_project_file_app_entry():
 commands:
   foo:
     conda_app_entry: foo bar ${PREFIX}
-"""}, check_launch_argv)
+"""}, check_run_argv)
 
 
-def test_launch_argv_from_project_file_shell():
-    def check_launch_argv(dirname):
+def test_run_argv_from_project_file_shell():
+    def check_run_argv(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
@@ -1212,11 +1212,11 @@ def test_launch_argv_from_project_file_shell():
 commands:
   foo:
     unix: foo bar ${PREFIX}
-"""}, check_launch_argv)
+"""}, check_run_argv)
 
 
-def test_launch_argv_from_project_file_windows(monkeypatch):
-    def check_launch_argv(dirname):
+def test_run_argv_from_project_file_windows(monkeypatch):
+    def check_run_argv(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
@@ -1244,7 +1244,7 @@ def test_launch_argv_from_project_file_windows(monkeypatch):
 commands:
   foo:
     windows: foo bar %CONDA_DEFAULT_ENV%
-"""}, check_launch_argv)
+"""}, check_run_argv)
 
 
 def test_exec_info_is_none_when_no_commands():
@@ -1287,8 +1287,8 @@ commands:
 """ % not_us}, check_exec_info)
 
 
-def test_launch_argv_from_meta_file():
-    def check_launch_argv(dirname):
+def test_run_argv_from_meta_file():
+    def check_run_argv(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         command = project.default_command
@@ -1301,12 +1301,12 @@ def test_launch_argv_from_meta_file():
     with_directory_contents({DEFAULT_RELATIVE_META_PATH: """
 app:
   entry: foo bar ${PREFIX}
-"""}, check_launch_argv)
+"""}, check_run_argv)
 
 
 # we used to fill in empty commands from meta.yaml, but no more,
-def test_launch_argv_from_meta_file_with_name_in_project_file():
-    def check_launch_argv(dirname):
+def test_run_argv_from_meta_file_with_name_in_project_file():
+    def check_run_argv(dirname):
         project = project_no_dedicated_env(dirname)
         assert ["%s: command 'foo' does not have a command line in it" % project.project_file.filename
                 ] == project.problems
@@ -1321,7 +1321,7 @@ commands:
 app:
   entry: foo bar ${PREFIX}
 """
-        }, check_launch_argv)
+        }, check_run_argv)
 
 
 if platform.system() == 'Windows':
@@ -1330,11 +1330,11 @@ else:
     echo_stuff = "echo_stuff.sh"
 
 
-def _launch_argv_for_environment(environ,
-                                 expected_output,
-                                 chdir=False,
-                                 command_line=('conda_app_entry: %s ${PREFIX} foo bar' % echo_stuff),
-                                 extra_args=None):
+def _run_argv_for_environment(environ,
+                              expected_output,
+                              chdir=False,
+                              command_line=('conda_app_entry: %s ${PREFIX} foo bar' % echo_stuff),
+                              extra_args=None):
     environ = minimal_environ(**environ)
 
     def check_echo_output(dirname):
@@ -1377,76 +1377,73 @@ echo %*
         }, check_echo_output)
 
 
-def test_launch_command_in_project_dir():
+def test_run_command_in_project_dir():
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _launch_argv_for_environment(dict(), "%s foo bar" % (prefix))
+    _run_argv_for_environment(dict(), "%s foo bar" % (prefix))
 
 
-def test_launch_command_in_project_dir_extra_args():
+def test_run_command_in_project_dir_extra_args():
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _launch_argv_for_environment(dict(), "%s foo bar baz" % (prefix), extra_args=["baz"])
+    _run_argv_for_environment(dict(), "%s foo bar baz" % (prefix), extra_args=["baz"])
 
 
-def test_launch_command_in_project_dir_with_shell(monkeypatch):
+def test_run_command_in_project_dir_with_shell(monkeypatch):
     if platform.system() == 'Windows':
         print("Cannot test shell on Windows")
         return
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _launch_argv_for_environment(dict(),
-                                 "%s foo bar" % (prefix),
-                                 command_line='unix: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"')
+    _run_argv_for_environment(dict(),
+                              "%s foo bar" % (prefix),
+                              command_line='unix: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"')
 
 
-def test_launch_command_in_project_dir_with_shell_extra_args(monkeypatch):
+def test_run_command_in_project_dir_with_shell_extra_args(monkeypatch):
     if platform.system() == 'Windows':
         print("Cannot test shell on Windows")
         return
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _launch_argv_for_environment(dict(),
-                                 "%s foo bar baz" % (prefix),
-                                 command_line='unix: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"',
-                                 extra_args=["baz"])
+    _run_argv_for_environment(dict(),
+                              "%s foo bar baz" % (prefix),
+                              command_line='unix: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"',
+                              extra_args=["baz"])
 
 
-def test_launch_command_in_project_dir_with_windows(monkeypatch):
+def test_run_command_in_project_dir_with_windows(monkeypatch):
     if platform.system() != 'Windows':
         print("Cannot test windows cmd on unix")
         return
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _launch_argv_for_environment(
+    _run_argv_for_environment(
         dict(),
         "%s foo bar" % (prefix),
         command_line='''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %CONDA_DEFAULT_ENV% foo bar"''')
 
 
-def test_launch_command_in_project_dir_with_windows_extra_args(monkeypatch):
+def test_run_command_in_project_dir_with_windows_extra_args(monkeypatch):
     if platform.system() != 'Windows':
         print("Cannot test windows cmd on unix")
         return
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _launch_argv_for_environment(
+    _run_argv_for_environment(
         dict(),
         "%s foo bar baz" % (prefix),
         command_line='''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %CONDA_DEFAULT_ENV% foo bar"''',
         extra_args=["baz"])
 
 
-def test_launch_command_in_project_dir_and_cwd_is_project_dir():
+def test_run_command_in_project_dir_and_cwd_is_project_dir():
     prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _launch_argv_for_environment(dict(),
-                                 "%s foo bar" % prefix,
-                                 chdir=True,
-                                 command_line=('conda_app_entry: %s ${PREFIX} foo bar' % os.path.join(".", echo_stuff)))
+    _run_argv_for_environment(dict(),
+                              "%s foo bar" % prefix,
+                              chdir=True,
+                              command_line=('conda_app_entry: %s ${PREFIX} foo bar' % os.path.join(".", echo_stuff)))
 
 
-def test_launch_command_in_project_dir_with_conda_env():
-    _launch_argv_for_environment(
-        dict(CONDA_ENV_PATH='/someplace',
-             CONDA_DEFAULT_ENV='/someplace'),
-        "/someplace foo bar")
+def test_run_command_in_project_dir_with_conda_env():
+    _run_argv_for_environment(dict(CONDA_ENV_PATH='/someplace', CONDA_DEFAULT_ENV='/someplace'), "/someplace foo bar")
 
 
-def test_launch_command_is_on_system_path():
+def test_run_command_is_on_system_path():
     def check_python_version_output(dirname):
         environ = minimal_environ(PROJECT_DIR=dirname)
         project = project_no_dedicated_env(dirname)
@@ -1463,7 +1460,7 @@ commands:
 """}, check_python_version_output)
 
 
-def test_launch_command_does_not_exist():
+def test_run_command_does_not_exist():
     def check_error_on_nonexistent_path(dirname):
         import errno
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -1488,8 +1485,8 @@ commands:
 """}, check_error_on_nonexistent_path)
 
 
-def test_launch_command_stuff_missing_from_environment():
-    def check_launch_with_stuff_missing(dirname):
+def test_run_command_stuff_missing_from_environment():
+    def check_run_with_stuff_missing(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -1508,7 +1505,7 @@ def test_launch_command_stuff_missing_from_environment():
 commands:
   default:
     conda_app_entry: foo
-"""}, check_launch_with_stuff_missing)
+"""}, check_run_with_stuff_missing)
 
 
 def test_get_publication_info_from_empty_project():
