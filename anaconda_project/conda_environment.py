@@ -15,22 +15,32 @@ from anaconda_project.internal.conda_api import parse_spec
 class CondaEnvironment(object):
     """Represents an environment specification which we could potentially create."""
 
-    def __init__(self, name, dependencies, channels):
+    def __init__(self, name, dependencies, channels, description=None):
         """Construct an Enviroment with the given name and dependencies.
 
         Args:
             name (str): name of the environment
             dependencies (list): list of package specs to pass to conda install
             channels (list): list of channel names
+            description (str or None): one-sentence-ish summary of what this env is
         """
         self._name = name
         self._dependencies = tuple(dependencies)
         self._channels = tuple(channels)
+        self._description = description
 
     @property
     def name(self):
         """Get name of the environment."""
         return self._name
+
+    @property
+    def description(self):
+        """Get the description of the environment."""
+        if self._description is None:
+            return self._name
+        else:
+            return self._description
 
     @property
     def dependencies(self):

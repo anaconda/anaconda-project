@@ -572,12 +572,15 @@ def test_load_environments():
         bar = project.conda_environments['bar']
         assert default.dependencies == ()
         assert foo.dependencies == ('python', 'dog', 'cat', 'zebra')
+        assert foo.description == "THE FOO"
         assert bar.dependencies == ()
+        assert bar.description == "bar"
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 environments:
   foo:
+    description: "THE FOO"
     dependencies:
        - python
        - dog
@@ -666,6 +669,20 @@ def test_complain_about_environments_not_a_dict():
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 environments: 42
+    """}, check_environments)
+
+
+def test_complain_about_non_string_environment_description():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["%s: 'description' field of environment foo must be a string" %
+                (project.project_file.filename)] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+environments:
+   foo:
+     description: []
     """}, check_environments)
 
 
@@ -1503,7 +1520,8 @@ def test_get_publication_info_from_empty_project():
             'environments': {
                 'default': {
                     'channels': [],
-                    'dependencies': []
+                    'dependencies': [],
+                    'description': 'Default'
                 }
             },
             'variables': {},
@@ -1542,6 +1560,7 @@ environments:
     channels:
       - woohoo
   w00t:
+    description: "double 0"
     dependencies:
       - something
   lol: {}
@@ -1578,13 +1597,17 @@ def test_get_publication_info_from_complex_project():
                                   'description': 'A downloaded file which is referenced by FOO.',
                                   'url': 'https://example.com/blah'}},
             'environments': {'default': {'channels': ['bar'],
-                                         'dependencies': ['foo']},
+                                         'dependencies': ['foo'],
+                                         'description': 'Default'},
                              'lol': {'channels': ['bar'],
-                                     'dependencies': ['foo']},
+                                     'dependencies': ['foo'],
+                                     'description': 'lol'},
                              'w00t': {'channels': ['bar'],
-                                      'dependencies': ['foo', 'something']},
+                                      'dependencies': ['foo', 'something'],
+                                      'description': 'double 0'},
                              'woot': {'channels': ['bar', 'woohoo'],
-                                      'dependencies': ['foo', 'blah']}},
+                                      'dependencies': ['foo', 'blah'],
+                                      'description': 'woot'}},
             'variables': {'SOMETHING': {'encrypted': False,
                                         'title': 'SOMETHING',
                                         'description': 'SOMETHING environment variable must be set.'},

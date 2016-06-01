@@ -263,8 +263,12 @@ class _ConfigCache(object):
         if isinstance(environments, dict):
             for (name, attrs) in environments.items():
                 if name.strip() == '':
-                    problems.append("Environment spec name cannot be empty string, found: '{}' as name".format(
-                        name))
+                    problems.append("Environment spec name cannot be empty string, found: '{}' as name".format(name))
+                    continue
+                description = attrs.get('description', None)
+                if description is not None and not is_string(description):
+                    problems.append("{}: 'description' field of environment {} must be a string".format(
+                        project_file.filename, name))
                     continue
                 deps = _parse_dependencies(attrs)
                 channels = _parse_channels(attrs)
@@ -275,7 +279,8 @@ class _ConfigCache(object):
                 all_channels = shared_channels + channels
                 self.conda_environments[name] = CondaEnvironment(name=name,
                                                                  dependencies=all_deps,
-                                                                 channels=all_channels)
+                                                                 channels=all_channels,
+                                                                 description=description)
         else:
             problems.append(
                 "%s: environments should be a dictionary from environment name to environment attributes, not %r" %
@@ -286,7 +291,8 @@ class _ConfigCache(object):
         if 'default' not in self.conda_environments:
             self.conda_environments['default'] = CondaEnvironment(name='default',
                                                                   dependencies=shared_deps,
-                                                                  channels=shared_channels)
+                                                                  channels=shared_channels,
+                                                                  description="Default")
 
         # since this never varies now, it's a little pointless, but we'll leave it here
         # as an abstraction in case we change our mind again.
@@ -658,7 +664,9 @@ class Project(object):
         json['commands'] = commands
         envs = dict()
         for key, env in self.conda_environments.items():
-            envs[key] = dict(dependencies=list(env.dependencies), channels=list(env.channels))
+            envs[key] = dict(dependencies=list(env.dependencies),
+                             channels=list(env.channels),
+                             description=env.description)
         json['environments'] = envs
         variables = dict()
         downloads = dict()

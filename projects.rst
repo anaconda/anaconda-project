@@ -148,6 +148,7 @@ your ``project.yml`` file:
       channels:
         - https://conda.anaconda.org/asmeurer
     python27:
+      description: "Uses Python 2 instead of 3"
       dependencies:
         - python < 3
       channels:
