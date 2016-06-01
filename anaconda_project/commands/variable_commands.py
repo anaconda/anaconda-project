@@ -54,8 +54,8 @@ def list_variables(project_dir):
     project = Project(project_dir)
     if console_utils.print_project_problems(project):
         return 1
-    print("Variables for project: {}".format(project_dir))
-    print("\n".join(project.all_variables))
+    print("Variables for project: {}\n".format(project_dir))
+    console_utils.print_names_and_descriptions(project.all_variable_requirements, name_attr='env_var')
     return 0
 
 

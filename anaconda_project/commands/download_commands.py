@@ -57,10 +57,9 @@ def list_downloads(project_dir):
     if console_utils.print_project_problems(project):
         return 1
 
-    downloads = project.downloads
-    if downloads:
-        print("Found these downloads in project:")
-        print('\n'.join(sorted(downloads)))
+    if project.downloads:
+        print("Downloads for project: {}\n".format(project_dir))
+        console_utils.print_names_and_descriptions(project.download_requirements, name_attr='title')
     else:
         print("No downloads found in project.")
     return 0

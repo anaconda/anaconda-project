@@ -98,7 +98,7 @@ def list_commands(project_dir):
 
     if project.commands:
         print("Commands for project: {}\n".format(project_dir))
-        print('\n'.join(sorted(project.commands.keys())))
+        console_utils.print_names_and_descriptions(project.commands.values())
     else:
         print("No commands found for project: {}\n".format(project_dir))
     return 0

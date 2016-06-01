@@ -334,8 +334,17 @@ def test_list_commands(capsys):
 
         out, err = capsys.readouterr()
         assert '' == err
-        commands = '\n'.join(('default', 'run_notebook'))
-        assert ("Commands for project: {}\n\n{}\n".format(dirname, commands)) == out
+
+        expected_out = """
+Commands for project: {dirname}
+
+Name          Description
+====          ===========
+default       Bokeh app test.py
+run_notebook  Notebook test.ipynb
+""".format(dirname=dirname).strip() + "\n"
+
+        assert expected_out == out
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: ("commands:\n"

@@ -334,7 +334,15 @@ def test_list_downloads(capsys, monkeypatch):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'list-downloads'])
         assert code == 0
         out, err = capsys.readouterr()
-        expected_out = "Found these downloads in project:\ntest\ntrain\n"
+
+        expected_out = """
+Downloads for project: {dirname}
+
+Name   Description
+====   ===========
+test   A downloaded file which is referenced by test.
+train  A downloaded file which is referenced by train.
+""".format(dirname=dirname).strip() + "\n"
         assert out == expected_out
 
     with_directory_contents(

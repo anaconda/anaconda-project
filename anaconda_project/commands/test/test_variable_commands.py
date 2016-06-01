@@ -109,13 +109,23 @@ def test_list_variables(capsys):
 
         assert code == 0
         out, err = capsys.readouterr()
-        expected_out = "Variables for project: {}\ntest\ntrain\n{}\n".format(dirname, PLATFORM_ENV_VAR)
+        expected_out = """
+Variables for project: {dirname}
+
+Name{space}Description
+===={space}===========
+{varname}  The project needs a Conda environment containing all required packages.
+tes2{space}A downloaded file which is referenced by tes2.
+test{space}A downloaded file which is referenced by test.
+""".format(dirname=dirname,
+           varname=PLATFORM_ENV_VAR,
+           space="".ljust(len(PLATFORM_ENV_VAR) - 2)).strip() + "\n"
         assert out == expected_out
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: ('downloads:\n'
                                     '  test: http://localhost:8000/test.tgz\n'
-                                    '  train: http://localhost:8000/train.tgz\n')}, check_list_not_empty)
+                                    '  tes2: http://localhost:8000/train.tgz\n')}, check_list_not_empty)
 
 
 def test_list_empty_environments(capsys):
@@ -124,7 +134,15 @@ def test_list_empty_environments(capsys):
 
         assert code == 0
         out, err = capsys.readouterr()
-        expected_out = "Variables for project: {}\n{}\n".format(dirname, PLATFORM_ENV_VAR)
+        expected_out = """
+Variables for project: {dirname}
+
+Name{space}Description
+===={space}===========
+{varname}  The project needs a Conda environment containing all required packages.
+""".format(dirname=dirname,
+           varname=PLATFORM_ENV_VAR,
+           space="".ljust(len(PLATFORM_ENV_VAR) - 2)).strip() + "\n"
         assert out == expected_out
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)
