@@ -332,33 +332,40 @@ class _ConfigCache(object):
                                     (project_file.filename, name, attrs))
                     continue
 
+                if 'description' in attrs and not is_string(attrs['description']):
+                    problems.append("{}: 'description' field of command {} must be a string".format(
+                        project_file.filename, name))
+                    continue
+
                 copy = deepcopy(attrs)
 
-                have_command = False
+                command_types = []
                 for attr in ALL_COMMAND_TYPES:
                     if attr not in copy:
                         continue
 
-                    # this should be True even if we have problems
-                    # with the command line, since "no command
-                    # line" error is confusing if there is one and
-                    # it's broken
-                    have_command = True
+                    # be sure we add this even if the command is broken, since it's
+                    # confusing to say "does not have a command line in it" below
+                    # if the issue is that the command line is broken.
+                    command_types.append(attr)
 
                     if not is_string(copy[attr]):
                         problems.append("%s: command '%s' attribute '%s' should be a string not '%r'" %
                                         (project_file.filename, name, attr, copy[attr]))
                         failed = True
 
-                if not have_command:
+                if len(command_types) == 0:
                     problems.append("%s: command '%s' does not have a command line in it" %
                                     (project_file.filename, name))
                     failed = True
 
-                if ('notebook' in copy or 'bokeh_app' in copy) and len(copy.keys()) > 1:
+                if ('notebook' in copy or 'bokeh_app' in copy) and (len(command_types) > 1):
                     label = 'bokeh_app' if 'bokeh_app' in copy else 'notebook'
-                    problems.append("%s: command '%s' has conflicting statements, '%s' must stand alone" %
-                                    (project_file.filename, name, label))
+                    others = command_types.copy()
+                    others.remove(label)
+                    others = [("'%s'" % other) for other in others]
+                    problems.append("%s: command '%s' has multiple commands in it, '%s' can't go with %s" %
+                                    (project_file.filename, name, label, ", ".join(others)))
                     failed = True
 
                 commands[name] = ProjectCommand(name=name, attributes=copy)

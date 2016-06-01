@@ -117,6 +117,8 @@ https://github.com/Anaconda-Server/anaconda-project/issues/80
 and https://github.com/Anaconda-Server/anaconda-project/issues/81
 when those are implemented
 
+TODO mention that commands can have a 'description' field.
+
 Environments and Channels
 =========================
 

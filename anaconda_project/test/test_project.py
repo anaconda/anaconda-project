@@ -906,6 +906,30 @@ def test_command_with_bogus_key():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n"}, check_app_entry)
 
 
+def test_command_with_non_string_description():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        expected_error = "%s: 'description' field of command %s must be a string" % (project.project_file.filename,
+                                                                                     'default')
+        assert expected_error == project.problems[0]
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     shell: 'boo'\n     description: []\n"}, check)
+
+
+def test_command_with_custom_description():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        command = project.default_command
+        assert command.bokeh_app == 'test.py'
+        assert command.description == 'hi'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n    description: hi\n"}, check)
+
+
 def test_command_with_bogus_key_and_ok_key():
     def check_app_entry(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1064,7 +1088,7 @@ def test_notebook_command_conflict():
     def check_notebook_conflict_command(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        expected_error = "%s: command '%s' has conflicting statements, 'notebook' must stand alone" % (
+        expected_error = "%s: command '%s' has multiple commands in it, 'notebook' can't go with 'unix'" % (
             project.project_file.filename, 'default')
         assert expected_error == project.problems[0]
 
@@ -1077,7 +1101,7 @@ def test_bokeh_command_conflict():
     def check_bokeh_conflict_command(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        expected_error = "%s: command '%s' has conflicting statements, 'bokeh_app' must stand alone" % (
+        expected_error = "%s: command '%s' has multiple commands in it, 'bokeh_app' can't go with 'unix'" % (
             project.project_file.filename, 'default')
         assert expected_error == project.problems[0]
 
@@ -1497,6 +1521,7 @@ name: foobar
 commands:
   foo:
     unix: echo hi
+    description: "say hi"
   bar:
     windows: echo boo
   baz:
@@ -1542,7 +1567,7 @@ def test_get_publication_info_from_complex_project():
             'name': 'foobar',
             'commands': {'bar': {'description': 'echo boo'},
                          'baz': {'description': 'echo blah'},
-                         'foo': {'description': 'echo hi',
+                         'foo': {'description': 'say hi',
                                  'default': True},
                          'myapp': {'description': 'Bokeh app main.py',
                                    'bokeh_app': 'main.py'},

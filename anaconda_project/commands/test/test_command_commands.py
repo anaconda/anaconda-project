@@ -250,7 +250,7 @@ def test_add_command_breaks_project(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert (("%s: command 'test' has conflicting statements, 'notebook' must stand alone\n" % os.path.join(
+        assert (("%s: command 'test' has multiple commands in it, 'notebook' can't go with 'unix'\n" % os.path.join(
             dirname, DEFAULT_PROJECT_FILENAME)) + "Unable to add the command.\n") == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    unix: foo\n")}, check_problem_add_cmd)
