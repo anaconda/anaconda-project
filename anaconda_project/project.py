@@ -7,7 +7,7 @@
 """Project class representing a project directory."""
 from __future__ import absolute_import
 
-from copy import deepcopy
+from copy import deepcopy, copy
 import os
 
 from anaconda_project.conda_environment import CondaEnvironment
@@ -343,11 +343,11 @@ class _ConfigCache(object):
                         project_file.filename, name))
                     continue
 
-                copy = deepcopy(attrs)
+                copied_attrs = deepcopy(attrs)
 
                 command_types = []
                 for attr in ALL_COMMAND_TYPES:
-                    if attr not in copy:
+                    if attr not in copied_attrs:
                         continue
 
                     # be sure we add this even if the command is broken, since it's
@@ -355,9 +355,9 @@ class _ConfigCache(object):
                     # if the issue is that the command line is broken.
                     command_types.append(attr)
 
-                    if not is_string(copy[attr]):
+                    if not is_string(copied_attrs[attr]):
                         problems.append("%s: command '%s' attribute '%s' should be a string not '%r'" %
-                                        (project_file.filename, name, attr, copy[attr]))
+                                        (project_file.filename, name, attr, copied_attrs[attr]))
                         failed = True
 
                 if len(command_types) == 0:
@@ -365,16 +365,16 @@ class _ConfigCache(object):
                                     (project_file.filename, name))
                     failed = True
 
-                if ('notebook' in copy or 'bokeh_app' in copy) and (len(command_types) > 1):
-                    label = 'bokeh_app' if 'bokeh_app' in copy else 'notebook'
-                    others = command_types.copy()
+                if ('notebook' in copied_attrs or 'bokeh_app' in copied_attrs) and (len(command_types) > 1):
+                    label = 'bokeh_app' if 'bokeh_app' in copied_attrs else 'notebook'
+                    others = copy(command_types)
                     others.remove(label)
                     others = [("'%s'" % other) for other in others]
                     problems.append("%s: command '%s' has multiple commands in it, '%s' can't go with %s" %
                                     (project_file.filename, name, label, ", ".join(others)))
                     failed = True
 
-                commands[name] = ProjectCommand(name=name, attributes=copy)
+                commands[name] = ProjectCommand(name=name, attributes=copied_attrs)
 
         self._add_notebook_commands(commands, problems, requirements)
 
