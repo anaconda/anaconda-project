@@ -7,7 +7,7 @@
 """Project class representing a project directory."""
 from __future__ import absolute_import
 
-from copy import deepcopy
+from copy import deepcopy, copy
 import os
 
 from anaconda_project.conda_environment import CondaEnvironment
@@ -263,8 +263,12 @@ class _ConfigCache(object):
         if isinstance(environments, dict):
             for (name, attrs) in environments.items():
                 if name.strip() == '':
-                    problems.append("Environment variable name cannot be empty string, found: '{}' as name".format(
-                        name))
+                    problems.append("Environment spec name cannot be empty string, found: '{}' as name".format(name))
+                    continue
+                description = attrs.get('description', None)
+                if description is not None and not is_string(description):
+                    problems.append("{}: 'description' field of environment {} must be a string".format(
+                        project_file.filename, name))
                     continue
                 deps = _parse_dependencies(attrs)
                 channels = _parse_channels(attrs)
@@ -275,7 +279,8 @@ class _ConfigCache(object):
                 all_channels = shared_channels + channels
                 self.conda_environments[name] = CondaEnvironment(name=name,
                                                                  dependencies=all_deps,
-                                                                 channels=all_channels)
+                                                                 channels=all_channels,
+                                                                 description=description)
         else:
             problems.append(
                 "%s: environments should be a dictionary from environment name to environment attributes, not %r" %
@@ -286,7 +291,8 @@ class _ConfigCache(object):
         if 'default' not in self.conda_environments:
             self.conda_environments['default'] = CondaEnvironment(name='default',
                                                                   dependencies=shared_deps,
-                                                                  channels=shared_channels)
+                                                                  channels=shared_channels,
+                                                                  description="Default")
 
         # since this never varies now, it's a little pointless, but we'll leave it here
         # as an abstraction in case we change our mind again.
@@ -332,36 +338,43 @@ class _ConfigCache(object):
                                     (project_file.filename, name, attrs))
                     continue
 
-                copy = deepcopy(attrs)
+                if 'description' in attrs and not is_string(attrs['description']):
+                    problems.append("{}: 'description' field of command {} must be a string".format(
+                        project_file.filename, name))
+                    continue
 
-                have_command = False
+                copied_attrs = deepcopy(attrs)
+
+                command_types = []
                 for attr in ALL_COMMAND_TYPES:
-                    if attr not in copy:
+                    if attr not in copied_attrs:
                         continue
 
-                    # this should be True even if we have problems
-                    # with the command line, since "no command
-                    # line" error is confusing if there is one and
-                    # it's broken
-                    have_command = True
+                    # be sure we add this even if the command is broken, since it's
+                    # confusing to say "does not have a command line in it" below
+                    # if the issue is that the command line is broken.
+                    command_types.append(attr)
 
-                    if not is_string(copy[attr]):
+                    if not is_string(copied_attrs[attr]):
                         problems.append("%s: command '%s' attribute '%s' should be a string not '%r'" %
-                                        (project_file.filename, name, attr, copy[attr]))
+                                        (project_file.filename, name, attr, copied_attrs[attr]))
                         failed = True
 
-                if not have_command:
+                if len(command_types) == 0:
                     problems.append("%s: command '%s' does not have a command line in it" %
                                     (project_file.filename, name))
                     failed = True
 
-                if ('notebook' in copy or 'bokeh_app' in copy) and len(copy.keys()) > 1:
-                    label = 'bokeh_app' if 'bokeh_app' in copy else 'notebook'
-                    problems.append("%s: command '%s' has conflicting statements, '%s' must stand alone" %
-                                    (project_file.filename, name, label))
+                if ('notebook' in copied_attrs or 'bokeh_app' in copied_attrs) and (len(command_types) > 1):
+                    label = 'bokeh_app' if 'bokeh_app' in copied_attrs else 'notebook'
+                    others = copy(command_types)
+                    others.remove(label)
+                    others = [("'%s'" % other) for other in others]
+                    problems.append("%s: command '%s' has multiple commands in it, '%s' can't go with %s" %
+                                    (project_file.filename, name, label, ", ".join(others)))
                     failed = True
 
-                commands[name] = ProjectCommand(name=name, attributes=copy)
+                commands[name] = ProjectCommand(name=name, attributes=copied_attrs)
 
         self._add_notebook_commands(commands, problems, requirements)
 
@@ -651,7 +664,9 @@ class Project(object):
         json['commands'] = commands
         envs = dict()
         for key, env in self.conda_environments.items():
-            envs[key] = dict(dependencies=list(env.dependencies), channels=list(env.channels))
+            envs[key] = dict(dependencies=list(env.dependencies),
+                             channels=list(env.channels),
+                             description=env.description)
         json['environments'] = envs
         variables = dict()
         downloads = dict()
@@ -660,11 +675,14 @@ class Project(object):
             if isinstance(req, CondaEnvRequirement):
                 continue
             elif isinstance(req, DownloadRequirement):
-                downloads[req.env_var] = dict(title=req.title, encrypted=req.encrypted, url=req.url)
+                downloads[req.env_var] = dict(title=req.title,
+                                              description=req.description,
+                                              encrypted=req.encrypted,
+                                              url=req.url)
             elif isinstance(req, ServiceRequirement):
-                services[req.env_var] = dict(title=req.title, type=req.service_type)
+                services[req.env_var] = dict(title=req.title, description=req.description, type=req.service_type)
             elif isinstance(req, EnvVarRequirement):
-                variables[req.env_var] = dict(title=req.title, encrypted=req.encrypted)
+                variables[req.env_var] = dict(title=req.title, description=req.description, encrypted=req.encrypted)
         json['downloads'] = downloads
         json['variables'] = variables
         json['services'] = services

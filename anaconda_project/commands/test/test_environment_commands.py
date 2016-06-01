@@ -323,7 +323,16 @@ def test_list_environments(capsys, monkeypatch):
 
         assert code == 0
         out, err = capsys.readouterr()
-        expected_out = "Found these environments in project: {}\nbar\ndefault\nfoo\n".format(dirname)
+        expected_out = """
+Environments for project: {dirname}
+
+Name     Description
+====     ===========
+bar
+default  Default
+foo
+""".format(dirname=dirname).strip() + "\n"
+
         assert out == expected_out
 
     with_directory_contents(
@@ -342,7 +351,13 @@ def test_list_empty_environments(capsys, monkeypatch):
 
         assert code == 0
         out, err = capsys.readouterr()
-        expected_out = "Found these environments in project: {}\ndefault\n".format(dirname)
+        expected_out = """
+Environments for project: {dirname}
+
+Name     Description
+====     ===========
+default  Default
+""".format(dirname=dirname).strip() + "\n"
         assert out == expected_out
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)

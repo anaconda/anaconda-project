@@ -31,6 +31,46 @@ def print_status_errors(status):
     print(status.status_description, file=sys.stderr)
 
 
+def format_names_and_descriptions(objects, name_attr='name', description_attr='description'):
+    """Format a table with names on the left and descriptions on the right."""
+    pairs = []
+    for o in objects:
+        name = getattr(o, name_attr)
+        description = getattr(o, description_attr)
+        pairs.append((name, description))
+
+    # deterministic order
+    pairs = sorted(pairs, key=lambda p: p[0])
+
+    # add headers if there's anything in the list
+    if len(pairs) > 0:
+        pairs = [("Name", "Description"), ("====", "===========")] + pairs
+
+    # format as table
+    max_name_len = 0
+    for pair in pairs:
+        max_name_len = max(len(pair[0]), max_name_len)
+    table = ""
+    for pair in pairs:
+        if pair[0] == pair[1]:
+            # skip useless description
+            line = pair[0]
+        else:
+            line = pair[0].ljust(max_name_len) + "  " + pair[1]
+        table = table + line + "\n"
+    if table == "":
+        return "\n"
+    else:
+        return table
+
+
+def print_names_and_descriptions(objects, name_attr='name', description_attr='description'):
+    """Print a table with names on the left and descriptions on the right."""
+    output = format_names_and_descriptions(objects, name_attr=name_attr, description_attr=description_attr)
+    # we chop the newline off
+    print(output[:-1])
+
+
 def stdin_is_interactive():
     """True if stdin is a tty."""
     return sys.stdin.isatty()

@@ -223,9 +223,11 @@ class ProjectCommand(object):
     @property
     def description(self):
         """Helpful string showing what the command is."""
-        description = None
-        if self.bokeh_app is not None:
-            description = "Bokeh app %s" % self.bokeh_app
+        description = self._attributes.get('description', None)
+
+        if description is None:
+            if self.bokeh_app is not None:
+                description = "Bokeh app %s" % self.bokeh_app
         if description is None:
             if self.notebook is not None:
                 description = "Notebook %s" % self.notebook

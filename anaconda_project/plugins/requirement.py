@@ -150,7 +150,20 @@ class Requirement(with_metaclass(ABCMeta)):
     @property
     @abstractmethod
     def title(self):
-        """Human-readable title of the requirement."""
+        """Human-readable short name of the requirement."""
+        pass  # pragma: no cover
+
+    def _description(self, default):
+        """Use this in subclasses to implement the description property."""
+        if 'description' in self.options:
+            return self.options['description']
+        else:
+            return default
+
+    @property
+    @abstractmethod
+    def description(self):
+        """Human-readable about-one-sentence hint or tooltip for the requirement."""
         pass  # pragma: no cover
 
     @property
@@ -263,7 +276,12 @@ class EnvVarRequirement(Requirement):
     @property
     def title(self):
         """Override superclass title."""
-        return "%s environment variable must be set" % (self.env_var)
+        return self.env_var
+
+    @property
+    def description(self):
+        """Override superclass description."""
+        return self._description("%s environment variable must be set." % (self.env_var))
 
     @property
     def encrypted(self):

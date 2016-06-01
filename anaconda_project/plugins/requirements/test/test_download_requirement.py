@@ -124,6 +124,50 @@ def test_checksum_is_not_a_string():
     assert len(requirements) == 0
 
 
+def test_description_is_not_a_string():
+    problems = []
+    requirements = []
+    DownloadRequirement._parse(PluginRegistry(),
+                               varname='FOO',
+                               item=dict(url='http://example.com/',
+                                         description=[]),
+                               problems=problems,
+                               requirements=requirements)
+    assert ["'description' field for download item FOO is not a string"] == problems
+    assert len(requirements) == 0
+
+
+def test_description_property():
+    problems = []
+    requirements = []
+    DownloadRequirement._parse(PluginRegistry(),
+                               varname='FOO',
+                               item=dict(url='http://example.com/',
+                                         description="hi"),
+                               problems=problems,
+                               requirements=requirements)
+    assert [] == problems
+    assert len(requirements) == 1
+    assert requirements[0].title == 'FOO'
+    assert requirements[0].description == 'hi'
+
+
+def test_download_item_is_a_list_not_a_string_or_dict():
+    problems = []
+    requirements = []
+    DownloadRequirement._parse(PluginRegistry(), varname='FOO', item=[], problems=problems, requirements=requirements)
+    assert ["Download name FOO should be followed by a URL string or a dictionary describing the download."] == problems
+    assert len(requirements) == 0
+
+
+def test_download_item_is_none_not_a_string_or_dict():
+    problems = []
+    requirements = []
+    DownloadRequirement._parse(PluginRegistry(), varname='FOO', item=None, problems=problems, requirements=requirements)
+    assert ["Download name FOO should be followed by a URL string or a dictionary describing the download."] == problems
+    assert len(requirements) == 0
+
+
 def test_unzip_is_not_a_bool():
     problems = []
     requirements = []

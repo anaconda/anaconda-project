@@ -73,3 +73,17 @@ def test_console_yes_or_no(monkeypatch, capsys):
     out, err = capsys.readouterr()
     assert out == "foo? "
     assert err == ""
+
+
+def test_format_names_and_descriptions():
+    class Thing(object):
+        def __init__(self, name, description):
+            self.name = name
+            self.description = description
+
+    cases = [
+        ([], "\n"), ([Thing("a", "b")], "Name  Description\n====  ===========\na     b\n"),
+        ([Thing("cd", "ef"), Thing("a", "b")], "Name  Description\n====  ===========\na     b\ncd    ef\n")
+    ]
+    for case in cases:
+        assert console_utils.format_names_and_descriptions(case[0]) == case[1]

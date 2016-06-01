@@ -71,6 +71,28 @@ variables:
 """}, check_some_env_var)
 
 
+def test_single_env_var_requirement_with_description():
+    def check_some_env_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        assert 2 == len(project.requirements)
+        assert "FOO" == project.requirements[0].env_var
+        assert {'description': "Set FOO to the value of your foo"} == project.requirements[0].options
+        assert "Set FOO to the value of your foo" == project.requirements[0].description
+        assert "FOO" == project.requirements[0].title
+
+        if platform.system() == 'Windows':
+            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
+        else:
+            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: { description: "Set FOO to the value of your foo" }
+"""}, check_some_env_var)
+
+
 def test_single_env_var_requirement_null_for_default():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
@@ -169,7 +191,7 @@ def test_problem_empty_names():
         assert "Variable name cannot be empty string, found: ' ' as name" in project.problems
         assert "Download name cannot be empty string, found: ' ' as name" in project.problems
         assert "Service name cannot be empty string, found: ' ' as name" in project.problems
-        assert "Environment variable name cannot be empty string, found: ' ' as name" in project.problems
+        assert "Environment spec name cannot be empty string, found: ' ' as name" in project.problems
         assert "Command variable name cannot be empty string, found: ' ' as name" in project.problems
 
     with_directory_contents(
@@ -550,12 +572,15 @@ def test_load_environments():
         bar = project.conda_environments['bar']
         assert default.dependencies == ()
         assert foo.dependencies == ('python', 'dog', 'cat', 'zebra')
+        assert foo.description == "THE FOO"
         assert bar.dependencies == ()
+        assert bar.description == "bar"
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 environments:
   foo:
+    description: "THE FOO"
     dependencies:
        - python
        - dog
@@ -644,6 +669,20 @@ def test_complain_about_environments_not_a_dict():
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 environments: 42
+    """}, check_environments)
+
+
+def test_complain_about_non_string_environment_description():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["%s: 'description' field of environment foo must be a string" %
+                (project.project_file.filename)] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+environments:
+   foo:
+     description: []
     """}, check_environments)
 
 
@@ -884,6 +923,30 @@ def test_command_with_bogus_key():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n"}, check_app_entry)
 
 
+def test_command_with_non_string_description():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        expected_error = "%s: 'description' field of command %s must be a string" % (project.project_file.filename,
+                                                                                     'default')
+        assert expected_error == project.problems[0]
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     shell: 'boo'\n     description: []\n"}, check)
+
+
+def test_command_with_custom_description():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        command = project.default_command
+        assert command.bokeh_app == 'test.py'
+        assert command.description == 'hi'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n    description: hi\n"}, check)
+
+
 def test_command_with_bogus_key_and_ok_key():
     def check_app_entry(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1042,7 +1105,7 @@ def test_notebook_command_conflict():
     def check_notebook_conflict_command(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        expected_error = "%s: command '%s' has conflicting statements, 'notebook' must stand alone" % (
+        expected_error = "%s: command '%s' has multiple commands in it, 'notebook' can't go with 'unix'" % (
             project.project_file.filename, 'default')
         assert expected_error == project.problems[0]
 
@@ -1055,7 +1118,7 @@ def test_bokeh_command_conflict():
     def check_bokeh_conflict_command(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        expected_error = "%s: command '%s' has conflicting statements, 'bokeh_app' must stand alone" % (
+        expected_error = "%s: command '%s' has multiple commands in it, 'bokeh_app' can't go with 'unix'" % (
             project.project_file.filename, 'default')
         assert expected_error == project.problems[0]
 
@@ -1457,7 +1520,8 @@ def test_get_publication_info_from_empty_project():
             'environments': {
                 'default': {
                     'channels': [],
-                    'dependencies': []
+                    'dependencies': [],
+                    'description': 'Default'
                 }
             },
             'variables': {},
@@ -1475,6 +1539,7 @@ name: foobar
 commands:
   foo:
     unix: echo hi
+    description: "say hi"
   bar:
     windows: echo boo
   baz:
@@ -1495,6 +1560,7 @@ environments:
     channels:
       - woohoo
   w00t:
+    description: "double 0"
     dependencies:
       - something
   lol: {}
@@ -1520,29 +1586,38 @@ def test_get_publication_info_from_complex_project():
             'name': 'foobar',
             'commands': {'bar': {'description': 'echo boo'},
                          'baz': {'description': 'echo blah'},
-                         'foo': {'description': 'echo hi',
+                         'foo': {'description': 'say hi',
                                  'default': True},
                          'myapp': {'description': 'Bokeh app main.py',
                                    'bokeh_app': 'main.py'},
                          'foo.ipynb': {'description': 'Notebook foo.ipynb',
                                        'notebook': 'foo.ipynb'}},
             'downloads': {'FOO': {'encrypted': False,
-                                  'title': 'A downloaded file which is referenced by FOO',
+                                  'title': 'FOO',
+                                  'description': 'A downloaded file which is referenced by FOO.',
                                   'url': 'https://example.com/blah'}},
             'environments': {'default': {'channels': ['bar'],
-                                         'dependencies': ['foo']},
+                                         'dependencies': ['foo'],
+                                         'description': 'Default'},
                              'lol': {'channels': ['bar'],
-                                     'dependencies': ['foo']},
+                                     'dependencies': ['foo'],
+                                     'description': 'lol'},
                              'w00t': {'channels': ['bar'],
-                                      'dependencies': ['foo', 'something']},
+                                      'dependencies': ['foo', 'something'],
+                                      'description': 'double 0'},
                              'woot': {'channels': ['bar', 'woohoo'],
-                                      'dependencies': ['foo', 'blah']}},
+                                      'dependencies': ['foo', 'blah'],
+                                      'description': 'woot'}},
             'variables': {'SOMETHING': {'encrypted': False,
-                                        'title': 'SOMETHING environment variable must be set'},
+                                        'title': 'SOMETHING',
+                                        'description': 'SOMETHING environment variable must be set.'},
                           'SOMETHING_ELSE': {'encrypted': False,
-                                             'title': 'SOMETHING_ELSE environment variable must be set'}},
-            'services': {'REDIS_URL': {'title': 'A running Redis server, located by a redis: URL set as REDIS_URL',
-                                       'type': 'redis'}}
+                                             'title': 'SOMETHING_ELSE',
+                                             'description': 'SOMETHING_ELSE environment variable must be set.'}},
+            'services': {'REDIS_URL':
+                         {'title': 'REDIS_URL',
+                          'description': 'A running Redis server, located by a redis: URL set as REDIS_URL.',
+                          'type': 'redis'}}
         }
 
         assert expected == project.publication_info()

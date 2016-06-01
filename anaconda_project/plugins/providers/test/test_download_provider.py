@@ -124,8 +124,7 @@ def test_prepare_download_exception(monkeypatch):
         project = project_no_dedicated_env(dirname)
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert not result
-        assert ('missing requirement to run this project: '
-                'A downloaded file which is referenced by DATAFILE') in result.errors
+        assert ('missing requirement to run this project: DATAFILE') in result.errors
 
         status = unprepare(project, result)
         filename = os.path.join(dirname, 'data.csv')
@@ -282,8 +281,7 @@ def test_failed_download(monkeypatch):
         project = project_no_dedicated_env(dirname)
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert not result
-        assert ('missing requirement to run this project: '
-                'A downloaded file which is referenced by DATAFILE') in result.errors
+        assert ('missing requirement to run this project: DATAFILE') in result.errors
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
@@ -301,8 +299,7 @@ def test_failed_download_before_connect(monkeypatch):
         project = project_no_dedicated_env(dirname)
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert not result
-        assert ('missing requirement to run this project: '
-                'A downloaded file which is referenced by DATAFILE') in result.errors
+        assert ('missing requirement to run this project: DATAFILE') in result.errors
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
@@ -488,8 +485,8 @@ def test_prepare_download_of_broken_zip_file(monkeypatch):
 
         result = prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert not result
-        assert [("Failed to unzip %s: File is not a zip file" % os.path.join(dirname, "data.zip")),
-                "missing requirement to run this project: A downloaded file which is referenced by DATAFILE",
+        assert [("Failed to unzip %s: File is not a zip file" % os.path.join(
+            dirname, "data.zip")), "missing requirement to run this project: DATAFILE",
                 "  Environment variable DATAFILE is not set."] == result.errors
 
     with_directory_contents(dict(), provide_download_of_zip)

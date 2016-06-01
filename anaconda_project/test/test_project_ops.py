@@ -331,7 +331,7 @@ def test_add_command_conflicting_type():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project, 'default', 'bokeh_app', 'myapp.py')
-        assert [("%s: command 'default' has conflicting statements, 'bokeh_app' must stand alone" %
+        assert [("%s: command 'default' has multiple commands in it, 'bokeh_app' can't go with 'unix'" %
                  project.project_file.filename)] == result.errors
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)

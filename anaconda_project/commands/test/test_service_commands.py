@@ -249,7 +249,14 @@ def test_list_service(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert err == ''
-        assert out == "Services for project: {}\n\n{}\n".format(dirname, 'REDIS_URL')
+        expected_out = """
+Services for project: {dirname}
+
+Name       Description
+====       ===========
+REDIS_URL  A running Redis server, located by a redis: URL set as REDIS_URL.
+""".format(dirname=dirname).strip() + "\n"
+        assert out == expected_out
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis\n"}, check_list)
 

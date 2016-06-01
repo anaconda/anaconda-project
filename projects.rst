@@ -117,6 +117,8 @@ https://github.com/Anaconda-Server/anaconda-project/issues/80
 and https://github.com/Anaconda-Server/anaconda-project/issues/81
 when those are implemented
 
+TODO mention that commands can have a 'description' field.
+
 Environments and Channels
 =========================
 
@@ -146,6 +148,7 @@ your ``project.yml`` file:
       channels:
         - https://conda.anaconda.org/asmeurer
     python27:
+      description: "Uses Python 2 instead of 3"
       dependencies:
         - python < 3
       channels:
@@ -229,6 +232,20 @@ For example:
     # default as part of options dict, needed if you also
     # want to set some options such as 'encrypted: true'
     BLAH: { default: "default_value_of_blah" }
+
+
+Variables can have custom description strings
+======================================
+
+A variable can have a 'description' field, which will be used in UIs
+which display the variable.
+
+For example:
+
+  variables:
+    SALES_DB_PASSWORD: {
+       description: "The password for the sales database, ask jim@example.com if you don't have one."
+    }
 
 
 Variables that are always set

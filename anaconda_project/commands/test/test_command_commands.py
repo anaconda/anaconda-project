@@ -250,7 +250,7 @@ def test_add_command_breaks_project(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert (("%s: command 'test' has conflicting statements, 'notebook' must stand alone\n" % os.path.join(
+        assert (("%s: command 'test' has multiple commands in it, 'notebook' can't go with 'unix'\n" % os.path.join(
             dirname, DEFAULT_PROJECT_FILENAME)) + "Unable to add the command.\n") == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    unix: foo\n")}, check_problem_add_cmd)
@@ -334,8 +334,17 @@ def test_list_commands(capsys):
 
         out, err = capsys.readouterr()
         assert '' == err
-        commands = '\n'.join(('default', 'run_notebook'))
-        assert ("Commands for project: {}\n\n{}\n".format(dirname, commands)) == out
+
+        expected_out = """
+Commands for project: {dirname}
+
+Name          Description
+====          ===========
+default       Bokeh app test.py
+run_notebook  Notebook test.ipynb
+""".format(dirname=dirname).strip() + "\n"
+
+        assert expected_out == out
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: ("commands:\n"

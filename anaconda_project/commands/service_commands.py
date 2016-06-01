@@ -47,10 +47,9 @@ def list_services(project_dir):
     if console_utils.print_project_problems(project):
         return 1
 
-    services = project.services
-    if services:
+    if project.services:
         print("Services for project: {}\n".format(project_dir))
-        print("\n".join(sorted(services)))
+        console_utils.print_names_and_descriptions(project.service_requirements, name_attr='title')
     else:
         print("No services found for project: {}".format(project_dir))
     return 0

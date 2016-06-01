@@ -44,6 +44,11 @@ class CondaEnvRequirement(EnvVarRequirement):
         return "A Conda environment"
 
     @property
+    def description(self):
+        """Override superclass to provide our description."""
+        return "The project needs a Conda environment containing all required packages."
+
+    @property
     def ignore_patterns(self):
         """Override superclass with our ignore patterns."""
         return set(['/envs/'])
@@ -81,7 +86,7 @@ class CondaEnvRequirement(EnvVarRequirement):
         current_env_setting = environ.get(self.env_var, None)
 
         if current_env_setting is None:
-            # this is our vaguest / least-helpful message so only if we didn't do better above
+            # this is our vaguest / least-descriptionful message so only if we didn't do better above
             return (False, "%s is not set." % self.env_var)
         elif current_env_setting != prefix:
             return (False, ("%s is set to %s instead of %s." % (self.env_var, current_env_setting, prefix)))

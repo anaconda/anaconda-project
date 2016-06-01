@@ -21,6 +21,15 @@ def test_find_by_env_var_master_password():
     assert not found.encrypted
 
 
+def test_master_password_title_and_description():
+    registry = PluginRegistry()
+    found = registry.find_requirement_by_env_var(env_var='ANACONDA_MASTER_PASSWORD', options=dict())
+    assert found is not None
+    assert isinstance(found, MasterPasswordRequirement)
+    assert found.title == 'ANACONDA_MASTER_PASSWORD'
+    assert found.description == 'Anaconda master password (used to encrypt other passwords and credentials).'
+
+
 def test_master_password_not_set():
     requirement = MasterPasswordRequirement(registry=PluginRegistry())
     status = requirement.check_status(dict(), tmp_local_state_file(), UserConfigOverrides())
