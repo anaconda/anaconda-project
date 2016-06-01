@@ -29,7 +29,7 @@ class DownloadRequirement(EnvVarRequirement):
         hash_algorithm = None
         hash_value = None
         unzip = None
-        help = None
+        description = None
         if is_string(item):
             url = item
         elif isinstance(item, dict):
@@ -38,9 +38,9 @@ class DownloadRequirement(EnvVarRequirement):
                 problems.append("Download item {} doesn't contain a 'url' field.".format(varname))
                 return
 
-            help = item.get('help', None)
-            if help is not None and not is_string(help):
-                problems.append("'help' field for download item {} is not a string".format(varname))
+            description = item.get('description', None)
+            if description is not None and not is_string(description):
+                problems.append("'description' field for download item {} is not a string".format(varname))
                 return
 
             for method in _hash_algorithms:
@@ -110,13 +110,21 @@ class DownloadRequirement(EnvVarRequirement):
                                                 hash_algorithm=hash_algorithm,
                                                 hash_value=hash_value,
                                                 unzip=unzip,
-                                                help=help))
+                                                description=description))
 
-    def __init__(self, registry, env_var, url, filename, hash_algorithm=None, hash_value=None, unzip=False, help=None):
+    def __init__(self,
+                 registry,
+                 env_var,
+                 url,
+                 filename,
+                 hash_algorithm=None,
+                 hash_value=None,
+                 unzip=False,
+                 description=None):
         """Extend init to accept url and hash parameters."""
         options = None
-        if help is not None:
-            options = dict(help=help)
+        if description is not None:
+            options = dict(description=description)
         super(DownloadRequirement, self).__init__(registry=registry, env_var=env_var, options=options)
         assert url is not None
         assert filename is not None
@@ -130,9 +138,9 @@ class DownloadRequirement(EnvVarRequirement):
         self.unzip = unzip
 
     @property
-    def help(self):
-        """Override superclass to supply our help."""
-        return self._help("A downloaded file which is referenced by {}.".format(self.env_var))
+    def description(self):
+        """Override superclass to supply our description."""
+        return self._description("A downloaded file which is referenced by {}.".format(self.env_var))
 
     @property
     def ignore_patterns(self):

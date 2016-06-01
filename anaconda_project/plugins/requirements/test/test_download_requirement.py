@@ -124,32 +124,32 @@ def test_checksum_is_not_a_string():
     assert len(requirements) == 0
 
 
-def test_help_is_not_a_string():
+def test_description_is_not_a_string():
     problems = []
     requirements = []
     DownloadRequirement._parse(PluginRegistry(),
                                varname='FOO',
                                item=dict(url='http://example.com/',
-                                         help=[]),
+                                         description=[]),
                                problems=problems,
                                requirements=requirements)
-    assert ["'help' field for download item FOO is not a string"] == problems
+    assert ["'description' field for download item FOO is not a string"] == problems
     assert len(requirements) == 0
 
 
-def test_help_sets_the_title():
+def test_description_property():
     problems = []
     requirements = []
     DownloadRequirement._parse(PluginRegistry(),
                                varname='FOO',
                                item=dict(url='http://example.com/',
-                                         help="hi"),
+                                         description="hi"),
                                problems=problems,
                                requirements=requirements)
     assert [] == problems
     assert len(requirements) == 1
     assert requirements[0].title == 'FOO'
-    assert requirements[0].help == 'hi'
+    assert requirements[0].description == 'hi'
 
 
 def test_download_item_is_a_list_not_a_string_or_dict():

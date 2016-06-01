@@ -231,17 +231,17 @@ For example:
     BLAH: { default: "default_value_of_blah" }
 
 
-Variables can have custom help strings
+Variables can have custom description strings
 ======================================
 
-A variable can have a 'help' field, which will be used in UIs
+A variable can have a 'description' field, which will be used in UIs
 which display the variable.
 
 For example:
 
   variables:
     SALES_DB_PASSWORD: {
-       help: "The password for the sales database, ask jim@example.com if you don't have one."
+       description: "The password for the sales database, ask jim@example.com if you don't have one."
     }
 
 

@@ -71,14 +71,14 @@ variables:
 """}, check_some_env_var)
 
 
-def test_single_env_var_requirement_with_help():
+def test_single_env_var_requirement_with_description():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         assert 2 == len(project.requirements)
         assert "FOO" == project.requirements[0].env_var
-        assert {'help': "Set FOO to the value of your foo"} == project.requirements[0].options
-        assert "Set FOO to the value of your foo" == project.requirements[0].help
+        assert {'description': "Set FOO to the value of your foo"} == project.requirements[0].options
+        assert "Set FOO to the value of your foo" == project.requirements[0].description
         assert "FOO" == project.requirements[0].title
 
         if platform.system() == 'Windows':
@@ -89,7 +89,7 @@ def test_single_env_var_requirement_with_help():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
-  FOO: { help: "Set FOO to the value of your foo" }
+  FOO: { description: "Set FOO to the value of your foo" }
 """}, check_some_env_var)
 
 
@@ -1550,7 +1550,7 @@ def test_get_publication_info_from_complex_project():
                                        'notebook': 'foo.ipynb'}},
             'downloads': {'FOO': {'encrypted': False,
                                   'title': 'FOO',
-                                  'help': 'A downloaded file which is referenced by FOO.',
+                                  'description': 'A downloaded file which is referenced by FOO.',
                                   'url': 'https://example.com/blah'}},
             'environments': {'default': {'channels': ['bar'],
                                          'dependencies': ['foo']},
@@ -1562,13 +1562,14 @@ def test_get_publication_info_from_complex_project():
                                       'dependencies': ['foo', 'blah']}},
             'variables': {'SOMETHING': {'encrypted': False,
                                         'title': 'SOMETHING',
-                                        'help': 'SOMETHING environment variable must be set.'},
+                                        'description': 'SOMETHING environment variable must be set.'},
                           'SOMETHING_ELSE': {'encrypted': False,
                                              'title': 'SOMETHING_ELSE',
-                                             'help': 'SOMETHING_ELSE environment variable must be set.'}},
-            'services': {'REDIS_URL': {'title': 'REDIS_URL',
-                                       'help': 'A running Redis server, located by a redis: URL set as REDIS_URL.',
-                                       'type': 'redis'}}
+                                             'description': 'SOMETHING_ELSE environment variable must be set.'}},
+            'services': {'REDIS_URL':
+                         {'title': 'REDIS_URL',
+                          'description': 'A running Redis server, located by a redis: URL set as REDIS_URL.',
+                          'type': 'redis'}}
         }
 
         assert expected == project.publication_info()
