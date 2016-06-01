@@ -263,7 +263,7 @@ class _ConfigCache(object):
         if isinstance(environments, dict):
             for (name, attrs) in environments.items():
                 if name.strip() == '':
-                    problems.append("Environment variable name cannot be empty string, found: '{}' as name".format(
+                    problems.append("Environment spec name cannot be empty string, found: '{}' as name".format(
                         name))
                     continue
                 deps = _parse_dependencies(attrs)

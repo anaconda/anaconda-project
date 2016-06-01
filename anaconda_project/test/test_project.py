@@ -191,7 +191,7 @@ def test_problem_empty_names():
         assert "Variable name cannot be empty string, found: ' ' as name" in project.problems
         assert "Download name cannot be empty string, found: ' ' as name" in project.problems
         assert "Service name cannot be empty string, found: ' ' as name" in project.problems
-        assert "Environment variable name cannot be empty string, found: ' ' as name" in project.problems
+        assert "Environment spec name cannot be empty string, found: ' ' as name" in project.problems
         assert "Command variable name cannot be empty string, found: ' ' as name" in project.problems
 
     with_directory_contents(
