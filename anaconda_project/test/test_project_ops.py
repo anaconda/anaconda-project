@@ -1080,8 +1080,8 @@ def test_remove_dependencies_from_one_environment_leaving_others_unaffected():
         assert [] == list(project2.project_file.get_value(['environments', 'hello', 'dependencies'], []))
         assert set(['baz', 'foo', 'bar']) == set(project2.project_file.get_value(
             ['environments', 'another', 'dependencies'], []))
-        assert project2.conda_environments['another'].conda_package_names_set == set(['qbert', 'foo', 'bar', 'baz'])
-        assert project2.conda_environments['hello'].conda_package_names_set == set(['qbert'])
+        assert project2.package_sets['another'].conda_package_names_set == set(['qbert', 'foo', 'bar', 'baz'])
+        assert project2.package_sets['hello'].conda_package_names_set == set(['qbert'])
 
         # be sure we didn't delete comments from the env
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()

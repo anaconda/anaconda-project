@@ -10,7 +10,7 @@ from __future__ import absolute_import
 from copy import deepcopy, copy
 import os
 
-from anaconda_project.conda_environment import CondaEnvironment
+from anaconda_project.package_set import PackageSet
 from anaconda_project.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement
@@ -51,7 +51,7 @@ class _ConfigCache(object):
         self.default_command_name = None
         self.project_file_count = 0
         self.conda_meta_file_count = 0
-        self.conda_environments = dict()
+        self.package_sets = dict()
         self.default_conda_environment_name = None
 
     def update(self, project_file, conda_meta_file):
@@ -84,9 +84,9 @@ class _ConfigCache(object):
             self._update_variables(requirements, problems, project_file)
             self._update_downloads(requirements, problems, project_file)
             self._update_services(requirements, problems, project_file)
-            self._update_conda_environments(problems, project_file)
+            self._update_package_sets(problems, project_file)
             # this MUST be after we _update_variables since we may get CondaEnvRequirement
-            # options in the variables section, and after _update_conda_environments
+            # options in the variables section, and after _update_package_sets
             # since we use those
             self._update_conda_env_requirements(requirements, problems, project_file)
 
@@ -242,7 +242,7 @@ class _ConfigCache(object):
                 continue
             ServiceRequirement._parse(self.registry, varname, item, problems, requirements)
 
-    def _update_conda_environments(self, problems, project_file):
+    def _update_package_sets(self, problems, project_file):
         def _parse_string_list(parent_dict, key, what):
             items = parent_dict.get(key, [])
             if not isinstance(items, (list, tuple)):
@@ -269,7 +269,7 @@ class _ConfigCache(object):
                     problems.append("%s: invalid package specification: %s" % (project_file.filename, dep))
             return deps
 
-        self.conda_environments = dict()
+        self.package_sets = dict()
         shared_deps = _parse_dependencies(project_file.root)
         shared_channels = _parse_channels(project_file.root)
         environments = project_file.get_value('environments', default={})
@@ -290,10 +290,11 @@ class _ConfigCache(object):
                 # do that for us anyway?
                 all_deps = shared_deps + deps
                 all_channels = shared_channels + channels
-                self.conda_environments[name] = CondaEnvironment(name=name,
-                                                                 dependencies=all_deps,
-                                                                 channels=all_channels,
-                                                                 description=description)
+
+                self.package_sets[name] = PackageSet(name=name,
+                                                     dependencies=all_deps,
+                                                     channels=all_channels,
+                                                     description=description)
         else:
             problems.append(
                 "%s: environments should be a dictionary from environment name to environment attributes, not %r" %
@@ -301,11 +302,11 @@ class _ConfigCache(object):
 
         # We ALWAYS have an environment named 'default' which is the default,
         # even if not explicitly listed.
-        if 'default' not in self.conda_environments:
-            self.conda_environments['default'] = CondaEnvironment(name='default',
-                                                                  dependencies=shared_deps,
-                                                                  channels=shared_channels,
-                                                                  description="Default")
+        if 'default' not in self.package_sets:
+            self.package_sets['default'] = PackageSet(name='default',
+                                                      dependencies=shared_deps,
+                                                      channels=shared_channels,
+                                                      description="Default")
 
         # since this never varies now, it's a little pointless, but we'll leave it here
         # as an abstraction in case we change our mind again.
@@ -316,7 +317,7 @@ class _ConfigCache(object):
             return
 
         env_requirement = CondaEnvRequirement(registry=self.registry,
-                                              environments=self.conda_environments,
+                                              environments=self.package_sets,
                                               default_environment_name=self.default_conda_environment_name)
         requirements.append(env_requirement)
 
@@ -581,9 +582,9 @@ class Project(object):
         return self._updated_cache().icon
 
     @property
-    def conda_environments(self):
+    def package_sets(self):
         """Get a dictionary of environment names to CondaEnvironment instances."""
-        return self._updated_cache().conda_environments
+        return self._updated_cache().package_sets
 
     @property
     def all_variables(self):
@@ -682,7 +683,7 @@ class Project(object):
                 commands[key]['default'] = True
         json['commands'] = commands
         envs = dict()
-        for key, env in self.conda_environments.items():
+        for key, env in self.package_sets.items():
             envs[key] = dict(dependencies=list(env.dependencies),
                              channels=list(env.channels),
                              description=env.description)

@@ -640,7 +640,7 @@ def prepare_in_stages(project,
     assert not project.problems
 
     assert command_name is None or command_name in project.commands
-    assert conda_environment_name is None or conda_environment_name in project.conda_environments
+    assert conda_environment_name is None or conda_environment_name in project.package_sets
 
     if environ is None:
         environ = os.environ
@@ -705,10 +705,10 @@ def _prepare_failure_on_bad_command_name(project, command_name, environ):
 
 
 def _prepare_failure_on_bad_conda_environment_name(project, conda_environment_name, environ):
-    if conda_environment_name is not None and conda_environment_name not in project.conda_environments:
+    if conda_environment_name is not None and conda_environment_name not in project.package_sets:
         error = ("Environment name '%s' is not in %s, these names were found: %s" %
                  (conda_environment_name, project.project_file.filename,
-                  ", ".join(sorted(project.conda_environments.keys()))))
+                  ", ".join(sorted(project.package_sets.keys()))))
         return PrepareFailure(logs=[], statuses=(), errors=[error], environ=environ)
     else:
         return None

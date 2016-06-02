@@ -487,7 +487,7 @@ icon: foo.png
 def test_get_package_requirements_from_project_file():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
-        env = project.conda_environments['default']
+        env = project.package_sets['default']
         assert env.name == 'default'
         assert ("foo", "hello >= 1.0", "world") == env.dependencies
         assert ("mtv", "hbo") == env.channels
@@ -519,7 +519,7 @@ channels:
 def test_get_package_requirements_from_empty_project():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
-        assert () == project.conda_environments['default'].dependencies
+        assert () == project.package_sets['default'].dependencies
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_get_packages)
 
@@ -585,14 +585,14 @@ def test_load_environments():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.conda_environments) == 3
-        assert 'default' in project.conda_environments
-        assert 'foo' in project.conda_environments
-        assert 'bar' in project.conda_environments
+        assert len(project.package_sets) == 3
+        assert 'default' in project.package_sets
+        assert 'foo' in project.package_sets
+        assert 'bar' in project.package_sets
         assert project.default_conda_environment_name == 'default'
-        default = project.conda_environments['default']
-        foo = project.conda_environments['foo']
-        bar = project.conda_environments['bar']
+        default = project.package_sets['default']
+        foo = project.package_sets['foo']
+        bar = project.package_sets['bar']
         assert default.dependencies == ()
         assert foo.dependencies == ('python', 'dog', 'cat', 'zebra')
         assert foo.description == "THE FOO"
@@ -617,14 +617,14 @@ def test_load_environments_merging_in_global():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.conda_environments) == 3
-        assert 'default' in project.conda_environments
-        assert 'foo' in project.conda_environments
-        assert 'bar' in project.conda_environments
+        assert len(project.package_sets) == 3
+        assert 'default' in project.package_sets
+        assert 'foo' in project.package_sets
+        assert 'bar' in project.package_sets
         assert project.default_conda_environment_name == 'default'
-        default = project.conda_environments['default']
-        foo = project.conda_environments['foo']
-        bar = project.conda_environments['bar']
+        default = project.package_sets['default']
+        foo = project.package_sets['foo']
+        bar = project.package_sets['bar']
         assert default.dependencies == ('dead-parrot', 'elephant', 'lion')
         assert foo.dependencies == ('dead-parrot', 'elephant', 'python', 'dog', 'cat', 'zebra')
         assert bar.dependencies == ('dead-parrot', 'elephant')
@@ -663,14 +663,14 @@ def test_load_environments_default_always_default_even_if_not_first():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.conda_environments) == 3
-        assert 'foo' in project.conda_environments
-        assert 'bar' in project.conda_environments
-        assert 'default' in project.conda_environments
+        assert len(project.package_sets) == 3
+        assert 'foo' in project.package_sets
+        assert 'bar' in project.package_sets
+        assert 'default' in project.package_sets
         assert project.default_conda_environment_name == 'default'
-        foo = project.conda_environments['foo']
-        bar = project.conda_environments['bar']
-        default = project.conda_environments['default']
+        foo = project.package_sets['foo']
+        bar = project.package_sets['bar']
+        default = project.package_sets['default']
         assert foo.dependencies == ()
         assert bar.dependencies == ()
         assert default.dependencies == ()

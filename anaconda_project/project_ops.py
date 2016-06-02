@@ -277,7 +277,7 @@ def _update_environment(project, name, packages, channels, create):
         channels = []
 
     if not create and (name is not None):
-        if name not in project.conda_environments:
+        if name not in project.package_sets:
             problem = "Environment {} doesn't exist.".format(name)
             return SimpleStatus(success=False, description=problem)
 
@@ -389,11 +389,11 @@ def remove_environment(project, name):
     if failed is not None:
         return failed
 
-    if name not in project.conda_environments:
+    if name not in project.package_sets:
         problem = "Environment {} doesn't exist.".format(name)
         return SimpleStatus(success=False, description=problem)
 
-    env_path = project.conda_environments[name].path(project.directory_path)
+    env_path = project.package_sets[name].path(project.directory_path)
 
     # For remove_service and remove_download, we use unprepare()
     # to do the cleanup; for the environment, it's awkward to do
@@ -477,18 +477,18 @@ def remove_dependencies(project, environment, packages):
     assert len(packages) > 0
 
     if environment is None:
-        envs = project.conda_environments.values()
+        envs = project.package_sets.values()
         unaffected_envs = []
     else:
-        env = project.conda_environments.get(environment, None)
+        env = project.package_sets.get(environment, None)
         if env is None:
             problem = "Environment {} doesn't exist.".format(environment)
             return SimpleStatus(success=False, description=problem)
         else:
             envs = [env]
-            unaffected_envs = list(project.conda_environments.values())
+            unaffected_envs = list(project.package_sets.values())
             unaffected_envs.remove(env)
-            assert len(unaffected_envs) == (len(project.conda_environments) - 1)
+            assert len(unaffected_envs) == (len(project.package_sets) - 1)
 
     assert len(envs) > 0
 

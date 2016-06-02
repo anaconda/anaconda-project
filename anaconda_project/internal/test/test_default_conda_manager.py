@@ -10,7 +10,7 @@ import os
 import platform
 import pytest
 
-from anaconda_project.conda_environment import CondaEnvironment
+from anaconda_project.package_set import PackageSet
 from anaconda_project.conda_manager import CondaManagerError
 
 from anaconda_project.internal.default_conda_manager import DefaultCondaManager
@@ -29,7 +29,7 @@ else:
 def test_conda_create_and_install_and_remove(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
-    spec = CondaEnvironment(name='myenv', dependencies=['ipython'], channels=[])
+    spec = PackageSet(name='myenv', dependencies=['ipython'], channels=[])
 
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
