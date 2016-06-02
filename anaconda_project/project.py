@@ -52,7 +52,7 @@ class _ConfigCache(object):
         self.project_file_count = 0
         self.conda_meta_file_count = 0
         self.package_sets = dict()
-        self.default_conda_environment_name = None
+        self.default_package_set_name = None
 
     def update(self, project_file, conda_meta_file):
         if project_file.change_count == self.project_file_count and \
@@ -310,7 +310,7 @@ class _ConfigCache(object):
 
         # since this never varies now, it's a little pointless, but we'll leave it here
         # as an abstraction in case we change our mind again.
-        self.default_conda_environment_name = 'default'
+        self.default_package_set_name = 'default'
 
     def _update_conda_env_requirements(self, requirements, problems, project_file):
         if problems:
@@ -318,7 +318,7 @@ class _ConfigCache(object):
 
         env_requirement = CondaEnvRequirement(registry=self.registry,
                                               environments=self.package_sets,
-                                              default_environment_name=self.default_conda_environment_name)
+                                              default_environment_name=self.default_package_set_name)
         requirements.append(env_requirement)
 
     def _update_commands(self, problems, project_file, conda_meta_file, requirements):
@@ -607,13 +607,13 @@ class Project(object):
         return [r.env_var for r in self.download_requirements]
 
     @property
-    def default_conda_environment_name(self):
+    def default_package_set_name(self):
         """Get the named environment to use by default.
 
         This will be the one named "default" if it exists, and
         otherwise the first-listed one.
         """
-        return self._updated_cache().default_conda_environment_name
+        return self._updated_cache().default_package_set_name
 
     @property
     def commands(self):

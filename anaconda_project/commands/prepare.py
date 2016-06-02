@@ -18,7 +18,7 @@ def prepare_command(project_dir, ui_mode, conda_environment):
         Prepare result (can be treated as True on success).
     """
     project = Project(project_dir)
-    result = prepare_with_ui_mode_printing_errors(project, conda_environment_name=conda_environment, ui_mode=ui_mode)
+    result = prepare_with_ui_mode_printing_errors(project, package_set_name=conda_environment, ui_mode=ui_mode)
 
     return result
 

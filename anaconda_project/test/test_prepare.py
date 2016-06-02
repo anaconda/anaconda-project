@@ -247,12 +247,12 @@ def test_prepare_choose_environment():
             _push_fake_env_creator()
             project = Project(dirname)
             environ = minimal_environ()
-            result = prepare_without_interaction(project, environ=environ, conda_environment_name='foo')
+            result = prepare_without_interaction(project, environ=environ, package_set_name='foo')
             expected_path = project.package_sets['foo'].path(project.directory_path)
             assert result.environ[env_var] == expected_path
 
             environ = minimal_environ()
-            result = prepare_without_interaction(project, environ=environ, conda_environment_name='bar')
+            result = prepare_without_interaction(project, environ=environ, package_set_name='bar')
             assert result
             expected_path = project.package_sets['bar'].path(project.directory_path)
             assert result.environ[env_var] == expected_path

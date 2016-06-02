@@ -78,7 +78,7 @@ def list_dependencies(project_dir, environment):
     if console_utils.print_project_problems(project):
         return 1
     if environment is None:
-        environment = project.default_conda_environment_name
+        environment = project.default_package_set_name
     env = project.package_sets.get(environment, None)
     if env is None:
         print("Project doesn't have an environment called '{}'".format(environment), file=sys.stderr)

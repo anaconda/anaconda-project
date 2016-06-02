@@ -1292,14 +1292,14 @@ def test_clean(monkeypatch):
     def check(dirname):
         project = Project(dirname)
 
-        result = prepare.prepare_without_interaction(project, conda_environment_name='foo')
+        result = prepare.prepare_without_interaction(project, package_set_name='foo')
 
         assert result
         envs_dir = os.path.join(dirname, "envs")
         assert os.path.isdir(os.path.join(envs_dir, "foo"))
 
         # prepare again with 'bar' this time
-        result = prepare.prepare_without_interaction(project, conda_environment_name='bar')
+        result = prepare.prepare_without_interaction(project, package_set_name='bar')
         assert result
         bar_dir = os.path.join(dirname, "envs", "bar")
         assert os.path.isdir(bar_dir)
@@ -1336,14 +1336,14 @@ def test_clean_failed_delete(monkeypatch):
     def check(dirname):
         project = Project(dirname)
 
-        result = prepare.prepare_without_interaction(project, conda_environment_name='foo')
+        result = prepare.prepare_without_interaction(project, package_set_name='foo')
 
         assert result
         envs_dir = os.path.join(dirname, "envs")
         assert os.path.isdir(os.path.join(envs_dir, "foo"))
 
         # prepare again with 'bar' this time
-        result = prepare.prepare_without_interaction(project, conda_environment_name='bar')
+        result = prepare.prepare_without_interaction(project, package_set_name='bar')
         assert result
         bar_dir = os.path.join(dirname, "envs", "bar")
         assert os.path.isdir(bar_dir)

@@ -589,7 +589,7 @@ def test_load_environments():
         assert 'default' in project.package_sets
         assert 'foo' in project.package_sets
         assert 'bar' in project.package_sets
-        assert project.default_conda_environment_name == 'default'
+        assert project.default_package_set_name == 'default'
         default = project.package_sets['default']
         foo = project.package_sets['foo']
         bar = project.package_sets['bar']
@@ -621,7 +621,7 @@ def test_load_environments_merging_in_global():
         assert 'default' in project.package_sets
         assert 'foo' in project.package_sets
         assert 'bar' in project.package_sets
-        assert project.default_conda_environment_name == 'default'
+        assert project.default_package_set_name == 'default'
         default = project.package_sets['default']
         foo = project.package_sets['foo']
         bar = project.package_sets['bar']
@@ -667,7 +667,7 @@ def test_load_environments_default_always_default_even_if_not_first():
         assert 'foo' in project.package_sets
         assert 'bar' in project.package_sets
         assert 'default' in project.package_sets
-        assert project.default_conda_environment_name == 'default'
+        assert project.default_package_set_name == 'default'
         foo = project.package_sets['foo']
         bar = project.package_sets['bar']
         default = project.package_sets['default']

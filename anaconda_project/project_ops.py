@@ -152,13 +152,13 @@ def set_properties(project, name=None, icon=None, description=None):
         return status
 
 
-def _commit_requirement_if_it_works(project, env_var_or_class, conda_environment_name=None):
+def _commit_requirement_if_it_works(project, env_var_or_class, package_set_name=None):
     project.project_file.use_changes_without_saving()
 
     # See if we can perform the download
     result = prepare.prepare_without_interaction(project,
                                                  provide_whitelist=(env_var_or_class, ),
-                                                 conda_environment_name=conda_environment_name)
+                                                 package_set_name=package_set_name)
 
     status = result.status_for(env_var_or_class)
     if status is None or not status:
@@ -339,7 +339,7 @@ def _update_environment(project, name, packages, channels, create):
             new_channels.append(channel)
     env_dict['channels'] = new_channels
 
-    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, conda_environment_name=name)
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, package_set_name=name)
 
     return status
 
@@ -538,7 +538,7 @@ def remove_dependencies(project, environment, packages):
         dependencies.extend(list(removed_from_global))
         env_dict['dependencies'] = dependencies
 
-    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, conda_environment_name=environment)
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, package_set_name=environment)
 
     return status
 

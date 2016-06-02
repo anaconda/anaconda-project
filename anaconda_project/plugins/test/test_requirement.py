@@ -12,9 +12,9 @@ from anaconda_project.internal.test.tmpfile_utils import tmp_local_state_file
 
 def test_user_config_overrides():
     overrides = UserConfigOverrides()
-    assert overrides.conda_environment_name is None
-    overrides = UserConfigOverrides(conda_environment_name='foo')
-    assert overrides.conda_environment_name == 'foo'
+    assert overrides.package_set_name is None
+    overrides = UserConfigOverrides(package_set_name='foo')
+    assert overrides.package_set_name == 'foo'
 
 
 def test_find_by_env_var_unknown():

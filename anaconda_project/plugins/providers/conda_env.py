@@ -43,10 +43,10 @@ class CondaEnvProvider(EnvVarProvider):
         assert 'PROJECT_DIR' in environ
         project_dir = environ['PROJECT_DIR']
 
-        if overrides.conda_environment_name is not None:
+        if overrides.package_set_name is not None:
             # short-circuit this whole party
-            env = requirement.environments.get(overrides.conda_environment_name)
-            config = dict(source='project', env_name=overrides.conda_environment_name, value=env.path(project_dir))
+            env = requirement.environments.get(overrides.package_set_name)
+            config = dict(source='project', env_name=overrides.package_set_name, value=env.path(project_dir))
             return config
 
         config = super(CondaEnvProvider, self).read_config(requirement, environ, local_state_file, overrides)
@@ -101,7 +101,7 @@ class CondaEnvProvider(EnvVarProvider):
         # We have to clear out the user override or it will
         # never stop overriding the user's new choice, if they
         # have changed to another env.
-        overrides.conda_environment_name = None
+        overrides.package_set_name = None
 
         if 'source' in values:
             if values['source'] == 'project':

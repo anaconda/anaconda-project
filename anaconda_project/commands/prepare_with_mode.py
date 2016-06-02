@@ -26,7 +26,7 @@ _all_ui_modes = (UI_MODE_BROWSER, UI_MODE_TEXT_ASK_QUESTIONS, UI_MODE_TEXT_ASSUM
 def prepare_with_ui_mode_printing_errors(project,
                                          environ=None,
                                          ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
-                                         conda_environment_name=None,
+                                         package_set_name=None,
                                          command_name=None,
                                          extra_command_args=None):
     """Perform all steps needed to get a project ready to execute.
@@ -40,7 +40,7 @@ def prepare_with_ui_mode_printing_errors(project,
         environ (dict): the environment to prepare (None to use os.environ)
         ui_mode (str): one of ``UI_MODE_BROWSER``, ``UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT``,
                        ``UI_MODE_TEXT_ASSUME_YES_PRODUCTION``, ``UI_MODE_TEXT_ASSUME_NO``
-        conda_environment_name (str): the environment spec name to require, or None for default
+        package_set_name (str): the environment spec name to require, or None for default
         command_name (str): command name to use or None for default
         extra_command_args (list of str): extra args for the command we prepare
 
@@ -53,7 +53,7 @@ def prepare_with_ui_mode_printing_errors(project,
     if ui_mode == UI_MODE_BROWSER:
         result = prepare.prepare_with_browser_ui(project,
                                                  environ,
-                                                 conda_environment_name=conda_environment_name,
+                                                 package_set_name=package_set_name,
                                                  command_name=command_name,
                                                  extra_command_args=extra_command_args,
                                                  keep_going_until_success=True)
@@ -70,7 +70,7 @@ def prepare_with_ui_mode_printing_errors(project,
         result = prepare.prepare_without_interaction(project,
                                                      environ,
                                                      mode=provide_mode,
-                                                     conda_environment_name=conda_environment_name,
+                                                     package_set_name=package_set_name,
                                                      command_name=command_name,
                                                      extra_command_args=extra_command_args)
 

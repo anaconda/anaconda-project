@@ -601,7 +601,7 @@ def prepare_in_stages(project,
                       keep_going_until_success=False,
                       mode=PROVIDE_MODE_DEVELOPMENT,
                       provide_whitelist=None,
-                      conda_environment_name=None,
+                      package_set_name=None,
                       command_name=None,
                       extra_command_args=None):
     """Get a chain of all steps needed to get a project ready to execute.
@@ -626,7 +626,7 @@ def prepare_in_stages(project,
         keep_going_until_success (bool): keep returning new stages until all requirements are met
         mode (str): One of ``PROVIDE_MODE_PRODUCTION``, ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_CHECK``
         provide_whitelist (iterable of str): ONLY call provide() for the listed env vars' requirements
-        conda_environment_name (str): the environment spec name to require, or None for default
+        package_set_name (str): the environment spec name to require, or None for default
         command_name (str): which named command to choose from the project, None for default
         extra_command_args (list of str): extra args for the command we prepare
 
@@ -640,7 +640,7 @@ def prepare_in_stages(project,
     assert not project.problems
 
     assert command_name is None or command_name in project.commands
-    assert conda_environment_name is None or conda_environment_name in project.package_sets
+    assert package_set_name is None or package_set_name in project.package_sets
 
     if environ is None:
         environ = os.environ
@@ -673,7 +673,7 @@ def prepare_in_stages(project,
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
-    overrides = UserConfigOverrides(conda_environment_name=conda_environment_name)
+    overrides = UserConfigOverrides(package_set_name=package_set_name)
 
     statuses = []
     for requirement in project.requirements:
@@ -704,20 +704,19 @@ def _prepare_failure_on_bad_command_name(project, command_name, environ):
         return None
 
 
-def _prepare_failure_on_bad_conda_environment_name(project, conda_environment_name, environ):
-    if conda_environment_name is not None and conda_environment_name not in project.package_sets:
+def _prepare_failure_on_bad_package_set_name(project, package_set_name, environ):
+    if package_set_name is not None and package_set_name not in project.package_sets:
         error = ("Environment name '%s' is not in %s, these names were found: %s" %
-                 (conda_environment_name, project.project_file.filename,
-                  ", ".join(sorted(project.package_sets.keys()))))
+                 (package_set_name, project.project_file.filename, ", ".join(sorted(project.package_sets.keys()))))
         return PrepareFailure(logs=[], statuses=(), errors=[error], environ=environ)
     else:
         return None
 
 
-def _check_prepare_prerequisites(project, conda_environment_name, command_name, environ):
+def _check_prepare_prerequisites(project, package_set_name, command_name, environ):
     failed = _project_problems_to_prepare_failure(project, environ)
     if failed is None:
-        failed = _prepare_failure_on_bad_conda_environment_name(project, conda_environment_name, environ)
+        failed = _prepare_failure_on_bad_package_set_name(project, package_set_name, environ)
     if failed is None:
         failed = _prepare_failure_on_bad_command_name(project, command_name, environ)
     return failed
@@ -727,7 +726,7 @@ def prepare_without_interaction(project,
                                 environ=None,
                                 mode=PROVIDE_MODE_DEVELOPMENT,
                                 provide_whitelist=None,
-                                conda_environment_name=None,
+                                package_set_name=None,
                                 command_name=None,
                                 extra_command_args=None):
     """Prepare a project to run one of its commands.
@@ -766,7 +765,7 @@ def prepare_without_interaction(project,
         environ (dict): os.environ or the previously-prepared environ; not modified in-place
         mode (str): mode from ``PROVIDE_MODE_PRODUCTION``, ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_CHECK``
         provide_whitelist (iterable of str): ONLY call provide() for the listed env vars' requirements
-        conda_environment_name (str): the environment spec name to require, or None for default
+        package_set_name (str): the environment spec name to require, or None for default
         command_name (str): which named command to choose from the project, None for default
         extra_command_args (list): extra args to include in the returned command argv
 
@@ -774,7 +773,7 @@ def prepare_without_interaction(project,
         a ``PrepareResult`` instance, which has a ``failed`` flag
 
     """
-    failure = _check_prepare_prerequisites(project, conda_environment_name, command_name, environ)
+    failure = _check_prepare_prerequisites(project, package_set_name, command_name, environ)
     if failure is not None:
         return failure
 
@@ -783,7 +782,7 @@ def prepare_without_interaction(project,
                               keep_going_until_success=False,
                               mode=mode,
                               provide_whitelist=provide_whitelist,
-                              conda_environment_name=conda_environment_name,
+                              package_set_name=package_set_name,
                               command_name=command_name,
                               extra_command_args=extra_command_args)
 
@@ -792,7 +791,7 @@ def prepare_without_interaction(project,
 
 def prepare_with_browser_ui(project,
                             environ=None,
-                            conda_environment_name=None,
+                            package_set_name=None,
                             command_name=None,
                             extra_command_args=None,
                             keep_going_until_success=True,
@@ -828,7 +827,7 @@ def prepare_with_browser_ui(project,
     Args:
         project (Project): from the ``load_project`` method
         environ (dict): os.environ or the previously-prepared environ; not modified in-place
-        conda_environment_name (str): the environment spec name to require, or None for default
+        package_set_name (str): the environment spec name to require, or None for default
         command_name (str): which named command to choose from the project, None for default
         extra_command_args (list): extra args to include in the returned command argv
         keep_going_until_success (bool): whether to loop until requirements are met
@@ -839,7 +838,7 @@ def prepare_with_browser_ui(project,
         a ``PrepareResult`` instance, which has a ``failed`` flag
 
     """
-    failure = _check_prepare_prerequisites(project, conda_environment_name, command_name, environ)
+    failure = _check_prepare_prerequisites(project, package_set_name, command_name, environ)
     if failure is not None:
         return failure
 
@@ -847,7 +846,7 @@ def prepare_with_browser_ui(project,
                               environ,
                               keep_going_until_success=keep_going_until_success,
                               mode=PROVIDE_MODE_DEVELOPMENT,
-                              conda_environment_name=conda_environment_name,
+                              package_set_name=package_set_name,
                               command_name=command_name,
                               extra_command_args=extra_command_args)
 

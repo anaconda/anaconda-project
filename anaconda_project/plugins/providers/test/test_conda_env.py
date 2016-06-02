@@ -269,7 +269,7 @@ def _run_browser_ui_test(monkeypatch,
                                          environ=environ,
                                          io_loop=io_loop,
                                          keep_going_until_success=True,
-                                         conda_environment_name=conda_environment_override)
+                                         package_set_name=conda_environment_override)
 
         # finish up the last http action if prepare_ui.py stopped the loop before we did
         while 'done' not in http_done:
