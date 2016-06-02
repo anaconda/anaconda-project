@@ -90,7 +90,7 @@ class ProjectFile(YamlFile):
         header = ("This is an Anaconda project file.\n" + "\n" +
                   "Here you can configure the requirements to run your code, such as\n" +
                   "packages, configuration, and services.\n" +
-                  "If you run your code with the 'anaconda-project launch' command, or with\n" +
+                  "If you run your code with the 'anaconda-project run' command, or with\n" +
                   "project-aware tools such as Anaconda Navigator, the tools will be smart\n" +
                   "about checking for and meeting your requirements.\n" + "\n" +
                   "The file is in YAML format, please see http://www.yaml.org/start.html for more.\n" +
@@ -105,9 +105,9 @@ class ProjectFile(YamlFile):
 
         sections['commands'] = (
             "In the commands section, list your runnable scripts, notebooks, and other code.\n" +
-            "You can give each item a name, and use it with anaconda-project launch, like this:\n" +
-            "    anaconda-project launch --command myscript\n"
-            "Without the --command option, 'anaconda-project launch' will run the command named\n" +
+            "You can give each item a name, and use it with anaconda-project run, like this:\n" +
+            "    anaconda-project run --command myscript\n"
+            "Without the --command option, 'anaconda-project run' will run the command named\n" +
             "'default', or the first command listed.\n" +
             "Any .ipynb files in the project directory are added automatically and don't need\n" +
             "to be listed here, but you can if you like.\n" + "\n" + "For example,\n" + "\n" + "commands:\n" +
@@ -160,9 +160,9 @@ class ProjectFile(YamlFile):
         sections['environments'] = (
             "If you like, you can define multiple, named Conda environments.\n" +
             "There's an implicit environment called 'default', which you can\n" +
-            "tune by naming it explicitly here. When you launch a command, use\n" +
+            "tune by naming it explicitly here. When you run a command, use\n" +
             "the --environment option to choose an environment.\n" +
-            "   anaconda-project launch --environment python27\n" + "\n" +
+            "   anaconda-project run --environment python27\n\n" +
             "Each environment may have 'dependencies' or 'channels' sub-sections\n" +
             "which are combined with any global 'dependencies' or 'channels'.\n" + "\n" + "For example,\n" + "\n" +
             "environments:\n" + "  default:\n" + "    dependencies:\n" + "      - bokeh\n" + "    channels:\n" +

@@ -182,7 +182,7 @@ def test_add_command_ask_type_twice(monkeypatch, capsys):
                        "    A Bokeh app is the project-relative path to a Bokeh script or app directory.\n" +
                        "    A notebook file is the project-relative path to a .ipynb file.\n"
                        "    A command line is any command you might type at the command prompt.\n"
-                       "Added a command 'test' to the project. Run it with `anaconda-project launch --command test`.\n")
+                       "Added a command 'test' to the project. Run it with `anaconda-project run --command test`.\n")
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 

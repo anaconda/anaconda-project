@@ -59,8 +59,8 @@ Mac) and for Windows. If you only care about one platform, you
 are not required to provide command lines for other platforms.
 
 When you send your project to someone else, they can type
-``anaconda-project launch`` to run your script. The cool part
-is that ``anaconda-project launch`` makes sure that all
+``anaconda-project run`` to run your script. The cool part
+is that ``anaconda-project run`` makes sure that all
 prerequisites are set up *before* it runs the script.
 
 Let's say your script requires a certain conda package to be
@@ -70,12 +70,12 @@ dependency:
   dependencies:
     - redis-py
 
-Now when someone runs ``anaconda-project launch`` the script is
+Now when someone runs ``anaconda-project run`` the script is
 automatically run in a conda environment that has ``redis-py``
 installed.
 
 (TODO the above is a lie for now because ``anaconda-project
-launch`` just complains, while ``anaconda-project prepare`` runs
+run`` just complains, while ``anaconda-project prepare`` runs
 the UI to set up the environment. See also
 https://github.com/Anaconda-Server/anaconda-project/issues/54)
 
@@ -89,7 +89,7 @@ downloaded locally:
       url: http://example.com/bigdatafile
       sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
 
-Now when someone runs ``anaconda-project launch``, the file is
+Now when someone runs ``anaconda-project run``, the file is
 downloaded if it hasn't been downloaded already, and the
 environment variable ``MYDATAFILE`` is set to the local
 filename of the data. In your ``analyze.py`` file you can write
@@ -98,7 +98,7 @@ something like this:
    import os
    filename = os.getenv('MYDATAFILE')
    if filename is None:
-     raise Exception("Please use anaconda-project launch to start this script")
+     raise Exception("Please use anaconda-project run to start this script")
    with open(filename, 'r') as input:
      data = input.read()
      # and so on
@@ -159,7 +159,7 @@ and ``envs/python27``.
 
 To run a project in a specific environment, use the ``environment`` option:
 
-  anaconda-project launch --environment myenvname
+  anaconda-project run --environment myenvname
 
 https://github.com/Anaconda-Server/anaconda-project/issues/97
 
@@ -173,7 +173,7 @@ Requiring environment variables to be set
 
 Anything in the ``variables:`` section of a ``project.yml`` file
 is considered an environment variable needed by your project.
-When someone launches your project, ``anaconda-project`` asks
+When someone runs your project, ``anaconda-project`` asks
 them to set these variables.
 
 For example:
@@ -281,7 +281,7 @@ For example, you can add a services section to your ``project.yml`` file:
   services:
     REDIS_URL: redis
 
-Now when someone else launches your project, ``anaconda-project``
+Now when someone else runs your project, ``anaconda-project``
 offers to start a local instance of ``redis-server`` automatically.
 
 There is also a long form of the above service configuration:
@@ -338,10 +338,10 @@ If you do not specify a filename, ``anaconda-project`` picks a
 reasonable default based on the URL.
 
 To avoid the automated download, it's also possible for someone to
-launch your project with an existing file path in the environment;
+run your project with an existing file path in the environment;
 on Linux or Mac, that looks like:
 
-  MYDATAFILE=/my/already/downloaded/file.csv anaconda-project launch
+  MYDATAFILE=/my/already/downloaded/file.csv anaconda-project run
 
 Anaconda Project can auto-unzip a zip file as it is downloaded.
 This is the default if the the URL path ends in ".zip"

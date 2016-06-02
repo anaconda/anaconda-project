@@ -17,7 +17,7 @@ from anaconda_project.project import ALL_COMMAND_TYPES
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirements.download import _hash_algorithms
 import anaconda_project.commands.init as init
-import anaconda_project.commands.launch as launch
+import anaconda_project.commands.run as run
 import anaconda_project.commands.prepare as prepare
 import anaconda_project.commands.clean as clean
 import anaconda_project.commands.bundle as bundle
@@ -74,7 +74,7 @@ def _parse_args_and_run_subcommand(argv):
     add_project_arg(preset)
     preset.set_defaults(main=init.main)
 
-    preset = subparsers.add_parser('launch', help="Run the project, setting up requirements first")
+    preset = subparsers.add_parser('run', help="Run the project, setting up requirements first")
     add_prepare_args(preset)
     preset.add_argument('--command',
                         metavar="COMMAND_NAME",
@@ -82,7 +82,7 @@ def _parse_args_and_run_subcommand(argv):
                         action="store",
                         help="A command name from project.yml")
     preset.add_argument('extra_args_for_command', metavar='EXTRA_ARGS_FOR_COMMAND', default=None, nargs=REMAINDER)
-    preset.set_defaults(main=launch.main)
+    preset.set_defaults(main=run.main)
 
     preset = subparsers.add_parser('prepare', help="Set up the project requirements, but does not run the project")
     add_prepare_args(preset)

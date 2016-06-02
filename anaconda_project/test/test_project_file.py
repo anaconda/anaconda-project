@@ -14,7 +14,7 @@ expected_default_file = """# This is an Anaconda project file.
 #
 # Here you can configure the requirements to run your code, such as
 # packages, configuration, and services.
-# If you run your code with the 'anaconda-project launch' command, or with
+# If you run your code with the 'anaconda-project run' command, or with
 # project-aware tools such as Anaconda Navigator, the tools will be smart
 # about checking for and meeting your requirements.
 #
@@ -35,9 +35,9 @@ name:
 icon:
 #
 # In the commands section, list your runnable scripts, notebooks, and other code.
-# You can give each item a name, and use it with anaconda-project launch, like this:
-#     anaconda-project launch --command myscript
-# Without the --command option, 'anaconda-project launch' will run the command named
+# You can give each item a name, and use it with anaconda-project run, like this:
+#     anaconda-project run --command myscript
+# Without the --command option, 'anaconda-project run' will run the command named
 # 'default', or the first command listed.
 # Any .ipynb files in the project directory are added automatically and don't need
 # to be listed here, but you can if you like.
@@ -142,9 +142,9 @@ channels: []
 #
 # If you like, you can define multiple, named Conda environments.
 # There's an implicit environment called 'default', which you can
-# tune by naming it explicitly here. When you launch a command, use
+# tune by naming it explicitly here. When you run a command, use
 # the --environment option to choose an environment.
-#    anaconda-project launch --environment python27
+#    anaconda-project run --environment python27
 #
 # Each environment may have 'dependencies' or 'channels' sub-sections
 # which are combined with any global 'dependencies' or 'channels'.
