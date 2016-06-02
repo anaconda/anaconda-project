@@ -68,18 +68,23 @@ def test_create(monkeypatch):
     with_directory_contents(dict(), check_create)
 
 
-def test_create_with_name_and_icon():
+def test_create_with_properties():
     def check_create(dirname):
-        project = project_ops.create(dirname, make_directory=False, name='hello', icon='something.png')
+        project = project_ops.create(dirname,
+                                     make_directory=False,
+                                     name='hello',
+                                     icon='something.png',
+                                     description="Hello World")
         assert [] == project.problems
         assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
         assert project.name == 'hello'
         assert project.icon == os.path.join(dirname, 'something.png')
+        assert project.description == "Hello World"
 
     with_directory_contents({'something.png': 'not a real png'}, check_create)
 
 
-def test_set_name_and_icon():
+def test_set_properties():
     def check(dirname):
         project = project_ops.create(dirname, make_directory=False)
         assert [] == project.problems
@@ -88,18 +93,20 @@ def test_set_name_and_icon():
         assert project.name == os.path.basename(dirname)
         assert project.icon is None
 
-        result = project_ops.set_properties(project, name='hello', icon='something.png')
+        result = project_ops.set_properties(project, name='hello', icon='something.png', description="HELLOOOO")
         assert result
 
         assert project.name == 'hello'
         assert project.icon == os.path.join(dirname, 'something.png')
+        assert project.description == "HELLOOOO"
 
         # set to Unicode
-        result = project_ops.set_properties(project, name=u'hello', icon=u'something.png')
+        result = project_ops.set_properties(project, name=u'hello', icon=u'something.png', description=u'HELLOOOO')
         assert result
 
         assert project.name == u'hello'
         assert project.icon == os.path.join(dirname, 'something.png')
+        assert project.description == u"HELLOOOO"
 
     with_directory_contents({'something.png': 'not a real png'}, check)
 

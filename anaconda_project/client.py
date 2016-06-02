@@ -51,15 +51,7 @@ class _Client(object):
         assert not project.problems
 
         url = "{}/apps/{}/projects".format(self._api.domain, self._username())
-        json = {
-            'name': project.name,
-            'access': 'public',
-            'profile': {
-                # Fill in after https://github.com/Anaconda-Platform/anaconda-project/issues/308
-                'description': '',
-                'summary': ''
-            }
-        }
+        json = {'name': project.name, 'access': 'public', 'profile': {'description': project.description}}
         data, headers = binstar_utils.jencode(json)
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)

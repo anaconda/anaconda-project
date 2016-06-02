@@ -49,7 +49,7 @@ class AnacondaProject(object):
         """
         return project.Project(directory_path=directory_path)
 
-    def create_project(self, directory_path, make_directory=False, name=None, icon=None):
+    def create_project(self, directory_path, make_directory=False, name=None, icon=None, description=None):
         """Create a project skeleton in the given directory.
 
         Returns a Project instance even if creation fails or the directory
@@ -66,11 +66,16 @@ class AnacondaProject(object):
             make_directory (bool): True to create the directory if it doesn't exist
             name (str): Name of the new project or None to leave unset (uses directory name)
             icon (str): Icon for the new project or None to leave unset (uses no icon)
+            description (str): Description for the new project or None to leave unset
 
         Returns:
             a Project instance
         """
-        return project_ops.create(directory_path=directory_path, make_directory=make_directory, name=name, icon=icon)
+        return project_ops.create(directory_path=directory_path,
+                                  make_directory=make_directory,
+                                  name=name,
+                                  icon=icon,
+                                  description=description)
 
     def prepare_project_locally(self,
                                 project,
@@ -258,7 +263,7 @@ class AnacondaProject(object):
         """
         return prepare.unprepare(project=project, prepare_result=prepare_result, whitelist=whitelist)
 
-    def set_properties(self, project, name=None, icon=None):
+    def set_properties(self, project, name=None, icon=None, description=None):
         """Set simple properties on a project.
 
         This doesn't support properties which require prepare()
@@ -269,13 +274,14 @@ class AnacondaProject(object):
 
         Args:
             project (``Project``): the project instance
-            name (str): Name of the new project or None to leave unmodified
-            icon (str): Icon for the new project or None to leave unmodified
+            name (str): Name of the project or None to leave unmodified
+            icon (str): Icon for the project or None to leave unmodified
+            description (str): description for the project or None to leave unmodified
 
         Returns:
             a ``Status`` instance indicating success or failure
         """
-        return project_ops.set_properties(project=project, name=name, icon=icon)
+        return project_ops.set_properties(project=project, name=name, icon=icon, description=description)
 
     def add_variables(self, project, vars_to_add):
         """Add variables in project.yml and set their values in local project state.

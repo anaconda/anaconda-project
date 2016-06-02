@@ -36,6 +36,7 @@ def test_properties():
         assert dirname == os.path.dirname(project.project_file.filename)
         assert dirname == os.path.dirname(os.path.dirname(project.conda_meta_file.filename))
         assert project.name == os.path.basename(dirname)
+        assert project.description == ''
 
     with_directory_contents(dict(), check_properties)
 
@@ -365,6 +366,28 @@ def test_set_name_in_project_file():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 name: foo
 """}, check_set_name)
+
+
+def test_get_description_from_project_file():
+    def check_description_from_project_file(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert project.description == "foo"
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+description: foo
+    """}, check_description_from_project_file)
+
+
+def test_broken_description_in_project_file():
+    def check_description_from_project_file(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [
+            (os.path.join(dirname, DEFAULT_PROJECT_FILENAME) + ": description: field should have a string value not []")
+        ] == project.problems
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+description: []
+    """}, check_description_from_project_file)
 
 
 def test_get_icon_from_conda_meta_yaml():
@@ -1513,6 +1536,7 @@ def test_get_publication_info_from_empty_project():
         project = project_no_dedicated_env(dirname)
         expected = {
             'name': os.path.basename(dirname),
+            'description': '',
             'commands': {},
             'environments': {
                 'default': {
@@ -1532,6 +1556,7 @@ def test_get_publication_info_from_empty_project():
 
 _complicated_project_contents = """
 name: foobar
+description: "A very complicated project."
 
 commands:
   foo:
@@ -1581,6 +1606,7 @@ def test_get_publication_info_from_complex_project():
 
         expected = {
             'name': 'foobar',
+            'description': 'A very complicated project.',
             'commands': {'bar': {'description': 'echo boo'},
                          'baz': {'description': 'echo blah'},
                          'foo': {'description': 'say hi',

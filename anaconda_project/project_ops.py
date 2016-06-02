@@ -55,7 +55,7 @@ def _add_projectignore_if_none(project_directory):
             pass
 
 
-def create(directory_path, make_directory=False, name=None, icon=None):
+def create(directory_path, make_directory=False, name=None, icon=None, description=None):
     """Create a project skeleton in the given directory.
 
     Returns a Project instance even if creation fails or the directory
@@ -72,6 +72,7 @@ def create(directory_path, make_directory=False, name=None, icon=None):
         make_directory (bool): True to create the directory if it doesn't exist
         name (str): Name of the new project or None to leave unset (uses directory name)
         icon (str): Icon for the new project or None to leave unset (uses no icon)
+        description (str): Description for the new project or None to leave unset
 
     Returns:
         a Project instance
@@ -92,6 +93,8 @@ def create(directory_path, make_directory=False, name=None, icon=None):
         project.project_file.set_value('name', name)
     if icon is not None:
         project.project_file.set_value('icon', icon)
+    if description is not None:
+        project.project_file.set_value('description', description)
 
     # write out the project.yml; note that this will try to create
     # the directory which we may not want... so only do it if
@@ -103,7 +106,7 @@ def create(directory_path, make_directory=False, name=None, icon=None):
     return project
 
 
-def set_properties(project, name=None, icon=None):
+def set_properties(project, name=None, icon=None, description=None):
     """Set simple properties on a project.
 
     This doesn't support properties which require prepare()
@@ -114,8 +117,9 @@ def set_properties(project, name=None, icon=None):
 
     Args:
         project (``Project``): the project instance
-        name (str): Name of the new project or None to leave unmodified
-        icon (str): Icon for the new project or None to leave unmodified
+        name (str): Name of the project or None to leave unmodified
+        icon (str): Icon for the project or None to leave unmodified
+        description (str): description for the project or None to leave unmodified
 
     Returns:
         a ``Status`` instance indicating success or failure
@@ -129,6 +133,9 @@ def set_properties(project, name=None, icon=None):
 
     if icon is not None:
         project.project_file.set_value('icon', icon)
+
+    if description is not None:
+        project.project_file.set_value('description', description)
 
     project.project_file.use_changes_without_saving()
 
