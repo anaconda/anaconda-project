@@ -355,7 +355,7 @@ def test_set_name_in_project_file():
         project = project_no_dedicated_env(dirname)
         assert project.name == "foo"
 
-        project.project_file.name = "bar"
+        project.project_file.set_value('name', "bar")
         assert project.name == "foo"
         project.project_file.save()
         assert project.name == "bar"
@@ -468,7 +468,7 @@ def test_set_icon_in_project_file():
         project = project_no_dedicated_env(dirname)
         assert project.icon == os.path.join(dirname, "foo.png")
 
-        project.project_file.icon = "bar.png"
+        project.project_file.set_value('icon', "bar.png")
         assert project.icon == os.path.join(dirname, "foo.png")
         project.project_file.save()
         assert project.icon == os.path.join(dirname, "bar.png")

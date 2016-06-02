@@ -96,7 +96,7 @@ class _ConfigCache(object):
         self.problems = problems
 
     def _update_name(self, problems, project_file, conda_meta_file):
-        name = project_file.name
+        name = project_file.get_value('name', None)
         if name is not None:
             if not is_string(name):
                 problems.append("%s: name: field should have a string value not %r" % (project_file.filename, name))
@@ -129,7 +129,7 @@ class _ConfigCache(object):
         self.description = desc
 
     def _update_icon(self, problems, project_file, conda_meta_file):
-        icon = project_file.icon
+        icon = project_file.get_value('icon', None)
         if icon is not None and not is_string(icon):
             problems.append("%s: icon: field should have a string value not %r" % (project_file.filename, icon))
             icon = None

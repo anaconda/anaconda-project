@@ -186,23 +186,3 @@ class ProjectFile(YamlFile):
             to_parse = to_parse + "\n#\n" + comment_out(comment) + section_name + ":\n" + section_body + "\n\n\n"
 
         return ryaml.load(to_parse, Loader=ryaml.RoundTripLoader)
-
-    @property
-    def name(self):
-        """Get the "name" field from the file."""
-        return self.get_value('name', default=None)
-
-    @name.setter
-    def name(self, value):
-        """Set the "name" field in the file."""
-        self.set_value('name', value)
-
-    @property
-    def icon(self):
-        """Get the "icon" field from the file."""
-        return self.get_value('icon', default=None)
-
-    @icon.setter
-    def icon(self, value):
-        """Set the "icon" field in the file."""
-        self.set_value('icon', value)
