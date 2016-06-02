@@ -45,6 +45,7 @@ class _ConfigCache(object):
         self.registry = registry
 
         self.name = None
+        self.description = ''
         self.icon = None
         self.commands = dict()
         self.default_command_name = None
@@ -77,6 +78,7 @@ class _ConfigCache(object):
 
         if project_exists and not (project_file.corrupted or conda_meta_file.corrupted):
             self._update_name(problems, project_file, conda_meta_file)
+            self._update_description(problems, project_file)
             self._update_icon(problems, project_file, conda_meta_file)
             # future: we could un-hardcode this so plugins can add stuff here
             self._update_variables(requirements, problems, project_file)
@@ -94,7 +96,7 @@ class _ConfigCache(object):
         self.problems = problems
 
     def _update_name(self, problems, project_file, conda_meta_file):
-        name = project_file.name
+        name = project_file.get_value('name', None)
         if name is not None:
             if not is_string(name):
                 problems.append("%s: name: field should have a string value not %r" % (project_file.filename, name))
@@ -115,8 +117,19 @@ class _ConfigCache(object):
 
         self.name = name
 
+    def _update_description(self, problems, project_file):
+        desc = project_file.get_value('description', None)
+        if desc is not None and not is_string(desc):
+            problems.append("%s: description: field should have a string value not %r" % (project_file.filename, desc))
+            desc = None
+
+        if desc is None:
+            desc = ''
+
+        self.description = desc
+
     def _update_icon(self, problems, project_file, conda_meta_file):
-        icon = project_file.icon
+        icon = project_file.get_value('icon', None)
         if icon is not None and not is_string(icon):
             problems.append("%s: icon: field should have a string value not %r" % (project_file.filename, icon))
             icon = None
@@ -554,6 +567,11 @@ class Project(object):
         return self._updated_cache().name
 
     @property
+    def description(self):
+        """Get the project description."""
+        return self._updated_cache().description
+
+    @property
     def icon(self):
         """Get the project's icon as an absolute path or None if no icon.
 
@@ -652,6 +670,7 @@ class Project(object):
         """
         json = dict()
         json['name'] = self.name
+        json['description'] = self.description
         commands = dict()
         for key, command in self.commands.items():
             commands[key] = dict(description=command.description)
