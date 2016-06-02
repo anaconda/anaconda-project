@@ -68,7 +68,7 @@ class CondaManager(with_metaclass(ABCMeta)):
 
         Args:
             prefix (str): the environment prefix (absolute path)
-            spec (PackageSet): specification for the environment
+            spec (EnvSpec): specification for the environment
 
         Returns:
             a ``CondaEnvironmentDeviations`` instance
@@ -87,7 +87,7 @@ class CondaManager(with_metaclass(ABCMeta)):
 
         Args:
             prefix (str): the environment prefix (absolute path)
-            spec (PackageSet): specification for the environment
+            spec (EnvSpec): specification for the environment
             deviations (CondaEnvironmentDeviations): optional previous result from find_environment_deviations()
 
         Returns:

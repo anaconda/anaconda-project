@@ -77,12 +77,7 @@ class AnacondaProject(object):
                                   icon=icon,
                                   description=description)
 
-    def prepare_project_locally(self,
-                                project,
-                                environ,
-                                package_set_name=None,
-                                command_name=None,
-                                extra_command_args=None):
+    def prepare_project_locally(self, project, environ, env_spec_name=None, command_name=None, extra_command_args=None):
         """Prepare a project to run one of its commands.
 
         "Locally" means a machine where development will go on,
@@ -118,7 +113,7 @@ class AnacondaProject(object):
         Args:
             project (Project): from the ``load_project`` method
             environ (dict): os.environ or the previously-prepared environ; not modified in-place
-            package_set_name (str): the package set name to require, or None for default
+            env_spec_name (str): the package set name to require, or None for default
             command_name (str): which named command to choose from the project, None for default
             extra_command_args (list): extra args to include in the returned command argv
 
@@ -129,14 +124,14 @@ class AnacondaProject(object):
         return prepare.prepare_without_interaction(project=project,
                                                    environ=environ,
                                                    mode=provide.PROVIDE_MODE_DEVELOPMENT,
-                                                   package_set_name=package_set_name,
+                                                   env_spec_name=env_spec_name,
                                                    command_name=command_name,
                                                    extra_command_args=extra_command_args)
 
     def prepare_project_production(self,
                                    project,
                                    environ,
-                                   package_set_name=None,
+                                   env_spec_name=None,
                                    command_name=None,
                                    extra_command_args=None):
         """Prepare a project to run one of its commands.
@@ -158,7 +153,7 @@ class AnacondaProject(object):
         Args:
             project (Project): from the ``load_project`` method
             environ (dict): os.environ or the previously-prepared environ; not modified in-place
-            package_set_name (str): the package set name to require, or None for default
+            env_spec_name (str): the package set name to require, or None for default
             command_name (str): which named command to choose from the project, None for default
             extra_command_args (list): extra args to include in the returned command argv
 
@@ -169,16 +164,11 @@ class AnacondaProject(object):
         return prepare.prepare_without_interaction(project=project,
                                                    environ=environ,
                                                    mode=provide.PROVIDE_MODE_PRODUCTION,
-                                                   package_set_name=package_set_name,
+                                                   env_spec_name=env_spec_name,
                                                    command_name=command_name,
                                                    extra_command_args=extra_command_args)
 
-    def prepare_project_check(self,
-                              project,
-                              environ,
-                              package_set_name=None,
-                              command_name=None,
-                              extra_command_args=None):
+    def prepare_project_check(self, project, environ, env_spec_name=None, command_name=None, extra_command_args=None):
         """Prepare a project to run one of its commands.
 
         This version only checks the status of the project's
@@ -193,7 +183,7 @@ class AnacondaProject(object):
         Args:
             project (Project): from the ``load_project`` method
             environ (dict): os.environ or the previously-prepared environ; not modified in-place
-            package_set_name (str): the package set name to require, or None for default
+            env_spec_name (str): the package set name to require, or None for default
             command_name (str): which named command to choose from the project, None for default
             extra_command_args (list): extra args to include in the returned command argv
 
@@ -204,14 +194,14 @@ class AnacondaProject(object):
         return prepare.prepare_without_interaction(project=project,
                                                    environ=environ,
                                                    mode=provide.PROVIDE_MODE_CHECK,
-                                                   package_set_name=package_set_name,
+                                                   env_spec_name=env_spec_name,
                                                    command_name=command_name,
                                                    extra_command_args=extra_command_args)
 
     def prepare_project_browser(self,
                                 project,
                                 environ,
-                                package_set_name=None,
+                                env_spec_name=None,
                                 command_name=None,
                                 extra_command_args=None,
                                 io_loop=None,
@@ -227,7 +217,7 @@ class AnacondaProject(object):
         Args:
             project (Project): from the ``load_project`` method
             environ (dict): os.environ or the previously-prepared environ; not modified in-place
-            package_set_name (str): the package set name to require, or None for default
+            env_spec_name (str): the package set name to require, or None for default
             command_name (str): which named command to choose from the project, None for default
             extra_command_args (list): extra args to include in the returned command argv
             io_loop (IOLoop): tornado IOLoop to use, None for default
@@ -239,7 +229,7 @@ class AnacondaProject(object):
         """
         return prepare.prepare_with_browser_ui(project=project,
                                                environ=environ,
-                                               package_set_name=package_set_name,
+                                               env_spec_name=env_spec_name,
                                                command_name=command_name,
                                                extra_command_args=extra_command_args,
                                                io_loop=io_loop,

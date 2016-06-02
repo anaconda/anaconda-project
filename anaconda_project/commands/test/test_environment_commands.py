@@ -400,7 +400,7 @@ def _test_list_dependencies(capsys, env, expected_deps):
 
         project = Project(dirname)
         expected_out = "Dependencies for environment '{}':\n{}".format(
-            (env or project.default_package_set_name), expected_deps)
+            (env or project.default_env_spec_name), expected_deps)
         assert out == expected_out
 
     project_contents = ('environments:\n'

@@ -1080,8 +1080,8 @@ def test_remove_dependencies_from_one_environment_leaving_others_unaffected():
         assert [] == list(project2.project_file.get_value(['environments', 'hello', 'dependencies'], []))
         assert set(['baz', 'foo', 'bar']) == set(project2.project_file.get_value(
             ['environments', 'another', 'dependencies'], []))
-        assert project2.package_sets['another'].conda_package_names_set == set(['qbert', 'foo', 'bar', 'baz'])
-        assert project2.package_sets['hello'].conda_package_names_set == set(['qbert'])
+        assert project2.env_specs['another'].conda_package_names_set == set(['qbert', 'foo', 'bar', 'baz'])
+        assert project2.env_specs['hello'].conda_package_names_set == set(['qbert'])
 
         # be sure we didn't delete comments from the env
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
@@ -1292,14 +1292,14 @@ def test_clean(monkeypatch):
     def check(dirname):
         project = Project(dirname)
 
-        result = prepare.prepare_without_interaction(project, package_set_name='foo')
+        result = prepare.prepare_without_interaction(project, env_spec_name='foo')
 
         assert result
         envs_dir = os.path.join(dirname, "envs")
         assert os.path.isdir(os.path.join(envs_dir, "foo"))
 
         # prepare again with 'bar' this time
-        result = prepare.prepare_without_interaction(project, package_set_name='bar')
+        result = prepare.prepare_without_interaction(project, env_spec_name='bar')
         assert result
         bar_dir = os.path.join(dirname, "envs", "bar")
         assert os.path.isdir(bar_dir)
@@ -1336,14 +1336,14 @@ def test_clean_failed_delete(monkeypatch):
     def check(dirname):
         project = Project(dirname)
 
-        result = prepare.prepare_without_interaction(project, package_set_name='foo')
+        result = prepare.prepare_without_interaction(project, env_spec_name='foo')
 
         assert result
         envs_dir = os.path.join(dirname, "envs")
         assert os.path.isdir(os.path.join(envs_dir, "foo"))
 
         # prepare again with 'bar' this time
-        result = prepare.prepare_without_interaction(project, package_set_name='bar')
+        result = prepare.prepare_without_interaction(project, env_spec_name='bar')
         assert result
         bar_dir = os.path.join(dirname, "envs", "bar")
         assert os.path.isdir(bar_dir)

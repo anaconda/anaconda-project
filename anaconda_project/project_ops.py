@@ -152,13 +152,13 @@ def set_properties(project, name=None, icon=None, description=None):
         return status
 
 
-def _commit_requirement_if_it_works(project, env_var_or_class, package_set_name=None):
+def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=None):
     project.project_file.use_changes_without_saving()
 
     # See if we can perform the download
     result = prepare.prepare_without_interaction(project,
                                                  provide_whitelist=(env_var_or_class, ),
-                                                 package_set_name=package_set_name)
+                                                 env_spec_name=env_spec_name)
 
     status = result.status_for(env_var_or_class)
     if status is None or not status:
@@ -277,7 +277,7 @@ def _update_environment(project, name, packages, channels, create):
         channels = []
 
     if not create and (name is not None):
-        if name not in project.package_sets:
+        if name not in project.env_specs:
             problem = "Environment {} doesn't exist.".format(name)
             return SimpleStatus(success=False, description=problem)
 
@@ -339,7 +339,7 @@ def _update_environment(project, name, packages, channels, create):
             new_channels.append(channel)
     env_dict['channels'] = new_channels
 
-    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, package_set_name=name)
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=name)
 
     return status
 
@@ -389,11 +389,11 @@ def remove_environment(project, name):
     if failed is not None:
         return failed
 
-    if name not in project.package_sets:
+    if name not in project.env_specs:
         problem = "Environment {} doesn't exist.".format(name)
         return SimpleStatus(success=False, description=problem)
 
-    env_path = project.package_sets[name].path(project.directory_path)
+    env_path = project.env_specs[name].path(project.directory_path)
 
     # For remove_service and remove_download, we use unprepare()
     # to do the cleanup; for the environment, it's awkward to do
@@ -477,18 +477,18 @@ def remove_dependencies(project, environment, packages):
     assert len(packages) > 0
 
     if environment is None:
-        envs = project.package_sets.values()
+        envs = project.env_specs.values()
         unaffected_envs = []
     else:
-        env = project.package_sets.get(environment, None)
+        env = project.env_specs.get(environment, None)
         if env is None:
             problem = "Environment {} doesn't exist.".format(environment)
             return SimpleStatus(success=False, description=problem)
         else:
             envs = [env]
-            unaffected_envs = list(project.package_sets.values())
+            unaffected_envs = list(project.env_specs.values())
             unaffected_envs.remove(env)
-            assert len(unaffected_envs) == (len(project.package_sets) - 1)
+            assert len(unaffected_envs) == (len(project.env_specs) - 1)
 
     assert len(envs) > 0
 
@@ -538,7 +538,7 @@ def remove_dependencies(project, environment, packages):
         dependencies.extend(list(removed_from_global))
         env_dict['dependencies'] = dependencies
 
-    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, package_set_name=environment)
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=environment)
 
     return status
 

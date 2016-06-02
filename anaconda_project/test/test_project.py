@@ -487,7 +487,7 @@ icon: foo.png
 def test_get_package_requirements_from_project_file():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
-        env = project.package_sets['default']
+        env = project.env_specs['default']
         assert env.name == 'default'
         assert ("foo", "hello >= 1.0", "world") == env.dependencies
         assert ("mtv", "hbo") == env.channels
@@ -519,7 +519,7 @@ channels:
 def test_get_package_requirements_from_empty_project():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
-        assert () == project.package_sets['default'].dependencies
+        assert () == project.env_specs['default'].dependencies
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_get_packages)
 
@@ -585,14 +585,14 @@ def test_load_environments():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.package_sets) == 3
-        assert 'default' in project.package_sets
-        assert 'foo' in project.package_sets
-        assert 'bar' in project.package_sets
-        assert project.default_package_set_name == 'default'
-        default = project.package_sets['default']
-        foo = project.package_sets['foo']
-        bar = project.package_sets['bar']
+        assert len(project.env_specs) == 3
+        assert 'default' in project.env_specs
+        assert 'foo' in project.env_specs
+        assert 'bar' in project.env_specs
+        assert project.default_env_spec_name == 'default'
+        default = project.env_specs['default']
+        foo = project.env_specs['foo']
+        bar = project.env_specs['bar']
         assert default.dependencies == ()
         assert foo.dependencies == ('python', 'dog', 'cat', 'zebra')
         assert foo.description == "THE FOO"
@@ -617,14 +617,14 @@ def test_load_environments_merging_in_global():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.package_sets) == 3
-        assert 'default' in project.package_sets
-        assert 'foo' in project.package_sets
-        assert 'bar' in project.package_sets
-        assert project.default_package_set_name == 'default'
-        default = project.package_sets['default']
-        foo = project.package_sets['foo']
-        bar = project.package_sets['bar']
+        assert len(project.env_specs) == 3
+        assert 'default' in project.env_specs
+        assert 'foo' in project.env_specs
+        assert 'bar' in project.env_specs
+        assert project.default_env_spec_name == 'default'
+        default = project.env_specs['default']
+        foo = project.env_specs['foo']
+        bar = project.env_specs['bar']
         assert default.dependencies == ('dead-parrot', 'elephant', 'lion')
         assert foo.dependencies == ('dead-parrot', 'elephant', 'python', 'dog', 'cat', 'zebra')
         assert bar.dependencies == ('dead-parrot', 'elephant')
@@ -663,14 +663,14 @@ def test_load_environments_default_always_default_even_if_not_first():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.package_sets) == 3
-        assert 'foo' in project.package_sets
-        assert 'bar' in project.package_sets
-        assert 'default' in project.package_sets
-        assert project.default_package_set_name == 'default'
-        foo = project.package_sets['foo']
-        bar = project.package_sets['bar']
-        default = project.package_sets['default']
+        assert len(project.env_specs) == 3
+        assert 'foo' in project.env_specs
+        assert 'bar' in project.env_specs
+        assert 'default' in project.env_specs
+        assert project.default_env_spec_name == 'default'
+        foo = project.env_specs['foo']
+        bar = project.env_specs['bar']
+        default = project.env_specs['default']
         assert foo.dependencies == ()
         assert bar.dependencies == ()
         assert default.dependencies == ()

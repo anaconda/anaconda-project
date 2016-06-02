@@ -18,19 +18,19 @@ from anaconda_project.status import Status
 class UserConfigOverrides(object):
     """Class containing user-forced configuration for the prepare process."""
 
-    def __init__(self, package_set_name=None):
+    def __init__(self, env_spec_name=None):
         """Construct a set of user overrides for the prepare process."""
-        self._package_set_name = package_set_name
+        self._env_spec_name = env_spec_name
 
     @property
-    def package_set_name(self):
+    def env_spec_name(self):
         """The user-specified name of the conda environment spec to use, or None if not specified."""
-        return self._package_set_name
+        return self._env_spec_name
 
-    @package_set_name.setter
-    def package_set_name(self, value):
+    @env_spec_name.setter
+    def env_spec_name(self, value):
         """Change the conda environment name override."""
-        self._package_set_name = value
+        self._env_spec_name = value
 
 
 class RequirementStatus(Status):
@@ -104,7 +104,7 @@ class RequirementStatus(Status):
         else:
             return self.latest_provide_result.errors
 
-    def recheck(self, environ, local_state_file, package_set_name_override=None, latest_provide_result=None):
+    def recheck(self, environ, local_state_file, env_spec_name_override=None, latest_provide_result=None):
         """Get a new ``RequirementStatus`` reflecting the current state.
 
         This calls ``Requirement.check_status()`` which can do network and filesystem IO,
@@ -112,8 +112,7 @@ class RequirementStatus(Status):
         """
         if latest_provide_result is None:
             latest_provide_result = self._latest_provide_result
-        return self.requirement.check_status(environ, local_state_file, package_set_name_override,
-                                             latest_provide_result)
+        return self.requirement.check_status(environ, local_state_file, env_spec_name_override, latest_provide_result)
 
 
 class Requirement(with_metaclass(ABCMeta)):

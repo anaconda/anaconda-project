@@ -12,7 +12,7 @@ import os
 from anaconda_project.internal.conda_api import parse_spec
 
 
-class PackageSet(object):
+class EnvSpec(object):
     """Represents a set of required conda packages we could potentially instantiate as a Conda environment."""
 
     def __init__(self, name, dependencies, channels, description=None):

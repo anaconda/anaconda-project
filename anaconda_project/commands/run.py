@@ -22,7 +22,7 @@ def run_command(project_dir, ui_mode, conda_environment, command, extra_command_
     project = Project(project_dir)
     result = prepare_with_ui_mode_printing_errors(project,
                                                   ui_mode=ui_mode,
-                                                  package_set_name=conda_environment,
+                                                  env_spec_name=conda_environment,
                                                   command_name=command,
                                                   extra_command_args=extra_command_args)
 

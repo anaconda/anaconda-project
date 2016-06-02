@@ -68,7 +68,7 @@ def list_environments(project_dir):
     if console_utils.print_project_problems(project):
         return 1
     print("Environments for project: {}\n".format(project_dir))
-    console_utils.print_names_and_descriptions(project.package_sets.values())
+    console_utils.print_names_and_descriptions(project.env_specs.values())
     return 0
 
 
@@ -78,8 +78,8 @@ def list_dependencies(project_dir, environment):
     if console_utils.print_project_problems(project):
         return 1
     if environment is None:
-        environment = project.default_package_set_name
-    env = project.package_sets.get(environment, None)
+        environment = project.default_env_spec_name
+    env = project.env_specs.get(environment, None)
     if env is None:
         print("Project doesn't have an environment called '{}'".format(environment), file=sys.stderr)
         return 1
