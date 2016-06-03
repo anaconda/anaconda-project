@@ -44,6 +44,6 @@ def main(args):
     # I don't understand why argparse does this to us and leaves the '--' in, but whatever.
     if args.extra_args_for_command and args.extra_args_for_command[0] == '--':
         args.extra_args_for_command = args.extra_args_for_command[1:]
-    run_command(args.project, args.mode, args.environment, args.command, args.extra_args_for_command)
+    run_command(args.project, args.mode, args.env_spec, args.command, args.extra_args_for_command)
     # if we returned, we failed to run the command and should have printed an error
     return 1

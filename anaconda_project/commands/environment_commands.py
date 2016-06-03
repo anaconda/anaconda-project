@@ -100,12 +100,12 @@ def main_remove(args):
 
 def main_add_dependencies(args):
     """Start the add-dependencies command and return exit status code."""
-    return add_dependencies(args.project, args.environment, args.packages, args.channel)
+    return add_dependencies(args.project, args.env_spec, args.packages, args.channel)
 
 
 def main_remove_dependencies(args):
     """Start the remove-dependencies command and return exit status code."""
-    return remove_dependencies(args.project, args.environment, args.packages)
+    return remove_dependencies(args.project, args.env_spec, args.packages)
 
 
 def main_list_env_specs(args):
@@ -115,4 +115,4 @@ def main_list_env_specs(args):
 
 def main_list_dependencies(args):
     """Start the list dependencies command and return exit status code."""
-    return list_dependencies(args.project, args.environment)
+    return list_dependencies(args.project, args.env_spec)

@@ -46,16 +46,16 @@ def _parse_args_and_run_subcommand(argv):
                             default='.',
                             help="Project directory containing project.yml (defaults to current directory)")
 
-    def add_environment_arg(preset):
-        preset.add_argument('--environment',
-                            metavar='ENVIRONMENT_NAME',
+    def add_env_spec_arg(preset):
+        preset.add_argument('--env-spec',
+                            metavar='ENVIRONMENT_SPEC_NAME',
                             default=None,
                             action='store',
-                            help="An environment name from project.yml")
+                            help="An environment spec name from project.yml")
 
     def add_prepare_args(preset):
         add_project_arg(preset)
-        add_environment_arg(preset)
+        add_env_spec_arg(preset)
         preset.add_argument('--mode',
                             metavar='MODE',
                             default=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
@@ -63,12 +63,12 @@ def _parse_args_and_run_subcommand(argv):
                             action='store',
                             help="One of " + ", ".join(_all_ui_modes))
 
-    def add_environment_name_arg(preset):
+    def add_env_spec_name_arg(preset):
         preset.add_argument('-n',
                             '--name',
-                            metavar='ENVIRONMENT_NAME',
+                            metavar='ENVIRONMENT_SPEC_NAME',
                             action='store',
-                            help="Name of the environment under PROJECT_DIR/envs")
+                            help="Name of the environment spec from project.yml")
 
     preset = subparsers.add_parser('init', help="Initialize a directory with default project configuration")
     add_project_arg(preset)
@@ -178,12 +178,12 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser('add-env-spec', help="Add a new environment spec to the project")
     add_project_arg(preset)
     add_package_args(preset)
-    add_environment_name_arg(preset)
+    add_env_spec_name_arg(preset)
     preset.set_defaults(main=environment_commands.main_add)
 
     preset = subparsers.add_parser('remove-env-spec', help="Remove an environment spec from the project")
     add_project_arg(preset)
-    add_environment_name_arg(preset)
+    add_env_spec_name_arg(preset)
     preset.set_defaults(main=environment_commands.main_remove)
 
     preset = subparsers.add_parser('list-env-specs', help="List all environment specs for the project")
@@ -192,19 +192,19 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('add-dependencies', help="Add packages to one or all project environments")
     add_project_arg(preset)
-    add_environment_arg(preset)
+    add_env_spec_arg(preset)
     add_package_args(preset)
     preset.set_defaults(main=environment_commands.main_add_dependencies)
 
     preset = subparsers.add_parser('remove-dependencies', help="Remove packages from one or all project environments")
     add_project_arg(preset)
-    add_environment_arg(preset)
+    add_env_spec_arg(preset)
     preset.add_argument('packages', metavar='PACKAGE_NAME', default=None, nargs='+')
     preset.set_defaults(main=environment_commands.main_remove_dependencies)
 
     preset = subparsers.add_parser('list-dependencies', help="List dependencies for an environment on the project")
     add_project_arg(preset)
-    add_environment_arg(preset)
+    add_env_spec_arg(preset)
     preset.set_defaults(main=environment_commands.main_list_dependencies)
 
     def add_command_name_arg(preset):

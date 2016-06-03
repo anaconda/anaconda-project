@@ -23,7 +23,7 @@ from anaconda_project.test.project_utils import project_dir_disable_dedicated_en
 class Args(object):
     def __init__(self, **kwargs):
         self.project = "."
-        self.environment = None
+        self.env_spec = None
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
             setattr(self, key, kwargs[key])

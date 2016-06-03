@@ -261,8 +261,8 @@ def test_add_dependencies_to_specific_environment(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_add_dependencies(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-dependencies', '--environment', 'foo',
-                                               '--channel', 'c1', '--channel=c2', 'a', 'b'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-dependencies', '--env-spec', 'foo', '--channel',
+                                               'c1', '--channel=c2', 'a', 'b'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -303,8 +303,7 @@ def test_remove_dependencies_from_specific_environment(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_remove_dependencies(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-dependencies', '--environment', 'foo', 'bar'
-                                               ])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-dependencies', '--env-spec', 'foo', 'bar'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -374,7 +373,7 @@ def test_list_dependencies_wrong_env(capsys):
     def check_missing_env(dirname):
         env_name = 'not-there'
         code = _parse_args_and_run_subcommand(['anaconda-project', 'list-dependencies', '--project', dirname,
-                                               '--environment', env_name])
+                                               '--env-spec', env_name])
 
         assert code == 1
 
@@ -391,7 +390,7 @@ def _test_list_dependencies(capsys, env, expected_deps):
     def check_list_not_empty(dirname):
         params = ['anaconda-project', 'list-dependencies', '--project', dirname]
         if env:
-            params.extend(['--environment', env])
+            params.extend(['--env-spec', env])
 
         code = _parse_args_and_run_subcommand(params)
 

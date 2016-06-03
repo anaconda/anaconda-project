@@ -21,7 +21,7 @@ from anaconda_project.test.project_utils import project_dir_disable_dedicated_en
 class Args(object):
     def __init__(self, **kwargs):
         self.project = "."
-        self.environment = None
+        self.env_spec = None
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -219,8 +219,7 @@ def test_prepare_command_choose_environment(capsys, monkeypatch):
     def check_prepare_choose_environment(dirname):
         wrong_envdir = os.path.join(dirname, "envs", "foo")
         envdir = os.path.join(dirname, "envs", "bar")
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname,
-                                                 '--environment=bar'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname, '--env-spec=bar'])
         assert result == 0
 
         assert os.path.isdir(envdir)
@@ -248,8 +247,8 @@ environments:
 def test_prepare_command_choose_environment_does_not_exist(capsys):
     def check_prepare_choose_environment_does_not_exist(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname,
-                                                 '--environment=nope'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname, '--env-spec=nope'
+                                                 ])
         assert result == 1
 
         expected_error = ("Environment name 'nope' is not in %s, these names were found: bar, default, foo" %
