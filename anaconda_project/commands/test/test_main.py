@@ -13,7 +13,7 @@ from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
 all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'bundle', 'upload', 'add-variable', 'remove-variable',
                    'list-variables', 'add-download', 'remove-download', 'list-downloads', 'add-service',
-                   'remove-service', 'list-services', 'add-environment', 'remove-environment', 'list-environments',
+                   'remove-service', 'list-services', 'add-env-spec', 'remove-env-spec', 'list-env-specs',
                    'add-dependencies', 'remove-dependencies', 'list-dependencies', 'add-command', 'remove-command',
                    'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
@@ -81,9 +81,9 @@ expected_usage_msg = \
         '    add-service         Add a service to be available before running commands\n' \
         '    remove-service      Remove a service from the project\n' \
         '    list-services       List services present in the project\n' \
-        '    add-environment     Add a new environment to the project\n' \
-        '    remove-environment  Remove an environment from the project\n' \
-        '    list-environments   List all environments on the project\n' \
+        '    add-env-spec        Add a new environment spec to the project\n' \
+        '    remove-env-spec     Remove an environment spec from the project\n' \
+        '    list-env-specs      List all environment specs for the project\n' \
         '    add-dependencies    Add packages to one or all project environments\n' \
         '    remove-dependencies\n' \
         '                        Remove packages from one or all project environments\n' \

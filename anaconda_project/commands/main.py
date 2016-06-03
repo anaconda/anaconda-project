@@ -175,20 +175,20 @@ def _parse_args_and_run_subcommand(argv):
                             help='Channel to search for packages')
         preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
 
-    preset = subparsers.add_parser('add-environment', help="Add a new environment to the project")
+    preset = subparsers.add_parser('add-env-spec', help="Add a new environment spec to the project")
     add_project_arg(preset)
     add_package_args(preset)
     add_environment_name_arg(preset)
     preset.set_defaults(main=environment_commands.main_add)
 
-    preset = subparsers.add_parser('remove-environment', help="Remove an environment from the project")
+    preset = subparsers.add_parser('remove-env-spec', help="Remove an environment spec from the project")
     add_project_arg(preset)
     add_environment_name_arg(preset)
     preset.set_defaults(main=environment_commands.main_remove)
 
-    preset = subparsers.add_parser('list-environments', help="List all environments on the project")
+    preset = subparsers.add_parser('list-env-specs', help="List all environment specs for the project")
     add_project_arg(preset)
-    preset.set_defaults(main=environment_commands.main_list_environments)
+    preset.set_defaults(main=environment_commands.main_list_env_specs)
 
     preset = subparsers.add_parser('add-dependencies', help="Add packages to one or all project environments")
     add_project_arg(preset)

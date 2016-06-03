@@ -24,14 +24,14 @@ def _handle_status(status, success_message):
         return 1
 
 
-def add_environment(project_dir, name, packages, channels):
+def add_env_spec(project_dir, name, packages, channels):
     """Add an environment with packages from specified channels to the project."""
     project = Project(project_dir)
     status = project_ops.add_env_spec(project, name=name, packages=packages, channels=channels)
     return _handle_status(status, "Added environment {} to the project file.".format(name))
 
 
-def remove_environment(project_dir, name):
+def remove_env_spec(project_dir, name):
     """Remove an environment with packages from the project."""
     project = Project(project_dir)
     status = project_ops.remove_env_spec(project, name=name)
@@ -62,7 +62,7 @@ def remove_dependencies(project, environment, packages):
     return _handle_status(status, success_message)
 
 
-def list_environments(project_dir):
+def list_env_specs(project_dir):
     """List environments in the project."""
     project = Project(project_dir)
     if console_utils.print_project_problems(project):
@@ -90,12 +90,12 @@ def list_dependencies(project_dir, environment):
 
 def main_add(args):
     """Start the add-environment command and return exit status code."""
-    return add_environment(args.project, args.name, args.packages, args.channel)
+    return add_env_spec(args.project, args.name, args.packages, args.channel)
 
 
 def main_remove(args):
     """Start the remove-environment command and return exit status code."""
-    return remove_environment(args.project, args.name)
+    return remove_env_spec(args.project, args.name)
 
 
 def main_add_dependencies(args):
@@ -108,9 +108,9 @@ def main_remove_dependencies(args):
     return remove_dependencies(args.project, args.environment, args.packages)
 
 
-def main_list_environments(args):
+def main_list_env_specs(args):
     """Start the list environments command and return exit status code."""
-    return list_environments(args.project)
+    return list_env_specs(args.project)
 
 
 def main_list_dependencies(args):
