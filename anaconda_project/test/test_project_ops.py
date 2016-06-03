@@ -788,14 +788,14 @@ def test_add_download_with_project_file_problems():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
-# the other add_environment tests use a mock CondaManager, but we want to have
+# the other add_env_spec tests use a mock CondaManager, but we want to have
 # one test that does the real thing to be sure it works.
-def test_add_environment_with_real_conda_manager(monkeypatch):
+def test_add_env_spec_with_real_conda_manager(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
     def check(dirname):
         project = Project(dirname)
-        status = project_ops.add_environment(project, name='foo', packages=['numpy'], channels=[])
+        status = project_ops.add_env_spec(project, name='foo', packages=['numpy'], channels=[])
         if not status:
             print(status.status_description)
             print(repr(status.errors))
@@ -848,14 +848,14 @@ def _with_conda_test(f, fix_works=True, missing_packages=(), wrong_version_packa
         _pop_conda_test()
 
 
-def test_add_environment():
+def test_add_env_spec():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_environment(project, name='foo', packages=[], channels=[])
+            status = project_ops.add_env_spec(project, name='foo', packages=[], channels=[])
             assert status
             # with "None" for the args
-            status = project_ops.add_environment(project, name='bar', packages=None, channels=None)
+            status = project_ops.add_env_spec(project, name='bar', packages=None, channels=None)
             assert status
 
         _with_conda_test(attempt)
@@ -868,14 +868,14 @@ def test_add_environment():
     with_directory_contents(dict(), check)
 
 
-def test_add_environment_with_packages_and_channels():
+def test_add_env_spec_with_packages_and_channels():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_environment(project,
-                                                 name='foo',
-                                                 packages=['a', 'b', 'c'],
-                                                 channels=['c1', 'c2', 'c3'])
+            status = project_ops.add_env_spec(project,
+                                              name='foo',
+                                              packages=['a', 'b', 'c'],
+                                              channels=['c1', 'c2', 'c3'])
             assert status
 
         _with_conda_test(attempt)
@@ -888,14 +888,14 @@ def test_add_environment_with_packages_and_channels():
     with_directory_contents(dict(), check)
 
 
-def test_add_environment_extending_existing_lists():
+def test_add_env_spec_extending_existing_lists():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_environment(project,
-                                                 name='foo',
-                                                 packages=['a', 'b', 'c'],
-                                                 channels=['c1', 'c2', 'c3'])
+            status = project_ops.add_env_spec(project,
+                                              name='foo',
+                                              packages=['a', 'b', 'c'],
+                                              channels=['c1', 'c2', 'c3'])
             assert status
 
         _with_conda_test(attempt)
@@ -914,14 +914,14 @@ environments:
 """}, check)
 
 
-def test_add_environment_extending_existing_lists_with_versions():
+def test_add_env_spec_extending_existing_lists_with_versions():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_environment(project,
-                                                 name='foo',
-                                                 packages=['a', 'b=2.0', 'c'],
-                                                 channels=['c1', 'c2', 'c3'])
+            status = project_ops.add_env_spec(project,
+                                              name='foo',
+                                              packages=['a', 'b=2.0', 'c'],
+                                              channels=['c1', 'c2', 'c3'])
             assert status
 
         _with_conda_test(attempt)
@@ -945,7 +945,7 @@ def test_add_dependencies_to_all_environments():
         def attempt():
             project = Project(dirname)
             status = project_ops.add_dependencies(project,
-                                                  environment=None,
+                                                  env_spec_name=None,
                                                   packages=['foo', 'bar'],
                                                   channels=['hello', 'world'])
             assert status
@@ -966,7 +966,7 @@ def test_add_dependencies_nonexistent_environment():
         def attempt():
             project = Project(dirname)
             status = project_ops.add_dependencies(project,
-                                                  environment="not_an_env",
+                                                  env_spec_name="not_an_env",
                                                   packages=['foo', 'bar'],
                                                   channels=['hello', 'world'])
             assert not status
@@ -981,7 +981,7 @@ def test_add_dependencies_invalid_spec():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_dependencies(project, environment=None, packages=['='], channels=[])
+            status = project_ops.add_dependencies(project, env_spec_name=None, packages=['='], channels=[])
             assert not status
             assert 'Could not add packages.' == status.status_description
             assert ['Bad package specifications: =.'] == status.errors
@@ -999,7 +999,7 @@ def test_remove_dependencies_from_all_environments():
             assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('dependencies'))
             assert ['foo', 'woot'] == list(project.project_file.get_value(
                 ['environments', 'hello', 'dependencies'], []))
-            status = project_ops.remove_dependencies(project, environment=None, packages=['foo', 'bar'])
+            status = project_ops.remove_dependencies(project, env_spec_name=None, packages=['foo', 'bar'])
             assert status
             assert [] == status.errors
 
@@ -1030,7 +1030,7 @@ def test_remove_dependencies_from_one_environment():
             project = Project(dirname)
             assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('dependencies'))
             assert ['foo'] == list(project.project_file.get_value(['environments', 'hello', 'dependencies'], []))
-            status = project_ops.remove_dependencies(project, environment='hello', packages=['foo', 'bar'])
+            status = project_ops.remove_dependencies(project, env_spec_name='hello', packages=['foo', 'bar'])
             assert status
             assert [] == status.errors
 
@@ -1068,7 +1068,7 @@ def test_remove_dependencies_from_one_environment_leaving_others_unaffected():
             project = Project(dirname)
             assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('dependencies'))
             assert ['foo'] == list(project.project_file.get_value(['environments', 'hello', 'dependencies'], []))
-            status = project_ops.remove_dependencies(project, environment='hello', packages=['foo', 'bar'])
+            status = project_ops.remove_dependencies(project, env_spec_name='hello', packages=['foo', 'bar'])
             assert status
             assert [] == status.errors
 
@@ -1110,10 +1110,12 @@ def test_remove_dependencies_from_nonexistent_environment():
         def attempt():
             project = Project(dirname)
             assert ['foo', 'bar'] == list(project.project_file.get_value('dependencies'))
-            status = project_ops.remove_dependencies(project, environment='not_an_environment', packages=['foo', 'bar'])
+            status = project_ops.remove_dependencies(project,
+                                                     env_spec_name='not_an_environment',
+                                                     packages=['foo', 'bar'])
             assert not status
             assert [] == status.errors
-            assert "Environment not_an_environment doesn't exist." == status.status_description
+            assert "Environment spec not_an_environment doesn't exist." == status.status_description
 
         _with_conda_test(attempt)
 
@@ -1131,7 +1133,7 @@ dependencies:
 def test_remove_dependencies_with_project_file_problems():
     def check(dirname):
         project = Project(dirname)
-        status = project_ops.remove_dependencies(project, environment=None, packages=['foo'])
+        status = project_ops.remove_dependencies(project, env_spec_name=None, packages=['foo'])
 
         assert not status
         assert ["variables section contains wrong value type 42, should be dict or list of requirements"

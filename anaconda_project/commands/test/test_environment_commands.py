@@ -27,15 +27,15 @@ def _monkeypatch_pwd(monkeypatch, dirname):
     monkeypatch.setattr('os.path.abspath', mock_abspath)
 
 
-def _monkeypatch_add_environment(monkeypatch, result):
+def _monkeypatch_add_env_spec(monkeypatch, result):
     params = {}
 
-    def mock_add_environment(*args, **kwargs):
+    def mock_add_env_spec(*args, **kwargs):
         params['args'] = args
         params['kwargs'] = kwargs
         return result
 
-    monkeypatch.setattr("anaconda_project.project_ops.add_environment", mock_add_environment)
+    monkeypatch.setattr("anaconda_project.project_ops.add_env_spec", mock_add_env_spec)
 
     return params
 
@@ -83,10 +83,10 @@ def _test_environment_command_with_project_file_problems(capsys, monkeypatch, co
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
-def test_add_environment_no_packages(capsys, monkeypatch):
+def test_add_env_spec_no_packages(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        _monkeypatch_add_environment(monkeypatch, SimpleStatus(success=True, description='Environment looks good.'))
+        _monkeypatch_add_env_spec(monkeypatch, SimpleStatus(success=True, description='Environment looks good.'))
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo'])
         assert code == 0
@@ -98,12 +98,12 @@ def test_add_environment_no_packages(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def test_add_environment_with_packages(capsys, monkeypatch):
+def test_add_env_spec_with_packages(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        params = _monkeypatch_add_environment(monkeypatch,
-                                              SimpleStatus(success=True,
-                                                           description='Environment looks good.'))
+        params = _monkeypatch_add_env_spec(monkeypatch,
+                                           SimpleStatus(success=True,
+                                                        description='Environment looks good.'))
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo', '--channel',
                                                'c1', '--channel=c2', 'a', 'b'])
@@ -119,14 +119,14 @@ def test_add_environment_with_packages(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def test_add_environment_fails(capsys, monkeypatch):
+def test_add_env_spec_fails(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        _monkeypatch_add_environment(monkeypatch,
-                                     SimpleStatus(success=False,
-                                                  description='Environment variable MYDATA is not set.',
-                                                  logs=['This is a log message.'],
-                                                  errors=['This is an error message.']))
+        _monkeypatch_add_env_spec(monkeypatch,
+                                  SimpleStatus(success=False,
+                                               description='Environment variable MYDATA is not set.',
+                                               logs=['This is a log message.'],
+                                               errors=['This is an error message.']))
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo'])
         assert code == 1
@@ -138,7 +138,7 @@ def test_add_environment_fails(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def test_remove_environment_missing(capsys, monkeypatch):
+def test_remove_env_spec_missing(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'foo'])
@@ -146,12 +146,12 @@ def test_remove_environment_missing(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert "Environment foo doesn't exist.\n" == err
+        assert "Environment spec foo doesn't exist.\n" == err
 
     with_directory_contents(dict(), check)
 
 
-def test_remove_environment_fails(capsys, monkeypatch):
+def test_remove_env_spec_fails(capsys, monkeypatch):
     def check(dirname):
         from shutil import rmtree as real_rmtree
         _monkeypatch_pwd(monkeypatch, dirname)
@@ -184,7 +184,7 @@ def test_remove_environment_fails(capsys, monkeypatch):
         }, check)
 
 
-def test_remove_environment(capsys, monkeypatch):
+def test_remove_env_spec(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
@@ -203,7 +203,7 @@ def test_remove_environment(capsys, monkeypatch):
         }, check)
 
 
-def test_remove_environment_default(capsys, monkeypatch):
+def test_remove_env_spec_default(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
@@ -212,17 +212,17 @@ def test_remove_environment_default(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert "Cannot remove default environment.\n" == err
+        assert "Cannot remove default environment spec.\n" == err
 
     with_directory_contents({}, check)
 
 
-def test_add_environment_with_project_file_problems(capsys, monkeypatch):
+def test_add_env_spec_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys, monkeypatch,
                                                          ['anaconda-project', 'add-environment', '--name', 'foo'])
 
 
-def test_remove_environment_with_project_file_problems(capsys, monkeypatch):
+def test_remove_env_spec_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys, monkeypatch,
                                                          ['anaconda-project', 'remove-environment', '--name', 'foo'])
 
@@ -251,7 +251,7 @@ def test_add_dependencies_to_all_environments(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(environment=None, packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
+        assert dict(env_spec_name=None, packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
 
     with_directory_contents(dict(), check)
 
@@ -270,7 +270,7 @@ def test_add_dependencies_to_specific_environment(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(environment='foo', packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
+        assert dict(env_spec_name='foo', packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 environments:
@@ -293,7 +293,7 @@ def test_remove_dependencies_from_all_environments(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(environment=None, packages=['bar']) == params['kwargs']
+        assert dict(env_spec_name=None, packages=['bar']) == params['kwargs']
 
     with_directory_contents(dict(), check)
 
@@ -312,7 +312,7 @@ def test_remove_dependencies_from_specific_environment(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(environment='foo', packages=['bar']) == params['kwargs']
+        assert dict(env_spec_name='foo', packages=['bar']) == params['kwargs']
 
     with_directory_contents(dict(), check)
 

@@ -244,42 +244,42 @@ def test_remove_download(monkeypatch):
     assert kwargs == params['kwargs']
 
 
-def test_add_environment(monkeypatch):
+def test_add_env_spec(monkeypatch):
     import anaconda_project.project_ops as project_ops
-    _verify_args_match(api.AnacondaProject.add_environment, project_ops.add_environment)
+    _verify_args_match(api.AnacondaProject.add_env_spec, project_ops.add_env_spec)
 
     params = dict(args=(), kwargs=dict())
 
-    def mock_add_environment(*args, **kwargs):
+    def mock_add_env_spec(*args, **kwargs):
         params['args'] = args
         params['kwargs'] = kwargs
         return 42
 
-    monkeypatch.setattr('anaconda_project.project_ops.add_environment', mock_add_environment)
+    monkeypatch.setattr('anaconda_project.project_ops.add_env_spec', mock_add_env_spec)
 
     p = api.AnacondaProject()
     kwargs = dict(project=43, name='foo', packages=['a'], channels=['b'])
-    result = p.add_environment(**kwargs)
+    result = p.add_env_spec(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
 
 
-def test_remove_environment(monkeypatch):
+def test_remove_env_spec(monkeypatch):
     import anaconda_project.project_ops as project_ops
-    _verify_args_match(api.AnacondaProject.remove_environment, project_ops.remove_environment)
+    _verify_args_match(api.AnacondaProject.remove_env_spec, project_ops.remove_env_spec)
 
     params = dict(args=(), kwargs=dict())
 
-    def mock_remove_environment(*args, **kwargs):
+    def mock_remove_env_spec(*args, **kwargs):
         params['args'] = args
         params['kwargs'] = kwargs
         return 42
 
-    monkeypatch.setattr('anaconda_project.project_ops.remove_environment', mock_remove_environment)
+    monkeypatch.setattr('anaconda_project.project_ops.remove_env_spec', mock_remove_env_spec)
 
     p = api.AnacondaProject()
     kwargs = dict(project=43, name='foo')
-    result = p.remove_environment(**kwargs)
+    result = p.remove_env_spec(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
 
@@ -298,7 +298,7 @@ def test_add_dependencies(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.add_dependencies', mock_add_dependencies)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, environment='foo', packages=['a'], channels=['b'])
+    kwargs = dict(project=43, env_spec_name='foo', packages=['a'], channels=['b'])
     result = p.add_dependencies(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
@@ -318,7 +318,7 @@ def test_remove_dependencies(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.remove_dependencies', mock_remove_dependencies)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, environment='foo', packages=['a'])
+    kwargs = dict(project=43, env_spec_name='foo', packages=['a'])
     result = p.remove_dependencies(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

@@ -350,8 +350,8 @@ class AnacondaProject(object):
         """
         return project_ops.remove_download(project=project, prepare_result=prepare_result, env_var=env_var)
 
-    def add_environment(self, project, name, packages, channels):
-        """Attempt to create the environment and add it to project.yml.
+    def add_env_spec(self, project, name, packages, channels):
+        """Attempt to create the environment spec and add it to project.yml.
 
         The returned ``Status`` will be an instance of ``SimpleStatus``. A False
         status will have an ``errors`` property with a list of error
@@ -366,10 +366,10 @@ class AnacondaProject(object):
         Returns:
             ``Status`` instance
         """
-        return project_ops.add_environment(project=project, name=name, packages=packages, channels=channels)
+        return project_ops.add_env_spec(project=project, name=name, packages=packages, channels=channels)
 
-    def remove_environment(self, project, name):
-        """Remove the environment from project directory and remove from project.yml.
+    def remove_env_spec(self, project, name):
+        """Remove the environment spec from project directory and remove from project.yml.
 
         Returns a ``Status`` subtype (it won't be a
         ``RequirementStatus`` as with some other functions, just a
@@ -382,14 +382,14 @@ class AnacondaProject(object):
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_environment(project=project, name=name)
+        return project_ops.remove_env_spec(project=project, name=name)
 
-    def add_dependencies(self, project, environment, packages, channels):
+    def add_dependencies(self, project, env_spec_name, packages, channels):
         """Attempt to install dependencies then add them to project.yml.
 
-        If the environment is None rather than an env name,
-        dependencies are added in the global dependencies section (to
-        all environments).
+        If the environment spec name is None rather than an env
+        name, dependencies are added in the global dependencies
+        section (to all environments).
 
         The returned ``Status`` should be a ``RequirementStatus`` for
         the environment requirement if it evaluates to True (on success),
@@ -399,24 +399,25 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
-            environment (str): environment name or None for all environments
+            env_spec_name (str): environment spec name or None for all environment specs
             packages (list of str): dependencies (with optional version info, as for conda install)
             channels (list of str): channels (as they should be passed to conda --channel)
 
         Returns:
             ``Status`` instance
+
         """
         return project_ops.add_dependencies(project=project,
-                                            environment=environment,
+                                            env_spec_name=env_spec_name,
                                             packages=packages,
                                             channels=channels)
 
-    def remove_dependencies(self, project, environment, packages):
-        """Attempt to remove dependencies from an environment in project.yml.
+    def remove_dependencies(self, project, env_spec_name, packages):
+        """Attempt to remove dependencies from an environment spec in project.yml.
 
-        If the environment is None rather than an env name,
-        dependencies are removed from the global dependencies section
-        (from all environments).
+        If the environment spec name is None rather than an env
+        name, dependencies are removed from the global
+        dependencies section (from all environments).
 
         The returned ``Status`` should be a ``RequirementStatus`` for
         the environment requirement if it evaluates to True (on success),
@@ -426,13 +427,14 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
-            environment (str): environment name or None for all environments
+            env_spec_name (str): environment name or None for all environments
             packages (list of str): dependencies
 
         Returns:
             ``Status`` instance
+
         """
-        return project_ops.remove_dependencies(project=project, environment=environment, packages=packages)
+        return project_ops.remove_dependencies(project=project, env_spec_name=env_spec_name, packages=packages)
 
     def add_command(self, project, name, command_type, command):
         """Add a command to project.yml.

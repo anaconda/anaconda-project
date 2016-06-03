@@ -27,21 +27,21 @@ def _handle_status(status, success_message):
 def add_environment(project_dir, name, packages, channels):
     """Add an environment with packages from specified channels to the project."""
     project = Project(project_dir)
-    status = project_ops.add_environment(project, name=name, packages=packages, channels=channels)
+    status = project_ops.add_env_spec(project, name=name, packages=packages, channels=channels)
     return _handle_status(status, "Added environment {} to the project file.".format(name))
 
 
 def remove_environment(project_dir, name):
     """Remove an environment with packages from the project."""
     project = Project(project_dir)
-    status = project_ops.remove_environment(project, name=name)
+    status = project_ops.remove_env_spec(project, name=name)
     return _handle_status(status, "Removed environment {} from the project file.".format(name))
 
 
 def add_dependencies(project, environment, packages, channels):
     """Add dependencies to the project."""
     project = Project(project)
-    status = project_ops.add_dependencies(project, environment=environment, packages=packages, channels=channels)
+    status = project_ops.add_dependencies(project, env_spec_name=environment, packages=packages, channels=channels)
     package_list = ", ".join(packages)
     if environment is None:
         success_message = "Added dependencies to project file: %s." % (package_list)
@@ -53,7 +53,7 @@ def add_dependencies(project, environment, packages, channels):
 def remove_dependencies(project, environment, packages):
     """Remove dependencies from the project."""
     project = Project(project)
-    status = project_ops.remove_dependencies(project, environment=environment, packages=packages)
+    status = project_ops.remove_dependencies(project, env_spec_name=environment, packages=packages)
     package_list = ", ".join(packages)
     if environment is None:
         success_message = "Removed dependencies from project file: %s." % (package_list)
