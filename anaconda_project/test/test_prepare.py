@@ -260,7 +260,7 @@ def test_prepare_choose_environment():
             _pop_fake_env_creator()
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
     foo: {}
     bar: {}
 """}, check)

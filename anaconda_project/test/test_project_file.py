@@ -140,18 +140,18 @@ dependencies: []
 #
 channels: []
 #
-# If you like, you can define multiple, named Conda environments.
-# There's an implicit environment called 'default', which you can
+# If you like, you can define multiple, named environment specs.
+# There's an implicit environment spec called 'default', which you can
 # tune by naming it explicitly here. When you run a command, use
-# the --environment option to choose an environment.
-#    anaconda-project run --environment python27
+# the --env-spec option to choose an environment.
+#    anaconda-project run --env-spec python27
 #
-# Each environment may have 'dependencies' or 'channels' sub-sections
+# Each environment spec may have 'dependencies' or 'channels' sub-sections
 # which are combined with any global 'dependencies' or 'channels'.
 #
 # For example,
 #
-# environments:
+# env_specs:
 #   default:
 #     dependencies:
 #       - bokeh
@@ -162,7 +162,7 @@ channels: []
 #       - python=2.7
 #
 #
-environments: {}
+env_specs: {}
 """
 
 

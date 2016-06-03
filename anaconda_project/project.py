@@ -272,9 +272,9 @@ class _ConfigCache(object):
         self.env_specs = dict()
         shared_deps = _parse_dependencies(project_file.root)
         shared_channels = _parse_channels(project_file.root)
-        environments = project_file.get_value('environments', default={})
-        if isinstance(environments, dict):
-            for (name, attrs) in environments.items():
+        env_specs = project_file.get_value('env_specs', default={})
+        if isinstance(env_specs, dict):
+            for (name, attrs) in env_specs.items():
                 if name.strip() == '':
                     problems.append("Environment spec name cannot be empty string, found: '{}' as name".format(name))
                     continue
@@ -297,8 +297,8 @@ class _ConfigCache(object):
                                                description=description)
         else:
             problems.append(
-                "%s: environments should be a dictionary from environment name to environment attributes, not %r" %
-                (project_file.filename, environments))
+                "%s: env_specs should be a dictionary from environment name to environment attributes, not %r" %
+                (project_file.filename, env_specs))
 
         # We ALWAYS have an environment named 'default' which is the default,
         # even if not explicitly listed.
@@ -317,8 +317,8 @@ class _ConfigCache(object):
             return
 
         env_requirement = CondaEnvRequirement(registry=self.registry,
-                                              environments=self.env_specs,
-                                              default_environment_name=self.default_env_spec_name)
+                                              env_specs=self.env_specs,
+                                              default_env_spec_name=self.default_env_spec_name)
         requirements.append(env_requirement)
 
     def _update_commands(self, problems, project_file, conda_meta_file, requirements):
@@ -687,7 +687,7 @@ class Project(object):
             envs[key] = dict(dependencies=list(env.dependencies),
                              channels=list(env.channels),
                              description=env.description)
-        json['environments'] = envs
+        json['env_specs'] = envs
         variables = dict()
         downloads = dict()
         services = dict()

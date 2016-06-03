@@ -203,7 +203,7 @@ downloads:
   ' ': 'http://localhost:8000/foo.tgz'
 services:
   ' ': redis
-environments:
+env_specs:
   ' ':
     dependencies:
        - python
@@ -499,9 +499,9 @@ def test_get_package_requirements_from_project_file():
             if isinstance(r, CondaEnvRequirement):
                 assert conda_env_req is None  # only one
                 conda_env_req = r
-        assert len(conda_env_req.environments) == 1
-        assert 'default' in conda_env_req.environments
-        assert conda_env_req.environments['default'] is env
+        assert len(conda_env_req.env_specs) == 1
+        assert 'default' in conda_env_req.env_specs
+        assert conda_env_req.env_specs['default'] is env
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
@@ -601,7 +601,7 @@ def test_load_environments():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   foo:
     description: "THE FOO"
     dependencies:
@@ -641,7 +641,7 @@ dependencies:
 channels:
   - mtv
 
-environments:
+env_specs:
   foo:
     dependencies:
        - python
@@ -677,7 +677,7 @@ def test_load_environments_default_always_default_even_if_not_first():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   foo: {}
   bar: {}
   default: {}
@@ -691,7 +691,7 @@ def test_complain_about_environments_not_a_dict():
         "should be a directory from environment name to environment attributes, not 42" in project.problems[0]
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-environments: 42
+env_specs: 42
     """}, check_environments)
 
 
@@ -703,7 +703,7 @@ def test_complain_about_non_string_environment_description():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
    foo:
      description: []
     """}, check_environments)
@@ -1538,7 +1538,7 @@ def test_get_publication_info_from_empty_project():
             'name': os.path.basename(dirname),
             'description': '',
             'commands': {},
-            'environments': {
+            'env_specs': {
                 'default': {
                     'channels': [],
                     'dependencies': [],
@@ -1575,7 +1575,7 @@ dependencies:
 channels:
   - bar
 
-environments:
+env_specs:
   woot:
     dependencies:
       - blah
@@ -1619,18 +1619,18 @@ def test_get_publication_info_from_complex_project():
                                   'title': 'FOO',
                                   'description': 'A downloaded file which is referenced by FOO.',
                                   'url': 'https://example.com/blah'}},
-            'environments': {'default': {'channels': ['bar'],
-                                         'dependencies': ['foo'],
-                                         'description': 'Default'},
-                             'lol': {'channels': ['bar'],
-                                     'dependencies': ['foo'],
-                                     'description': 'lol'},
-                             'w00t': {'channels': ['bar'],
-                                      'dependencies': ['foo', 'something'],
-                                      'description': 'double 0'},
-                             'woot': {'channels': ['bar', 'woohoo'],
-                                      'dependencies': ['foo', 'blah'],
-                                      'description': 'woot'}},
+            'env_specs': {'default': {'channels': ['bar'],
+                                      'dependencies': ['foo'],
+                                      'description': 'Default'},
+                          'lol': {'channels': ['bar'],
+                                  'dependencies': ['foo'],
+                                  'description': 'lol'},
+                          'w00t': {'channels': ['bar'],
+                                   'dependencies': ['foo', 'something'],
+                                   'description': 'double 0'},
+                          'woot': {'channels': ['bar', 'woohoo'],
+                                   'dependencies': ['foo', 'blah'],
+                                   'description': 'woot'}},
             'variables': {'SOMETHING': {'encrypted': False,
                                         'title': 'SOMETHING',
                                         'description': 'SOMETHING environment variable must be set.'},

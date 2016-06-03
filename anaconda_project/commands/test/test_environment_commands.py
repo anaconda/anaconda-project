@@ -179,7 +179,7 @@ def test_remove_env_spec_fails(capsys, monkeypatch):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: 'environments:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
+            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
             'envs/foo/bin/test': 'code here'
         }, check)
 
@@ -198,7 +198,7 @@ def test_remove_env_spec(capsys, monkeypatch):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: 'environments:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
+            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
             'envs/foo/bin/test': 'code here'
         }, check)
 
@@ -273,7 +273,7 @@ def test_add_dependencies_to_specific_environment(capsys, monkeypatch):
         assert dict(env_spec_name='foo', packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   foo:
    dependencies:
      - bar
@@ -335,7 +335,7 @@ foo
         assert out == expected_out
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: ('environments:\n'
+        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
                                     '  foo:\n'
                                     '    dependencies:\n'
                                     '      - bar\n'
@@ -402,7 +402,7 @@ def _test_list_dependencies(capsys, env, expected_deps):
             (env or project.default_env_spec_name), expected_deps)
         assert out == expected_out
 
-    project_contents = ('environments:\n'
+    project_contents = ('env_specs:\n'
                         '  foo:\n'
                         '    dependencies:\n'
                         '      - requests\n'

@@ -26,7 +26,7 @@ else:
 
 
 def _empty_default_requirement():
-    return CondaEnvRequirement(registry=PluginRegistry(), environments=dict(default=EnvSpec('default', [], [])))
+    return CondaEnvRequirement(registry=PluginRegistry(), env_specs=dict(default=EnvSpec('default', [], [])))
 
 
 def test_env_var_on_windows(monkeypatch):
@@ -97,7 +97,7 @@ def test_conda_fails_while_listing_installed(monkeypatch):
         local_state = LocalStateFile.load_for_directory(dirname)
 
         requirement = CondaEnvRequirement(registry=PluginRegistry(),
-                                          environments=dict(default=EnvSpec('default', ['not_a_real_package'], [])))
+                                          env_specs=dict(default=EnvSpec('default', ['not_a_real_package'], [])))
         status = requirement.check_status(minimal_environ(PROJECT_DIR=dirname), local_state, UserConfigOverrides())
         assert status.status_description.startswith("Conda failed while listing installed packages in ")
         assert status.status_description.endswith(": sabotage!")
@@ -109,7 +109,7 @@ def test_missing_package():
     def check_missing_package(dirname):
         requirement = CondaEnvRequirement(
             registry=PluginRegistry(),
-            environments=dict(default=EnvSpec('default', ['boguspackage', 'boguspackage2'], [])))
+            env_specs=dict(default=EnvSpec('default', ['boguspackage', 'boguspackage2'], [])))
         project_dir_disable_dedicated_env(dirname)
         local_state = LocalStateFile.load_for_directory(dirname)
         status = requirement.check_status(minimal_environ(PROJECT_DIR=dirname), local_state, UserConfigOverrides())

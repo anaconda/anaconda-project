@@ -230,7 +230,7 @@ def test_prepare_command_choose_environment(capsys, monkeypatch):
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   foo:
     dependencies:
         - nonexistent_foo
@@ -259,7 +259,7 @@ def test_prepare_command_choose_environment_does_not_exist(capsys):
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   foo:
     dependencies:
         - nonexistent_foo

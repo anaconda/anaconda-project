@@ -157,15 +157,14 @@ class ProjectFile(YamlFile):
             "for packages. These channels will be used by ALL Conda environments\n" + "this project runs in.\n" + "\n" +
             "For example,\n" + "\n" + "channels:\n" + "   - https://conda.anaconda.org/asmeurer\n")
 
-        sections['environments'] = (
-            "If you like, you can define multiple, named Conda environments.\n" +
-            "There's an implicit environment called 'default', which you can\n" +
+        sections['env_specs'] = (
+            "If you like, you can define multiple, named environment specs.\n" +
+            "There's an implicit environment spec called 'default', which you can\n" +
             "tune by naming it explicitly here. When you run a command, use\n" +
-            "the --environment option to choose an environment.\n" +
-            "   anaconda-project run --environment python27\n\n" +
-            "Each environment may have 'dependencies' or 'channels' sub-sections\n" +
+            "the --env-spec option to choose an environment.\n" + "   anaconda-project run --env-spec python27\n\n" +
+            "Each environment spec may have 'dependencies' or 'channels' sub-sections\n" +
             "which are combined with any global 'dependencies' or 'channels'.\n" + "\n" + "For example,\n" + "\n" +
-            "environments:\n" + "  default:\n" + "    dependencies:\n" + "      - bokeh\n" + "    channels:\n" +
+            "env_specs:\n" + "  default:\n" + "    dependencies:\n" + "      - bokeh\n" + "    channels:\n" +
             "      - https://conda.anaconda.org/asmeurer\n" + "  python27:\n" + "    dependencies:\n" +
             "      - python=2.7\n"
             "\n")

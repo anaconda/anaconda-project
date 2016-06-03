@@ -134,13 +134,12 @@ dependencies:
   channels:
     - https://conda.anaconda.org/asmeurer
 
-``anaconda-project`` creates an environment in ``envs/default``
-by default. But if you prefer, you can have
-multiple named environments available in the ``envs``
-directory. To do that, specify an ``environments:`` section of
-your ``project.yml`` file:
+``anaconda-project`` creates an environment in ``envs/default`` by
+default. But if you prefer, you can have multiple named
+environments available in the ``envs`` directory. To do that,
+specify an ``env_specs:`` section of your ``project.yml`` file:
 
-  environments:
+  env_specs:
     default:
       dependencies:
         - foo
@@ -154,18 +153,25 @@ your ``project.yml`` file:
       channels:
         - https://example.com/somechannel
 
-In the above example we create two environments, ``envs/default``
-and ``envs/python27``.
+An "environment spec" is a description of an environment,
+describing the packages that the project requires to run.  By
+default, environment specs are instantiated as actual Conda
+environments in the ``envs`` directory inside your project.
 
-To run a project in a specific environment, use the ``environment`` option:
+In the above example we create two environment specs, which will
+be instantiated as two environments, ``envs/default`` and
+``envs/python27``.
 
-  anaconda-project run --environment myenvname
+To run a project using a specific env spec, use the ``--env-spec`` option:
+
+  anaconda-project run --env-spec myenvname
 
 https://github.com/Anaconda-Server/anaconda-project/issues/97
 
-If you have top level ``channels`` or ``dependencies`` sections
-in your ``project.yml`` file (not in the ``environments:`` section),
-those channels and dependencies are added to all environments.
+If you have top level ``channels`` or ``dependencies`` sections in
+your ``project.yml`` file (not in the ``env_specs:`` section),
+those channels and dependencies are added to all environment
+specs.
 
 
 Requiring environment variables to be set

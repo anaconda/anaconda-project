@@ -535,7 +535,7 @@ def test_browser_ui_keeping_env_var_set(monkeypatch):
 
 def test_browser_ui_three_envs_defaulting_to_first(monkeypatch):
     directory_contents = {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   default: {} # this is auto-created anyway, but here for clarity
   first_env: {}
   second_env:
@@ -587,7 +587,7 @@ environments:
 
 def test_browser_ui_three_envs_choosing_second(monkeypatch):
     directory_contents = {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   default: {} # this is auto-created anyway, but here for clarity
   first_env:
     dependencies:
@@ -643,7 +643,7 @@ environments:
 
 def test_browser_ui_two_envs_user_override(monkeypatch):
     directory_contents = {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   first_env: {}
   second_env:
     dependencies:

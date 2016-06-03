@@ -284,10 +284,10 @@ def _update_env_spec(project, name, packages, channels, create):
     if name is None:
         env_dict = project.project_file.root
     else:
-        env_dict = project.project_file.get_value(['environments', name])
+        env_dict = project.project_file.get_value(['env_specs', name])
         if env_dict is None:
             env_dict = dict()
-            project.project_file.set_value(['environments', name], env_dict)
+            project.project_file.set_value(['env_specs', name], env_dict)
 
     # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
     # so don't convert this thing to a regular list.
@@ -403,7 +403,7 @@ def remove_env_spec(project, name):
     # machinery.
     status = _remove_env_path(env_path)
     if status:
-        project.project_file.unset_value(['environments', name])
+        project.project_file.unset_value(['env_specs', name])
         project.project_file.use_changes_without_saving()
         assert project.problems == []
         project.project_file.save()
@@ -505,7 +505,7 @@ def remove_dependencies(project, env_spec_name, packages):
     def envs_to_their_dicts(envs):
         env_dicts = []
         for env in envs:
-            env_dict = project.project_file.get_value(['environments', env.name])
+            env_dict = project.project_file.get_value(['env_specs', env.name])
             if env_dict is not None:  # it can be None for the default environment (which doesn't have to be listed)
                 env_dicts.append(env_dict)
         return env_dicts
