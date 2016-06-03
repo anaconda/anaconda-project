@@ -152,13 +152,13 @@ def set_properties(project, name=None, icon=None, description=None):
         return status
 
 
-def _commit_requirement_if_it_works(project, env_var_or_class, conda_environment_name=None):
+def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=None):
     project.project_file.use_changes_without_saving()
 
     # See if we can perform the download
     result = prepare.prepare_without_interaction(project,
                                                  provide_whitelist=(env_var_or_class, ),
-                                                 conda_environment_name=conda_environment_name)
+                                                 env_spec_name=env_spec_name)
 
     status = result.status_for(env_var_or_class)
     if status is None or not status:
@@ -266,7 +266,7 @@ def _map_inplace(f, items):
         i += 1
 
 
-def _update_environment(project, name, packages, channels, create):
+def _update_env_spec(project, name, packages, channels, create):
     failed = project.problems_status()
     if failed is not None:
         return failed
@@ -277,17 +277,17 @@ def _update_environment(project, name, packages, channels, create):
         channels = []
 
     if not create and (name is not None):
-        if name not in project.conda_environments:
-            problem = "Environment {} doesn't exist.".format(name)
+        if name not in project.env_specs:
+            problem = "Environment spec {} doesn't exist.".format(name)
             return SimpleStatus(success=False, description=problem)
 
     if name is None:
         env_dict = project.project_file.root
     else:
-        env_dict = project.project_file.get_value(['environments', name])
+        env_dict = project.project_file.get_value(['env_specs', name])
         if env_dict is None:
             env_dict = dict()
-            project.project_file.set_value(['environments', name], env_dict)
+            project.project_file.set_value(['env_specs', name], env_dict)
 
     # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
     # so don't convert this thing to a regular list.
@@ -339,13 +339,13 @@ def _update_environment(project, name, packages, channels, create):
             new_channels.append(channel)
     env_dict['channels'] = new_channels
 
-    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, conda_environment_name=name)
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=name)
 
     return status
 
 
-def add_environment(project, name, packages, channels):
-    """Attempt to create the environment and add it to project.yml.
+def add_env_spec(project, name, packages, channels):
+    """Attempt to create the environment spec and add it to project.yml.
 
     The returned ``Status`` should be a ``RequirementStatus`` for
     the environment requirement if it evaluates to True (on success),
@@ -355,7 +355,7 @@ def add_environment(project, name, packages, channels):
 
     Args:
         project (Project): the project
-        name (str): environment name
+        name (str): environment spec name
         packages (list of str): dependencies (with optional version info, as for conda install)
         channels (list of str): channels (as they should be passed to conda --channel)
 
@@ -364,11 +364,11 @@ def add_environment(project, name, packages, channels):
     """
     assert name is not None
     name = name.strip()
-    return _update_environment(project, name, packages, channels, create=True)
+    return _update_env_spec(project, name, packages, channels, create=True)
 
 
-def remove_environment(project, name):
-    """Remove the environment from project directory and remove from project.yml.
+def remove_env_spec(project, name):
+    """Remove the environment spec from project directory and remove from project.yml.
 
     Returns a ``Status`` subtype (it won't be a
     ``RequirementStatus`` as with some other functions, just a
@@ -376,24 +376,24 @@ def remove_environment(project, name):
 
     Args:
         project (Project): the project
-        name (str): environment name
+        name (str): environment spec name
 
     Returns:
         ``Status`` instance
     """
     assert name is not None
     if name == 'default':
-        return SimpleStatus(success=False, description="Cannot remove default environment.")
+        return SimpleStatus(success=False, description="Cannot remove default environment spec.")
 
     failed = project.problems_status()
     if failed is not None:
         return failed
 
-    if name not in project.conda_environments:
-        problem = "Environment {} doesn't exist.".format(name)
+    if name not in project.env_specs:
+        problem = "Environment spec {} doesn't exist.".format(name)
         return SimpleStatus(success=False, description=problem)
 
-    env_path = project.conda_environments[name].path(project.directory_path)
+    env_path = project.env_specs[name].path(project.directory_path)
 
     # For remove_service and remove_download, we use unprepare()
     # to do the cleanup; for the environment, it's awkward to do
@@ -403,7 +403,7 @@ def remove_environment(project, name):
     # machinery.
     status = _remove_env_path(env_path)
     if status:
-        project.project_file.unset_value(['environments', name])
+        project.project_file.unset_value(['env_specs', name])
         project.project_file.use_changes_without_saving()
         assert project.problems == []
         project.project_file.save()
@@ -411,12 +411,12 @@ def remove_environment(project, name):
     return status
 
 
-def add_dependencies(project, environment, packages, channels):
+def add_dependencies(project, env_spec_name, packages, channels):
     """Attempt to install dependencies then add them to project.yml.
 
-    If the environment is None rather than an env name,
+    If the env_spec_name is None rather than an env name,
     dependencies are added in the global dependencies section (to
-    all environments).
+    all environment specs).
 
     The returned ``Status`` should be a ``RequirementStatus`` for
     the environment requirement if it evaluates to True (on success),
@@ -426,20 +426,20 @@ def add_dependencies(project, environment, packages, channels):
 
     Args:
         project (Project): the project
-        environment (str): environment name or None for all environments
+        env_spec_name (str): environment spec name or None for all environment specs
         packages (list of str): dependencies (with optional version info, as for conda install)
         channels (list of str): channels (as they should be passed to conda --channel)
 
     Returns:
         ``Status`` instance
     """
-    return _update_environment(project, environment, packages, channels, create=False)
+    return _update_env_spec(project, env_spec_name, packages, channels, create=False)
 
 
-def remove_dependencies(project, environment, packages):
+def remove_dependencies(project, env_spec_name, packages):
     """Attempt to remove dependencies from an environment in project.yml.
 
-    If the environment is None rather than an env name,
+    If the env_spec_name is None rather than an env name,
     dependencies are removed from the global dependencies section
     (from all environments).
 
@@ -451,7 +451,7 @@ def remove_dependencies(project, environment, packages):
 
     Args:
         project (Project): the project
-        environment (str): environment name or None for all environments
+        env_spec_name (str): environment spec name or None for all environment specs
         packages (list of str): dependencies
 
     Returns:
@@ -476,19 +476,19 @@ def remove_dependencies(project, environment, packages):
     assert packages is not None
     assert len(packages) > 0
 
-    if environment is None:
-        envs = project.conda_environments.values()
+    if env_spec_name is None:
+        envs = project.env_specs.values()
         unaffected_envs = []
     else:
-        env = project.conda_environments.get(environment, None)
+        env = project.env_specs.get(env_spec_name, None)
         if env is None:
-            problem = "Environment {} doesn't exist.".format(environment)
+            problem = "Environment spec {} doesn't exist.".format(env_spec_name)
             return SimpleStatus(success=False, description=problem)
         else:
             envs = [env]
-            unaffected_envs = list(project.conda_environments.values())
+            unaffected_envs = list(project.env_specs.values())
             unaffected_envs.remove(env)
-            assert len(unaffected_envs) == (len(project.conda_environments) - 1)
+            assert len(unaffected_envs) == (len(project.env_specs) - 1)
 
     assert len(envs) > 0
 
@@ -505,7 +505,7 @@ def remove_dependencies(project, environment, packages):
     def envs_to_their_dicts(envs):
         env_dicts = []
         for env in envs:
-            env_dict = project.project_file.get_value(['environments', env.name])
+            env_dict = project.project_file.get_value(['env_specs', env.name])
             if env_dict is not None:  # it can be None for the default environment (which doesn't have to be listed)
                 env_dicts.append(env_dict)
         return env_dicts
@@ -538,7 +538,7 @@ def remove_dependencies(project, environment, packages):
         dependencies.extend(list(removed_from_global))
         env_dict['dependencies'] = dependencies
 
-    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, conda_environment_name=environment)
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=env_spec_name)
 
     return status
 

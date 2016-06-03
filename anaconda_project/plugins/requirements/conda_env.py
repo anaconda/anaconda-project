@@ -16,13 +16,13 @@ from anaconda_project.conda_manager import new_conda_manager, CondaManagerError
 class CondaEnvRequirement(EnvVarRequirement):
     """A requirement for CONDA_ENV_PATH (or CONDA_DEFAULT_ENV on Windows) to point to a conda env."""
 
-    def __init__(self, registry, environments=None, default_environment_name='default'):
+    def __init__(self, registry, env_specs=None, default_env_spec_name='default'):
         """Extend superclass to default to CONDA_ENV_PATH and carry environment information.
 
         Args:
             registry (PluginRegistry): plugin registry
-            environments (dict): dict from env name to ``CondaEnvironment``
-            default_environment_name (str): name of env to use by default
+            env_specs (dict): dict from env name to ``CondaEnvironment``
+            default_env_spec_name (str): name of env to use by default
         """
         if platform.system() == 'Windows':
             # On Windows, activate.bat never sets CONDA_ENV_PATH but
@@ -34,8 +34,8 @@ class CondaEnvRequirement(EnvVarRequirement):
             # name or the full path.
             env_var = "CONDA_ENV_PATH"
         super(CondaEnvRequirement, self).__init__(registry=registry, env_var=env_var)
-        self.environments = environments
-        self.default_environment_name = default_environment_name
+        self.env_specs = env_specs
+        self.default_env_spec_name = default_env_spec_name
         self._conda = new_conda_manager()
 
     @property
@@ -73,7 +73,7 @@ class CondaEnvRequirement(EnvVarRequirement):
 
         env_name = config.get('env_name', None)
         if env_name is not None:
-            environment_spec = self.environments[env_name]
+            environment_spec = self.env_specs[env_name]
 
             try:
                 deviations = self._conda.find_environment_deviations(prefix, environment_spec)

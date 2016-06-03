@@ -43,10 +43,10 @@ class CondaEnvProvider(EnvVarProvider):
         assert 'PROJECT_DIR' in environ
         project_dir = environ['PROJECT_DIR']
 
-        if overrides.conda_environment_name is not None:
+        if overrides.env_spec_name is not None:
             # short-circuit this whole party
-            env = requirement.environments.get(overrides.conda_environment_name)
-            config = dict(source='project', env_name=overrides.conda_environment_name, value=env.path(project_dir))
+            env = requirement.env_specs.get(overrides.env_spec_name)
+            config = dict(source='project', env_name=overrides.env_spec_name, value=env.path(project_dir))
             return config
 
         config = super(CondaEnvProvider, self).read_config(requirement, environ, local_state_file, overrides)
@@ -77,16 +77,16 @@ class CondaEnvProvider(EnvVarProvider):
         if 'value' in config:
             config['value'] = os.path.normpath(config['value'])
 
-        config['env_name'] = requirement.default_environment_name
+        config['env_name'] = requirement.default_env_spec_name
 
         if 'value' in config:
-            for env in requirement.environments.values():
+            for env in requirement.env_specs.values():
                 if config['value'] == env.path(project_dir):
                     config['env_name'] = env.name
                     if config['source'] == 'variables':
                         config['source'] = 'project'
         elif config['source'] == 'project':
-            env = requirement.environments.get(config['env_name'])
+            env = requirement.env_specs.get(config['env_name'])
             config['value'] = env.path(project_dir)
 
         # print("read_config " + repr(config))
@@ -101,13 +101,13 @@ class CondaEnvProvider(EnvVarProvider):
         # We have to clear out the user override or it will
         # never stop overriding the user's new choice, if they
         # have changed to another env.
-        overrides.conda_environment_name = None
+        overrides.env_spec_name = None
 
         if 'source' in values:
             if values['source'] == 'project':
                 project_dir = environ['PROJECT_DIR']
                 name = values['env_name']
-                for env in requirement.environments.values():
+                for env in requirement.env_specs.values():
                     if env.name == name:
                         prefix = env.path(project_dir)
                         local_state_file.set_value(['variables', requirement.env_var], prefix)
@@ -116,14 +116,14 @@ class CondaEnvProvider(EnvVarProvider):
                 local_state_file.set_value('inherit_environment', True)
 
     def config_html(self, requirement, environ, local_state_file, status):
-        """Override superclass to provide the extra option to create one of our configured environments."""
+        """Override superclass to provide the extra option to create one of our configured env_specs."""
         # print("config_html with config " + repr(status.analysis.config))
         environ_value = environ.get(requirement.env_var, None)
         project_dir = environ['PROJECT_DIR']
         options_html = ('<div><label><input type="radio" name="source" ' +
                         'value="project"/>Use project-specific environment: <select name="env_name">')
         environ_value_is_project_specific = False
-        for env in requirement.environments.values():
+        for env in requirement.env_specs.values():
             html = ('<option value="%s">%s</option>\n' % (env.name, env.name))
             if env.path(project_dir) == environ_value:
                 environ_value_is_project_specific = True
@@ -172,8 +172,8 @@ class CondaEnvProvider(EnvVarProvider):
 
         if prefix is None:
             # use the default environment
-            env_name = context.status.analysis.config.get('env_name', requirement.default_environment_name)
-            env = requirement.environments.get(env_name)
+            env_name = context.status.analysis.config.get('env_name', requirement.default_env_spec_name)
+            env = requirement.env_specs.get(env_name)
             assert env is not None
             prefix = env.path(project_dir)
 
@@ -183,7 +183,7 @@ class CondaEnvProvider(EnvVarProvider):
             # we update the environment in both prod and dev mode
 
             env_spec = None
-            for env in requirement.environments.values():
+            for env in requirement.env_specs.values():
                 if env.path(project_dir) == prefix:
                     env_spec = env
                     break

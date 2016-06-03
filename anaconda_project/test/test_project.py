@@ -203,7 +203,7 @@ downloads:
   ' ': 'http://localhost:8000/foo.tgz'
 services:
   ' ': redis
-environments:
+env_specs:
   ' ':
     dependencies:
        - python
@@ -487,7 +487,7 @@ icon: foo.png
 def test_get_package_requirements_from_project_file():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
-        env = project.conda_environments['default']
+        env = project.env_specs['default']
         assert env.name == 'default'
         assert ("foo", "hello >= 1.0", "world") == env.dependencies
         assert ("mtv", "hbo") == env.channels
@@ -499,9 +499,9 @@ def test_get_package_requirements_from_project_file():
             if isinstance(r, CondaEnvRequirement):
                 assert conda_env_req is None  # only one
                 conda_env_req = r
-        assert len(conda_env_req.environments) == 1
-        assert 'default' in conda_env_req.environments
-        assert conda_env_req.environments['default'] is env
+        assert len(conda_env_req.env_specs) == 1
+        assert 'default' in conda_env_req.env_specs
+        assert conda_env_req.env_specs['default'] is env
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
@@ -519,7 +519,7 @@ channels:
 def test_get_package_requirements_from_empty_project():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
-        assert () == project.conda_environments['default'].dependencies
+        assert () == project.env_specs['default'].dependencies
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_get_packages)
 
@@ -585,14 +585,14 @@ def test_load_environments():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.conda_environments) == 3
-        assert 'default' in project.conda_environments
-        assert 'foo' in project.conda_environments
-        assert 'bar' in project.conda_environments
-        assert project.default_conda_environment_name == 'default'
-        default = project.conda_environments['default']
-        foo = project.conda_environments['foo']
-        bar = project.conda_environments['bar']
+        assert len(project.env_specs) == 3
+        assert 'default' in project.env_specs
+        assert 'foo' in project.env_specs
+        assert 'bar' in project.env_specs
+        assert project.default_env_spec_name == 'default'
+        default = project.env_specs['default']
+        foo = project.env_specs['foo']
+        bar = project.env_specs['bar']
         assert default.dependencies == ()
         assert foo.dependencies == ('python', 'dog', 'cat', 'zebra')
         assert foo.description == "THE FOO"
@@ -601,7 +601,7 @@ def test_load_environments():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   foo:
     description: "THE FOO"
     dependencies:
@@ -617,14 +617,14 @@ def test_load_environments_merging_in_global():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.conda_environments) == 3
-        assert 'default' in project.conda_environments
-        assert 'foo' in project.conda_environments
-        assert 'bar' in project.conda_environments
-        assert project.default_conda_environment_name == 'default'
-        default = project.conda_environments['default']
-        foo = project.conda_environments['foo']
-        bar = project.conda_environments['bar']
+        assert len(project.env_specs) == 3
+        assert 'default' in project.env_specs
+        assert 'foo' in project.env_specs
+        assert 'bar' in project.env_specs
+        assert project.default_env_spec_name == 'default'
+        default = project.env_specs['default']
+        foo = project.env_specs['foo']
+        bar = project.env_specs['bar']
         assert default.dependencies == ('dead-parrot', 'elephant', 'lion')
         assert foo.dependencies == ('dead-parrot', 'elephant', 'python', 'dog', 'cat', 'zebra')
         assert bar.dependencies == ('dead-parrot', 'elephant')
@@ -641,7 +641,7 @@ dependencies:
 channels:
   - mtv
 
-environments:
+env_specs:
   foo:
     dependencies:
        - python
@@ -663,21 +663,21 @@ def test_load_environments_default_always_default_even_if_not_first():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.conda_environments) == 3
-        assert 'foo' in project.conda_environments
-        assert 'bar' in project.conda_environments
-        assert 'default' in project.conda_environments
-        assert project.default_conda_environment_name == 'default'
-        foo = project.conda_environments['foo']
-        bar = project.conda_environments['bar']
-        default = project.conda_environments['default']
+        assert len(project.env_specs) == 3
+        assert 'foo' in project.env_specs
+        assert 'bar' in project.env_specs
+        assert 'default' in project.env_specs
+        assert project.default_env_spec_name == 'default'
+        foo = project.env_specs['foo']
+        bar = project.env_specs['bar']
+        default = project.env_specs['default']
         assert foo.dependencies == ()
         assert bar.dependencies == ()
         assert default.dependencies == ()
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   foo: {}
   bar: {}
   default: {}
@@ -691,7 +691,7 @@ def test_complain_about_environments_not_a_dict():
         "should be a directory from environment name to environment attributes, not 42" in project.problems[0]
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-environments: 42
+env_specs: 42
     """}, check_environments)
 
 
@@ -703,7 +703,7 @@ def test_complain_about_non_string_environment_description():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
    foo:
      description: []
     """}, check_environments)
@@ -1538,7 +1538,7 @@ def test_get_publication_info_from_empty_project():
             'name': os.path.basename(dirname),
             'description': '',
             'commands': {},
-            'environments': {
+            'env_specs': {
                 'default': {
                     'channels': [],
                     'dependencies': [],
@@ -1575,7 +1575,7 @@ dependencies:
 channels:
   - bar
 
-environments:
+env_specs:
   woot:
     dependencies:
       - blah
@@ -1619,18 +1619,18 @@ def test_get_publication_info_from_complex_project():
                                   'title': 'FOO',
                                   'description': 'A downloaded file which is referenced by FOO.',
                                   'url': 'https://example.com/blah'}},
-            'environments': {'default': {'channels': ['bar'],
-                                         'dependencies': ['foo'],
-                                         'description': 'Default'},
-                             'lol': {'channels': ['bar'],
-                                     'dependencies': ['foo'],
-                                     'description': 'lol'},
-                             'w00t': {'channels': ['bar'],
-                                      'dependencies': ['foo', 'something'],
-                                      'description': 'double 0'},
-                             'woot': {'channels': ['bar', 'woohoo'],
-                                      'dependencies': ['foo', 'blah'],
-                                      'description': 'woot'}},
+            'env_specs': {'default': {'channels': ['bar'],
+                                      'dependencies': ['foo'],
+                                      'description': 'Default'},
+                          'lol': {'channels': ['bar'],
+                                  'dependencies': ['foo'],
+                                  'description': 'lol'},
+                          'w00t': {'channels': ['bar'],
+                                   'dependencies': ['foo', 'something'],
+                                   'description': 'double 0'},
+                          'woot': {'channels': ['bar', 'woohoo'],
+                                   'dependencies': ['foo', 'blah'],
+                                   'description': 'woot'}},
             'variables': {'SOMETHING': {'encrypted': False,
                                         'title': 'SOMETHING',
                                         'description': 'SOMETHING environment variable must be set.'},

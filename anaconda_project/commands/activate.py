@@ -27,7 +27,7 @@ def activate(dirname, ui_mode, conda_environment):
         None on failure or a list of lines to print.
     """
     project = Project(dirname)
-    result = prepare_with_ui_mode_printing_errors(project, ui_mode=ui_mode, conda_environment_name=conda_environment)
+    result = prepare_with_ui_mode_printing_errors(project, ui_mode=ui_mode, env_spec_name=conda_environment)
     if result.failed:
         return None
 
@@ -44,7 +44,7 @@ def activate(dirname, ui_mode, conda_environment):
 
 def main(args):
     """Start the activate command and return exit status code."""
-    result = activate(args.project, args.mode, args.environment)
+    result = activate(args.project, args.mode, args.env_spec)
     if result is None:
         return 1
     else:

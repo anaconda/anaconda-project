@@ -22,7 +22,7 @@ def run_command(project_dir, ui_mode, conda_environment, command, extra_command_
     project = Project(project_dir)
     result = prepare_with_ui_mode_printing_errors(project,
                                                   ui_mode=ui_mode,
-                                                  conda_environment_name=conda_environment,
+                                                  env_spec_name=conda_environment,
                                                   command_name=command,
                                                   extra_command_args=extra_command_args)
 
@@ -44,6 +44,6 @@ def main(args):
     # I don't understand why argparse does this to us and leaves the '--' in, but whatever.
     if args.extra_args_for_command and args.extra_args_for_command[0] == '--':
         args.extra_args_for_command = args.extra_args_for_command[1:]
-    run_command(args.project, args.mode, args.environment, args.command, args.extra_args_for_command)
+    run_command(args.project, args.mode, args.env_spec, args.command, args.extra_args_for_command)
     # if we returned, we failed to run the command and should have printed an error
     return 1

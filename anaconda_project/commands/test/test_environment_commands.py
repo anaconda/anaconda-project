@@ -27,15 +27,15 @@ def _monkeypatch_pwd(monkeypatch, dirname):
     monkeypatch.setattr('os.path.abspath', mock_abspath)
 
 
-def _monkeypatch_add_environment(monkeypatch, result):
+def _monkeypatch_add_env_spec(monkeypatch, result):
     params = {}
 
-    def mock_add_environment(*args, **kwargs):
+    def mock_add_env_spec(*args, **kwargs):
         params['args'] = args
         params['kwargs'] = kwargs
         return result
 
-    monkeypatch.setattr("anaconda_project.project_ops.add_environment", mock_add_environment)
+    monkeypatch.setattr("anaconda_project.project_ops.add_env_spec", mock_add_env_spec)
 
     return params
 
@@ -83,12 +83,12 @@ def _test_environment_command_with_project_file_problems(capsys, monkeypatch, co
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
-def test_add_environment_no_packages(capsys, monkeypatch):
+def test_add_env_spec_no_packages(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        _monkeypatch_add_environment(monkeypatch, SimpleStatus(success=True, description='Environment looks good.'))
+        _monkeypatch_add_env_spec(monkeypatch, SimpleStatus(success=True, description='Environment looks good.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-env-spec', '--name', 'foo'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -98,15 +98,15 @@ def test_add_environment_no_packages(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def test_add_environment_with_packages(capsys, monkeypatch):
+def test_add_env_spec_with_packages(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        params = _monkeypatch_add_environment(monkeypatch,
-                                              SimpleStatus(success=True,
-                                                           description='Environment looks good.'))
+        params = _monkeypatch_add_env_spec(monkeypatch,
+                                           SimpleStatus(success=True,
+                                                        description='Environment looks good.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo', '--channel',
-                                               'c1', '--channel=c2', 'a', 'b'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-env-spec', '--name', 'foo', '--channel', 'c1',
+                                               '--channel=c2', 'a', 'b'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -119,16 +119,16 @@ def test_add_environment_with_packages(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def test_add_environment_fails(capsys, monkeypatch):
+def test_add_env_spec_fails(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        _monkeypatch_add_environment(monkeypatch,
-                                     SimpleStatus(success=False,
-                                                  description='Environment variable MYDATA is not set.',
-                                                  logs=['This is a log message.'],
-                                                  errors=['This is an error message.']))
+        _monkeypatch_add_env_spec(monkeypatch,
+                                  SimpleStatus(success=False,
+                                               description='Environment variable MYDATA is not set.',
+                                               logs=['This is a log message.'],
+                                               errors=['This is an error message.']))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-environment', '--name', 'foo'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-env-spec', '--name', 'foo'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -138,20 +138,20 @@ def test_add_environment_fails(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def test_remove_environment_missing(capsys, monkeypatch):
+def test_remove_env_spec_missing(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'foo'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-env-spec', '--name', 'foo'])
         assert code == 1
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert "Environment foo doesn't exist.\n" == err
+        assert "Environment spec foo doesn't exist.\n" == err
 
     with_directory_contents(dict(), check)
 
 
-def test_remove_environment_fails(capsys, monkeypatch):
+def test_remove_env_spec_fails(capsys, monkeypatch):
     def check(dirname):
         from shutil import rmtree as real_rmtree
         _monkeypatch_pwd(monkeypatch, dirname)
@@ -170,7 +170,7 @@ def test_remove_environment_fails(capsys, monkeypatch):
 
         monkeypatch.setattr('shutil.rmtree', mock_remove)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'foo'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-env-spec', '--name', 'foo'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -179,16 +179,16 @@ def test_remove_environment_fails(capsys, monkeypatch):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: 'environments:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
+            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
             'envs/foo/bin/test': 'code here'
         }, check)
 
 
-def test_remove_environment(capsys, monkeypatch):
+def test_remove_env_spec(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'foo'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-env-spec', '--name', 'foo'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -198,33 +198,33 @@ def test_remove_environment(capsys, monkeypatch):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: 'environments:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
+            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    dependencies:\n    - bar\n',
             'envs/foo/bin/test': 'code here'
         }, check)
 
 
-def test_remove_environment_default(capsys, monkeypatch):
+def test_remove_env_spec_default(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-environment', '--name', 'default'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-env-spec', '--name', 'default'])
         assert code == 1
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert "Cannot remove default environment.\n" == err
+        assert "Cannot remove default environment spec.\n" == err
 
     with_directory_contents({}, check)
 
 
-def test_add_environment_with_project_file_problems(capsys, monkeypatch):
+def test_add_env_spec_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys, monkeypatch,
-                                                         ['anaconda-project', 'add-environment', '--name', 'foo'])
+                                                         ['anaconda-project', 'add-env-spec', '--name', 'foo'])
 
 
-def test_remove_environment_with_project_file_problems(capsys, monkeypatch):
+def test_remove_env_spec_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys, monkeypatch,
-                                                         ['anaconda-project', 'remove-environment', '--name', 'foo'])
+                                                         ['anaconda-project', 'remove-env-spec', '--name', 'foo'])
 
 
 def test_add_dependencies_with_project_file_problems(capsys, monkeypatch):
@@ -251,7 +251,7 @@ def test_add_dependencies_to_all_environments(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(environment=None, packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
+        assert dict(env_spec_name=None, packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
 
     with_directory_contents(dict(), check)
 
@@ -261,8 +261,8 @@ def test_add_dependencies_to_specific_environment(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_add_dependencies(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-dependencies', '--environment', 'foo',
-                                               '--channel', 'c1', '--channel=c2', 'a', 'b'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-dependencies', '--env-spec', 'foo', '--channel',
+                                               'c1', '--channel=c2', 'a', 'b'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -270,10 +270,10 @@ def test_add_dependencies_to_specific_environment(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(environment='foo', packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
+        assert dict(env_spec_name='foo', packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-environments:
+env_specs:
   foo:
    dependencies:
      - bar
@@ -293,7 +293,7 @@ def test_remove_dependencies_from_all_environments(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(environment=None, packages=['bar']) == params['kwargs']
+        assert dict(env_spec_name=None, packages=['bar']) == params['kwargs']
 
     with_directory_contents(dict(), check)
 
@@ -303,8 +303,7 @@ def test_remove_dependencies_from_specific_environment(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_remove_dependencies(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-dependencies', '--environment', 'foo', 'bar'
-                                               ])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-dependencies', '--env-spec', 'foo', 'bar'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -312,14 +311,14 @@ def test_remove_dependencies_from_specific_environment(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(environment='foo', packages=['bar']) == params['kwargs']
+        assert dict(env_spec_name='foo', packages=['bar']) == params['kwargs']
 
     with_directory_contents(dict(), check)
 
 
 def test_list_environments(capsys, monkeypatch):
     def check_list_not_empty(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-environments', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-env-specs', '--project', dirname])
 
         assert code == 0
         out, err = capsys.readouterr()
@@ -336,7 +335,7 @@ foo
         assert out == expected_out
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: ('environments:\n'
+        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
                                     '  foo:\n'
                                     '    dependencies:\n'
                                     '      - bar\n'
@@ -347,7 +346,7 @@ foo
 
 def test_list_empty_environments(capsys, monkeypatch):
     def check_list_empty(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-environments', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-env-specs', '--project', dirname])
 
         assert code == 0
         out, err = capsys.readouterr()
@@ -366,7 +365,7 @@ default  Default
 def test_list_environments_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys,
                                                          monkeypatch,
-                                                         ['anaconda-project', 'list-environments', '--project'],
+                                                         ['anaconda-project', 'list-env-specs', '--project'],
                                                          append_dirname=True)
 
 
@@ -374,7 +373,7 @@ def test_list_dependencies_wrong_env(capsys):
     def check_missing_env(dirname):
         env_name = 'not-there'
         code = _parse_args_and_run_subcommand(['anaconda-project', 'list-dependencies', '--project', dirname,
-                                               '--environment', env_name])
+                                               '--env-spec', env_name])
 
         assert code == 1
 
@@ -391,7 +390,7 @@ def _test_list_dependencies(capsys, env, expected_deps):
     def check_list_not_empty(dirname):
         params = ['anaconda-project', 'list-dependencies', '--project', dirname]
         if env:
-            params.extend(['--environment', env])
+            params.extend(['--env-spec', env])
 
         code = _parse_args_and_run_subcommand(params)
 
@@ -400,10 +399,10 @@ def _test_list_dependencies(capsys, env, expected_deps):
 
         project = Project(dirname)
         expected_out = "Dependencies for environment '{}':\n{}".format(
-            (env or project.default_conda_environment_name), expected_deps)
+            (env or project.default_env_spec_name), expected_deps)
         assert out == expected_out
 
-    project_contents = ('environments:\n'
+    project_contents = ('env_specs:\n'
                         '  foo:\n'
                         '    dependencies:\n'
                         '      - requests\n'
