@@ -1866,6 +1866,7 @@ def test_upload(monkeypatch):
             assert [] == project.problems
             status = project_ops.upload(project, site='unit_test')
             assert status
+            assert status.url == 'http://example.com/whatevs'
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\n", "foo.py": "print('hello')\n"}, check)
 

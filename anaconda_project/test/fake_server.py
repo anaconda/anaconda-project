@@ -34,6 +34,9 @@ class ProjectViewHandler(RequestHandler):
                 else:
                     self.set_header('Content-Type', 'application/json')
                     self.write('{"login":"fake_username"}\n')
+        elif path == 'user/foobar':
+            self.set_header('Content-Type', 'application/json')
+            self.write('{"login":"foobar"}\n')
         else:
             self.set_status(status_code=404)
 

@@ -481,7 +481,7 @@ def test_upload(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.upload', mock_upload)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, site=123)
+    kwargs = dict(project=43, site=123, token=456, username=789, log_level='LOTS')
     result = p.upload(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
