@@ -1871,6 +1871,17 @@ def test_upload(monkeypatch):
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\n", "foo.py": "print('hello')\n"}, check)
 
 
+def test_upload_with_project_file_problems():
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.upload(project)
+        assert not status
+        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
+                ] == status.errors
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
 def test_upload_cannot_walk_directory(monkeypatch):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
