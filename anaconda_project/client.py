@@ -86,10 +86,10 @@ class _Client(object):
         self._check_response(res)
         return res
 
-    def commit(self, project_name, revision_id):
+    def commit(self, project_name, dist_id):
 
-        url = "{}/apps/{}/projects/{}/commit".format(self._api.domain, self._username(), project_name)
-        data, headers = binstar_utils.jencode({'revision_id': revision_id})
+        url = "{}/apps/{}/projects/{}/commit/{}".format(self._api.domain, self._username(), project_name, dist_id)
+        data, headers = binstar_utils.jencode({})
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
         return res
@@ -128,10 +128,14 @@ class _Client(object):
 
         stage_info = res.json()
 
+        assert 'post_url' in stage_info
+        assert 'form_data' in stage_info
+        assert 'dist_id' in stage_info
+
         res = self._put_on_s3(bundle_filename, url=stage_info['post_url'], s3data=stage_info['form_data'])
         assert res.status_code in (200, 201)
 
-        res = self.commit(project.name, stage_info['form_data']['revision_id'])
+        res = self.commit(project.name, stage_info['dist_id'])
         assert res.status_code in (200, 201)
 
         return res.json()
