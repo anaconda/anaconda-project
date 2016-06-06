@@ -80,7 +80,7 @@ class _Client(object):
         file_count = self._file_count(bundle_filename)
         if file_count is not None:
             config['num_of_files'] = file_count
-        json = {'basename': ("%s.tar" % project.name), 'configuration': config, 'size': config['size']}
+        json = {'basename': ("%s.tar" % project.name), 'configuration': config}
         data, headers = binstar_utils.jencode(json)
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
