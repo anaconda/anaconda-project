@@ -558,14 +558,17 @@ class AnacondaProject(object):
         """
         return project_ops.bundle(project=project, filename=filename)
 
-    def upload(self, project, site=None):
+    def upload(self, project, site=None, username=None, token=None, log_level=None):
         """Upload the project to the Anaconda server.
 
         Args:
             project (``Project``): the project
             site (str): site alias from Anaconda config
+            username (str): Anaconda username
+            token (str): Anaconda auth token
+            log_level (str): Anaconda log level
 
         Returns:
             a ``Status``, if failed has ``errors``
         """
-        return project_ops.upload(project=project, site=site)
+        return project_ops.upload(project=project, site=site, username=username, token=token, log_level=log_level)

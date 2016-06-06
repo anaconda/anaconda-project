@@ -926,16 +926,25 @@ def bundle(project, filename):
     return bundler._bundle_project(project, filename)
 
 
-def upload(project, site=None):
+def upload(project, site=None, username=None, token=None, log_level=None):
     """Upload the project to the Anaconda server.
+
+    The returned status; if successful, has a 'url' attribute with the project URL.
 
     Args:
         project (``Project``): the project
         site (str): site alias from Anaconda config
+        username (str): Anaconda username
+        token (str): Anaconda auth token
+        log_level (str): Anaconda log level
 
     Returns:
         a ``Status``, if failed has ``errors``
     """
+    failed = project.problems_status()
+    if failed is not None:
+        return failed
+
     # delete=True breaks on windows if you use tmp_tarfile.name to re-open the file,
     # so don't use delete=True.
     # future: change suffix to .tar.bz2 once server can handle it...
@@ -945,7 +954,12 @@ def upload(project, site=None):
         status = bundle(project, tmp_tarfile.name)
         if not status:
             return status
-        status = client._upload(project, tmp_tarfile.name, site=site)
+        status = client._upload(project,
+                                tmp_tarfile.name,
+                                site=site,
+                                username=username,
+                                token=token,
+                                log_level=log_level)
         return status
     finally:
         os.remove(tmp_tarfile.name)

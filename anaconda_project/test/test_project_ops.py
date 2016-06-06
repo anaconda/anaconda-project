@@ -1866,8 +1866,20 @@ def test_upload(monkeypatch):
             assert [] == project.problems
             status = project_ops.upload(project, site='unit_test')
             assert status
+            assert status.url == 'http://example.com/whatevs'
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\n", "foo.py": "print('hello')\n"}, check)
+
+
+def test_upload_with_project_file_problems():
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.upload(project)
+        assert not status
+        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
+                ] == status.errors
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_upload_cannot_walk_directory(monkeypatch):

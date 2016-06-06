@@ -34,6 +34,9 @@ class ProjectViewHandler(RequestHandler):
                 else:
                     self.set_header('Content-Type', 'application/json')
                     self.write('{"login":"fake_username"}\n')
+        elif path == 'user/foobar':
+            self.set_header('Content-Type', 'application/json')
+            self.write('{"login":"foobar"}\n')
         else:
             self.set_status(status_code=404)
 
@@ -48,7 +51,7 @@ class ProjectViewHandler(RequestHandler):
                 self.write('{}\n')
         elif path.startswith('apps/fake_username/projects/'):
             path = path[len('apps/fake_username/projects/'):]
-            [project, operation] = path.split("/")
+            [project, operation] = path.split("/", 1)
             # print("project=" + project + " operation=" + operation, file=sys.stderr)
             if operation == 'stage':
                 if 'stage' in self.application.server.fail_these:
@@ -56,10 +59,9 @@ class ProjectViewHandler(RequestHandler):
                 else:
                     post_url = self.application.server.url + "fake_s3"
                     self.set_header('Content-Type', 'application/json')
-                    self.write(('{"post_url":"%s", ' +
-                                '"form_data":{"x-should-be-passed-back-to-us":"12345", "revision_id":42}}\n') %
-                               (post_url))
-            elif operation == 'commit':
+                    self.write(('{"post_url":"%s", ' + '"form_data":{"x-should-be-passed-back-to-us":"12345"},' +
+                                '"dist_id":"rev42"}\n') % (post_url))
+            elif operation == 'commit/rev42':
                 if 'commit' in self.application.server.fail_these:
                     self.set_status(501)
                 else:

@@ -21,6 +21,19 @@ def test_username(monkeypatch):
         assert username == 'fake_username'
 
 
+def test_username_override(monkeypatch):
+    with fake_server(monkeypatch):
+        client = _Client(site='unit_test', username='foobar')
+        username = client._username()
+        assert username == 'foobar'
+
+
+def test_specify_token_and_log_level(monkeypatch):
+    import logging
+    client = _Client(token='134', log_level=logging.ERROR)
+    assert client._api.token == '134'
+
+
 def test_upload(monkeypatch):
     def check(dirname):
         with fake_server(monkeypatch):

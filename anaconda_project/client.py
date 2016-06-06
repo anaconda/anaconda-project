@@ -7,6 +7,7 @@
 """Talking to the Anaconda server."""
 from __future__ import absolute_import, print_function
 
+import logging
 import os
 import tarfile
 import zipfile
@@ -20,15 +21,18 @@ from anaconda_project.internal.simple_status import SimpleStatus
 
 
 class _Client(object):
-    def __init__(self, site=None):
+    def __init__(self, site=None, username=None, token=None, log_level=None):
         assert hasattr(binstar_utils, 'get_server_api'), "Please upgrade anaconda-client"
-        self._api = binstar_utils.get_server_api(site=site)
+        if log_level is None:
+            log_level = logging.INFO
+        self._api = binstar_utils.get_server_api(site=site, token=token, log_level=log_level)
         self._user_info = None
+        self._force_username = username
 
     def _username(self):
-        """Get username if known, otherwise raise Unauthorized."""
+        """Get username to upload to; raise Unauthorized if we aren't logged in."""
         if self._user_info is None:
-            self._user_info = self._api.user()
+            self._user_info = self._api.user(login=self._force_username)
         assert self._user_info is not None
         username = self._user_info.get('login', None)
         if username is None:
@@ -76,16 +80,16 @@ class _Client(object):
         file_count = self._file_count(bundle_filename)
         if file_count is not None:
             config['num_of_files'] = file_count
-        json = {'basename': ("%s.tar" % project.name), 'configuration': config, 'size': config['size']}
+        json = {'basename': ("%s.tar" % project.name), 'configuration': config}
         data, headers = binstar_utils.jencode(json)
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
         return res
 
-    def commit(self, project_name, revision_id):
+    def commit(self, project_name, dist_id):
 
-        url = "{}/apps/{}/projects/{}/commit".format(self._api.domain, self._username(), project_name)
-        data, headers = binstar_utils.jencode({'revision_id': revision_id})
+        url = "{}/apps/{}/projects/{}/commit/{}".format(self._api.domain, self._username(), project_name, dist_id)
+        data, headers = binstar_utils.jencode({})
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
         return res
@@ -124,25 +128,35 @@ class _Client(object):
 
         stage_info = res.json()
 
+        assert 'post_url' in stage_info
+        assert 'form_data' in stage_info
+        assert 'dist_id' in stage_info
+
         res = self._put_on_s3(bundle_filename, url=stage_info['post_url'], s3data=stage_info['form_data'])
         assert res.status_code in (200, 201)
 
-        res = self.commit(project.name, stage_info['form_data']['revision_id'])
+        res = self.commit(project.name, stage_info['dist_id'])
         assert res.status_code in (200, 201)
 
         return res.json()
 
 
+class _UploadedStatus(SimpleStatus):
+    def __init__(self, json):
+        self.url = json.get('url', None)
+        logs = []
+        if self.url is not None:
+            logs.append("Project is at %s" % self.url)
+        super(_UploadedStatus, self).__init__(success=True, description="Upload successful.", logs=logs)
+
+
 # This function is supposed to encapsulate the binstar API (don't
 # require any other files to import binstar_client).
-def _upload(project, bundle_filename, site=None):
-    client = _Client(site=site)
+def _upload(project, bundle_filename, site=None, username=None, token=None, log_level=None):
+    client = _Client(site=site, username=username, token=token, log_level=log_level)
     try:
         json = client.upload(project, bundle_filename)
-        logs = []
-        if 'url' in json:
-            logs.append("Project is at %s" % json['url'])
-        return SimpleStatus(success=True, description="Upload successful.", logs=logs)
+        return _UploadedStatus(json)
     except Unauthorized as e:
         return SimpleStatus(success=False,
                             description='Please log in with the "anaconda login" command.',
