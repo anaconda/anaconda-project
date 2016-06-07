@@ -37,7 +37,8 @@ engine:
   - python=3.5
 
 install:
-  - conda install -y -q pip
+  # win32 build system doesn't seem to have psutil
+  - conda install -y -q pip psutil
   - pip install pep257 yapf==0.6.2 pytest-xdist flake8
   - conda install -y -q pycrypto bcrypt ipython-notebook bokeh ruamel_yaml coverage beautifulsoup4 tornado pytest pytest-cov anaconda-client requests
 
@@ -49,6 +50,7 @@ before_script:
   - python -V
 
 script:
+  - conda install -n root -y psutil
   - conda build conda.recipe
 
 ---

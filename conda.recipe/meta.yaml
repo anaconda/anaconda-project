@@ -16,6 +16,7 @@ requirements:
   build:
     - python
     - setuptools
+    - psutil # needed by conda
 
   run:
     - bcrypt
