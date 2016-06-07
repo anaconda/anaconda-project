@@ -52,7 +52,7 @@ def test_autoguess_encrypted_option():
 
 def test_empty_variable_treated_as_unset():
     requirement = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO')
-    status = requirement.check_status(dict(FOO=''), tmp_local_state_file(), UserConfigOverrides())
+    status = requirement.check_status(dict(FOO=''), tmp_local_state_file(), 'default', UserConfigOverrides())
     assert not status
     assert "Environment variable FOO is not set." == status.status_description
     assert [] == status.logs

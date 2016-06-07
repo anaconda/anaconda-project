@@ -40,7 +40,7 @@ def test_ui_server_empty():
 
         project = Project(dirname)
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        context = ConfigurePrepareContext(dict(), local_state_file, UserConfigOverrides(), [])
+        context = ConfigurePrepareContext(dict(), local_state_file, 'default', UserConfigOverrides(), [])
         server = UIServer(project, _no_op_prepare(context), event_handler, io_loop)
 
         get_response = http_get(io_loop, server.url)
@@ -73,8 +73,8 @@ def test_ui_server_with_form():
 
         project = Project(dirname)
         requirement = EnvVarRequirement(registry=project.plugin_registry, env_var="FOO")
-        status = requirement.check_status(dict(), local_state_file, UserConfigOverrides())
-        context = ConfigurePrepareContext(dict(), local_state_file, UserConfigOverrides(), [status])
+        status = requirement.check_status(dict(), local_state_file, 'default', UserConfigOverrides())
+        context = ConfigurePrepareContext(dict(), local_state_file, 'default', UserConfigOverrides(), [status])
         server = UIServer(project, _no_op_prepare(context), event_handler, io_loop)
 
         get_response = http_get(io_loop, server.url)
@@ -117,8 +117,8 @@ def _ui_server_bad_form_name_test(capsys, name_template, expected_err):
         local_state_file = LocalStateFile.load_for_directory(dirname)
 
         requirement = EnvVarRequirement(registry=project.plugin_registry, env_var="FOO")
-        status = requirement.check_status(dict(), local_state_file, UserConfigOverrides())
-        context = ConfigurePrepareContext(dict(), local_state_file, UserConfigOverrides(), [status])
+        status = requirement.check_status(dict(), local_state_file, 'default', UserConfigOverrides())
+        context = ConfigurePrepareContext(dict(), local_state_file, 'default', UserConfigOverrides(), [status])
         server = UIServer(project, _no_op_prepare(context), event_handler, io_loop)
 
         # do a get so that _requirements_by_id below exists

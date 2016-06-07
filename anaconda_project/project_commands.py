@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 from copy import copy
-from copy import deepcopy
 from distutils.spawn import find_executable
 
 import os
@@ -161,8 +160,9 @@ class ProjectCommand(object):
             name (str): name of the command
             attributes (dict): named attributes of the command
         """
+        assert 'env_spec' in attributes
         self._name = name
-        self._attributes = deepcopy(attributes)
+        self._attributes = attributes
 
     @property
     def name(self):
@@ -213,6 +213,11 @@ class ProjectCommand(object):
     def auto_generated(self):
         """Get the boolean indicating if the command is auto generated."""
         return self._attributes.get('auto_generated', False)
+
+    @property
+    def default_env_spec_name(self):
+        """Get the environment spec name used for this command unless user specified otherwise."""
+        return self._attributes.get('env_spec')
 
     def _shell_field(self):
         if _is_windows():

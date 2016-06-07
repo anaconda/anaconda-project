@@ -154,7 +154,7 @@ class DownloadRequirement(EnvVarRequirement):
         if not os.path.exists(filename):
             return 'File not found: {}'.format(filename)
 
-    def check_status(self, environ, local_state_file, overrides, latest_provide_result=None):
+    def check_status(self, environ, local_state_file, default_env_spec_name, overrides, latest_provide_result=None):
         """Override superclass to get our status."""
         why_not_provided = self._why_not_provided(environ)
 
@@ -165,6 +165,7 @@ class DownloadRequirement(EnvVarRequirement):
             status_description = why_not_provided
         return self._create_status(environ,
                                    local_state_file,
+                                   default_env_spec_name,
                                    overrides=overrides,
                                    has_been_provided=has_been_provided,
                                    status_description=status_description,

@@ -42,13 +42,14 @@ def test_master_password_provider_with_value_not_set():
         requirement = _load_master_password_requirement(dirname)
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict()
-        config = provider.read_config(requirement, environ, local_state_file, UserConfigOverrides())
+        config = provider.read_config(requirement, environ, local_state_file, 'default', UserConfigOverrides())
         assert dict() == config
-        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
+        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         html = provider.config_html(requirement, environ, local_state_file, status)
         assert 'type="password"' in html
         context = ProvideContext(environ=dict(),
                                  local_state_file=local_state_file,
+                                 default_env_spec_name='default',
                                  status=status,
                                  mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
@@ -67,12 +68,13 @@ def test_master_password_provider_with_value_set_in_environment():
         requirement = _load_master_password_requirement(dirname)
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict()
-        config = provider.read_config(requirement, environ, local_state_file, UserConfigOverrides())
+        config = provider.read_config(requirement, environ, local_state_file, 'default', UserConfigOverrides())
         assert dict() == config
         environ = dict(ANACONDA_MASTER_PASSWORD='from_environ')
-        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
+        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
+                                 default_env_spec_name='default',
                                  status=status,
                                  mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
@@ -96,12 +98,13 @@ def test_master_password_provider_with_value_set_in_keyring():
             requirement = _load_master_password_requirement(dirname)
             local_state_file = LocalStateFile.load_for_directory(dirname)
             environ = dict()
-            config = provider.read_config(requirement, environ, local_state_file, UserConfigOverrides())
+            config = provider.read_config(requirement, environ, local_state_file, 'default', UserConfigOverrides())
             assert dict(value='from_keyring') == config
             environ = dict(ANACONDA_MASTER_PASSWORD='from_environ')
-            status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
+            status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
             context = ProvideContext(environ=environ,
                                      local_state_file=local_state_file,
+                                     default_env_spec_name='default',
                                      status=status,
                                      mode=PROVIDE_MODE_DEVELOPMENT)
             provider.provide(requirement, context=context)
@@ -124,12 +127,13 @@ def test_master_password_provider_with_value_set_in_default():
         requirement = _load_master_password_requirement(dirname)
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict()
-        config = provider.read_config(requirement, environ, local_state_file, UserConfigOverrides())
+        config = provider.read_config(requirement, environ, local_state_file, 'default', UserConfigOverrides())
         assert dict() == config
         environ = dict()
-        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
+        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
+                                 default_env_spec_name='default',
                                  status=status,
                                  mode=PROVIDE_MODE_DEVELOPMENT)
         provider.provide(requirement, context=context)
@@ -152,18 +156,20 @@ def test_master_password_provider_saves_config_in_keyring():
             requirement = _load_master_password_requirement(dirname)
             local_state_file = LocalStateFile.load_for_directory(dirname)
             environ = dict()
-            config = provider.read_config(requirement, environ, local_state_file, UserConfigOverrides())
+            config = provider.read_config(requirement, environ, local_state_file, 'default', UserConfigOverrides())
             assert dict() == config
             provider.set_config_values_as_strings(requirement,
                                                   environ,
                                                   local_state_file,
+                                                  'default',
                                                   UserConfigOverrides(),
                                                   dict(value='from_config'))
             assert keyring.get('ANACONDA_MASTER_PASSWORD') == 'from_config'
             environ = dict()
-            status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
+            status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
             context = ProvideContext(environ=environ,
                                      local_state_file=local_state_file,
+                                     default_env_spec_name='default',
                                      status=status,
                                      mode=PROVIDE_MODE_DEVELOPMENT)
             provider.provide(requirement, context=context)

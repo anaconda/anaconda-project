@@ -149,9 +149,9 @@ class PrepareViewHandler(RequestHandler):
                     values = configs[(requirement, provider)]
                     values[unscoped_name] = value_string
             for ((requirement, provider), values) in configs.items():
-                provider.set_config_values_as_strings(requirement, prepare_context.environ,
-                                                      prepare_context.local_state_file, prepare_context.overrides,
-                                                      values)
+                provider.set_config_values_as_strings(
+                    requirement, prepare_context.environ, prepare_context.local_state_file,
+                    prepare_context.default_env_spec_name, prepare_context.overrides, values)
 
             prepare_context.local_state_file.save()
 

@@ -601,7 +601,7 @@ def remove_variables(project, vars_to_remove):
     return SimpleStatus(success=True, description="Variables removed from the project file.")
 
 
-def add_command(project, name, command_type, command):
+def add_command(project, name, command_type, command, env_spec_name=None):
     """Add a command to project.yml.
 
     Returns a ``Status`` subtype (it won't be a
@@ -613,6 +613,7 @@ def add_command(project, name, command_type, command):
        name (str): name of the command
        command_type (str): choice of `bokeh_app`, `notebook`, `unix` or `windows` command
        command (str): the command line or filename itself
+       env_spec_name (str): env spec to use with this command
 
     Returns:
        a ``Status`` instance
@@ -632,6 +633,16 @@ def add_command(project, name, command_type, command):
         project.project_file.set_value(['commands', name], command_dict)
 
     command_dict[command_type] = command
+
+    if env_spec_name is None:
+        if 'env_spec' not in command_dict:
+            # make it explicit for clarity
+            command_dict['env_spec'] = project.default_env_spec_name
+        # if env_spec is set, leave it alone; this way people can
+        # modify commands via command line without specifying the
+        # env_spec every time.
+    else:
+        command_dict['env_spec'] = env_spec_name
 
     project.project_file.use_changes_without_saving()
 
