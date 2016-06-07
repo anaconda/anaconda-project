@@ -436,7 +436,7 @@ class AnacondaProject(object):
         """
         return project_ops.remove_dependencies(project=project, env_spec_name=env_spec_name, packages=packages)
 
-    def add_command(self, project, name, command_type, command):
+    def add_command(self, project, name, command_type, command, env_spec_name=None):
         """Add a command to project.yml.
 
         Returns a ``Status`` subtype (it won't be a
@@ -448,12 +448,17 @@ class AnacondaProject(object):
            name (str): name of the command
            command_type (str): choice of `bokeh_app`, `notebook`, `unix` or `windows` command
            command (str): the command line or filename itself
+           env_spec_name (str): env spec to use with this command
 
         Returns:
            a ``Status`` instance
 
         """
-        return project_ops.add_command(project=project, name=name, command_type=command_type, command=command)
+        return project_ops.add_command(project=project,
+                                       name=name,
+                                       command_type=command_type,
+                                       command=command,
+                                       env_spec_name=env_spec_name)
 
     def update_command(self, project, name, command_type=None, command=None, new_name=None):
         """Update attributes of a command in project.yml.

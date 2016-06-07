@@ -218,6 +218,7 @@ def _parse_args_and_run_subcommand(argv):
     command_choices.remove("conda_app_entry")  # conda_app_entry is sort of silly and may go away
     preset.add_argument('--type', action="store", choices=command_choices, help="Command type to add")
     add_command_name_arg(preset)
+    add_env_spec_arg(preset)
     preset.add_argument('command', metavar="COMMAND", help="Command line or app filename to add")
     preset.set_defaults(main=command_commands.main)
 

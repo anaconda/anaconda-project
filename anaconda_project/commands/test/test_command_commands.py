@@ -22,6 +22,7 @@ class Args(object):
         self.name = name
         self.command = command
         self.project = project
+        self.env_spec = None
 
 
 def test_add_command_ask_type(monkeypatch):
@@ -43,8 +44,9 @@ def test_add_command_ask_type(monkeypatch):
         project = Project(dirname)
 
         command = project.project_file.get_value(['commands', 'test'])
-        assert len(command.keys()) == 1
+        assert len(command.keys()) == 2
         assert command['bokeh_app'] == 'file.py'
+        assert command['env_spec'] == 'default'
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 
@@ -115,8 +117,9 @@ def test_add_command_ask_other_shell(monkeypatch):
         project = Project(dirname)
 
         command = project.project_file.get_value(['commands', 'test'])
-        assert len(command.keys()) == 1
+        assert len(command.keys()) == 2
         assert command['unix'] == 'echo hello'
+        assert command['env_spec'] == 'default'
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
 
@@ -145,8 +148,9 @@ def test_add_command_ask_other_windows(monkeypatch):
         project = Project(dirname)
 
         command = project.project_file.get_value(['commands', 'test'])
-        assert len(command.keys()) == 1
+        assert len(command.keys()) == 2
         assert command['windows'] == 'echo hello'
+        assert command['env_spec'] == 'default'
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
 
@@ -175,8 +179,9 @@ def test_add_command_ask_type_twice(monkeypatch, capsys):
         project = Project(dirname)
 
         command = project.project_file.get_value(['commands', 'test'])
-        assert len(command.keys()) == 1
+        assert len(command.keys()) == 2
         assert command['bokeh_app'] == 'file.py'
+        assert command['env_spec'] == 'default'
         out, err = capsys.readouterr()
         assert out == ("Please enter 'b', 'n', or 'c'.\n" +
                        "    A Bokeh app is the project-relative path to a Bokeh script or app directory.\n" +
@@ -197,7 +202,8 @@ def test_add_command_specifying_notebook(monkeypatch, capsys):
 
         command = project.project_file.get_value(['commands', 'test'])
         assert command['notebook'] == 'file.ipynb'
-        assert len(command.keys()) == 1
+        assert command['env_spec'] == 'default'
+        assert len(command.keys()) == 2
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_specifying_notebook)
 
@@ -212,9 +218,26 @@ def test_add_command_guessing_notebook(monkeypatch, capsys):
 
         command = project.project_file.get_value(['commands', 'test'])
         assert command['notebook'] == 'file.ipynb'
-        assert len(command.keys()) == 1
+        assert command['env_spec'] == 'default'
+        assert len(command.keys()) == 2
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: '', 'file.ipynb': ""}, check_guessing_notebook)
+
+
+def test_add_command_with_env_spec(monkeypatch, capsys):
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-command', '--project', dirname, '--env-spec',
+                                               'foo', '--type', 'notebook', 'test', 'file.ipynb'])
+        assert code == 0
+
+        project = Project(dirname)
+
+        command = project.project_file.get_value(['commands', 'test'])
+        assert command['notebook'] == 'file.ipynb'
+        assert command['env_spec'] == 'foo'
+        assert len(command.keys()) == 2
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
 
 
 def _test_command_command_project_problem(capsys, monkeypatch, command, append_dir=False):

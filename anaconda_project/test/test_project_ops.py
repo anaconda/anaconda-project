@@ -301,8 +301,9 @@ def test_add_command_bokeh():
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
         command = re_loaded.get_value(['commands', 'bokeh_test'])
-        assert len(command.keys()) == 1
+        assert len(command.keys()) == 2
         assert command['bokeh_app'] == 'file.py'
+        assert command['env_spec'] == 'default'
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_add_command)
 
@@ -315,12 +316,72 @@ def test_add_command_bokeh_overwrites():
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
         command = re_loaded.get_value(['commands', 'bokeh_test'])
-        assert len(command.keys()) == 1
+        assert len(command.keys()) == 2
         assert command['bokeh_app'] == 'file.py'
+        assert command['env_spec'] == 'default'
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: ('commands:\n'
                                     '  bokeh_test:\n'
+                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+
+
+def test_add_command_sets_env_spec():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, 'bokeh_test', 'bokeh_app', 'file.py', env_spec_name='foo')
+        assert result
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'bokeh_test'])
+        assert command['bokeh_app'] == 'file.py'
+        assert command['env_spec'] == 'foo'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                    '  foo: {}\n'
+                                    'commands:\n'
+                                    '  bokeh_test:\n'
+                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+
+
+def test_add_command_leaves_env_spec():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, 'bokeh_test', 'bokeh_app', 'file.py', env_spec_name=None)
+        assert result
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'bokeh_test'])
+        assert command['bokeh_app'] == 'file.py'
+        assert command['env_spec'] == 'foo'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                    '  foo: {}\n'
+                                    'commands:\n'
+                                    '  bokeh_test:\n'
+                                    '    env_spec: "foo"\n'
+                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+
+
+def test_add_command_modifies_env_spec():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, 'bokeh_test', 'bokeh_app', 'file.py', env_spec_name='default')
+        assert result
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'bokeh_test'])
+        assert command['bokeh_app'] == 'file.py'
+        assert command['env_spec'] == 'default'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                    '  foo: {}\n'
+                                    'commands:\n'
+                                    '  bokeh_test:\n'
+                                    '    env_spec: "foo"\n'
                                     '    bokeh_app: replaced.py\n')}, check_add_command)
 
 
