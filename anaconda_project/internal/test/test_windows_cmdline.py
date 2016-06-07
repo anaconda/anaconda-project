@@ -64,7 +64,12 @@ def test_multiple_args_with_backslash():
 
 
 def test_multiple_args_with_unicode():
-    _roundtrip(["foo", "bÄr", "¿"])
+    try:
+        _roundtrip(["foo", "bÄr", "¿"])
+    except WindowsCommandLineException as e:
+        # on Win32/py2 apparently we end up in ASCII
+        if 'cannot represent this command line in its character encoding' not in str(e):
+            raise e
 
 
 def test_multiple_args_which_are_spaces():
