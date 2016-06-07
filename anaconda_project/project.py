@@ -90,6 +90,7 @@ class _ConfigCache(object):
             # since we use those
             self._update_conda_env_requirements(requirements, problems, project_file)
 
+            # this MUST be after we update env reqs so we have the valid env spec names
             self._update_commands(problems, project_file, conda_meta_file, requirements)
 
         self.requirements = requirements
@@ -308,17 +309,14 @@ class _ConfigCache(object):
                                                 channels=shared_channels,
                                                 description="Default")
 
-        # since this never varies now, it's a little pointless, but we'll leave it here
-        # as an abstraction in case we change our mind again.
+        # this is only used for commands that don't specify anything
         self.default_env_spec_name = 'default'
 
     def _update_conda_env_requirements(self, requirements, problems, project_file):
         if problems:
             return
 
-        env_requirement = CondaEnvRequirement(registry=self.registry,
-                                              env_specs=self.env_specs,
-                                              default_env_spec_name=self.default_env_spec_name)
+        env_requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)
         requirements.append(env_requirement)
 
     def _update_commands(self, problems, project_file, conda_meta_file, requirements):
@@ -343,6 +341,7 @@ class _ConfigCache(object):
             for (name, attrs) in commands_section.items():
                 if name.strip() == '':
                     problems.append("Command variable name cannot be empty string, found: '{}' as name".format(name))
+                    failed = True
                     continue
                 if first_command_name is None:
                     first_command_name = name
@@ -350,14 +349,29 @@ class _ConfigCache(object):
                 if not isinstance(attrs, dict):
                     problems.append("%s: command name '%s' should be followed by a dictionary of attributes not %r" %
                                     (project_file.filename, name, attrs))
+                    failed = True
                     continue
 
                 if 'description' in attrs and not is_string(attrs['description']):
                     problems.append("{}: 'description' field of command {} must be a string".format(
                         project_file.filename, name))
-                    continue
+                    failed = True
+
+                if 'env_spec' in attrs:
+                    if not is_string(attrs['env_spec']):
+                        problems.append(
+                            "{}: 'env_spec' field of command {} must be a string (an environment spec name)".format(
+                                project_file.filename, name))
+                        failed = True
+                    elif attrs['env_spec'] not in self.env_specs:
+                        problems.append("%s: env_spec '%s' for command '%s' does not appear in the env_specs section" %
+                                        (project_file.filename, attrs['env_spec'], name))
+                        failed = True
 
                 copied_attrs = deepcopy(attrs)
+
+                if 'env_spec' not in copied_attrs:
+                    copied_attrs['env_spec'] = self.default_env_spec_name
 
                 command_types = []
                 for attr in ALL_COMMAND_TYPES:
@@ -388,7 +402,9 @@ class _ConfigCache(object):
                                     (project_file.filename, name, label, ", ".join(others)))
                     failed = True
 
-                commands[name] = ProjectCommand(name=name, attributes=copied_attrs)
+                # note that once one command fails, we don't add any more
+                if not failed:
+                    commands[name] = ProjectCommand(name=name, attributes=copied_attrs)
 
         self._add_notebook_commands(commands, problems, requirements)
 
@@ -400,7 +416,8 @@ class _ConfigCache(object):
             if app_entry_from_meta_yaml is not None and len(commands) == 0:
                 commands['default'] = ProjectCommand(name='default',
                                                      attributes=dict(conda_app_entry=app_entry_from_meta_yaml,
-                                                                     auto_generated=True))
+                                                                     auto_generated=True,
+                                                                     env_spec=self.default_env_spec_name))
 
             self.commands = commands
 
@@ -436,7 +453,8 @@ class _ConfigCache(object):
                 if relative_name not in commands:
                     commands[relative_name] = ProjectCommand(name=relative_name,
                                                              attributes={'notebook': relative_name,
-                                                                         'auto_generated': True})
+                                                                         'auto_generated': True,
+                                                                         'env_spec': self.default_env_spec_name})
 
 
 class Project(object):
@@ -612,8 +630,22 @@ class Project(object):
 
         This will be the one named "default" if it exists, and
         otherwise the first-listed one.
+
+        Note that each command may have its own default, so
+        this should only be used in contexts with no known
+        command.
         """
         return self._updated_cache().default_env_spec_name
+
+    def default_env_spec_name_for_command(self, command_name):
+        """Get the named environment to use by default for a given command name.
+
+        the command name may be ``None``
+        """
+        if command_name is None:
+            return self.default_env_spec_name
+        else:
+            return self.commands[command_name].default_env_spec_name
 
     @property
     def commands(self):
@@ -681,6 +713,7 @@ class Project(object):
                 commands[key]['notebook'] = command.notebook
             if command is self.default_command:
                 commands[key]['default'] = True
+            commands[key]['env_spec'] = command.default_env_spec_name
         json['commands'] = commands
         envs = dict()
         for key, env in self.env_specs.items():

@@ -24,7 +24,7 @@ def test_filename_not_set():
                                           env_var=ENV_VAR,
                                           url='http://example.com',
                                           filename=ENV_VAR)
-        status = requirement.check_status(dict(PROJECT_DIR=dirname), local_state, UserConfigOverrides())
+        status = requirement.check_status(dict(PROJECT_DIR=dirname), local_state, 'default', UserConfigOverrides())
         assert not status
         assert "Environment variable {} is not set.".format(ENV_VAR) == status.status_description
 
@@ -40,7 +40,7 @@ def test_download_filename_missing():
                                           url='http://localhost/data.zip',
                                           filename='data.zip')
         status = requirement.check_status({ENV_VAR: filename,
-                                           'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
+                                           'PROJECT_DIR': dirname}, local_state, 'default', UserConfigOverrides())
         assert not status
         assert 'File not found: {}'.format(filename) == status.status_description
 
@@ -71,7 +71,7 @@ def test_download_checksum():
                                           hash_algorithm='md5',
                                           hash_value=digest)
         status = requirement.check_status({ENV_VAR: filename,
-                                           'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
+                                           'PROJECT_DIR': dirname}, local_state, 'default', UserConfigOverrides())
         assert 'File downloaded to {}'.format(filename) == status.status_description
         assert status
 
@@ -89,7 +89,7 @@ def test_download_with_no_checksum():
                                           url='http://localhost/data.zip',
                                           filename='data.zip')
         status = requirement.check_status({ENV_VAR: filename,
-                                           'PROJECT_DIR': dirname}, local_state, UserConfigOverrides())
+                                           'PROJECT_DIR': dirname}, local_state, 'default', UserConfigOverrides())
         assert status
         assert 'File downloaded to {}'.format(filename) == status.status_description
 

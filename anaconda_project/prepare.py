@@ -162,10 +162,11 @@ class PrepareFailure(PrepareResult):
 class ConfigurePrepareContext(object):
     """Information needed to configure a stage."""
 
-    def __init__(self, environ, local_state_file, overrides, statuses):
+    def __init__(self, environ, local_state_file, default_env_spec_name, overrides, statuses):
         """Construct a ConfigurePrepareContext."""
         self.environ = environ
         self.local_state_file = local_state_file
+        self.default_env_spec_name = default_env_spec_name
         self.overrides = overrides
         self.statuses = statuses
         if len(statuses) > 0:
@@ -412,6 +413,9 @@ def _in_provide_whitelist(provide_whitelist, requirement):
 
 def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success, mode,
                            provide_whitelist, overrides, command_name, extra_command_args):
+
+    default_env_spec_name = project.default_env_spec_name_for_command(command_name)
+
     def provide_stage(stage):
         def get_missing_to_provide(status):
             return status.analysis.missing_env_vars_to_provide
@@ -421,7 +425,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         # we have to recheck all the statuses in case configuration happened
         rechecked = []
         for status in sorted:
-            rechecked.append(status.recheck(environ, local_state, overrides))
+            rechecked.append(status.recheck(environ, local_state, default_env_spec_name, overrides))
 
         logs = []
         errors = []
@@ -435,7 +439,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 continue
             else:
                 did_any_providing = True
-                context = ProvideContext(environ, local_state, status, mode)
+                context = ProvideContext(environ, local_state, default_env_spec_name, status, mode)
                 result = status.provider.provide(status.requirement, context)
                 logs.extend(result.logs)
                 errors.extend(result.errors)
@@ -447,6 +451,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             for status in old:
                 rechecked.append(status.recheck(environ,
                                                 local_state,
+                                                default_env_spec_name,
                                                 overrides,
                                                 latest_provide_result=results_by_status.get(status)))
 
@@ -485,6 +490,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
     def _start_over(updated_all_statuses, updated_statuses):
         configure_context = ConfigurePrepareContext(environ=environ,
                                                     local_state_file=local_state,
+                                                    default_env_spec_name=default_env_spec_name,
                                                     overrides=overrides,
                                                     statuses=updated_statuses)
         return _FunctionPrepareStage(environ, "Set up project.", updated_all_statuses, provide_stage, configure_context)
@@ -557,7 +563,7 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
         return _stages_for(remaining)
 
 
-def _add_missing_env_var_requirements(project, environ, local_state, overrides, statuses):
+def _add_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses):
     by_env_var = dict()
     for status in statuses:
         # if we add requirements with no env_var, change this to
@@ -576,18 +582,22 @@ def _add_missing_env_var_requirements(project, environ, local_state, overrides, 
         if env_var not in by_env_var:
             created_anything = True
             requirement = project.plugin_registry.find_requirement_by_env_var(env_var, options=dict())
-            statuses.append(requirement.check_status(environ, local_state, overrides, latest_provide_result=None))
+            statuses.append(requirement.check_status(environ,
+                                                     local_state,
+                                                     project.default_env_spec_name_for_command(command_name),
+                                                     overrides,
+                                                     latest_provide_result=None))
 
     if created_anything:
         # run the whole above again to find any transitive requirements of the new providers
-        _add_missing_env_var_requirements(project, environ, local_state, overrides, statuses)
+        _add_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses)
 
 
 def _first_stage(project, environ, local_state, statuses, keep_going_until_success, mode, provide_whitelist, overrides,
                  command_name, extra_command_args):
     assert 'PROJECT_DIR' in environ
 
-    _add_missing_env_var_requirements(project, environ, local_state, overrides, statuses)
+    _add_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses)
 
     first_stage = _process_requirement_statuses(project, environ, local_state, statuses, statuses,
                                                 keep_going_until_success, mode, provide_whitelist, overrides,
@@ -677,7 +687,11 @@ def prepare_in_stages(project,
 
     statuses = []
     for requirement in project.requirements:
-        status = requirement.check_status(environ_copy, local_state, overrides, latest_provide_result=None)
+        status = requirement.check_status(environ_copy,
+                                          local_state,
+                                          project.default_env_spec_name_for_command(command_name),
+                                          overrides,
+                                          latest_provide_result=None)
         statuses.append(status)
 
     return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode, provide_whitelist,

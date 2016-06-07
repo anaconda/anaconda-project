@@ -955,7 +955,7 @@ def test_command_with_non_string_description():
         assert expected_error == project.problems[0]
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     shell: 'boo'\n     description: []\n"}, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     description: []\n"}, check)
 
 
 def test_command_with_custom_description():
@@ -968,6 +968,50 @@ def test_command_with_custom_description():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n    description: hi\n"}, check)
+
+
+def test_command_with_non_string_env_spec():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        expected_error = "%s: 'env_spec' field of command %s must be a string (an environment spec name)" % (
+            project.project_file.filename, 'default')
+        assert [expected_error] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     env_spec: []\n"}, check)
+
+
+def test_command_with_nonexistent_env_spec():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        expected_error = "%s: env_spec 'boo' for command '%s' does not appear in the env_specs section" % (
+            project.project_file.filename, 'default')
+        assert [expected_error] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     env_spec: boo\n"}, check)
+
+
+def test_command_with_many_problems_at_once():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        expected_errors = [
+            "%s: 'description' field of command default must be a string",
+            "%s: env_spec 'nonexistent' for command 'default' does not appear in the env_specs section",
+            "%s: command 'default' has multiple commands in it, 'notebook' can't go with 'unix'"
+        ]
+        expected_errors = list(map(lambda e: e % project.project_file.filename, expected_errors))
+        assert expected_errors == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+commands:
+  default:
+     unix: bar
+     notebook: foo.ipynb
+     env_spec: nonexistent
+     description: []
+        """}, check)
 
 
 def test_command_with_bogus_key_and_ok_key():
@@ -1564,10 +1608,12 @@ commands:
     description: "say hi"
   bar:
     windows: echo boo
+    env_spec: lol
   baz:
     conda_app_entry: echo blah
   myapp:
     bokeh_app: main.py
+    env_spec: woot
 
 dependencies:
   - foo
@@ -1607,14 +1653,19 @@ def test_get_publication_info_from_complex_project():
         expected = {
             'name': 'foobar',
             'description': 'A very complicated project.',
-            'commands': {'bar': {'description': 'echo boo'},
-                         'baz': {'description': 'echo blah'},
+            'commands': {'bar': {'description': 'echo boo',
+                                 'env_spec': 'lol'},
+                         'baz': {'description': 'echo blah',
+                                 'env_spec': 'default'},
                          'foo': {'description': 'say hi',
-                                 'default': True},
+                                 'default': True,
+                                 'env_spec': 'default'},
                          'myapp': {'description': 'Bokeh app main.py',
-                                   'bokeh_app': 'main.py'},
+                                   'bokeh_app': 'main.py',
+                                   'env_spec': 'woot'},
                          'foo.ipynb': {'description': 'Notebook foo.ipynb',
-                                       'notebook': 'foo.ipynb'}},
+                                       'notebook': 'foo.ipynb',
+                                       'env_spec': 'default'}},
             'downloads': {'FOO': {'encrypted': False,
                                   'title': 'FOO',
                                   'description': 'A downloaded file which is referenced by FOO.',

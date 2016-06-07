@@ -16,7 +16,7 @@ from anaconda_project.internal.simple_status import SimpleStatus
 class MasterPasswordProvider(Provider):
     """Provides a master password, stored in the OS keyring if possible."""
 
-    def read_config(self, requirement, environ, local_state_file, overrides):
+    def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to read from keyring."""
         config = dict()
         value = keyring.get(requirement.env_var)
@@ -24,7 +24,8 @@ class MasterPasswordProvider(Provider):
             config['value'] = value
         return config
 
-    def set_config_values_as_strings(self, requirement, environ, local_state_file, overrides, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, default_env_spec_name, overrides,
+                                     values):
         """Override superclass to set in keyring."""
         if 'value' in values:
             value_string = values['value']

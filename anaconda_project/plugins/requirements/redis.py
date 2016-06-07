@@ -34,7 +34,7 @@ class RedisRequirement(ServiceRequirement):
         else:
             return "Cannot connect to Redis at {url}.".format(url=url, env_var=self.env_var)
 
-    def check_status(self, environ, local_state_file, overrides, latest_provide_result=None):
+    def check_status(self, environ, local_state_file, default_env_spec_name, overrides, latest_provide_result=None):
         """Override superclass to get our status."""
         why_not_provided = self._why_not_provided(environ)
 
@@ -46,6 +46,7 @@ class RedisRequirement(ServiceRequirement):
 
         return self._create_status(environ,
                                    local_state_file,
+                                   default_env_spec_name,
                                    overrides=overrides,
                                    has_been_provided=has_been_provided,
                                    status_description=status_description,

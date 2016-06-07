@@ -119,6 +119,9 @@ when those are implemented
 
 TODO mention that commands can have a 'description' field.
 
+TODO mention that commands can have an 'env_spec' field giving the
+env spec name to use by default with the command.
+
 Environments and Channels
 =========================
 

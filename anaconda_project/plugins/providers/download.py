@@ -30,9 +30,10 @@ class _DownloadProviderAnalysis(ProviderAnalysis):
 class DownloadProvider(EnvVarProvider):
     """Downloads a file according to the specified requirement."""
 
-    def read_config(self, requirement, environ, local_state_file, overrides):
+    def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to return our config."""
-        config = super(DownloadProvider, self).read_config(requirement, environ, local_state_file, overrides)
+        config = super(DownloadProvider, self).read_config(requirement, environ, local_state_file,
+                                                           default_env_spec_name, overrides)
 
         assert 'source' in config
         assert config['source'] != 'default'
@@ -42,10 +43,11 @@ class DownloadProvider(EnvVarProvider):
 
         return config
 
-    def set_config_values_as_strings(self, requirement, environ, local_state_file, overrides, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, default_env_spec_name, overrides,
+                                     values):
         """Override superclass to clear out environ if we decide not to use it."""
-        super(DownloadProvider, self).set_config_values_as_strings(requirement, environ, local_state_file, overrides,
-                                                                   values)
+        super(DownloadProvider, self).set_config_values_as_strings(requirement, environ, local_state_file,
+                                                                   default_env_spec_name, overrides, values)
 
         if 'source' in values and values['source'] != 'environ':
             # clear out the previous setting; this is sort of a hack. The problem
@@ -79,9 +81,10 @@ class DownloadProvider(EnvVarProvider):
 
         return extra_html
 
-    def analyze(self, requirement, environ, local_state_file, overrides):
+    def analyze(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to store additional fields in the analysis."""
-        analysis = super(DownloadProvider, self).analyze(requirement, environ, local_state_file, overrides)
+        analysis = super(DownloadProvider, self).analyze(requirement, environ, local_state_file, default_env_spec_name,
+                                                         overrides)
         filename = os.path.join(environ['PROJECT_DIR'], requirement.filename)
         if os.path.exists(filename):
             existing_filename = filename

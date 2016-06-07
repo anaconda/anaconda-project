@@ -266,6 +266,40 @@ env_specs:
 """}, check)
 
 
+def test_prepare_use_command_specified_env_spec():
+    def check(dirname):
+        if platform.system() == 'Windows':
+            env_var = "CONDA_DEFAULT_ENV"
+        else:
+            env_var = "CONDA_ENV_PATH"
+
+        try:
+            _push_fake_env_creator()
+            project = Project(dirname)
+            environ = minimal_environ()
+            # we specify the command name but not the
+            # env_spec_name but it should imply the proper env
+            # spec name.
+            result = prepare_without_interaction(project, environ=environ, command_name='hello')
+            expected_path = project.env_specs['foo'].path(project.directory_path)
+            assert result.environ[env_var] == expected_path
+        finally:
+            _pop_fake_env_creator()
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+    default: {}
+    foo: {}
+    bar: {}
+commands:
+    hello:
+       env_spec: foo
+       unix: echo hello
+       windows: echo hello
+"""}, check)
+
+
 def test_update_environ():
     def prepare_then_update_environ(dirname):
         project = project_no_dedicated_env(dirname)

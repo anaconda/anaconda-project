@@ -38,7 +38,7 @@ class CondaEnvProvider(EnvVarProvider):
         super(CondaEnvProvider, self).__init__()
         self._conda = new_conda_manager()
 
-    def read_config(self, requirement, environ, local_state_file, overrides):
+    def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to add a choice to create a project-scoped environment."""
         assert 'PROJECT_DIR' in environ
         project_dir = environ['PROJECT_DIR']
@@ -49,7 +49,8 @@ class CondaEnvProvider(EnvVarProvider):
             config = dict(source='project', env_name=overrides.env_spec_name, value=env.path(project_dir))
             return config
 
-        config = super(CondaEnvProvider, self).read_config(requirement, environ, local_state_file, overrides)
+        config = super(CondaEnvProvider, self).read_config(requirement, environ, local_state_file,
+                                                           default_env_spec_name, overrides)
 
         assert 'source' in config
 
@@ -77,7 +78,7 @@ class CondaEnvProvider(EnvVarProvider):
         if 'value' in config:
             config['value'] = os.path.normpath(config['value'])
 
-        config['env_name'] = requirement.default_env_spec_name
+        config['env_name'] = default_env_spec_name
 
         if 'value' in config:
             for env in requirement.env_specs.values():
@@ -93,10 +94,11 @@ class CondaEnvProvider(EnvVarProvider):
 
         return config
 
-    def set_config_values_as_strings(self, requirement, environ, local_state_file, overrides, values):
+    def set_config_values_as_strings(self, requirement, environ, local_state_file, default_env_spec_name, overrides,
+                                     values):
         """Override superclass to support 'project' source option."""
-        super(CondaEnvProvider, self).set_config_values_as_strings(requirement, environ, local_state_file, overrides,
-                                                                   values)
+        super(CondaEnvProvider, self).set_config_values_as_strings(requirement, environ, local_state_file,
+                                                                   default_env_spec_name, overrides, values)
 
         # We have to clear out the user override or it will
         # never stop overriding the user's new choice, if they
@@ -172,7 +174,7 @@ class CondaEnvProvider(EnvVarProvider):
 
         if prefix is None:
             # use the default environment
-            env_name = context.status.analysis.config.get('env_name', requirement.default_env_spec_name)
+            env_name = context.status.analysis.config.get('env_name', context.default_env_spec_name)
             env = requirement.env_specs.get(env_name)
             assert env is not None
             prefix = env.path(project_dir)

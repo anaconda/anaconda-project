@@ -498,7 +498,7 @@ def test_config_html(monkeypatch):
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = _download_requirement()
         environ = minimal_environ(PROJECT_DIR=dirname)
-        status = requirement.check_status(environ, local_state_file, UserConfigOverrides())
+        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         provider = DownloadProvider()
         html = provider.config_html(requirement, environ, local_state_file, status)
         assert 'Download {} to {}'.format(requirement.url, requirement.filename) in html
@@ -507,7 +507,7 @@ def test_config_html(monkeypatch):
             f.write('boo')
 
         env = minimal_environ(PROJECT_DIR=dirname)
-        status = requirement.check_status(env, local_state_file, UserConfigOverrides())
+        status = requirement.check_status(env, local_state_file, 'default', UserConfigOverrides())
         html = provider.config_html(requirement, env, local_state_file, status)
         expected_choice = 'Use already-downloaded file {}'.format(FILENAME)
         assert expected_choice in html
