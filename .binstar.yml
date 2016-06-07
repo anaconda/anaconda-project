@@ -28,9 +28,12 @@ build_targets: [conda]
 
 package: anaconda_project
 
-platform: win-64
+platform:
+  - win-32
+  - win-64
 
 engine:
+  - python=2.7
   - python=3.5
 
 install:
