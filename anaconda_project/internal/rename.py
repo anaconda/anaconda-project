@@ -14,8 +14,9 @@ import uuid
 def rename_over_existing(src, dest):
     try:
         # On Windows, this will throw EEXIST, on Linux it won't.
+        # on Win32 / Python 2.7 it throws OSError instead of IOError
         os.rename(src, dest)
-    except IOError as e:
+    except (OSError, IOError) as e:
         if e.errno == errno.EEXIST:
             # Clearly this song-and-dance is not in fact atomic,
             # but if something goes wrong putting the new file in
