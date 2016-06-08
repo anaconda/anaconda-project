@@ -22,7 +22,8 @@ test:
 script:
   - conda build conda.recipe
 
-build_targets: [conda]
+# we only do build_targets for 2.7, below
+# build_targets: [conda]
 
 --- # Windows config starts here
 
