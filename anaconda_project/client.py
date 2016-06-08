@@ -51,11 +51,11 @@ class _Client(object):
         res = self._api.session.get(url)
         return res.status_code == 200
 
-    def create(self, project):
-        assert not project.problems
-
+    def create(self, project_info):
         url = "{}/apps/{}/projects".format(self._api.domain, self._username())
-        json = {'name': project.name, 'access': 'public', 'profile': {'description': project.description}}
+        json = {'name': project_info['name'],
+                'access': 'public',
+                'profile': {'description': project_info['description']}}
         data, headers = binstar_utils.jencode(json)
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
@@ -71,16 +71,14 @@ class _Client(object):
                 return len(zf.namelist())
         assert False, ("unsupported bundle filename %s" % bundle_filename)  # pragma: no cover (should not be reached)
 
-    def stage(self, project, bundle_filename):
-        assert not project.problems
-
-        url = "{}/apps/{}/projects/{}/stage".format(self._api.domain, self._username(), project.name)
-        config = project.publication_info().copy()
+    def stage(self, project_info, bundle_filename):
+        url = "{}/apps/{}/projects/{}/stage".format(self._api.domain, self._username(), project_info['name'])
+        config = project_info.copy()
         config['size'] = os.path.getsize(bundle_filename)
         file_count = self._file_count(bundle_filename)
         if file_count is not None:
             config['num_of_files'] = file_count
-        json = {'basename': ("%s.tar" % project.name), 'configuration': config}
+        json = {'basename': ("%s.tar" % project_info['name']), 'configuration': config}
         data, headers = binstar_utils.jencode(json)
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
@@ -115,15 +113,13 @@ class _Client(object):
             self._check_response(res)
         return res
 
-    def upload(self, project, bundle_filename):
+    def upload(self, project_info, bundle_filename):
         """Upload bundle_filename created from project, throwing BinstarError."""
-        assert not project.problems
-
-        if not self._exists(project.name):
-            res = self.create(project=project)
+        if not self._exists(project_info['name']):
+            res = self.create(project_info=project_info)
             assert res.status_code in (200, 201)
 
-        res = self.stage(project=project, bundle_filename=bundle_filename)
+        res = self.stage(project_info=project_info, bundle_filename=bundle_filename)
         assert res.status_code in (200, 201)
 
         stage_info = res.json()
@@ -135,7 +131,7 @@ class _Client(object):
         res = self._put_on_s3(bundle_filename, url=stage_info['post_url'], s3data=stage_info['form_data'])
         assert res.status_code in (200, 201)
 
-        res = self.commit(project.name, stage_info['dist_id'])
+        res = self.commit(project_info['name'], stage_info['dist_id'])
         assert res.status_code in (200, 201)
 
         return res.json()
@@ -153,9 +149,11 @@ class _UploadedStatus(SimpleStatus):
 # This function is supposed to encapsulate the binstar API (don't
 # require any other files to import binstar_client).
 def _upload(project, bundle_filename, site=None, username=None, token=None, log_level=None):
+    assert not project.problems
+
     client = _Client(site=site, username=username, token=token, log_level=log_level)
     try:
-        json = client.upload(project, bundle_filename)
+        json = client.upload(project.publication_info(), bundle_filename)
         return _UploadedStatus(json)
     except Unauthorized as e:
         return SimpleStatus(success=False,
