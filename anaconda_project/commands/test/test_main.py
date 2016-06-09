@@ -9,6 +9,7 @@ from functools import partial
 
 import os
 
+import anaconda_project
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
 all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'bundle', 'upload', 'add-variable', 'remove-variable',
@@ -122,6 +123,9 @@ def test_main_help_via_entry_point(capsys, monkeypatch):
     assert expected_usage_msg == out
 
     assert 0 == code
+
+    # undo this side effect
+    anaconda_project._beta_test_mode = False
 
 
 def _main_calls_subcommand(monkeypatch, capsys, subcommand):
