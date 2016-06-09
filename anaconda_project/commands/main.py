@@ -16,6 +16,7 @@ from anaconda_project.version import version
 from anaconda_project.project import ALL_COMMAND_TYPES
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirements.download import _hash_algorithms
+import anaconda_project
 import anaconda_project.commands.init as init
 import anaconda_project.commands.run as run
 import anaconda_project.commands.prepare as prepare
@@ -253,4 +254,5 @@ def main():
 
     Conda expects us to take no args and return an exit code.
     """
+    anaconda_project._enter_beta_test_mode()
     return _parse_args_and_run_subcommand(sys.argv)
