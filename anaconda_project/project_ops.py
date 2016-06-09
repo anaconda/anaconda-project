@@ -12,6 +12,7 @@ import os
 import shutil
 import tempfile
 
+import anaconda_project
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import prepare
 from anaconda_project import bundler
@@ -955,6 +956,13 @@ def upload(project, site=None, username=None, token=None, log_level=None):
     failed = project.problems_status()
     if failed is not None:
         return failed
+
+    if anaconda_project._beta_test_mode:
+        return SimpleStatus(
+            success=False,
+            description="Upload disabled",
+            errors=["The server-side support for projects hasn't been deployed yet so upload is disabled."]
+        )  # pragma: no cover (beta mode)
 
     # delete=True breaks on windows if you use tmp_tarfile.name to re-open the file,
     # so don't use delete=True.
