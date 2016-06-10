@@ -273,8 +273,8 @@ class AnacondaProject(object):
         """
         return project_ops.set_properties(project=project, name=name, icon=icon, description=description)
 
-    def add_variables(self, project, vars_to_add):
-        """Add variables in project.yml and set their values in local project state.
+    def add_variables(self, project, vars_to_add, defaults):
+        """Add variables in project.yml, optionally setting their defaults.
 
         Returns a ``Status`` instance which evaluates to True on
         success and has an ``errors`` property (with a list of error
@@ -282,12 +282,13 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
-            vars_to_add (list of tuple): key-value pairs
+            vars_to_add (list of str): variable names
+            defaults (dict): dictionary from keys to defaults, can be empty
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.add_variables(project=project, vars_to_add=vars_to_add)
+        return project_ops.add_variables(project=project, vars_to_add=vars_to_add, defaults=defaults)
 
     def remove_variables(self, project, vars_to_remove):
         """Remove variables from project.yml and unset their values in local project state.

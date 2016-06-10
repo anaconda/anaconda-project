@@ -6,7 +6,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-from anaconda_project.commands.variable_commands import main
+from anaconda_project.commands.variable_commands import main_add, main_remove
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.simple_status import SimpleStatus
@@ -18,33 +18,71 @@ PLATFORM_ENV_VAR = 'CONDA_DEFAULT_ENV' if platform.system() == 'Windows' else 'C
 
 
 class Args(object):
-    def __init__(self, action, vars_to_add=None, vars_to_remove=None, project='.'):
+    def __init__(self, vars_to_add=None, vars_to_remove=None, project='.', default=None):
         self.project = project
-        self.action = action
         self.vars_to_add = vars_to_add
         self.vars_to_remove = vars_to_remove
+        self.default = None
 
 
 def test_add_variable_command(monkeypatch):
 
     params = []
 
-    def mock_add_variables(project, _vars):
+    def mock_add_variables(project, _vars, defaults):
         params.append(_vars)
+        params.append(defaults)
         return True
 
     monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
 
-    args = Args('add', vars_to_add=['foo=bar', 'baz=qux', 'has_two_equals=foo=bar'])
-    res = main(args)
+    args = Args(vars_to_add=['foo', 'baz'])
+    res = main_add(args)
     assert res == 0
-    assert [('foo', 'bar'), ('baz', 'qux'), ('has_two_equals', 'foo=bar')] == params[0]
+    assert ['foo', 'baz'] == params[0]
+
+
+def test_add_variable_with_default(monkeypatch):
+
+    params = []
+
+    def mock_add_variables(project, _vars, defaults):
+        params.append(_vars)
+        params.append(defaults)
+        return True
+
+    monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
+
+    res = _parse_args_and_run_subcommand(['anaconda-project', 'add-variable', '--default', 'bar', 'foo'])
+    assert res == 0
+    assert [['foo'], dict(foo='bar')] == params
+
+
+def test_add_two_variables_with_default(monkeypatch, capsys):
+
+    params = []
+
+    def mock_add_variables(project, _vars, defaults):
+        params.append(_vars)
+        params.append(defaults)
+        return True
+
+    monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
+
+    res = _parse_args_and_run_subcommand(['anaconda-project', 'add-variable', '--default', 'bar', 'foo', 'hello'])
+    assert res == 1
+
+    out, err = capsys.readouterr()
+    assert out == ''
+    expected_err = ("It isn't clear which variable your --default option goes with; " +
+                    "add one variable at a time if using --default.\n")
+    assert err == expected_err
 
 
 def test_add_variable_project_problem(capsys):
     def check_problem(dirname):
-        args = Args('add', vars_to_add=['foo=bar', 'baz=qux'], project=dirname)
-        res = main(args)
+        args = Args(vars_to_add=['foo', 'baz'], project=dirname)
+        res = main_add(args)
         assert res == 1
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ("variables:\n" "  42")}, check_problem)
@@ -56,25 +94,6 @@ def test_add_variable_project_problem(capsys):
     assert err == expected_err
 
 
-def test_add_variable_command_bad(monkeypatch, capsys):
-
-    params = []
-
-    def mock_add_variables(project, _vars):
-        params.append(_vars)
-        return True
-
-    monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
-
-    args = Args('add', vars_to_add=['foo=bar', 'baz'])
-    res = main(args)
-    assert res == 1
-    out, err = capsys.readouterr()
-    assert "Error: {} doesn't define a name=value pair".format('baz') in out
-
-    assert len(params) == 0
-
-
 def test_remove_variable_command(monkeypatch):
     params = []
 
@@ -84,8 +103,8 @@ def test_remove_variable_command(monkeypatch):
             return True
 
         monkeypatch.setattr('anaconda_project.project_ops.remove_variables', mock_remove_variables)
-        args = Args('remove', vars_to_remove=['foo', 'baz'], project=dirname)
-        res = main(args)
+        args = Args(vars_to_remove=['foo', 'baz'], project=dirname)
+        res = main_remove(args)
         assert res == 0
         assert len(params) == 1
 
@@ -97,8 +116,8 @@ def test_remove_variable_command(monkeypatch):
 
 def test_remove_variable_project_problem(monkeypatch):
     def check_problem_remove(dirname):
-        args = Args('remove', vars_to_remove=['foo', 'baz'], project=dirname)
-        res = main(args)
+        args = Args(vars_to_remove=['foo', 'baz'], project=dirname)
+        res = main_remove(args)
         assert res == 1
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ("variables:\n" "  foo: true")}, check_problem_remove)

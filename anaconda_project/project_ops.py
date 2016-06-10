@@ -544,8 +544,8 @@ def remove_dependencies(project, env_spec_name, packages):
     return status
 
 
-def add_variables(project, vars_to_add):
-    """Add variables in project.yml and set their values in local project state.
+def add_variables(project, vars_to_add, defaults=None):
+    """Add variables in project.yml, optionally setting their defaults.
 
     Returns a ``Status`` instance which evaluates to True on
     success and has an ``errors`` property (with a list of error
@@ -553,7 +553,8 @@ def add_variables(project, vars_to_add):
 
     Args:
         project (Project): the project
-        vars_to_add (list of tuple): key-value pairs
+        vars_to_add (list of str): variable names
+        defaults (dict): dictionary from keys to defaults, can be empty
 
     Returns:
         ``Status`` instance
@@ -562,14 +563,14 @@ def add_variables(project, vars_to_add):
     if failed is not None:
         return failed
 
-    local_state = LocalStateFile.load_for_directory(project.directory_path)
+    if defaults is None:
+        defaults = dict()
+
     present_vars = {req.env_var for req in project.requirements if isinstance(req, EnvVarRequirement)}
-    for varname, value in vars_to_add:
-        local_state.set_value(['variables', varname], value)
+    for varname in vars_to_add:
         if varname not in present_vars:
-            project.project_file.set_value(['variables', varname], None)
+            project.project_file.set_value(['variables', varname], defaults.get(varname))
     project.project_file.save()
-    local_state.save()
 
     return SimpleStatus(success=True, description="Variables added to the project file.")
 

@@ -7,26 +7,27 @@
 """Commands related to setting and unsetting variables."""
 from __future__ import absolute_import, print_function
 
+import sys
+
 from anaconda_project.project import Project
 from anaconda_project import project_ops
 from anaconda_project.commands import console_utils
 
 
-def add_variables(project_dir, vars_to_add):
-    """Change default env variables for local project and change project file.
+def add_variables(project_dir, vars_to_add, default):
+    """Add env variables to project file.
 
     Returns:
         Returns exit code
     """
-    fixed_vars = []
-    for var in vars_to_add:
-        if '=' not in var:
-            print("Error: {} doesn't define a name=value pair".format(var))
-            return 1
-        # maxsplit=1 -- no maxplist keywork in py27
-        fixed_vars.append(tuple(var.split('=', 1)))
+    if len(vars_to_add) > 1 and default is not None:
+        print(
+            ("It isn't clear which variable your --default option goes with; " +
+             "add one variable at a time if using --default."),
+            file=sys.stderr)
+        return 1
     project = Project(project_dir)
-    status = project_ops.add_variables(project, fixed_vars)
+    status = project_ops.add_variables(project, vars_to_add, {vars_to_add[0]: default})
     if status:
         return 0
     else:
@@ -35,7 +36,7 @@ def add_variables(project_dir, vars_to_add):
 
 
 def remove_variables(project_dir, vars_to_remove):
-    """Unset the variables for local project and changes project file.
+    """Remove env variable requirements from the project file.
 
     Returns:
         Returns exit code
@@ -98,12 +99,14 @@ def unset_variables(project_dir, vars_to_unset):
         return 1
 
 
-def main(args):
-    """Submit the action to alter the variables in project."""
-    if args.action == 'add':
-        return add_variables(args.project, args.vars_to_add)
-    elif args.action == 'remove':
-        return remove_variables(args.project, args.vars_to_remove)
+def main_add(args):
+    """Add variables main."""
+    return add_variables(args.project, args.vars_to_add, args.default)
+
+
+def main_remove(args):
+    """Remove variables main."""
+    return remove_variables(args.project, args.vars_to_remove)
 
 
 def main_list(args):

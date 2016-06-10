@@ -70,10 +70,8 @@ expected_usage_msg = \
         '    bundle              Create a .zip, .tar.gz, or .tar.bz2 archive with\n' \
         '                        project files in it\n'\
         '    upload              Upload the project to Anaconda Cloud\n' \
-        '    add-variable        Add an environment variable and add it to the project\n' \
-        '                        if not present\n' \
-        '    remove-variable     Remove an environment variable and remove it from the\n' \
-        '                        project\n' \
+        '    add-variable        Add a required environment variable to the project\n' \
+        '    remove-variable     Remove an environment variable from the project\n' \
         '    list-variables      List all variables on the project\n' \
         '    set-variable        Set an environment variable value in project-local.yml\n'\
         '    unset-variable      Unset an environment variable value from project-\n' \

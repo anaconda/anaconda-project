@@ -112,17 +112,19 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
     preset.set_defaults(main=upload.main)
 
-    preset = subparsers.add_parser('add-variable',
-                                   help="Add an environment variable and add it to the project if not present")
+    preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
     preset.add_argument('vars_to_add', metavar='VARS_TO_ADD', default=None, nargs=REMAINDER)
+    preset.add_argument('--default',
+                        metavar='DEFAULT_VALUE',
+                        default=None,
+                        help='Default value if environment variable is unset')
     add_project_arg(preset)
-    preset.set_defaults(main=variable_commands.main, action="add")
+    preset.set_defaults(main=variable_commands.main_add)
 
-    preset = subparsers.add_parser('remove-variable',
-                                   help="Remove an environment variable and remove it from the project")
+    preset = subparsers.add_parser('remove-variable', help="Remove an environment variable from the project")
     add_project_arg(preset)
     preset.add_argument('vars_to_remove', metavar='VARS_TO_REMOVE', default=None, nargs=REMAINDER)
-    preset.set_defaults(main=variable_commands.main, action="remove")
+    preset.set_defaults(main=variable_commands.main_remove)
 
     preset = subparsers.add_parser('list-variables', help="List all variables on the project")
     add_project_arg(preset)
