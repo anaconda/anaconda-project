@@ -213,18 +213,14 @@ You should see the data printed out, and then the sentence about
 Custom variables
 ================
 
-TODO this is messed up because of
-https://github.com/Anaconda-Platform/anaconda-project/issues/240
-
 Say your command needs a database password, or has a tunable
-parameter. You can require or allow users to configure these
-before the command runs.
+parameter. You can require (or just allow) users to configure
+these before the command runs.
 
-Type ``anaconda-project add-variable
-COLUMN_TO_SHOW=sepal_length``. In ``project.yml`` you should now
-have a ``COLUMN_TO_SHOW`` in the ``variables:`` section, and
-``anaconda-project list-variables`` should list
-``COLUMN_TO_SHOW``.
+Type ``anaconda-project add-variable COLUMN_TO_SHOW``. In
+``project.yml`` you should now have a ``COLUMN_TO_SHOW`` in the
+``variables:`` section, and ``anaconda-project list-variables``
+should list ``COLUMN_TO_SHOW``.
 
 Now modify ``showdata.py`` to use this variable:
 
@@ -241,18 +237,19 @@ Now modify ``showdata.py`` to use this variable:
     print(flowers[column_to_show])
     print("My project directory is {} and my conda environment is {}".format(project_dir, env))
 
-TODO right now add-variable set the local value not the default
-
-When you run ``anaconda-project run --command showdata`` you'll
-see only one column. You configured the variable to be set to
-``sepal_length`` by default, but users can override it:
+On Linux and Mac, users can set the environment variable like this:
 
     COLUMN_TO_SHOW=petal_length anaconda-project run --command showdata
 
-If you remove the default from ``project.yml``, users will be
-prompted to fill something in. If your variable is something like
-a password, you may want to leave out a default value when you add
-the variable, like ``anaconda-project add-variable DB_PASSWORD``.
+They can also configure a value to be used on their local machine,
+by typing:
+
+    anaconda-project set-variable COLUMN_TO_SHOW=sepal_length
+
+``set-variable`` sets a value in ``project-local.yml``, which is a
+file local to this user and machine. When an environment variable
+isn't set, the value (if any) from ``project-local.yml`` will be
+used.
 
 NOTE: it's good practice to use variables for passwords and
 secrets in particular! It isn't very secure to put your personal
