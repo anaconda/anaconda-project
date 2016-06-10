@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 
+import anaconda_project
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.status import Status
@@ -218,6 +219,8 @@ class Requirement(with_metaclass(ABCMeta)):
 
 # suffixes that change the default for the "encrypted" option
 _secret_suffixes = ('_PASSWORD', '_ENCRYPTED', '_SECRET_KEY', '_SECRET')
+if anaconda_project._beta_test_mode:
+    _secret_suffixes = ()  # credentials stuff is just confusing for now # pragma: no cover (beta mode)
 
 
 class EnvVarRequirement(Requirement):
