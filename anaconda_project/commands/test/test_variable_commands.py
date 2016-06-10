@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 from anaconda_project.commands.variable_commands import main
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 import platform
@@ -128,7 +129,7 @@ test{space}A downloaded file which is referenced by test.
                                     '  tes2: http://localhost:8000/train.tgz\n')}, check_list_not_empty)
 
 
-def test_list_empty_environments(capsys):
+def test_list_variables_with_no_variables(capsys):
     def check_list_empty(dirname):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'list-variables', '--project', dirname])
 
@@ -160,3 +161,98 @@ def test_list_variables_with_project_file_problems(capsys):
                 'Unable to load the project.\n') == err
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_set_variables_with_project_file_problems(capsys):
+    def check(dirname):
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'set-variable', '--project', dirname, 'FOO=bar'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
+                'Unable to load the project.\n') == err
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_unset_variables_with_project_file_problems(capsys):
+    def check(dirname):
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'unset-variable', '--project', dirname, 'FOO'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
+                'Unable to load the project.\n') == err
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_set_variable_command(monkeypatch):
+
+    params = []
+
+    def mock_set_variables(project, _vars):
+        params.append(_vars)
+        return SimpleStatus(success=True, description="BOO")
+
+    monkeypatch.setattr('anaconda_project.project_ops.set_variables', mock_set_variables)
+
+    def check(dirname):
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'set-variable', '--project', dirname, 'foo=bar',
+                                              'baz=qux', 'has_two_equals=foo=bar'])
+        assert res == 0
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+variables:
+  - foo
+  - baz
+  - has_two_equals
+    """}, check)
+
+    assert [('foo', 'bar'), ('baz', 'qux'), ('has_two_equals', 'foo=bar')] == params[0]
+
+
+def test_set_variable_command_bad_arg(monkeypatch, capsys):
+
+    params = []
+
+    def mock_set_variables(project, _vars):
+        params.append(_vars)
+        return SimpleStatus(success=True, description="BOO")
+
+    monkeypatch.setattr('anaconda_project.project_ops.set_variables', mock_set_variables)
+
+    res = _parse_args_and_run_subcommand(['anaconda-project', 'set-variable', 'foo=bar', 'baz'])
+    assert res == 1
+    out, err = capsys.readouterr()
+    assert "Error: argument '{}' should be in NAME=value format".format('baz') in out
+
+    assert len(params) == 0
+
+
+def test_unset_variable_command(monkeypatch):
+
+    params = []
+
+    def mock_unset_variables(project, _vars):
+        params.append(_vars)
+        return SimpleStatus(success=True, description="BOO")
+
+    monkeypatch.setattr('anaconda_project.project_ops.unset_variables', mock_unset_variables)
+
+    def check(dirname):
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'unset-variable', '--project', dirname, 'foo', 'baz'])
+        assert res == 0
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  - foo
+  - baz
+    """}, check)
+
+    assert ['foo', 'baz'] == params[0]

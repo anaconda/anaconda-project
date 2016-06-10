@@ -59,6 +59,45 @@ def list_variables(project_dir):
     return 0
 
 
+def set_variables(project_dir, vars_and_values):
+    """Set the given variables to the given values.
+
+    Returns:
+        Returns exit code
+    """
+    fixed_vars = []
+    for var in vars_and_values:
+        if '=' not in var:
+            print("Error: argument '{}' should be in NAME=value format".format(var))
+            return 1
+        # maxsplit=1 -- no maxsplit keywork in py27
+        fixed_vars.append(tuple(var.split('=', 1)))
+    project = Project(project_dir)
+    status = project_ops.set_variables(project, fixed_vars)
+    if status:
+        print(status.status_description)
+        return 0
+    else:
+        console_utils.print_status_errors(status)
+        return 1
+
+
+def unset_variables(project_dir, vars_to_unset):
+    """Unset the variables for local project.
+
+    Returns:
+        Returns exit code
+    """
+    project = Project(project_dir)
+    status = project_ops.unset_variables(project, vars_to_unset)
+    if status:
+        print(status.status_description)
+        return 0
+    else:
+        console_utils.print_status_errors(status)
+        return 1
+
+
 def main(args):
     """Submit the action to alter the variables in project."""
     if args.action == 'add':
@@ -70,3 +109,13 @@ def main(args):
 def main_list(args):
     """List the project variable names."""
     return list_variables(args.project)
+
+
+def main_set(args):
+    """Set the project variables."""
+    return set_variables(args.project, args.vars_and_values)
+
+
+def main_unset(args):
+    """Unset the project variables."""
+    return unset_variables(args.project, args.vars_to_unset)

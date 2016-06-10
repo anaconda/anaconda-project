@@ -305,6 +305,38 @@ class AnacondaProject(object):
         """
         return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove)
 
+    def set_variables(self, project, vars_and_values):
+        """Set variables' values in project-local.yml.
+
+        Returns a ``Status`` instance which evaluates to True on
+        success and has an ``errors`` property (with a list of error
+        strings) on failure.
+
+        Args:
+            project (Project): the project
+            vars_and_values (list of tuple): key-value pairs
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.set_variables(project=project, vars_and_values=vars_and_values)
+
+    def unset_variables(self, project, vars_to_unset):
+        """Unset variables' values in project-local.yml.
+
+        Returns a ``Status`` instance which evaluates to True on
+        success and has an ``errors`` property (with a list of error
+        strings) on failure.
+
+        Args:
+            project (Project): the project
+            vars_to_unset (list of str): variable names
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.unset_variables(project=project, vars_to_unset=vars_to_unset)
+
     def add_download(self, project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
         """Attempt to download the URL; if successful, add it as a download to the project.
 

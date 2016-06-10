@@ -583,7 +583,7 @@ def remove_variables(project, vars_to_remove):
 
     Args:
         project (Project): the project
-        vars_to_remove (list of tuple): key-value pairs
+        vars_to_remove (list of str): variable names
 
     Returns:
         ``Status`` instance
@@ -600,6 +600,66 @@ def remove_variables(project, vars_to_remove):
     local_state.save()
 
     return SimpleStatus(success=True, description="Variables removed from the project file.")
+
+
+def set_variables(project, vars_and_values):
+    """Set variables' values in project-local.yml.
+
+    Returns a ``Status`` instance which evaluates to True on
+    success and has an ``errors`` property (with a list of error
+    strings) on failure.
+
+    Args:
+        project (Project): the project
+        vars_and_values (list of tuple): key-value pairs
+
+    Returns:
+        ``Status`` instance
+    """
+    failed = project.problems_status()
+    if failed is not None:
+        return failed
+
+    local_state = LocalStateFile.load_for_directory(project.directory_path)
+    present_vars = {req.env_var for req in project.requirements if isinstance(req, EnvVarRequirement)}
+    errors = []
+    for varname, value in vars_and_values:
+        if varname in present_vars:
+            local_state.set_value(['variables', varname], value)
+        else:
+            errors.append("Variable %s does not exist in the project." % varname)
+
+    if errors:
+        return SimpleStatus(success=False, description="Could not set variables.", errors=errors)
+    else:
+        local_state.save()
+        return SimpleStatus(success=True, description=("Values were set in %s." % local_state.filename))
+
+
+def unset_variables(project, vars_to_unset):
+    """Unset variables' values in project-local.yml.
+
+    Returns a ``Status`` instance which evaluates to True on
+    success and has an ``errors`` property (with a list of error
+    strings) on failure.
+
+    Args:
+        project (Project): the project
+        vars_to_unset (list of str): variable names
+
+    Returns:
+        ``Status`` instance
+    """
+    failed = project.problems_status()
+    if failed is not None:
+        return failed
+
+    local_state = LocalStateFile.load_for_directory(project.directory_path)
+    for varname in vars_to_unset:
+        local_state.unset_value(['variables', varname])
+    local_state.save()
+
+    return SimpleStatus(success=True, description=("Variables were unset in %s." % local_state.filename))
 
 
 def add_command(project, name, command_type, command, env_spec_name=None):

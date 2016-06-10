@@ -128,6 +128,16 @@ def _parse_args_and_run_subcommand(argv):
     add_project_arg(preset)
     preset.set_defaults(main=variable_commands.main_list)
 
+    preset = subparsers.add_parser('set-variable', help="Set an environment variable value in project-local.yml")
+    preset.add_argument('vars_and_values', metavar='VARS_AND_VALUES', default=None, nargs=REMAINDER)
+    add_project_arg(preset)
+    preset.set_defaults(main=variable_commands.main_set)
+
+    preset = subparsers.add_parser('unset-variable', help="Unset an environment variable value from project-local.yml")
+    add_project_arg(preset)
+    preset.add_argument('vars_to_unset', metavar='VARS_TO_UNSET', default=None, nargs=REMAINDER)
+    preset.set_defaults(main=variable_commands.main_unset)
+
     preset = subparsers.add_parser('add-download', help="Add a URL to be downloaded before running commands")
     add_project_arg(preset)
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
