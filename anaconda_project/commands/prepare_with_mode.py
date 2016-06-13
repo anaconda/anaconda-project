@@ -38,25 +38,34 @@ def _interactively_fix_missing_variables(project, result):
     if not console_utils.stdin_is_interactive():
         return False
 
-    print("(Use Ctrl+C to quit.)")
+    can_ask_about = [status
+                     for status in result.statuses
+                     if (not status and isinstance(status.requirement, EnvVarRequirement))]
 
+    if can_ask_about:
+        print("(Use Ctrl+C to quit.)")
+
+    start_over = False
     values = dict()
-    for status in result.statuses:
-        if not status and isinstance(status.requirement, EnvVarRequirement):
-            reply = console_utils.console_input("Value for " + status.requirement.env_var + ": ")
-            if reply is None:
-                return False  # EOF
-            reply = reply.strip()
-            if reply == '':
-                break
-            values[status.requirement.env_var] = reply
+    for status in can_ask_about:
+        reply = console_utils.console_input("Value for " + status.requirement.env_var + ": ")
+        if reply is None:
+            return False  # EOF
+        reply = reply.strip()
+        if reply == '':
+            start_over = True
+            break
+        values[status.requirement.env_var] = reply
 
-    status = project_ops.set_variables(project, values.items())
-    if status:
-        return True
+    if len(values) > 0:
+        status = project_ops.set_variables(project, values.items())
+        if status:
+            return True
+        else:
+            console_utils.print_status_errors(status)
+            return False
     else:
-        console_utils.print_status_errors(status)
-        return False
+        return start_over
 
 
 def prepare_with_ui_mode_printing_errors(project,
