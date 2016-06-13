@@ -11,7 +11,8 @@ import os
 import sys
 from argparse import ArgumentParser, REMAINDER
 
-from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
+from anaconda_project.commands.prepare_with_mode import (UI_MODE_TEXT_ASK_QUESTIONS,
+                                                         UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK, _all_ui_modes)
 from anaconda_project.version import version
 from anaconda_project.project import ALL_COMMAND_TYPES
 from anaconda_project.plugins.registry import PluginRegistry
@@ -57,9 +58,12 @@ def _parse_args_and_run_subcommand(argv):
     def add_prepare_args(preset):
         add_project_arg(preset)
         add_env_spec_arg(preset)
+        all_supported_modes = list(_all_ui_modes)
+        # we don't support "ask about every single thing" mode yet.
+        all_supported_modes.remove(UI_MODE_TEXT_ASK_QUESTIONS)
         preset.add_argument('--mode',
                             metavar='MODE',
-                            default=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                            default=UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK,
                             choices=_all_ui_modes,
                             action='store',
                             help="One of " + ", ".join(_all_ui_modes))

@@ -8,19 +8,55 @@
 from __future__ import absolute_import, print_function
 
 from anaconda_project import prepare
+from anaconda_project import project_ops
+from anaconda_project.plugins.requirement import EnvVarRequirement
 
 from anaconda_project.provide import (PROVIDE_MODE_PRODUCTION, PROVIDE_MODE_DEVELOPMENT, PROVIDE_MODE_CHECK)
+
+import anaconda_project.commands.console_utils as console_utils
 
 # these UI_MODE_ strings are used as values for command line options, so they are user-visible
 
 UI_MODE_BROWSER = "browser"
+# ASK_QUESTIONS mode is supposed to ask about default actions too,
+# like whether to start servers.  It isn't implemented yet.
 UI_MODE_TEXT_ASK_QUESTIONS = "ask"
+UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK = "development_defaults_or_ask"
 UI_MODE_TEXT_ASSUME_YES_PRODUCTION = "production_defaults"
 UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT = "development_defaults"
 UI_MODE_TEXT_ASSUME_NO = "check"
 
-_all_ui_modes = (UI_MODE_BROWSER, UI_MODE_TEXT_ASK_QUESTIONS, UI_MODE_TEXT_ASSUME_YES_PRODUCTION,
-                 UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, UI_MODE_TEXT_ASSUME_NO)
+_all_ui_modes = (UI_MODE_BROWSER, UI_MODE_TEXT_ASK_QUESTIONS, UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK,
+                 UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, UI_MODE_TEXT_ASSUME_NO)
+
+
+def _interactively_fix_missing_variables(project, result):
+    """Return True if we need to re-prepare."""
+    if project.problems:
+        return False
+
+    if not console_utils.stdin_is_interactive():
+        return False
+
+    print("(Use Ctrl+C to quit.)")
+
+    values = dict()
+    for status in result.statuses:
+        if not status and isinstance(status.requirement, EnvVarRequirement):
+            reply = console_utils.console_input("Value for " + status.requirement.env_var + ": ")
+            if reply is None:
+                return False  # EOF
+            reply = reply.strip()
+            if reply == '':
+                break
+            values[status.requirement.env_var] = reply
+
+    status = project_ops.set_variables(project, values.items())
+    if status:
+        return True
+    else:
+        console_utils.print_status_errors(status)
+        return False
 
 
 def prepare_with_ui_mode_printing_errors(project,
@@ -58,23 +94,36 @@ def prepare_with_ui_mode_printing_errors(project,
                                                  extra_command_args=extra_command_args,
                                                  keep_going_until_success=True)
     else:
+        ask = False
         if ui_mode == UI_MODE_TEXT_ASSUME_YES_PRODUCTION:
             provide_mode = PROVIDE_MODE_PRODUCTION
         elif ui_mode == UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT:
             provide_mode = PROVIDE_MODE_DEVELOPMENT
         elif ui_mode == UI_MODE_TEXT_ASSUME_NO:
             provide_mode = PROVIDE_MODE_CHECK
+        elif ui_mode == UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK:
+            provide_mode = PROVIDE_MODE_DEVELOPMENT
+            ask = True
 
         assert ui_mode != UI_MODE_TEXT_ASK_QUESTIONS  # Not implemented yet
 
-        result = prepare.prepare_without_interaction(project,
-                                                     environ,
-                                                     mode=provide_mode,
-                                                     env_spec_name=env_spec_name,
-                                                     command_name=command_name,
-                                                     extra_command_args=extra_command_args)
+        environ = None
+        while True:
+            result = prepare.prepare_without_interaction(project,
+                                                         environ,
+                                                         mode=provide_mode,
+                                                         env_spec_name=env_spec_name,
+                                                         command_name=command_name,
+                                                         extra_command_args=extra_command_args)
 
-    if result.failed:
-        result.print_output()
+            if result.failed:
+                result.print_output()
+
+                if ask and _interactively_fix_missing_variables(project, result):
+                    environ = result.environ
+                    continue  # re-prepare, building on our previous environ
+
+            # if we didn't continue, quit.
+            break
 
     return result
