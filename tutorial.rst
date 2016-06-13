@@ -392,11 +392,11 @@ in there:
     Archive:  iris.zip
       Length      Date    Time    Name
     ---------  ---------- -----   ----
-           16  06-10-2016 10:04   hello.py
-          281  06-10-2016 10:22   showdata.py
-          222  06-10-2016 09:46   .projectignore
-         4927  06-10-2016 10:31   project.yml
-          557  06-10-2016 10:33   iris_plot/main.py
+           16  06-10-2016 10:04   iris/hello.py
+          281  06-10-2016 10:22   iris/showdata.py
+          222  06-10-2016 09:46   iris/.projectignore
+         4927  06-10-2016 10:31   iris/project.yml
+          557  06-10-2016 10:33   iris/iris_plot/main.py
     ---------                     -------
          6003                     5 files
 
