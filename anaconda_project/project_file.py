@@ -87,87 +87,41 @@ class ProjectFile(YamlFile):
         super(ProjectFile, self).__init__(filename)
 
     def _default_content(self):
-        header = ("This is an Anaconda project file.\n" + "\n" +
-                  "Here you can configure the requirements to run your code, such as\n" +
-                  "packages, configuration, and services.\n" +
-                  "If you run your code with the 'anaconda-project run' command, or with\n" +
-                  "project-aware tools such as Anaconda Navigator, the tools will be smart\n" +
-                  "about checking for and meeting your requirements.\n" + "\n" +
-                  "The file is in YAML format, please see http://www.yaml.org/start.html for more.\n" +
-                  "(But often you don't have to edit this file by hand!\n" +
-                  "Try the anaconda-project command or Anaconda Navigator to set up your project.)\n")
-
+        header = (
+            "This is an Anaconda project file.\n" + "\n" + "Here you can describe your project and how to run it.\n" +
+            "Use `anaconda-project run` to run the project.\n" +
+            "The file is in YAML format, please see http://www.yaml.org/start.html for more.\n")
         sections = OrderedDict()
 
-        sections['name'] = ("Set the 'name' key to name your project:\n" + "name: myproject\n")
+        sections['name'] = ("Set the 'name' key to name your project\n")
 
-        sections['icon'] = ("Set the 'icon' key to give your project an icon in Navigator:\n" + "icon: myicon.png\n")
+        sections['icon'] = ("Set the 'icon' key to give your project an icon\n")
 
-        sections['commands'] = (
-            "In the commands section, list your runnable scripts, notebooks, and other code.\n" +
-            "You can give each item a name, and use it with anaconda-project run, like this:\n" +
-            "    anaconda-project run --command myscript\n"
-            "Without the --command option, 'anaconda-project run' will run the command named\n" +
-            "'default', or the first command listed.\n" +
-            "Any .ipynb files in the project directory are added automatically and don't need\n" +
-            "to be listed here, but you can if you like.\n" + "\n" + "For example,\n" + "\n" + "commands:\n" +
-            "   default:\n" + "      unix: echo \"This project is in $PROJECT_DIR\"\n" +
-            "      windows: echo \"This project is in \"%PROJECT_DIR%\n" + "   myscript:\n" + "      unix: main.py\n" +
-            "   my_bokeh_app:\n" + "      bokeh_app: the_app_directory_name\n" + "   my_notebook:\n" +
-            "      notebook: foo.ipynb\n" + "\n" +
-            "Commands may have both a Unix shell version and a Windows cmd.exe version.\n" +
-            "In this example, my_notebook was automatically added as a command named\n" +
-            "'foo.ipynb' but we've manually added it as 'my_notebook' also.\n" + "\n" +
-            "If you prefer, add commands using anaconda-project like this:\n" +
-            "    anaconda-project add-command --type=bokeh_app myappname myappdir\n")
+        sections['commands'] = ("In the commands section, list your runnable scripts, notebooks, and other code.\n" +
+                                "Use `anaconda-project add-command` to add commands.\n")
 
-        sections['variables'] = (
-            "In the variables section, list any environment variables your code depends on.\n" + "\n" +
-            "For example,\n\n" + "variables:\n" + "   EC2_PASSWORD: null\n" + "   NUMBER_OF_ITERATIONS: null\n\n" +
-            "If you give a value other than null for the variable, that value will be the default\n" +
-            "for everyone who runs this project.\n" +
-            "You can also set a local value (not shared with others) in project-local.yml.\n")
+        sections['variables'] = ("In the variables section, list any environment variables your code depends on.\n"
+                                 "Use `anaconda-project add-variable` to add variables.\n")
 
         sections['services'] = (
-            "In the services section, list any services that should be\n" +
-            "available before your code runs. Each service's address\n" +
-            "will be provided to your code in an environment variable.\n" + "\n" + "For example,\n" + "\n" +
-            "services:\n" + "   REDIS_URL: redis\n" + "   # the above can be written more verbosely\n" +
-            "   REDIS_URL2: { type: redis }\n" + "   # in the long form, you can specify options\n" +
-            "   REDIS_URL3: { type: redis, default: \"redis://localhost:123456\" }\n" + "\n" +
-            "Services can be added with anaconda-project:\n" + "   anaconda-project add-service redis\n")
+            "In the services section, list any services that should be\n" + "available before your code runs.\n" +
+            "Use `anaconda-project add-service` to add services.\n")
 
-        sections['downloads'] = (
-            "In the downloads section, list any URLs to download to local files\n" + "before your code runs.\n" +
-            "Each local filename is placed in an environment variable.\n" + "\n" + "For example,\n" + "\n" +
-            "downloads:\n" + "   MY_DATA_FILE: http://example.com/data.csv\n" + "   ANOTHER_DATA_FILE: {\n" +
-            "     url: http://example.com/foo.csv\n" + "     sha1: adc83b19e793491b1c6ea0fd8b46cd9f32e592fc\n" +
-            "     filename: local-name-for-foo.csv\n" + "   }\n" + "\n" +
-            "In this example, the MY_DATA_FILE environment variable would\n" +
-            "contain the full path to a local copy of data.csv, while\n" +
-            "ANOTHER_DATA_FILE would contain the full path to a local copy\n" + "named local-name-for-foo.csv\n")
+        sections['downloads'] = ("In the downloads section, list any URLs to download to local files\n" +
+                                 "before your code runs.\n" + "Use `anaconda-project add-download` to add downloads.\n")
 
         sections['dependencies'] = (
             "In the dependencies section, list any packages that must be installed\n" + "before your code runs.\n" +
-            "These packages will be installed in ALL Conda environments used for\n" + "this project.\n" + "\n" +
-            "For example,\n" + "dependencies:\n" + "   - bokeh=0.11.1\n" + "   - numpy\n")
+            "Use `anaconda-project add-dependencies` to add dependencies.\n")
 
         sections['channels'] = (
-            "In the channels section, list any Conda channel URLs to be searched\n" +
-            "for packages. These channels will be used by ALL Conda environments\n" + "this project runs in.\n" + "\n" +
+            "In the channels section, list any Conda channel URLs to be searched\n" + "for packages.\n" + "\n" +
             "For example,\n" + "\n" + "channels:\n" + "   - https://conda.anaconda.org/asmeurer\n")
 
-        sections['env_specs'] = (
-            "If you like, you can define multiple, named environment specs.\n" +
-            "There's an implicit environment spec called 'default', which you can\n" +
-            "tune by naming it explicitly here. When you run a command, use\n" +
-            "the --env-spec option to choose an environment.\n" + "   anaconda-project run --env-spec python27\n\n" +
-            "Each environment spec may have 'dependencies' or 'channels' sub-sections\n" +
-            "which are combined with any global 'dependencies' or 'channels'.\n" + "\n" + "For example,\n" + "\n" +
-            "env_specs:\n" + "  default:\n" + "    dependencies:\n" + "      - bokeh\n" + "    channels:\n" +
-            "      - https://conda.anaconda.org/asmeurer\n" + "  python27:\n" + "    dependencies:\n" +
-            "      - python=2.7\n"
-            "\n")
+        sections['env_specs'] = ("If you like, you can define multiple, named environment specs.\n" +
+                                 "There's an implicit environment spec called 'default', which you can\n" +
+                                 "tune by naming it explicitly here.\n"
+                                 "Use `anaconda-project add-env-spec` to add environment specs.\n")
 
         # we make a big string and then parse it because I can't figure out the
         # ruamel.yaml API to insert comments in front of map keys.
