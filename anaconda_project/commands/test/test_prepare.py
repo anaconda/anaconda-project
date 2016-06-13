@@ -240,7 +240,8 @@ env_specs:
 """}, check_prepare_choose_environment)
 
     out, err = capsys.readouterr()
-    assert out == ""
+    assert out == (
+        "The project is ready to run commands.\n" + "Use `anaconda-project list-commands` to see what's available.\n")
     assert err == ""
 
 

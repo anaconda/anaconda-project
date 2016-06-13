@@ -26,6 +26,8 @@ def prepare_command(project_dir, ui_mode, conda_environment):
 def main(args):
     """Start the prepare command and return exit status code."""
     if prepare_command(args.project, args.mode, args.env_spec):
+        print("The project is ready to run commands.")
+        print("Use `anaconda-project list-commands` to see what's available.")
         return 0
     else:
         return 1
