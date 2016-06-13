@@ -458,7 +458,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         failed = False
         for status in rechecked:
             if not status:
-                errors.append("missing requirement to run this project: {requirement.title}"
+                errors.append("missing requirement to run this project: {requirement.description}"
                               .format(requirement=status.requirement))
                 errors.append("  {why_not}".format(why_not=status.status_description))
                 failed = True

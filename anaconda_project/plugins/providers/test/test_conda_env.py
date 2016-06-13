@@ -161,8 +161,11 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
         result = prepare_without_interaction(project, environ=environ, mode=provide.PROVIDE_MODE_CHECK)
         assert not result
         expected_env_path = os.path.join(dirname, "envs", "default")
-        assert ['missing requirement to run this project: A Conda environment',
-                "  '%s' doesn't look like it contains a Conda environment yet." % expected_env_path] == result.errors
+        assert [
+            ('missing requirement to run this project: ' +
+             'The project needs a Conda environment containing all required packages.'),
+            "  '%s' doesn't look like it contains a Conda environment yet." % expected_env_path
+        ] == result.errors
 
         # unprepare should not have anything to do
         status = unprepare(project, result)

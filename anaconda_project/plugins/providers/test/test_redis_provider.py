@@ -564,7 +564,8 @@ service_options:
     out, err = capsys.readouterr()
     assert out == ""
     assert err == (
-        "Could not connect to system default Redis.\n" + "missing requirement to run this project: REDIS_URL\n" +
+        "Could not connect to system default Redis.\n" +
+        "missing requirement to run this project: A running Redis server, located by a redis: URL set as REDIS_URL.\n" +
         "  Environment variable REDIS_URL is not set.\n")
 
 
