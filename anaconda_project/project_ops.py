@@ -568,8 +568,19 @@ def add_variables(project, vars_to_add, defaults=None):
 
     present_vars = {req.env_var for req in project.requirements if isinstance(req, EnvVarRequirement)}
     for varname in vars_to_add:
-        if varname not in present_vars:
-            project.project_file.set_value(['variables', varname], defaults.get(varname))
+        if varname in defaults:
+            # we need to update the default even if var already exists
+            new_default = defaults.get(varname)
+            variable_value = project.project_file.get_value(['variables', varname])
+            if variable_value is None or not isinstance(variable_value, dict):
+                variable_value = new_default
+            else:
+                variable_value['default'] = new_default
+            project.project_file.set_value(['variables', varname], variable_value)
+        elif varname not in present_vars:
+            # we are only adding the var if nonexistent and should leave
+            # the default alone if it's already set
+            project.project_file.set_value(['variables', varname], None)
     project.project_file.save()
 
     return SimpleStatus(success=True, description="Variables added to the project file.")

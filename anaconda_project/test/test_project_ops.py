@@ -203,7 +203,12 @@ def test_add_variables_existing_download():
 def test_add_variables_existing_options():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
-        project_ops.add_variables(project, ['foo', 'baz'], dict(foo='bar', baz='qux'))
+        status = project_ops.add_variables(project,
+                                           ['foo', 'baz', 'blah', 'woot', 'woot2'],
+                                           dict(foo='bar',
+                                                baz='qux',
+                                                woot2='updated'))
+        assert status
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
 
         foo = re_loaded.get_value(['variables', 'foo'])
@@ -214,16 +219,26 @@ def test_add_variables_existing_options():
         baz = re_loaded.get_value(['variables', 'baz'])
         assert isinstance(baz, dict)
         assert 'default' in baz
-        assert baz['default'] == 'hello'
+        assert baz['default'] == 'qux'
+
+        blah = re_loaded.get_value(['variables', 'blah'])
+        assert isinstance(blah, dict)
+        assert 'default' in blah
+        assert blah['default'] == 'unchanged'
 
         woot = re_loaded.get_value(['variables', 'woot'])
         assert woot == 'world'
+
+        woot2 = re_loaded.get_value(['variables', 'woot2'])
+        assert woot2 == 'updated'
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: ('variables:\n'
                                     '  foo: { something: 42 }\n'
                                     '  baz: { default: "hello" }\n'
+                                    '  blah: { default: "unchanged" }\n'
                                     '  woot: "world"\n'
+                                    '  woot2: "changed"\n'
                                     'downloads:\n'
                                     '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
 

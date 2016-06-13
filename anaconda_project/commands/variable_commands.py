@@ -21,10 +21,9 @@ def add_variables(project_dir, vars_to_add, default):
         Returns exit code
     """
     if len(vars_to_add) > 1 and default is not None:
-        print(
-            ("It isn't clear which variable your --default option goes with; " +
-             "add one variable at a time if using --default."),
-            file=sys.stderr)
+        print(("It isn't clear which variable your --default option goes with; " +
+               "add one variable at a time if using --default."),
+              file=sys.stderr)
         return 1
     project = Project(project_dir)
     status = project_ops.add_variables(project, vars_to_add, {vars_to_add[0]: default})
