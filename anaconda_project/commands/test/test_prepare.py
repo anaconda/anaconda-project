@@ -460,3 +460,38 @@ variables:
   FOO: null
   BAR: null
 """}, check)
+
+
+def test_no_ask_variables_interactively_if_no_variables_missing_but_prepare_fails(monkeypatch, capsys):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
+        def mock_console_input(prompt):
+            raise Exception("Should not have called this, prompt " + prompt)
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
+
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        assert res == 1
+
+        out, err = capsys.readouterr()
+
+        assert out == ""
+        assert err == ("%s: env_specs should be a dictionary from environment name to environment attributes, not 42\n"
+                       "Unable to load the project.\n") % os.path.join(dirname, "project.yml")
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: { default: "foo" }
+  BAR: { default: "bar" }
+
+# breakage
+env_specs: 42
+
+"""}, check)

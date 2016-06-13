@@ -112,9 +112,9 @@ command line. The command line session looks like:
 
     $ anaconda-project add-command hello "python hello.py"
     Is `hello` a (B)okeh app, (N)otebook, or (C)ommand line? C
-    Added a command 'hello' to the project. Run it with `anaconda-project run --command hello`.
+    Added a command 'hello' to the project. Run it with `anaconda-project run hello`.
 
-Now try ``anaconda-project run --command hello``. It should print
+Now try ``anaconda-project run hello``. It should print
 "hello".
 
 NOTE: Since you have only one command, plain ``anaconda-project
@@ -204,7 +204,7 @@ Tell ``anaconda-project`` how to run it by adding a command:
 
 Now run that command:
 
-    anaconda-project run --command showdata
+    anaconda-project run showdata
 
 You should see the data printed out, and then the sentence about
 "My project directory is...".
@@ -241,7 +241,7 @@ Now modify ``showdata.py`` to use this variable:
 Because there's no value for ``COLUMN_TO_SHOW``, it will be
 mandatory for users to provide one. Try:
 
-   anaconda-project run --command showdata
+   anaconda-project run showdata
 
 The first time you run this, you should see a prompt asking you to
 type in a column name. If you enter a column at the prompt (try
@@ -317,7 +317,7 @@ should look like:
 
     $ anaconda-project add-command plot iris_plot
     Is `plot` a (B)okeh app, (N)otebook, or (C)ommand line? B
-    Added a command 'plot' to the project. Run it with `anaconda-project run --command plot`.
+    Added a command 'plot' to the project. Run it with `anaconda-project run plot`.
 
 NOTE: we use the app directory path, not the script path
 ``iris_plot/main.py``, to refer to a Bokeh app. Bokeh looks for
@@ -325,7 +325,7 @@ the file ``main.py`` by convention.
 
 To see your plot, try this command:
 
-    anaconda-project run --command plot -- --show
+    anaconda-project run plot --show
 
 The double hyphen ``--`` means to pass subsequent command line
 arguments down to your command. ``--show`` gets passed to the
@@ -351,7 +351,7 @@ Type:
 
 Run one of your commands again, and they'll come back. Type:
 
-    anaconda-project run --command showdata
+    anaconda-project run showdata
 
 You should have ``iris.csv`` and ``envs/default`` back as they
 were before.
@@ -419,7 +419,7 @@ commands in it:
     showdata  python showdata.py
 
 
-And then your colleague can type ``anaconda-project run --command
+And then your colleague can type ``anaconda-project run
 showdata`` (for example), and it will download the data, install
 needed dependencies, and run the command.
 
