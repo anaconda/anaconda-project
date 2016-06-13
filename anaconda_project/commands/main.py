@@ -11,7 +11,8 @@ import os
 import sys
 from argparse import ArgumentParser, REMAINDER
 
-from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, _all_ui_modes
+from anaconda_project.commands.prepare_with_mode import (UI_MODE_TEXT_ASK_QUESTIONS,
+                                                         UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK, _all_ui_modes)
 from anaconda_project.version import version
 from anaconda_project.project import ALL_COMMAND_TYPES
 from anaconda_project.plugins.registry import PluginRegistry
@@ -57,9 +58,12 @@ def _parse_args_and_run_subcommand(argv):
     def add_prepare_args(preset):
         add_project_arg(preset)
         add_env_spec_arg(preset)
+        all_supported_modes = list(_all_ui_modes)
+        # we don't support "ask about every single thing" mode yet.
+        all_supported_modes.remove(UI_MODE_TEXT_ASK_QUESTIONS)
         preset.add_argument('--mode',
                             metavar='MODE',
-                            default=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                            default=UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK,
                             choices=_all_ui_modes,
                             action='store',
                             help="One of " + ", ".join(_all_ui_modes))
@@ -112,21 +116,33 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
     preset.set_defaults(main=upload.main)
 
-    preset = subparsers.add_parser('add-variable',
-                                   help="Add an environment variable and add it to the project if not present")
+    preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
     preset.add_argument('vars_to_add', metavar='VARS_TO_ADD', default=None, nargs=REMAINDER)
+    preset.add_argument('--default',
+                        metavar='DEFAULT_VALUE',
+                        default=None,
+                        help='Default value if environment variable is unset')
     add_project_arg(preset)
-    preset.set_defaults(main=variable_commands.main, action="add")
+    preset.set_defaults(main=variable_commands.main_add)
 
-    preset = subparsers.add_parser('remove-variable',
-                                   help="Remove an environment variable and remove it from the project")
+    preset = subparsers.add_parser('remove-variable', help="Remove an environment variable from the project")
     add_project_arg(preset)
     preset.add_argument('vars_to_remove', metavar='VARS_TO_REMOVE', default=None, nargs=REMAINDER)
-    preset.set_defaults(main=variable_commands.main, action="remove")
+    preset.set_defaults(main=variable_commands.main_remove)
 
     preset = subparsers.add_parser('list-variables', help="List all variables on the project")
     add_project_arg(preset)
     preset.set_defaults(main=variable_commands.main_list)
+
+    preset = subparsers.add_parser('set-variable', help="Set an environment variable value in project-local.yml")
+    preset.add_argument('vars_and_values', metavar='VARS_AND_VALUES', default=None, nargs=REMAINDER)
+    add_project_arg(preset)
+    preset.set_defaults(main=variable_commands.main_set)
+
+    preset = subparsers.add_parser('unset-variable', help="Unset an environment variable value from project-local.yml")
+    add_project_arg(preset)
+    preset.add_argument('vars_to_unset', metavar='VARS_TO_UNSET', default=None, nargs=REMAINDER)
+    preset.set_defaults(main=variable_commands.main_unset)
 
     preset = subparsers.add_parser('add-download', help="Add a URL to be downloaded before running commands")
     add_project_arg(preset)

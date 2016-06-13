@@ -213,18 +213,14 @@ You should see the data printed out, and then the sentence about
 Custom variables
 ================
 
-TODO this is messed up because of
-https://github.com/Anaconda-Platform/anaconda-project/issues/240
-
 Say your command needs a database password, or has a tunable
-parameter. You can require or allow users to configure these
-before the command runs.
+parameter. You can require (or just allow) users to configure
+these before the command runs.
 
-Type ``anaconda-project add-variable
-COLUMN_TO_SHOW=sepal_length``. In ``project.yml`` you should now
-have a ``COLUMN_TO_SHOW`` in the ``variables:`` section, and
-``anaconda-project list-variables`` should list
-``COLUMN_TO_SHOW``.
+Type ``anaconda-project add-variable COLUMN_TO_SHOW``. In
+``project.yml`` you should now have a ``COLUMN_TO_SHOW`` in the
+``variables:`` section, and ``anaconda-project list-variables``
+should list ``COLUMN_TO_SHOW``.
 
 Now modify ``showdata.py`` to use this variable:
 
@@ -238,21 +234,40 @@ Now modify ``showdata.py`` to use this variable:
 
     flowers = pd.read_csv(iris_csv)
 
+    print("Showing column {}".format(column_to_show))
     print(flowers[column_to_show])
     print("My project directory is {} and my conda environment is {}".format(project_dir, env))
 
-TODO right now add-variable set the local value not the default
+Because there's no value for ``COLUMN_TO_SHOW``, it will be
+mandatory for users to provide one. Try:
 
-When you run ``anaconda-project run --command showdata`` you'll
-see only one column. You configured the variable to be set to
-``sepal_length`` by default, but users can override it:
+   anaconda-project run --command showdata
 
-    COLUMN_TO_SHOW=petal_length anaconda-project run --command showdata
+The first time you run this, you should see a prompt asking you to
+type in a column name. If you enter a column at the prompt (try
+"sepal_length"), it will be saved in ``project-local.yml``.  To
+change the value in ``project-local.yml``, use:
 
-If you remove the default from ``project.yml``, users will be
-prompted to fill something in. If your variable is something like
-a password, you may want to leave out a default value when you add
-the variable, like ``anaconda-project add-variable DB_PASSWORD``.
+    anaconda-project set-variable COLUMN_TO_SHOW=sepal_length
+
+``project-local.yml`` is local to this user and machine, while
+``project.yml`` will be shared across all users of a project.
+
+You can also set a default value for a variable in
+``project.yml``; if you do this, users will not be prompted for a
+value, but can still set the variable to override the default if
+they want to. Try setting a default value like this:
+
+   anaconda-project add-variable --default=petal_length COLUMN_TO_SHOW
+
+Now you should see the default in ``project.yml``.
+
+If you've set the variable in ``project-local.yml``, the default
+will be ignored; unset your local override with:
+
+   anaconda-project unset-variable COLUMN_TO_SHOW
+
+The default will then be used.
 
 NOTE: it's good practice to use variables for passwords and
 secrets in particular! It isn't very secure to put your personal

@@ -178,7 +178,7 @@ def test_add_variables(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.add_variables', mock_add_variables)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, vars_to_add=45)
+    kwargs = dict(project=43, vars_to_add=45, defaults=12345)
     result = p.add_variables(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
@@ -200,6 +200,46 @@ def test_remove_variables(monkeypatch):
     p = api.AnacondaProject()
     kwargs = dict(project=43, vars_to_remove=45)
     result = p.remove_variables(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
+def test_set_variables(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.set_variables, project_ops.set_variables)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_set_variables(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.set_variables', mock_set_variables)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, vars_and_values=45)
+    result = p.set_variables(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
+def test_unset_variables(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.unset_variables, project_ops.unset_variables)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_unset_variables(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.unset_variables', mock_unset_variables)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, vars_to_unset=45)
+    result = p.unset_variables(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
 

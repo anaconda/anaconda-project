@@ -14,8 +14,10 @@ from anaconda_project.commands.prepare_with_mode import (UI_MODE_TEXT_ASSUME_YES
                                                          UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_NO)
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.local_state_file import LocalStateFile
 
 from anaconda_project.test.project_utils import project_dir_disable_dedicated_env
+from anaconda_project.internal.simple_status import SimpleStatus
 
 
 class Args(object):
@@ -240,7 +242,8 @@ env_specs:
 """}, check_prepare_choose_environment)
 
     out, err = capsys.readouterr()
-    assert out == ""
+    assert out == (
+        "The project is ready to run commands.\n" + "Use `anaconda-project list-commands` to see what's available.\n")
     assert err == ""
 
 
@@ -267,3 +270,193 @@ env_specs:
     dependencies:
         - nonexistent_bar
 """}, check_prepare_choose_environment_does_not_exist)
+
+
+def test_ask_variables_interactively(monkeypatch):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
+        inputs = ["foo", "bar"]
+
+        def mock_console_input(prompt):
+            return inputs.pop(0)
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
+
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        assert res == 0
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert local_state.get_value(['variables', 'FOO']) == 'foo'
+        assert local_state.get_value(['variables', 'BAR']) == 'bar'
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: null
+  BAR: null
+"""}, check)
+
+
+def test_ask_variables_interactively_empty_answer_re_asks(monkeypatch):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
+        inputs = ["", "foo", "bar"]
+
+        def mock_console_input(prompt):
+            return inputs.pop(0)
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
+
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        assert res == 0
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert local_state.get_value(['variables', 'FOO']) == 'foo'
+        assert local_state.get_value(['variables', 'BAR']) == 'bar'
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: null
+  BAR: null
+"""}, check)
+
+
+def test_ask_variables_interactively_whitespace_answer_re_asks(monkeypatch):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
+        inputs = ["    ", "foo", "bar"]
+
+        def mock_console_input(prompt):
+            return inputs.pop(0)
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
+
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        assert res == 0
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert local_state.get_value(['variables', 'FOO']) == 'foo'
+        assert local_state.get_value(['variables', 'BAR']) == 'bar'
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: null
+  BAR: null
+"""}, check)
+
+
+def test_ask_variables_interactively_eof_answer_gives_up(monkeypatch, capsys):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
+        def mock_console_input(prompt):
+            return None
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
+
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        assert res == 1
+
+        out, err = capsys.readouterr()
+
+        assert err == ("missing requirement to run this project: FOO environment variable must be set.\n" +
+                       "  Environment variable FOO is not set.\n" +
+                       "missing requirement to run this project: BAR environment variable must be set.\n" +
+                       "  Environment variable BAR is not set.\n")
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: null
+  BAR: null
+"""}, check)
+
+
+def test_ask_variables_interactively_then_set_variable_fails(monkeypatch, capsys):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
+        inputs = ["foo", "bar"]
+
+        def mock_console_input(prompt):
+            return inputs.pop(0)
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
+
+        def mock_set_variables(project, vars_and_values):
+            return SimpleStatus(success=False, description="Set variables FAIL")
+
+        monkeypatch.setattr('anaconda_project.project_ops.set_variables', mock_set_variables)
+
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        assert res == 1
+
+        out, err = capsys.readouterr()
+
+        assert err == ("missing requirement to run this project: FOO environment variable must be set.\n" +
+                       "  Environment variable FOO is not set.\n" +
+                       "missing requirement to run this project: BAR environment variable must be set.\n" +
+                       "  Environment variable BAR is not set.\n" + "Set variables FAIL\n")
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: null
+  BAR: null
+"""}, check)
+
+
+def test_no_ask_variables_interactively_not_interactive(monkeypatch, capsys):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+
+        def mock_is_interactive():
+            return False
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
+        def mock_console_input(prompt):
+            raise Exception("should not have been called")
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
+
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        assert res == 1
+
+        out, err = capsys.readouterr()
+
+        assert err == ("missing requirement to run this project: FOO environment variable must be set.\n" +
+                       "  Environment variable FOO is not set.\n" +
+                       "missing requirement to run this project: BAR environment variable must be set.\n" +
+                       "  Environment variable BAR is not set.\n")
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: null
+  BAR: null
+"""}, check)

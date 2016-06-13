@@ -167,31 +167,31 @@ def test_set_invalid_icon():
 
 
 def test_add_variables():
-    def check_set_var(dirname):
+    def check_add_var(dirname):
         project = project_no_dedicated_env(dirname)
-        project_ops.add_variables(project, [('foo', 'bar'), ('baz', 'qux')])
-        re_loaded = ProjectFile.load_for_directory(project.directory_path)
-        assert dict(foo=None, baz=None, preset=None) == re_loaded.get_value(['variables'])
-        local_state = LocalStateFile.load_for_directory(dirname)
+        status = project_ops.add_variables(project, ['foo', 'baz'], dict(foo='bar'))
+        assert status
+        req = project.find_requirements(env_var='foo')[0]
+        assert req.options['default'] == 'bar'
 
-        local_state.get_value(['variables', 'foo']) == 'bar'
-        local_state.get_value(['variables', 'baz']) == 'qux'
+        req = project.find_requirements(env_var='baz')[0]
+        assert req.options.get('default') is None
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  preset: null')}, check_set_var)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_add_var)
 
 
 def test_add_variables_existing_download():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
-        project_ops.add_variables(project, [('foo', 'bar'), ('baz', 'qux')])
+        project_ops.add_variables(project, ['foo', 'baz'])
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
         assert dict(foo=None, baz=None, preset=None) == re_loaded.get_value(['variables'])
         assert re_loaded.get_value(['downloads', 'datafile']) == 'http://localhost:8000/data.tgz'
-        local_state = LocalStateFile.load_for_directory(dirname)
 
-        local_state.get_value(['variables', 'foo']) == 'bar'
-        local_state.get_value(['variables', 'baz']) == 'qux'
-        local_state.get_value(['variables', 'datafile']) == 'http://localhost:8000/data.tgz'
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert local_state.get_value(['variables', 'foo']) is None
+        assert local_state.get_value(['variables', 'baz']) is None
+        assert local_state.get_value(['variables', 'datafile']) is None
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: ('variables:\n'
@@ -203,7 +203,12 @@ def test_add_variables_existing_download():
 def test_add_variables_existing_options():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
-        project_ops.add_variables(project, [('foo', 'bar'), ('baz', 'qux')])
+        status = project_ops.add_variables(project,
+                                           ['foo', 'baz', 'blah', 'woot', 'woot2'],
+                                           dict(foo='bar',
+                                                baz='qux',
+                                                woot2='updated'))
+        assert status
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
 
         foo = re_loaded.get_value(['variables', 'foo'])
@@ -214,24 +219,26 @@ def test_add_variables_existing_options():
         baz = re_loaded.get_value(['variables', 'baz'])
         assert isinstance(baz, dict)
         assert 'default' in baz
-        assert baz['default'] == 'hello'
+        assert baz['default'] == 'qux'
+
+        blah = re_loaded.get_value(['variables', 'blah'])
+        assert isinstance(blah, dict)
+        assert 'default' in blah
+        assert blah['default'] == 'unchanged'
 
         woot = re_loaded.get_value(['variables', 'woot'])
         assert woot == 'world'
 
-        assert re_loaded.get_value(['downloads', 'datafile']) == 'http://localhost:8000/data.tgz'
-
-        local_state = LocalStateFile.load_for_directory(dirname)
-
-        local_state.get_value(['variables', 'foo']) == 'bar'
-        local_state.get_value(['variables', 'baz']) == 'qux'
-        local_state.get_value(['variables', 'datafile']) == 'http://localhost:8000/data.tgz'
+        woot2 = re_loaded.get_value(['variables', 'woot2'])
+        assert woot2 == 'updated'
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: ('variables:\n'
                                     '  foo: { something: 42 }\n'
                                     '  baz: { default: "hello" }\n'
+                                    '  blah: { default: "unchanged" }\n'
                                     '  woot: "world"\n'
+                                    '  woot2: "changed"\n'
                                     'downloads:\n'
                                     '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
 
@@ -246,10 +253,66 @@ def test_remove_variables():
         assert re_loaded.get_value(['variables', 'bar']) is None
         local_state = LocalStateFile.load_for_directory(dirname)
 
-        local_state.get_value(['variables', 'foo']) is None
-        local_state.get_value(['variables', 'bar']) is None
+        assert local_state.get_value(['variables', 'foo']) is None
+        assert local_state.get_value(['variables', 'bar']) is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  foo: baz\n  bar: qux')}, check_remove_var)
+
+
+def test_set_variables():
+    def check_set_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.add_variables(project, ['foo', 'baz'], dict(foo='no', baz='nope'))
+        assert status
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert local_state.get_value(['variables', 'foo']) is None
+        assert local_state.get_value(['variables', 'baz']) is None
+
+        status = project_ops.set_variables(project, [('foo', 'bar'), ('baz', 'qux')])
+        assert status
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert local_state.get_value(['variables', 'foo']) == 'bar'
+        assert local_state.get_value(['variables', 'baz']) == 'qux'
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  preset: null')}, check_set_var)
+
+
+def test_set_variables_nonexistent():
+    def check_set_var(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        status = project_ops.set_variables(project, [('foo', 'bar'), ('baz', 'qux')])
+        assert not status
+        assert status.status_description == "Could not set variables."
+        assert status.errors == ["Variable foo does not exist in the project.",
+                                 "Variable baz does not exist in the project."]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_set_var)
+
+
+def test_unset_variables():
+    def check_unset_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.add_variables(project, ['foo', 'baz'])
+        assert status
+
+        status = project_ops.set_variables(project, [('foo', 'no'), ('baz', 'nope')])
+        assert status
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert local_state.get_value(['variables', 'foo']) == 'no'
+        assert local_state.get_value(['variables', 'baz']) == 'nope'
+
+        status = project_ops.unset_variables(project, ['foo', 'baz'])
+        assert status
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert local_state.get_value(['variables', 'foo']) is None
+        assert local_state.get_value(['variables', 'baz']) is None
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  preset: null')}, check_unset_var)
 
 
 def _test_add_command_line(command_type):
