@@ -248,22 +248,24 @@ def _leaf_infos(infos):
     return all_by_name.values()
 
 
-def _write_tar(infos, filename, compression, logs):
+def _write_tar(archive_root_name, infos, filename, compression, logs):
     if compression is None:
         compression = ""
     else:
         compression = ":" + compression
     with tarfile.open(filename, ('w%s' % compression)) as tf:
         for info in _leaf_infos(infos):
-            logs.append("  added %s" % info.relative_path)
-            tf.add(info.full_path, arcname=info.relative_path)
+            arcname = os.path.join(archive_root_name, info.relative_path)
+            logs.append("  added %s" % arcname)
+            tf.add(info.full_path, arcname=arcname)
 
 
-def _write_zip(infos, filename, logs):
+def _write_zip(archive_root_name, infos, filename, logs):
     with zipfile.ZipFile(filename, 'w') as zf:
         for info in _leaf_infos(infos):
-            logs.append("  added %s" % info.relative_path)
-            zf.write(info.full_path, arcname=info.relative_path)
+            arcname = os.path.join(archive_root_name, info.relative_path)
+            logs.append("  added %s" % arcname)
+            zf.write(info.full_path, arcname=arcname)
 
 
 # function exported for project.py
@@ -304,13 +306,13 @@ def _bundle_project(project, filename):
     tmp_filename = filename + ".tmp-" + str(uuid.uuid4())
     try:
         if filename.lower().endswith(".zip"):
-            _write_zip(infos, tmp_filename, logs)
+            _write_zip(project.name, infos, tmp_filename, logs)
         elif filename.lower().endswith(".tar.gz"):
-            _write_tar(infos, tmp_filename, compression="gz", logs=logs)
+            _write_tar(project.name, infos, tmp_filename, compression="gz", logs=logs)
         elif filename.lower().endswith(".tar.bz2"):
-            _write_tar(infos, tmp_filename, compression="bz2", logs=logs)
+            _write_tar(project.name, infos, tmp_filename, compression="bz2", logs=logs)
         elif filename.lower().endswith(".tar"):
-            _write_tar(infos, tmp_filename, compression=None, logs=logs)
+            _write_tar(project.name, infos, tmp_filename, compression=None, logs=logs)
         else:
             return SimpleStatus(success=False,
                                 description="Project bundle filename must be a .zip, .tar.gz, or .tar.bz2.",

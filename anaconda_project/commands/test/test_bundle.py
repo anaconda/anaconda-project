@@ -33,7 +33,7 @@ def test_bundle_command_on_simple_project(capsys):
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert ('  added foo.py\nCreated project bundle %s\n' % bundlefile) == out
+        assert ('  added %s/foo.py\nCreated project bundle %s\n' % (os.path.basename(dirname), bundlefile)) == out
         assert '' == err
 
     with_directory_contents({'foo.py': 'print("hello")\n'}, check)
