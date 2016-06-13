@@ -266,7 +266,8 @@ def test_run_command_extra_args(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--project', dirname, 'foo', '$PATH'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--project', dirname, 'default', 'foo',
+                                                 '$PATH', '--something'])
 
         assert 1 == result
         assert 'file' in executed
@@ -274,10 +275,11 @@ def test_run_command_extra_args(monkeypatch, capsys):
         assert 'env' in executed
         assert executed['file'].endswith(python_exe)
         assert executed['args'][0].endswith(python_exe)
-        assert len(executed['args']) == 4
+        assert len(executed['args']) == 5
         assert '--version' == executed['args'][1]
         assert 'foo' == executed['args'][2]
         assert '$PATH' == executed['args'][3]
+        assert '--something' == executed['args'][4]
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
@@ -314,7 +316,9 @@ def test_run_command_extra_args_with_double_hyphen(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--project', dirname, '--', '--bar'])
+        # double hyphen lets us specify "--foo" as a command name
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--project', dirname, '--', '--foo', '--bar'
+                                                 ])
 
         assert 1 == result
         assert 'file' in executed
@@ -329,9 +333,8 @@ def test_run_command_extra_args_with_double_hyphen(monkeypatch, capsys):
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 commands:
-  default:
+  "--foo":
     conda_app_entry: python --version
-
 """}, check_run_main)
 
     out, err = capsys.readouterr()
@@ -339,7 +342,7 @@ commands:
     assert "" == err
 
 
-def test_run_command_specify_name(monkeypatch, capsys):
+def _test_run_command_foo(command_line, monkeypatch, capsys):
     executed = {}
 
     def mock_execvpe(file, args, env):
@@ -361,32 +364,51 @@ def test_run_command_specify_name(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--command', 'foo', '--project', dirname])
+
+        for n, i in enumerate(command_line):
+            if i == '<DIRNAME>':
+                command_line[n] = dirname
+
+        result = _parse_args_and_run_subcommand(command_line)
 
         assert 1 == result
         assert 'file' in executed
         assert 'args' in executed
         assert 'env' in executed
         assert executed['file'].endswith(python_exe)
-        assert executed['args'][0].endswith(python_exe)
-        assert len(executed['args']) == 3
-        assert '--version' == executed['args'][1]
-        assert 'foo' == executed['args'][2]
 
-    with_directory_contents(
+        out, err = capsys.readouterr()
+        assert "" == out
+        assert "" == err
+
+        return executed['args'][1:]
+
+    return with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
-    conda_app_entry: python --version
+    conda_app_entry: python --version def
   foo:
     conda_app_entry: python --version foo
   bar:
     conda_app_entry: python --version bar
 """}, check_run_main)
 
-    out, err = capsys.readouterr()
-    assert "" == out
-    assert "" == err
+
+def test_run_command_specify_name_after_options(monkeypatch, capsys):
+    args = _test_run_command_foo(['anaconda-project', 'run', '--project', '<DIRNAME>', 'foo'], monkeypatch, capsys)
+
+    assert args == ['--version', 'foo']
+
+
+def test_run_command_specify_name_before_options(monkeypatch, capsys):
+    args = _test_run_command_foo(['anaconda-project', 'run', 'foo', '--project', '<DIRNAME>'], monkeypatch, capsys)
+    assert args[:-1] == ['--version', 'foo', '--project']
+
+
+def test_run_command_omit_name_use_default(monkeypatch, capsys):
+    args = _test_run_command_foo(['anaconda-project', 'run', '--project', '<DIRNAME>'], monkeypatch, capsys)
+    assert args == ['--version', 'def']
 
 
 def test_run_command_nonexistent_name(monkeypatch, capsys):
@@ -402,7 +424,7 @@ def test_run_command_nonexistent_name(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--command', 'nope', '--project', dirname])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--project', dirname, 'nope'])
 
         assert 1 == result
 

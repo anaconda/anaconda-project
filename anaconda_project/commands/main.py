@@ -81,10 +81,10 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('run', help="Run the project, setting up requirements first")
     add_prepare_args(preset)
-    preset.add_argument('--command',
-                        metavar="COMMAND_NAME",
+    preset.add_argument('command',
+                        metavar='COMMAND_NAME',
                         default=None,
-                        action="store",
+                        nargs='?',
                         help="A command name from project.yml")
     preset.add_argument('extra_args_for_command', metavar='EXTRA_ARGS_FOR_COMMAND', default=None, nargs=REMAINDER)
     preset.set_defaults(main=run.main)
