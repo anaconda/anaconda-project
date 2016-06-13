@@ -12,126 +12,50 @@ from anaconda_project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME,
 
 expected_default_file = """# This is an Anaconda project file.
 #
-# Here you can configure the requirements to run your code, such as
-# packages, configuration, and services.
-# If you run your code with the 'anaconda-project run' command, or with
-# project-aware tools such as Anaconda Navigator, the tools will be smart
-# about checking for and meeting your requirements.
-#
+# Here you can describe your project and how to run it.
+# Use `anaconda-project run` to run the project.
 # The file is in YAML format, please see http://www.yaml.org/start.html for more.
-# (But often you don't have to edit this file by hand!
-# Try the anaconda-project command or Anaconda Navigator to set up your project.)
 #
 
 #
-# Set the 'name' key to name your project:
-# name: myproject
+# Set the 'name' key to name your project
 #
 name:
 #
-# Set the 'icon' key to give your project an icon in Navigator:
-# icon: myicon.png
+# Set the 'icon' key to give your project an icon
 #
 icon:
 #
 # In the commands section, list your runnable scripts, notebooks, and other code.
-# You can give each item a name, and use it with anaconda-project run, like this:
-#     anaconda-project run --command myscript
-# Without the --command option, 'anaconda-project run' will run the command named
-# 'default', or the first command listed.
-# Any .ipynb files in the project directory are added automatically and don't need
-# to be listed here, but you can if you like.
-#
-# For example,
-#
-# commands:
-#    default:
-#       unix: echo "This project is in $PROJECT_DIR"
-#       windows: echo "This project is in "%PROJECT_DIR%
-#    myscript:
-#       unix: main.py
-#    my_bokeh_app:
-#       bokeh_app: the_app_directory_name
-#    my_notebook:
-#       notebook: foo.ipynb
-#
-# Commands may have both a Unix shell version and a Windows cmd.exe version.
-# In this example, my_notebook was automatically added as a command named
-# 'foo.ipynb' but we've manually added it as 'my_notebook' also.
-#
-# If you prefer, add commands using anaconda-project like this:
-#     anaconda-project add-command --type=bokeh_app myappname myappdir
+# Use `anaconda-project add-command` to add commands.
 #
 commands: {}
 #
 # In the variables section, list any environment variables your code depends on.
-#
-# For example,
-#
-# variables:
-#    EC2_PASSWORD: null
-#    NUMBER_OF_ITERATIONS: null
-#
-# If you give a value other than null for the variable, that value will be the default
-# for everyone who runs this project.
-# You can also set a local value (not shared with others) in project-local.yml.
+# Use `anaconda-project add-variable` to add variables.
 #
 variables: {}
 #
 # In the services section, list any services that should be
-# available before your code runs. Each service's address
-# will be provided to your code in an environment variable.
-#
-# For example,
-#
-# services:
-#    REDIS_URL: redis
-#    # the above can be written more verbosely
-#    REDIS_URL2: { type: redis }
-#    # in the long form, you can specify options
-#    REDIS_URL3: { type: redis, default: "redis://localhost:123456" }
-#
-# Services can be added with anaconda-project:
-#    anaconda-project add-service redis
+# available before your code runs.
+# Use `anaconda-project add-service` to add services.
 #
 services: {}
 #
 # In the downloads section, list any URLs to download to local files
 # before your code runs.
-# Each local filename is placed in an environment variable.
-#
-# For example,
-#
-# downloads:
-#    MY_DATA_FILE: http://example.com/data.csv
-#    ANOTHER_DATA_FILE: {
-#      url: http://example.com/foo.csv
-#      sha1: adc83b19e793491b1c6ea0fd8b46cd9f32e592fc
-#      filename: local-name-for-foo.csv
-#    }
-#
-# In this example, the MY_DATA_FILE environment variable would
-# contain the full path to a local copy of data.csv, while
-# ANOTHER_DATA_FILE would contain the full path to a local copy
-# named local-name-for-foo.csv
+# Use `anaconda-project add-download` to add downloads.
 #
 downloads: {}
 #
 # In the dependencies section, list any packages that must be installed
 # before your code runs.
-# These packages will be installed in ALL Conda environments used for
-# this project.
-#
-# For example,
-# dependencies:
-#    - bokeh=0.11.1
-#    - numpy
+# Use `anaconda-project add-dependencies` to add dependencies.
 #
 dependencies: []
 #
 # In the channels section, list any Conda channel URLs to be searched
-# for packages. These channels will be used by ALL Conda environments
-# this project runs in.
+# for packages.
 #
 # For example,
 #
@@ -142,25 +66,8 @@ channels: []
 #
 # If you like, you can define multiple, named environment specs.
 # There's an implicit environment spec called 'default', which you can
-# tune by naming it explicitly here. When you run a command, use
-# the --env-spec option to choose an environment.
-#    anaconda-project run --env-spec python27
-#
-# Each environment spec may have 'dependencies' or 'channels' sub-sections
-# which are combined with any global 'dependencies' or 'channels'.
-#
-# For example,
-#
-# env_specs:
-#   default:
-#     dependencies:
-#       - bokeh
-#     channels:
-#       - https://conda.anaconda.org/asmeurer
-#   python27:
-#     dependencies:
-#       - python=2.7
-#
+# tune by naming it explicitly here.
+# Use `anaconda-project add-env-spec` to add environment specs.
 #
 env_specs: {}
 """
