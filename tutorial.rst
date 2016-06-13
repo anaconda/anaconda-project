@@ -234,22 +234,40 @@ Now modify ``showdata.py`` to use this variable:
 
     flowers = pd.read_csv(iris_csv)
 
+    print("Showing column {}".format(column_to_show))
     print(flowers[column_to_show])
     print("My project directory is {} and my conda environment is {}".format(project_dir, env))
 
-On Linux and Mac, users can set the environment variable like this:
+Because there's no value for ``COLUMN_TO_SHOW``, it will be
+mandatory for users to provide one. Try:
 
-    COLUMN_TO_SHOW=petal_length anaconda-project run --command showdata
+   anaconda-project run --command showdata
 
-They can also configure a value to be used on their local machine,
-by typing:
+The first time you run this, you should see a prompt asking you to
+type in a column name. If you enter a column at the prompt (try
+"sepal_length"), it will be saved in ``project-local.yml``.  To
+change the value in ``project-local.yml``, use:
 
     anaconda-project set-variable COLUMN_TO_SHOW=sepal_length
 
-``set-variable`` sets a value in ``project-local.yml``, which is a
-file local to this user and machine. When an environment variable
-isn't set, the value (if any) from ``project-local.yml`` will be
-used.
+``project-local.yml`` is local to this user and machine, while
+``project.yml`` will be shared across all users of a project.
+
+You can also set a default value for a variable in
+``project.yml``; if you do this, users will not be prompted for a
+value, but can still set the variable to override the default if
+they want to. Try setting a default value like this:
+
+   anaconda-project add-variable --default=petal_length COLUMN_TO_SHOW
+
+Now you should see the default in ``project.yml``.
+
+If you've set the variable in ``project-local.yml``, the default
+will be ignored; unset your local override with:
+
+   anaconda-project unset-variable COLUMN_TO_SHOW
+
+The default will then be used.
 
 NOTE: it's good practice to use variables for passwords and
 secrets in particular! It isn't very secure to put your personal
