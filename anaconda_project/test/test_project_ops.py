@@ -1505,14 +1505,18 @@ env_specs:
 """}, check)
 
 
+def _strip_prefixes(names):
+    return list([name[len("bundledproj/"):] for name in names])
+
+
 def _assert_zip_contains(zip_path, filenames):
     with zipfile.ZipFile(zip_path, mode='r') as zf:
-        assert sorted(zf.namelist()) == sorted(filenames)
+        assert sorted(_strip_prefixes(zf.namelist())) == sorted(filenames)
 
 
 def _assert_tar_contains(tar_path, filenames):
     with tarfile.open(tar_path, mode='r') as tf:
-        assert sorted(tf.getnames()) == sorted(filenames)
+        assert sorted(_strip_prefixes(tf.getnames())) == sorted(filenames)
 
 
 def test_bundle_zip():
@@ -1542,6 +1546,7 @@ def test_bundle_zip():
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
 services:
    REDIS_URL: redis
     """,
@@ -1580,6 +1585,7 @@ def test_bundle_tar():
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
 services:
    REDIS_URL: redis
     """,
@@ -1618,6 +1624,7 @@ def test_bundle_tar_gz():
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
 services:
    REDIS_URL: redis
     """,
@@ -1656,6 +1663,7 @@ def test_bundle_tar_bz2():
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
 services:
    REDIS_URL: redis
     """,
@@ -1687,8 +1695,11 @@ def test_bundle_cannot_write_destination_path(monkeypatch):
             assert status.status_description == ('Failed to write project bundle %s.' % bundlefile)
             assert ['NOPE'] == status.errors
 
-        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-    """, "foo.py": "print('hello')\n"}, check)
+        with_directory_contents(
+            {DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
+    """,
+             "foo.py": "print('hello')\n"}, check)
 
     with_directory_contents(dict(), bundletest)
 
@@ -1735,6 +1746,7 @@ def test_bundle_zip_with_gitignore():
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
         """,
                             "foo.py": "print('hello')\n",
                             '.gitignore': "/ignored.py\n",
@@ -1836,6 +1848,7 @@ def test_bundle_zip_with_inability_to_walk_directory(monkeypatch):
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
         """,
                             "foo.py": "print('hello')\n"}), check)
 
@@ -1875,6 +1888,7 @@ def test_bundle_zip_with_unreadable_projectignore(monkeypatch):
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
         """,
                             "foo.py": "print('hello')\n"}), check)
 
@@ -1897,6 +1911,7 @@ def test_bundle_with_bogus_filename(monkeypatch):
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
         """,
                             "foo.py": "print('hello')\n"}), check)
 
@@ -1917,6 +1932,7 @@ def test_bundle_zip_with_downloaded_file():
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
 downloads:
    MYDOWNLOAD: "http://example.com/downloaded.py"
 """,
@@ -1951,6 +1967,7 @@ def test_bundle_zip_overwrites_but_does_not_include_the_dest_zip():
 
     with_directory_contents(
         _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
 """,
                         "foo.py": "print('hello')\n",
                         'foo.zip': ""}), check)
@@ -1974,6 +1991,7 @@ def test_bundle_zip_with_projectignore():
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
+name: bundledproj
         """,
              "foo.py": "print('hello')\n",
              "foo.pyc": "",
