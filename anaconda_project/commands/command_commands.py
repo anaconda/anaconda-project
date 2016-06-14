@@ -65,7 +65,7 @@ def add_command(project_dir, name, command_type, command, env_spec_name):
         console_utils.print_status_errors(status)
         return 1
     else:
-        print("Added a command '%s' to the project. Run it with `anaconda-project run --command %s`." % (name, name))
+        print("Added a command '%s' to the project. Run it with `anaconda-project run %s`." % (name, name))
         return 0
 
 
