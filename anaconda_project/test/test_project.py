@@ -489,7 +489,7 @@ def test_get_package_requirements_from_project_file():
         project = project_no_dedicated_env(dirname)
         env = project.env_specs['default']
         assert env.name == 'default'
-        assert ("foo", "hello >= 1.0", "world") == env.dependencies
+        assert ("foo", "hello >= 1.0", "world") == env.conda_packages
         assert ("mtv", "hbo") == env.channels
         assert set(["foo", "hello", "world"]) == env.conda_package_names_set
 
@@ -519,7 +519,7 @@ channels:
 def test_get_package_requirements_from_empty_project():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
-        assert () == project.env_specs['default'].dependencies
+        assert () == project.env_specs['default'].conda_packages
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_get_packages)
 
@@ -593,10 +593,10 @@ def test_load_environments():
         default = project.env_specs['default']
         foo = project.env_specs['foo']
         bar = project.env_specs['bar']
-        assert default.dependencies == ()
-        assert foo.dependencies == ('python', 'dog', 'cat', 'zebra')
+        assert default.conda_packages == ()
+        assert foo.conda_packages == ('python', 'dog', 'cat', 'zebra')
         assert foo.description == "THE FOO"
-        assert bar.dependencies == ()
+        assert bar.conda_packages == ()
         assert bar.description == "bar"
 
     with_directory_contents(
@@ -625,9 +625,9 @@ def test_load_environments_merging_in_global():
         default = project.env_specs['default']
         foo = project.env_specs['foo']
         bar = project.env_specs['bar']
-        assert default.dependencies == ('dead-parrot', 'elephant', 'lion')
-        assert foo.dependencies == ('dead-parrot', 'elephant', 'python', 'dog', 'cat', 'zebra')
-        assert bar.dependencies == ('dead-parrot', 'elephant')
+        assert default.conda_packages == ('dead-parrot', 'elephant', 'lion')
+        assert foo.conda_packages == ('dead-parrot', 'elephant', 'python', 'dog', 'cat', 'zebra')
+        assert bar.conda_packages == ('dead-parrot', 'elephant')
         assert default.channels == ('mtv', 'cartoons')
         assert foo.channels == ('mtv', 'hbo')
         assert bar.channels == ('mtv', )
@@ -671,9 +671,9 @@ def test_load_environments_default_always_default_even_if_not_first():
         foo = project.env_specs['foo']
         bar = project.env_specs['bar']
         default = project.env_specs['default']
-        assert foo.dependencies == ()
-        assert bar.dependencies == ()
-        assert default.dependencies == ()
+        assert foo.conda_packages == ()
+        assert bar.conda_packages == ()
+        assert default.conda_packages == ()
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """

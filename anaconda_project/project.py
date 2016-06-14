@@ -293,7 +293,7 @@ class _ConfigCache(object):
                 all_channels = shared_channels + channels
 
                 self.env_specs[name] = EnvSpec(name=name,
-                                               dependencies=all_deps,
+                                               conda_packages=all_deps,
                                                channels=all_channels,
                                                description=description)
         else:
@@ -305,7 +305,7 @@ class _ConfigCache(object):
         # even if not explicitly listed.
         if 'default' not in self.env_specs:
             self.env_specs['default'] = EnvSpec(name='default',
-                                                dependencies=shared_deps,
+                                                conda_packages=shared_deps,
                                                 channels=shared_channels,
                                                 description="Default")
 
@@ -717,7 +717,7 @@ class Project(object):
         json['commands'] = commands
         envs = dict()
         for key, env in self.env_specs.items():
-            envs[key] = dict(dependencies=list(env.dependencies),
+            envs[key] = dict(dependencies=list(env.conda_packages),
                              channels=list(env.channels),
                              description=env.description)
         json['env_specs'] = envs
