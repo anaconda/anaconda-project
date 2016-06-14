@@ -4,19 +4,19 @@ Projects Tutorial
 
 With ``anaconda-project``, anyone who wants to look at your
 notebooks or Bokeh plots or other analysis code can type
-``anaconda-project run`` and have it Just
-Work(tm). ``anaconda-project`` automates setup steps such as
-installing the right packages, downloading files, and configuring
-passwords.
+``anaconda-project run`` and have it Just Work(tm).
 
-The neat thing is that it _also_ makes it easier for you to set up
-the project yourself in the first place! *Automation for others
+``anaconda-project`` automates setup steps such as installing the
+right packages, downloading files, and configuring passwords.
+
+The neat thing is that it *also* makes it easier for you to set up
+the project yourself in the first place! **Automation for others
 (or your future self) happens as a side effect as you work on your
-project.*
+project.**
 
-Even if you never share your project with others, you
-may find that it's more convenient to use ``anaconda-project``
-than it is to use ``conda`` directly.
+Even if you never share your project with others, you may find
+that it's more convenient to use ``anaconda-project`` than it is
+to use ``conda`` directly.
 
 In this tutorial, we'll create a project directory containing a
 Bokeh application, then package it up as a zip file and pretend
@@ -34,14 +34,17 @@ install anaconda_project``.
 Be sure you can now run ``anaconda-project --version`` at your
 command prompt and see the version information for
 ``anaconda-project``. It should print a version number like
-``0.1``.
+``0.2.0``.
+
+NOTE: at the moment, the package is private so it's only available
+if you are logged in to anaconda.org and in the proper group.
 
 =======================
 Create an empty project
 =======================
 
 We'll create a project directory called ``iris``. At the command
-prompt, switch to the directory you'd like to contain the ``iris``
+prompt, switch to a directory you'd like to contain the ``iris``
 project. Now type:
 
     anaconda-project init --project iris
@@ -55,9 +58,10 @@ this:
     Create directory '/home/alice/mystuff/iris'? y
     Project configuration is in /home/alice/mystuff/iris/project.yml
 
-At this point, if you like you can browse ``iris/project.yml`` to
-get oriented. We won't edit ``project.yml`` by hand in this
-tutorial, but the commands we use in this tutorial will modify it.
+At this point, if you like you can look through
+``iris/project.yml`` to get oriented. We won't edit
+``project.yml`` by hand in this tutorial, but the commands we use
+in this tutorial will modify it.
 
 ==========================
 Get some data to work with
@@ -82,7 +86,7 @@ Here's what the command line session might look like:
 
     $ cd /home/alice/mystuff/iris
     $ anaconda-project add-download IRIS_CSV  https://raw.githubusercontent.com/bokeh/bokeh/f9aa6a8caae8c7c12efd32be95ec7b0216f62203/bokeh/sampledata/iris.csv
-    File downloaded to /home/hp/checkout/iris/iris.csv
+    File downloaded to /home/alice/mystuff/iris/iris.csv
     Added https://raw.githubusercontent.com/bokeh/bokeh/f9aa6a8caae8c7c12efd32be95ec7b0216f62203/bokeh/sampledata/iris.csv to the project file.
 
 Don't worry about the name ``IRIS_CSV`` yet. It's the name of an
@@ -92,7 +96,7 @@ environment variable; we'll get to that in a moment.
 Create a command to run
 =======================
 
-Our project should contain some sort of code, right? Let's make a
+A project should contain some sort of code, right? Let's make a
 "hello world". Create a file ``hello.py`` with these contents:
 
     print("hello")
@@ -114,8 +118,8 @@ command line. The command line session looks like:
     Is `hello` a (B)okeh app, (N)otebook, or (C)ommand line? C
     Added a command 'hello' to the project. Run it with `anaconda-project run hello`.
 
-Now try ``anaconda-project run hello``. It should print
-"hello".
+Now try ``anaconda-project run hello``. After a short delay, it
+should print "hello".
 
 NOTE: Since you have only one command, plain ``anaconda-project
 run`` would work too.
@@ -152,14 +156,14 @@ our ``iris/envs/default`` environment yet.
 
 While in your ``iris`` directory, type:
 
-    anaconda-project add-dependencies bokeh pandas
+    anaconda-project add-dependencies bokeh=0.11.1 pandas
 
 The command line session should look something like:
 
-    $ anaconda-project add-dependencies bokeh=0.11 pandas
+    $ anaconda-project add-dependencies bokeh=0.11.1 pandas
     conda install: Using Anaconda Cloud api site https://api.anaconda.org
     Using Conda environment /home/alice/mystuff/iris/envs/default.
-    Added dependencies to project file: bokeh=0.11, pandas.
+    Added dependencies to project file: bokeh=0.11.1, pandas.
 
 If you look at ``project.yml`` you'll see bokeh and pandas listed
 under the ``dependencies:`` section. Also, files such as
@@ -202,6 +206,8 @@ Tell ``anaconda-project`` how to run it by adding a command:
 
     anaconda-project add-command showdata 'python showdata.py'
 
+(Choose 'C' for "command line" at the prompt.)
+
 Now run that command:
 
     anaconda-project run showdata
@@ -217,8 +223,11 @@ Say your command needs a database password, or has a tunable
 parameter. You can require (or just allow) users to configure
 these before the command runs.
 
-Type ``anaconda-project add-variable COLUMN_TO_SHOW``. In
-``project.yml`` you should now have a ``COLUMN_TO_SHOW`` in the
+Type:
+
+    anaconda-project add-variable COLUMN_TO_SHOW
+
+In ``project.yml`` you should now have a ``COLUMN_TO_SHOW`` in the
 ``variables:`` section, and ``anaconda-project list-variables``
 should list ``COLUMN_TO_SHOW``.
 
@@ -245,10 +254,12 @@ mandatory for users to provide one. Try:
 
 The first time you run this, you should see a prompt asking you to
 type in a column name. If you enter a column at the prompt (try
-"sepal_length"), it will be saved in ``project-local.yml``.  To
-change the value in ``project-local.yml``, use:
+"sepal_length"), it will be saved in ``project-local.yml``. Next
+time you run, you won't be prompted for a value.
 
-    anaconda-project set-variable COLUMN_TO_SHOW=sepal_length
+To change the value in ``project-local.yml``, use:
+
+    anaconda-project set-variable COLUMN_TO_SHOW=petal_length
 
 ``project-local.yml`` is local to this user and machine, while
 ``project.yml`` will be shared across all users of a project.
@@ -258,7 +269,7 @@ You can also set a default value for a variable in
 value, but can still set the variable to override the default if
 they want to. Try setting a default value like this:
 
-   anaconda-project add-variable --default=petal_length COLUMN_TO_SHOW
+   anaconda-project add-variable --default=sepal_width COLUMN_TO_SHOW
 
 Now you should see the default in ``project.yml``.
 
@@ -267,7 +278,8 @@ will be ignored; unset your local override with:
 
    anaconda-project unset-variable COLUMN_TO_SHOW
 
-The default will then be used.
+The default will then be used when you ``anaconda-project run
+showdata``.
 
 NOTE: it's good practice to use variables for passwords and
 secrets in particular! It isn't very secure to put your personal
@@ -279,8 +291,8 @@ Creating a Bokeh app
 
 Let's plot that flower data!
 
-Create the directory ``iris_plot`` and in it put a file
-``main.py`` with these contents:
+Create the directory ``iris_plot`` inside your ``iris`` project
+directory, and in it put a file ``main.py`` with these contents:
 
     import os
     import pandas as pd
@@ -304,9 +316,9 @@ Create the directory ``iris_plot`` and in it put a file
     curdoc().title = "Iris Example"
     curdoc().add_root(p)
 
-You should now have a file ``iris_plot/main.py``. The
-``iris_plot`` directory is a simple Bokeh app. (TODO link to info
-on Bokeh apps)
+You should now have a file ``iris_plot/main.py`` inside the
+project. The ``iris_plot`` directory is a simple Bokeh app. (TODO
+link to info on Bokeh apps)
 
 To tell ``anaconda-project`` about the Bokeh app, type:
 
@@ -327,9 +339,10 @@ To see your plot, try this command:
 
     anaconda-project run plot --show
 
-The double hyphen ``--`` means to pass subsequent command line
-arguments down to your command. ``--show`` gets passed to the
-``bokeh`` command, and tells Bokeh to open a browser window.
+``--show`` gets passed to the ``bokeh serve`` command, and tells
+Bokeh to open a browser window. Other options for ``bokeh serve``
+can be appended to the ``anaconda-project run`` command line as
+well, if you like.
 
 You should get a browser window displaying the Iris plot.
 
@@ -433,7 +446,8 @@ There's more that ``anaconda-project`` can do.
    on. Right now it only supports starting Redis, for demo
    purposes. Use the ``anaconda-project add-service redis``
    command to play with this. More kinds of service will be
-   supported soon! Let us know which you'd like to have. (TODO link)
+   supported soon! Let us know if there are particular ones you'd
+   find useful.
  * You can have multiple Conda environment specs in your project,
    if for example some of your commands use a different version of
    Python or otherwise have distinct dependencies.
@@ -441,4 +455,6 @@ There's more that ``anaconda-project`` can do.
    environment specs.
  * Because projects are self-describing, hosting providers such as
    Anaconda can automatically deploy them to a server.
-   ``anaconda-project upload`` starts this process.
+   ``anaconda-project upload`` starts this process.  A deployment
+   will use a particular command, particular env spec, and
+   customized values for your environment variables.
