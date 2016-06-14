@@ -43,7 +43,7 @@ any necessary setup prior to executing them).
 ## Learn more
 
 See ``tutorial.rst`` in this directory for a simple
-getting-started walkthrough. TODO tutorial doesn't exist yet...
+getting-started walkthrough.
 
 See ``projects.rst`` in this directory for more detail on the
 syntax of the `project.yml` file.
