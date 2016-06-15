@@ -1,0 +1,8 @@
+name: movie example
+commands: {default: {bokeh_app: main.py}}
+variables: {}
+services: {}
+downloads: {MOVIE_DATA: 'https://s3.amazonaws.com/bokeh_data/movies.db.zip'}
+dependencies: [bokeh, pandas]
+channels: []
+environments: {}
