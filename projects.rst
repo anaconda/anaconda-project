@@ -232,7 +232,7 @@ in the environment or in ``project-local.yml`` overrides
 these defaults. To omit a default for a variable, set
 its value to either ``null`` or ``{}``.
 
-For example:
+For example::
 
   variables:
     FOO: "default_value_of_foo"
