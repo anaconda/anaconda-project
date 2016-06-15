@@ -207,7 +207,7 @@ Variables that end in ``_PASSWORD``, ``_ENCRYPTED``,
 ``_SECRET_KEY``, or ``_SECRET`` are treated sensitively by
 default. This means that if ``anaconda-project`` stores a value
 for them in ``project.yml`` or ``project-local.yml`` or elsewhere,
-that value is encrypted. NOTE: ``project-local.yml stores and
+that value is encrypted. NOTE: ``project-local.yml`` stores and
 encrypts the value that you enter when prompted.
 
 To force a variable to be encrypted or not encrypted, add the
