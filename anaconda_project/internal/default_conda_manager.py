@@ -20,6 +20,8 @@ class DefaultCondaManager(CondaManager):
                 summary="'%s' doesn't look like it contains a Conda environment yet." % (prefix),
                 missing_packages=tuple(spec.conda_package_names_set),
                 wrong_version_packages=(),
+                missing_pip_packages=(),
+                wrong_version_pip_packages=(),
                 broken=True)
 
         try:
@@ -40,9 +42,17 @@ class DefaultCondaManager(CondaManager):
             sorted = list(missing)
             sorted.sort()
             summary = "Conda environment is missing packages: %s" % (", ".join(sorted))
-            return CondaEnvironmentDeviations(summary=summary, missing_packages=sorted, wrong_version_packages=())
+            return CondaEnvironmentDeviations(summary=summary,
+                                              missing_packages=sorted,
+                                              wrong_version_packages=(),
+                                              missing_pip_packages=(),
+                                              wrong_version_pip_packages=())
         else:
-            return CondaEnvironmentDeviations(summary="OK", missing_packages=(), wrong_version_packages=())
+            return CondaEnvironmentDeviations(summary="OK",
+                                              missing_packages=(),
+                                              wrong_version_packages=(),
+                                              missing_pip_packages=(),
+                                              wrong_version_pip_packages=())
 
     def fix_environment_deviations(self, prefix, spec, deviations=None):
         if deviations is None:

@@ -30,6 +30,8 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
     spec = EnvSpec(name='myenv', conda_packages=['ipython'], channels=[])
+    assert spec.conda_packages == ('ipython', )
+    assert spec.pip_packages == ()
 
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)

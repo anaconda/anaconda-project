@@ -221,7 +221,11 @@ commands:
 def _push_fake_env_creator():
     class HappyCondaManager(CondaManager):
         def find_environment_deviations(self, prefix, spec):
-            return CondaEnvironmentDeviations(summary="all good", missing_packages=(), wrong_version_packages=())
+            return CondaEnvironmentDeviations(summary="all good",
+                                              missing_packages=(),
+                                              wrong_version_packages=(),
+                                              missing_pip_packages=(),
+                                              wrong_version_pip_packages=())
 
         def fix_environment_deviations(self, prefix, spec, deviations=None):
             pass

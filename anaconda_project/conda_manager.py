@@ -122,7 +122,13 @@ class CondaManager(with_metaclass(ABCMeta)):
 class CondaEnvironmentDeviations(object):
     """Represents differences between actual and desired environment state."""
 
-    def __init__(self, summary, missing_packages, wrong_version_packages, broken=False):
+    def __init__(self,
+                 summary,
+                 missing_packages,
+                 wrong_version_packages,
+                 missing_pip_packages,
+                 wrong_version_pip_packages,
+                 broken=False):
         """Construct a ``CondaEnvironmentDeviations``.
 
         Args:
@@ -135,6 +141,8 @@ class CondaEnvironmentDeviations(object):
         self._broken = broken
         self._missing_packages = tuple(missing_packages)
         self._wrong_version_packages = tuple(wrong_version_packages)
+        self._missing_pip_packages = tuple(missing_pip_packages)
+        self._wrong_version_pip_packages = tuple(wrong_version_pip_packages)
 
     @property
     def ok(self):
@@ -146,7 +154,11 @@ class CondaEnvironmentDeviations(object):
         called.
 
         """
-        return len(self.missing_packages) == 0 and len(self.wrong_version_packages) == 0 and not self._broken
+        return len(self.missing_packages) == 0 and \
+            len(self.wrong_version_packages) == 0 and \
+            len(self.missing_pip_packages) == 0 and \
+            len(self.wrong_version_pip_packages) == 0 and \
+            not self._broken
 
     @property
     def summary(self):
@@ -162,3 +174,13 @@ class CondaEnvironmentDeviations(object):
     def wrong_version_packages(self):
         """Iterable collection of package names an unacceptable version installed."""
         return self._wrong_version_packages
+
+    @property
+    def missing_pip_packages(self):
+        """Iterable collection of missing pip package names."""
+        return self._missing_pip_packages
+
+    @property
+    def wrong_version_pip_packages(self):
+        """Iterable collection of pip package names an unacceptable version installed."""
+        return self._wrong_version_pip_packages

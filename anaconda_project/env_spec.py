@@ -15,18 +15,20 @@ from anaconda_project.internal.conda_api import parse_spec
 class EnvSpec(object):
     """Represents a set of required conda packages we could potentially instantiate as a Conda environment."""
 
-    def __init__(self, name, conda_packages, channels, description=None):
+    def __init__(self, name, conda_packages, channels, pip_packages=(), description=None):
         """Construct a package set with the given name and dependencies.
 
         Args:
             name (str): name of the package set
             conda_packages (list): list of package specs to pass to conda install
             channels (list): list of channel names
+            pip_packages (list): list of pip package specs to pass to pip
             description (str or None): one-sentence-ish summary of what this env is
         """
         self._name = name
         self._conda_packages = tuple(conda_packages)
         self._channels = tuple(channels)
+        self._pip_packages = tuple(pip_packages)
         self._description = description
 
     @property
@@ -51,6 +53,11 @@ class EnvSpec(object):
     def channels(self):
         """Get the channels to install conda packages from."""
         return self._channels
+
+    @property
+    def pip_packages(self):
+        """Get the pip packages to install in the environment as an iterable."""
+        return self._pip_packages
 
     @property
     def conda_package_names_set(self):
