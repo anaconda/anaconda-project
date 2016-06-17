@@ -320,7 +320,8 @@ You should now have a file ``iris_plot/main.py`` inside the
 project. The ``iris_plot`` directory is a simple Bokeh app. (TODO
 link to info on Bokeh apps)
 
-To tell ``anaconda-project`` about the Bokeh app, type::
+To tell ``anaconda-project`` about the Bokeh app be sure you are in the
+directory "iris" and type::
 
     anaconda-project add-command plot iris_plot
 
