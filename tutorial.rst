@@ -45,13 +45,13 @@ Create an empty project
 
 We'll create a project directory called ``iris``. At the command
 prompt, switch to a directory you'd like to contain the ``iris``
-project. Now type:
+project. Now type::
 
     anaconda-project init --project iris
 
 It will ask you whether to create the ``iris`` directory. Type "y"
 to confirm. Your command line session could look something like
-this:
+this::
 
     $ cd /home/alice/mystuff
     $ anaconda-project init --project iris
@@ -73,7 +73,7 @@ to download them on demand.
 This data set about iris flowers isn't very large, but we'll set
 it up to download on demand anyway to show how it works.
 
-Change into your ``iris`` project directory, then type:
+Change into your ``iris`` project directory, then type::
 
     anaconda-project add-download IRIS_CSV https://raw.githubusercontent.com/bokeh/bokeh/f9aa6a8caae8c7c12efd32be95ec7b0216f62203/bokeh/sampledata/iris.csv
 
@@ -82,7 +82,7 @@ there will be an ``iris.csv`` in your directory. If you look at
 ``project.yml``, you'll see a new entry in the ``downloads:``
 section.
 
-Here's what the command line session might look like:
+Here's what the command line session might look like::
 
     $ cd /home/alice/mystuff/iris
     $ anaconda-project add-download IRIS_CSV  https://raw.githubusercontent.com/bokeh/bokeh/f9aa6a8caae8c7c12efd32be95ec7b0216f62203/bokeh/sampledata/iris.csv
@@ -97,7 +97,7 @@ Create a command to run
 =======================
 
 A project should contain some sort of code, right? Let's make a
-"hello world". Create a file ``hello.py`` with these contents:
+"hello world". Create a file ``hello.py`` with these contents::
 
     print("hello")
 
@@ -107,12 +107,12 @@ import print_function`` to the top, or omit the parentheses after
 
 You can run ``hello.py`` with ``python hello.py``. But that won't
 do any ``anaconda-project`` magic. To be sure things get set up,
-add ``hello.py`` as a project command, like this:
+add ``hello.py`` as a project command, like this::
 
     anaconda-project add-command hello "python hello.py"
 
 It will ask you what kind of command it is; choose ``C`` for
-command line. The command line session looks like:
+command line. The command line session looks like::
 
     $ anaconda-project add-command hello "python hello.py"
     Is `hello` a (B)okeh app, (N)otebook, or (C)ommand line? C
@@ -138,7 +138,7 @@ Have a look in ``project.yml`` and you should see the ``hello``
 command in the ``commands:`` section.
 
 You can also list the commands in your project by typing
-``anaconda-project list-commands``, here's an example:
+``anaconda-project list-commands``, here's an example::
 
     $ anaconda-project list-commands
     Commands for project: /home/alice/mystuff/iris
@@ -154,11 +154,11 @@ Adding required packages
 In the next steps, we'll need to use some packages that aren't in
 our ``iris/envs/default`` environment yet.
 
-While in your ``iris`` directory, type:
+While in your ``iris`` directory, type::
 
     anaconda-project add-dependencies bokeh=0.11.1 pandas
 
-The command line session should look something like:
+The command line session should look something like::
 
     $ anaconda-project add-dependencies bokeh=0.11.1 pandas
     conda install: Using Anaconda Cloud api site https://api.anaconda.org
@@ -184,7 +184,7 @@ You can grab these variables from within your scripts with
 Python's ``os.getenv`` function.
 
 Let's make a script that prints out our data. Call it
-``showdata.py`` and put the following code in there:
+``showdata.py`` and put the following code in there::
 
     import os
     import pandas as pd
@@ -202,13 +202,13 @@ If you run ``python showdata.py`` now, this script probably won't
 work; pandas may not be installed, and the environment variables
 won't be set.
 
-Tell ``anaconda-project`` how to run it by adding a command:
+Tell ``anaconda-project`` how to run it by adding a command::
 
     anaconda-project add-command showdata 'python showdata.py'
 
 (Choose 'C' for "command line" at the prompt.)
 
-Now run that command:
+Now run that command::
 
     anaconda-project run showdata
 
@@ -223,7 +223,7 @@ Say your command needs a database password, or has a tunable
 parameter. You can require (or just allow) users to configure
 these before the command runs.
 
-Type:
+Type::
 
     anaconda-project add-variable COLUMN_TO_SHOW
 
@@ -231,7 +231,7 @@ In ``project.yml`` you should now have a ``COLUMN_TO_SHOW`` in the
 ``variables:`` section, and ``anaconda-project list-variables``
 should list ``COLUMN_TO_SHOW``.
 
-Now modify ``showdata.py`` to use this variable:
+Now modify ``showdata.py`` to use this variable::
 
     import os
     import pandas as pd
@@ -248,7 +248,7 @@ Now modify ``showdata.py`` to use this variable:
     print("My project directory is {} and my conda environment is {}".format(project_dir, env))
 
 Because there's no value for ``COLUMN_TO_SHOW``, it will be
-mandatory for users to provide one. Try:
+mandatory for users to provide one. Try::
 
    anaconda-project run showdata
 
@@ -257,7 +257,7 @@ type in a column name. If you enter a column at the prompt (try
 "sepal_length"), it will be saved in ``project-local.yml``. Next
 time you run, you won't be prompted for a value.
 
-To change the value in ``project-local.yml``, use:
+To change the value in ``project-local.yml``, use::
 
     anaconda-project set-variable COLUMN_TO_SHOW=petal_length
 
@@ -267,14 +267,14 @@ To change the value in ``project-local.yml``, use:
 You can also set a default value for a variable in
 ``project.yml``; if you do this, users will not be prompted for a
 value, but can still set the variable to override the default if
-they want to. Try setting a default value like this:
+they want to. Try setting a default value like this::
 
    anaconda-project add-variable --default=sepal_width COLUMN_TO_SHOW
 
 Now you should see the default in ``project.yml``.
 
 If you've set the variable in ``project-local.yml``, the default
-will be ignored; unset your local override with:
+will be ignored; unset your local override with::
 
    anaconda-project unset-variable COLUMN_TO_SHOW
 
@@ -292,7 +292,7 @@ Creating a Bokeh app
 Let's plot that flower data!
 
 Create the directory ``iris_plot`` inside your ``iris`` project
-directory, and in it put a file ``main.py`` with these contents:
+directory, and in it put a file ``main.py`` with these contents::
 
     import os
     import pandas as pd
@@ -320,12 +320,12 @@ You should now have a file ``iris_plot/main.py`` inside the
 project. The ``iris_plot`` directory is a simple Bokeh app. (TODO
 link to info on Bokeh apps)
 
-To tell ``anaconda-project`` about the Bokeh app, type:
+To tell ``anaconda-project`` about the Bokeh app, type::
 
     anaconda-project add-command plot iris_plot
 
 When asked, type ``B`` for Bokeh app. The command line session
-should look like:
+should look like::
 
     $ anaconda-project add-command plot iris_plot
     Is `plot` a (B)okeh app, (N)otebook, or (C)ommand line? B
@@ -335,7 +335,7 @@ NOTE: we use the app directory path, not the script path
 ``iris_plot/main.py``, to refer to a Bokeh app. Bokeh looks for
 the file ``main.py`` by convention.
 
-To see your plot, try this command:
+To see your plot, try this command::
 
     anaconda-project run plot --show
 
@@ -356,13 +356,13 @@ directory and you'll see you have ``envs/default`` and
 ``iris.csv``, which you didn't create manually. Let's get rid of
 them.
 
-Type:
+Type::
 
     anaconda-project clean
 
 ``iris.csv`` and ``envs/default`` should now be gone.
 
-Run one of your commands again, and they'll come back. Type:
+Run one of your commands again, and they'll come back. Type::
 
     anaconda-project run showdata
 
@@ -370,11 +370,11 @@ You should have ``iris.csv`` and ``envs/default`` back as they
 were before.
 
 You could also redo the setup steps without running a
-command. Clean again:
+command. Clean again::
 
     anaconda-project clean
 
-``iris.csv`` and ``envs/default`` should be gone again. Then re-prepare the project:
+``iris.csv`` and ``envs/default`` should be gone again. Then re-prepare the project::
 
     anaconda-project prepare
 
@@ -393,13 +393,13 @@ larger file, you might not want to include that either. The
 ``anaconda-project bundle`` command automatically omits the files
 it can reproduce automatically.
 
-Type:
+Type::
 
    anaconda-project bundle iris.zip
 
 You should now have a file ``iris.zip``. If you list the files in
 the zip, you'll see that the automatically-generated ones aren't
-in there:
+in there::
 
     $ unzip -l iris.zip
     Archive:  iris.zip
@@ -420,7 +420,7 @@ NOTE: ``anaconda-project`` also supports creating ``.tar.gz`` and
 ``.tar.bz2`` archives.
 
 When your colleague unzips the archive, they could list the
-commands in it:
+commands in it::
 
     $ anaconda-project list-commands
     Commands for project: /home/bob/projects/iris
