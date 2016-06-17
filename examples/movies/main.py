@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+#
+# The full license is in the file LICENSE.txt, distributed with this software.
+# ----------------------------------------------------------------------------
 from os.path import dirname, join
 import os
 
@@ -40,8 +46,7 @@ min_year = Slider(title="Year released", start=1940, end=2014, value=1970, step=
 max_year = Slider(title="End Year released", start=1940, end=2014, value=2014, step=1)
 oscars = Slider(title="Minimum number of Oscar wins", start=0, end=4, value=0, step=1)
 boxoffice = Slider(title="Dollars at Box Office (millions)", start=0, end=800, value=0, step=1)
-genre = Select(title="Genre", value="All",
-               options=open(join(dirname(__file__), 'genres.txt')).read().split())
+genre = Select(title="Genre", value="All", options=open(join(dirname(__file__), 'genres.txt')).read().split())
 director = TextInput(title="Director name contains")
 cast = TextInput(title="Cast names contains")
 x_axis = Select(title="X Axis", options=sorted(axis_map.keys()), value="Tomato Meter")
@@ -50,33 +55,27 @@ y_axis = Select(title="Y Axis", options=sorted(axis_map.keys()), value="Number o
 # Create Column Data Source that will be used by the plot
 source = ColumnDataSource(data=dict(x=[], y=[], color=[], title=[], year=[], revenue=[]))
 
-hover = HoverTool(tooltips=[
-    ("Title","@title"),
-    ("Year", "@year"),
-    ("$", "@revenue")
-])
+hover = HoverTool(tooltips=[("Title", "@title"), ("Year", "@year"), ("$", "@revenue")])
 
 p = Figure(plot_height=600, plot_width=800, title="", toolbar_location=None, tools=[hover])
 p.circle(x="x", y="y", source=source, size=7, color="color", line_color=None, fill_alpha="alpha")
+
 
 def select_movies():
     genre_val = genre.value
     director_val = director.value.strip()
     cast_val = cast.value.strip()
     selected = movies[
-        (movies.Reviews >= reviews.value) &
-        (movies.BoxOffice >= (boxoffice.value * 1e6)) &
-        (movies.Year >= min_year.value) &
-        (movies.Year <= max_year.value) &
-        (movies.Oscars >= oscars.value)
-    ]
+        (movies.Reviews >= reviews.value) & (movies.BoxOffice >= (boxoffice.value * 1e6)) & (
+            movies.Year >= min_year.value) & (movies.Year <= max_year.value) & (movies.Oscars >= oscars.value)]
     if (genre_val != "All"):
-        selected = selected[selected.Genre.str.contains(genre_val)==True]
+        selected = selected[selected.Genre.str.contains(genre_val)]
     if (director_val != ""):
-        selected = selected[selected.Director.str.contains(director_val)==True]
+        selected = selected[selected.Director.str.contains(director_val)]
     if (cast_val != ""):
-        selected = selected[selected.Cast.str.contains(cast_val)==True]
+        selected = selected[selected.Cast.str.contains(cast_val)]
     return selected
+
 
 def update(attrname, old, new):
     df = select_movies()
@@ -86,15 +85,14 @@ def update(attrname, old, new):
     p.xaxis.axis_label = x_axis.value
     p.yaxis.axis_label = y_axis.value
     p.title = "%d movies selected" % len(df)
-    source.data = dict(
-        x=df[x_name],
-        y=df[y_name],
-        color=df["color"],
-        title=df["Title"],
-        year=df["Year"],
-        revenue=df["revenue"],
-        alpha=df["alpha"],
-    )
+    source.data = dict(x=df[x_name],
+                       y=df[y_name],
+                       color=df["color"],
+                       title=df["Title"],
+                       year=df["Year"],
+                       revenue=df["revenue"],
+                       alpha=df["alpha"], )
+
 
 controls = [reviews, boxoffice, genre, min_year, max_year, oscars, director, cast, x_axis, y_axis]
 for control in controls:
@@ -102,6 +100,6 @@ for control in controls:
 
 inputs = HBox(VBoxForm(*controls), width=300)
 
-update(None, None, None) # initial load of the data
+update(None, None, None)  # initial load of the data
 
 curdoc().add_root(HBox(inputs, p, width=1100))
