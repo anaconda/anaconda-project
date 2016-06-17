@@ -246,7 +246,7 @@ def set_conda_env_in_path(path, prefix):
 ParsedSpec = collections.namedtuple('ParsedSpec', ['name', 'conda_constraint', 'pip_constraint'])
 
 # this is copied from conda
-spec_pat = re.compile(r'''
+_spec_pat = re.compile(r'''
 (?P<name>[^=<>!\s]+)               # package name
 \s*                                # ignore spaces
 (
@@ -264,7 +264,7 @@ def parse_spec(spec):
     Returns:
        ``ParsedSpec`` or None on failure
     """
-    m = spec_pat.match(spec)
+    m = _spec_pat.match(spec)
     if m is None:
         return None
     pip_constraint = m.group('pc')

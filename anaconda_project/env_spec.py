@@ -9,7 +9,8 @@ from __future__ import absolute_import
 
 import os
 
-from anaconda_project.internal.conda_api import parse_spec
+import anaconda_project.internal.conda_api as conda_api
+import anaconda_project.internal.pip_api as pip_api
 
 
 class EnvSpec(object):
@@ -64,7 +65,15 @@ class EnvSpec(object):
         """Conda package names that we require, as a Python set."""
         names = set()
         for spec in self.conda_packages:
-            names.add(parse_spec(spec).name)
+            names.add(conda_api.parse_spec(spec).name)
+        return names
+
+    @property
+    def pip_package_names_set(self):
+        """Pip package names that we require, as a Python set."""
+        names = set()
+        for spec in self.pip_packages:
+            names.add(pip_api.parse_spec(spec).name)
         return names
 
     def path(self, project_dir):

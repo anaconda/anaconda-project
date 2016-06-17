@@ -88,9 +88,12 @@ def test_pip_errors(monkeypatch):
                 return real_exists(path)
 
         monkeypatch.setattr('os.path.exists', mock_exists)
-        with pytest.raises(pip_api.PipError) as excinfo:
-            pip_api.installed(prefix=envdir)
+        with pytest.raises(pip_api.PipNotInstalledError) as excinfo:
+            pip_api.install(prefix=envdir, pkgs=['foo'])
         assert 'command is not installed in the environment' in repr(excinfo.value)
+
+        installed = pip_api.installed(prefix=envdir)
+        assert dict() == installed  # with pip not installed, no packages are listed.
 
         # pip command exits nonzero
         def get_failed_command(prefix, extra_args):
@@ -123,3 +126,23 @@ def test_pip_errors(monkeypatch):
 def test_installed_on_nonexistent_prefix():
     installed = pip_api.installed("/this/does/not/exist")
     assert dict() == installed
+
+
+def test_parse_spec():
+    # just a package name
+    assert "foo" == pip_api.parse_spec("foo").name
+    # ignore leading whitespace
+    assert "foo" == pip_api.parse_spec("  foo").name
+    # non-alphanumeric names not ok
+    assert pip_api.parse_spec("=") is None
+    assert pip_api.parse_spec("%%") is None
+    # ignore the version specifier stuff
+    assert "foo" == pip_api.parse_spec("foo==1.3").name
+    # these three punctuation chars are allowed
+    assert "a-_." == pip_api.parse_spec("a-_.").name
+
+    # a bunch of examples from the pip docs
+    for spec in ['SomeProject', 'SomeProject == 1.3', 'SomeProject >=1.2,<.2.0', 'SomeProject[foo, bar]',
+                 'SomeProject~=1.4.2', "SomeProject ==5.4 ; python_version < '2.7'",
+                 "SomeProject; sys_platform == 'win32'"]:
+        assert "SomeProject" == pip_api.parse_spec(spec).name

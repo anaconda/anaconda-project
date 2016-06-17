@@ -6,6 +6,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import collections
 import subprocess
 import os
 import re
@@ -18,6 +19,12 @@ class PipError(Exception):
     pass
 
 
+class PipNotInstalledError(PipError):
+    """Pip isn't even installed in this environment."""
+
+    pass
+
+
 # this function exists so we can monkeypatch it in tests
 def _get_pip_command(prefix, extra_args):
     # we need to use the pip from the prefix
@@ -25,7 +32,7 @@ def _get_pip_command(prefix, extra_args):
     win_pip = os.path.join(prefix, "Scripts", "pip.exe")
     pips = [pip for pip in [unix_pip, win_pip] if os.path.exists(pip)]
     if len(pips) == 0:
-        raise PipError("'pip' command is not installed in the environment %s" % prefix)
+        raise PipNotInstalledError("'pip' command is not installed in the environment %s" % prefix)
     cmd_list = [pips[0]]
     cmd_list.extend(extra_args)
     return cmd_list
@@ -75,7 +82,10 @@ def installed(prefix):
     """Get a dict of package names to (name, version) tuples."""
     if not os.path.isdir(prefix):
         return dict()
-    out = _call_pip(prefix, extra_args=['list']).decode('utf-8')
+    try:
+        out = _call_pip(prefix, extra_args=['list']).decode('utf-8')
+    except PipNotInstalledError:
+        out = ""  # if pip isn't installed, there are no pip packages
     # the output to parse looks like:
     #   ympy (0.7.6.1)
     #   tables (3.2.2)
@@ -85,3 +95,26 @@ def installed(prefix):
     for match in line_re.finditer(out):
         result[match.group(1)] = (match.group(1), match.group(2))
     return result
+
+
+ParsedPipSpec = collections.namedtuple('ParsedPipSpec', ['name'])
+
+_spec_pat = re.compile(' *([a-zA-Z0-9][-_.a-zA-Z0-9]+)')
+
+
+def parse_spec(spec):
+    """Parse a pip spec, right now we only understand the name portion.
+
+    Parsing it exactly as pip would is extremely complicated, and
+    we would pretty much have to import the pip code.
+    So for now we'll "fail late" when we invoke pip.
+
+    Returns:
+       ``ParsedPipSpec`` or None on failure
+
+    """
+    m = _spec_pat.match(spec)
+    if m is None:
+        return None
+    name = m.group(1)
+    return ParsedPipSpec(name=name)
