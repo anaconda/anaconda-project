@@ -241,6 +241,7 @@ For example::
     # default as part of options dict, needed if you also
     # want to set some options such as 'encrypted: true'
     BLAH: { default: "default_value_of_blah" }
+    BLARGH: { default: "default_value_of_blargh", encrypted: true }
 
 
 Variables can have custom description strings

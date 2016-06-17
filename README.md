@@ -72,9 +72,9 @@ especially useful when you change the required dependencies; with
 packages, while `anaconda-project run` will automatically add
 missing packages every time.
 
-Of course, `anaconda-project` can also perform other kinds of
-setup in addition to environment creation. It's a superset of
-`conda env` in that sense.
+In addition to environment creation, `anaconda-project` can also perform other
+kinds of setup, such as adding data files and running a database server. It's a
+superset of `conda env` in that sense.
 
 # Contributing
 
