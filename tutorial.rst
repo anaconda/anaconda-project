@@ -174,7 +174,7 @@ been installed in your project's environment.
 Environment variables configure your project
 ============================================
 
-You may have wondered about the string ``IRIS_CSV`. That's the
+You may have wondered about the string ``IRIS_CSV``. That's the
 environment variable that will tell your program where
 ``iris.csv`` lives. There are also some other environment
 variables that ``anaconda-project`` sets automatically, such as
