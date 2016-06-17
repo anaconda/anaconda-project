@@ -23,7 +23,8 @@ from anaconda_project.bundler import _list_relative_paths_for_unignored_project_
 
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.internal.simple_status import SimpleStatus
-from anaconda_project.internal.conda_api import parse_spec
+import anaconda_project.internal.conda_api as conda_api
+import anaconda_project.internal.pip_api as pip_api
 
 # These strings are used in the command line options to anaconda-project,
 # so changing them has back-compat consequences.
@@ -244,34 +245,53 @@ class _ConfigCache(object):
             ServiceRequirement._parse(self.registry, varname, item, problems, requirements)
 
     def _update_env_specs(self, problems, project_file):
-        def _parse_string_list(parent_dict, key, what):
+        def _parse_string_list_with_special(parent_dict, key, what, special_filter):
             items = parent_dict.get(key, [])
             if not isinstance(items, (list, tuple)):
                 problems.append("%s: %s: value should be a list of %ss, not '%r'" %
                                 (project_file.filename, key, what, items))
-                return []
+                return ([], [])
             cleaned = []
+            special = []
             for item in items:
                 if is_string(item):
                     cleaned.append(item.strip())
+                elif special_filter(item):
+                    special.append(item)
                 else:
                     problems.append("%s: %s: value should be a %s (as a string) not '%r'" %
                                     (project_file.filename, key, what, item))
-            return cleaned
+            return (cleaned, special)
+
+        def _parse_string_list(parent_dict, key, what):
+            return _parse_string_list_with_special(parent_dict, key, what, special_filter=lambda x: False)[0]
 
         def _parse_channels(parent_dict):
             return _parse_string_list(parent_dict, 'channels', 'channel name')
 
         def _parse_dependencies(parent_dict):
-            deps = _parse_string_list(parent_dict, 'dependencies', 'package name')
+            (deps, pip_dicts) = _parse_string_list_with_special(parent_dict, 'dependencies', 'package name',
+                                                                lambda x: isinstance(x, dict) and ('pip' in x))
             for dep in deps:
-                parsed = parse_spec(dep)
+                parsed = conda_api.parse_spec(dep)
                 if parsed is None:
                     problems.append("%s: invalid package specification: %s" % (project_file.filename, dep))
-            return deps
+
+            # note that multiple "pip:" dicts are allowed
+            pip_deps = []
+            for pip_dict in pip_dicts:
+                pip_list = _parse_string_list(pip_dict, 'pip', 'pip package name')
+                pip_deps.extend(pip_list)
+
+            for dep in pip_deps:
+                parsed = pip_api.parse_spec(dep)
+                if parsed is None:
+                    problems.append("%s: invalid pip package specifier: %s" % (project_file.filename, dep))
+
+            return (deps, pip_deps)
 
         self.env_specs = dict()
-        shared_deps = _parse_dependencies(project_file.root)
+        (shared_deps, shared_pip_deps) = _parse_dependencies(project_file.root)
         shared_channels = _parse_channels(project_file.root)
         env_specs = project_file.get_value('env_specs', default={})
         if isinstance(env_specs, dict):
@@ -284,16 +304,18 @@ class _ConfigCache(object):
                     problems.append("{}: 'description' field of environment {} must be a string".format(
                         project_file.filename, name))
                     continue
-                deps = _parse_dependencies(attrs)
+                (deps, pip_deps) = _parse_dependencies(attrs)
                 channels = _parse_channels(attrs)
                 # ideally we would merge same-name packages here, choosing the
                 # highest of the two versions or something. maybe conda will
                 # do that for us anyway?
                 all_deps = shared_deps + deps
+                all_pip_deps = shared_pip_deps + pip_deps
                 all_channels = shared_channels + channels
 
                 self.env_specs[name] = EnvSpec(name=name,
                                                conda_packages=all_deps,
+                                               pip_packages=all_pip_deps,
                                                channels=all_channels,
                                                description=description)
         else:
@@ -306,6 +328,7 @@ class _ConfigCache(object):
         if 'default' not in self.env_specs:
             self.env_specs['default'] = EnvSpec(name='default',
                                                 conda_packages=shared_deps,
+                                                pip_packages=shared_pip_deps,
                                                 channels=shared_channels,
                                                 description="Default")
 

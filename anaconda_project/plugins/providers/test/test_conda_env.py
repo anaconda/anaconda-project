@@ -10,6 +10,7 @@ import os
 import platform
 
 import anaconda_project.internal.conda_api as conda_api
+import anaconda_project.internal.pip_api as pip_api
 from anaconda_project.test.environ_utils import (minimal_environ, minimal_environ_no_conda_env,
                                                  strip_environ_keeping_conda_env)
 from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
@@ -207,6 +208,9 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         assert 'numpy' in installed
         assert 'ipython-notebook' in installed
 
+        installed_pip = pip_api.installed(prefix)
+        assert 'flake8' in installed_pip
+
         # Preparing it again with a bogus package should fail
         deps = project.project_file.get_value('dependencies')
         project.project_file.set_value(['dependencies'], deps + ['boguspackage'])
@@ -220,6 +224,8 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
 dependencies:
     - ipython
     - numpy
+    - pip:
+      - flake8
 """}, prepare_project_scoped_env_with_packages)
 
 
