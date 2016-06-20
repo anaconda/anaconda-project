@@ -941,11 +941,17 @@ def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove
             self.fixed = False
             self.deviations = CondaEnvironmentDeviations(summary="test",
                                                          missing_packages=missing_packages,
-                                                         wrong_version_packages=wrong_version_packages)
+                                                         wrong_version_packages=wrong_version_packages,
+                                                         missing_pip_packages=(),
+                                                         wrong_version_pip_packages=())
 
         def find_environment_deviations(self, prefix, spec):
             if self.fixed:
-                return CondaEnvironmentDeviations(summary="fixed", missing_packages=(), wrong_version_packages=())
+                return CondaEnvironmentDeviations(summary="fixed",
+                                                  missing_packages=(),
+                                                  wrong_version_packages=(),
+                                                  missing_pip_packages=(),
+                                                  wrong_version_pip_packages=())
             else:
                 return self.deviations
 

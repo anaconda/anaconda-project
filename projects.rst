@@ -176,6 +176,18 @@ your ``project.yml`` file (not in the ``env_specs:`` section),
 those channels and dependencies are added to all environment
 specs.
 
+pip dependencies
+================
+
+Underneath any `dependencies:` section, you can add a `pip:`
+section with a list of pip requirement specifiers.
+
+    dependencies:
+       - condapackage1
+       - pip:
+         - pippackage1
+         - pippackage2
+
 
 Requiring environment variables to be set
 =========================================

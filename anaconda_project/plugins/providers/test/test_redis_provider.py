@@ -631,7 +631,10 @@ sys.exit(1)
 
         def mock_Popen(*args, **kwargs):
             if 'args' not in kwargs:
-                raise RuntimeError("this mock only works if 'args' provided")
+                # `pip list` goes through this codepath while redis launch
+                # happens to specify args= as a kwarg
+                assert 'pip' in args[0][0]
+                return real_Popen(*args, **kwargs)
             kwargs['args'] = ['python', failscript, logfile, logfile_fail_mode]
             return real_Popen(*args, **kwargs)
 
@@ -687,7 +690,10 @@ def test_fail_to_prepare_local_redis_server_not_on_path(monkeypatch, capsys):
 
         def mock_Popen(*args, **kwargs):
             if 'args' not in kwargs:
-                raise RuntimeError("this mock only works if 'args' provided")
+                # `pip list` goes through this codepath while redis launch
+                # happens to specify args= as a kwarg
+                assert 'pip' in args[0][0]
+                return real_Popen(*args, **kwargs)
             kwargs['args'] = ['this-is-not-on-the-path']
             return real_Popen(*args, **kwargs)
 

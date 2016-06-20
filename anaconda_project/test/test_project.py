@@ -489,9 +489,11 @@ def test_get_package_requirements_from_project_file():
         project = project_no_dedicated_env(dirname)
         env = project.env_specs['default']
         assert env.name == 'default'
-        assert ("foo", "hello >= 1.0", "world") == env.dependencies
         assert ("mtv", "hbo") == env.channels
+        assert ("foo", "hello >= 1.0", "world") == env.conda_packages
+        assert ("pip1", "pip2==1.3", "pip3") == env.pip_packages
         assert set(["foo", "hello", "world"]) == env.conda_package_names_set
+        assert set(["pip1", "pip2", "pip3"]) == env.pip_package_names_set
 
         # find CondaEnvRequirement
         conda_env_req = None
@@ -509,6 +511,11 @@ dependencies:
   - foo
   - hello >= 1.0
   - world
+  - pip:
+     - pip1
+     - pip2==1.3
+  - pip:
+     - pip3
 
 channels:
   - mtv
@@ -519,7 +526,7 @@ channels:
 def test_get_package_requirements_from_empty_project():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
-        assert () == project.env_specs['default'].dependencies
+        assert () == project.env_specs['default'].conda_packages
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_get_packages)
 
@@ -536,18 +543,45 @@ dependencies:
     """}, check_get_packages)
 
 
+def test_complain_about_pip_deps_not_a_list():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        "should be a list of strings not 'CommentedMap" in project.problems[0]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+dependencies:
+    - pip: bar
+    """}, check)
+
+
+def test_complain_about_pip_deps_not_a_string():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        "should be a list of pip package names" in project.problems[0]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+dependencies:
+    - pip:
+      - {}
+    """}, check)
+
+
 def test_complain_about_dependencies_bad_spec():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
         filename = project.project_file.filename
         assert ["%s: invalid package specification: =" % filename, "%s: invalid package specification: foo bar" %
-                filename] == project.problems
+                filename, "%s: invalid pip package specifier: %%" % filename] == project.problems
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 dependencies:
     - "="
     - foo bar
+    - pip:
+      - "%"
     """}, check_get_packages)
 
 
@@ -593,10 +627,10 @@ def test_load_environments():
         default = project.env_specs['default']
         foo = project.env_specs['foo']
         bar = project.env_specs['bar']
-        assert default.dependencies == ()
-        assert foo.dependencies == ('python', 'dog', 'cat', 'zebra')
+        assert default.conda_packages == ()
+        assert foo.conda_packages == ('python', 'dog', 'cat', 'zebra')
         assert foo.description == "THE FOO"
-        assert bar.dependencies == ()
+        assert bar.conda_packages == ()
         assert bar.description == "bar"
 
     with_directory_contents(
@@ -625,9 +659,9 @@ def test_load_environments_merging_in_global():
         default = project.env_specs['default']
         foo = project.env_specs['foo']
         bar = project.env_specs['bar']
-        assert default.dependencies == ('dead-parrot', 'elephant', 'lion')
-        assert foo.dependencies == ('dead-parrot', 'elephant', 'python', 'dog', 'cat', 'zebra')
-        assert bar.dependencies == ('dead-parrot', 'elephant')
+        assert default.conda_packages == ('dead-parrot', 'elephant', 'lion')
+        assert foo.conda_packages == ('dead-parrot', 'elephant', 'python', 'dog', 'cat', 'zebra')
+        assert bar.conda_packages == ('dead-parrot', 'elephant')
         assert default.channels == ('mtv', 'cartoons')
         assert foo.channels == ('mtv', 'hbo')
         assert bar.channels == ('mtv', )
@@ -671,9 +705,9 @@ def test_load_environments_default_always_default_even_if_not_first():
         foo = project.env_specs['foo']
         bar = project.env_specs['bar']
         default = project.env_specs['default']
-        assert foo.dependencies == ()
-        assert bar.dependencies == ()
-        assert default.dependencies == ()
+        assert foo.conda_packages == ()
+        assert bar.conda_packages == ()
+        assert default.conda_packages == ()
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """

@@ -84,7 +84,7 @@ def list_dependencies(project_dir, environment):
         print("Project doesn't have an environment called '{}'".format(environment), file=sys.stderr)
         return 1
     print("Dependencies for environment '{}':\n".format(env.name))
-    print("\n".join(sorted(env.dependencies)), end='\n\n')
+    print("\n".join(sorted(env.conda_packages)), end='\n\n')
     return 0
 
 
