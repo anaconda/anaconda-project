@@ -22,7 +22,7 @@ from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_
 if platform.system() == 'Windows':
     PYTHON_BINARY = "python.exe"
     IPYTHON_BINARY = "Scripts\ipython.exe"
-    FLAKE8_BINARY = "Scripts\flake8.exe"
+    FLAKE8_BINARY = "Scripts\\flake8.exe"
 else:
     PYTHON_BINARY = "bin/python"
     IPYTHON_BINARY = "bin/ipython"

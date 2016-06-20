@@ -84,6 +84,8 @@ def installed(prefix):
         return dict()
     try:
         out = _call_pip(prefix, extra_args=['list']).decode('utf-8')
+        # on Windows, $ in a regex doesn't match \r\n, we need to get rid of \r
+        out = out.replace("\r\n", "\n")
     except PipNotInstalledError:
         out = ""  # if pip isn't installed, there are no pip packages
     # the output to parse looks like:

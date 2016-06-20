@@ -17,7 +17,7 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
 
 if platform.system() == 'Windows':
-    FLAKE8_BINARY = "Scripts\flake8.exe"
+    FLAKE8_BINARY = "Scripts\\flake8.exe"
 else:
     FLAKE8_BINARY = "bin/flake8"
 
