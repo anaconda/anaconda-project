@@ -9,6 +9,8 @@ from __future__ import absolute_import, print_function
 
 import sys
 
+_PY2 = sys.version_info[0] == 2
+
 
 def print_project_problems(project):
     """Print project problems to stderr, and return True if there were problems."""
@@ -76,12 +78,16 @@ def stdin_is_interactive():
     return sys.stdin.isatty()
 
 
+# this "_input" wrapper exists to let us mock "input" because
+# pytest makes it pesky to mock builtin functions that vary across
+# python versions.  Python 2 has "input" and "raw_input" where
+# "input" is eval(raw_input()).  Python 3 renames "raw_input" to
+# "input".
 def _input(prompt):
-    # builtins are annoying to mock especially when they are python-version-specific)
-    try:  # pragma: no cover
-        return input(prompt)  # flake8: noqa # pragma: no cover
-    except NameError:  # pragma: no cover
+    if _PY2:  # pragma: no cover
         return raw_input(prompt)  # flake8: noqa # pragma: no cover (py2 only)
+    else:
+        return input(prompt)  # flake8: noqa # pragma: no cover
 
 
 def console_input(prompt):
