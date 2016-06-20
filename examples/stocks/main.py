@@ -1,26 +1,7 @@
-# -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
-# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
-#
-# The full license is in the file LICENSE.txt, distributed with this software.
-# ----------------------------------------------------------------------------
 ''' Create a simple stocks correlation dashboard.
 
 Choose stocks to compare in the drop down widgets, and make selections
 on the plots to update the summary and histograms accordingly.
-
-.. note::
-    Running this example requires downloading sample data. See
-    the included `README`_ for more information.
-
-Use the ``bokeh serve`` command to run the example by executing:
-
-    bokeh serve stocks
-
-at your command prompt. Then navigate to the URL
-
-    http://localhost:5006/stocks
-
 '''
 try:
     from functools import lru_cache
