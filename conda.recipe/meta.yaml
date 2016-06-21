@@ -4,11 +4,12 @@ package:
 
 source:
   git_url: ../
+  # If you're trying to test build changes, you have to add this
+  # pointing to the branch you're modifying.
+  # git_tag: package-script
 
 build:
   number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
-  string: py_{{ environ.get("GIT_DESCRIBE_NUMBER", 0) }}
-  noarch_python: True
   entry_points:
     - anaconda-project = anaconda_project.commands.main:main
 
@@ -17,8 +18,16 @@ requirements:
     - python
     - setuptools
     - psutil # needed by conda
+    - bcrypt
+    - tornado
+    - pycrypto
+    - ruamel_yaml
+    - beautifulsoup4
+    - requests
+    - anaconda-client
 
   run:
+    - python
     - bcrypt
     - tornado
     - pycrypto
@@ -31,7 +40,10 @@ test:
   imports:
     - anaconda_project
   commands:
+    - echo "First of test commands"
     - anaconda-project --help
+    - anaconda-project --version
+    - echo "Last of test commands"
 
 about:
   home: https://github.com/Anaconda-Platform/anaconda-project/

@@ -9,6 +9,7 @@
 from __future__ import print_function
 
 import codecs
+import errno
 import os
 import platform
 import re
@@ -16,11 +17,32 @@ import shutil
 import subprocess
 import sys
 from os.path import dirname, realpath
-from distutils.core import setup
+from distutils.core import setup, Command
 from setuptools.command.test import test as TestCommand
 from setup_atomic_replace import atomic_replace
 
-VERSION = '0.1'
+
+def _obtain_version():
+    tag = os.environ.get("GIT_DESCRIBE_TAG", None)
+    if tag is None or tag == "":
+        out = subprocess.check_output(['git', 'describe', '--tags'])
+        tag = out.decode('utf-8').strip()
+        if tag == '':
+            raise Exception("git describe didn't give us a tag")
+    if tag is None:
+        raise Exception("Could not obtain git tag")
+
+    # the tag may be only "v2.1" or may be "v2.1-NN-ABCEFG",
+    # if the latter we drop the extra stuff
+    pieces = tag.replace("v", "").split("-")
+    version = pieces[0]
+    print("git tag is %s, version is %s" % (tag, version))
+    return version
+
+
+VERSION = _obtain_version()
+
+assert VERSION != ''
 
 ROOT = dirname(realpath(__file__))
 
@@ -92,6 +114,23 @@ try:
     print("Coverage monkeypatched to skip_covered")
 except Exception as e:
     print("Failed to monkeypatch coverage: " + str(e), file=sys.stderr)
+
+
+def _update_version_file():
+    version_code = ('"""Version information."""\n\n' + '# Note: this is a generated file, edit setup.py not here.\n' +
+                    ('version = "%s"\n' % VERSION))
+    content = coding_utf8_header + copyright_header + version_code
+    version_py = os.path.join(ROOT, 'anaconda_project', 'version.py')
+    try:
+        old_content = codecs.open(version_py, 'r', 'utf-8').read()
+    except IOError as e:
+        if e.errno == errno.ENOENT:
+            old_content = ""
+        else:
+            raise e
+    if old_content != content:
+        print("Updating " + version_py + " with version " + VERSION)
+        atomic_replace(version_py, content, 'utf-8')
 
 
 class AllTestsCommand(TestCommand):
@@ -172,18 +211,6 @@ class AllTestsCommand(TestCommand):
                         print("Creating " + init_py)
                         with codecs.open(init_py, 'w', 'utf-8') as handle:
                             handle.flush()
-
-    def _update_version_file(self):
-        version_code = (
-            '"""Version information."""\n\n' + '# Note: this is a generated file, edit setup.py not here.\n' +
-            ('version = "%s"\n' % VERSION))
-        content = coding_utf8_header + copyright_header + version_code
-        version_py = os.path.join(ROOT, 'anaconda_project', 'version.py')
-        old_content = codecs.open(version_py, 'r', 'utf-8').read()
-        if old_content != content:
-            print("Updating " + version_py)
-            atomic_replace(version_py, content, 'utf-8')
-            self.failed.append('version-file-updated')
 
     def _headerize_file(self, path):
         with codecs.open(path, 'r', 'utf-8') as file:
@@ -343,7 +370,7 @@ class AllTestsCommand(TestCommand):
             print("Only formatting %d git-staged python files, skipping %d files" %
                   (len(self._git_staged_py_files()), len(self._py_files())))
         self._add_missing_init_py()
-        self._update_version_file()
+        _update_version_file()
         self._headers()
         # only yapf is slow enough to really be worth profiling
         if self.profile_formatting:
@@ -379,6 +406,110 @@ class AllTestsCommand(TestCommand):
                     print("All tests passed! 💯 🌟")
 
 
+class VersionModuleCommand(Command):
+    description = "Write out version.py"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        _update_version_file()
+
+
+def _safe_makedirs(path):
+    try:
+        os.makedirs(path)
+    except OSError:
+        pass
+
+
+class CondaPackageCommand(Command):
+    description = "Create Conda packages"
+    user_options = [('packages-dir=', None, "Where to put the packages"), ]
+
+    def initialize_options(self):
+        self.packages_dir = None
+
+    def finalize_options(self):
+        if self.packages_dir is None:
+            self.packages_dir = os.path.join(ROOT, 'build', 'packages')
+        _safe_makedirs(self.packages_dir)
+
+    def run(self):
+        try:
+            self._real_run()
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print("setup.py: Failed to build packages: " + str(e), file=sys.stderr)
+            sys.exit(1)
+
+    def _real_run(self):
+        recipe_dir = os.path.join(ROOT, 'conda.recipe')
+        python_versions = ('2.7', '3.4', '3.5')
+        all_final_package_paths = []
+        for python_version in python_versions:
+            out = subprocess.check_output(['conda', 'build', '--output', '--python', python_version, recipe_dir])
+            package_path = out.decode('utf-8').strip()
+            print("expected conda package path: " + package_path)
+            if '--' in package_path:
+                # conda build bug?
+                print("package_path looks broken, contains -- in it. fixing...")
+                package_path = package_path.replace("--", "-%s-" % VERSION)
+                print("new conda package path: " + package_path)
+            build_arch = os.path.basename(os.path.dirname(package_path))
+            python_scoped_package_dir = os.path.join(self.packages_dir, "py%s" % python_version)
+            final_package_path = os.path.join(python_scoped_package_dir, build_arch, os.path.basename(package_path))
+            all_final_package_paths.append(final_package_path)
+            if os.path.isfile(final_package_path):
+                print("Package for python %s platform %s already exists: %s" %
+                      (python_version, build_arch, final_package_path))
+            else:
+                if os.path.isfile(package_path):
+                    print("Already built for python %s at %s" % (python_version, package_path))
+                else:
+                    print("Calling conda build for %s %s" % (python_version, build_arch))
+                    code = subprocess.call(['conda', 'build', '--no-binstar-upload', '--python', python_version,
+                                            recipe_dir])
+                    if code != 0:
+                        raise Exception("Failed to build for python version " + python_version)
+                    if not os.path.isfile(package_path):
+                        try:
+                            print("files that DO exist: " + repr(os.listdir(os.path.basename(package_path))))
+                        except Exception as e:
+                            print(" (failed to list files that do exist, %s)"  % str(e))
+                        raise Exception("conda said it would build %s but it didn't" % package_path)
+
+                _safe_makedirs(os.path.dirname(final_package_path))
+                print("Copying %s to %s" % (package_path, final_package_path))
+                shutil.copyfile(package_path, final_package_path)
+                print("Created %s" % final_package_path)
+
+            for arch in ('osx-64', 'linux-32', 'win-32', 'win-64'):
+                if arch == build_arch:
+                    continue
+                converted_output_dir = os.path.join(python_scoped_package_dir)
+                converted_package_path = os.path.join(converted_output_dir, arch, os.path.basename(package_path))
+                if os.path.isfile(converted_package_path):
+                    print("Already converted to %s from %s for python %s" % (arch, build_arch, python_version))
+                else:
+                    print("Creating %s by conversion %s=>%s" % (converted_package_path, build_arch, arch))
+                    _safe_makedirs(converted_output_dir)
+                    # this automatically creates the "arch" directory to put the package in
+                    code = subprocess.call(['conda', 'convert', '--platform', arch, final_package_path, '--output-dir',
+                                            converted_output_dir])
+                    if code != 0:
+                        raise Exception("Failed to convert from %s to %s to create %s" %
+                                        (build_arch, arch, converted_package_path))
+                    all_final_package_paths.append(converted_package_path)
+
+        print("Packages in " + self.packages_dir)
+
+
 setup(name='anaconda-project',
       version=VERSION,
       author="Continuum Analytics",
@@ -389,7 +520,9 @@ setup(name='anaconda-project',
       zip_safe=False,
       install_requires=REQUIRES,
       tests_require=TEST_REQUIRES,
-      cmdclass=dict(test=AllTestsCommand),
+      cmdclass=dict(test=AllTestsCommand,
+                    conda_package=CondaPackageCommand,
+                    version_module=VersionModuleCommand),
       scripts=[
           'bin/anaconda-project'
       ],
