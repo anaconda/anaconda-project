@@ -19,7 +19,7 @@ from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.project_commands import ProjectCommand
 from anaconda_project.project_file import ProjectFile
-from anaconda_project.bundler import _list_relative_paths_for_unignored_project_files
+from anaconda_project.archiver import _list_relative_paths_for_unignored_project_files
 
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.internal.simple_status import SimpleStatus

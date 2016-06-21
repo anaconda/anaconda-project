@@ -22,7 +22,7 @@ import anaconda_project.commands.init as init
 import anaconda_project.commands.run as run
 import anaconda_project.commands.prepare as prepare
 import anaconda_project.commands.clean as clean
-import anaconda_project.commands.bundle as bundle
+import anaconda_project.commands.archive as archive
 import anaconda_project.commands.upload as upload
 import anaconda_project.commands.activate as activate
 import anaconda_project.commands.variable_commands as variable_commands
@@ -103,11 +103,11 @@ def _parse_args_and_run_subcommand(argv):
     add_prepare_args(preset)
     preset.set_defaults(main=activate.main)
 
-    preset = subparsers.add_parser('bundle',
+    preset = subparsers.add_parser('archive',
                                    help="Create a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
     add_project_arg(preset)
     preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
-    preset.set_defaults(main=bundle.main)
+    preset.set_defaults(main=archive.main)
 
     preset = subparsers.add_parser('upload', help="Upload the project to Anaconda Cloud")
     add_project_arg(preset)

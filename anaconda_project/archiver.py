@@ -204,7 +204,7 @@ def _ignore_file_filter(project_directory, errors):
     return matches_some_pattern
 
 
-def _enumerate_bundle_files(project_directory, errors, requirements):
+def _enumerate_archive_files(project_directory, errors, requirements):
     git_filter = _git_filter(project_directory, errors)
     ignore_file_filter = _ignore_file_filter(project_directory, errors)
     if git_filter is None or ignore_file_filter is None:
@@ -270,14 +270,14 @@ def _write_zip(archive_root_name, infos, filename, logs):
 
 # function exported for project.py
 def _list_relative_paths_for_unignored_project_files(project_directory, errors, requirements):
-    infos = _enumerate_bundle_files(project_directory, errors, requirements=requirements)
+    infos = _enumerate_archive_files(project_directory, errors, requirements=requirements)
     if infos is None:
         return None
     return [info.relative_path for info in infos]
 
 
 # function exported for project_ops.py
-def _bundle_project(project, filename):
+def _archive_project(project, filename):
     """Make an archive of the non-ignored files in the project.
 
     Args:
@@ -292,12 +292,12 @@ def _bundle_project(project, filename):
         return failed
 
     errors = []
-    infos = _enumerate_bundle_files(project.directory_path, errors, requirements=project.requirements)
+    infos = _enumerate_archive_files(project.directory_path, errors, requirements=project.requirements)
     if infos is None:
         return SimpleStatus(success=False, description="Failed to list files in the project.", errors=errors)
 
     # don't put the destination zip into itself, since it's fairly natural to
-    # create a bundle right in the project directory
+    # create a archive right in the project directory
     relative_dest_file = subdirectory_relative_to_directory(filename, project.directory_path)
     if not os.path.isabs(relative_dest_file):
         infos = [info for info in infos if info.relative_path != relative_dest_file]
@@ -315,12 +315,12 @@ def _bundle_project(project, filename):
             _write_tar(project.name, infos, tmp_filename, compression=None, logs=logs)
         else:
             return SimpleStatus(success=False,
-                                description="Project bundle filename must be a .zip, .tar.gz, or .tar.bz2.",
-                                errors=["Unsupported bundle filename %s." % (filename)])
+                                description="Project archive filename must be a .zip, .tar.gz, or .tar.bz2.",
+                                errors=["Unsupported archive filename %s." % (filename)])
         rename_over_existing(tmp_filename, filename)
     except IOError as e:
         return SimpleStatus(success=False,
-                            description=("Failed to write project bundle %s." % (filename)),
+                            description=("Failed to write project archive %s." % (filename)),
                             errors=[str(e)])
     finally:
         try:
@@ -328,4 +328,4 @@ def _bundle_project(project, filename):
         except (IOError, OSError):
             pass
 
-    return SimpleStatus(success=True, description=("Created project bundle %s" % filename), logs=logs)
+    return SimpleStatus(success=True, description=("Created project archive %s" % filename), logs=logs)

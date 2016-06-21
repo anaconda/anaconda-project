@@ -13,36 +13,36 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 
-def test_bundle_command_on_empty_project(capsys):
+def test_archive_command_on_empty_project(capsys):
     def check(dirname):
-        bundlefile = os.path.join(dirname, "foo.zip")
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'bundle', '--project', dirname, bundlefile])
+        archivefile = os.path.join(dirname, "foo.zip")
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--project', dirname, archivefile])
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert ('Created project bundle %s\n' % bundlefile) == out
+        assert ('Created project archive %s\n' % archivefile) == out
         assert '' == err
 
     with_directory_contents(dict(), check)
 
 
-def test_bundle_command_on_simple_project(capsys):
+def test_archive_command_on_simple_project(capsys):
     def check(dirname):
-        bundlefile = os.path.join(dirname, "foo.zip")
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'bundle', '--project', dirname, bundlefile])
+        archivefile = os.path.join(dirname, "foo.zip")
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--project', dirname, archivefile])
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert ('  added %s\nCreated project bundle %s\n' % (os.path.join(
-            os.path.basename(dirname), "foo.py"), bundlefile)) == out
+        assert ('  added %s\nCreated project archive %s\n' % (os.path.join(
+            os.path.basename(dirname), "foo.py"), archivefile)) == out
         assert '' == err
 
     with_directory_contents({'foo.py': 'print("hello")\n'}, check)
 
 
-def test_bundle_command_on_invalid_project(capsys):
+def test_archive_command_on_invalid_project(capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'bundle', '--project', dirname, 'foo.zip'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--project', dirname, 'foo.zip'])
         assert code == 1
 
         out, err = capsys.readouterr()

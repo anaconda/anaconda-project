@@ -4,7 +4,7 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-"""The ``bundle`` command makes an archive of the project."""
+"""The ``archive`` command makes an archive of the project."""
 from __future__ import absolute_import, print_function
 
 from anaconda_project.project import Project
@@ -12,14 +12,14 @@ from anaconda_project.commands import console_utils
 import anaconda_project.project_ops as project_ops
 
 
-def bundle_command(project_dir, bundle_filename):
+def archive_command(project_dir, archive_filename):
     """Make an archive of the project.
 
     Returns:
         exit code
     """
     project = Project(project_dir)
-    status = project_ops.bundle(project, bundle_filename)
+    status = project_ops.archive(project, archive_filename)
     if status:
         for line in status.logs:
             print(line)
@@ -31,5 +31,5 @@ def bundle_command(project_dir, bundle_filename):
 
 
 def main(args):
-    """Start the bundle command and return exit status code."""
-    return bundle_command(args.project, args.filename)
+    """Start the archive command and return exit status code."""
+    return archive_command(args.project, args.filename)

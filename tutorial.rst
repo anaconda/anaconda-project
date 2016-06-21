@@ -391,12 +391,12 @@ containing it. Of course you won't want to include
 ``envs/default``, because conda environments don't work if moved
 between machines, plus they are large. If ``iris.csv`` were a
 larger file, you might not want to include that either. The
-``anaconda-project bundle`` command automatically omits the files
+``anaconda-project archive`` command automatically omits the files
 it can reproduce automatically.
 
 Type::
 
-   anaconda-project bundle iris.zip
+   anaconda-project archive iris.zip
 
 You should now have a file ``iris.zip``. If you list the files in
 the zip, you'll see that the automatically-generated ones aren't
@@ -418,7 +418,8 @@ NOTE: there's a ``.projectignore`` file you can use to manually
 exclude anything you don't want in your archives.
 
 NOTE: ``anaconda-project`` also supports creating ``.tar.gz`` and
-``.tar.bz2`` archives.
+``.tar.bz2`` archives. The archive format will match the filename
+you provide.
 
 When your colleague unzips the archive, they could list the
 commands in it::
