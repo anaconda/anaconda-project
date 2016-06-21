@@ -1512,7 +1512,7 @@ env_specs:
 
 
 def _strip_prefixes(names):
-    return list([name[len("bundledproj/"):] for name in names])
+    return list([name[len("archivedproj/"):] for name in names])
 
 
 def _assert_zip_contains(zip_path, filenames):
@@ -1525,9 +1525,9 @@ def _assert_tar_contains(tar_path, filenames):
         assert sorted(_strip_prefixes(tf.getnames())) == sorted(filenames)
 
 
-def test_bundle_zip():
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+def test_archive_zip():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
         def check(dirname):
             # be sure we ignore these
@@ -1535,24 +1535,24 @@ def test_bundle_zip():
             os.makedirs(os.path.join(dirname, "envs"))
 
             project = project_no_dedicated_env(dirname)
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_zip_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'project.yml',
-                                              'project-local.yml'])
+            assert os.path.exists(archivefile)
+            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'project.yml',
+                                               'project-local.yml'])
 
             # overwriting should work
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_zip_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'project.yml',
-                                              'project-local.yml'])
+            assert os.path.exists(archivefile)
+            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'project.yml',
+                                               'project-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
 services:
    REDIS_URL: redis
     """,
@@ -1561,12 +1561,12 @@ services:
              "a/b/c/d.py": "",
              "a/b/c/e.py": ""}, check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_tar():
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.tar")
+def test_archive_tar():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.tar")
 
         def check(dirname):
             # be sure we ignore these
@@ -1574,24 +1574,24 @@ def test_bundle_tar():
             os.makedirs(os.path.join(dirname, "envs"))
 
             project = project_no_dedicated_env(dirname)
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                              'project-local.yml'])
+            assert os.path.exists(archivefile)
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                               'project-local.yml'])
 
             # overwriting should work
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                              'project-local.yml'])
+            assert os.path.exists(archivefile)
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                               'project-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
 services:
    REDIS_URL: redis
     """,
@@ -1600,12 +1600,12 @@ services:
              "a/b/c/d.py": "",
              "a/b/c/e.py": ""}, check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_tar_gz():
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.tar.gz")
+def test_archive_tar_gz():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.tar.gz")
 
         def check(dirname):
             # be sure we ignore these
@@ -1613,24 +1613,24 @@ def test_bundle_tar_gz():
             os.makedirs(os.path.join(dirname, "envs"))
 
             project = project_no_dedicated_env(dirname)
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                              'project-local.yml'])
+            assert os.path.exists(archivefile)
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                               'project-local.yml'])
 
             # overwriting should work
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                              'project-local.yml'])
+            assert os.path.exists(archivefile)
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                               'project-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
 services:
    REDIS_URL: redis
     """,
@@ -1639,12 +1639,12 @@ services:
              "a/b/c/d.py": "",
              "a/b/c/e.py": ""}, check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_tar_bz2():
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.tar.bz2")
+def test_archive_tar_bz2():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.tar.bz2")
 
         def check(dirname):
             # be sure we ignore these
@@ -1652,24 +1652,24 @@ def test_bundle_tar_bz2():
             os.makedirs(os.path.join(dirname, "envs"))
 
             project = project_no_dedicated_env(dirname)
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                              'project-local.yml'])
+            assert os.path.exists(archivefile)
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                               'project-local.yml'])
 
             # overwriting should work
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_tar_contains(bundlefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                              'project-local.yml'])
+            assert os.path.exists(archivefile)
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
+                                               'project-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
 services:
    REDIS_URL: redis
     """,
@@ -1678,12 +1678,12 @@ services:
              "a/b/c/d.py": "",
              "a/b/c/e.py": ""}, check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_cannot_write_destination_path(monkeypatch):
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+def test_archive_cannot_write_destination_path(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
         def mock_ZipFile(*args, **kwargs):
             raise IOError("NOPE")
@@ -1695,19 +1695,19 @@ def test_bundle_cannot_write_destination_path(monkeypatch):
             os.makedirs(os.path.join(dirname, "envs"))
 
             project = project_no_dedicated_env(dirname)
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert not status
-            assert status.status_description == ('Failed to write project bundle %s.' % bundlefile)
+            assert status.status_description == ('Failed to write project archive %s.' % archivefile)
             assert ['NOPE'] == status.errors
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
     """,
              "foo.py": "print('hello')\n"}, check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
 def _add_empty_git(contents):
@@ -1735,35 +1735,35 @@ def _add_empty_git(contents):
     return contents
 
 
-def test_bundle_zip_with_gitignore():
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+def test_archive_zip_with_gitignore():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
         def check(dirname):
             # be sure we ignore this
             os.makedirs(os.path.join(dirname, "envs"))
 
             project = project_no_dedicated_env(dirname)
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_zip_contains(bundlefile, ['foo.py', '.gitignore', 'project.yml', 'project-local.yml'])
+            assert os.path.exists(archivefile)
+            _assert_zip_contains(archivefile, ['foo.py', '.gitignore', 'project.yml', 'project-local.yml'])
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
         """,
                             "foo.py": "print('hello')\n",
                             '.gitignore': "/ignored.py\n",
                             'ignored.py': 'print("ignore me!")'}), check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_zip_with_failing_git_command(monkeypatch):
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+def test_archive_zip_with_failing_git_command(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
         def check(dirname):
             # be sure we ignore this
@@ -1778,10 +1778,10 @@ def test_bundle_zip_with_failing_git_command(monkeypatch):
 
             monkeypatch.setattr('subprocess.check_output', mock_check_output)
 
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert not status
-            assert not os.path.exists(bundlefile)
+            assert not os.path.exists(archivefile)
             # before the "." is the command output, but "false" has no output.
             assert status.errors == ["'git ls-files' failed to list ignored files: ."]
 
@@ -1790,12 +1790,12 @@ def test_bundle_zip_with_failing_git_command(monkeypatch):
         """,
                             "foo.py": "print('hello')\n"}), check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_zip_with_exception_executing_git_command(monkeypatch):
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+def test_archive_zip_with_exception_executing_git_command(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
         def check(dirname):
             # be sure we ignore these
@@ -1811,10 +1811,10 @@ def test_bundle_zip_with_exception_executing_git_command(monkeypatch):
 
             monkeypatch.setattr('subprocess.check_output', mock_check_output)
 
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert not status
-            assert not os.path.exists(bundlefile)
+            assert not os.path.exists(archivefile)
             assert len(status.errors) == 1
             # full error message is platform-dependent
             assert status.errors[0].startswith("Failed to run 'git ls-files'")
@@ -1824,12 +1824,12 @@ def test_bundle_zip_with_exception_executing_git_command(monkeypatch):
         """,
                             "foo.py": "print('hello')\n"}), check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_zip_with_inability_to_walk_directory(monkeypatch):
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+def test_archive_zip_with_inability_to_walk_directory(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
         def check(dirname):
             # be sure we ignore these
@@ -1844,26 +1844,26 @@ def test_bundle_zip_with_inability_to_walk_directory(monkeypatch):
 
             monkeypatch.setattr('os.walk', mock_os_walk)
 
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert not status
-            assert not os.path.exists(bundlefile)
+            assert not os.path.exists(archivefile)
             assert status.status_description == "Failed to list files in the project."
             assert len(status.errors) > 0
             assert status.errors[0].startswith("Could not list files in")
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
         """,
                             "foo.py": "print('hello')\n"}), check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_zip_with_unreadable_projectignore(monkeypatch):
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+def test_archive_zip_with_unreadable_projectignore(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
         def check(dirname):
             # be sure we ignore these
@@ -1886,59 +1886,59 @@ def test_bundle_zip_with_unreadable_projectignore(monkeypatch):
 
             monkeypatch.setattr('codecs.open', mock_codecs_open)
 
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert not status
-            assert not os.path.exists(bundlefile)
+            assert not os.path.exists(archivefile)
             assert ["Failed to read %s: NOPE" % ignorefile] == status.errors
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
         """,
                             "foo.py": "print('hello')\n"}), check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_with_bogus_filename(monkeypatch):
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.bar")
+def test_archive_with_bogus_filename(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.bar")
 
         def check(dirname):
             project = project_no_dedicated_env(dirname)
 
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert not status
-            assert not os.path.exists(bundlefile)
-            assert status.status_description == "Project bundle filename must be a .zip, .tar.gz, or .tar.bz2."
-            assert status.errors == ["Unsupported bundle filename %s." % bundlefile]
+            assert not os.path.exists(archivefile)
+            assert status.status_description == "Project archive filename must be a .zip, .tar.gz, or .tar.bz2."
+            assert status.errors == ["Unsupported archive filename %s." % archivefile]
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
         """,
                             "foo.py": "print('hello')\n"}), check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_zip_with_downloaded_file():
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+def test_archive_zip_with_downloaded_file():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
         def check(dirname):
             project = project_no_dedicated_env(dirname)
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+            assert os.path.exists(archivefile)
+            _assert_zip_contains(archivefile, ['foo.py', 'project.yml', 'project-local.yml'])
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
 downloads:
    MYDOWNLOAD: "http://example.com/downloaded.py"
 """,
@@ -1946,42 +1946,42 @@ downloads:
                             'downloaded.py': 'print("ignore me!")',
                             'downloaded.py.part': ''}), check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
-def test_bundle_zip_overwrites_but_does_not_include_the_dest_zip():
+def test_archive_zip_overwrites_but_does_not_include_the_dest_zip():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
-        bundlefile = os.path.join(dirname, "foo.zip")
-        assert os.path.isfile(bundlefile)
+        archivefile = os.path.join(dirname, "foo.zip")
+        assert os.path.isfile(archivefile)
 
-        status = project_ops.bundle(project, bundlefile)
-
-        assert status
-        assert os.path.exists(bundlefile)
-
-        _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
-
-        # re-bundle to the same file
-        status = project_ops.bundle(project, bundlefile)
+        status = project_ops.archive(project, archivefile)
 
         assert status
-        assert os.path.exists(bundlefile)
+        assert os.path.exists(archivefile)
 
-        _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', 'project-local.yml'])
+        _assert_zip_contains(archivefile, ['foo.py', 'project.yml', 'project-local.yml'])
+
+        # re-archive to the same file
+        status = project_ops.archive(project, archivefile)
+
+        assert status
+        assert os.path.exists(archivefile)
+
+        _assert_zip_contains(archivefile, ['foo.py', 'project.yml', 'project-local.yml'])
 
     with_directory_contents(
         _add_empty_git({DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
 """,
                         "foo.py": "print('hello')\n",
                         'foo.zip': ""}), check)
 
 
-def test_bundle_zip_with_projectignore():
-    def bundletest(bundle_dest_dir):
-        bundlefile = os.path.join(bundle_dest_dir, "foo.zip")
+def test_archive_zip_with_projectignore():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
         def check(dirname):
             # be sure we ignore this
@@ -1989,22 +1989,22 @@ def test_bundle_zip_with_projectignore():
 
             project = project_ops.create(dirname)
             assert [] == project.problems
-            status = project_ops.bundle(project, bundlefile)
+            status = project_ops.archive(project, archivefile)
 
             assert status
-            assert os.path.exists(bundlefile)
-            _assert_zip_contains(bundlefile, ['foo.py', 'project.yml', '.projectignore', 'bar/'])
+            assert os.path.exists(archivefile)
+            _assert_zip_contains(archivefile, ['foo.py', 'project.yml', '.projectignore', 'bar/'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
-name: bundledproj
+name: archivedproj
         """,
              "foo.py": "print('hello')\n",
              "foo.pyc": "",
              ".ipynb_checkpoints": "",
              "bar/blah.pyc": ""}, check)
 
-    with_directory_contents(dict(), bundletest)
+    with_directory_contents(dict(), archivetest)
 
 
 def test_upload(monkeypatch):

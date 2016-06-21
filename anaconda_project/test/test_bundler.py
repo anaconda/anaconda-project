@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from anaconda_project import bundler
+from anaconda_project import archiver
 from anaconda_project import project_ops
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
@@ -16,7 +16,7 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 def test_parse_ignore_file():
     def check(dirname):
         errors = []
-        patterns = bundler._parse_ignore_file(os.path.join(dirname, ".projectignore"), errors)
+        patterns = archiver._parse_ignore_file(os.path.join(dirname, ".projectignore"), errors)
         assert [] == errors
 
         pattern_strings = [pattern.pattern for pattern in patterns]
@@ -44,7 +44,7 @@ hello
 def test_parse_missing_ignore_file():
     def check(dirname):
         errors = []
-        patterns = bundler._parse_ignore_file(os.path.join(dirname, ".projectignore"), errors)
+        patterns = archiver._parse_ignore_file(os.path.join(dirname, ".projectignore"), errors)
         assert [] == errors
 
         pattern_strings = [pattern.pattern for pattern in patterns]
@@ -69,7 +69,7 @@ def test_parse_ignore_file_with_io_error(monkeypatch):
 
         monkeypatch.setattr('codecs.open', mock_codecs_open)
 
-        patterns = bundler._parse_ignore_file(ignorefile, errors)
+        patterns = archiver._parse_ignore_file(ignorefile, errors)
         assert patterns is None
         assert ["Failed to read %s: NOPE" % ignorefile] == errors
 
@@ -86,7 +86,7 @@ def test_parse_default_ignore_file():
         assert os.path.isfile(ignorefile)
 
         errors = []
-        patterns = bundler._parse_ignore_file(ignorefile, errors)
+        patterns = archiver._parse_ignore_file(ignorefile, errors)
         assert [] == errors
 
         pattern_strings = [pattern.pattern for pattern in patterns]
@@ -102,7 +102,7 @@ def _test_file_pattern_matcher(tests, is_directory):
         pass
 
     for pattern_string in tests.keys():
-        pattern = bundler._FilePattern(pattern_string)
+        pattern = archiver._FilePattern(pattern_string)
         should_match = tests[pattern_string]['yes']
         should_not_match = tests[pattern_string]['no']
         matched = []

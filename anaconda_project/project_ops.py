@@ -15,7 +15,7 @@ import tempfile
 import anaconda_project
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import prepare
-from anaconda_project import bundler
+from anaconda_project import archiver
 from anaconda_project import client
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import EnvVarRequirement
@@ -997,7 +997,7 @@ def clean(project, prepare_result):
         return SimpleStatus(success=False, description="Failed to clean everything up.", logs=logs, errors=errors)
 
 
-def bundle(project, filename):
+def archive(project, filename):
     """Make an archive of the non-ignored files in the project.
 
     Args:
@@ -1007,7 +1007,7 @@ def bundle(project, filename):
     Returns:
         a ``Status``, if failed has ``errors``
     """
-    return bundler._bundle_project(project, filename)
+    return archiver._archive_project(project, filename)
 
 
 def upload(project, site=None, username=None, token=None, log_level=None):
@@ -1041,7 +1041,7 @@ def upload(project, site=None, username=None, token=None, log_level=None):
     tmp_tarfile = tempfile.NamedTemporaryFile(delete=False, prefix="anaconda_upload_", suffix=".tar.bz2")
     tmp_tarfile.close()  # immediately un-use it to avoid file-in-use errors on Windows
     try:
-        status = bundle(project, tmp_tarfile.name)
+        status = archive(project, tmp_tarfile.name)
         if not status:
             return status
         status = client._upload(project,

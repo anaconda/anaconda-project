@@ -487,22 +487,22 @@ def test_clean(monkeypatch):
     assert kwargs == params['kwargs']
 
 
-def test_bundle(monkeypatch):
+def test_archive(monkeypatch):
     import anaconda_project.project_ops as project_ops
-    _verify_args_match(api.AnacondaProject.bundle, project_ops.bundle)
+    _verify_args_match(api.AnacondaProject.archive, project_ops.archive)
 
     params = dict(args=(), kwargs=dict())
 
-    def mock_bundle(*args, **kwargs):
+    def mock_archive(*args, **kwargs):
         params['args'] = args
         params['kwargs'] = kwargs
         return 42
 
-    monkeypatch.setattr('anaconda_project.project_ops.bundle', mock_bundle)
+    monkeypatch.setattr('anaconda_project.project_ops.archive', mock_archive)
 
     p = api.AnacondaProject()
     kwargs = dict(project=43, filename=123)
-    result = p.bundle(**kwargs)
+    result = p.archive(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
 

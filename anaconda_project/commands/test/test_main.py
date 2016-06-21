@@ -12,11 +12,11 @@ import os
 import anaconda_project
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 
-all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'bundle', 'upload', 'add-variable', 'remove-variable',
-                   'list-variables', 'set-variable', 'unset-variable', 'add-download', 'remove-download',
-                   'list-downloads', 'add-service', 'remove-service', 'list-services', 'add-env-spec',
-                   'remove-env-spec', 'list-env-specs', 'add-dependencies', 'remove-dependencies', 'list-dependencies',
-                   'add-command', 'remove-command', 'list-commands')
+all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'upload', 'add-variable',
+                   'remove-variable', 'list-variables', 'set-variable', 'unset-variable', 'add-download',
+                   'remove-download', 'list-downloads', 'add-service', 'remove-service', 'list-services',
+                   'add-env-spec', 'remove-env-spec', 'list-env-specs', 'add-dependencies', 'remove-dependencies',
+                   'list-dependencies', 'add-command', 'remove-command', 'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -67,7 +67,7 @@ expected_usage_msg = \
         '                        environment files, etc)\n' \
         '    activate            Set up the project and output shell export commands\n' \
         '                        reflecting the setup\n' \
-        '    bundle              Create a .zip, .tar.gz, or .tar.bz2 archive with\n' \
+        '    archive             Create a .zip, .tar.gz, or .tar.bz2 archive with\n' \
         '                        project files in it\n'\
         '    upload              Upload the project to Anaconda Cloud\n' \
         '    add-variable        Add a required environment variable to the project\n' \

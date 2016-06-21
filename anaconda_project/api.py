@@ -584,7 +584,7 @@ class AnacondaProject(object):
         """
         return project_ops.clean(project=project, prepare_result=prepare_result)
 
-    def bundle(self, project, filename):
+    def archive(self, project, filename):
         """Make an archive of the non-ignored files in the project.
 
         Args:
@@ -594,7 +594,7 @@ class AnacondaProject(object):
         Returns:
             a ``Status``, if failed has ``errors``
         """
-        return project_ops.bundle(project=project, filename=filename)
+        return project_ops.archive(project=project, filename=filename)
 
     def upload(self, project, site=None, username=None, token=None, log_level=None):
         """Upload the project to the Anaconda server.
