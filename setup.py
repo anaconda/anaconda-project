@@ -225,6 +225,9 @@ class AllTestsCommand(TestCommand):
     def _headers(self):
         print("Checking file headers...")
         for pyfile in self._git_staged_or_all_py_files():
+            # don't force headers on the examples.
+            if "/examples/" in pyfile or "\\examples\\" in pyfile:
+                continue
             self._headerize_file(pyfile)
 
     def _start_format_files(self, paths):

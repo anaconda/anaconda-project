@@ -1,0 +1,14 @@
+name: "Movie Example"
+
+description: "An example Bokeh app"
+
+commands:
+  default:
+    bokeh_app: main.py
+
+downloads:
+  MOVIE_DATA: 'https://s3.amazonaws.com/bokeh_data/movies.db.zip'
+
+dependencies:
+  - bokeh
+  - pandas
