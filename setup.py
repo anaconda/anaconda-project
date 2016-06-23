@@ -481,7 +481,7 @@ class CondaPackageCommand(Command):
                         try:
                             print("files that DO exist: " + repr(os.listdir(os.path.basename(package_path))))
                         except Exception as e:
-                            print(" (failed to list files that do exist, %s)"  % str(e))
+                            print(" (failed to list files that do exist, %s)" % str(e))
                         raise Exception("conda said it would build %s but it didn't" % package_path)
 
                 _safe_makedirs(os.path.dirname(final_package_path))
