@@ -99,3 +99,5 @@ htmlcov
 /.travis.yml
 /.envs
 /record.txt
+# version.py is a generated file
+/anaconda_project/version.py

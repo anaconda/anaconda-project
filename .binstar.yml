@@ -9,7 +9,6 @@ platform: linux-64
 
 engine:
   - python=3.5
-  - python=2.7
 
 install:
   - conda install -y -q pip
@@ -18,12 +17,6 @@ install:
 
 test:
   - LANG=en_US.UTF-8 python setup.py test
-
-script:
-  - conda build conda.recipe
-
-# we only do build_targets for 2.7, below
-# build_targets: [conda]
 
 --- # Windows config starts here
 
@@ -50,13 +43,19 @@ before_script:
   - conda info
   - python -V
 
-script:
-  - conda install -n root -y psutil
-  - conda build conda.recipe
+iotimeout: 600
 
 ---
 platform: linux-64
 engine: python=2.7
-build_targets: /opt/miniconda/conda-bld/noarch/*.tar.bz2
 
-iotimeout: 600
+script:
+  - echo "*** UPDATING CONDA BUILD"
+  - conda update -n root conda-build
+  - echo "*** BUILDING CONDA PACKAGES"
+  - LANG=en_US.UTF-8 python setup.py conda_package
+  - echo "*** LISTING BUILT STUFF"
+  - ls -R build/packages
+  - echo "*** DONE WITH SCRIPT SECTION"
+
+build_targets: build/packages/*/*.tar.bz2
