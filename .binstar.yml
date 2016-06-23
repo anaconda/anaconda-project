@@ -18,32 +18,35 @@ install:
 test:
   - LANG=en_US.UTF-8 python setup.py test
 
---- # Windows config starts here
+# windows is commented out because something is wrong with
+# the build workers
 
-package: anaconda_project
+# --- # Windows config starts here
 
-platform:
-  - win-32
-  - win-64
+# package: anaconda_project
 
-engine:
-  - python=2.7
-  - python=3.5
+# platform:
+#   - win-32
+#   - win-64
 
-install:
-  # win32 build system doesn't seem to have psutil
-  - conda install -y -q pip psutil
-  - pip install pep257 yapf==0.6.2 pytest-xdist flake8
-  - conda install -y -q pycrypto bcrypt ipython-notebook bokeh ruamel_yaml coverage beautifulsoup4 tornado pytest pytest-cov anaconda-client requests
+# engine:
+#   - python=2.7
+#   - python=3.5
 
-test:
-  - python setup.py test
+# install:
+#   # win32 build system doesn't seem to have psutil
+#   - conda install -y -q pip psutil
+#   - pip install pep257 yapf==0.6.2 pytest-xdist flake8
+#   - conda install -y -q pycrypto bcrypt ipython-notebook bokeh ruamel_yaml coverage beautifulsoup4 tornado pytest pytest-cov anaconda-client requests
 
-before_script:
-  - conda info
-  - python -V
+# test:
+#   - python setup.py test
 
-iotimeout: 600
+# before_script:
+#   - conda info
+#   - python -V
+
+# iotimeout: 600
 
 ---
 platform: linux-64
