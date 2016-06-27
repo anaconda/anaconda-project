@@ -70,6 +70,36 @@ def test_prepare_command_assume_no(monkeypatch):
     _test_prepare_command(monkeypatch, UI_MODE_TEXT_ASSUME_NO)
 
 
+def _form_names(response, provider):
+    from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
+    from bs4 import BeautifulSoup
+
+    if response.code != 200:
+        raise Exception("got a bad http response " + repr(response))
+
+    soup = BeautifulSoup(response.body, _BEAUTIFUL_SOUP_BACKEND)
+    named_elements = soup.find_all(attrs={'name': True})
+    names = set()
+    for element in named_elements:
+        if provider in element['name']:
+            names.add(element['name'])
+    return names
+
+
+def _prefix_form(form_names, form):
+    prefixed = dict()
+    for (key, value) in form.items():
+        found = False
+        for name in form_names:
+            if name.endswith("." + key):
+                prefixed[name] = value
+                found = True
+                break
+        if not found:
+            raise RuntimeError("Form field %s in %r could not be prefixed from %r" % (key, form, form_names))
+    return prefixed
+
+
 def _monkeypatch_open_new_tab(monkeypatch):
     from tornado.ioloop import IOLoop
 
@@ -82,6 +112,14 @@ def _monkeypatch_open_new_tab(monkeypatch):
         @gen.coroutine
         def do_http():
             http_results['get'] = yield http_get_async(url)
+
+            # pick our environment (using inherited one)
+            form_names = _form_names(http_results['get'], provider='CondaEnvProvider')
+            form = _prefix_form(form_names, {'source': 'inherited'})
+            response = yield http_post_async(url, form=form)
+            assert response.code == 200
+
+            # now do the next round of stuff
             http_results['post'] = yield http_post_async(url, body="")
 
         IOLoop.current().add_callback(do_http)
@@ -362,6 +400,12 @@ variables:
 """}, check)
 
 
+_foo_and_bar_missing = ("missing requirement to run this project: BAR environment variable must be set.\n" +
+                        "  Environment variable BAR is not set.\n" +
+                        "missing requirement to run this project: FOO environment variable must be set.\n" +
+                        "  Environment variable FOO is not set.\n")
+
+
 def test_ask_variables_interactively_eof_answer_gives_up(monkeypatch, capsys):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)
@@ -381,10 +425,7 @@ def test_ask_variables_interactively_eof_answer_gives_up(monkeypatch, capsys):
 
         out, err = capsys.readouterr()
 
-        assert err == ("missing requirement to run this project: FOO environment variable must be set.\n" +
-                       "  Environment variable FOO is not set.\n" +
-                       "missing requirement to run this project: BAR environment variable must be set.\n" +
-                       "  Environment variable BAR is not set.\n")
+        assert err == _foo_and_bar_missing
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 variables:
@@ -419,10 +460,7 @@ def test_ask_variables_interactively_then_set_variable_fails(monkeypatch, capsys
 
         out, err = capsys.readouterr()
 
-        assert err == ("missing requirement to run this project: FOO environment variable must be set.\n" +
-                       "  Environment variable FOO is not set.\n" +
-                       "missing requirement to run this project: BAR environment variable must be set.\n" +
-                       "  Environment variable BAR is not set.\n" + "Set variables FAIL\n")
+        assert err == _foo_and_bar_missing + "Set variables FAIL\n"
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 variables:
@@ -450,10 +488,7 @@ def test_no_ask_variables_interactively_not_interactive(monkeypatch, capsys):
 
         out, err = capsys.readouterr()
 
-        assert err == ("missing requirement to run this project: FOO environment variable must be set.\n" +
-                       "  Environment variable FOO is not set.\n" +
-                       "missing requirement to run this project: BAR environment variable must be set.\n" +
-                       "  Environment variable BAR is not set.\n")
+        assert err == _foo_and_bar_missing
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 variables:

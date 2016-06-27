@@ -586,7 +586,7 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
     with_directory_contents(directory_contents, do_browser_ui_test)
 
 
-def _extract_radio_items(response):
+def _extract_radio_items(response, provider='DownloadProvider'):
     from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
     from bs4 import BeautifulSoup
 
@@ -595,10 +595,10 @@ def _extract_radio_items(response):
 
     soup = BeautifulSoup(response.body, _BEAUTIFUL_SOUP_BACKEND)
     radios = soup.find_all("input", attrs={'type': 'radio'})
-    return [r for r in radios if ('DownloadProvider' in r['name'])]
+    return [r for r in radios if (provider in r['name'])]
 
 
-def _form_names(response):
+def _form_names(response, provider='DownloadProvider'):
     from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
     from bs4 import BeautifulSoup
 
@@ -609,7 +609,7 @@ def _form_names(response):
     named_elements = soup.find_all(attrs={'name': True})
     names = set()
     for element in named_elements:
-        if 'DownloadProvider' in element['name']:
+        if provider in element['name']:
             names.add(element['name'])
     return names
 
@@ -624,7 +624,7 @@ def _prefix_form(form_names, form):
                 found = True
                 break
         if not found:
-            raise RuntimeError("Form field %s in %r could not be prefixed from %r" % (name, form, form_names))
+            raise RuntimeError("Form field %s in %r could not be prefixed from %r" % (key, form, form_names))
     return prefixed
 
 
@@ -636,6 +636,18 @@ def _verify_choices(response, expected):
         actual.append((r['value'], 'checked' in r.attrs))
     assert expected == tuple(actual)
     return name
+
+
+@gen.coroutine
+def post_choose_inherited_env(url):
+    response = yield http_get_async(url)
+    assert response.code == 200
+    body = response.body.decode('utf-8')
+    assert 'activated environment' in body
+    form_names = _form_names(response, provider='CondaEnvProvider')
+    form = _prefix_form(form_names, {'source': 'inherited'})
+    response = yield http_post_async(url, form=form)
+    assert response.code == 200
 
 
 def test_browser_ui_with_no_env_var_set(monkeypatch):
@@ -676,7 +688,7 @@ downloads:
     _run_browser_ui_test(monkeypatch=monkeypatch,
                          directory_contents=directory_contents,
                          initial_environ=initial_environ,
-                         http_actions=[get_initial, post_empty_form],
+                         http_actions=[post_choose_inherited_env, get_initial, post_empty_form],
                          final_result_check=final_result_check)
 
 
@@ -723,7 +735,7 @@ downloads:
     _run_browser_ui_test(monkeypatch=monkeypatch,
                          directory_contents=directory_contents,
                          initial_environ=initial_environ,
-                         http_actions=[get_initial, post_empty_form],
+                         http_actions=[post_choose_inherited_env, get_initial, post_empty_form],
                          final_result_check=final_result_check)
 
 
@@ -771,7 +783,7 @@ downloads:
     _run_browser_ui_test(monkeypatch=monkeypatch,
                          directory_contents=directory_contents,
                          initial_environ=initial_environ,
-                         http_actions=[get_initial, post_empty_form],
+                         http_actions=[post_choose_inherited_env, get_initial, post_empty_form],
                          final_result_check=final_result_check)
 
 
@@ -846,5 +858,5 @@ downloads:
     _run_browser_ui_test(monkeypatch=monkeypatch,
                          directory_contents=directory_contents,
                          initial_environ=initial_environ,
-                         http_actions=[get_initial, post_do_download, post_use_env],
+                         http_actions=[post_choose_inherited_env, get_initial, post_do_download, post_use_env],
                          final_result_check=final_result_check)

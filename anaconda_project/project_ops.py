@@ -27,6 +27,7 @@ from anaconda_project.plugins.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
 from anaconda_project.internal.conda_api import parse_spec
+from anaconda_project.internal import keyring
 
 _default_projectignore = """
 # project-local contains your personal configuration choices and state
@@ -158,7 +159,8 @@ def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=Non
 
     # See if we can perform the download
     result = prepare.prepare_without_interaction(project,
-                                                 provide_whitelist=(env_var_or_class, ),
+                                                 provide_whitelist=(CondaEnvRequirement,
+                                                                    env_var_or_class, ),
                                                  env_spec_name=env_spec_name)
 
     status = result.status_for(env_var_or_class)
@@ -544,6 +546,23 @@ def remove_dependencies(project, env_spec_name, packages):
     return status
 
 
+def _prepare_env_prefix(project, env_spec_name):
+    failed = project.problems_status()
+    if failed is not None:
+        return (None, failed)
+
+    # we need an env prefix to store in keyring
+    result = prepare.prepare_without_interaction(project,
+                                                 provide_whitelist=(CondaEnvRequirement, ),
+                                                 env_spec_name=env_spec_name)
+    status = result.status_for(CondaEnvRequirement)
+    assert status is not None
+    if not status:
+        return (None, status)
+    else:
+        return (result.environ[status.requirement.env_var], status)
+
+
 def add_variables(project, vars_to_add, defaults=None):
     """Add variables in project.yml, optionally setting their defaults.
 
@@ -586,7 +605,17 @@ def add_variables(project, vars_to_add, defaults=None):
     return SimpleStatus(success=True, description="Variables added to the project file.")
 
 
-def remove_variables(project, vars_to_remove):
+def _unset_variable(project, env_prefix, varname, local_state):
+    reqs = project.find_requirements(env_var=varname)
+    if len(reqs) > 0:
+        req = reqs[0]
+        if req.encrypted:
+            keyring.unset(env_prefix, varname)
+        else:
+            local_state.unset_value(['variables', varname])
+
+
+def remove_variables(project, vars_to_remove, env_spec_name=None):
     """Remove variables from project.yml and unset their values in local project state.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -596,25 +625,26 @@ def remove_variables(project, vars_to_remove):
     Args:
         project (Project): the project
         vars_to_remove (list of str): variable names
+        env_spec_name (str): name of env spec to use
 
     Returns:
         ``Status`` instance
     """
-    failed = project.problems_status()
-    if failed is not None:
-        return failed
+    (env_prefix, status) = _prepare_env_prefix(project, env_spec_name)
+    if env_prefix is None:
+        return status
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
     for varname in vars_to_remove:
-        local_state.unset_value(['variables', varname])
+        _unset_variable(project, env_prefix, varname, local_state)
         project.project_file.unset_value(['variables', varname])
-    project.project_file.save()
-    local_state.save()
+        project.project_file.save()
+        local_state.save()
 
     return SimpleStatus(success=True, description="Variables removed from the project file.")
 
 
-def set_variables(project, vars_and_values):
+def set_variables(project, vars_and_values, env_spec_name=None):
     """Set variables' values in project-local.yml.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -624,31 +654,50 @@ def set_variables(project, vars_and_values):
     Args:
         project (Project): the project
         vars_and_values (list of tuple): key-value pairs
+        env_spec_name (str): name of env spec to use
 
     Returns:
         ``Status`` instance
     """
-    failed = project.problems_status()
-    if failed is not None:
-        return failed
+    (env_prefix, status) = _prepare_env_prefix(project, env_spec_name)
+    if env_prefix is None:
+        return status
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
-    present_vars = {req.env_var for req in project.requirements if isinstance(req, EnvVarRequirement)}
+    var_reqs = dict()
+    for req in project.find_requirements(klass=EnvVarRequirement):
+        var_reqs[req.env_var] = req
+    present_vars = set(var_reqs.keys())
     errors = []
+    local_state_count = 0
+    keyring_count = 0
     for varname, value in vars_and_values:
         if varname in present_vars:
-            local_state.set_value(['variables', varname], value)
+            if var_reqs[varname].encrypted:
+                keyring.set(env_prefix, varname, value)
+                keyring_count = keyring_count + 1
+            else:
+                local_state.set_value(['variables', varname], value)
+                local_state_count = local_state_count + 1
         else:
             errors.append("Variable %s does not exist in the project." % varname)
 
     if errors:
         return SimpleStatus(success=False, description="Could not set variables.", errors=errors)
     else:
-        local_state.save()
-        return SimpleStatus(success=True, description=("Values were set in %s." % local_state.filename))
+        if local_state_count > 0:
+            local_state.save()
+        if keyring_count == 0:
+            description = ("Values saved in %s." % local_state.filename)
+        elif local_state_count == 0:
+            description = ("Values saved in the system keychain.")
+        else:
+            description = ("%d values saved in %s, %d values saved in the system keychain." %
+                           (local_state_count, local_state.filename, keyring_count))
+        return SimpleStatus(success=True, description=description)
 
 
-def unset_variables(project, vars_to_unset):
+def unset_variables(project, vars_to_unset, env_spec_name=None):
     """Unset variables' values in project-local.yml.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -658,20 +707,21 @@ def unset_variables(project, vars_to_unset):
     Args:
         project (Project): the project
         vars_to_unset (list of str): variable names
+        env_spec_name (str): name of env spec to use
 
     Returns:
         ``Status`` instance
     """
-    failed = project.problems_status()
-    if failed is not None:
-        return failed
+    (env_prefix, status) = _prepare_env_prefix(project, env_spec_name)
+    if env_prefix is None:
+        return status
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
     for varname in vars_to_unset:
-        local_state.unset_value(['variables', varname])
+        _unset_variable(project, env_prefix, varname, local_state)
     local_state.save()
 
-    return SimpleStatus(success=True, description=("Variables were unset in %s." % local_state.filename))
+    return SimpleStatus(success=True, description=("Variables were unset."))
 
 
 def add_command(project, name, command_type, command, env_spec_name=None):

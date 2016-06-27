@@ -584,10 +584,19 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
     elif len(initial) > 0:
         return _stages_for(initial)
     else:
-        return _stages_for(remaining)
+        # this branch would happen if a requirement depends on an
+        # already-met requirement, right now our only dependency
+        # is on the env prefix which we always unset at the start
+        # of prepare, so this should be unreachable. Keeping this
+        # code though because in future we might want it back.
+        assert False, "This code should not be reachable, bug!"  # pragma: no cover
+        return _stages_for(remaining)  # pragma: no cover (not reachable)
 
 
-def _add_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses):
+# this used to create requirement objects for missing reqs, but
+# at the moment missing reqs aren't possible, so it's changed to
+# an assertion until it's possible again.
+def _assert_no_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses):
     by_env_var = dict()
     for status in statuses:
         # if we add requirements with no env_var, change this to
@@ -600,28 +609,30 @@ def _add_missing_env_var_requirements(project, environ, local_state, overrides, 
         needed_env_vars.update(status.provider.missing_env_vars_to_configure(status.requirement, environ, local_state))
         needed_env_vars.update(status.provider.missing_env_vars_to_provide(status.requirement, environ, local_state))
 
-    created_anything = False
+    # created_anything = False
 
     for env_var in needed_env_vars:
-        if env_var not in by_env_var:
-            created_anything = True
-            requirement = project.plugin_registry.find_requirement_by_env_var(env_var, options=dict())
-            statuses.append(requirement.check_status(environ,
-                                                     local_state,
-                                                     project.default_env_spec_name_for_command(command_name),
-                                                     overrides,
-                                                     latest_provide_result=None))
+        assert env_var in by_env_var
 
-    if created_anything:
-        # run the whole above again to find any transitive requirements of the new providers
-        _add_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses)
+    #     if env_var not in by_env_var:
+    #         created_anything = True
+    #         requirement = project.plugin_registry.find_requirement_by_env_var(env_var, options=dict())
+    #         statuses.append(requirement.check_status(environ,
+    #                                                  local_state,
+    #                                                  project.default_env_spec_name_for_command(command_name),
+    #                                                  overrides,
+    #                                                  latest_provide_result=None))
+
+    # if created_anything:
+    #     # run the whole above again to find any transitive requirements of the new providers
+    #     _add_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses)
 
 
 def _first_stage(project, environ, local_state, statuses, keep_going_until_success, mode, provide_whitelist, overrides,
                  command_name, extra_command_args):
     assert 'PROJECT_DIR' in environ
 
-    _add_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses)
+    _assert_no_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses)
 
     first_stage = _process_requirement_statuses(project, environ, local_state, statuses, statuses,
                                                 keep_going_until_success, mode, provide_whitelist, overrides,

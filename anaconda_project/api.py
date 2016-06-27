@@ -290,7 +290,7 @@ class AnacondaProject(object):
         """
         return project_ops.add_variables(project=project, vars_to_add=vars_to_add, defaults=defaults)
 
-    def remove_variables(self, project, vars_to_remove):
+    def remove_variables(self, project, vars_to_remove, env_spec_name=None):
         """Remove variables from project.yml and unset their values in local project state.
 
         Returns a ``Status`` instance which evaluates to True on
@@ -300,13 +300,14 @@ class AnacondaProject(object):
         Args:
             project (Project): the project
             vars_to_remove (list of tuple): key-value pairs
+            env_spec_name (str): name of env spec to use
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove)
+        return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove, env_spec_name=env_spec_name)
 
-    def set_variables(self, project, vars_and_values):
+    def set_variables(self, project, vars_and_values, env_spec_name=None):
         """Set variables' values in project-local.yml.
 
         Returns a ``Status`` instance which evaluates to True on
@@ -316,13 +317,14 @@ class AnacondaProject(object):
         Args:
             project (Project): the project
             vars_and_values (list of tuple): key-value pairs
+            env_spec_name (str): name of env spec to use
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.set_variables(project=project, vars_and_values=vars_and_values)
+        return project_ops.set_variables(project=project, vars_and_values=vars_and_values, env_spec_name=env_spec_name)
 
-    def unset_variables(self, project, vars_to_unset):
+    def unset_variables(self, project, vars_to_unset, env_spec_name=None):
         """Unset variables' values in project-local.yml.
 
         Returns a ``Status`` instance which evaluates to True on
@@ -332,11 +334,12 @@ class AnacondaProject(object):
         Args:
             project (Project): the project
             vars_to_unset (list of str): variable names
+            env_spec_name (str): name of env spec to use
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.unset_variables(project=project, vars_to_unset=vars_to_unset)
+        return project_ops.unset_variables(project=project, vars_to_unset=vars_to_unset, env_spec_name=env_spec_name)
 
     def add_download(self, project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
         """Attempt to download the URL; if successful, add it as a download to the project.

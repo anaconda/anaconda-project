@@ -7,11 +7,11 @@
 from __future__ import absolute_import
 
 import os
+import platform
 
 import pytest
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
-from anaconda_project.internal.crypto import encrypt_string
 from anaconda_project.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
 from anaconda_project.plugins.provider import (Provider, ProvideContext, EnvVarProvider, ProvideResult,
                                                shutdown_service_run_state)
@@ -19,10 +19,16 @@ from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
 from anaconda_project.project import Project
 from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
-from anaconda_project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.prepare import (prepare_without_interaction, unprepare)
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.test.environ_utils import minimal_environ
+from anaconda_project.internal import keyring
+
+if platform.system() == 'Windows':
+    conda_env_var = 'CONDA_DEFAULT_ENV'
+else:
+    conda_env_var = 'CONDA_ENV_PATH'
 
 
 def test_find_provider_by_class_name():
@@ -52,6 +58,12 @@ def test_provider_default_method_implementations():
 
         def unprovide(self, requirement, local_state_file, requirement_status=None):
             pass
+
+        def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
+            return ()
+
+        def missing_env_vars_to_provide(self, requirement, environ, local_state_file):
+            return ()
 
     provider = UselessProvider()
     # this method is supposed to do nothing by default (ignore
@@ -120,96 +132,6 @@ variables:
   FOO:
     default: from_default
 """}, check_env_var_provider)
-
-
-def test_env_var_provider_with_encrypted_default_value_in_project_file():
-    def check_env_var_provider(dirname):
-        # Save a default value which is encrypted and the key is in var MASTER
-        project_file = ProjectFile.load_for_directory(dirname)
-        secret = "boo"
-        encrypted = encrypt_string("from_default", secret)
-        project_file.set_value(['variables', 'FOO_SECRET'], dict(default=dict(key='MASTER', encrypted=encrypted)))
-        project_file.save()
-
-        provider = EnvVarProvider()
-        requirement = _load_env_var_requirement(dirname, "FOO_SECRET")
-        assert requirement.encrypted
-        assert dict(default=dict(key='MASTER', encrypted=encrypted)) == requirement.options
-        local_state_file = LocalStateFile.load_for_directory(dirname)
-        environ = dict(MASTER=secret)
-        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        assert ('ANACONDA_MASTER_PASSWORD', ) == status.analysis.missing_env_vars_to_configure
-        assert ('MASTER', ) == status.analysis.missing_env_vars_to_provide
-        context = ProvideContext(environ=environ,
-                                 local_state_file=local_state_file,
-                                 default_env_spec_name='default',
-                                 status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
-        result = provider.provide(requirement, context=context)
-        assert [] == result.errors
-        assert 'FOO_SECRET' in context.environ
-        assert 'from_default' == context.environ['FOO_SECRET']
-
-    with_directory_contents(dict(), check_env_var_provider)
-
-
-def test_env_var_provider_with_encrypted_default_value_in_project_file_no_master_password():
-    def check_env_var_provider(dirname):
-        # Save a default value which is encrypted and the key is in var MASTER
-        project_file = ProjectFile.load_for_directory(dirname)
-        secret = "boo"
-        encrypted = encrypt_string("from_default", secret)
-        project_file.set_value(['variables', 'FOO_SECRET'], dict(default=dict(key='MASTER', encrypted=encrypted)))
-        project_file.save()
-
-        provider = EnvVarProvider()
-        requirement = _load_env_var_requirement(dirname, "FOO_SECRET")
-        assert requirement.encrypted
-        assert dict(default=dict(key='MASTER', encrypted=encrypted)) == requirement.options
-        local_state_file = LocalStateFile.load_for_directory(dirname)
-        environ = dict()
-        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        assert ('ANACONDA_MASTER_PASSWORD', ) == status.analysis.missing_env_vars_to_configure
-        assert ('MASTER', ) == status.analysis.missing_env_vars_to_provide
-        context = ProvideContext(environ=environ,
-                                 local_state_file=local_state_file,
-                                 default_env_spec_name='default',
-                                 status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
-        result = provider.provide(requirement, context=context)
-        assert ["Master password MASTER is not set so can't get value of FOO_SECRET."] == result.errors
-        assert 'FOO_SECRET' not in context.environ
-
-    with_directory_contents(dict(), check_env_var_provider)
-
-
-def test_env_var_provider_with_encrypted_default_value_in_project_file_for_non_encrypted_requirement():
-    def check_env_var_provider(dirname):
-        # Save a default value which is encrypted and the key is in var MASTER
-        project_file = ProjectFile.load_for_directory(dirname)
-        secret = "boo"
-        encrypted = encrypt_string("from_default", secret)
-        project_file.set_value(['variables', 'FOO'], dict(default=dict(key='MASTER', encrypted=encrypted)))
-        project_file.save()
-
-        provider = EnvVarProvider()
-        requirement = _load_env_var_requirement(dirname, "FOO")
-        assert not requirement.encrypted  # this is the point of this test
-        assert dict(default=dict(key='MASTER', encrypted=encrypted)) == requirement.options
-        local_state_file = LocalStateFile.load_for_directory(dirname)
-        environ = dict(MASTER=secret)
-        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        context = ProvideContext(environ=environ,
-                                 local_state_file=local_state_file,
-                                 default_env_spec_name='default',
-                                 status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
-        result = provider.provide(requirement, context=context)
-        assert [] == result.errors
-        assert 'FOO' in context.environ
-        assert 'from_default' == context.environ['FOO']
-
-    with_directory_contents(dict(), check_env_var_provider)
 
 
 def test_env_var_provider_with_unencrypted_default_value_in_project_file_for_encrypted_requirement():
@@ -300,44 +222,6 @@ variables:
 """}, check_env_var_provider)
 
 
-def test_env_var_provider_with_encrypted_default_value_in_local_state():
-    def check_env_var_provider(dirname):
-        # Save a default value which is encrypted and the key is in var MASTER
-        local_state_file = LocalStateFile.load_for_directory(dirname)
-        secret = "boo"
-        encrypted = encrypt_string("from_local_state", secret)
-        local_state_file.set_value(['variables', 'FOO_SECRET'], dict(key='MASTER', encrypted=encrypted))
-        local_state_file.save()
-
-        provider = EnvVarProvider()
-        requirement = _load_env_var_requirement(dirname, "FOO_SECRET")
-        assert requirement.encrypted
-        assert dict(default='from_default') == requirement.options
-        assert ('MASTER', ) == provider.missing_env_vars_to_configure(requirement, dict(), local_state_file)
-        assert ('MASTER', ) == provider.missing_env_vars_to_provide(requirement, dict(), local_state_file)
-
-        environ = dict(MASTER=secret)
-        assert () == provider.missing_env_vars_to_configure(requirement, environ, local_state_file)
-        assert () == provider.missing_env_vars_to_provide(requirement, environ, local_state_file)
-        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        context = ProvideContext(environ=environ,
-                                 local_state_file=local_state_file,
-                                 default_env_spec_name='default',
-                                 status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
-        result = provider.provide(requirement, context=context)
-        assert [] == result.errors
-        assert 'FOO_SECRET' in context.environ
-        assert 'from_local_state' == context.environ['FOO_SECRET']
-
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
-variables:
-  FOO_SECRET:
-    default: from_default
-"""}, check_env_var_provider)
-
-
 def test_env_var_provider_configure_local_state_value():
     def check_env_var_provider_config_local_state(dirname):
         provider = EnvVarProvider()
@@ -381,6 +265,51 @@ def test_env_var_provider_configure_local_state_value():
 variables:
   - FOO
 """}, check_env_var_provider_config_local_state)
+
+
+def test_env_var_provider_configure_encrypted_value():
+    def check_env_var_provider_config_local_state(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO_PASSWORD")
+        assert requirement.encrypted
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        status = requirement.check_status(dict(), local_state_file, 'default', UserConfigOverrides())
+        assert dict(source='unset') == status.analysis.config
+
+        assert local_state_file.get_value(['variables', 'FOO_PASSWORD']) is None
+        assert set(keyring.fallback_data().values()) == set()
+
+        environ = dict(CONDA_DEFAULT_ENV='/pretend/env', CONDA_ENV_PATH='/pretend/env')
+
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state_file,
+                                              'default',
+                                              UserConfigOverrides(),
+                                              dict(value="bar"))
+
+        # should not have affected local state, should use keyring
+        assert local_state_file.get_value(['variables', 'FOO_PASSWORD']) is None
+        assert set(keyring.fallback_data().values()) == set(["bar"])
+
+        # setting empty string = unset
+        provider.set_config_values_as_strings(requirement,
+                                              environ,
+                                              local_state_file,
+                                              'default',
+                                              UserConfigOverrides(),
+                                              dict(value=""))
+        assert local_state_file.get_value(['variables', 'FOO_PASSWORD']) is None
+        assert set(keyring.fallback_data().values()) == set()
+
+    keyring.enable_fallback_keyring()
+    try:
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+variables:
+  - FOO_PASSWORD
+"""}, check_env_var_provider_config_local_state)
+    finally:
+        keyring.disable_fallback_keyring()
 
 
 def test_env_var_provider_configure_disabled_local_state_value():

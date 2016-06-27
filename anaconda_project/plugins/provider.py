@@ -13,11 +13,12 @@ import os
 import shutil
 import subprocess
 
+from anaconda_project.plugins.requirements.conda_env import _platform_env_prefix_variable
+
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
-from anaconda_project.internal.crypto import encrypt_string, decrypt_string
-from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.internal.simple_status import SimpleStatus
+import anaconda_project.internal.keyring as keyring
 
 
 def _service_directory(local_state_file, relative_name):
@@ -244,6 +245,7 @@ _emptyProvideResult = ProvideResult()
 class Provider(with_metaclass(ABCMeta)):
     """A Provider can take some action to meet a Requirement."""
 
+    @abstractmethod
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
         """Get a list of unset environment variable names that must be set before configuring this provider.
 
@@ -252,8 +254,9 @@ class Provider(with_metaclass(ABCMeta)):
             environ (dict): current environment variable dict
             local_state_file (LocalStateFile): local state file
         """
-        return ()
+        pass  # pragma: no cover
 
+    @abstractmethod
     def missing_env_vars_to_provide(self, requirement, environ, local_state_file):
         """Get a list of unset environment variable names that must be set before calling provide().
 
@@ -262,7 +265,7 @@ class Provider(with_metaclass(ABCMeta)):
             environ (dict): current environment variable dict
             local_state_file (LocalStateFile): local state file
         """
-        return ()
+        pass  # pragma: no cover
 
     @abstractmethod
     def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
@@ -384,79 +387,41 @@ class EnvVarProvider(Provider):
     def _disabled_local_state_override(self, requirement, local_state_file):
         return local_state_file.get_value(["disabled_variables", requirement.env_var], default=None)
 
-    def _key_from_value(cls, value):
-        if isinstance(value, dict) and 'key' in value:
-            return value['key']
-        else:
-            return None
-
-    def _possibly_decrypted_value(self, requirement, context, value, errors, logs):
-        assert value is not None  # if it's None caller couldn't detect errors
-        key = self._key_from_value(value)
-        if key is not None:
-            assert 'encrypted' in value  # we were supposed to validate this on project load
-            if key not in context.environ:
-                errors.append("Master password %s is not set so can't get value of %s." % (key, requirement.env_var))
-                return None
-            value = decrypt_string(value['encrypted'], context.environ[key])
-        assert is_string(value)  # should have validated this on project load
-        return value
-
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
-        """Override superclass to require encryption key variable if this env var is encrypted."""
-        # we need the master password to either read from local
-        # state file, or save a new value to the local state file,
-        # but we do NOT need it if the env var is already set
-        # (which is likely to happen in a production-server-type
-        # deployment)
-        local_override = self._local_state_override(requirement, local_state_file)
-        local_override_key = self._key_from_value(local_override)
-        if local_override_key is not None:
-            if local_override_key not in environ:
-                return (local_override_key, )
-            else:
-                return ()
-        elif requirement.encrypted and requirement.env_var not in environ:
-            # default key - we'll need this to save the encrypted value
-            return ('ANACONDA_MASTER_PASSWORD', )
-        else:
+        """Override superclass to require env prefix."""
+        if self._get_env_prefix(environ) is not None:
             return ()
+        else:
+            return (_platform_env_prefix_variable(), )
 
     def missing_env_vars_to_provide(self, requirement, environ, local_state_file):
-        """Override superclass to require encryption key variable if this env var is encrypted."""
-        local_override = self._local_state_override(requirement, local_state_file)
-        local_override_key = self._key_from_value(local_override)
-        if local_override_key is not None:
-            if local_override_key not in environ:
-                return (local_override_key, )
-            else:
-                return ()
-        elif requirement.env_var in environ:
-            # nothing to decrypt
-            return ()
-        else:
-            default_key = self._key_from_value(requirement.options.get('default', None))
-            if default_key is not None:
-                return (default_key, )
-            else:
-                return ()
+        """Override superclass to require env prefix."""
+        return self.missing_env_vars_to_configure(requirement, environ, local_state_file)
+
+    def _get_env_prefix(self, environ):
+        # on unix, ENV_PATH is the prefix and DEFAULT_ENV can be just a name,
+        # on windows DEFAULT_ENV is always the prefix
+        return environ.get(_platform_env_prefix_variable(), None)
 
     def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to read env var value."""
         config = dict()
-        value = self._local_state_override(requirement, local_state_file)
-        disabled_value = self._disabled_local_state_override(requirement, local_state_file)
+        if requirement.encrypted:
+            env_prefix = self._get_env_prefix(environ)
+            if env_prefix is None:
+                value = None
+            else:
+                value = keyring.get(env_prefix, requirement.env_var)
+
+            disabled_value = None
+        else:
+            value = self._local_state_override(requirement, local_state_file)
+            disabled_value = self._disabled_local_state_override(requirement, local_state_file)
         was_disabled = value is None and disabled_value is not None
         if was_disabled:
             value = disabled_value
-        key = self._key_from_value(value)
 
         if value is not None:
-            if key is not None:
-                # TODO: we need to deal with missing 'encrypted'
-                # or with a bad password in some way
-                encrypted = value['encrypted']
-                value = decrypt_string(encrypted, environ[key])
             config['value'] = value
 
         if value is not None and not was_disabled:
@@ -474,6 +439,15 @@ class EnvVarProvider(Provider):
     def set_config_values_as_strings(self, requirement, environ, local_state_file, default_env_spec_name, overrides,
                                      values):
         """Override superclass to set env var value."""
+        if requirement.encrypted:
+            self._set_encrypted_config_values_as_strings(requirement, environ, local_state_file, default_env_spec_name,
+                                                         overrides, values)
+        else:
+            self._set_nonencrypted_config_values_as_strings(requirement, environ, local_state_file,
+                                                            default_env_spec_name, overrides, values)
+
+    def _set_nonencrypted_config_values_as_strings(self, requirement, environ, local_state_file, default_env_spec_name,
+                                                   overrides, values):
         override_path = ["variables", requirement.env_var]
         disabled_path = ["disabled_variables", requirement.env_var]
 
@@ -502,21 +476,24 @@ class EnvVarProvider(Provider):
                 local_state_file.unset_value(override_path)
                 local_state_file.unset_value(disabled_path)
             else:
-                key = self._key_from_value(local_override_value)
-                if key is None and requirement.encrypted:
-                    key = 'ANACONDA_MASTER_PASSWORD'
-
-                if key is not None:
-                    value = dict(key=key, encrypted=encrypt_string(value_string, environ[key]))
-                else:
-                    value = value_string
-
                 if overriding:
-                    local_state_file.set_value(override_path, value)
+                    local_state_file.set_value(override_path, value_string)
                     local_state_file.unset_value(disabled_path)
                 else:
-                    local_state_file.set_value(disabled_path, value)
+                    local_state_file.set_value(disabled_path, value_string)
                     local_state_file.unset_value(override_path)
+
+    def _set_encrypted_config_values_as_strings(self, requirement, environ, local_state_file, default_env_spec_name,
+                                                overrides, values):
+        env_prefix = self._get_env_prefix(environ)
+        from_keyring = keyring.get(env_prefix, requirement.env_var)
+        value_string = values.get('value', from_keyring)
+
+        if value_string is not None:
+            if value_string == '':
+                keyring.unset(env_prefix, requirement.env_var)
+            else:
+                keyring.set(env_prefix, requirement.env_var, value_string)
 
     def _extra_source_options_html(self, requirement, environ, local_state_file, status):
         """Override this in a subtype to add choices to the config HTML.
@@ -584,19 +561,25 @@ class EnvVarProvider(Provider):
         #  - value set in project-local state overrides everything
         #    (otherwise the UI for configuring the value would end
         #    up ignored)
+        #  - value in the keyring overrides (treated the same as
+        #    project-local.yml, but for encrypted variables)
         #  - then anything already set in the environment wins, so you
         #    can override on the command line like `FOO=bar myapp`
         #  - then the project.yml default value
-        local_state_override = self._local_state_override(requirement, context.local_state_file)
+        if requirement.encrypted:
+            env_prefix = self._get_env_prefix(context.environ)
+            if env_prefix is None:
+                local_state_override = None
+            else:
+                local_state_override = keyring.get(env_prefix, requirement.env_var)
+        else:
+            local_state_override = self._local_state_override(requirement, context.local_state_file)
         if local_state_override is not None:
             # project-local.yml
             #
             # variables:
             #   REDIS_URL: "redis://example.com:1234"
-            local_state_override = self._possibly_decrypted_value(requirement, context, local_state_override, errors,
-                                                                  logs)
-            if local_state_override is not None:
-                context.environ[requirement.env_var] = local_state_override
+            context.environ[requirement.env_var] = local_state_override
         elif requirement.env_var in context.environ:
             # nothing to do here
             pass
@@ -607,8 +590,6 @@ class EnvVarProvider(Provider):
             #   REDIS_URL:
             #     default: "redis://example.com:1234"
             value = requirement.options['default']
-            if value is not None:
-                value = self._possibly_decrypted_value(requirement, context, value, errors, logs)
             if value is not None:
                 context.environ[requirement.env_var] = value
         else:
