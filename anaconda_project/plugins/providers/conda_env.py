@@ -46,6 +46,8 @@ class CondaEnvProvider(EnvVarProvider):
         if overrides.env_spec_name is not None:
             # short-circuit this whole party
             env = requirement.env_specs.get(overrides.env_spec_name)
+            # future: it should be possible to override the env spec without using the
+            # default-created project-scoped env.
             config = dict(source='project', env_name=overrides.env_spec_name, value=env.path(project_dir))
             return config
 
@@ -61,18 +63,15 @@ class CondaEnvProvider(EnvVarProvider):
         # a default.
         assert config['source'] != 'default'
 
-        if config['source'] == 'environ':
-            # we have a setting (off by default) for whether to
-            # use the conda env we were in prior to
-            # preparation. By default we always use a
-            # project-scoped one.
-            if not local_state_file.get_value('inherit_environment', default=False):
+        if config['source'] == 'unset':
+            if local_state_file.get_value('inherit_environment', default=False) and overrides.inherited_env is not None:
+                config['source'] = 'inherited'
+                config['value'] = overrides.inherited_env
+            else:
+                # if nothing is selected, default to project mode
+                # because we don't have a radio button in the UI for
+                # "do nothing" right now.
                 config['source'] = 'project'
-        elif config['source'] == 'unset':
-            # if nothing is selected, default to project mode
-            # because we don't have a radio button in the UI for
-            # "do nothing" right now
-            config['source'] = 'project'
 
         # be sure we don't get confused by alternate ways to spell the path
         if 'value' in config:
@@ -106,6 +105,13 @@ class CondaEnvProvider(EnvVarProvider):
         overrides.env_spec_name = None
 
         if 'source' in values:
+            if values['source'] == 'inherited':
+                local_state_file.set_value('inherit_environment', True)
+            else:
+                # don't write this out if it wasn't in there anyway
+                if local_state_file.get_value('inherit_environment') is not None:
+                    local_state_file.set_value('inherit_environment', False)
+
             if values['source'] == 'project':
                 project_dir = environ['PROJECT_DIR']
                 name = values['env_name']
@@ -113,11 +119,8 @@ class CondaEnvProvider(EnvVarProvider):
                     if env.name == name:
                         prefix = env.path(project_dir)
                         local_state_file.set_value(['variables', requirement.env_var], prefix)
-            elif values['source'] == 'environ':
-                # if user chose 'environ' explicitly, we need to set the inherit_environment flag
-                local_state_file.set_value('inherit_environment', True)
 
-    def config_html(self, requirement, environ, local_state_file, status):
+    def config_html(self, requirement, environ, local_state_file, overrides, status):
         """Override superclass to provide the extra option to create one of our configured env_specs."""
         # print("config_html with config " + repr(status.analysis.config))
         environ_value = environ.get(requirement.env_var, None)
@@ -125,10 +128,13 @@ class CondaEnvProvider(EnvVarProvider):
         options_html = ('<div><label><input type="radio" name="source" ' +
                         'value="project"/>Use project-specific environment: <select name="env_name">')
         environ_value_is_project_specific = False
+        inherited_value_is_project_specific = False
         for env in requirement.env_specs.values():
             html = ('<option value="%s">%s</option>\n' % (env.name, env.name))
             if env.path(project_dir) == environ_value:
                 environ_value_is_project_specific = True
+            if env.path(project_dir) == overrides.inherited_env:
+                inherited_value_is_project_specific = True
             options_html = options_html + html
 
         options_html = options_html + "</select></div>\n"
@@ -139,6 +145,15 @@ class CondaEnvProvider(EnvVarProvider):
               <label><input type="radio" name="source" value="environ"/>Keep value '{from_environ}'</label>
             </div>
             """.format(from_environ=environ_value)
+
+        if environ_value != overrides.inherited_env and \
+           overrides.inherited_env is not None and \
+           not inherited_value_is_project_specific:
+            options_html = options_html + """
+            <div>
+              <label><input type="radio" name="source" value="inherited"/>Inherit environment '{from_inherited}'</label>
+            </div>
+            """.format(from_inherited=overrides.inherited_env)
 
         options_html = options_html + """
             <div>
@@ -157,17 +172,16 @@ class CondaEnvProvider(EnvVarProvider):
         """Override superclass to create or update our environment."""
         assert 'PATH' in context.environ
 
-        # we want to ignore the existing env var unless inherit_environment=True
-        # read_config should have already arranged this
-        if not context.local_state_file.get_value('inherit_environment', default=False):
-            assert context.status.analysis.config['source'] != 'environ'
+        # set from the inherited vale if necessary
+        if context.status.analysis.config['source'] == 'inherited':
+            context.environ[requirement.env_var] = context.status.analysis.config['value']
 
         # set the env var (but not PATH, etc. to fully activate, that's done below)
         super_result = super(CondaEnvProvider, self).provide(requirement, context)
 
         project_dir = context.environ['PROJECT_DIR']
 
-        if context.status.analysis.config['source'] == 'environ':
+        if context.status.analysis.config['source'] in ('environ', 'inherited'):
             prefix = context.environ.get(requirement.env_var, None)
         else:
             prefix = None
@@ -217,10 +231,17 @@ class CondaEnvProvider(EnvVarProvider):
 
         return super_result
 
-    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
+    def unprovide(self, requirement, environ, local_state_file, overrides, requirement_status=None):
         """Override superclass to delete project-scoped envs directory."""
-        env_path = environ.get('CONDA_ENV_PATH', environ.get('CONDA_DEFAULT_ENV', None))
-        assert env_path is not None  # can we be called outside of any activated env? let's say no
+        config = self.read_config(requirement,
+                                  environ,
+                                  local_state_file,
+                                  # future: pass in this default_env_spec_name
+                                  default_env_spec_name='default',
+                                  overrides=overrides)
+
+        env_path = config.get('value', None)
+        assert env_path is not None
         project_dir = environ['PROJECT_DIR']
         if not env_path.startswith(project_dir):
             return SimpleStatus(success=True,

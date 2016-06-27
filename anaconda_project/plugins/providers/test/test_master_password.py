@@ -45,7 +45,7 @@ def test_master_password_provider_with_value_not_set():
         config = provider.read_config(requirement, environ, local_state_file, 'default', UserConfigOverrides())
         assert dict() == config
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        html = provider.config_html(requirement, environ, local_state_file, status)
+        html = provider.config_html(requirement, environ, local_state_file, UserConfigOverrides(), status)
         assert 'type="password"' in html
         context = ProvideContext(environ=dict(),
                                  local_state_file=local_state_file,

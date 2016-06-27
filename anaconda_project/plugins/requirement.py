@@ -19,14 +19,20 @@ from anaconda_project.status import Status
 class UserConfigOverrides(object):
     """Class containing user-forced configuration for the prepare process."""
 
-    def __init__(self, env_spec_name=None):
+    def __init__(self, inherited_env=None, env_spec_name=None):
         """Construct a set of user overrides for the prepare process."""
+        self._inherited_env = inherited_env
         self._env_spec_name = env_spec_name
 
     @property
     def env_spec_name(self):
         """The user-specified name of the conda environment spec to use, or None if not specified."""
         return self._env_spec_name
+
+    @property
+    def inherited_env(self):
+        """The environment we started with before we ran the prepare process."""
+        return self._inherited_env
 
     @env_spec_name.setter
     def env_spec_name(self, value):

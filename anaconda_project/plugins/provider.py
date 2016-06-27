@@ -291,7 +291,7 @@ class Provider(with_metaclass(ABCMeta)):
         """
         pass  # silently ignore unknown config values
 
-    def config_html(self, requirement, environ, local_state_file, status):
+    def config_html(self, requirement, environ, local_state_file, overrides, status):
         """Get an HTML string for configuring the provider.
 
         The HTML string must contain a single <form> tag. Any
@@ -356,7 +356,7 @@ class Provider(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @abstractmethod
-    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
+    def unprovide(self, requirement, environ, local_state_file, overrides, requirement_status=None):
         """Undo the provide, cleaning up any files or processes we created.
 
         The requirement may still be met after this, if our providing wasn't
@@ -366,6 +366,7 @@ class Provider(with_metaclass(ABCMeta)):
             requirement (Requirement): requirement we want to de-provide
             environ (dict): current env vars, often from a previous prepare
             local_state_file (LocalStateFile): the local state
+            overrides (UserConfigOverrides): overrides to state
             requirement_status (RequirementStatus or None): requirement status if available
 
         Returns:
@@ -462,6 +463,7 @@ class EnvVarProvider(Provider):
             source = 'variables'
         elif requirement.env_var in environ:
             source = 'environ'
+            config['value'] = environ[requirement.env_var]
         elif 'default' in requirement.options:
             source = 'default'
         else:
@@ -523,7 +525,7 @@ class EnvVarProvider(Provider):
         """
         return ""
 
-    def config_html(self, requirement, environ, local_state_file, status):
+    def config_html(self, requirement, environ, local_state_file, overrides, status):
         """Override superclass to provide our config html."""
         if status.requirement.encrypted:
             input_type = 'password'
@@ -614,6 +616,6 @@ class EnvVarProvider(Provider):
 
         return ProvideResult.empty().copy_with_additions(errors, logs)
 
-    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
+    def unprovide(self, requirement, environ, local_state_file, overrides, requirement_status=None):
         """Override superclass to return success always."""
         return SimpleStatus(success=True, description=("Nothing to clean up for %s." % requirement.env_var))

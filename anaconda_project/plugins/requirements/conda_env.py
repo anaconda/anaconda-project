@@ -59,14 +59,9 @@ class CondaEnvRequirement(EnvVarRequirement):
         assert config['source'] != 'unset'
 
         prefix = None
-        if 'value' in config and (config['source'] == 'variables' or config['source'] == 'project'):
+        if 'value' in config and config['source'] in ('variables', 'project', 'inherited', 'environ'):
             prefix = config['value']
-        elif config['source'] == 'environ' and local_state_file.get_value('inherit_environment', default=False):
-            prefix = environ.get(self.env_var, None)
 
-        # At present we change 'unset' to 'project' and then use the default env,
-        # so prefix of None should not be possible.
-        # if prefix is None: return (False, "A Conda environment hasn't been chosen for this project.")
         assert prefix is not None
 
         env_name = config.get('env_name', None)
@@ -86,8 +81,6 @@ class CondaEnvRequirement(EnvVarRequirement):
         if current_env_setting is None:
             # this is our vaguest / least-descriptionful message so only if we didn't do better above
             return (False, "%s is not set." % self.env_var)
-        elif current_env_setting != prefix:
-            return (False, ("%s is set to %s instead of %s." % (self.env_var, current_env_setting, prefix)))
         else:
             return (True, "Using Conda environment %s." % prefix)
 

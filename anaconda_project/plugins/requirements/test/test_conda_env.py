@@ -10,7 +10,7 @@ import os
 import platform
 
 from anaconda_project.test.project_utils import project_dir_disable_dedicated_env
-from anaconda_project.test.environ_utils import minimal_environ, minimal_environ_no_conda_env
+from anaconda_project.test.environ_utils import (minimal_environ, minimal_environ_no_conda_env)
 from anaconda_project.env_spec import EnvSpec
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.registry import PluginRegistry
@@ -125,20 +125,3 @@ def test_missing_package():
         assert "Conda environment is missing packages: boguspackage, boguspackage2" == status.status_description
 
     with_directory_contents(dict(), check_missing_package)
-
-
-def test_conda_env_set_to_something_else_while_default_exists():
-    def check(dirname):
-        requirement = _empty_default_requirement()
-        # make it look like we already created envs/default, so the requirement
-        # has to fail because the env var is wrong rather than because the
-        # env itself is missing.
-        envdir = os.path.join(dirname, "envs", "default")
-        os.makedirs(os.path.join(envdir, 'conda-meta'))
-        local_state = LocalStateFile.load_for_directory(dirname)
-        environ = minimal_environ(PROJECT_DIR=dirname)
-        status = requirement.check_status(environ, local_state, 'default', UserConfigOverrides())
-        expected = "%s is set to %s instead of %s." % (requirement.env_var, environ.get(requirement.env_var), envdir)
-        assert expected == status.status_description
-
-    with_directory_contents(dict(), check)

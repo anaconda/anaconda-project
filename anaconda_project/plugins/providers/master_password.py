@@ -31,7 +31,7 @@ class MasterPasswordProvider(Provider):
             value_string = values['value']
             keyring.set(requirement.env_var, value_string)
 
-    def config_html(self, requirement, environ, local_state_file, status):
+    def config_html(self, requirement, environ, local_state_file, overrides, status):
         """Override superclass to provide our config html."""
         return """
 <form>
@@ -67,6 +67,6 @@ class MasterPasswordProvider(Provider):
 
         return ProvideResult.empty()
 
-    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
+    def unprovide(self, requirement, environ, local_state_file, overrides, requirement_status=None):
         """Override superclass to return success always."""
         return SimpleStatus(success=True, description=("Nothing to clean up for master password."))
