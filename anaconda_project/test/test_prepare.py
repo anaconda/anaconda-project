@@ -22,7 +22,7 @@ from anaconda_project.prepare import (prepare_without_interaction, prepare_with_
 from anaconda_project.project import Project
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirement import (EnvVarRequirement, UserConfigOverrides)
 from anaconda_project.conda_manager import (push_conda_manager_class, pop_conda_manager_class, CondaManager,
                                             CondaEnvironmentDeviations)
 
@@ -349,22 +349,35 @@ def test_skip_after_success_function_when_second_stage_fails():
     def do_first(stage):
         assert state['state'] == 'start'
         state['state'] = 'first'
-        stage.set_result(PrepareSuccess(logs=[], statuses=(), command_exec_info=None, environ=dict()), [])
+        stage.set_result(
+            PrepareSuccess(logs=[],
+                           statuses=(),
+                           command_exec_info=None,
+                           environ=dict(),
+                           overrides=UserConfigOverrides()),
+            [])
 
         def last(stage):
             assert state['state'] == 'first'
             state['state'] = 'second'
-            stage.set_result(PrepareFailure(logs=[], statuses=(), errors=[], environ=dict()), [])
+            stage.set_result(
+                PrepareFailure(logs=[],
+                               statuses=(),
+                               errors=[],
+                               environ=dict(),
+                               overrides=UserConfigOverrides()),
+                [])
             return None
 
-        return _FunctionPrepareStage(dict(), "second", [], last)
+        return _FunctionPrepareStage(dict(), UserConfigOverrides(), "second", [], last)
 
-    first_stage = _FunctionPrepareStage(dict(), "first", [], do_first)
+    first_stage = _FunctionPrepareStage(dict(), UserConfigOverrides(), "first", [], do_first)
 
     def after(updated_statuses):
         raise RuntimeError("should not have been called")
 
     stage = _after_stage_success(first_stage, after)
+    assert stage.overrides is first_stage.overrides
     assert isinstance(stage.environ, dict)
     while stage is not None:
         next_stage = stage.execute()
@@ -385,23 +398,36 @@ def test_run_after_success_function_when_second_stage_succeeds():
     def do_first(stage):
         assert state['state'] == 'start'
         state['state'] = 'first'
-        stage.set_result(PrepareSuccess(logs=[], statuses=(), command_exec_info=None, environ=dict()), [])
+        stage.set_result(
+            PrepareSuccess(logs=[],
+                           statuses=(),
+                           command_exec_info=None,
+                           environ=dict(),
+                           overrides=UserConfigOverrides()),
+            [])
 
         def last(stage):
             assert state['state'] == 'first'
             state['state'] = 'second'
-            stage.set_result(PrepareSuccess(logs=[], statuses=(), command_exec_info=None, environ=dict()), [])
+            stage.set_result(
+                PrepareSuccess(logs=[],
+                               statuses=(),
+                               command_exec_info=None,
+                               environ=dict(),
+                               overrides=UserConfigOverrides()),
+                [])
             return None
 
-        return _FunctionPrepareStage(dict(), "second", [], last)
+        return _FunctionPrepareStage(dict(), UserConfigOverrides(), "second", [], last)
 
-    first_stage = _FunctionPrepareStage(dict(), "first", [], do_first)
+    first_stage = _FunctionPrepareStage(dict(), UserConfigOverrides(), "first", [], do_first)
 
     def after(updated_statuses):
         assert state['state'] == 'second'
         state['state'] = 'after'
 
     stage = _after_stage_success(first_stage, after)
+    assert stage.overrides is first_stage.overrides
     while stage is not None:
         next_stage = stage.execute()
         result = stage.result
@@ -583,7 +609,12 @@ icon: foo.png
 
 
 def test_prepare_success_properties():
-    result = PrepareSuccess(logs=["a"], statuses=(), command_exec_info=None, environ=dict())
+    result = PrepareSuccess(logs=["a"],
+                            statuses=(),
+                            command_exec_info=None,
+                            environ=dict(),
+                            overrides=UserConfigOverrides())
     assert result.statuses == ()
     assert result.status_for('FOO') is None
     assert result.status_for(EnvVarRequirement) is None
+    assert result.overrides is not None

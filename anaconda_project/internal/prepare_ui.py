@@ -49,4 +49,8 @@ def prepare_browser(project, stage, io_loop, show_url):
     else:
         from anaconda_project.prepare import PrepareFailure
         # this pretty much only happens in unit tests.
-        return PrepareFailure(logs=[], statuses=(), errors=["Browser UI main loop was stopped."], environ=stage.environ)
+        return PrepareFailure(logs=[],
+                              statuses=(),
+                              errors=["Browser UI main loop was stopped."],
+                              environ=stage.environ,
+                              overrides=stage.overrides)

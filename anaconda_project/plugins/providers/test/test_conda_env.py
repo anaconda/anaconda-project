@@ -108,11 +108,14 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
         result = prepare_without_interaction(project, environ=environ)
         assert not result
 
+        assert 'CONDA_DEFAULT_ENV' not in result.environ
+        assert 'CONDA_ENV_PATH' not in result.environ
+
         # unprepare should not have anything to do
         status = unprepare(project, result)
         assert status
         assert status.errors == []
-        assert status.status_description == ('Current environment is not in %s, no need to delete it.' % dirname)
+        assert status.status_description == "Nothing to clean up for environment 'default'."
 
     with_directory_contents(dict(), prepare_project_scoped_env_fails)
 
@@ -408,7 +411,7 @@ def test_browser_ui_with_default_env_and_env_var_set(monkeypatch):
                             # by default, use one of the project-defined named envs
                             ('project', True),
                             # offer choice to keep the environment setting
-                            ('environ', False),
+                            ('inherited', False),
                             # allow typing in a manual value
                             ('variables', False)))
 
@@ -460,6 +463,8 @@ def test_browser_ui_with_default_env_and_env_var_set_to_default_already(monkeypa
                         (
                             # by default, use one of the project-defined named envs
                             ('project', True),
+                            # allow toggling on use inherited active env mode
+                            ('inherited', False),
                             # allow typing in a manual value
                             ('variables', False)))
 
@@ -491,7 +496,7 @@ def test_browser_ui_with_default_env_and_env_var_set_to_default_already(monkeypa
                          final_result_check=final_result_check)
 
 
-def test_browser_ui_keeping_env_var_set(monkeypatch):
+def test_browser_ui_using_inherited_then_back_to_default(monkeypatch):
     directory_contents = {DEFAULT_PROJECT_FILENAME: ""}
     envprefix = os.path.join("not", "a", "real", "environment")
     initial_environ = minimal_environ(**{conda_env_var: envprefix})
@@ -509,14 +514,14 @@ def test_browser_ui_keeping_env_var_set(monkeypatch):
                         (
                             # by default, use one of the project-defined named envs
                             ('project', True),
-                            # offer choice to keep the environment setting
-                            ('environ', False),
+                            # offer choice to inherit the active environment
+                            ('inherited', False),
                             # allow typing in a manual value
                             ('variables', False)))
 
     @gen.coroutine
-    def post_choosing_keep_environ(url):
-        form = _prefix_form(stuff['form_names'], {'source': 'environ', 'env_name': 'default'})
+    def post_choosing_use_inherited(url):
+        form = _prefix_form(stuff['form_names'], {'source': 'inherited'})
         response = yield http_post_async(url, form=form)
         assert response.code == 200
         # print("POST BODY: " + body)
@@ -527,8 +532,82 @@ def test_browser_ui_keeping_env_var_set(monkeypatch):
         _verify_choices(response,
                         (('project', False),
                          # the thing we chose should still be chosen
-                         ('environ', True),
+                         ('inherited', True),
                          ('variables', False)))
+
+    @gen.coroutine
+    def post_back_to_default_environ(url):
+        form = _prefix_form(stuff['form_names'], {'source': 'project', 'env_name': 'default'})
+        response = yield http_post_async(url, form=form)
+        assert response.code == 200
+        # print("POST BODY: " + body)
+        body = response.body.decode('utf-8')
+        assert "Done!" in body
+        _verify_choices(response, ())
+
+    def final_result_check(dirname, result):
+        assert result
+        expected_env_path = os.path.join(dirname, 'envs', 'default')
+        assert result.environ['CONDA_ENV_PATH'] == expected_env_path
+        assert result.environ['CONDA_DEFAULT_ENV'] == expected_env_path
+        assert result.environ['PROJECT_DIR'] == dirname
+
+    _run_browser_ui_test(monkeypatch=monkeypatch,
+                         directory_contents=directory_contents,
+                         initial_environ=initial_environ,
+                         # we choose keep environment twice, should be idempotent
+                         http_actions=[get_initial, post_choosing_use_inherited, post_choosing_use_inherited,
+                                       post_back_to_default_environ],
+                         final_result_check=final_result_check)
+
+
+def test_browser_ui_changing_to_new_prefix(monkeypatch):
+    directory_contents = {DEFAULT_PROJECT_FILENAME: ""}
+    envprefix = os.path.join("not", "a", "real", "environment")
+    envprefix2 = os.path.join("another", "non", "real", "environment")
+    initial_environ = minimal_environ(**{conda_env_var: envprefix})
+
+    stuff = dict()
+
+    @gen.coroutine
+    def get_initial(url):
+        response = yield http_get_async(url)
+        assert response.code == 200
+        body = response.body.decode('utf-8')
+        assert "default' doesn't look like it contains a Conda environment yet." in body
+        stuff['form_names'] = _form_names(response)
+        _verify_choices(response,
+                        (
+                            # by default, use one of the project-defined named envs
+                            ('project', True),
+                            # offer choice to always use activated env
+                            ('inherited', False),
+                            # allow typing in a manual value
+                            ('variables', False)))
+
+    @gen.coroutine
+    def post_choosing_inherited(url):
+        form = _prefix_form(stuff['form_names'], {'source': 'inherited'})
+        response = yield http_post_async(url, form=form)
+        assert response.code == 200
+        # print("POST BODY: " + body)
+        body = response.body.decode('utf-8')
+        assert "Done!" not in body
+        # error message should be about the environ thing we chose
+        assert envprefix + "' doesn't look like it contains a Conda environment yet." in body
+        _verify_choices(response, (('project', False), ('inherited', True), ('variables', False)))
+
+    @gen.coroutine
+    def post_choosing_new_environ(url):
+        form = _prefix_form(stuff['form_names'], {'source': 'variables', 'value': envprefix2})
+        response = yield http_post_async(url, form=form)
+        assert response.code == 200
+        # print("POST BODY: " + body)
+        body = response.body.decode('utf-8')
+        assert "Done!" not in body
+        # error message should be about the environ thing we chose
+        assert envprefix2 + "' doesn't look like it contains a Conda environment yet." in body
+        _verify_choices(response, (('project', False), ('inherited', False), ('variables', True)))
 
     def final_result_check(dirname, result):
         assert not result
@@ -537,8 +616,7 @@ def test_browser_ui_keeping_env_var_set(monkeypatch):
     _run_browser_ui_test(monkeypatch=monkeypatch,
                          directory_contents=directory_contents,
                          initial_environ=initial_environ,
-                         # we choose keep environment twice, should be idempotent
-                         http_actions=[get_initial, post_choosing_keep_environ, post_choosing_keep_environ],
+                         http_actions=[get_initial, post_choosing_inherited, post_choosing_new_environ],
                          final_result_check=final_result_check)
 
 

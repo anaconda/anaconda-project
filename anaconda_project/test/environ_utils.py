@@ -33,6 +33,8 @@ def _minimal_environ_full(with_conda_env, **additions):
         if name in os.environ:
             minimal_environ[name] = os.environ[name]
 
+    env_prefix = minimal_environ.get('CONDA_ENV_PATH', minimal_environ.get('CONDA_DEFAULT_ENV', None))
+
     if len(additions) > 0 or not with_conda_env:
         if not with_conda_env:
             for name in conda_vars_to_keep:
@@ -42,16 +44,21 @@ def _minimal_environ_full(with_conda_env, **additions):
         for (key, value) in additions.items():
             minimal_environ[key] = value
 
-    return minimal_environ
+    return (env_prefix, minimal_environ)
 
 
 def minimal_environ(**additions):
     """Get an environment with minimal likely weird side effects on tests, while still working."""
-    return _minimal_environ_full(with_conda_env=True, **additions)
+    return _minimal_environ_full(with_conda_env=True, **additions)[1]
 
 
 def minimal_environ_no_conda_env(**additions):
     """Get a minimal environment without the conda env in it."""
+    return _minimal_environ_full(with_conda_env=False, **additions)[1]
+
+
+def env_prefix_and_minimal_environ(**additions):
+    """Get a tuple of env_prefix and minimal environ without conda vars."""
     return _minimal_environ_full(with_conda_env=False, **additions)
 
 

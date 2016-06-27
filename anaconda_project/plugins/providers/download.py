@@ -160,7 +160,7 @@ class DownloadProvider(EnvVarProvider):
 
         return super_result.copy_with_additions(errors=errors, logs=logs)
 
-    def unprovide(self, requirement, environ, local_state_file, requirement_status=None):
+    def unprovide(self, requirement, environ, local_state_file, overrides, requirement_status=None):
         """Override superclass to delete the downloaded file."""
         project_dir = environ['PROJECT_DIR']
         filename = os.path.abspath(os.path.join(project_dir, requirement.filename))

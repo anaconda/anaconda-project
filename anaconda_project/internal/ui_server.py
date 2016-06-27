@@ -70,7 +70,8 @@ class PrepareViewHandler(RequestHandler):
                                                                                         check + " ")
             if with_config:
                 raw_html = status.provider.config_html(status.requirement, prepare_context.environ,
-                                                       prepare_context.local_state_file, status)
+                                                       prepare_context.local_state_file, prepare_context.overrides,
+                                                       status)
                 if raw_html is not None:
                     prefix = self.application.form_prefix(status.requirement, status.provider)
                     cleaned_html = cleanup_and_scope_form(raw_html, prefix, status.analysis.config)

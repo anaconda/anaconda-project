@@ -39,11 +39,12 @@ def _update_environ(dest, src):
 class PrepareResult(with_metaclass(ABCMeta)):
     """Abstract class describing the result of preparing the project to run."""
 
-    def __init__(self, logs, statuses, environ):
+    def __init__(self, logs, statuses, environ, overrides):
         """Construct an abstract PrepareResult."""
         self._logs = logs
         self._statuses = tuple(statuses)
         self._environ = environ
+        self._overrides = overrides
 
     def __bool__(self):
         """True if we were successful."""
@@ -107,13 +108,18 @@ class PrepareResult(with_metaclass(ABCMeta)):
         """
         return self._environ
 
+    @property
+    def overrides(self):
+        """Override object which was passed to prepare()."""
+        return self._overrides
+
 
 class PrepareSuccess(PrepareResult):
     """Class describing the successful result of preparing the project to run."""
 
-    def __init__(self, logs, statuses, command_exec_info, environ):
+    def __init__(self, logs, statuses, command_exec_info, environ, overrides):
         """Construct a PrepareSuccess indicating a successful prepare stage."""
-        super(PrepareSuccess, self).__init__(logs, statuses, environ)
+        super(PrepareSuccess, self).__init__(logs, statuses, environ, overrides)
         self._command_exec_info = command_exec_info
 
     @property
@@ -137,9 +143,9 @@ class PrepareSuccess(PrepareResult):
 class PrepareFailure(PrepareResult):
     """Class describing the failed result of preparing the project to run."""
 
-    def __init__(self, logs, statuses, errors, environ):
+    def __init__(self, logs, statuses, errors, environ, overrides):
         """Construct a PrepareFailure indicating a failed prepare stage."""
-        super(PrepareFailure, self).__init__(logs, statuses, environ)
+        super(PrepareFailure, self).__init__(logs, statuses, environ, overrides)
         self._errors = errors
 
     @property
@@ -219,6 +225,12 @@ class PrepareStage(with_metaclass(ABCMeta)):
 
     @property
     @abstractmethod
+    def overrides(self):
+        """User overrides."""
+        pass  # pragma: no cover
+
+    @property
+    @abstractmethod
     def statuses_before_execute(self):
         """``RequirementStatus`` list before execution.
 
@@ -256,10 +268,11 @@ def _refresh_status_list(old_statuses, rechecked_statuses):
 class _FunctionPrepareStage(PrepareStage):
     """A stage chain where the description and the execute function are passed in to the constructor."""
 
-    def __init__(self, environ, description, statuses, execute, config_context=None):
+    def __init__(self, environ, overrides, description, statuses, execute, config_context=None):
         assert isinstance(environ, dict)
         assert config_context is None or isinstance(config_context, ConfigurePrepareContext)
         self._environ = environ
+        self._overrides = overrides
         # the execute function is supposed to set these two (via accessor)
         self._result = None
         self._statuses_after_execute = None
@@ -298,6 +311,10 @@ class _FunctionPrepareStage(PrepareStage):
             return self._environ
         else:
             return self.result.environ
+
+    @property
+    def overrides(self):
+        return self._overrides
 
     @property
     def statuses_before_execute(self):
@@ -353,6 +370,10 @@ class _AndThenPrepareStage(PrepareStage):
     @property
     def environ(self):
         return self._stage.environ
+
+    @property
+    def overrides(self):
+        return self._stage.overrides
 
     @property
     def statuses_before_execute(self):
@@ -469,7 +490,8 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 PrepareFailure(logs=logs,
                                statuses=result_statuses,
                                errors=errors,
-                               environ=environ),
+                               environ=environ,
+                               overrides=overrides),
                 rechecked)
             if keep_going_until_success:
                 return _start_over(stage.statuses_after_execute, rechecked)
@@ -483,7 +505,8 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 PrepareSuccess(logs=logs,
                                statuses=result_statuses,
                                command_exec_info=exec_info,
-                               environ=environ),
+                               environ=environ,
+                               overrides=overrides),
                 rechecked)
             return None
 
@@ -493,7 +516,8 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                                                     default_env_spec_name=default_env_spec_name,
                                                     overrides=overrides,
                                                     statuses=updated_statuses)
-        return _FunctionPrepareStage(environ, "Set up project.", updated_all_statuses, provide_stage, configure_context)
+        return _FunctionPrepareStage(environ, overrides, "Set up project.", updated_all_statuses, provide_stage,
+                                     configure_context)
 
     return _start_over(all_statuses, statuses)
 
@@ -606,6 +630,71 @@ def _first_stage(project, environ, local_state, statuses, keep_going_until_succe
     return first_stage
 
 
+def _prepare_environ_and_overrides(project, environ=None, env_spec_name=None):
+    if environ is None:
+        environ = os.environ
+
+    assert 'PATH' in environ
+
+    # we modify a copy, which 1) makes all our changes atomic and
+    # 2) minimizes memory leaks on systems that use putenv().
+    #
+    # On Linux, it appears we must use deepcopy (vs plain copy) or
+    # we still modify os.environ somehow.
+    #
+    # On the Windows CI server, but NOT on my local Windows 10
+    # machine, deepcopy() didn't work but adding the extra .copy()
+    # fixed it. The failure mode was that changes to PATH in the
+    # copy were not visible via os.environ or os.getenv('PATH'),
+    # but they DID affect what subprocess.Popen was able to see,
+    # so that a test which modified PATH in this environ_copy
+    # would break subsequent tests (such as test_conda_api which
+    # tries to run conda). Anyway, presumably this is a bug in
+    # something, but I'm not sure in what. If you can remove the
+    # extra copy() and still pass all tests on all platforms at
+    # some point in the future, feel free to clean up this
+    # hackery.
+    environ_copy = deepcopy(environ.copy())
+
+    # many requirements and providers might need this, plus
+    # it's useful for scripts to find their source tree.
+    environ_copy['PROJECT_DIR'] = project.directory_path
+
+    # Save and then clear out any existing environment
+    existing_env_prefix = environ_copy.get('CONDA_ENV_PATH', environ_copy.get('CONDA_DEFAULT_ENV', None))
+    for name in ('CONDA_ENV_PATH', 'CONDA_DEFAULT_ENV'):
+        if name in environ_copy:
+            del environ_copy[name]
+
+    overrides = UserConfigOverrides(env_spec_name=env_spec_name, inherited_env=existing_env_prefix)
+
+    return (environ_copy, overrides)
+
+
+def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_until_success, mode, provide_whitelist,
+                                command_name, extra_command_args):
+    assert not project.problems
+    if mode not in _all_provide_modes:
+        raise ValueError("invalid provide mode " + mode)
+
+    assert command_name is None or command_name in project.commands
+    assert overrides.env_spec_name is None or overrides.env_spec_name in project.env_specs
+
+    local_state = LocalStateFile.load_for_directory(project.directory_path)
+
+    statuses = []
+    for requirement in project.requirements:
+        status = requirement.check_status(environ_copy,
+                                          local_state,
+                                          project.default_env_spec_name_for_command(command_name),
+                                          overrides,
+                                          latest_provide_result=None)
+        statuses.append(status)
+
+    return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode, provide_whitelist,
+                        overrides, command_name, extra_command_args)
+
+
 def prepare_in_stages(project,
                       environ=None,
                       keep_going_until_success=False,
@@ -644,95 +733,53 @@ def prepare_in_stages(project,
         The first ``PrepareStage`` in the chain of steps.
 
     """
-    if mode not in _all_provide_modes:
-        raise ValueError("invalid provide mode " + mode)
+    (environ_copy, overrides) = _prepare_environ_and_overrides(project, environ, env_spec_name)
 
-    assert not project.problems
-
-    assert command_name is None or command_name in project.commands
-    assert env_spec_name is None or env_spec_name in project.env_specs
-
-    if environ is None:
-        environ = os.environ
-
-    assert 'PATH' in environ
-
-    # we modify a copy, which 1) makes all our changes atomic and
-    # 2) minimizes memory leaks on systems that use putenv().
-    #
-    # On Linux, it appears we must use deepcopy (vs plain copy) or
-    # we still modify os.environ somehow.
-    #
-    # On the Windows CI server, but NOT on my local Windows 10
-    # machine, deepcopy() didn't work but adding the extra .copy()
-    # fixed it. The failure mode was that changes to PATH in the
-    # copy were not visible via os.environ or os.getenv('PATH'),
-    # but they DID affect what subprocess.Popen was able to see,
-    # so that a test which modified PATH in this environ_copy
-    # would break subsequent tests (such as test_conda_api which
-    # tries to run conda). Anyway, presumably this is a bug in
-    # something, but I'm not sure in what. If you can remove the
-    # extra copy() and still pass all tests on all platforms at
-    # some point in the future, feel free to clean up this
-    # hackery.
-    environ_copy = deepcopy(environ.copy())
-
-    # many requirements and providers might need this, plus
-    # it's useful for scripts to find their source tree.
-    environ_copy['PROJECT_DIR'] = project.directory_path
-
-    local_state = LocalStateFile.load_for_directory(project.directory_path)
-
-    overrides = UserConfigOverrides(env_spec_name=env_spec_name)
-
-    statuses = []
-    for requirement in project.requirements:
-        status = requirement.check_status(environ_copy,
-                                          local_state,
-                                          project.default_env_spec_name_for_command(command_name),
-                                          overrides,
-                                          latest_provide_result=None)
-        statuses.append(status)
-
-    return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode, provide_whitelist,
-                        overrides, command_name, extra_command_args)
+    return _internal_prepare_in_stages(project,
+                                       environ_copy=environ_copy,
+                                       overrides=overrides,
+                                       keep_going_until_success=keep_going_until_success,
+                                       mode=mode,
+                                       provide_whitelist=provide_whitelist,
+                                       command_name=command_name,
+                                       extra_command_args=extra_command_args)
 
 
-def _project_problems_to_prepare_failure(project, environ):
+def _project_problems_to_prepare_failure(project, environ, overrides):
     if project.problems:
         errors = []
         for problem in project.problems:
             errors.append(problem)
         errors.append("Unable to load the project.")
-        return PrepareFailure(logs=[], statuses=(), errors=errors, environ=environ)
+        return PrepareFailure(logs=[], statuses=(), errors=errors, environ=environ, overrides=overrides)
     else:
         return None
 
 
-def _prepare_failure_on_bad_command_name(project, command_name, environ):
+def _prepare_failure_on_bad_command_name(project, command_name, environ, overrides):
     if command_name is not None and command_name not in project.commands:
         error = ("Command name '%s' is not in %s, these names were found: %s" %
                  (command_name, project.project_file.filename, ", ".join(sorted(project.commands.keys()))))
-        return PrepareFailure(logs=[], statuses=(), errors=[error], environ=environ)
+        return PrepareFailure(logs=[], statuses=(), errors=[error], environ=environ, overrides=overrides)
     else:
         return None
 
 
-def _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ):
+def _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ, overrides):
     if env_spec_name is not None and env_spec_name not in project.env_specs:
         error = ("Environment name '%s' is not in %s, these names were found: %s" %
                  (env_spec_name, project.project_file.filename, ", ".join(sorted(project.env_specs.keys()))))
-        return PrepareFailure(logs=[], statuses=(), errors=[error], environ=environ)
+        return PrepareFailure(logs=[], statuses=(), errors=[error], environ=environ, overrides=overrides)
     else:
         return None
 
 
-def _check_prepare_prerequisites(project, env_spec_name, command_name, environ):
-    failed = _project_problems_to_prepare_failure(project, environ)
+def _check_prepare_prerequisites(project, env_spec_name, command_name, environ, overrides):
+    failed = _project_problems_to_prepare_failure(project, environ, overrides)
     if failed is None:
-        failed = _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ)
+        failed = _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ, overrides)
     if failed is None:
-        failed = _prepare_failure_on_bad_command_name(project, command_name, environ)
+        failed = _prepare_failure_on_bad_command_name(project, command_name, environ, overrides)
     return failed
 
 
@@ -787,18 +834,20 @@ def prepare_without_interaction(project,
         a ``PrepareResult`` instance, which has a ``failed`` flag
 
     """
-    failure = _check_prepare_prerequisites(project, env_spec_name, command_name, environ)
+    (environ_copy, overrides) = _prepare_environ_and_overrides(project, environ, env_spec_name)
+
+    failure = _check_prepare_prerequisites(project, env_spec_name, command_name, environ_copy, overrides)
     if failure is not None:
         return failure
 
-    stage = prepare_in_stages(project,
-                              environ,
-                              keep_going_until_success=False,
-                              mode=mode,
-                              provide_whitelist=provide_whitelist,
-                              env_spec_name=env_spec_name,
-                              command_name=command_name,
-                              extra_command_args=extra_command_args)
+    stage = _internal_prepare_in_stages(project,
+                                        environ_copy=environ_copy,
+                                        overrides=overrides,
+                                        keep_going_until_success=False,
+                                        mode=mode,
+                                        provide_whitelist=provide_whitelist,
+                                        command_name=command_name,
+                                        extra_command_args=extra_command_args)
 
     return prepare_execute_without_interaction(stage)
 
@@ -852,17 +901,20 @@ def prepare_with_browser_ui(project,
         a ``PrepareResult`` instance, which has a ``failed`` flag
 
     """
-    failure = _check_prepare_prerequisites(project, env_spec_name, command_name, environ)
+    (environ_copy, overrides) = _prepare_environ_and_overrides(project, environ, env_spec_name)
+
+    failure = _check_prepare_prerequisites(project, env_spec_name, command_name, environ_copy, overrides)
     if failure is not None:
         return failure
 
-    stage = prepare_in_stages(project,
-                              environ,
-                              keep_going_until_success=keep_going_until_success,
-                              mode=PROVIDE_MODE_DEVELOPMENT,
-                              env_spec_name=env_spec_name,
-                              command_name=command_name,
-                              extra_command_args=extra_command_args)
+    stage = _internal_prepare_in_stages(project,
+                                        environ_copy=environ_copy,
+                                        overrides=overrides,
+                                        keep_going_until_success=keep_going_until_success,
+                                        mode=PROVIDE_MODE_DEVELOPMENT,
+                                        command_name=command_name,
+                                        provide_whitelist=None,
+                                        extra_command_args=extra_command_args)
 
     return prepare_execute_with_browser_ui(project, stage, io_loop=io_loop, show_url=show_url)
 
@@ -940,7 +992,8 @@ def unprepare(project, prepare_result, whitelist=None):
             continue
 
         provider = status.provider
-        unprovide_status = provider.unprovide(requirement, prepare_result.environ, local_state_file, status)
+        unprovide_status = provider.unprovide(requirement, prepare_result.environ, local_state_file,
+                                              prepare_result.overrides, status)
         if not unprovide_status:
             failed_requirements.append(requirement)
             failed_statuses.append(unprovide_status)
