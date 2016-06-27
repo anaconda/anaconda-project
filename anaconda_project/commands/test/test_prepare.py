@@ -18,6 +18,7 @@ from anaconda_project.local_state_file import LocalStateFile
 
 from anaconda_project.test.project_utils import project_dir_disable_dedicated_env
 from anaconda_project.internal.simple_status import SimpleStatus
+from anaconda_project.internal import keyring
 
 
 class Args(object):
@@ -321,7 +322,7 @@ def test_ask_variables_interactively(monkeypatch):
 
         inputs = ["foo", "bar"]
 
-        def mock_console_input(prompt):
+        def mock_console_input(prompt, encrypted):
             return inputs.pop(0)
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
@@ -331,13 +332,18 @@ def test_ask_variables_interactively(monkeypatch):
 
         local_state = LocalStateFile.load_for_directory(dirname)
         assert local_state.get_value(['variables', 'FOO']) == 'foo'
-        assert local_state.get_value(['variables', 'BAR']) == 'bar'
+        assert local_state.get_value(['variables', 'BAR_PASSWORD']) is None
+        assert set(keyring.fallback_data().values()) == set(['bar'])
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    keyring.enable_fallback_keyring()
+    try:
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
-  BAR: null
+  BAR_PASSWORD: null
 """}, check)
+    finally:
+        keyring.disable_fallback_keyring()
 
 
 def test_ask_variables_interactively_empty_answer_re_asks(monkeypatch):
@@ -351,7 +357,7 @@ def test_ask_variables_interactively_empty_answer_re_asks(monkeypatch):
 
         inputs = ["", "foo", "bar"]
 
-        def mock_console_input(prompt):
+        def mock_console_input(prompt, encrypted):
             return inputs.pop(0)
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
@@ -381,7 +387,7 @@ def test_ask_variables_interactively_whitespace_answer_re_asks(monkeypatch):
 
         inputs = ["    ", "foo", "bar"]
 
-        def mock_console_input(prompt):
+        def mock_console_input(prompt, encrypted):
             return inputs.pop(0)
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
@@ -415,7 +421,7 @@ def test_ask_variables_interactively_eof_answer_gives_up(monkeypatch, capsys):
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
 
-        def mock_console_input(prompt):
+        def mock_console_input(prompt, encrypted):
             return None
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
@@ -445,7 +451,7 @@ def test_ask_variables_interactively_then_set_variable_fails(monkeypatch, capsys
 
         inputs = ["foo", "bar"]
 
-        def mock_console_input(prompt):
+        def mock_console_input(prompt, encrypted):
             return inputs.pop(0)
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
@@ -478,7 +484,7 @@ def test_no_ask_variables_interactively_not_interactive(monkeypatch, capsys):
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
 
-        def mock_console_input(prompt):
+        def mock_console_input(prompt, encrypted):
             raise Exception("should not have been called")
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
@@ -506,7 +512,7 @@ def test_no_ask_variables_interactively_if_no_variables_missing_but_prepare_fail
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
 
-        def mock_console_input(prompt):
+        def mock_console_input(prompt, encrypted):
             raise Exception("Should not have called this, prompt " + prompt)
 
         monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)

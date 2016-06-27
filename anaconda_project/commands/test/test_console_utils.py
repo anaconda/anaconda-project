@@ -35,6 +35,25 @@ def _monkeypatch_input(monkeypatch, answer):
     monkeypatch.setattr('anaconda_project.commands.console_utils._input', mock_input)
 
 
+def _monkeypatch_getpass(monkeypatch, answer):
+    answers = []
+    if answer is None or isinstance(answer, str):
+        answers.append(answer)
+    else:
+        answers = list(answer)
+        answers.reverse()
+
+    def mock_getpass(prompt, stream=None):
+        sys.stderr.write(prompt)
+        item = answers.pop()
+        if item is None:
+            raise EOFError("eof on getpass")
+        else:
+            return item
+
+    monkeypatch.setattr('getpass.getpass', mock_getpass)
+
+
 def test_console_yes_or_no(monkeypatch, capsys):
     def mock_isatty_true():
         return True
@@ -87,3 +106,22 @@ def test_format_names_and_descriptions():
     ]
     for case in cases:
         assert console_utils.format_names_and_descriptions(case[0]) == case[1]
+
+
+def test_console_get_password(monkeypatch, capsys):
+    def mock_isatty_true():
+        return True
+
+    # python 2 can throw a "readonly" error if you try to patch sys.stdin.isatty itself
+    monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_isatty_true)
+
+    _monkeypatch_getpass(monkeypatch, "s3kr3t")
+
+    password = console_utils.console_input("foo: ", encrypted=True)
+
+    assert password == 's3kr3t'
+
+    (out, err) = capsys.readouterr()
+
+    assert out == ''
+    assert err == 'foo: '
