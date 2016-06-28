@@ -337,6 +337,8 @@ def test_unset_variables():
 
 
 def test_set_and_unset_variables_encrypted():
+    keyring.reset_keyring_module()
+
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
         status = project_ops.add_variables(project,
@@ -374,6 +376,8 @@ def test_set_and_unset_variables_encrypted():
 
 
 def test_set_and_unset_variables_some_encrypted():
+    keyring.reset_keyring_module()
+
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
         status = project_ops.add_variables(project,

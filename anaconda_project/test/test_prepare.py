@@ -530,6 +530,8 @@ variables:
 
 
 def test_prepare_asking_for_password_with_browser(monkeypatch):
+    keyring.reset_keyring_module()
+
     # In this scenario, we store a password in the keyring.
     from tornado.ioloop import IOLoop
     io_loop = IOLoop()

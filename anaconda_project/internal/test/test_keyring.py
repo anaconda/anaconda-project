@@ -66,6 +66,8 @@ def test_get_set_using_fallback():
 
     _with_fallback_keyring(check)
 
+    keyring.reset_keyring_module()
+
 
 def test_get_set_using_mock(monkeypatch):
     passwords = _monkeypatch_keyring(monkeypatch)
@@ -74,6 +76,8 @@ def test_get_set_using_mock(monkeypatch):
     assert "bar" == keyring.get("abc", "FOO")
 
     assert dict(anaconda={'abc/FOO': 'bar'}) == passwords
+
+    keyring.reset_keyring_module()
 
 
 def test_unset_using_fallback():
@@ -85,6 +89,8 @@ def test_unset_using_fallback():
 
     _with_fallback_keyring(check)
 
+    keyring.reset_keyring_module()
+
 
 def test_unset_using_mock(monkeypatch):
     passwords = _monkeypatch_keyring(monkeypatch)
@@ -95,6 +101,8 @@ def test_unset_using_mock(monkeypatch):
     assert keyring.get("abc", "FOO") is None
 
     assert dict(anaconda=dict()) == passwords
+
+    keyring.reset_keyring_module()
 
 
 expected_broken_message = (
@@ -111,6 +119,8 @@ def test_set_get_using_broken(monkeypatch, capsys):
     assert '' == out
     assert (expected_broken_message % "setting") == err
 
+    keyring.reset_keyring_module()
+
 
 def test_get_using_broken(monkeypatch, capsys):
     _monkeypatch_broken_keyring(monkeypatch)
@@ -121,6 +131,8 @@ def test_get_using_broken(monkeypatch, capsys):
     assert '' == out
     assert (expected_broken_message % "getting") == err
 
+    keyring.reset_keyring_module()
+
 
 def test_unset_using_broken(monkeypatch, capsys):
     _monkeypatch_broken_keyring(monkeypatch)
@@ -130,3 +142,5 @@ def test_unset_using_broken(monkeypatch, capsys):
     (out, err) = capsys.readouterr()
     assert '' == out
     assert (expected_broken_message % "deleting") == err
+
+    keyring.reset_keyring_module()
