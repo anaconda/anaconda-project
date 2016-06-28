@@ -406,6 +406,7 @@ class EnvVarProvider(Provider):
     def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to read env var value."""
         config = dict()
+        value = None
         if requirement.encrypted:
             env_prefix = self._get_env_prefix(environ)
             if env_prefix is None:
@@ -413,10 +414,13 @@ class EnvVarProvider(Provider):
             else:
                 value = keyring.get(env_prefix, requirement.env_var)
 
-            disabled_value = None
-        else:
+        # note that we will READ an encrypted value from local
+        # state if someone puts it in there by hand, but we won't
+        # ever write one there ourselves.
+        if value is None:
             value = self._local_state_override(requirement, local_state_file)
-            disabled_value = self._disabled_local_state_override(requirement, local_state_file)
+
+        disabled_value = self._disabled_local_state_override(requirement, local_state_file)
         was_disabled = value is None and disabled_value is not None
         if was_disabled:
             value = disabled_value
@@ -566,14 +570,17 @@ class EnvVarProvider(Provider):
         #  - then anything already set in the environment wins, so you
         #    can override on the command line like `FOO=bar myapp`
         #  - then the project.yml default value
+        local_state_override = None
         if requirement.encrypted:
             env_prefix = self._get_env_prefix(context.environ)
-            if env_prefix is None:
-                local_state_override = None
-            else:
+            if env_prefix is not None:
                 local_state_override = keyring.get(env_prefix, requirement.env_var)
-        else:
+
+        # we will read encrypted vars from local state, though we never
+        # put them in there ourselves
+        if local_state_override is None:
             local_state_override = self._local_state_override(requirement, context.local_state_file)
+
         if local_state_override is not None:
             # project-local.yml
             #

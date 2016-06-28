@@ -222,6 +222,38 @@ variables:
 """}, check_env_var_provider)
 
 
+def test_env_var_provider_with_encrypted_value_set_in_local_state():
+    def check_env_var_provider(dirname):
+        provider = EnvVarProvider()
+        requirement = _load_env_var_requirement(dirname, "FOO_PASSWORD")
+        assert requirement.encrypted
+        local_state_file = LocalStateFile.load_for_directory(dirname)
+        # set in environ to be sure we override it with local state
+        environ = dict(FOO_PASSWORD='from_environ')
+        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
+        assert dict(value="from_local_state", source="variables") == status.analysis.config
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT)
+        result = provider.provide(requirement, context=context)
+        assert [] == result.errors
+        assert 'FOO_PASSWORD' in context.environ
+        assert 'from_local_state' == context.environ['FOO_PASSWORD']
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO_PASSWORD:
+    default: from_default
+    """,
+         DEFAULT_LOCAL_STATE_FILENAME: """
+variables:
+  FOO_PASSWORD: from_local_state
+"""}, check_env_var_provider)
+
+
 def test_env_var_provider_configure_local_state_value():
     def check_env_var_provider_config_local_state(dirname):
         provider = EnvVarProvider()
