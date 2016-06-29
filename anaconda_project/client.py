@@ -71,14 +71,14 @@ class _Client(object):
                 return len(zf.namelist())
         assert False, ("unsupported archive filename %s" % archive_filename)  # pragma: no cover (should not be reached)
 
-    def stage(self, project_info, archive_filename):
+    def stage(self, project_info, archive_filename, uploaded_basename):
         url = "{}/apps/{}/projects/{}/stage".format(self._api.domain, self._username(), project_info['name'])
         config = project_info.copy()
         config['size'] = os.path.getsize(archive_filename)
         file_count = self._file_count(archive_filename)
         if file_count is not None:
             config['num_of_files'] = file_count
-        json = {'basename': ("%s.tar" % project_info['name']), 'configuration': config}
+        json = {'basename': uploaded_basename, 'configuration': config}
         data, headers = binstar_utils.jencode(json)
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
@@ -92,7 +92,7 @@ class _Client(object):
         self._check_response(res)
         return res
 
-    def _put_on_s3(self, archive_filename, url, s3data):
+    def _put_on_s3(self, archive_filename, uploaded_basename, url, s3data):
         with open(archive_filename, 'rb') as f:
             _hexmd5, b64md5, size = binstar_utils.compute_hash(f, size=os.path.getsize(archive_filename))
 
@@ -103,7 +103,7 @@ class _Client(object):
         with open(archive_filename, 'rb') as archive_file_object:
             data_stream, headers = binstar_requests_ext.stream_multipart(
                 s3data,
-                files={'file': (os.path.basename(archive_filename), archive_file_object)})
+                files={'file': (uploaded_basename, archive_file_object)})
 
             res = requests.post(url,
                                 data=data_stream,
@@ -113,13 +113,15 @@ class _Client(object):
             self._check_response(res)
         return res
 
-    def upload(self, project_info, archive_filename):
+    def upload(self, project_info, archive_filename, uploaded_basename):
         """Upload archive_filename created from project, throwing BinstarError."""
         if not self._exists(project_info['name']):
             res = self.create(project_info=project_info)
             assert res.status_code in (200, 201)
 
-        res = self.stage(project_info=project_info, archive_filename=archive_filename)
+        res = self.stage(project_info=project_info,
+                         archive_filename=archive_filename,
+                         uploaded_basename=uploaded_basename)
         assert res.status_code in (200, 201)
 
         stage_info = res.json()
@@ -128,7 +130,10 @@ class _Client(object):
         assert 'form_data' in stage_info
         assert 'dist_id' in stage_info
 
-        res = self._put_on_s3(archive_filename, url=stage_info['post_url'], s3data=stage_info['form_data'])
+        res = self._put_on_s3(archive_filename,
+                              uploaded_basename,
+                              url=stage_info['post_url'],
+                              s3data=stage_info['form_data'])
         assert res.status_code in (200, 201)
 
         res = self.commit(project_info['name'], stage_info['dist_id'])
@@ -148,12 +153,14 @@ class _UploadedStatus(SimpleStatus):
 
 # This function is supposed to encapsulate the binstar API (don't
 # require any other files to import binstar_client).
-def _upload(project, archive_filename, site=None, username=None, token=None, log_level=None):
+# archive_filename is the path to a local tmp file to upload
+# uploaded_basename is the filename the server should remember
+def _upload(project, archive_filename, uploaded_basename, site=None, username=None, token=None, log_level=None):
     assert not project.problems
 
     client = _Client(site=site, username=username, token=token, log_level=log_level)
     try:
-        json = client.upload(project.publication_info(), archive_filename)
+        json = client.upload(project.publication_info(), archive_filename, uploaded_basename)
         return _UploadedStatus(json)
     except Unauthorized as e:
         return SimpleStatus(success=False,

@@ -2113,7 +2113,7 @@ name: archivedproj
 
 def test_upload(monkeypatch):
     def check(dirname):
-        with fake_server(monkeypatch):
+        with fake_server(monkeypatch, expected_basename='foo.tar.bz2'):
             project = project_no_dedicated_env(dirname)
             assert [] == project.problems
             status = project_ops.upload(project, site='unit_test')

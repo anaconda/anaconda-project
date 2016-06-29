@@ -36,12 +36,12 @@ def test_specify_token_and_log_level(monkeypatch):
 
 def test_upload(monkeypatch):
     def check(dirname):
-        with fake_server(monkeypatch):
+        with fake_server(monkeypatch, expected_basename='foo.zip'):
             project = project_ops.create(dirname)
-            archivefile = os.path.join(dirname, "foo.zip")
+            archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test')
             assert status
 
     with_directory_contents(dict(), check)
@@ -49,12 +49,12 @@ def test_upload(monkeypatch):
 
 def test_upload_failing_auth(monkeypatch):
     def check(dirname):
-        with fake_server(monkeypatch, fail_these=('auth', )):
+        with fake_server(monkeypatch, expected_basename='foo.zip', fail_these=('auth', )):
             project = project_ops.create(dirname)
-            archivefile = os.path.join(dirname, "foo.zip")
+            archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test')
             assert not status
             assert ['Not logged in.'] == status.errors
 
@@ -63,12 +63,12 @@ def test_upload_failing_auth(monkeypatch):
 
 def test_upload_missing_login(monkeypatch):
     def check(dirname):
-        with fake_server(monkeypatch, fail_these=('missing_login', )):
+        with fake_server(monkeypatch, expected_basename='foo.zip', fail_these=('missing_login', )):
             project = project_ops.create(dirname)
-            archivefile = os.path.join(dirname, "foo.zip")
+            archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test')
             assert not status
             assert ['Not logged in.'] == status.errors
 
@@ -77,12 +77,12 @@ def test_upload_missing_login(monkeypatch):
 
 def test_upload_failing_create(monkeypatch):
     def check(dirname):
-        with fake_server(monkeypatch, fail_these=('create', )):
+        with fake_server(monkeypatch, expected_basename='foo.zip', fail_these=('create', )):
             project = project_ops.create(dirname)
-            archivefile = os.path.join(dirname, "foo.zip")
+            archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test')
             assert not status
             assert '501' in status.errors[0]
 
@@ -91,12 +91,12 @@ def test_upload_failing_create(monkeypatch):
 
 def test_upload_failing_stage(monkeypatch):
     def check(dirname):
-        with fake_server(monkeypatch, fail_these=('stage', )):
+        with fake_server(monkeypatch, expected_basename='foo.zip', fail_these=('stage', )):
             project = project_ops.create(dirname)
-            archivefile = os.path.join(dirname, "foo.zip")
+            archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test')
             assert not status
             assert '501' in status.errors[0]
 
@@ -105,12 +105,12 @@ def test_upload_failing_stage(monkeypatch):
 
 def test_upload_failing_s3_upload(monkeypatch):
     def check(dirname):
-        with fake_server(monkeypatch, fail_these=('s3', )):
+        with fake_server(monkeypatch, expected_basename='foo.zip', fail_these=('s3', )):
             project = project_ops.create(dirname)
-            archivefile = os.path.join(dirname, "foo.zip")
+            archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test')
             assert not status
             assert '501' in status.errors[0]
 
@@ -119,12 +119,12 @@ def test_upload_failing_s3_upload(monkeypatch):
 
 def test_upload_failing_commit(monkeypatch):
     def check(dirname):
-        with fake_server(monkeypatch, fail_these=('commit', )):
+        with fake_server(monkeypatch, expected_basename='foo.zip', fail_these=('commit', )):
             project = project_ops.create(dirname)
-            archivefile = os.path.join(dirname, "foo.zip")
+            archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test')
             assert not status
             assert '501' in status.errors[0]
 
