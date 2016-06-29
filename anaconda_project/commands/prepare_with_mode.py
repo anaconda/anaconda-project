@@ -48,7 +48,8 @@ def _interactively_fix_missing_variables(project, result):
     start_over = False
     values = dict()
     for status in can_ask_about:
-        reply = console_utils.console_input("Value for " + status.requirement.env_var + ": ")
+        reply = console_utils.console_input("Value for " + status.requirement.env_var + ": ",
+                                            encrypted=status.requirement.encrypted)
         if reply is None:
             return False  # EOF
         reply = reply.strip()

@@ -25,13 +25,8 @@ class PluginRegistry(object):
         Returns:
             instance of Requirement
         """
-        # future goal will be to un-hardcode this
-        if env_var == 'ANACONDA_MASTER_PASSWORD':
-            from .requirements.master_password import MasterPasswordRequirement
-            return MasterPasswordRequirement(registry=self, options=options)
-        else:
-            from .requirement import EnvVarRequirement
-            return EnvVarRequirement(registry=self, env_var=env_var, options=options)
+        from .requirement import EnvVarRequirement
+        return EnvVarRequirement(registry=self, env_var=env_var, options=options)
 
     def find_requirement_by_service_type(self, service_type, env_var, options):
         """Create a requirement instance given a service type.
@@ -76,9 +71,6 @@ class PluginRegistry(object):
         if class_name == 'CondaEnvProvider':
             from .providers.conda_env import CondaEnvProvider
             return CondaEnvProvider()
-        elif class_name == 'MasterPasswordProvider':
-            from .providers.master_password import MasterPasswordProvider
-            return MasterPasswordProvider()
         elif class_name == 'RedisProvider':
             from .providers.redis import RedisProvider
             return RedisProvider()

@@ -18,23 +18,21 @@ requirements:
     - python
     - setuptools
     - psutil # needed by conda
-    - bcrypt
     - tornado
-    - pycrypto
     - ruamel_yaml
     - beautifulsoup4
     - requests
     - anaconda-client
+    - "keyring >=9.0"
 
   run:
     - python
-    - bcrypt
     - tornado
-    - pycrypto
     - ruamel_yaml
     - beautifulsoup4
     - requests
     - anaconda-client
+    - "keyring >=9.0"
 
 test:
   imports:

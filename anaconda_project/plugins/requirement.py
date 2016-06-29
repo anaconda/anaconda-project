@@ -10,7 +10,6 @@ from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 
-import anaconda_project
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.status import Status
@@ -56,6 +55,10 @@ class RequirementStatus(Status):
         self._provider = provider
         self._analysis = analysis
         self._latest_provide_result = latest_provide_result
+
+    def __repr__(self):
+        """Repr of the status."""
+        return "RequirementStatus(%r,%r,%r)" % (self.has_been_provided, self.status_description, self.requirement)
 
     def __bool__(self):
         """True if the requirement is met."""
@@ -224,9 +227,7 @@ class Requirement(with_metaclass(ABCMeta)):
         pass  # pragma: no cover (abstract method)
 
 # suffixes that change the default for the "encrypted" option
-_secret_suffixes = ('_PASSWORD', '_ENCRYPTED', '_SECRET_KEY', '_SECRET')
-if anaconda_project._beta_test_mode:
-    _secret_suffixes = ()  # credentials stuff is just confusing for now # pragma: no cover (beta mode)
+_secret_suffixes = ('_PASSWORD', '_SECRET_KEY', '_SECRET')
 
 
 class EnvVarRequirement(Requirement):
@@ -245,12 +246,6 @@ class EnvVarRequirement(Requirement):
             good_default = False
         elif is_string(raw_default) or isinstance(raw_default, (int, float)):
             good_default = True
-        elif isinstance(raw_default, dict):
-            # we only allow a dict if it represents an encrypted value
-            if ('key' in raw_default) and ('encrypted' in raw_default):
-                good_default = True
-            else:
-                good_default = False
         else:
             good_default = False
 
@@ -261,16 +256,10 @@ class EnvVarRequirement(Requirement):
         if good_default:
             return True
         else:
-            if isinstance(raw_default, dict):
-                problems.append(("default value for variable {env_var} can be a dict but only if it " +
-                                 "contains 'key' and 'encrypted' fields; found {value}").format(env_var=env_var,
-                                                                                                value=dict(
-                                                                                                    raw_default)))
-            else:
-                problems.append(
-                    "default value for variable {env_var} must be null, a string, or a number, not {value}.".format(
-                        env_var=env_var,
-                        value=raw_default))
+            problems.append(
+                "default value for variable {env_var} must be null, a string, or a number, not {value}.".format(
+                    env_var=env_var,
+                    value=raw_default))
             return False
 
     def __init__(self, registry, env_var, options=None):

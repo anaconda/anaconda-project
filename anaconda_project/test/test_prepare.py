@@ -15,7 +15,6 @@ import subprocess
 from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
-from anaconda_project.internal.crypto import decrypt_string
 from anaconda_project.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare,
                                       prepare_in_stages, PrepareSuccess, PrepareFailure, _after_stage_success,
                                       _FunctionPrepareStage)
@@ -25,6 +24,7 @@ from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import (EnvVarRequirement, UserConfigOverrides)
 from anaconda_project.conda_manager import (push_conda_manager_class, pop_conda_manager_class, CondaManager,
                                             CondaEnvironmentDeviations)
+import anaconda_project.internal.keyring as keyring
 
 
 def test_prepare_empty_directory():
@@ -140,7 +140,13 @@ def test_prepare_some_env_var_not_set_keep_going():
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(BAR='bar')
         stage = prepare_in_stages(project, environ=environ, keep_going_until_success=True)
+
+        # there's an initial stage to set the conda env
+        next_stage = stage.execute()
+        assert not stage.failed
         assert stage.environ['PROJECT_DIR'] == dirname
+        stage = next_stage
+
         for i in range(1, 10):
             next_stage = stage.execute()
             assert next_stage is not None
@@ -441,6 +447,36 @@ def test_run_after_success_function_when_second_stage_succeeds():
     assert state['state'] == 'after'
 
 
+def _form_names(response, provider):
+    from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
+    from bs4 import BeautifulSoup
+
+    if response.code != 200:
+        raise Exception("got a bad http response " + repr(response))
+
+    soup = BeautifulSoup(response.body, _BEAUTIFUL_SOUP_BACKEND)
+    named_elements = soup.find_all(attrs={'name': True})
+    names = set()
+    for element in named_elements:
+        if provider in element['name']:
+            names.add(element['name'])
+    return names
+
+
+def _prefix_form(form_names, form):
+    prefixed = dict()
+    for (key, value) in form.items():
+        found = False
+        for name in form_names:
+            if name.endswith("." + key):
+                prefixed[name] = value
+                found = True
+                break
+        if not found:
+            raise RuntimeError("Form field %s in %r could not be prefixed from %r" % (key, form, form_names))
+    return prefixed
+
+
 def test_prepare_with_browser(monkeypatch):
     from tornado.ioloop import IOLoop
     io_loop = IOLoop()
@@ -454,6 +490,14 @@ def test_prepare_with_browser(monkeypatch):
         @gen.coroutine
         def do_http():
             http_results['get'] = yield http_get_async(url)
+
+            # pick our environment (using inherited one)
+            form_names = _form_names(http_results['get'], provider='CondaEnvProvider')
+            form = _prefix_form(form_names, {'source': 'inherited'})
+            response = yield http_post_async(url, form=form)
+            assert response.code == 200
+
+            # now do the next round of stuff (the FOO variable)
             http_results['post'] = yield http_post_async(url, body="")
 
         io_loop.add_callback(do_http)
@@ -486,9 +530,9 @@ variables:
 
 
 def test_prepare_asking_for_password_with_browser(monkeypatch):
-    # In this scenario, the master password is already in
-    # the environment and we need to ask for another password
-    # that we'd store using the master password.
+    keyring.reset_keyring_module()
+
+    # In this scenario, we store a password in the keyring.
     from tornado.ioloop import IOLoop
     io_loop = IOLoop()
 
@@ -548,13 +592,11 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
 
     def prepare_with_browser(dirname):
         project = project_no_dedicated_env(dirname)
-        environ = minimal_environ(ANACONDA_MASTER_PASSWORD='bar')
+        environ = minimal_environ()
         result = prepare_with_browser_ui(project, environ=environ, keep_going_until_success=False, io_loop=io_loop)
         assert result
-        assert dict(ANACONDA_MASTER_PASSWORD='bar',
-                    FOO_PASSWORD='bloop',
-                    PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
-        assert dict(ANACONDA_MASTER_PASSWORD='bar') == strip_environ(environ)
+        assert dict(FOO_PASSWORD='bloop', PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert dict() == strip_environ(environ)
 
         # wait for the results of the POST to come back,
         # awesome hack-tacular
@@ -575,21 +617,19 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
         assert "Environment variable FOO_PASSWORD is set." in final_done_html
 
         local_state_file = LocalStateFile.load_for_directory(project.directory_path)
-        foo_password = local_state_file.get_value(['variables', 'FOO_PASSWORD'])
-        assert isinstance(foo_password, dict)
-        assert foo_password['key'] == 'ANACONDA_MASTER_PASSWORD'
-        assert 'encrypted' in foo_password
-        encrypted = foo_password['encrypted']
-        decrypted = decrypt_string(encrypted, 'bar')
-        assert 'bloop' == decrypted
+        assert local_state_file.get_value(['variables', 'FOO_PASSWORD']) is None
 
         # now a no-browser prepare() should read password from the
-        # local state file
+        # keyring
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    keyring.enable_fallback_keyring()
+    try:
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO_PASSWORD: {}
 """}, prepare_with_browser)
+    finally:
+        keyring.disable_fallback_keyring()
 
 
 def test_prepare_problem_project_with_browser(monkeypatch):

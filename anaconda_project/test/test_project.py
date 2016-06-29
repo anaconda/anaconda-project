@@ -842,25 +842,6 @@ def test_variable_default_cannot_be_list():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  FOO: []\n"}, check_file)
 
 
-def test_variable_default_missing_encrypted_field():
-    def check(dirname):
-        filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
-        assert os.path.exists(filename)
-        project = project_no_dedicated_env(dirname)
-        assert [] == project.requirements
-        assert 1 == len(project.problems)
-
-        assert ("default value for variable FOO can be a dict but only if it contains 'key' and 'encrypted' fields; " +
-                "found {'key': 'MASTER_PASSWORD'}") == project.problems[0]
-
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
-variables:
-  FOO:
-    default: { key: 'MASTER_PASSWORD' }
-"""}, check)
-
-
 def test_variable_default_missing_key_field():
     def check(dirname):
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
@@ -869,8 +850,8 @@ def test_variable_default_missing_key_field():
         assert [] == project.requirements
         assert 1 == len(project.problems)
 
-        assert ("default value for variable FOO can be a dict but only if it contains 'key' and 'encrypted' fields; " +
-                "found {'encrypted': 'abcdefg'}") == project.problems[0]
+        assert ("default value for variable FOO must be null, a string, or a number, " +
+                "not CommentedMap([('encrypted', 'abcdefg')]).") == project.problems[0]
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """

@@ -13,6 +13,18 @@ from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.conda_manager import new_conda_manager, CondaManagerError
 
 
+def _platform_env_prefix_variable():
+    if platform.system() == 'Windows':
+        # On Windows, activate.bat never sets CONDA_ENV_PATH but
+        # sets CONDA_DEFAULT_ENV to the full path to the environment.
+        return "CONDA_DEFAULT_ENV"
+    else:
+        # On Unix, activate script sets CONDA_ENV_PATH to the full
+        # path, and sets CONDA_DEFAULT_ENV to either just the env
+        # name or the full path.
+        return "CONDA_ENV_PATH"
+
+
 class CondaEnvRequirement(EnvVarRequirement):
     """A requirement for CONDA_ENV_PATH (or CONDA_DEFAULT_ENV on Windows) to point to a conda env."""
 
@@ -23,16 +35,7 @@ class CondaEnvRequirement(EnvVarRequirement):
             registry (PluginRegistry): plugin registry
             env_specs (dict): dict from env name to ``CondaEnvironment``
         """
-        if platform.system() == 'Windows':
-            # On Windows, activate.bat never sets CONDA_ENV_PATH but
-            # sets CONDA_DEFAULT_ENV to the full path to the environment.
-            env_var = "CONDA_DEFAULT_ENV"
-        else:
-            # On Unix, activate script sets CONDA_ENV_PATH to the full
-            # path, and sets CONDA_DEFAULT_ENV to either just the env
-            # name or the full path.
-            env_var = "CONDA_ENV_PATH"
-        super(CondaEnvRequirement, self).__init__(registry=registry, env_var=env_var)
+        super(CondaEnvRequirement, self).__init__(registry=registry, env_var=_platform_env_prefix_variable())
         self.env_specs = env_specs
         self._conda = new_conda_manager()
 

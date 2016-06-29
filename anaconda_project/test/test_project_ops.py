@@ -24,6 +24,7 @@ from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
 from anaconda_project.test.fake_server import fake_server
+import anaconda_project.internal.keyring as keyring
 
 
 def test_create(monkeypatch):
@@ -292,6 +293,26 @@ def test_set_variables_nonexistent():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_set_var)
 
 
+def test_set_variables_cannot_create_environment(monkeypatch):
+    def mock_create(prefix, pkgs, channels):
+        from anaconda_project.internal import conda_api
+        raise conda_api.CondaError("error_from_conda_create")
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
+
+    def check_set_var(dirname):
+        project = Project(dirname)
+
+        status = project_ops.set_variables(project, [('foo', 'bar'), ('baz', 'qux')])
+        assert not status
+        expected_env_path = os.path.join(dirname, 'envs', 'default')
+        assert status.status_description == ("'%s' doesn't look like it contains a Conda environment yet." %
+                                             expected_env_path)
+        assert status.errors == ["Failed to create environment at %s: error_from_conda_create" % expected_env_path]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_set_var)
+
+
 def test_unset_variables():
     def check_unset_var(dirname):
         project = project_no_dedicated_env(dirname)
@@ -313,6 +334,89 @@ def test_unset_variables():
         assert local_state.get_value(['variables', 'baz']) is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  preset: null')}, check_unset_var)
+
+
+def test_set_and_unset_variables_encrypted():
+    keyring.reset_keyring_module()
+
+    def check_set_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.add_variables(project,
+                                           ['foo_PASSWORD', 'baz_SECRET'],
+                                           dict(foo_PASSWORD='no',
+                                                baz_SECRET='nope'))
+        assert status
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert local_state.get_value(['variables', 'foo_PASSWORD']) is None
+        assert local_state.get_value(['variables', 'baz_SECRET']) is None
+
+        assert set(keyring.fallback_data().values()) == set()
+
+        status = project_ops.set_variables(project, [('foo_PASSWORD', 'bar'), ('baz_SECRET', 'qux')])
+        assert status
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        # the encrypted variables are NOT in local state
+        assert local_state.get_value(['variables', 'foo_PASSWORD']) is None
+        assert local_state.get_value(['variables', 'baz_SECRET']) is None
+
+        assert set(keyring.fallback_data().values()) == set(['bar', 'qux'])
+
+        status = project_ops.unset_variables(project, ['foo_PASSWORD', 'baz_SECRET'])
+        assert status
+
+        assert set(keyring.fallback_data().values()) == set()
+
+    try:
+        keyring.enable_fallback_keyring()
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  preset: null')}, check_set_var)
+    finally:
+        keyring.disable_fallback_keyring()
+
+
+def test_set_and_unset_variables_some_encrypted():
+    keyring.reset_keyring_module()
+
+    def check_set_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.add_variables(project,
+                                           ['foo_PASSWORD', 'baz_SECRET', 'woo'],
+                                           dict(foo_PASSWORD='no',
+                                                baz_SECRET='nope',
+                                                woo='something'))
+        assert status
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert local_state.get_value(['variables', 'foo_PASSWORD']) is None
+        assert local_state.get_value(['variables', 'baz_SECRET']) is None
+        assert local_state.get_value(['variables', 'woo']) is None
+
+        assert set(keyring.fallback_data().values()) == set()
+
+        status = project_ops.set_variables(project, [('foo_PASSWORD', 'bar'), ('baz_SECRET', 'qux'), ('woo', 'w00t')])
+        assert status
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        # the encrypted variables are NOT in local state
+        assert local_state.get_value(['variables', 'foo_PASSWORD']) is None
+        assert local_state.get_value(['variables', 'baz_SECRET']) is None
+        assert local_state.get_value(['variables', 'woo']) == 'w00t'
+
+        assert set(keyring.fallback_data().values()) == set(['bar', 'qux'])
+
+        status = project_ops.unset_variables(project, ['foo_PASSWORD', 'baz_SECRET', 'woo'])
+        assert status
+
+        local_state = LocalStateFile.load_for_directory(dirname)
+        assert set(keyring.fallback_data().values()) == set()
+        assert local_state.get_value(['variables', 'woo']) is None
+
+    try:
+        keyring.enable_fallback_keyring()
+        with_directory_contents({DEFAULT_PROJECT_FILENAME: ('variables:\n' '  preset: null')}, check_set_var)
+    finally:
+        keyring.disable_fallback_keyring()
 
 
 def _test_add_command_line(command_type):
@@ -734,7 +838,7 @@ def test_add_download(monkeypatch):
     def check(dirname):
         _monkeypatch_download_file(monkeypatch, dirname)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
 
         assert os.path.isfile(os.path.join(dirname, "MYDATA"))
@@ -743,7 +847,7 @@ def test_add_download(monkeypatch):
         assert [] == status.errors
 
         # be sure download was added to the file and saved
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert {"url": 'http://localhost:123456'} == project2.project_file.get_value(['downloads', 'MYDATA'])
 
     with_directory_contents(dict(), check)
@@ -754,7 +858,7 @@ def test_add_download_with_filename(monkeypatch):
         FILENAME = 'TEST_FILENAME'
         _monkeypatch_download_file(monkeypatch, dirname, FILENAME)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456', FILENAME)
 
         assert os.path.isfile(os.path.join(dirname, FILENAME))
@@ -763,7 +867,7 @@ def test_add_download_with_filename(monkeypatch):
         assert [] == status.errors
 
         # be sure download was added to the file and saved
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         requirement = project2.project_file.get_value(['downloads', 'MYDATA'])
         assert requirement['url'] == 'http://localhost:123456'
         assert requirement['filename'] == FILENAME
@@ -776,7 +880,7 @@ def test_add_download_with_checksum(monkeypatch):
         FILENAME = 'MYDATA'
         _monkeypatch_download_file(monkeypatch, dirname, checksum='DIGEST')
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_download(project,
                                           'MYDATA',
                                           'http://localhost:123456',
@@ -788,7 +892,7 @@ def test_add_download_with_checksum(monkeypatch):
         assert [] == status.errors
 
         # be sure download was added to the file and saved
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         requirement = project2.project_file.get_value(['downloads', 'MYDATA'])
         assert requirement['url'] == 'http://localhost:123456'
         assert requirement['md5'] == 'DIGEST'
@@ -856,7 +960,7 @@ def test_add_download_fails(monkeypatch):
     def check(dirname):
         _monkeypatch_download_file_fails(monkeypatch, dirname)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
@@ -865,7 +969,7 @@ def test_add_download_fails(monkeypatch):
         assert ['Error downloading http://localhost:123456: response code 404'] == status.errors
 
         # be sure download was NOT added to the file
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert project2.project_file.get_value(['downloads', 'MYDATA']) is None
         # should have been dropped from the original project object also
         assert project.project_file.get_value(['downloads', 'MYDATA']) is None
@@ -877,7 +981,7 @@ def test_add_download_fails_to_get_http_response(monkeypatch):
     def check(dirname):
         _monkeypatch_download_file_fails_to_get_http_response(monkeypatch, dirname)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
@@ -885,7 +989,7 @@ def test_add_download_fails_to_get_http_response(monkeypatch):
         assert ['Nope nope nope'] == status.errors
 
         # be sure download was NOT added to the file
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert project2.project_file.get_value(['downloads', 'MYDATA']) is None
         # should have been dropped from the original project object also
         assert project.project_file.get_value(['downloads', 'MYDATA']) is None
@@ -895,7 +999,7 @@ def test_add_download_fails_to_get_http_response(monkeypatch):
 
 def test_add_download_with_project_file_problems():
     def check(dirname):
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
@@ -904,7 +1008,7 @@ def test_add_download_with_project_file_problems():
                 ] == status.errors
 
         # be sure download was NOT added to the file
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert project2.project_file.get_value(['downloads', 'MYDATA']) is None
         # should have been dropped from the original project object also
         assert project.project_file.get_value(['downloads', 'MYDATA']) is None

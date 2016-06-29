@@ -223,6 +223,12 @@ Say your command needs a database password, or has a tunable
 parameter. You can require (or just allow) users to configure
 these before the command runs.
 
+Encrypted variables such as passwords are treated differently from
+plain variables; encrypted variable values are kept in the system
+keychain, while plain variable values are kept in
+``project-local.yml``. Let's try out a plain unencrypted variable
+first.
+
 Type::
 
     anaconda-project add-variable COLUMN_TO_SHOW
@@ -281,9 +287,50 @@ will be ignored; unset your local override with::
 The default will then be used when you ``anaconda-project run
 showdata``.
 
-NOTE: it's good practice to use variables for passwords and
-secrets in particular! It isn't very secure to put your personal
-passwords directly in your code.
+============================
+An encrypted custom variable
+============================
+
+It's good practice to use variables for passwords and secrets in
+particular. This way, every user of the project can input their
+own password, and it will be kept in their system keychain.
+
+Any variable ending in ``_PASSWORD``, ``_SECRET``, or
+``_SECRET_KEY`` will be encrypted by default.
+
+Type::
+
+    anaconda-project add-variable DB_PASSWORD
+
+In ``project.yml`` you should now have a ``DB_PASSWORD`` in the
+``variables:`` section, and ``anaconda-project list-variables``
+should list ``DB_PASSWORD``.
+
+From here, things work just like the ``COLUMN_TO_SHOW`` example
+above, except that the value of ``DB_PASSWORD`` will be saved in
+the system keychain rather than ``project-local.yml``.
+
+Try for example::
+
+   anaconda-project run showdata
+
+This should prompt you for a value the first time, and then save
+it in the keychain and use it from there on the second run.  You
+can also use ``anaconda-project set-variable
+DB_PASSWORD=whatever``, ``anaconda-project unset-variable
+DB_PASSWORD``, and so on.
+
+Because there's no reason this Iris example needs a database
+password, feel free to remove it.
+
+Type::
+
+  anaconda-project remove-variable DB_PASSWORD
+
+NOTE: ``unset-variable`` removes the variable value but keeps the
+requirement that ``DB_PASSWORD`` must be set.  ``remove-variable``
+removes the variable itself (the project will no longer require a
+``DB_PASSWORD`` in order to run).
 
 ====================
 Creating a Bokeh app

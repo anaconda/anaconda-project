@@ -7,6 +7,7 @@
 """Utilities for implementing console interaction."""
 from __future__ import absolute_import, print_function
 
+import getpass
 import sys
 
 _PY2 = sys.version_info[0] == 2
@@ -90,13 +91,16 @@ def _input(prompt):
         return input(prompt)  # flake8: noqa # pragma: no cover
 
 
-def console_input(prompt):
+def console_input(prompt, encrypted=False):
     """Wrapper for raw_input (py2) and input (py3).
 
     Returns None on EOF.
     """
     try:
-        return _input(prompt)
+        if encrypted:
+            return getpass.getpass(prompt)
+        else:
+            return _input(prompt)
     except EOFError:
         return None
     except KeyboardInterrupt:

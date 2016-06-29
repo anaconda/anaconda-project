@@ -42,12 +42,10 @@ def test_autoguess_encrypted_option():
     assert req(env_var='FOO_PASSWORD').encrypted
     assert req(env_var='FOO_SECRET').encrypted
     assert req(env_var='FOO_SECRET_KEY').encrypted
-    assert req(env_var='FOO_ENCRYPTED').encrypted
 
     assert not req(env_var='FOO_PASSWORD', options=dict(encrypted=False)).encrypted
     assert not req(env_var='FOO_SECRET', options=dict(encrypted=False)).encrypted
     assert not req(env_var='FOO_SECRET_KEY', options=dict(encrypted=False)).encrypted
-    assert not req(env_var='FOO_ENCRYPTED', options=dict(encrypted=False)).encrypted
 
 
 def test_empty_variable_treated_as_unset():
@@ -57,3 +55,15 @@ def test_empty_variable_treated_as_unset():
     assert "Environment variable FOO is not set." == status.status_description
     assert [] == status.logs
     assert [] == status.errors
+
+
+def test_requirement_repr():
+    requirement = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO')
+    assert "EnvVarRequirement(env_var='FOO')" == repr(requirement)
+
+
+def test_requirement_status_repr():
+    requirement = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO')
+    status = requirement.check_status(dict(FOO=''), tmp_local_state_file(), 'default', UserConfigOverrides())
+    assert "RequirementStatus(False,'Environment variable FOO is not set.',EnvVarRequirement(env_var='FOO'))" == repr(
+        status)

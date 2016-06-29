@@ -48,7 +48,7 @@ ROOT = dirname(realpath(__file__))
 
 PY2 = sys.version_info[0] == 2
 
-REQUIRES = ['beautifulsoup4 >= 4.3', 'tornado >= 4.3', 'pycrypto', 'bcrypt >= 2.0']
+REQUIRES = ['beautifulsoup4 >= 4.3', 'tornado >= 4.3', 'keyring >= 9.0']
 
 TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2', 'pytest-xdist']
 
@@ -473,8 +473,8 @@ class CondaPackageCommand(Command):
                     print("Already built for python %s at %s" % (python_version, package_path))
                 else:
                     print("Calling conda build for %s %s" % (python_version, build_arch))
-                    code = subprocess.call(['conda', 'build', '--no-binstar-upload', '--python', python_version,
-                                            recipe_dir])
+                    code = subprocess.call(['conda', 'build', '--channel', 'conda-forge', '--no-binstar-upload',
+                                            '--python', python_version, recipe_dir])
                     if code != 0:
                         raise Exception("Failed to build for python version " + python_version)
                     if not os.path.isfile(package_path):

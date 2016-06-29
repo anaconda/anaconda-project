@@ -38,6 +38,14 @@ class CondaEnvProvider(EnvVarProvider):
         super(CondaEnvProvider, self).__init__()
         self._conda = new_conda_manager()
 
+    def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
+        """Override superclass to not require ourselves."""
+        return ()
+
+    def missing_env_vars_to_provide(self, requirement, environ, local_state_file):
+        """Override superclass to not require ourselves."""
+        return self.missing_env_vars_to_configure(requirement, environ, local_state_file)
+
     def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to add a choice to create a project-scoped environment."""
         assert 'PROJECT_DIR' in environ
