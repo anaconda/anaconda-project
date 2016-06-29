@@ -6,6 +6,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import json
 import socket
 import sys
 import threading
@@ -57,6 +58,9 @@ class ProjectViewHandler(RequestHandler):
                 if 'stage' in self.application.server.fail_these:
                     self.set_status(501)
                 else:
+                    body = json.loads(self.request.body.decode('utf-8'))
+                    assert 'basename' in body
+                    assert body['basename'] == self.application.server.expected_basename
                     post_url = self.application.server.url + "fake_s3"
                     self.set_header('Content-Type', 'application/json')
                     self.write(('{"post_url":"%s", ' + '"form_data":{"x-should-be-passed-back-to-us":"12345"},' +
@@ -80,7 +84,7 @@ class ProjectViewHandler(RequestHandler):
                     assert 'file' in self.request.files
                     assert len(self.request.files['file']) == 1
                     fileinfo = self.request.files['file'][0]
-                    assert fileinfo['filename'] is not None
+                    assert fileinfo['filename'] == self.application.server.expected_basename
                     assert len(fileinfo['body']) > 100  # shouldn't be some tiny or empty thing
         else:
             self.set_status(status_code=404)
@@ -96,10 +100,11 @@ class FakeAnacondaApplication(Application):
 
 
 class FakeAnacondaServer(object):
-    def __init__(self, io_loop, fail_these):
+    def __init__(self, io_loop, fail_these, expected_basename):
         assert io_loop is not None
 
         self.fail_these = fail_these
+        self.expected_basename = expected_basename
         self._application = FakeAnacondaApplication(server=self, io_loop=io_loop)
         self._http = HTTPServer(self._application, io_loop=io_loop)
 
@@ -138,9 +143,10 @@ def _monkeypatch_client_config(monkeypatch, url):
 
 
 class FakeServerContext(object):
-    def __init__(self, monkeypatch, fail_these):
+    def __init__(self, monkeypatch, fail_these, expected_basename):
         self._monkeypatch = monkeypatch
         self._fail_these = fail_these
+        self._expected_basename = expected_basename
         self._url = None
         self._loop = None
         self._started = threading.Condition()
@@ -163,7 +169,9 @@ class FakeServerContext(object):
 
     def _run(self):
         self._loop = IOLoop()
-        self._server = FakeAnacondaServer(io_loop=self._loop, fail_these=self._fail_these)
+        self._server = FakeAnacondaServer(io_loop=self._loop,
+                                          fail_these=self._fail_these,
+                                          expected_basename=self._expected_basename)
         self._url = self._server.url
 
         def notify_started():
@@ -188,5 +196,5 @@ class FakeServerContext(object):
             self._loop.call_later(delay=0.05, callback=really_stop)
 
 
-def fake_server(monkeypatch, fail_these=()):
-    return FakeServerContext(monkeypatch, fail_these)
+def fake_server(monkeypatch, fail_these=(), expected_basename='nope'):
+    return FakeServerContext(monkeypatch, fail_these, expected_basename)
