@@ -11,7 +11,7 @@ import sys
 
 try:
     from urllib.parse import quote_plus
-except NameError:  # pragma: no cover (py2 only)
+except ImportError:  # pragma: no cover (py2 only)
     from urllib import quote_plus  # pragma: no cover (py2 only)
 
 _fallback_keyring = 0
