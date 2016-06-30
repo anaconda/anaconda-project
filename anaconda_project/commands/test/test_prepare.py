@@ -273,10 +273,10 @@ def test_prepare_command_choose_environment(capsys, monkeypatch):
         {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
-    dependencies:
+    packages:
         - nonexistent_foo
   bar:
-    dependencies:
+    packages:
         - nonexistent_bar
 """}, check_prepare_choose_environment)
 
@@ -303,10 +303,10 @@ def test_prepare_command_choose_environment_does_not_exist(capsys):
         {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
-    dependencies:
+    packages:
         - nonexistent_foo
   bar:
-    dependencies:
+    packages:
         - nonexistent_bar
 """}, check_prepare_choose_environment_does_not_exist)
 

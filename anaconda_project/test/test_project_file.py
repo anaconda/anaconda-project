@@ -48,11 +48,11 @@ services: {}
 #
 downloads: {}
 #
-# In the dependencies section, list any packages that must be installed
+# In the packages section, list any packages that must be installed
 # before your code runs.
-# Use `anaconda-project add-dependencies` to add dependencies.
+# Use `anaconda-project add-packages` to add packages.
 #
-dependencies: []
+packages: []
 #
 # In the channels section, list any Conda channel URLs to be searched
 # for packages.

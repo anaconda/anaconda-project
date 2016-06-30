@@ -1032,7 +1032,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
         # be sure it was really done
         project2 = Project(dirname)
         env_commented_map = project2.project_file.get_value(['env_specs', 'foo'])
-        assert dict(dependencies=['numpy'], channels=[]) == dict(env_commented_map)
+        assert dict(packages=['numpy'], channels=[]) == dict(env_commented_map)
         assert os.path.isdir(os.path.join(dirname, 'envs', 'foo', 'conda-meta'))
 
     with_directory_contents(dict(), check)
@@ -1096,8 +1096,8 @@ def test_add_env_spec():
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert dict(dependencies=[], channels=[]) == dict(project2.project_file.get_value(['env_specs', 'foo']))
-        assert dict(dependencies=[], channels=[]) == dict(project2.project_file.get_value(['env_specs', 'bar']))
+        assert dict(packages=[], channels=[]) == dict(project2.project_file.get_value(['env_specs', 'foo']))
+        assert dict(packages=[], channels=[]) == dict(project2.project_file.get_value(['env_specs', 'bar']))
 
     with_directory_contents(dict(), check)
 
@@ -1116,7 +1116,7 @@ def test_add_env_spec_with_packages_and_channels():
 
         # be sure download was added to the file and saved
         project2 = Project(dirname)
-        assert dict(dependencies=['a', 'b', 'c'],
+        assert dict(packages=['a', 'b', 'c'],
                     channels=['c1', 'c2', 'c3']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
 
     with_directory_contents(dict(), check)
@@ -1136,14 +1136,14 @@ def test_add_env_spec_extending_existing_lists():
 
         # be sure download was added to the file and saved
         project2 = Project(dirname)
-        assert dict(dependencies=['b', 'a', 'c'],
+        assert dict(packages=['b', 'a', 'c'],
                     channels=['c3', 'c1', 'c2']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
-    dependencies: [ 'b' ]
+    packages: [ 'b' ]
     channels: [ 'c3']
 """}, check)
 
@@ -1162,26 +1162,26 @@ def test_add_env_spec_extending_existing_lists_with_versions():
 
         # be sure download was added to the file and saved
         project2 = Project(dirname)
-        assert dict(dependencies=['b=2.0', 'a', 'c'],
+        assert dict(packages=['b=2.0', 'a', 'c'],
                     channels=['c3', 'c1', 'c2']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
-    dependencies: [ 'b=1.0' ]
+    packages: [ 'b=1.0' ]
     channels: [ 'c3']
 """}, check)
 
 
-def test_add_dependencies_to_all_environments():
+def test_add_packages_to_all_environments():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_dependencies(project,
-                                                  env_spec_name=None,
-                                                  packages=['foo', 'bar'],
-                                                  channels=['hello', 'world'])
+            status = project_ops.add_packages(project,
+                                              env_spec_name=None,
+                                              packages=['foo', 'bar'],
+                                              channels=['hello', 'world'])
             assert status
             assert [] == status.errors
 
@@ -1189,20 +1189,20 @@ def test_add_dependencies_to_all_environments():
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert ['foo', 'bar'] == list(project2.project_file.get_value('dependencies'))
+        assert ['foo', 'bar'] == list(project2.project_file.get_value('packages'))
         assert ['hello', 'world'] == list(project2.project_file.get_value('channels'))
 
     with_directory_contents(dict(), check)
 
 
-def test_add_dependencies_nonexistent_environment():
+def test_add_packages_nonexistent_environment():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_dependencies(project,
-                                                  env_spec_name="not_an_env",
-                                                  packages=['foo', 'bar'],
-                                                  channels=['hello', 'world'])
+            status = project_ops.add_packages(project,
+                                              env_spec_name="not_an_env",
+                                              packages=['foo', 'bar'],
+                                              channels=['hello', 'world'])
             assert not status
             assert [] == status.errors
 
@@ -1211,11 +1211,11 @@ def test_add_dependencies_nonexistent_environment():
     with_directory_contents(dict(), check)
 
 
-def test_add_dependencies_invalid_spec():
+def test_add_packages_invalid_spec():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_dependencies(project, env_spec_name=None, packages=['='], channels=[])
+            status = project_ops.add_packages(project, env_spec_name=None, packages=['='], channels=[])
             assert not status
             assert 'Could not add packages.' == status.status_description
             assert ['Bad package specifications: =.'] == status.errors
@@ -1225,14 +1225,14 @@ def test_add_dependencies_invalid_spec():
     with_directory_contents(dict(), check)
 
 
-def test_remove_dependencies_from_all_environments():
+def test_remove_packages_from_all_environments():
     def check(dirname):
         def attempt():
             os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
             project = Project(dirname)
-            assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('dependencies'))
-            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'dependencies'], []))
-            status = project_ops.remove_dependencies(project, env_spec_name=None, packages=['foo', 'bar'])
+            assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('packages'))
+            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo', 'bar'])
             assert status
             assert [] == status.errors
 
@@ -1240,30 +1240,30 @@ def test_remove_dependencies_from_all_environments():
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert ['baz'] == list(project2.project_file.get_value('dependencies'))
-        assert ['woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'dependencies']))
+        assert ['baz'] == list(project2.project_file.get_value('packages'))
+        assert ['woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
   - foo
   - bar
   - baz
 env_specs:
   hello:
-    dependencies:
+    packages:
      - foo
      - woot
 """}, check)
 
 
-def test_remove_dependencies_from_one_environment():
+def test_remove_packages_from_one_environment():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('dependencies'))
-            assert ['foo'] == list(project.project_file.get_value(['env_specs', 'hello', 'dependencies'], []))
-            status = project_ops.remove_dependencies(project, env_spec_name='hello', packages=['foo', 'bar'])
+            assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('packages'))
+            assert ['foo'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'])
             assert status
             assert [] == status.errors
 
@@ -1271,37 +1271,37 @@ def test_remove_dependencies_from_one_environment():
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        # note that hello will still inherit the deps from the global dependencies,
+        # note that hello will still inherit the deps from the global packages,
         # and that's fine
-        assert ['qbert'] == list(project2.project_file.get_value('dependencies'))
-        assert [] == list(project2.project_file.get_value(['env_specs', 'hello', 'dependencies'], []))
+        assert ['qbert'] == list(project2.project_file.get_value('packages'))
+        assert [] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
 
-        # be sure we didn't delete comments from global dependencies section
+        # be sure we didn't delete comments from global packages section
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
         assert '# this is a pre comment' in content
         assert '# this is a post comment' in content
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
   # this is a pre comment
   - qbert # this is a post comment
   - foo
   - bar
 env_specs:
   hello:
-    dependencies:
+    packages:
      - foo
 """}, check)
 
 
-def test_remove_dependencies_from_one_environment_leaving_others_unaffected():
+def test_remove_packages_from_one_environment_leaving_others_unaffected():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('dependencies'))
-            assert ['foo'] == list(project.project_file.get_value(['env_specs', 'hello', 'dependencies'], []))
-            status = project_ops.remove_dependencies(project, env_spec_name='hello', packages=['foo', 'bar'])
+            assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('packages'))
+            assert ['foo'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'])
             assert status
             assert [] == status.errors
 
@@ -1309,10 +1309,10 @@ def test_remove_dependencies_from_one_environment_leaving_others_unaffected():
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert ['qbert'] == list(project2.project_file.get_value('dependencies'))
-        assert [] == list(project2.project_file.get_value(['env_specs', 'hello', 'dependencies'], []))
+        assert ['qbert'] == list(project2.project_file.get_value('packages'))
+        assert [] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
         assert set(['baz', 'foo', 'bar']) == set(project2.project_file.get_value(
-            ['env_specs', 'another', 'dependencies'], []))
+            ['env_specs', 'another', 'packages'], []))
         assert project2.env_specs['another'].conda_package_names_set == set(['qbert', 'foo', 'bar', 'baz'])
         assert project2.env_specs['hello'].conda_package_names_set == set(['qbert'])
 
@@ -1323,29 +1323,27 @@ def test_remove_dependencies_from_one_environment_leaving_others_unaffected():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
   - qbert
   - foo
   - bar
 env_specs:
   hello:
-    dependencies:
+    packages:
      - foo
   another:
-    dependencies:
+    packages:
      # this is a pre comment
      - baz # this is a post comment
 """}, check)
 
 
-def test_remove_dependencies_from_nonexistent_environment():
+def test_remove_packages_from_nonexistent_environment():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            assert ['foo', 'bar'] == list(project.project_file.get_value('dependencies'))
-            status = project_ops.remove_dependencies(project,
-                                                     env_spec_name='not_an_environment',
-                                                     packages=['foo', 'bar'])
+            assert ['foo', 'bar'] == list(project.project_file.get_value('packages'))
+            status = project_ops.remove_packages(project, env_spec_name='not_an_environment', packages=['foo', 'bar'])
             assert not status
             assert [] == status.errors
             assert "Environment spec not_an_environment doesn't exist." == status.status_description
@@ -1354,19 +1352,19 @@ def test_remove_dependencies_from_nonexistent_environment():
 
         # be sure we didn't make the config changes
         project2 = Project(dirname)
-        assert ['foo', 'bar'] == list(project2.project_file.get_value('dependencies'))
+        assert ['foo', 'bar'] == list(project2.project_file.get_value('packages'))
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
   - foo
   - bar
 """}, check)
 
 
-def test_remove_dependencies_with_project_file_problems():
+def test_remove_packages_with_project_file_problems():
     def check(dirname):
         project = Project(dirname)
-        status = project_ops.remove_dependencies(project, env_spec_name=None, packages=['foo'])
+        status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo'])
 
         assert not status
         assert ["variables section contains wrong value type 42, should be dict or list of requirements"

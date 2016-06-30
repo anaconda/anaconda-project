@@ -220,7 +220,7 @@ class CondaEnvProvider(EnvVarProvider):
                     break
 
             # TODO if not creating a named env, we could use the
-            # shared dependencies, but for now we leave it alone
+            # shared packages, but for now we leave it alone
             if env_spec is not None:
                 try:
                     self._conda.fix_environment_deviations(prefix, env_spec)

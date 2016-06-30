@@ -38,27 +38,27 @@ def remove_env_spec(project_dir, name):
     return _handle_status(status, "Removed environment {} from the project file.".format(name))
 
 
-def add_dependencies(project, environment, packages, channels):
-    """Add dependencies to the project."""
+def add_packages(project, environment, packages, channels):
+    """Add packages to the project."""
     project = Project(project)
-    status = project_ops.add_dependencies(project, env_spec_name=environment, packages=packages, channels=channels)
+    status = project_ops.add_packages(project, env_spec_name=environment, packages=packages, channels=channels)
     package_list = ", ".join(packages)
     if environment is None:
-        success_message = "Added dependencies to project file: %s." % (package_list)
+        success_message = "Added packages to project file: %s." % (package_list)
     else:
-        success_message = "Added dependencies to environment %s in project file: %s." % (environment, package_list)
+        success_message = "Added packages to environment %s in project file: %s." % (environment, package_list)
     return _handle_status(status, success_message)
 
 
-def remove_dependencies(project, environment, packages):
-    """Remove dependencies from the project."""
+def remove_packages(project, environment, packages):
+    """Remove packages from the project."""
     project = Project(project)
-    status = project_ops.remove_dependencies(project, env_spec_name=environment, packages=packages)
+    status = project_ops.remove_packages(project, env_spec_name=environment, packages=packages)
     package_list = ", ".join(packages)
     if environment is None:
-        success_message = "Removed dependencies from project file: %s." % (package_list)
+        success_message = "Removed packages from project file: %s." % (package_list)
     else:
-        success_message = "Removed dependencies from environment %s in project file: %s." % (environment, package_list)
+        success_message = "Removed packages from environment %s in project file: %s." % (environment, package_list)
     return _handle_status(status, success_message)
 
 
@@ -72,8 +72,8 @@ def list_env_specs(project_dir):
     return 0
 
 
-def list_dependencies(project_dir, environment):
-    """List the dependencies for an environment in the project."""
+def list_packages(project_dir, environment):
+    """List the packages for an environment in the project."""
     project = Project(project_dir)
     if console_utils.print_project_problems(project):
         return 1
@@ -83,7 +83,7 @@ def list_dependencies(project_dir, environment):
     if env is None:
         print("Project doesn't have an environment called '{}'".format(environment), file=sys.stderr)
         return 1
-    print("Dependencies for environment '{}':\n".format(env.name))
+    print("Packages for environment '{}':\n".format(env.name))
     print("\n".join(sorted(env.conda_packages)), end='\n\n')
     return 0
 
@@ -98,14 +98,14 @@ def main_remove(args):
     return remove_env_spec(args.project, args.name)
 
 
-def main_add_dependencies(args):
-    """Start the add-dependencies command and return exit status code."""
-    return add_dependencies(args.project, args.env_spec, args.packages, args.channel)
+def main_add_packages(args):
+    """Start the add-packages command and return exit status code."""
+    return add_packages(args.project, args.env_spec, args.packages, args.channel)
 
 
-def main_remove_dependencies(args):
-    """Start the remove-dependencies command and return exit status code."""
-    return remove_dependencies(args.project, args.env_spec, args.packages)
+def main_remove_packages(args):
+    """Start the remove-packages command and return exit status code."""
+    return remove_packages(args.project, args.env_spec, args.packages)
 
 
 def main_list_env_specs(args):
@@ -113,6 +113,6 @@ def main_list_env_specs(args):
     return list_env_specs(args.project)
 
 
-def main_list_dependencies(args):
-    """Start the list dependencies command and return exit status code."""
-    return list_dependencies(args.project, args.env_spec)
+def main_list_packages(args):
+    """Start the list packages command and return exit status code."""
+    return list_packages(args.project, args.env_spec)

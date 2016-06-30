@@ -110,9 +110,8 @@ class ProjectFile(YamlFile):
         sections['downloads'] = ("In the downloads section, list any URLs to download to local files\n" +
                                  "before your code runs.\n" + "Use `anaconda-project add-download` to add downloads.\n")
 
-        sections['dependencies'] = (
-            "In the dependencies section, list any packages that must be installed\n" + "before your code runs.\n" +
-            "Use `anaconda-project add-dependencies` to add dependencies.\n")
+        sections['packages'] = ("In the packages section, list any packages that must be installed\n" +
+                                "before your code runs.\n" + "Use `anaconda-project add-packages` to add packages.\n")
 
         sections['channels'] = (
             "In the channels section, list any Conda channel URLs to be searched\n" + "for packages.\n" + "\n" +
@@ -132,7 +131,7 @@ class ProjectFile(YamlFile):
         for section_name, comment in sections.items():
             if section_name in ('name', 'icon'):
                 section_body = ""
-            elif section_name in ('channels', 'dependencies'):
+            elif section_name in ('channels', 'packages'):
                 section_body = "  []"
             else:
                 section_body = "  {}"

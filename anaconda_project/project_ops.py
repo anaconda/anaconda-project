@@ -112,7 +112,7 @@ def set_properties(project, name=None, icon=None, description=None):
 
     This doesn't support properties which require prepare()
     actions to check their effects; see other calls such as
-    ``add_dependencies()`` for those.
+    ``add_packages()`` for those.
 
     This will fail if project.problems is non-empty.
 
@@ -291,22 +291,22 @@ def _update_env_spec(project, name, packages, channels, create):
             env_dict = dict()
             project.project_file.set_value(['env_specs', name], env_dict)
 
-    # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
+    # packages may be a "CommentedSeq" and we don't want to lose the comments,
     # so don't convert this thing to a regular list.
-    dependencies = env_dict.get('dependencies', [])
-    old_dependencies_set = set(parse_spec(dep).name for dep in dependencies)
+    old_packages = env_dict.get('packages', [])
+    old_packages_set = set(parse_spec(dep).name for dep in old_packages)
     bad_specs = []
     updated_specs = []
     new_specs = []
     for dep in packages:
-        if dep in dependencies:
+        if dep in old_packages:
             # no-op adding the EXACT same thing (don't move it around)
             continue
         parsed = parse_spec(dep)
         if parsed is None:
             bad_specs.append(dep)
         else:
-            if parsed.name in old_dependencies_set:
+            if parsed.name in old_packages_set:
                 updated_specs.append((parsed.name, dep))
             else:
                 new_specs.append(dep)
@@ -325,12 +325,12 @@ def _update_env_spec(project, name, packages, channels, create):
                 return new_spec
         return old
 
-    _map_inplace(replace_spec, dependencies)
+    _map_inplace(replace_spec, old_packages)
     # add all the new ones
     for added in new_specs:
-        dependencies.append(added)
+        old_packages.append(added)
 
-    env_dict['dependencies'] = dependencies
+    env_dict['packages'] = old_packages
 
     # channels may be a "CommentedSeq" and we don't want to lose the comments,
     # so don't convert this thing to a regular list.
@@ -358,7 +358,7 @@ def add_env_spec(project, name, packages, channels):
     Args:
         project (Project): the project
         name (str): environment spec name
-        packages (list of str): dependencies (with optional version info, as for conda install)
+        packages (list of str): packages (with optional version info, as for conda install)
         channels (list of str): channels (as they should be passed to conda --channel)
 
     Returns:
@@ -413,11 +413,11 @@ def remove_env_spec(project, name):
     return status
 
 
-def add_dependencies(project, env_spec_name, packages, channels):
-    """Attempt to install dependencies then add them to project.yml.
+def add_packages(project, env_spec_name, packages, channels):
+    """Attempt to install packages then add them to project.yml.
 
     If the env_spec_name is None rather than an env name,
-    dependencies are added in the global dependencies section (to
+    packages are added in the global packages section (to
     all environment specs).
 
     The returned ``Status`` should be a ``RequirementStatus`` for
@@ -429,7 +429,7 @@ def add_dependencies(project, env_spec_name, packages, channels):
     Args:
         project (Project): the project
         env_spec_name (str): environment spec name or None for all environment specs
-        packages (list of str): dependencies (with optional version info, as for conda install)
+        packages (list of str): packages (with optional version info, as for conda install)
         channels (list of str): channels (as they should be passed to conda --channel)
 
     Returns:
@@ -438,11 +438,11 @@ def add_dependencies(project, env_spec_name, packages, channels):
     return _update_env_spec(project, env_spec_name, packages, channels, create=False)
 
 
-def remove_dependencies(project, env_spec_name, packages):
-    """Attempt to remove dependencies from an environment in project.yml.
+def remove_packages(project, env_spec_name, packages):
+    """Attempt to remove packages from an environment in project.yml.
 
     If the env_spec_name is None rather than an env name,
-    dependencies are removed from the global dependencies section
+    packages are removed from the global packages section
     (from all environments).
 
     The returned ``Status`` should be a ``RequirementStatus`` for
@@ -454,13 +454,13 @@ def remove_dependencies(project, env_spec_name, packages):
     Args:
         project (Project): the project
         env_spec_name (str): environment spec name or None for all environment specs
-        packages (list of str): dependencies
+        packages (list of str): packages to remove
 
     Returns:
         ``Status`` instance
     """
     # This is sort of one big ugly. What we SHOULD be able to do
-    # is simply remove the dependency from project.yml then re-run
+    # is simply remove the package from project.yml then re-run
     # prepare, and if the packages aren't pulled in as deps of
     # something else, they get removed. This would work if our
     # approach was to always force the env to exactly the env
@@ -519,26 +519,26 @@ def remove_dependencies(project, env_spec_name, packages):
 
     assert len(env_dicts) > 0
 
-    previous_global_deps = set(project.project_file.root.get('dependencies', []))
+    previous_global_deps = set(project.project_file.root.get('packages', []))
 
     for env_dict in env_dicts:
-        # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
+        # packages may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
-        dependencies = env_dict.get('dependencies', [])
+        old_packages = env_dict.get('packages', [])
         removed_set = set(packages)
-        _filter_inplace(lambda dep: dep not in removed_set, dependencies)
-        env_dict['dependencies'] = dependencies
+        _filter_inplace(lambda dep: dep not in removed_set, old_packages)
+        env_dict['packages'] = old_packages
 
     # if we removed any deps from global, add them to the
     # individual envs that were not supposed to be affected.
-    new_global_deps = set(project.project_file.root.get('dependencies', []))
+    new_global_deps = set(project.project_file.root.get('packages', []))
     removed_from_global = (previous_global_deps - new_global_deps)
     for env_dict in unaffected_env_dicts:
-        # dependencies may be a "CommentedSeq" and we don't want to lose the comments,
+        # old_packages may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
-        dependencies = env_dict.get('dependencies', [])
-        dependencies.extend(list(removed_from_global))
-        env_dict['dependencies'] = dependencies
+        old_packages = env_dict.get('packages', [])
+        old_packages.extend(list(removed_from_global))
+        env_dict['packages'] = old_packages
 
     status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=env_spec_name)
 
