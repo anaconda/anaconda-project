@@ -541,3 +541,23 @@ def test_pip_style_specs():
                                                                                            ('foo', None, '>=1.0,<2.0'))]
     for case in cases:
         assert conda_api.parse_spec(case[0]) == case[1]
+
+
+def test_conda_variable_when_not_in_conda(monkeypatch):
+    monkeypatch.setattr('os.environ', dict())
+    assert conda_api.conda_prefix_variable() == 'CONDA_PREFIX'
+
+
+def test_conda_variable_when_have_only_env_path_and_default_env(monkeypatch):
+    monkeypatch.setattr('os.environ', dict(CONDA_ENV_PATH='foo', CONDA_DEFAULT_ENV='bar'))
+    assert conda_api.conda_prefix_variable() == 'CONDA_ENV_PATH'
+
+
+def test_conda_variable_when_have_only_default_env(monkeypatch):
+    monkeypatch.setattr('os.environ', dict(CONDA_DEFAULT_ENV='foo'))
+    assert conda_api.conda_prefix_variable() == 'CONDA_DEFAULT_ENV'
+
+
+def test_conda_variable_when_have_all_three(monkeypatch):
+    monkeypatch.setattr('os.environ', dict(CONDA_ENV_PATH='foo', CONDA_DEFAULT_ENV='bar', CONDA_PREFIX='baz'))
+    assert conda_api.conda_prefix_variable() == 'CONDA_PREFIX'

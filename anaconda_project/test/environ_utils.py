@@ -8,6 +8,8 @@ from __future__ import absolute_import, print_function
 
 import os
 
+from anaconda_project.internal import conda_api
+
 # we keep the conda env variables because otherwise
 # we'd have to keep recreating project-specific conda envs in our tests
 system_vars_to_keep = ('PATH',
@@ -24,7 +26,7 @@ system_vars_to_keep = ('PATH',
                        'LOCALAPPDATA',
                        'HOMEDRIVE',
                        'HOMEPATH')
-conda_vars_to_keep = ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH')
+conda_vars_to_keep = ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH', 'CONDA_PREFIX')
 
 
 def _minimal_environ_full(with_conda_env, **additions):
@@ -33,7 +35,7 @@ def _minimal_environ_full(with_conda_env, **additions):
         if name in os.environ:
             minimal_environ[name] = os.environ[name]
 
-    env_prefix = minimal_environ.get('CONDA_ENV_PATH', minimal_environ.get('CONDA_DEFAULT_ENV', None))
+    env_prefix = conda_api.environ_get_prefix(minimal_environ)
 
     if len(additions) > 0 or not with_conda_env:
         if not with_conda_env:

@@ -14,6 +14,8 @@ import os
 import platform
 import sys
 
+from anaconda_project.internal import conda_api
+
 try:  # pragma: no cover
     from shlex import quote  # pragma: no cover
 except ImportError:  # pragma: no cover
@@ -284,7 +286,7 @@ class ProjectCommand(object):
                 args = []
                 for arg in parsed:
                     if '${PREFIX}' in arg:
-                        arg = arg.replace('${PREFIX}', environ.get('CONDA_ENV_PATH', environ.get('CONDA_DEFAULT_ENV')))
+                        arg = arg.replace('${PREFIX}', conda_api.environ_get_prefix(environ))
                     args.append(arg)
                 if extra_args is not None:
                     args = args + extra_args
@@ -296,15 +298,12 @@ class ProjectCommand(object):
         """Get a ``CommandExecInfo`` ready to be executed.
 
         Args:
-            environ (dict): the environment containing a CONDA_ENV_PATH, PATH, and PROJECT_DIR
+            environ (dict): the environment containing a CONDA_PREFIX, PATH, and PROJECT_DIR
             extra_args (list of str): extra args to append to the command line
         Returns:
             argv as list of strings
         """
-        if _is_windows():
-            conda_var = 'CONDA_DEFAULT_ENV'
-        else:
-            conda_var = 'CONDA_ENV_PATH'
+        conda_var = conda_api.conda_prefix_variable()
         for name in (conda_var, 'PATH', 'PROJECT_DIR'):
             if name not in environ:
                 raise ValueError("To get a runnable command for the app, %s must be set." % (name))

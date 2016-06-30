@@ -27,10 +27,10 @@ from tornado import gen
 
 if platform.system() == 'Windows':
     script_dir = "Scripts"
-    conda_env_var = 'CONDA_DEFAULT_ENV'
 else:
     script_dir = "bin"
-    conda_env_var = 'CONDA_ENV_PATH'
+
+conda_env_var = conda_api.conda_prefix_variable()
 
 
 def test_find_by_class_name_conda_env():
@@ -56,12 +56,9 @@ def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
                                                                       "bin") + os.pathsep + "foo" + os.pathsep + "bar"
         else:
             expected_new_path = os.path.join(expected_env, script_dir) + os.pathsep + "foo" + os.pathsep + "bar"
-        expected = dict(CONDA_ENV_PATH=expected_env,
-                        CONDA_DEFAULT_ENV=expected_env,
-                        PROJECT_DIR=project.directory_path,
-                        PATH=expected_new_path)
-        if platform.system() == 'Windows':
-            del expected['CONDA_ENV_PATH']
+        expected = dict(PROJECT_DIR=project.directory_path, PATH=expected_new_path)
+        conda_api.environ_set_prefix(expected, expected_env)
+
         expected == result.environ
         assert os.path.exists(os.path.join(expected_env, "conda-meta"))
         conda_meta_mtime = os.path.getmtime(os.path.join(expected_env, "conda-meta"))
@@ -77,12 +74,8 @@ def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
         environ = dict(PROJECT_DIR=dirname, PATH=fake_old_path)
         result = prepare_without_interaction(project, environ=environ)
         assert result
-        expected = dict(CONDA_ENV_PATH=expected_env,
-                        CONDA_DEFAULT_ENV=expected_env,
-                        PROJECT_DIR=project.directory_path,
-                        PATH=expected_new_path)
-        if platform.system() == 'Windows':
-            del expected['CONDA_ENV_PATH']
+        expected = dict(PROJECT_DIR=project.directory_path, PATH=expected_new_path)
+        conda_api.environ_set_prefix(expected, expected_env)
         assert expected == result.environ
         assert conda_meta_mtime == os.path.getmtime(os.path.join(expected_env, "conda-meta"))
 
@@ -378,9 +371,8 @@ def test_browser_ui_with_default_env_and_no_env_var_set(monkeypatch):
     def final_result_check(dirname, result):
         assert result
         expected_env_path = os.path.join(dirname, 'envs', 'default')
-        expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
-        if platform.system() == 'Windows':
-            del expected['CONDA_ENV_PATH']
+        expected = dict(PROJECT_DIR=dirname)
+        conda_api.environ_set_prefix(expected, expected_env_path)
         assert expected == strip_environ_keeping_conda_env(result.environ)
         bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
@@ -429,9 +421,8 @@ def test_browser_ui_with_default_env_and_env_var_set(monkeypatch):
     def final_result_check(dirname, result):
         assert result
         expected_env_path = os.path.join(dirname, 'envs', 'default')
-        expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
-        if platform.system() == 'Windows':
-            del expected['CONDA_ENV_PATH']
+        expected = dict(PROJECT_DIR=dirname)
+        conda_api.environ_set_prefix(expected, expected_env_path)
         assert expected == strip_environ_keeping_conda_env(result.environ)
         bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
@@ -482,9 +473,8 @@ def test_browser_ui_with_default_env_and_env_var_set_to_default_already(monkeypa
     def final_result_check(dirname, result):
         assert result
         expected_env_path = os.path.join(dirname, 'envs', 'default')
-        expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
-        if platform.system() == 'Windows':
-            del expected['CONDA_ENV_PATH']
+        expected = dict(PROJECT_DIR=dirname)
+        conda_api.environ_set_prefix(expected, expected_env_path)
         assert expected == strip_environ_keeping_conda_env(result.environ)
         bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
@@ -548,8 +538,7 @@ def test_browser_ui_using_inherited_then_back_to_default(monkeypatch):
     def final_result_check(dirname, result):
         assert result
         expected_env_path = os.path.join(dirname, 'envs', 'default')
-        assert result.environ['CONDA_ENV_PATH'] == expected_env_path
-        assert result.environ['CONDA_DEFAULT_ENV'] == expected_env_path
+        conda_api.environ_get_prefix(result.environ) == expected_env_path
         assert result.environ['PROJECT_DIR'] == dirname
 
     _run_browser_ui_test(monkeypatch=monkeypatch,
@@ -658,9 +647,8 @@ env_specs:
     def final_result_check(dirname, result):
         assert result
         expected_env_path = os.path.join(dirname, 'envs', 'default')
-        expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
-        if platform.system() == 'Windows':
-            del expected['CONDA_ENV_PATH']
+        expected = dict(PROJECT_DIR=dirname)
+        conda_api.environ_set_prefix(expected, expected_env_path)
         assert expected == strip_environ_keeping_conda_env(result.environ)
         bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
@@ -714,9 +702,8 @@ env_specs:
     def final_result_check(dirname, result):
         assert result
         expected_env_path = os.path.join(dirname, 'envs', 'second_env')
-        expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
-        if platform.system() == 'Windows':
-            del expected['CONDA_ENV_PATH']
+        expected = dict(PROJECT_DIR=dirname)
+        conda_api.environ_set_prefix(expected, expected_env_path)
         assert expected == strip_environ_keeping_conda_env(result.environ)
         bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
@@ -766,9 +753,8 @@ env_specs:
     def final_result_check(dirname, result):
         assert result
         expected_env_path = os.path.join(dirname, 'envs', 'second_env')
-        expected = dict(CONDA_ENV_PATH=expected_env_path, CONDA_DEFAULT_ENV=expected_env_path, PROJECT_DIR=dirname)
-        if platform.system() == 'Windows':
-            del expected['CONDA_ENV_PATH']
+        expected = dict(PROJECT_DIR=dirname)
+        conda_api.environ_set_prefix(expected, expected_env_path)
         assert expected == strip_environ_keeping_conda_env(result.environ)
         bindir = os.path.join(expected_env_path, script_dir)
         assert bindir in result.environ.get("PATH")
