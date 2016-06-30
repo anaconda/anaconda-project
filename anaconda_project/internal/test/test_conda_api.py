@@ -561,3 +561,11 @@ def test_conda_variable_when_have_only_default_env(monkeypatch):
 def test_conda_variable_when_have_all_three(monkeypatch):
     monkeypatch.setattr('os.environ', dict(CONDA_ENV_PATH='foo', CONDA_DEFAULT_ENV='bar', CONDA_PREFIX='baz'))
     assert conda_api.conda_prefix_variable() == 'CONDA_PREFIX'
+
+
+def test_environ_set_prefix_to_root():
+    prefix = conda_api.resolve_env_to_prefix('root')
+    environ = dict()
+    conda_api.environ_set_prefix(environ, prefix, varname='CONDA_PREFIX')
+    assert environ['CONDA_PREFIX'] == prefix
+    assert environ['CONDA_DEFAULT_ENV'] == 'root'

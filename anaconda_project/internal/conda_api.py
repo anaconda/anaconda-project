@@ -318,9 +318,11 @@ def environ_delete_prefix_variables(environ):
 
 
 _envs_dirs = None
+_root_dir = None
 
 
 def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
+    prefix = os.path.normpath(prefix)
     environ[varname] = prefix
     if varname != 'CONDA_DEFAULT_ENV':
         # This case matters on both Unix and Windows
@@ -328,11 +330,16 @@ def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
         # is CONDA_PREFIX, and matters on Unix only pre-4.1.4
         # when requirement.env_var is CONDA_ENV_PATH.
         global _envs_dirs
+        global _root_dir
         if _envs_dirs is None:
-            _envs_dirs = info().get('envs_dirs', [])
-        name = prefix
-        for d in _envs_dirs:
-            name = subdirectory_relative_to_directory(prefix, d)
-            if name != prefix:
-                break
+            i = info()
+            _envs_dirs = [os.path.normpath(d) for d in i.get('envs_dirs', [])]
+            _root_dir = os.path.normpath(i.get('root_prefix'))
+        if prefix == _root_dir:
+            name = 'root'
+        else:
+            for d in _envs_dirs:
+                name = subdirectory_relative_to_directory(prefix, d)
+                if name != prefix:
+                    break
         environ['CONDA_DEFAULT_ENV'] = name
