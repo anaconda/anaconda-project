@@ -197,8 +197,8 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         assert 'ipython-notebook' not in installed
 
         # Preparing it again with new packages added should add those
-        deps = project.project_file.get_value('dependencies')
-        project.project_file.set_value('dependencies', deps + ['ipython-notebook'])
+        deps = project.project_file.get_value('packages')
+        project.project_file.set_value('packages', deps + ['ipython-notebook'])
         project.project_file.save()
         environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare_without_interaction(project, environ=environ)
@@ -215,8 +215,8 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         assert 'flake8' in installed_pip
 
         # Preparing it again with a bogus package should fail
-        deps = project.project_file.get_value('dependencies')
-        project.project_file.set_value(['dependencies'], deps + ['boguspackage'])
+        deps = project.project_file.get_value('packages')
+        project.project_file.set_value(['packages'], deps + ['boguspackage'])
         project.project_file.save()
         environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare_without_interaction(project, environ=environ)
@@ -224,7 +224,7 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
     - ipython
     - numpy
     - pip:
@@ -626,7 +626,7 @@ env_specs:
   default: {} # this is auto-created anyway, but here for clarity
   first_env: {}
   second_env:
-    dependencies:
+    packages:
       - python
 """}
     initial_environ = minimal_environ_no_conda_env()
@@ -677,7 +677,7 @@ def test_browser_ui_three_envs_choosing_second(monkeypatch):
 env_specs:
   default: {} # this is auto-created anyway, but here for clarity
   first_env:
-    dependencies:
+    packages:
       - python
   second_env: {}
 """}
@@ -733,7 +733,7 @@ def test_browser_ui_two_envs_user_override(monkeypatch):
 env_specs:
   first_env: {}
   second_env:
-    dependencies:
+    packages:
       - python
 """}
     initial_environ = minimal_environ_no_conda_env()

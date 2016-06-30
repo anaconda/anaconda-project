@@ -67,7 +67,7 @@ Let's say your script requires a certain conda package to be
 installed. Add the ``redis-py`` package to ``project.yml`` as a
 dependency:
 
-  dependencies:
+  packages:
     - redis-py
 
 Now when someone runs ``anaconda-project run`` the script is
@@ -125,14 +125,14 @@ env spec name to use by default with the command.
 Environments and Channels
 =========================
 
-You can configure dependencies in a top level ``dependencies``
+You can configure packages in a top level ``packages``
 section of the ``project.yml`` file, as we discussed earlier:
 
-  dependencies:
+  packages:
     - redis-py
 
 You can also add specific conda channels to be searched for
-dependencies:
+packages:
 
   channels:
     - https://conda.anaconda.org/asmeurer
@@ -144,14 +144,14 @@ specify an ``env_specs:`` section of your ``project.yml`` file:
 
   env_specs:
     default:
-      dependencies:
+      packages:
         - foo
         - bar
       channels:
         - https://conda.anaconda.org/asmeurer
     python27:
       description: "Uses Python 2 instead of 3"
-      dependencies:
+      packages:
         - python < 3
       channels:
         - https://example.com/somechannel
@@ -171,18 +171,18 @@ To run a project using a specific env spec, use the ``--env-spec`` option:
 
 https://github.com/Anaconda-Server/anaconda-project/issues/97
 
-If you have top level ``channels`` or ``dependencies`` sections in
+If you have top level ``channels`` or ``packages`` sections in
 your ``project.yml`` file (not in the ``env_specs:`` section),
-those channels and dependencies are added to all environment
+those channels and packages are added to all environment
 specs.
 
-pip dependencies
+pip packages
 ================
 
-Underneath any `dependencies:` section, you can add a `pip:`
+Underneath any `packages:` section, you can add a `pip:`
 section with a list of pip requirement specifiers.
 
-    dependencies:
+    packages:
        - condapackage1
        - pip:
          - pippackage1
@@ -413,9 +413,9 @@ To add a download to ``project.yml``:
 
   anaconda-project add-download MYFILE http://example.com/myfile
 
-To add a dependency:
+To add a package:
 
-  anaconda-project add-dependencies redis-py
+  anaconda-project add-packages redis-py
 
 To ask for a running Redis instance:
 

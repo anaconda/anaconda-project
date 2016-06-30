@@ -156,17 +156,17 @@ our ``iris/envs/default`` environment yet.
 
 While in your ``iris`` directory, type::
 
-    anaconda-project add-dependencies bokeh=0.11.1 pandas
+    anaconda-project add-packages bokeh=0.11.1 pandas
 
 The command line session should look something like::
 
-    $ anaconda-project add-dependencies bokeh=0.11.1 pandas
+    $ anaconda-project add-packages bokeh=0.11.1 pandas
     conda install: Using Anaconda Cloud api site https://api.anaconda.org
     Using Conda environment /home/alice/mystuff/iris/envs/default.
-    Added dependencies to project file: bokeh=0.11.1, pandas.
+    Added packages to project file: bokeh=0.11.1, pandas.
 
 If you look at ``project.yml`` you'll see bokeh and pandas listed
-under the ``dependencies:`` section. Also, files such as
+under the ``packages:`` section. Also, files such as
 ``envs/default/bin/bokeh`` will now exist, since the packages have
 been installed in your project's environment.
 
@@ -483,7 +483,7 @@ commands in it::
 
 And then your colleague can type ``anaconda-project run
 showdata`` (for example), and it will download the data, install
-needed dependencies, and run the command.
+needed packages, and run the command.
 
 ==========
 Next steps

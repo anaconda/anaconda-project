@@ -205,7 +205,7 @@ services:
   ' ': redis
 env_specs:
   ' ':
-    dependencies:
+    packages:
        - python
 commands:
   ' ':
@@ -507,7 +507,7 @@ def test_get_package_requirements_from_project_file():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
   - foo
   - hello >= 1.0
   - world
@@ -531,14 +531,14 @@ def test_get_package_requirements_from_empty_project():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_get_packages)
 
 
-def test_complain_about_dependencies_not_a_list():
+def test_complain_about_packages_not_a_list():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         "should be a list of strings not 'CommentedMap" in project.problems[0]
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
     foo: bar
     """}, check_get_packages)
 
@@ -550,7 +550,7 @@ def test_complain_about_pip_deps_not_a_list():
         "should be a list of strings not 'CommentedMap" in project.problems[0]
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
     - pip: bar
     """}, check)
 
@@ -562,13 +562,13 @@ def test_complain_about_pip_deps_not_a_string():
         "should be a list of pip package names" in project.problems[0]
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
     - pip:
       - {}
     """}, check)
 
 
-def test_complain_about_dependencies_bad_spec():
+def test_complain_about_packages_bad_spec():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
         filename = project.project_file.filename
@@ -577,7 +577,7 @@ def test_complain_about_dependencies_bad_spec():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
     - "="
     - foo bar
     - pip:
@@ -638,7 +638,7 @@ def test_load_environments():
 env_specs:
   foo:
     description: "THE FOO"
-    dependencies:
+    packages:
        - python
        - dog
        - cat
@@ -668,7 +668,7 @@ def test_load_environments_merging_in_global():
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
   - dead-parrot
   - elephant
 
@@ -677,7 +677,7 @@ channels:
 
 env_specs:
   foo:
-    dependencies:
+    packages:
        - python
        - dog
        - cat
@@ -686,7 +686,7 @@ env_specs:
        - hbo
   bar: {}
   default:
-    dependencies:
+    packages:
       - lion
     channels:
       - cartoons
@@ -743,14 +743,14 @@ env_specs:
     """}, check_environments)
 
 
-def test_complain_about_dependencies_list_of_wrong_thing():
+def test_complain_about_packages_list_of_wrong_thing():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         "should be a string not '42'" in project.problems[0]
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-dependencies:
+packages:
     - 42
     """}, check_get_packages)
 
@@ -1600,7 +1600,7 @@ def test_get_publication_info_from_empty_project():
             'env_specs': {
                 'default': {
                     'channels': [],
-                    'dependencies': [],
+                    'packages': [],
                     'description': 'Default'
                 }
             },
@@ -1630,7 +1630,7 @@ commands:
     bokeh_app: main.py
     env_spec: woot
 
-dependencies:
+packages:
   - foo
 
 channels:
@@ -1638,13 +1638,13 @@ channels:
 
 env_specs:
   woot:
-    dependencies:
+    packages:
       - blah
     channels:
       - woohoo
   w00t:
     description: "double 0"
-    dependencies:
+    packages:
       - something
   lol: {}
 
@@ -1686,16 +1686,16 @@ def test_get_publication_info_from_complex_project():
                                   'description': 'A downloaded file which is referenced by FOO.',
                                   'url': 'https://example.com/blah'}},
             'env_specs': {'default': {'channels': ['bar'],
-                                      'dependencies': ['foo'],
+                                      'packages': ['foo'],
                                       'description': 'Default'},
                           'lol': {'channels': ['bar'],
-                                  'dependencies': ['foo'],
+                                  'packages': ['foo'],
                                   'description': 'lol'},
                           'w00t': {'channels': ['bar'],
-                                   'dependencies': ['foo', 'something'],
+                                   'packages': ['foo', 'something'],
                                    'description': 'double 0'},
                           'woot': {'channels': ['bar', 'woohoo'],
-                                   'dependencies': ['foo', 'blah'],
+                                   'packages': ['foo', 'blah'],
                                    'description': 'woot'}},
             'variables': {'SOMETHING': {'encrypted': False,
                                         'title': 'SOMETHING',

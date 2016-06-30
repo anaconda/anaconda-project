@@ -269,8 +269,8 @@ class _ConfigCache(object):
         def _parse_channels(parent_dict):
             return _parse_string_list(parent_dict, 'channels', 'channel name')
 
-        def _parse_dependencies(parent_dict):
-            (deps, pip_dicts) = _parse_string_list_with_special(parent_dict, 'dependencies', 'package name',
+        def _parse_packages(parent_dict):
+            (deps, pip_dicts) = _parse_string_list_with_special(parent_dict, 'packages', 'package name',
                                                                 lambda x: isinstance(x, dict) and ('pip' in x))
             for dep in deps:
                 parsed = conda_api.parse_spec(dep)
@@ -291,7 +291,7 @@ class _ConfigCache(object):
             return (deps, pip_deps)
 
         self.env_specs = dict()
-        (shared_deps, shared_pip_deps) = _parse_dependencies(project_file.root)
+        (shared_deps, shared_pip_deps) = _parse_packages(project_file.root)
         shared_channels = _parse_channels(project_file.root)
         env_specs = project_file.get_value('env_specs', default={})
         if isinstance(env_specs, dict):
@@ -304,7 +304,7 @@ class _ConfigCache(object):
                     problems.append("{}: 'description' field of environment {} must be a string".format(
                         project_file.filename, name))
                     continue
-                (deps, pip_deps) = _parse_dependencies(attrs)
+                (deps, pip_deps) = _parse_packages(attrs)
                 channels = _parse_channels(attrs)
                 # ideally we would merge same-name packages here, choosing the
                 # highest of the two versions or something. maybe conda will
@@ -740,7 +740,7 @@ class Project(object):
         json['commands'] = commands
         envs = dict()
         for key, env in self.env_specs.items():
-            envs[key] = dict(dependencies=list(env.conda_packages),
+            envs[key] = dict(packages=list(env.conda_packages),
                              channels=list(env.channels),
                              description=env.description)
         json['env_specs'] = envs

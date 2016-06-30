@@ -15,8 +15,8 @@ from anaconda_project.commands.main import _parse_args_and_run_subcommand
 all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'upload', 'add-variable',
                    'remove-variable', 'list-variables', 'set-variable', 'unset-variable', 'add-download',
                    'remove-download', 'list-downloads', 'add-service', 'remove-service', 'list-services',
-                   'add-env-spec', 'remove-env-spec', 'list-env-specs', 'add-dependencies', 'remove-dependencies',
-                   'list-dependencies', 'add-command', 'remove-command', 'list-commands')
+                   'add-env-spec', 'remove-env-spec', 'list-env-specs', 'add-packages', 'remove-packages',
+                   'list-packages', 'add-command', 'remove-command', 'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -86,10 +86,9 @@ expected_usage_msg = \
         '    add-env-spec        Add a new environment spec to the project\n' \
         '    remove-env-spec     Remove an environment spec from the project\n' \
         '    list-env-specs      List all environment specs for the project\n' \
-        '    add-dependencies    Add packages to one or all project environments\n' \
-        '    remove-dependencies\n' \
-        '                        Remove packages from one or all project environments\n' \
-        '    list-dependencies   List dependencies for an environment on the project\n' \
+        '    add-packages        Add packages to one or all project environments\n' \
+        '    remove-packages     Remove packages from one or all project environments\n' \
+        '    list-packages       List packages for an environment on the project\n' \
         '    add-command         Add a new command to the project\n' \
         '    remove-command      Remove a command from the project\n' \
         '    list-commands       List the commands on the project\n' \

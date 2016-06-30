@@ -209,22 +209,22 @@ def _parse_args_and_run_subcommand(argv):
     add_project_arg(preset)
     preset.set_defaults(main=environment_commands.main_list_env_specs)
 
-    preset = subparsers.add_parser('add-dependencies', help="Add packages to one or all project environments")
+    preset = subparsers.add_parser('add-packages', help="Add packages to one or all project environments")
     add_project_arg(preset)
     add_env_spec_arg(preset)
     add_package_args(preset)
-    preset.set_defaults(main=environment_commands.main_add_dependencies)
+    preset.set_defaults(main=environment_commands.main_add_packages)
 
-    preset = subparsers.add_parser('remove-dependencies', help="Remove packages from one or all project environments")
+    preset = subparsers.add_parser('remove-packages', help="Remove packages from one or all project environments")
     add_project_arg(preset)
     add_env_spec_arg(preset)
     preset.add_argument('packages', metavar='PACKAGE_NAME', default=None, nargs='+')
-    preset.set_defaults(main=environment_commands.main_remove_dependencies)
+    preset.set_defaults(main=environment_commands.main_remove_packages)
 
-    preset = subparsers.add_parser('list-dependencies', help="List dependencies for an environment on the project")
+    preset = subparsers.add_parser('list-packages', help="List packages for an environment on the project")
     add_project_arg(preset)
     add_env_spec_arg(preset)
-    preset.set_defaults(main=environment_commands.main_list_dependencies)
+    preset.set_defaults(main=environment_commands.main_list_packages)
 
     def add_command_name_arg(preset):
         preset.add_argument('name', metavar="NAME", help="Command name used to invoke it")

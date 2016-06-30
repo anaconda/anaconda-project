@@ -17,7 +17,7 @@ class EnvSpec(object):
     """Represents a set of required conda packages we could potentially instantiate as a Conda environment."""
 
     def __init__(self, name, conda_packages, channels, pip_packages=(), description=None):
-        """Construct a package set with the given name and dependencies.
+        """Construct a package set with the given name and packages.
 
         Args:
             name (str): name of the package set

@@ -324,42 +324,42 @@ def test_remove_env_spec(monkeypatch):
     assert kwargs == params['kwargs']
 
 
-def test_add_dependencies(monkeypatch):
+def test_add_packages(monkeypatch):
     import anaconda_project.project_ops as project_ops
-    _verify_args_match(api.AnacondaProject.add_dependencies, project_ops.add_dependencies)
+    _verify_args_match(api.AnacondaProject.add_packages, project_ops.add_packages)
 
     params = dict(args=(), kwargs=dict())
 
-    def mock_add_dependencies(*args, **kwargs):
+    def mock_add_packages(*args, **kwargs):
         params['args'] = args
         params['kwargs'] = kwargs
         return 42
 
-    monkeypatch.setattr('anaconda_project.project_ops.add_dependencies', mock_add_dependencies)
+    monkeypatch.setattr('anaconda_project.project_ops.add_packages', mock_add_packages)
 
     p = api.AnacondaProject()
     kwargs = dict(project=43, env_spec_name='foo', packages=['a'], channels=['b'])
-    result = p.add_dependencies(**kwargs)
+    result = p.add_packages(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
 
 
-def test_remove_dependencies(monkeypatch):
+def test_remove_packages(monkeypatch):
     import anaconda_project.project_ops as project_ops
-    _verify_args_match(api.AnacondaProject.remove_dependencies, project_ops.remove_dependencies)
+    _verify_args_match(api.AnacondaProject.remove_packages, project_ops.remove_packages)
 
     params = dict(args=(), kwargs=dict())
 
-    def mock_remove_dependencies(*args, **kwargs):
+    def mock_remove_packages(*args, **kwargs):
         params['args'] = args
         params['kwargs'] = kwargs
         return 42
 
-    monkeypatch.setattr('anaconda_project.project_ops.remove_dependencies', mock_remove_dependencies)
+    monkeypatch.setattr('anaconda_project.project_ops.remove_packages', mock_remove_packages)
 
     p = api.AnacondaProject()
     kwargs = dict(project=43, env_spec_name='foo', packages=['a'])
-    result = p.remove_dependencies(**kwargs)
+    result = p.remove_packages(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
 
