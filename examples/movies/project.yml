@@ -9,6 +9,6 @@ commands:
 downloads:
   MOVIE_DATA: 'https://s3.amazonaws.com/bokeh_data/movies.db.zip'
 
-dependencies:
+packages:
   - bokeh
   - pandas

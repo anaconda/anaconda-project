@@ -9,6 +9,6 @@ commands:
 downloads:
   QUANTQUOTE: 'http://quantquote.com/files/quantquote_daily_sp500_83986.zip'
 
-dependencies:
+packages:
   - bokeh=0.11.1
   - pandas
