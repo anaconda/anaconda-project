@@ -13,8 +13,7 @@ import os
 import shutil
 import subprocess
 
-from anaconda_project.plugins.requirements.conda_env import _platform_env_prefix_variable
-
+from anaconda_project.internal import conda_api
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
 from anaconda_project.internal.simple_status import SimpleStatus
@@ -392,7 +391,7 @@ class EnvVarProvider(Provider):
         if self._get_env_prefix(environ) is not None:
             return ()
         else:
-            return (_platform_env_prefix_variable(), )
+            return (conda_api.conda_prefix_variable(), )
 
     def missing_env_vars_to_provide(self, requirement, environ, local_state_file):
         """Override superclass to require env prefix."""
@@ -401,7 +400,7 @@ class EnvVarProvider(Provider):
     def _get_env_prefix(self, environ):
         # on unix, ENV_PATH is the prefix and DEFAULT_ENV can be just a name,
         # on windows DEFAULT_ENV is always the prefix
-        return environ.get(_platform_env_prefix_variable(), None)
+        return environ.get(conda_api.conda_prefix_variable(), None)
 
     def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to read env var value."""

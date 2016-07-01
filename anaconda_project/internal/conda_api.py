@@ -11,8 +11,11 @@ import errno
 import subprocess
 import json
 import os
+import platform
 import re
 import sys
+
+from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
 
 
 class CondaError(Exception):
@@ -236,7 +239,6 @@ def set_conda_env_in_path(path, prefix):
     Returns:
         the new PATH value
     """
-    import platform
     if platform.system() == 'Windows':
         return _set_conda_env_in_path_windows(path, prefix)
     else:
@@ -271,3 +273,73 @@ def parse_spec(spec):
     if pip_constraint is not None:
         pip_constraint = pip_constraint.replace(' ', '')
     return ParsedSpec(name=m.group('name').lower(), conda_constraint=m.group('cc'), pip_constraint=pip_constraint)
+
+# these are in order of preference. On pre-4.1.4 Windows,
+# CONDA_PREFIX and CONDA_ENV_PATH aren't set, so we get to
+# CONDA_DEFAULT_ENV.
+_all_prefix_variables = ('CONDA_PREFIX', 'CONDA_ENV_PATH', 'CONDA_DEFAULT_ENV')
+
+
+def conda_prefix_variable():
+    # conda 4.1.4 and higher sets CONDA_PREFIX to the full prefix,
+    # and CONDA_DEFAULT_ENV to the env name only, cross-platform.
+
+    # Pre-4.1.4, on Windows, activate.bat never sets
+    # CONDA_ENV_PATH but sets CONDA_DEFAULT_ENV to the full
+    # path to the environment.
+
+    # Pre-4.1.4, on Unix, activate script sets CONDA_ENV_PATH
+    # to the full path, and sets CONDA_DEFAULT_ENV to either
+    # just the env name or the full path.
+
+    # if we're in a conda environment, then use CONDA_PREFIX if it
+    # was set by conda, otherwise use CONDA_ENV_PATH if set,
+    # otherwise use CONDA_DEFAULT_ENV if set.
+    for name in _all_prefix_variables:
+        if name in os.environ:
+            return name
+
+    # if we aren't in a conda environment, just hope we have a
+    # newer conda...
+    return 'CONDA_PREFIX'
+
+
+def environ_get_prefix(environ):
+    for name in _all_prefix_variables:
+        if name in environ:
+            return environ.get(name)
+    return None
+
+
+def environ_delete_prefix_variables(environ):
+    for name in _all_prefix_variables:
+        if name in environ:
+            del environ[name]
+
+
+_envs_dirs = None
+_root_dir = None
+
+
+def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
+    prefix = os.path.normpath(prefix)
+    environ[varname] = prefix
+    if varname != 'CONDA_DEFAULT_ENV':
+        # This case matters on both Unix and Windows
+        # with conda >= 4.1.4 since requirement.env_var
+        # is CONDA_PREFIX, and matters on Unix only pre-4.1.4
+        # when requirement.env_var is CONDA_ENV_PATH.
+        global _envs_dirs
+        global _root_dir
+        if _envs_dirs is None:
+            i = info()
+            _envs_dirs = [os.path.normpath(d) for d in i.get('envs_dirs', [])]
+            _root_dir = os.path.normpath(i.get('root_prefix'))
+        if prefix == _root_dir:
+            name = 'root'
+        else:
+            for d in _envs_dirs:
+                name = subdirectory_relative_to_directory(prefix, d)
+                if name != prefix:
+                    break
+        environ['CONDA_DEFAULT_ENV'] = name

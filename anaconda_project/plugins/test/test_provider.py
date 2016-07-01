@@ -7,7 +7,6 @@
 from __future__ import absolute_import
 
 import os
-import platform
 
 import pytest
 
@@ -23,12 +22,9 @@ from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.prepare import (prepare_without_interaction, unprepare)
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.test.environ_utils import minimal_environ
-from anaconda_project.internal import keyring
+from anaconda_project.internal import (keyring, conda_api)
 
-if platform.system() == 'Windows':
-    conda_env_var = 'CONDA_DEFAULT_ENV'
-else:
-    conda_env_var = 'CONDA_ENV_PATH'
+conda_env_var = conda_api.conda_prefix_variable()
 
 
 def test_find_provider_by_class_name():
@@ -311,7 +307,7 @@ def test_env_var_provider_configure_encrypted_value():
         assert local_state_file.get_value(['variables', 'FOO_PASSWORD']) is None
         assert set(keyring.fallback_data().values()) == set()
 
-        environ = dict(CONDA_DEFAULT_ENV='/pretend/env', CONDA_ENV_PATH='/pretend/env')
+        environ = dict(CONDA_DEFAULT_ENV='/pretend/env', CONDA_ENV_PATH='/pretend/env', CONDA_PREFIX='/pretend/env')
 
         provider.set_config_values_as_strings(requirement,
                                               environ,

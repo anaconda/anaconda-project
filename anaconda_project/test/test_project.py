@@ -17,6 +17,7 @@ import pytest
 
 from anaconda_project.conda_meta_file import DEFAULT_RELATIVE_META_PATH, META_DIRECTORY
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal import conda_api
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
@@ -61,10 +62,8 @@ def test_single_env_var_requirement():
         assert "FOO" == project.requirements[0].env_var
         assert dict() == project.requirements[0].options
 
-        if platform.system() == 'Windows':
-            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
-        else:
-            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+        conda_env_var = conda_api.conda_prefix_variable()
+        assert conda_env_var == project.requirements[1].env_var
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 variables:
@@ -82,10 +81,8 @@ def test_single_env_var_requirement_with_description():
         assert "Set FOO to the value of your foo" == project.requirements[0].description
         assert "FOO" == project.requirements[0].title
 
-        if platform.system() == 'Windows':
-            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
-        else:
-            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+        conda_env_var = conda_api.conda_prefix_variable()
+        assert conda_env_var == project.requirements[1].env_var
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
@@ -104,10 +101,8 @@ def test_single_env_var_requirement_null_for_default():
         assert "BAR" == project.requirements[1].env_var
         assert dict() == project.requirements[1].options
 
-        if platform.system() == 'Windows':
-            assert "CONDA_DEFAULT_ENV" == project.requirements[2].env_var
-        else:
-            assert "CONDA_ENV_PATH" == project.requirements[2].env_var
+        conda_env_var = conda_api.conda_prefix_variable()
+        assert conda_env_var == project.requirements[2].env_var
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
@@ -125,10 +120,8 @@ def test_single_env_var_requirement_string_for_default():
         assert "FOO" == project.requirements[0].env_var
         assert dict(default='hello') == project.requirements[0].options
 
-        if platform.system() == 'Windows':
-            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
-        else:
-            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+        conda_env_var = conda_api.conda_prefix_variable()
+        assert conda_env_var == project.requirements[1].env_var
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 variables:
@@ -144,10 +137,8 @@ def test_single_env_var_requirement_number_for_default():
         assert "FOO" == project.requirements[0].env_var
         assert dict(default='42') == project.requirements[0].options
 
-        if platform.system() == 'Windows':
-            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
-        else:
-            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+        conda_env_var = conda_api.conda_prefix_variable()
+        assert conda_env_var == project.requirements[1].env_var
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 variables:
@@ -163,10 +154,8 @@ def test_single_env_var_requirement_default_is_in_dict():
         assert "FOO" == project.requirements[0].env_var
         assert dict(default='42') == project.requirements[0].options
 
-        if platform.system() == 'Windows':
-            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
-        else:
-            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+        conda_env_var = conda_api.conda_prefix_variable()
+        assert conda_env_var == project.requirements[1].env_var
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 variables:
@@ -260,10 +249,8 @@ def test_single_env_var_requirement_with_options():
         assert "FOO" == project.requirements[0].env_var
         assert dict(default="hello") == project.requirements[0].options
 
-        if platform.system() == 'Windows':
-            assert "CONDA_DEFAULT_ENV" == project.requirements[1].env_var
-        else:
-            assert "CONDA_ENV_PATH" == project.requirements[1].env_var
+        conda_env_var = conda_api.conda_prefix_variable()
+        assert conda_env_var == project.requirements[1].env_var
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
@@ -590,13 +577,15 @@ def test_complain_about_conda_env_in_variables_list():
         project = project_no_dedicated_env(dirname)
         template = "Environment variable %s is reserved for Conda's use, " + \
                    "so it can't appear in the variables section."
-        assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV'] == project.problems
+        assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV', template % 'CONDA_PREFIX'
+                ] == project.problems
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
   - CONDA_ENV_PATH
   - CONDA_DEFAULT_ENV
+  - CONDA_PREFIX
     """}, check_complain_about_conda_env_var)
 
 
@@ -605,13 +594,15 @@ def test_complain_about_conda_env_in_variables_dict():
         project = project_no_dedicated_env(dirname)
         template = "Environment variable %s is reserved for Conda's use, " + \
                    "so it can't appear in the variables section."
-        assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV'] == project.problems
+        assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV', template % 'CONDA_PREFIX'
+                ] == project.problems
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
   CONDA_ENV_PATH: {}
   CONDA_DEFAULT_ENV: {}
+  CONDA_PREFIX: {}
     """}, check_complain_about_conda_env_var)
 
 
@@ -768,10 +759,10 @@ def test_load_list_of_variables_requirements():
         assert isinstance(requirements[1], EnvVarRequirement)
         assert 'BAR' == requirements[1].env_var
         assert isinstance(requirements[2], CondaEnvRequirement)
-        if platform.system() == 'Windows':
-            assert "CONDA_DEFAULT_ENV" == project.requirements[2].env_var
-        else:
-            assert "CONDA_ENV_PATH" == project.requirements[2].env_var
+
+        conda_env_var = conda_api.conda_prefix_variable()
+        assert conda_env_var == project.requirements[2].env_var
+
         assert dict() == requirements[2].options
         assert len(project.problems) == 0
 
@@ -793,10 +784,10 @@ def test_load_dict_of_variables_requirements():
         assert 'BAR' == requirements[1].env_var
         assert dict(b=2) == requirements[1].options
         assert isinstance(requirements[2], CondaEnvRequirement)
-        if platform.system() == 'Windows':
-            assert "CONDA_DEFAULT_ENV" == project.requirements[2].env_var
-        else:
-            assert "CONDA_ENV_PATH" == project.requirements[2].env_var
+
+        conda_env_var = conda_api.conda_prefix_variable()
+        assert conda_env_var == project.requirements[2].env_var
+
         assert dict() == requirements[2].options
         assert len(project.problems) == 0
 
@@ -1460,12 +1451,12 @@ echo %*
 
 
 def test_run_command_in_project_dir():
-    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
+    prefix = conda_api.environ_get_prefix(os.environ)
     _run_argv_for_environment(dict(), "%s foo bar" % (prefix))
 
 
 def test_run_command_in_project_dir_extra_args():
-    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
+    prefix = conda_api.environ_get_prefix(os.environ)
     _run_argv_for_environment(dict(), "%s foo bar baz" % (prefix), extra_args=["baz"])
 
 
@@ -1473,48 +1464,42 @@ def test_run_command_in_project_dir_with_shell(monkeypatch):
     if platform.system() == 'Windows':
         print("Cannot test shell on Windows")
         return
-    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _run_argv_for_environment(dict(),
-                              "%s foo bar" % (prefix),
-                              command_line='unix: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"')
+    prefix = conda_api.environ_get_prefix(os.environ)
+    command_line = 'unix: "${PROJECT_DIR}/echo_stuff.sh ${%s} foo bar"' % conda_api.conda_prefix_variable()
+    _run_argv_for_environment(dict(), "%s foo bar" % (prefix), command_line=command_line)
 
 
 def test_run_command_in_project_dir_with_shell_extra_args(monkeypatch):
     if platform.system() == 'Windows':
         print("Cannot test shell on Windows")
         return
-    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _run_argv_for_environment(dict(),
-                              "%s foo bar baz" % (prefix),
-                              command_line='unix: "${PROJECT_DIR}/echo_stuff.sh ${CONDA_ENV_PATH} foo bar"',
-                              extra_args=["baz"])
+    prefix = conda_api.environ_get_prefix(os.environ)
+    command_line = 'unix: "${PROJECT_DIR}/echo_stuff.sh ${%s} foo bar"' % conda_api.conda_prefix_variable()
+    _run_argv_for_environment(dict(), "%s foo bar baz" % (prefix), command_line=command_line, extra_args=["baz"])
 
 
 def test_run_command_in_project_dir_with_windows(monkeypatch):
     if platform.system() != 'Windows':
         print("Cannot test windows cmd on unix")
         return
-    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _run_argv_for_environment(
-        dict(),
-        "%s foo bar" % (prefix),
-        command_line='''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %CONDA_DEFAULT_ENV% foo bar"''')
+    prefix = conda_api.environ_get_prefix(os.environ)
+    command_line = '''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %{}% foo bar"'''.format(
+        conda_api.conda_prefix_variable())
+    _run_argv_for_environment(dict(), "%s foo bar" % (prefix), command_line=command_line)
 
 
 def test_run_command_in_project_dir_with_windows_extra_args(monkeypatch):
     if platform.system() != 'Windows':
         print("Cannot test windows cmd on unix")
         return
-    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
-    _run_argv_for_environment(
-        dict(),
-        "%s foo bar baz" % (prefix),
-        command_line='''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %CONDA_DEFAULT_ENV% foo bar"''',
-        extra_args=["baz"])
+    prefix = conda_api.environ_get_prefix(os.environ)
+    command_line = '''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %{}% foo bar"'''.format(
+        conda_api.conda_prefix_variable())
+    _run_argv_for_environment(dict(), "%s foo bar baz" % (prefix), command_line=command_line, extra_args=["baz"])
 
 
 def test_run_command_in_project_dir_and_cwd_is_project_dir():
-    prefix = os.getenv('CONDA_ENV_PATH', os.getenv('CONDA_DEFAULT_ENV'))
+    prefix = conda_api.environ_get_prefix(os.environ)
     _run_argv_for_environment(dict(),
                               "%s foo bar" % prefix,
                               chdir=True,
@@ -1522,7 +1507,11 @@ def test_run_command_in_project_dir_and_cwd_is_project_dir():
 
 
 def test_run_command_in_project_dir_with_conda_env():
-    _run_argv_for_environment(dict(CONDA_ENV_PATH='/someplace', CONDA_DEFAULT_ENV='/someplace'), "/someplace foo bar")
+    _run_argv_for_environment(
+        dict(CONDA_PREFIX='/someplace',
+             CONDA_ENV_PATH='/someplace',
+             CONDA_DEFAULT_ENV='/someplace'),
+        "/someplace foo bar")
 
 
 def test_run_command_is_on_system_path():
@@ -1572,9 +1561,7 @@ def test_run_command_stuff_missing_from_environment():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
         environ = minimal_environ(PROJECT_DIR=dirname)
-        conda_var = 'CONDA_ENV_PATH'
-        if platform.system() == 'Windows':
-            conda_var = 'CONDA_DEFAULT_ENV'
+        conda_var = conda_api.conda_prefix_variable()
         for key in ('PATH', conda_var, 'PROJECT_DIR'):
             environ_copy = deepcopy(environ)
             del environ_copy[key]
@@ -1765,7 +1752,7 @@ def test_requirements_subsets():
 
         everything = project.all_variable_requirements
         everything_names = [req.env_var for req in everything]
-        # the first element is CONDA_ENV_PATH or the Windows equivalent CONDA_DEFAULT_ENV
+        # the first element is CONDA_PREFIX, CONDA_ENV_PATH, or CONDA_DEFAULT_ENV
         assert ['FOO', 'REDIS_URL', 'SOMETHING', 'SOMETHING_ELSE'] == sorted(everything_names)[1:]
 
         plain = project.plain_variable_requirements
@@ -1790,7 +1777,7 @@ def test_env_var_name_list_properties():
         assert ['FOO'] == downloads
 
         everything = project.all_variables
-        # the first element is CONDA_ENV_PATH or the Windows equivalent CONDA_DEFAULT_ENV
+        # the first element is CONDA_PREFIX, CONDA_ENV_PATH, or CONDA_DEFAULT_ENV
         assert ['FOO', 'REDIS_URL', 'SOMETHING', 'SOMETHING_ELSE'] == sorted(everything)[1:]
 
         plain = project.plain_variables

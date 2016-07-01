@@ -7,7 +7,6 @@
 from __future__ import absolute_import, print_function
 
 import os
-import platform
 
 from anaconda_project.test.project_utils import project_dir_disable_dedicated_env
 from anaconda_project.test.environ_utils import (minimal_environ, minimal_environ_no_conda_env)
@@ -18,35 +17,19 @@ from anaconda_project.plugins.requirement import UserConfigOverrides
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal import conda_api
 
-if platform.system() == 'Windows':
-    conda_env_var = 'CONDA_DEFAULT_ENV'
-else:
-    conda_env_var = 'CONDA_ENV_PATH'
+conda_env_var = conda_api.conda_prefix_variable()
 
 
 def _empty_default_requirement():
     return CondaEnvRequirement(registry=PluginRegistry(), env_specs=dict(default=EnvSpec('default', [], [])))
 
 
-def test_env_var_on_windows(monkeypatch):
-    def mock_system():
-        return 'Windows'
-
-    monkeypatch.setattr('platform.system', mock_system)
+def test_env_var():
     registry = PluginRegistry()
     requirement = CondaEnvRequirement(registry)
-    assert requirement.env_var == 'CONDA_DEFAULT_ENV'
-
-
-def test_env_var_on_linux(monkeypatch):
-    def mock_system():
-        return 'Linux'
-
-    monkeypatch.setattr('platform.system', mock_system)
-    registry = PluginRegistry()
-    requirement = CondaEnvRequirement(registry)
-    assert requirement.env_var == 'CONDA_ENV_PATH'
+    assert requirement.env_var == conda_env_var
 
 
 def test_conda_env_title_and_description():

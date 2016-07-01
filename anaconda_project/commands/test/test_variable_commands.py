@@ -10,11 +10,10 @@ from anaconda_project.commands.variable_commands import main_add, main_remove
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.simple_status import SimpleStatus
+from anaconda_project.internal import conda_api
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
-import platform
-
-PLATFORM_ENV_VAR = 'CONDA_DEFAULT_ENV' if platform.system() == 'Windows' else 'CONDA_ENV_PATH'
+PLATFORM_ENV_VAR = conda_api.conda_prefix_variable()
 
 
 class Args(object):

@@ -17,6 +17,7 @@ from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal import prepare_ui
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.toposort import toposort_from_dependency_info
+from anaconda_project.internal import conda_api
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT)
@@ -672,10 +673,8 @@ def _prepare_environ_and_overrides(project, environ=None, env_spec_name=None):
     environ_copy['PROJECT_DIR'] = project.directory_path
 
     # Save and then clear out any existing environment
-    existing_env_prefix = environ_copy.get('CONDA_ENV_PATH', environ_copy.get('CONDA_DEFAULT_ENV', None))
-    for name in ('CONDA_ENV_PATH', 'CONDA_DEFAULT_ENV'):
-        if name in environ_copy:
-            del environ_copy[name]
+    existing_env_prefix = conda_api.environ_get_prefix(environ_copy)
+    conda_api.environ_delete_prefix_variables(environ_copy)
 
     overrides = UserConfigOverrides(env_spec_name=env_spec_name, inherited_env=existing_env_prefix)
 

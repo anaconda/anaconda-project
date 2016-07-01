@@ -158,7 +158,7 @@ class _ConfigCache(object):
         variables = project_file.get_value("variables")
 
         def check_conda_reserved(key):
-            if key in ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH'):
+            if key in ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH', 'CONDA_PREFIX'):
                 problems.append(("Environment variable %s is reserved for Conda's use, " +
                                  "so it can't appear in the variables section.") % key)
                 return True
