@@ -1398,7 +1398,7 @@ def test_add_service(monkeypatch):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_service(project, service_type='redis')
 
         assert status
@@ -1406,7 +1406,7 @@ def test_add_service(monkeypatch):
         assert [] == status.errors
 
         # be sure service was added to the file and saved
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert 'redis' == project2.project_file.get_value(['services', 'REDIS_URL'])
 
     with_directory_contents(dict(), check)
@@ -1416,7 +1416,7 @@ def test_add_service_nondefault_variable_name(monkeypatch):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_service(project, service_type='redis', variable_name='MY_SPECIAL_REDIS')
 
         assert status
@@ -1424,7 +1424,7 @@ def test_add_service_nondefault_variable_name(monkeypatch):
         assert [] == status.errors
 
         # be sure service was added to the file and saved
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert 'redis' == project2.project_file.get_value(['services', 'MY_SPECIAL_REDIS'])
 
     with_directory_contents(dict(), check)
@@ -1452,7 +1452,7 @@ def test_add_service_already_exists(monkeypatch):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_service(project, service_type='redis')
 
         assert status
