@@ -18,7 +18,7 @@ from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviat
                                             push_conda_manager_class, pop_conda_manager_class)
 from anaconda_project.project import Project
 import anaconda_project.prepare as prepare
-from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, with_temporary_script_commandline)
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
 from anaconda_project.test.project_utils import project_no_dedicated_env
@@ -1398,7 +1398,7 @@ def test_add_service(monkeypatch):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_service(project, service_type='redis')
 
         assert status
@@ -1406,7 +1406,7 @@ def test_add_service(monkeypatch):
         assert [] == status.errors
 
         # be sure service was added to the file and saved
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert 'redis' == project2.project_file.get_value(['services', 'REDIS_URL'])
 
     with_directory_contents(dict(), check)
@@ -1416,7 +1416,7 @@ def test_add_service_nondefault_variable_name(monkeypatch):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_service(project, service_type='redis', variable_name='MY_SPECIAL_REDIS')
 
         assert status
@@ -1424,7 +1424,7 @@ def test_add_service_nondefault_variable_name(monkeypatch):
         assert [] == status.errors
 
         # be sure service was added to the file and saved
-        project2 = Project(dirname)
+        project2 = project_no_dedicated_env(dirname)
         assert 'redis' == project2.project_file.get_value(['services', 'MY_SPECIAL_REDIS'])
 
     with_directory_contents(dict(), check)
@@ -1452,7 +1452,7 @@ def test_add_service_already_exists(monkeypatch):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
-        project = Project(dirname)
+        project = project_no_dedicated_env(dirname)
         status = project_ops.add_service(project, service_type='redis')
 
         assert status
@@ -1876,7 +1876,10 @@ def test_archive_zip_with_failing_git_command(monkeypatch):
             from subprocess import check_output as real_check_output
 
             def mock_check_output(args, cwd):
-                return real_check_output(['false'])
+                def run(commandline):
+                    return real_check_output(commandline)
+
+                return with_temporary_script_commandline("import sys\nsys.exit(1)\n", run)
 
             monkeypatch.setattr('subprocess.check_output', mock_check_output)
 

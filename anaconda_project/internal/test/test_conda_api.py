@@ -12,7 +12,7 @@ import pytest
 
 import anaconda_project.internal.conda_api as conda_api
 
-from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, tmp_script_commandline)
 
 if platform.system() == 'Windows':
     PYTHON_BINARY = "python.exe"
@@ -160,7 +160,11 @@ def test_conda_invoke_fails(monkeypatch):
 
 def test_conda_invoke_nonzero_returncode(monkeypatch):
     def get_failed_command(extra_args):
-        return ["bash", "-c", "echo TEST_ERROR 1>&2 && false"]
+        return tmp_script_commandline("""from __future__ import print_function
+import sys
+print("TEST_ERROR", file=sys.stderr)
+sys.exit(1)
+""")
 
     def do_test(dirname):
         monkeypatch.setattr('anaconda_project.internal.conda_api._get_conda_command', get_failed_command)
@@ -173,20 +177,29 @@ def test_conda_invoke_nonzero_returncode(monkeypatch):
 
 def test_conda_invoke_zero_returncode_with_stuff_on_stderr(monkeypatch, capsys):
     def get_command(extra_args):
-        return ["bash", "-c", "echo TEST_ERROR 1>&2 && echo '{}' || true"]
+        return tmp_script_commandline("""from __future__ import print_function
+import sys
+print("TEST_ERROR", file=sys.stderr)
+print("{}")
+sys.exit(0)
+""")
 
     def do_test(dirname):
         monkeypatch.setattr('anaconda_project.internal.conda_api._get_conda_command', get_command)
         conda_api.info()
         (out, err) = capsys.readouterr()
-        assert 'bash -c: TEST_ERROR\n' == err
+        assert 'TEST_ERROR' in err
 
     with_directory_contents(dict(), do_test)
 
 
 def test_conda_invoke_zero_returncode_with_invalid_json(monkeypatch, capsys):
     def get_command(extra_args):
-        return ["echo", "NOT_JSON"]
+        return tmp_script_commandline("""from __future__ import print_function
+import sys
+print("NOT_JSON")
+sys.exit(0)
+""")
 
     def do_test(dirname):
         monkeypatch.setattr('anaconda_project.internal.conda_api._get_conda_command', get_command)
