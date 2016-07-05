@@ -104,15 +104,18 @@ def test_remove_service_shutdown_fails(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
         local_state = LocalStateFile.load_for_directory(dirname)
-        local_state.set_service_run_state('TEST', {'shutdown_commands': [['false']]})
+        false_commandline = tmp_script_commandline("""import sys
+sys.exit(1)
+""")
+        local_state.set_service_run_state('TEST', {'shutdown_commands': [false_commandline]})
         local_state.save()
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'TEST'])
         assert code == 1
 
         out, err = capsys.readouterr()
-        expected_err = (
-            "Shutting down TEST, command ['false'] failed with code 1.\n" + "Shutdown commands failed for TEST.\n")
+        expected_err = ("Shutting down TEST, command %r failed with code 1.\n" +
+                        "Shutdown commands failed for TEST.\n") % false_commandline
         assert expected_err == err
         assert '' == out
 

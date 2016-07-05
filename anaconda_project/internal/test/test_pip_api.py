@@ -102,10 +102,8 @@ print("TEST_ERROR", file=sys.stderr)
 sys.exit(1)
 """
 
-        error_commandline = tmp_script_commandline(error_script)
-
         def get_failed_command(prefix, extra_args):
-            return error_commandline
+            return tmp_script_commandline(error_script)
 
         monkeypatch.setattr('anaconda_project.internal.pip_api._get_pip_command', get_failed_command)
         with pytest.raises(pip_api.PipError) as excinfo:
@@ -113,8 +111,14 @@ sys.exit(1)
         assert 'TEST_ERROR' in repr(excinfo.value)
 
         # pip command exits zero printing stuff on stderr
+        error_message_but_success_script = """from __future__ import print_function
+import sys
+print("TEST_ERROR", file=sys.stderr)
+sys.exit(0)
+"""
+
         def get_failed_command(prefix, extra_args):
-            return ["bash", "-c", "echo TEST_ERROR 1>&2 && true"]
+            return tmp_script_commandline(error_message_but_success_script)
 
         monkeypatch.setattr('anaconda_project.internal.pip_api._get_pip_command', get_failed_command)
         pip_api.install(prefix=envdir, pkgs=['flake8'])
