@@ -15,7 +15,7 @@ from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.plugins.requirements.redis import RedisRequirement
 from anaconda_project.plugins.registry import PluginRegistry
-from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, tmp_script_commandline)
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.local_state_file import LocalStateFile
 
@@ -37,6 +37,13 @@ def _monkeypatch_add_service(monkeypatch, result):
         return result
 
     monkeypatch.setattr("anaconda_project.project_ops.add_service", mock_add_service)
+
+
+_echo_commandline = tmp_script_commandline("""from __future__ import print_function
+import sys
+print(" ".join(sys.argv))
+sys.exit(0)
+""")
 
 
 def test_add_service(capsys, monkeypatch):
@@ -78,8 +85,8 @@ def test_remove_service(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
         local_state = LocalStateFile.load_for_directory(dirname)
-        local_state.set_service_run_state('ABC', {'shutdown_commands': [['echo', '"shutting down ABC"']]})
-        local_state.set_service_run_state('TEST', {'shutdown_commands': [['echo', '"shutting down TEST"']]})
+        local_state.set_service_run_state('ABC', {'shutdown_commands': [_echo_commandline + ['"shutting down ABC"']]})
+        local_state.set_service_run_state('TEST', {'shutdown_commands': [_echo_commandline + ['"shutting down TEST"']]})
         local_state.save()
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'TEST'])
@@ -116,7 +123,7 @@ def test_remove_service_by_type(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
         local_state = LocalStateFile.load_for_directory(dirname)
-        local_state.set_service_run_state('TEST', {'shutdown_commands': [['echo', '"shutting down TEST"']]})
+        local_state.set_service_run_state('TEST', {'shutdown_commands': [_echo_commandline + ['"shutting down TEST"']]})
         local_state.save()
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'redis'])
@@ -134,8 +141,8 @@ def test_remove_service_duplicate(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
         local_state = LocalStateFile.load_for_directory(dirname)
-        local_state.set_service_run_state('ABC', {'shutdown_commands': [['echo', '"shutting down ABC"']]})
-        local_state.set_service_run_state('TEST', {'shutdown_commands': [['echo', '"shutting down TEST"']]})
+        local_state.set_service_run_state('ABC', {'shutdown_commands': [_echo_commandline + ['"shutting down ABC"']]})
+        local_state.set_service_run_state('TEST', {'shutdown_commands': [_echo_commandline + ['"shutting down TEST"']]})
         local_state.save()
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'redis'])

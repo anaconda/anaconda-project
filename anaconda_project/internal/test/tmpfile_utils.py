@@ -64,7 +64,7 @@ def with_temporary_file(func, dir=None):
     # below.
     f = tempfile.NamedTemporaryFile(dir=dir, delete=False)
     try:
-        func(f)
+        return func(f)
     finally:
         f.close()
         os.remove(f.name)
@@ -77,9 +77,27 @@ def with_file_contents(contents, func, dir=None):
         # Windows will get mad if we try to rename it without closing,
         # and some users of with_file_contents want to rename it.
         f.close()
-        func(f.name)
+        return func(f.name)
 
-    with_temporary_file(with_file_object, dir=dir)
+    return with_temporary_file(with_file_object, dir=dir)
+
+
+def with_temporary_script_commandline(contents, func, dir=None):
+    def script_wrapper(filename):
+        return func(['python', os.path.abspath(filename)])
+
+    return with_file_contents(contents, script_wrapper, dir=dir)
+
+
+def tmp_script_commandline(contents):
+    import tempfile
+    # delete=False required so windows will allow the file to be
+    # opened.  (we never delete this tmpfile, except when the
+    # entire tmpdir is blown away)
+    f = tempfile.NamedTemporaryFile(dir=local_tmp, delete=False, suffix=".py", prefix="script_")
+    f.write(contents.encode('utf-8'))
+    f.close()
+    return ['python', os.path.abspath(f.name)]
 
 
 def tmp_local_state_file():
@@ -101,8 +119,8 @@ def with_tmp_zipfile(contents, f):
                 zf.writestr(key, value.encode('utf-8'))
 
         def using_directory(dirname):
-            f(handle.name, dirname)
+            return f(handle.name, dirname)
 
-        with_directory_contents(dict(), using_directory)
+        return with_directory_contents(dict(), using_directory)
 
-    with_temporary_file(using_temporary_file)
+    return with_temporary_file(using_temporary_file)

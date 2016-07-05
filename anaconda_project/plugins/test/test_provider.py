@@ -10,7 +10,7 @@ import os
 
 import pytest
 
-from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, tmp_script_commandline)
 from anaconda_project.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
 from anaconda_project.plugins.provider import (Provider, ProvideContext, EnvVarProvider, ProvideResult,
                                                shutdown_service_run_state)
@@ -563,7 +563,10 @@ def test_shutdown_service_run_state_nothing_to_do():
 def test_shutdown_service_run_state_command_success():
     def check(dirname):
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        local_state_file.set_service_run_state('FOO', {'shutdown_commands': [['true']]})
+        true_commandline = tmp_script_commandline("""import sys
+sys.exit(0)
+""")
+        local_state_file.set_service_run_state('FOO', {'shutdown_commands': [true_commandline]})
         status = shutdown_service_run_state(local_state_file, 'FOO')
         assert status
         assert status.status_description == "Successfully shut down FOO."
@@ -574,10 +577,13 @@ def test_shutdown_service_run_state_command_success():
 def test_shutdown_service_run_state_command_failure():
     def check(dirname):
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        local_state_file.set_service_run_state('FOO', {'shutdown_commands': [['false']]})
+        false_commandline = tmp_script_commandline("""import sys
+sys.exit(1)
+""")
+        local_state_file.set_service_run_state('FOO', {'shutdown_commands': [false_commandline]})
         status = shutdown_service_run_state(local_state_file, 'FOO')
         assert not status
         assert status.status_description == "Shutdown commands failed for FOO."
-        assert status.errors == ["Shutting down FOO, command ['false'] failed with code 1."]
+        assert status.errors == ["Shutting down FOO, command %r failed with code 1." % false_commandline]
 
     with_directory_contents(dict(), check)

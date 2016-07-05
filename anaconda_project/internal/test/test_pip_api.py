@@ -13,7 +13,7 @@ import pytest
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
 
-from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, tmp_script_commandline)
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
 
 if platform.system() == 'Windows':
@@ -96,8 +96,16 @@ def test_pip_errors(monkeypatch):
         assert dict() == installed  # with pip not installed, no packages are listed.
 
         # pip command exits nonzero
+        error_script = """from __future__ import print_function
+import sys
+print("TEST_ERROR", file=sys.stderr)
+sys.exit(1)
+"""
+
+        error_commandline = tmp_script_commandline(error_script)
+
         def get_failed_command(prefix, extra_args):
-            return ["bash", "-c", "echo TEST_ERROR 1>&2 && false"]
+            return error_commandline
 
         monkeypatch.setattr('anaconda_project.internal.pip_api._get_pip_command', get_failed_command)
         with pytest.raises(pip_api.PipError) as excinfo:

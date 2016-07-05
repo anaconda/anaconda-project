@@ -18,7 +18,7 @@ from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviat
                                             push_conda_manager_class, pop_conda_manager_class)
 from anaconda_project.project import Project
 import anaconda_project.prepare as prepare
-from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, with_temporary_script_commandline)
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
 from anaconda_project.test.project_utils import project_no_dedicated_env
@@ -1876,7 +1876,10 @@ def test_archive_zip_with_failing_git_command(monkeypatch):
             from subprocess import check_output as real_check_output
 
             def mock_check_output(args, cwd):
-                return real_check_output(['false'])
+                def run(commandline):
+                    return real_check_output(commandline)
+
+                return with_temporary_script_commandline("import sys\nsys.exit(1)\n", run)
 
             monkeypatch.setattr('subprocess.check_output', mock_check_output)
 
