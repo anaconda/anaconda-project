@@ -1,5 +1,5 @@
 ## Release
 
 ```
-conda build conda.recipe
+python setup.py conda_package
 ```
