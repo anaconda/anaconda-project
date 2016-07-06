@@ -1,15 +1,15 @@
 # Conda Kapsel
 
-Get rid of that long README! It gets outdated, and people don't
-read it carefully anyway.
+*Conda kapsels are reproducible, executable project directories.*
 
-What if your README's instructions could be as short as "type
-`conda kapsel run`"?
+Take any directory full of stuff that you're working on; web apps,
+scripts, Jupyter notebooks, data files, whatever it may be.
 
-A _conda kapsel_ is a project directory with some configuration in
-a `kapsel.yml`, allowing [conda](https://github.com/conda/conda)
-to run the project. Running a project can mean executing any
-arbitrary command.
+By adding a `kapsel.yml` to this project directory, you can tell
+[conda](https://github.com/conda/conda) how to run it.
+
+"Running" a conda kapsel can mean whatever you configure it to
+mean (that is, it can execute any arbitrary command).
 
 `kapsel.yml` tells conda how to automate project setup; conda can
 establish all prerequisite conditions for the project's commands
@@ -24,13 +24,9 @@ The goal is that if your project runs on your machine, it will
 also run on others' machines (or on your future machine after you
 reboot a few times and forget how your project works).
 
-*Conda kapsels are reproducible, executable projects.*
-
-All we mean by "project" is a directory full of related stuff that
-you're working on; scripts, notebooks, data files, whatever it may
-be. Organize it however you like. The command `conda kapsel init
-DIRECTORY_NAME` creates a `kapsel.yml`, which includes kapsel
-configuration.
+The command `conda kapsel init DIRECTORY_NAME` creates a
+`kapsel.yml`, converting your project directory into a conda
+kapsel.
 
 ## Put another way...
 
@@ -38,6 +34,30 @@ Traditional build scripts such as `setup.py` automate "building"
 the project (going from source code to something runnable), while
 conda kapsel automates "running" the project (taking build
 artifacts and doing any necessary setup prior to executing them).
+
+## Why?
+
+ * Do you have a README with setup steps in it? You may find that
+   it gets outdated, or that people don't read it, and then you
+   have to help them diagnose the problem. `conda kapsel`
+   automates the setup steps; the README can say "type `conda
+   kapsel run`" and that it.
+ * Do you need everyone working on a project to have the same
+   dependencies in their conda environment? `conda kapsel`
+   automates environment creation and verifies that environments
+   have the right versions of packages.
+ * Do you sometimes include your personal passwords or secret keys
+   in your code, because it's too complicated to do otherwise?
+   With `conda kapsel`, you can `os.getenv("DB_PASSWORD")` and
+   configure `conda kapsel` to prompt the user for any missing
+   credentials.
+ * Do you want improved reproducibility? With `conda kapsel`,
+   someone who wants to reproduce your analysis can ensure they
+   have exactly the same setup that you have on your machine.
+ * Do you want to deploy your analysis as a web application? The
+   configuration in `kapsel.yml` tells hosting providers how to
+   run your project, so there's no special setup needed when
+   you move from your local machine to the web.
 
 ## Learn more
 
@@ -51,8 +71,8 @@ the syntax of the `kapsel.yml` file.
 
 `conda kapsel` has similar functionality and may be more
 convenient. The advantage of `conda kapsel` for environment
-handling is that it performs conda operations _and_ records them
-in a config file in one step.
+handling is that it performs conda operations, _and_ records them
+in a config file for reproducibility, in one step.
 
 For example, if you do `conda kapsel add-packages bokeh=0.11`,
 that will install Bokeh with conda, _and_ add `bokeh=0.11` to an
@@ -70,10 +90,9 @@ people can forget to re-run it and update their packages, while
 `conda kapsel run` will automatically add missing packages every
 time.
 
-In addition to environment creation, `conda kapsel` can also
-perform other kinds of setup, such as adding data files and
-running a database server. It's a superset of `conda env` in that
-sense.
+In addition to environment creation, `conda kapsel` can perform
+other kinds of setup, such as adding data files and running a
+database server. It's a superset of `conda env` in that sense.
 
 # Bug Reports
 
