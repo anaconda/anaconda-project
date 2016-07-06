@@ -32,4 +32,4 @@ def upload_command(project_dir, site, username, token):
 
 def main(args):
     """Start the upload command and return exit status code."""
-    return upload_command(args.project, args.site, args.user, args.token)
+    return upload_command(args.directory, args.site, args.user, args.token)

@@ -23,7 +23,7 @@ from conda_kapsel.internal import keyring
 
 class Args(object):
     def __init__(self, **kwargs):
-        self.project = "."
+        self.directory = "."
         self.env_spec = None
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         for key in kwargs:
@@ -141,7 +141,7 @@ def test_main(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        main(Args(project=dirname, mode='browser'))
+        main(Args(directory=dirname, mode='browser'))
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 services:
@@ -191,7 +191,7 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname, '--mode=browser'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--mode=browser'])
         assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -233,7 +233,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = main(Args(project=dirname))
+        code = main(Args(directory=dirname))
         assert 1 == code
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -260,7 +260,8 @@ def test_prepare_command_choose_environment(capsys, monkeypatch):
     def check_prepare_choose_environment(dirname):
         wrong_envdir = os.path.join(dirname, "envs", "foo")
         envdir = os.path.join(dirname, "envs", "bar")
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname, '--env-spec=bar'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--env-spec=bar'
+                                                 ])
         assert result == 0
 
         assert os.path.isdir(envdir)
@@ -289,8 +290,8 @@ env_specs:
 def test_prepare_command_choose_environment_does_not_exist(capsys):
     def check_prepare_choose_environment_does_not_exist(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname, '--env-spec=nope'
-                                                 ])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname,
+                                                 '--env-spec=nope'])
         assert result == 1
 
         expected_error = ("Environment name 'nope' is not in %s, these names were found: bar, default, foo" %
@@ -327,7 +328,7 @@ def test_ask_variables_interactively(monkeypatch):
 
         monkeypatch.setattr('conda_kapsel.commands.console_utils.console_input', mock_console_input)
 
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname])
         assert res == 0
 
         local_state = LocalStateFile.load_for_directory(dirname)
@@ -362,7 +363,7 @@ def test_ask_variables_interactively_empty_answer_re_asks(monkeypatch):
 
         monkeypatch.setattr('conda_kapsel.commands.console_utils.console_input', mock_console_input)
 
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname])
         assert res == 0
 
         local_state = LocalStateFile.load_for_directory(dirname)
@@ -392,7 +393,7 @@ def test_ask_variables_interactively_whitespace_answer_re_asks(monkeypatch):
 
         monkeypatch.setattr('conda_kapsel.commands.console_utils.console_input', mock_console_input)
 
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname])
         assert res == 0
 
         local_state = LocalStateFile.load_for_directory(dirname)
@@ -426,7 +427,7 @@ def test_ask_variables_interactively_eof_answer_gives_up(monkeypatch, capsys):
 
         monkeypatch.setattr('conda_kapsel.commands.console_utils.console_input', mock_console_input)
 
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname])
         assert res == 1
 
         out, err = capsys.readouterr()
@@ -461,7 +462,7 @@ def test_ask_variables_interactively_then_set_variable_fails(monkeypatch, capsys
 
         monkeypatch.setattr('conda_kapsel.project_ops.set_variables', mock_set_variables)
 
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname])
         assert res == 1
 
         out, err = capsys.readouterr()
@@ -489,7 +490,7 @@ def test_no_ask_variables_interactively_not_interactive(monkeypatch, capsys):
 
         monkeypatch.setattr('conda_kapsel.commands.console_utils.console_input', mock_console_input)
 
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname])
         assert res == 1
 
         out, err = capsys.readouterr()
@@ -517,7 +518,7 @@ def test_no_ask_variables_interactively_if_no_variables_missing_but_prepare_fail
 
         monkeypatch.setattr('conda_kapsel.commands.console_utils.console_input', mock_console_input)
 
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--project', dirname])
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname])
         assert res == 1
 
         out, err = capsys.readouterr()

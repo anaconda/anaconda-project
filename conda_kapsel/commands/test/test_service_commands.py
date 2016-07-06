@@ -195,7 +195,8 @@ def test_remove_service_running_redis(monkeypatch):
         assert real_can_connect_to_socket(host='localhost', port=port)
 
         # now clean it up
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'REDIS_URL', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'REDIS_URL', '--directory', dirname
+                                               ])
         assert code == 0
 
         assert not os.path.exists(pidfile)

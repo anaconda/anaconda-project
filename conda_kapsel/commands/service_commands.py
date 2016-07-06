@@ -57,14 +57,14 @@ def list_services(project_dir):
 
 def main_add(args):
     """Start the add-service command and return exit status code."""
-    return add_service(args.project, args.service_type, args.variable)
+    return add_service(args.directory, args.service_type, args.variable)
 
 
 def main_remove(args):
     """Start the remove-service command and return exit status code."""
-    return remove_service(args.project, args.variable)
+    return remove_service(args.directory, args.variable)
 
 
 def main_list(args):
     """Start the list the services command and return exit status code."""
-    return list_services(args.project)
+    return list_services(args.directory)

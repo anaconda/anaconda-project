@@ -17,8 +17,8 @@ PLATFORM_ENV_VAR = conda_api.conda_prefix_variable()
 
 
 class Args(object):
-    def __init__(self, vars_to_add=None, vars_to_remove=None, project='.', default=None):
-        self.project = project
+    def __init__(self, vars_to_add=None, vars_to_remove=None, directory='.', default=None):
+        self.directory = directory
         self.vars_to_add = vars_to_add
         self.vars_to_remove = vars_to_remove
         self.default = None
@@ -80,7 +80,7 @@ def test_add_two_variables_with_default(monkeypatch, capsys):
 
 def test_add_variable_project_problem(capsys):
     def check_problem(dirname):
-        args = Args(vars_to_add=['foo', 'baz'], project=dirname)
+        args = Args(vars_to_add=['foo', 'baz'], directory=dirname)
         res = main_add(args)
         assert res == 1
 
@@ -102,7 +102,7 @@ def test_remove_variable_command(monkeypatch):
             return True
 
         monkeypatch.setattr('conda_kapsel.project_ops.remove_variables', mock_remove_variables)
-        args = Args(vars_to_remove=['foo', 'baz'], project=dirname)
+        args = Args(vars_to_remove=['foo', 'baz'], directory=dirname)
         res = main_remove(args)
         assert res == 0
         assert len(params) == 1
@@ -115,7 +115,7 @@ def test_remove_variable_command(monkeypatch):
 
 def test_remove_variable_project_problem(monkeypatch):
     def check_problem_remove(dirname):
-        args = Args(vars_to_remove=['foo', 'baz'], project=dirname)
+        args = Args(vars_to_remove=['foo', 'baz'], directory=dirname)
         res = main_remove(args)
         assert res == 1
 
@@ -124,7 +124,7 @@ def test_remove_variable_project_problem(monkeypatch):
 
 def test_list_variables(capsys):
     def check_list_not_empty(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-variables', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-variables', '--directory', dirname])
 
         assert code == 0
         out, err = capsys.readouterr()
@@ -149,7 +149,7 @@ test{space}A downloaded file which is referenced by test.
 
 def test_list_variables_with_no_variables(capsys):
     def check_list_empty(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-variables', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-variables', '--directory', dirname])
 
         assert code == 0
         out, err = capsys.readouterr()
@@ -170,7 +170,7 @@ Name{space}Description
 def test_list_variables_with_project_file_problems(capsys):
     def check(dirname):
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-variables', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-variables', '--directory', dirname])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -184,7 +184,7 @@ def test_list_variables_with_project_file_problems(capsys):
 def test_set_variables_with_project_file_problems(capsys):
     def check(dirname):
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'set-variable', '--project', dirname, 'FOO=bar'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'set-variable', '--directory', dirname, 'FOO=bar'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -198,7 +198,7 @@ def test_set_variables_with_project_file_problems(capsys):
 def test_unset_variables_with_project_file_problems(capsys):
     def check(dirname):
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'unset-variable', '--project', dirname, 'FOO'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'unset-variable', '--directory', dirname, 'FOO'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -220,7 +220,7 @@ def test_set_variable_command(monkeypatch):
     monkeypatch.setattr('conda_kapsel.project_ops.set_variables', mock_set_variables)
 
     def check(dirname):
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'set-variable', '--project', dirname, 'foo=bar',
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'set-variable', '--directory', dirname, 'foo=bar',
                                               'baz=qux', 'has_two_equals=foo=bar'])
         assert res == 0
 
@@ -264,7 +264,8 @@ def test_unset_variable_command(monkeypatch):
     monkeypatch.setattr('conda_kapsel.project_ops.unset_variables', mock_unset_variables)
 
     def check(dirname):
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'unset-variable', '--project', dirname, 'foo', 'baz'])
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'unset-variable', '--directory', dirname, 'foo', 'baz'
+                                              ])
         assert res == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """

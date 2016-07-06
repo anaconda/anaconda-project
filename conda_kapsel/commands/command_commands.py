@@ -106,14 +106,14 @@ def list_commands(project_dir):
 
 def main(args):
     """Submit the add command with args and returns exit code."""
-    return add_command(args.project, args.name, args.type, args.command, args.env_spec)
+    return add_command(args.directory, args.name, args.type, args.command, args.env_spec)
 
 
 def main_remove(args):
     """Submit the remove command with args and returns exit code."""
-    return remove_command(args.project, args.name)
+    return remove_command(args.directory, args.name)
 
 
 def main_list(args):
     """Start the list command with args and return exit code."""
-    return list_commands(args.project)
+    return list_commands(args.directory)

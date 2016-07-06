@@ -42,8 +42,8 @@ def _parse_args_and_run_subcommand(argv):
 
     parser.add_argument('-v', '--version', action='version', version=version)
 
-    def add_project_arg(preset):
-        preset.add_argument('--project',
+    def add_directory_arg(preset):
+        preset.add_argument('--directory',
                             metavar='PROJECT_DIR',
                             default='.',
                             help="Project directory containing project.yml (defaults to current directory)")
@@ -56,7 +56,7 @@ def _parse_args_and_run_subcommand(argv):
                             help="An environment spec name from project.yml")
 
     def add_prepare_args(preset):
-        add_project_arg(preset)
+        add_directory_arg(preset)
         add_env_spec_arg(preset)
         all_supported_modes = list(_all_ui_modes)
         # we don't support "ask about every single thing" mode yet.
@@ -76,7 +76,7 @@ def _parse_args_and_run_subcommand(argv):
                             help="Name of the environment spec from project.yml")
 
     preset = subparsers.add_parser('init', help="Initialize a directory with default project configuration")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.set_defaults(main=init.main)
 
     preset = subparsers.add_parser('run', help="Run the project, setting up requirements first")
@@ -95,7 +95,7 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('clean',
                                    help="Removes generated state (stops services, deletes environment files, etc)")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.set_defaults(main=clean.main)
 
     preset = subparsers.add_parser('activate',
@@ -105,12 +105,12 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('archive',
                                    help="Create a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
     preset.set_defaults(main=archive.main)
 
     preset = subparsers.add_parser('upload', help="Upload the project to Anaconda Cloud")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.add_argument('-s', '--site', metavar='SITE', help='Select site to use')
     preset.add_argument('-t', '--token', metavar='TOKEN', help='Auth token or a path to a file containing a token')
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
@@ -122,30 +122,30 @@ def _parse_args_and_run_subcommand(argv):
                         metavar='DEFAULT_VALUE',
                         default=None,
                         help='Default value if environment variable is unset')
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_add)
 
     preset = subparsers.add_parser('remove-variable', help="Remove an environment variable from the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.add_argument('vars_to_remove', metavar='VARS_TO_REMOVE', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main_remove)
 
     preset = subparsers.add_parser('list-variables', help="List all variables on the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_list)
 
     preset = subparsers.add_parser('set-variable', help="Set an environment variable value in project-local.yml")
     preset.add_argument('vars_and_values', metavar='VARS_AND_VALUES', default=None, nargs=REMAINDER)
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_set)
 
     preset = subparsers.add_parser('unset-variable', help="Unset an environment variable value from project-local.yml")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.add_argument('vars_to_unset', metavar='VARS_TO_UNSET', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main_unset)
 
     preset = subparsers.add_parser('add-download', help="Add a URL to be downloaded before running commands")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
     preset.add_argument('--filename', help="The name to give the file/folder after downloading it", default=None)
@@ -157,12 +157,12 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=download_commands.main_add)
 
     preset = subparsers.add_parser('remove-download', help="Remove a download from the project and from the filesystem")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.set_defaults(main=download_commands.main_remove)
 
     preset = subparsers.add_parser('list-downloads', help="List all downloads on the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.set_defaults(main=download_commands.main_list)
 
     service_types = PluginRegistry().list_service_types()
@@ -172,18 +172,18 @@ def _parse_args_and_run_subcommand(argv):
         preset.add_argument('--variable', metavar='ENV_VAR_FOR_SERVICE_ADDRESS', default=None)
 
     preset = subparsers.add_parser('add-service', help="Add a service to be available before running commands")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     add_service_variable_name(preset)
     preset.add_argument('service_type', metavar='SERVICE_TYPE', default=None, choices=service_choices)
     preset.set_defaults(main=service_commands.main_add)
 
     preset = subparsers.add_parser('remove-service', help="Remove a service from the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.add_argument('variable', metavar='SERVICE_REFERENCE', default=None)
     preset.set_defaults(main=service_commands.main_remove)
 
     preset = subparsers.add_parser('list-services', help="List services present in the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.set_defaults(main=service_commands.main_list)
 
     def add_package_args(preset):
@@ -195,34 +195,34 @@ def _parse_args_and_run_subcommand(argv):
         preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
 
     preset = subparsers.add_parser('add-env-spec', help="Add a new environment spec to the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     add_package_args(preset)
     add_env_spec_name_arg(preset)
     preset.set_defaults(main=environment_commands.main_add)
 
     preset = subparsers.add_parser('remove-env-spec', help="Remove an environment spec from the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     add_env_spec_name_arg(preset)
     preset.set_defaults(main=environment_commands.main_remove)
 
     preset = subparsers.add_parser('list-env-specs', help="List all environment specs for the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.set_defaults(main=environment_commands.main_list_env_specs)
 
     preset = subparsers.add_parser('add-packages', help="Add packages to one or all project environments")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     add_env_spec_arg(preset)
     add_package_args(preset)
     preset.set_defaults(main=environment_commands.main_add_packages)
 
     preset = subparsers.add_parser('remove-packages', help="Remove packages from one or all project environments")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     add_env_spec_arg(preset)
     preset.add_argument('packages', metavar='PACKAGE_NAME', default=None, nargs='+')
     preset.set_defaults(main=environment_commands.main_remove_packages)
 
     preset = subparsers.add_parser('list-packages', help="List packages for an environment on the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     add_env_spec_arg(preset)
     preset.set_defaults(main=environment_commands.main_list_packages)
 
@@ -230,7 +230,7 @@ def _parse_args_and_run_subcommand(argv):
         preset.add_argument('name', metavar="NAME", help="Command name used to invoke it")
 
     preset = subparsers.add_parser('add-command', help="Add a new command to the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     command_choices = list(ALL_COMMAND_TYPES) + ['ask']
     command_choices.remove("conda_app_entry")  # conda_app_entry is sort of silly and may go away
     preset.add_argument('--type', action="store", choices=command_choices, help="Command type to add")
@@ -240,12 +240,12 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=command_commands.main)
 
     preset = subparsers.add_parser('remove-command', help="Remove a command from the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     add_command_name_arg(preset)
     preset.set_defaults(main=command_commands.main_remove)
 
     preset = subparsers.add_parser('list-commands', help="List the commands on the project")
-    add_project_arg(preset)
+    add_directory_arg(preset)
     preset.set_defaults(main=command_commands.main_list)
 
     # argparse doesn't do this for us for whatever reason
@@ -259,9 +259,9 @@ def _parse_args_and_run_subcommand(argv):
     except SystemExit as e:
         return e.code
 
-    # 'project_dir' is used for all subcommands now, but may not be always
-    if 'project' in args:
-        args.project = os.path.abspath(args.project)
+    # '--directory' is used for all subcommands now, but may not be always
+    if 'directory' in args:
+        args.directory = os.path.abspath(args.directory)
     return args.main(args)
 
 

@@ -43,6 +43,6 @@ def run_command(project_dir, ui_mode, conda_environment, command, extra_command_
 
 def main(args):
     """Start the run command and return exit status code.."""
-    run_command(args.project, args.mode, args.env_spec, args.command, args.extra_args_for_command)
+    run_command(args.directory, args.mode, args.env_spec, args.command, args.extra_args_for_command)
     # if we returned, we failed to run the command and should have printed an error
     return 1

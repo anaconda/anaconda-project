@@ -17,11 +17,11 @@ from conda_kapsel.project import Project
 
 
 class Args(object):
-    def __init__(self, type, name, command, project='.'):
+    def __init__(self, type, name, command, directory='.'):
         self.type = type
         self.name = name
         self.command = command
-        self.project = project
+        self.directory = directory
         self.env_spec = None
 
 
@@ -37,7 +37,7 @@ def test_add_command_ask_type(monkeypatch):
 
         monkeypatch.setattr('conda_kapsel.commands.console_utils.console_input', mock_console_input)
 
-        args = Args(None, 'test', 'file.py', project=dirname)
+        args = Args(None, 'test', 'file.py', directory=dirname)
         res = main(args)
         assert res == 0
 
@@ -58,7 +58,7 @@ def test_add_command_not_interactive(monkeypatch, capsys):
 
         monkeypatch.setattr('conda_kapsel.commands.console_utils.stdin_is_interactive', mock_is_interactive)
 
-        args = Args(None, 'test', 'file.py', project=dirname)
+        args = Args(None, 'test', 'file.py', directory=dirname)
         res = main(args)
         assert res == 1
 
@@ -81,7 +81,7 @@ def test_add_command_ask_type_interrupted(monkeypatch, capsys):
 
         monkeypatch.setattr('conda_kapsel.commands.console_utils._input', mock_input)
 
-        args = Args(None, 'test', 'file.py', project=dirname)
+        args = Args(None, 'test', 'file.py', directory=dirname)
         with pytest.raises(SystemExit) as excinfo:
             main(args)
         assert excinfo.value.code == 1
@@ -110,7 +110,7 @@ def test_add_command_ask_other_shell(monkeypatch):
 
         monkeypatch.setattr('platform.system', mock_system)
 
-        args = Args(None, 'test', 'echo hello', project=dirname)
+        args = Args(None, 'test', 'echo hello', directory=dirname)
         res = main(args)
         assert res == 0
 
@@ -141,7 +141,7 @@ def test_add_command_ask_other_windows(monkeypatch):
 
         monkeypatch.setattr('platform.system', mock_system)
 
-        args = Args(None, 'test', 'echo hello', project=dirname)
+        args = Args(None, 'test', 'echo hello', directory=dirname)
         res = main(args)
         assert res == 0
 
@@ -171,7 +171,7 @@ def test_add_command_ask_type_twice(monkeypatch, capsys):
 
         monkeypatch.setattr('conda_kapsel.commands.console_utils.console_input', mock_console_input)
 
-        args = Args(None, 'test', 'file.py', project=dirname)
+        args = Args(None, 'test', 'file.py', directory=dirname)
         res = main(args)
         assert res == 0
         assert len(calls) == 2
@@ -194,7 +194,7 @@ def test_add_command_ask_type_twice(monkeypatch, capsys):
 
 def test_add_command_specifying_notebook(monkeypatch, capsys):
     def check_specifying_notebook(dirname):
-        args = Args('notebook', 'test', 'file.ipynb', project=dirname)
+        args = Args('notebook', 'test', 'file.ipynb', directory=dirname)
         res = main(args)
         assert res == 0
 
@@ -210,7 +210,7 @@ def test_add_command_specifying_notebook(monkeypatch, capsys):
 
 def test_add_command_guessing_notebook(monkeypatch, capsys):
     def check_guessing_notebook(dirname):
-        args = Args(None, 'test', 'file.ipynb', project=dirname)
+        args = Args(None, 'test', 'file.ipynb', directory=dirname)
         res = main(args)
         assert res == 0
 
@@ -226,7 +226,7 @@ def test_add_command_guessing_notebook(monkeypatch, capsys):
 
 def test_add_command_with_env_spec(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-command', '--project', dirname, '--env-spec',
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-command', '--directory', dirname, '--env-spec',
                                                'foo', '--type', 'notebook', 'test', 'file.ipynb'])
         assert code == 0
 
@@ -243,7 +243,7 @@ def test_add_command_with_env_spec(monkeypatch, capsys):
 def _test_command_command_project_problem(capsys, monkeypatch, command, append_dir=False):
     def check(dirname):
         if append_dir:
-            command.extend(['--project', dirname])
+            command.extend(['--directory', dirname])
         code = _parse_args_and_run_subcommand(command)
         assert code == 1
 
@@ -267,7 +267,7 @@ def test_add_command_project_problem(capsys, monkeypatch):
 
 def test_add_command_breaks_project(capsys, monkeypatch):
     def check_problem_add_cmd(dirname):
-        args = Args('notebook', 'test', 'file.ipynb', project=dirname)
+        args = Args('notebook', 'test', 'file.ipynb', directory=dirname)
         res = main(args)
         assert res == 1
 
@@ -288,7 +288,7 @@ def test_remove_command_with_project_file_problems(capsys, monkeypatch):
 
 def test_remove_command(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'test', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'test', '--directory', dirname])
         assert code == 0
 
         project = Project(dirname)
@@ -305,7 +305,7 @@ def test_remove_command(monkeypatch, capsys):
 
 def test_remove_command_missing(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'test', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'test', '--directory', dirname])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -317,8 +317,8 @@ def test_remove_command_missing(monkeypatch, capsys):
 
 def test_remove_command_auto_generated(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'file.ipynb', '--project', dirname
-                                               ])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'file.ipynb', '--directory',
+                                               dirname])
         assert code == 1
 
         project = Project(dirname)
@@ -340,7 +340,7 @@ def test_list_commands_with_project_file_problems(capsys, monkeypatch):
 
 def test_list_commands_empty_project(capsys):
     def check_empty_project(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--directory', dirname])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -352,7 +352,7 @@ def test_list_commands_empty_project(capsys):
 
 def test_list_commands(capsys):
     def check_empty_project(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--directory', dirname])
         assert code == 0
 
         out, err = capsys.readouterr()

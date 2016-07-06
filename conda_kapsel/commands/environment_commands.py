@@ -90,29 +90,29 @@ def list_packages(project_dir, environment):
 
 def main_add(args):
     """Start the add-environment command and return exit status code."""
-    return add_env_spec(args.project, args.name, args.packages, args.channel)
+    return add_env_spec(args.directory, args.name, args.packages, args.channel)
 
 
 def main_remove(args):
     """Start the remove-environment command and return exit status code."""
-    return remove_env_spec(args.project, args.name)
+    return remove_env_spec(args.directory, args.name)
 
 
 def main_add_packages(args):
     """Start the add-packages command and return exit status code."""
-    return add_packages(args.project, args.env_spec, args.packages, args.channel)
+    return add_packages(args.directory, args.env_spec, args.packages, args.channel)
 
 
 def main_remove_packages(args):
     """Start the remove-packages command and return exit status code."""
-    return remove_packages(args.project, args.env_spec, args.packages)
+    return remove_packages(args.directory, args.env_spec, args.packages)
 
 
 def main_list_env_specs(args):
     """Start the list environments command and return exit status code."""
-    return list_env_specs(args.project)
+    return list_env_specs(args.directory)
 
 
 def main_list_packages(args):
     """Start the list packages command and return exit status code."""
-    return list_packages(args.project, args.env_spec)
+    return list_packages(args.directory, args.env_spec)

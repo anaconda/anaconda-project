@@ -22,7 +22,7 @@ from conda_kapsel.test.project_utils import project_dir_disable_dedicated_env
 
 class Args(object):
     def __init__(self, **kwargs):
-        self.project = "."
+        self.directory = "."
         self.env_spec = None
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
         self.command = None
@@ -102,7 +102,7 @@ def test_run_command_no_app_entry(capsys):
 def test_run_command_nonexistent_project(capsys):
     def check_run_nonexistent(dirname):
         project_dir = os.path.join(dirname, "nope")
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--project', project_dir])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--directory', project_dir])
 
         assert 1 == result
 
@@ -150,7 +150,7 @@ def test_main(monkeypatch, capsys):
 
     def check_run_main(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = main(Args(project=dirname))
+        result = main(Args(directory=dirname))
 
         assert 1 == result
         assert 'file' in executed
@@ -181,7 +181,7 @@ def test_main_failed_exec(monkeypatch, capsys):
 
     def check_run_main(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = main(Args(project=dirname))
+        result = main(Args(directory=dirname))
 
         assert 1 == result
 
@@ -266,7 +266,7 @@ def test_run_command_extra_args(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--project', dirname, 'default', 'foo',
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--directory', dirname, 'default', 'foo',
                                                  '$PATH', '--something'])
 
         assert 1 == result
@@ -317,8 +317,8 @@ def test_run_command_extra_args_with_double_hyphen(monkeypatch, capsys):
 
         project_dir_disable_dedicated_env(dirname)
         # double hyphen lets us specify "--foo" as a command name
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--project', dirname, '--', '--foo', '--bar'
-                                                 ])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--directory', dirname, '--', '--foo',
+                                                 '--bar'])
 
         assert 1 == result
         assert 'file' in executed
@@ -396,18 +396,18 @@ commands:
 
 
 def test_run_command_specify_name_after_options(monkeypatch, capsys):
-    args = _test_run_command_foo(['anaconda-project', 'run', '--project', '<DIRNAME>', 'foo'], monkeypatch, capsys)
+    args = _test_run_command_foo(['anaconda-project', 'run', '--directory', '<DIRNAME>', 'foo'], monkeypatch, capsys)
 
     assert args == ['--version', 'foo']
 
 
 def test_run_command_specify_name_before_options(monkeypatch, capsys):
-    args = _test_run_command_foo(['anaconda-project', 'run', 'foo', '--project', '<DIRNAME>'], monkeypatch, capsys)
-    assert args[:-1] == ['--version', 'foo', '--project']
+    args = _test_run_command_foo(['anaconda-project', 'run', 'foo', '--directory', '<DIRNAME>'], monkeypatch, capsys)
+    assert args[:-1] == ['--version', 'foo', '--directory']
 
 
 def test_run_command_omit_name_use_default(monkeypatch, capsys):
-    args = _test_run_command_foo(['anaconda-project', 'run', '--project', '<DIRNAME>'], monkeypatch, capsys)
+    args = _test_run_command_foo(['anaconda-project', 'run', '--directory', '<DIRNAME>'], monkeypatch, capsys)
     assert args == ['--version', 'def']
 
 
@@ -424,7 +424,7 @@ def test_run_command_nonexistent_name(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--project', dirname, 'nope'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--directory', dirname, 'nope'])
 
         assert 1 == result
 

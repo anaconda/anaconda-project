@@ -16,7 +16,7 @@ from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 def test_archive_command_on_empty_project(capsys):
     def check(dirname):
         archivefile = os.path.join(dirname, "foo.zip")
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--project', dirname, archivefile])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--directory', dirname, archivefile])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -29,7 +29,7 @@ def test_archive_command_on_empty_project(capsys):
 def test_archive_command_on_simple_project(capsys):
     def check(dirname):
         archivefile = os.path.join(dirname, "foo.zip")
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--project', dirname, archivefile])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--directory', dirname, archivefile])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -42,7 +42,7 @@ def test_archive_command_on_simple_project(capsys):
 
 def test_archive_command_on_invalid_project(capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--project', dirname, 'foo.zip'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--directory', dirname, 'foo.zip'])
         assert code == 1
 
         out, err = capsys.readouterr()

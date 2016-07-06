@@ -32,4 +32,4 @@ def archive_command(project_dir, archive_filename):
 
 def main(args):
     """Start the archive command and return exit status code."""
-    return archive_command(args.project, args.filename)
+    return archive_command(args.directory, args.filename)

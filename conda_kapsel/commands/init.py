@@ -34,4 +34,4 @@ def init_command(project_dir):
 
 def main(args):
     """Start the init command and return exit status code."""
-    return init_command(args.project)
+    return init_command(args.directory)

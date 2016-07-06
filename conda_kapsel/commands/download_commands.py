@@ -67,15 +67,15 @@ def list_downloads(project_dir):
 
 def main_add(args):
     """Start the download command and return exit status code."""
-    return add_download(args.project, args.filename_variable, args.download_url, args.filename, args.hash_algorithm,
+    return add_download(args.directory, args.filename_variable, args.download_url, args.filename, args.hash_algorithm,
                         args.hash_value)
 
 
 def main_remove(args):
     """Start the remove download command and return exit status code."""
-    return remove_download(args.project, args.filename_variable)
+    return remove_download(args.directory, args.filename_variable)
 
 
 def main_list(args):
     """Start the list download command and return exit status code."""
-    return list_downloads(args.project)
+    return list_downloads(args.directory)

@@ -100,24 +100,24 @@ def unset_variables(project_dir, vars_to_unset):
 
 def main_add(args):
     """Add variables main."""
-    return add_variables(args.project, args.vars_to_add, args.default)
+    return add_variables(args.directory, args.vars_to_add, args.default)
 
 
 def main_remove(args):
     """Remove variables main."""
-    return remove_variables(args.project, args.vars_to_remove)
+    return remove_variables(args.directory, args.vars_to_remove)
 
 
 def main_list(args):
     """List the project variable names."""
-    return list_variables(args.project)
+    return list_variables(args.directory)
 
 
 def main_set(args):
     """Set the project variables."""
-    return set_variables(args.project, args.vars_and_values)
+    return set_variables(args.directory, args.vars_and_values)
 
 
 def main_unset(args):
     """Unset the project variables."""
-    return unset_variables(args.project, args.vars_to_unset)
+    return unset_variables(args.directory, args.vars_to_unset)

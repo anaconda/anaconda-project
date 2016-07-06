@@ -33,4 +33,4 @@ def clean_command(project_dir):
 
 def main(args):
     """Start the clean command and return exit status code."""
-    return clean_command(args.project)
+    return clean_command(args.directory)

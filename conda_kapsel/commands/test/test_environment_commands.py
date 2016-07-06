@@ -318,7 +318,7 @@ def test_remove_packages_from_specific_environment(capsys, monkeypatch):
 
 def test_list_environments(capsys, monkeypatch):
     def check_list_not_empty(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-env-specs', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-env-specs', '--directory', dirname])
 
         assert code == 0
         out, err = capsys.readouterr()
@@ -346,7 +346,7 @@ foo
 
 def test_list_empty_environments(capsys, monkeypatch):
     def check_list_empty(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-env-specs', '--project', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-env-specs', '--directory', dirname])
 
         assert code == 0
         out, err = capsys.readouterr()
@@ -365,15 +365,15 @@ default  Default
 def test_list_environments_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys,
                                                          monkeypatch,
-                                                         ['anaconda-project', 'list-env-specs', '--project'],
+                                                         ['anaconda-project', 'list-env-specs', '--directory'],
                                                          append_dirname=True)
 
 
 def test_list_packages_wrong_env(capsys):
     def check_missing_env(dirname):
         env_name = 'not-there'
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-packages', '--project', dirname, '--env-spec',
-                                               env_name])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-packages', '--directory', dirname,
+                                               '--env-spec', env_name])
 
         assert code == 1
 
@@ -388,7 +388,7 @@ def test_list_packages_wrong_env(capsys):
 
 def _test_list_packages(capsys, env, expected_deps):
     def check_list_not_empty(dirname):
-        params = ['anaconda-project', 'list-packages', '--project', dirname]
+        params = ['anaconda-project', 'list-packages', '--directory', dirname]
         if env:
             params.extend(['--env-spec', env])
 
@@ -429,5 +429,5 @@ def test_list_packages_default_env(capsys):
 def test_list_packages_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys,
                                                          monkeypatch,
-                                                         ['anaconda-project', 'list-packages', '--project'],
+                                                         ['anaconda-project', 'list-packages', '--directory'],
                                                          append_dirname=True)
