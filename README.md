@@ -8,12 +8,12 @@ scripts, Jupyter notebooks, data files, whatever it may be.
 By adding a `kapsel.yml` to this project directory, you can tell
 [conda](https://github.com/conda/conda) how to run it.
 
-"Running" a conda kapsel can mean whatever you configure it to
-mean (that is, it can execute any arbitrary command).
+Running a conda kapsel executes a command specified in the
+`kapsel.yml` (any arbitrary commands can be configured).
 
-`kapsel.yml` tells conda how to automate project setup; conda can
-establish all prerequisite conditions for the project's commands
-to execute successfully. These conditions could include:
+`kapsel.yml` also tells conda how to automate project setup; conda
+can establish all prerequisite conditions for the project's
+commands to execute successfully. These conditions could include:
 
  * creating a conda environment with certain packages in it
  * prompting the user for passwords or other configuration
