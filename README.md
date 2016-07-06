@@ -96,3 +96,6 @@ manipulating conda kapsels.
    -vv conda_kapsel/test/test_foo.py`
  * To only run a single test function `python -m pytest
    -vv conda_kapsel/test/test_foo.py::test_something`
+ * There's a script `build_and_upload.sh` that should be used to
+   manually make a release. The checked-out revision should have
+   a version tag prior to running the script.
