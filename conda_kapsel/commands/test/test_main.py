@@ -28,9 +28,10 @@ def test_main_no_subcommand(capsys):
 
     out, err = capsys.readouterr()
     assert "" == out
-    expected_error_msg = ('Must specify a subcommand.\nusage: anaconda-project [-h] [-v]\n'
-                          '                        %s\n'
-                          '                        ...\n') % all_subcommands_in_curlies
+    expected_error_msg = ('Must specify a subcommand.\n'
+                          'usage: conda-kapsel [-h] [-v]\n'
+                          '                    %s\n'
+                          '                    ...\n') % all_subcommands_in_curlies
     assert expected_error_msg == err
 
 
@@ -38,9 +39,9 @@ def test_main_bad_subcommand(capsys):
     code = _parse_args_and_run_subcommand(['project', 'foo'])
 
     out, err = capsys.readouterr()
-    expected_error_msg = ("usage: anaconda-project [-h] [-v]\n"
-                          "                        %s\n"
-                          "                        ...\nanaconda-project: error: invalid choice: 'foo' "
+    expected_error_msg = ("usage: conda-kapsel [-h] [-v]\n"
+                          "                    %s\n"
+                          "                    ...\nconda-kapsel: error: invalid choice: 'foo' "
                           "(choose from %s)\n") % (all_subcommands_in_curlies, all_subcommands_comma_space)
     assert expected_error_msg == err
     assert "" == out
@@ -49,9 +50,9 @@ def test_main_bad_subcommand(capsys):
 
 
 expected_usage_msg = \
-        'usage: anaconda-project [-h] [-v]\n' \
-        '                        %s\n' \
-        '                        ...\n' \
+        'usage: conda-kapsel [-h] [-v]\n' \
+        '                    %s\n' \
+        '                    ...\n' \
         '\n' \
         'Actions on Anaconda projects.\n' \
         '\n' \
@@ -135,7 +136,7 @@ def _main_calls_subcommand(monkeypatch, capsys, subcommand):
         return 27
 
     monkeypatch.setattr('conda_kapsel.commands.{}.main'.format(subcommand), partial(mock_subcommand_main, subcommand))
-    code = _parse_args_and_run_subcommand(['anaconda-project', subcommand, '--directory', 'MYPROJECT'])
+    code = _parse_args_and_run_subcommand(['conda-kapsel', subcommand, '--directory', 'MYPROJECT'])
 
     assert 27 == code
 

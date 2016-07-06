@@ -1151,7 +1151,7 @@ def test_notebook_guess_command():
             '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
         }, check_notebook_guess_command)
 
-    # anaconda-project run data.ipynb
+    # conda-kapsel run data.ipynb
 
 
 def test_notebook_guess_command_can_be_default():

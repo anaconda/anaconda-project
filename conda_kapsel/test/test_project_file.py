@@ -13,7 +13,7 @@ from conda_kapsel.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME, pos
 expected_default_file = """# This is an Anaconda project file.
 #
 # Here you can describe your project and how to run it.
-# Use `anaconda-project run` to run the project.
+# Use `conda-kapsel run` to run the project.
 # The file is in YAML format, please see http://www.yaml.org/start.html for more.
 #
 
@@ -27,30 +27,30 @@ name:
 icon:
 #
 # In the commands section, list your runnable scripts, notebooks, and other code.
-# Use `anaconda-project add-command` to add commands.
+# Use `conda-kapsel add-command` to add commands.
 #
 commands: {}
 #
 # In the variables section, list any environment variables your code depends on.
-# Use `anaconda-project add-variable` to add variables.
+# Use `conda-kapsel add-variable` to add variables.
 #
 variables: {}
 #
 # In the services section, list any services that should be
 # available before your code runs.
-# Use `anaconda-project add-service` to add services.
+# Use `conda-kapsel add-service` to add services.
 #
 services: {}
 #
 # In the downloads section, list any URLs to download to local files
 # before your code runs.
-# Use `anaconda-project add-download` to add downloads.
+# Use `conda-kapsel add-download` to add downloads.
 #
 downloads: {}
 #
 # In the packages section, list any packages that must be installed
 # before your code runs.
-# Use `anaconda-project add-packages` to add packages.
+# Use `conda-kapsel add-packages` to add packages.
 #
 packages: []
 #
@@ -67,7 +67,7 @@ channels: []
 # If you like, you can define multiple, named environment specs.
 # There's an implicit environment spec called 'default', which you can
 # tune by naming it explicitly here.
-# Use `anaconda-project add-env-spec` to add environment specs.
+# Use `conda-kapsel add-env-spec` to add environment specs.
 #
 env_specs: {}
 """

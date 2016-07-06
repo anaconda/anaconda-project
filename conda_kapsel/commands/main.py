@@ -33,7 +33,7 @@ import conda_kapsel.commands.command_commands as command_commands
 
 
 def _parse_args_and_run_subcommand(argv):
-    parser = ArgumentParser(prog="anaconda-project", description="Actions on Anaconda projects.")
+    parser = ArgumentParser(prog="conda-kapsel", description="Actions on Anaconda projects.")
 
     # future: make setup.py store our version in a version.py then use that here
     # parser.add_argument('-v', '--version', action='version', version='0.1')
@@ -266,7 +266,7 @@ def _parse_args_and_run_subcommand(argv):
 
 
 def main():
-    """anaconda-project command line tool Conda-style entry point.
+    """conda-kapsel command line tool Conda-style entry point.
 
     Conda expects us to take no args and return an exit code.
     """

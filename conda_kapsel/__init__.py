@@ -10,6 +10,6 @@ _beta_test_mode = False
 
 
 def _enter_beta_test_mode():
-    """Called by anaconda-project executable to do special things for beta."""
+    """Called by conda-kapsel executable to do special things for beta."""
     global _beta_test_mode
     _beta_test_mode = True

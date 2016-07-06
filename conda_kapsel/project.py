@@ -26,7 +26,7 @@ from conda_kapsel.internal.simple_status import SimpleStatus
 import conda_kapsel.internal.conda_api as conda_api
 import conda_kapsel.internal.pip_api as pip_api
 
-# These strings are used in the command line options to anaconda-project,
+# These strings are used in the command line options to conda-kapsel,
 # so changing them has back-compat consequences.
 COMMAND_TYPE_CONDA_APP_ENTRY = 'conda_app_entry'
 COMMAND_TYPE_SHELL = 'unix'

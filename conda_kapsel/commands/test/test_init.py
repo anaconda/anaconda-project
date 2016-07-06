@@ -38,7 +38,7 @@ def test_init_in_pwd(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'init'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'init'])
         assert code == 0
 
         assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
@@ -62,7 +62,7 @@ def test_init_create_directory(capsys, monkeypatch):
     def check(dirname):
         subdir = os.path.join(dirname, "foo")
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'init', '--directory', subdir])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'init', '--directory', subdir])
         assert code == 0
 
         assert os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))
@@ -88,7 +88,7 @@ def test_init_do_not_create_directory(capsys, monkeypatch):
     def check(dirname):
         subdir = os.path.join(dirname, "foo")
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'init', '--directory', subdir])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'init', '--directory', subdir])
         assert code == 1
 
         assert not os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))
@@ -112,7 +112,7 @@ def test_init_do_not_create_directory_not_interactive(capsys, monkeypatch):
     def check(dirname):
         subdir = os.path.join(dirname, "foo")
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'init', '--directory', subdir])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'init', '--directory', subdir])
         assert code == 1
 
         assert not os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))

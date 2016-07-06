@@ -13,7 +13,7 @@ from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 
 def test_clean_command_on_empty_project(capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'clean', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'clean', '--directory', dirname])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -25,7 +25,7 @@ def test_clean_command_on_empty_project(capsys):
 
 def test_clean_command_on_invalid_project(capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'clean', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'clean', '--directory', dirname])
         assert code == 1
 
         out, err = capsys.readouterr()

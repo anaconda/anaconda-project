@@ -74,7 +74,7 @@ def _test_add_download(capsys, monkeypatch, command):
 
 def test_add_download(capsys, monkeypatch):
     called_params = _test_add_download(capsys, monkeypatch,
-                                       ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456'])
+                                       ['conda-kapsel', 'add-download', 'MYDATA', 'http://localhost:123456'])
     assert len(called_params['args']) == 1
     expected_kwargs = {
         'env_var': 'MYDATA',
@@ -88,8 +88,7 @@ def test_add_download(capsys, monkeypatch):
 
 def test_add_download_with_filename(capsys, monkeypatch):
     called_params = _test_add_download(
-        capsys, monkeypatch,
-        ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--filename', 'foo'])
+        capsys, monkeypatch, ['conda-kapsel', 'add-download', 'MYDATA', 'http://localhost:123456', '--filename', 'foo'])
     assert len(called_params['args']) == 1
     expected_kwargs = {
         'env_var': 'MYDATA',
@@ -103,8 +102,8 @@ def test_add_download_with_filename(capsys, monkeypatch):
 
 def test_add_download_with_checksum(capsys, monkeypatch):
     called_params = _test_add_download(capsys, monkeypatch, [
-        'anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-algorithm', 'md5',
-        '--hash-value', 'foo'
+        'conda-kapsel', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-algorithm', 'md5', '--hash-value',
+        'foo'
     ])
     assert len(called_params['args']) == 1
     expected_kwargs = {
@@ -137,7 +136,7 @@ def _test_add_download_with_only_one_hash_param(capsys, monkeypatch, command):
 
 def test_add_download_with_only_hash_algorithm(capsys, monkeypatch):
     called_params = _test_add_download_with_only_one_hash_param(capsys, monkeypatch, [
-        'anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-algorithm', 'md5'
+        'conda-kapsel', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-algorithm', 'md5'
     ])
     assert len(called_params['args']) == 0
     assert called_params['kwargs'] == {}
@@ -145,7 +144,7 @@ def test_add_download_with_only_hash_algorithm(capsys, monkeypatch):
 
 def test_add_download_with_only_hash_value(capsys, monkeypatch):
     called_params = _test_add_download_with_only_one_hash_param(capsys, monkeypatch, [
-        'anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-value', 'foo'
+        'conda-kapsel', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-value', 'foo'
     ])
     assert len(called_params['args']) == 0
     assert called_params['kwargs'] == {}
@@ -168,19 +167,19 @@ def _test_download_command_with_project_file_problems(capsys, monkeypatch, comma
 
 def test_add_download_command_with_project_file_problems(capsys, monkeypatch):
     _test_download_command_with_project_file_problems(
-        capsys, monkeypatch, ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456'])
+        capsys, monkeypatch, ['conda-kapsel', 'add-download', 'MYDATA', 'http://localhost:123456'])
 
 
 def test_remove_download_with_project_file_problems(capsys, monkeypatch):
     _test_download_command_with_project_file_problems(capsys, monkeypatch,
-                                                      ['anaconda-project', 'remove-download', 'MYDATA'])
+                                                      ['conda-kapsel', 'remove-download', 'MYDATA'])
 
 
 def test_remove_download(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-download', 'TEST_FILE'])
         project = Project(dirname)
         assert not project.downloads
         assert code == 0
@@ -201,7 +200,7 @@ def test_remove_download_dir(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-download', 'TEST_FILE'])
         project = Project(dirname)
         assert not project.downloads
         assert code == 0
@@ -237,7 +236,7 @@ def test_remove_download_file_error(capsys, monkeypatch):
 
         monkeypatch.setattr('os.remove', mock_remove)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-download', 'TEST_FILE'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -270,7 +269,7 @@ def test_remove_download_directory_error(capsys, monkeypatch):
 
         monkeypatch.setattr('shutil.rmtree', mock_remove)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-download', 'TEST_FILE'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -288,7 +287,7 @@ def test_remove_download_missing_var(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-download', 'TEST_FILE'])
         project = Project(dirname)
         assert not project.downloads
         assert code == 1
@@ -304,7 +303,7 @@ def test_list_downloads_with_project_file_problems(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-downloads'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'list-downloads'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -318,7 +317,7 @@ def test_list_downloads_with_project_file_problems(capsys, monkeypatch):
 def test_list_empty_downloads(capsys, monkeypatch):
     def check_list_empty(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-downloads'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'list-downloads'])
 
         assert code == 0
         out, err = capsys.readouterr()
@@ -331,7 +330,7 @@ def test_list_empty_downloads(capsys, monkeypatch):
 def test_list_downloads(capsys, monkeypatch):
     def check_list_not_empty(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-downloads'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'list-downloads'])
         assert code == 0
         out, err = capsys.readouterr()
 

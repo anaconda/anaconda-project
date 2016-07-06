@@ -89,7 +89,7 @@ class ProjectFile(YamlFile):
     def _default_content(self):
         header = (
             "This is an Anaconda project file.\n" + "\n" + "Here you can describe your project and how to run it.\n" +
-            "Use `anaconda-project run` to run the project.\n" +
+            "Use `conda-kapsel run` to run the project.\n" +
             "The file is in YAML format, please see http://www.yaml.org/start.html for more.\n")
         sections = OrderedDict()
 
@@ -98,20 +98,20 @@ class ProjectFile(YamlFile):
         sections['icon'] = ("Set the 'icon' key to give your project an icon\n")
 
         sections['commands'] = ("In the commands section, list your runnable scripts, notebooks, and other code.\n" +
-                                "Use `anaconda-project add-command` to add commands.\n")
+                                "Use `conda-kapsel add-command` to add commands.\n")
 
         sections['variables'] = ("In the variables section, list any environment variables your code depends on.\n"
-                                 "Use `anaconda-project add-variable` to add variables.\n")
+                                 "Use `conda-kapsel add-variable` to add variables.\n")
 
         sections['services'] = (
             "In the services section, list any services that should be\n" + "available before your code runs.\n" +
-            "Use `anaconda-project add-service` to add services.\n")
+            "Use `conda-kapsel add-service` to add services.\n")
 
         sections['downloads'] = ("In the downloads section, list any URLs to download to local files\n" +
-                                 "before your code runs.\n" + "Use `anaconda-project add-download` to add downloads.\n")
+                                 "before your code runs.\n" + "Use `conda-kapsel add-download` to add downloads.\n")
 
         sections['packages'] = ("In the packages section, list any packages that must be installed\n" +
-                                "before your code runs.\n" + "Use `anaconda-project add-packages` to add packages.\n")
+                                "before your code runs.\n" + "Use `conda-kapsel add-packages` to add packages.\n")
 
         sections['channels'] = (
             "In the channels section, list any Conda channel URLs to be searched\n" + "for packages.\n" + "\n" +
@@ -120,7 +120,7 @@ class ProjectFile(YamlFile):
         sections['env_specs'] = ("If you like, you can define multiple, named environment specs.\n" +
                                  "There's an implicit environment spec called 'default', which you can\n" +
                                  "tune by naming it explicitly here.\n"
-                                 "Use `anaconda-project add-env-spec` to add environment specs.\n")
+                                 "Use `conda-kapsel add-env-spec` to add environment specs.\n")
 
         # we make a big string and then parse it because I can't figure out the
         # ruamel.yaml API to insert comments in front of map keys.

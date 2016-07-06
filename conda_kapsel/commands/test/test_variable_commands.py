@@ -52,7 +52,7 @@ def test_add_variable_with_default(monkeypatch):
 
     monkeypatch.setattr('conda_kapsel.project_ops.add_variables', mock_add_variables)
 
-    res = _parse_args_and_run_subcommand(['anaconda-project', 'add-variable', '--default', 'bar', 'foo'])
+    res = _parse_args_and_run_subcommand(['conda-kapsel', 'add-variable', '--default', 'bar', 'foo'])
     assert res == 0
     assert [['foo'], dict(foo='bar')] == params
 
@@ -68,7 +68,7 @@ def test_add_two_variables_with_default(monkeypatch, capsys):
 
     monkeypatch.setattr('conda_kapsel.project_ops.add_variables', mock_add_variables)
 
-    res = _parse_args_and_run_subcommand(['anaconda-project', 'add-variable', '--default', 'bar', 'foo', 'hello'])
+    res = _parse_args_and_run_subcommand(['conda-kapsel', 'add-variable', '--default', 'bar', 'foo', 'hello'])
     assert res == 1
 
     out, err = capsys.readouterr()
@@ -124,7 +124,7 @@ def test_remove_variable_project_problem(monkeypatch):
 
 def test_list_variables(capsys):
     def check_list_not_empty(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-variables', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'list-variables', '--directory', dirname])
 
         assert code == 0
         out, err = capsys.readouterr()
@@ -149,7 +149,7 @@ test{space}A downloaded file which is referenced by test.
 
 def test_list_variables_with_no_variables(capsys):
     def check_list_empty(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-variables', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'list-variables', '--directory', dirname])
 
         assert code == 0
         out, err = capsys.readouterr()
@@ -170,7 +170,7 @@ Name{space}Description
 def test_list_variables_with_project_file_problems(capsys):
     def check(dirname):
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-variables', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'list-variables', '--directory', dirname])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -184,7 +184,7 @@ def test_list_variables_with_project_file_problems(capsys):
 def test_set_variables_with_project_file_problems(capsys):
     def check(dirname):
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'set-variable', '--directory', dirname, 'FOO=bar'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'set-variable', '--directory', dirname, 'FOO=bar'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -198,7 +198,7 @@ def test_set_variables_with_project_file_problems(capsys):
 def test_unset_variables_with_project_file_problems(capsys):
     def check(dirname):
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'unset-variable', '--directory', dirname, 'FOO'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'unset-variable', '--directory', dirname, 'FOO'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -220,7 +220,7 @@ def test_set_variable_command(monkeypatch):
     monkeypatch.setattr('conda_kapsel.project_ops.set_variables', mock_set_variables)
 
     def check(dirname):
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'set-variable', '--directory', dirname, 'foo=bar',
+        res = _parse_args_and_run_subcommand(['conda-kapsel', 'set-variable', '--directory', dirname, 'foo=bar',
                                               'baz=qux', 'has_two_equals=foo=bar'])
         assert res == 0
 
@@ -245,7 +245,7 @@ def test_set_variable_command_bad_arg(monkeypatch, capsys):
 
     monkeypatch.setattr('conda_kapsel.project_ops.set_variables', mock_set_variables)
 
-    res = _parse_args_and_run_subcommand(['anaconda-project', 'set-variable', 'foo=bar', 'baz'])
+    res = _parse_args_and_run_subcommand(['conda-kapsel', 'set-variable', 'foo=bar', 'baz'])
     assert res == 1
     out, err = capsys.readouterr()
     assert "Error: argument '{}' should be in NAME=value format".format('baz') in out
@@ -264,8 +264,7 @@ def test_unset_variable_command(monkeypatch):
     monkeypatch.setattr('conda_kapsel.project_ops.unset_variables', mock_unset_variables)
 
     def check(dirname):
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'unset-variable', '--directory', dirname, 'foo', 'baz'
-                                              ])
+        res = _parse_args_and_run_subcommand(['conda-kapsel', 'unset-variable', '--directory', dirname, 'foo', 'baz'])
         assert res == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """

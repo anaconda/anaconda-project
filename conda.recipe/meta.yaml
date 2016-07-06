@@ -11,7 +11,7 @@ source:
 build:
   number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
   entry_points:
-    - anaconda-project = conda_kapsel.commands.main:main
+    - conda-kapsel = conda_kapsel.commands.main:main
 
 requirements:
   build:
@@ -39,10 +39,10 @@ test:
     - conda_kapsel
   commands:
     - echo "First of test commands"
-    - anaconda-project --help
-    - anaconda-project --version
+    - conda-kapsel --help
+    - conda-kapsel --version
     - echo "Last of test commands"
 
 about:
-  home: https://github.com/Anaconda-Platform/anaconda-project/
+  home: https://github.com/Anaconda-Platform/conda-kapsel/
   license: BSD

@@ -22,7 +22,7 @@ class DefaultCondaManager(CondaManager):
             raise CondaManagerError("Conda failed while listing installed packages in %s: %s" % (prefix, str(e)))
 
         # TODO: we don't verify that the environment contains the right versions
-        # https://github.com/Anaconda-Server/anaconda-project/issues/77
+        # https://github.com/Anaconda-Server/conda-kapsel/issues/77
 
         missing = set()
 
@@ -44,7 +44,7 @@ class DefaultCondaManager(CondaManager):
             raise CondaManagerError("pip failed while listing installed packages in %s: %s" % (prefix, str(e)))
 
         # TODO: we don't verify that the environment contains the right versions
-        # https://github.com/Anaconda-Server/anaconda-project/issues/77
+        # https://github.com/Anaconda-Server/conda-kapsel/issues/77
 
         missing = set()
 
@@ -92,7 +92,7 @@ class DefaultCondaManager(CondaManager):
             if len(missing) > 0:
                 try:
                     # TODO we are ignoring package versions here
-                    # https://github.com/Anaconda-Server/anaconda-project/issues/77
+                    # https://github.com/Anaconda-Server/conda-kapsel/issues/77
                     conda_api.install(prefix=prefix, pkgs=list(missing), channels=spec.channels)
                 except conda_api.CondaError as e:
                     raise CondaManagerError("Failed to install missing packages: " + ", ".join(missing))

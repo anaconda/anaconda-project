@@ -510,11 +510,11 @@ class CondaPackageCommand(Command):
         print("Packages in " + self.packages_dir)
 
 
-setup(name='anaconda-project',
+setup(name='conda-kapsel',
       version=VERSION,
       author="Continuum Analytics",
       author_email='info@continuum.io',
-      url='http://github.com/Anaconda-Server/anaconda-project',
+      url='http://github.com/Anaconda-Server/conda-kapsel',
       description='Library to load and manipulate project directories',
       license='New BSD',
       zip_safe=False,
@@ -524,7 +524,7 @@ setup(name='anaconda-project',
                     conda_package=CondaPackageCommand,
                     version_module=VersionModuleCommand),
       scripts=[
-          'bin/anaconda-project'
+          'bin/conda-kapsel'
       ],
       packages=[
           'conda_kapsel', 'conda_kapsel.internal', 'conda_kapsel.commands', 'conda_kapsel.plugins',

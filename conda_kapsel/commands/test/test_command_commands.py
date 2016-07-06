@@ -187,7 +187,7 @@ def test_add_command_ask_type_twice(monkeypatch, capsys):
                        "    A Bokeh app is the project-relative path to a Bokeh script or app directory.\n" +
                        "    A notebook file is the project-relative path to a .ipynb file.\n"
                        "    A command line is any command you might type at the command prompt.\n"
-                       "Added a command 'test' to the project. Run it with `anaconda-project run test`.\n")
+                       "Added a command 'test' to the project. Run it with `conda-kapsel run test`.\n")
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 
@@ -226,7 +226,7 @@ def test_add_command_guessing_notebook(monkeypatch, capsys):
 
 def test_add_command_with_env_spec(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-command', '--directory', dirname, '--env-spec',
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'add-command', '--directory', dirname, '--env-spec',
                                                'foo', '--type', 'notebook', 'test', 'file.ipynb'])
         assert code == 0
 
@@ -259,8 +259,7 @@ def test_add_command_project_problem(capsys, monkeypatch):
     _test_command_command_project_problem(capsys,
                                           monkeypatch,
                                           [
-                                              'anaconda-project', 'add-command', '--type', 'notebook', 'test',
-                                              'file.ipynb'
+                                              'conda-kapsel', 'add-command', '--type', 'notebook', 'test', 'file.ipynb'
                                           ],
                                           append_dir=True)
 
@@ -282,13 +281,13 @@ def test_add_command_breaks_project(capsys, monkeypatch):
 def test_remove_command_with_project_file_problems(capsys, monkeypatch):
     _test_command_command_project_problem(capsys,
                                           monkeypatch,
-                                          ['anaconda-project', 'remove-command', 'test'],
+                                          ['conda-kapsel', 'remove-command', 'test'],
                                           append_dir=True)
 
 
 def test_remove_command(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'test', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-command', 'test', '--directory', dirname])
         assert code == 0
 
         project = Project(dirname)
@@ -305,7 +304,7 @@ def test_remove_command(monkeypatch, capsys):
 
 def test_remove_command_missing(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'test', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-command', 'test', '--directory', dirname])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -317,8 +316,7 @@ def test_remove_command_missing(monkeypatch, capsys):
 
 def test_remove_command_auto_generated(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'file.ipynb', '--directory',
-                                               dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-command', 'file.ipynb', '--directory', dirname])
         assert code == 1
 
         project = Project(dirname)
@@ -335,12 +333,12 @@ def test_remove_command_auto_generated(monkeypatch, capsys):
 
 
 def test_list_commands_with_project_file_problems(capsys, monkeypatch):
-    _test_command_command_project_problem(capsys, monkeypatch, ['anaconda-project', 'list-commands'], append_dir=True)
+    _test_command_command_project_problem(capsys, monkeypatch, ['conda-kapsel', 'list-commands'], append_dir=True)
 
 
 def test_list_commands_empty_project(capsys):
     def check_empty_project(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'list-commands', '--directory', dirname])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -352,7 +350,7 @@ def test_list_commands_empty_project(capsys):
 
 def test_list_commands(capsys):
     def check_empty_project(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'list-commands', '--directory', dirname])
         assert code == 0
 
         out, err = capsys.readouterr()

@@ -126,7 +126,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'activate'])
         assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -147,7 +147,7 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'activate', '--directory', dirname])
         assert code == 0
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """

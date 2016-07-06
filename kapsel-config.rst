@@ -75,7 +75,7 @@ installed.
 (TODO the above is a lie for now because ``conda kapsel
 run`` just complains, while ``conda kapsel prepare`` runs
 the UI to set up the environment. See also
-https://github.com/Anaconda-Server/anaconda-project/issues/54)
+https://github.com/Anaconda-Server/conda-kapsel/issues/54)
 
 Here's another example. Let's say your script requires a huge
 data file that you don't want to put in source control and
@@ -111,8 +111,8 @@ Multiple Commands
 =================
 
 TODO describe
-https://github.com/Anaconda-Server/anaconda-project/issues/80
-and https://github.com/Anaconda-Server/anaconda-project/issues/81
+https://github.com/Anaconda-Server/conda-kapsel/issues/80
+and https://github.com/Anaconda-Server/conda-kapsel/issues/81
 when those are implemented
 
 TODO mention that commands can have a 'description' field.

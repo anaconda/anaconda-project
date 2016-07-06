@@ -55,7 +55,7 @@ def test_add_service(capsys, monkeypatch):
 
         _monkeypatch_add_service(monkeypatch, status)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-service', 'redis'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'add-service', 'redis'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -71,7 +71,7 @@ def test_add_service_fails(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
         _monkeypatch_add_service(monkeypatch, SimpleStatus(success=False, description='Service add FAIL.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-service', 'redis'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'add-service', 'redis'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -89,7 +89,7 @@ def test_remove_service(capsys, monkeypatch):
         local_state.set_service_run_state('TEST', {'shutdown_commands': [_echo_commandline + ['"shutting down TEST"']]})
         local_state.save()
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'TEST'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-service', 'TEST'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -110,7 +110,7 @@ sys.exit(1)
         local_state.set_service_run_state('TEST', {'shutdown_commands': [false_commandline]})
         local_state.save()
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'TEST'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-service', 'TEST'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -129,7 +129,7 @@ def test_remove_service_by_type(capsys, monkeypatch):
         local_state.set_service_run_state('TEST', {'shutdown_commands': [_echo_commandline + ['"shutting down TEST"']]})
         local_state.save()
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'redis'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-service', 'redis'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -148,7 +148,7 @@ def test_remove_service_duplicate(capsys, monkeypatch):
         local_state.set_service_run_state('TEST', {'shutdown_commands': [_echo_commandline + ['"shutting down TEST"']]})
         local_state.save()
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'redis'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-service', 'redis'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -195,8 +195,7 @@ def test_remove_service_running_redis(monkeypatch):
         assert real_can_connect_to_socket(host='localhost', port=port)
 
         # now clean it up
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'REDIS_URL', '--directory', dirname
-                                               ])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-service', 'REDIS_URL', '--directory', dirname])
         assert code == 0
 
         assert not os.path.exists(pidfile)
@@ -213,7 +212,7 @@ def test_remove_service_missing_variable(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'TEST'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-service', 'TEST'])
         assert code == 1
 
         out, err = capsys.readouterr()
@@ -240,22 +239,21 @@ def _test_service_command_with_project_file_problems(capsys, monkeypatch, comman
 
 
 def test_add_service_with_project_file_problems(capsys, monkeypatch):
-    _test_service_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'add-service', 'redis'])
+    _test_service_command_with_project_file_problems(capsys, monkeypatch, ['conda-kapsel', 'add-service', 'redis'])
 
 
 def test_remove_service_with_project_file_problems(capsys, monkeypatch):
-    _test_service_command_with_project_file_problems(capsys, monkeypatch,
-                                                     ['anaconda-project', 'remove-service', 'TEST'])
+    _test_service_command_with_project_file_problems(capsys, monkeypatch, ['conda-kapsel', 'remove-service', 'TEST'])
 
 
 def test_list_service_with_project_file_problems(capsys, monkeypatch):
-    _test_service_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'list-services'])
+    _test_service_command_with_project_file_problems(capsys, monkeypatch, ['conda-kapsel', 'list-services'])
 
 
 def test_list_service(capsys, monkeypatch):
     def check_list(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-services'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'list-services'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -275,7 +273,7 @@ REDIS_URL  A running Redis server, located by a redis: URL set as REDIS_URL.
 def test_list_service_with_empty_project(capsys, monkeypatch):
     def check_empty(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-services'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'list-services'])
         assert code == 0
 
         out, err = capsys.readouterr()
