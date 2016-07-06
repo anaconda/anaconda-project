@@ -3,7 +3,7 @@
 
 # Linux config
 
-package: anaconda_project
+package: conda_kapsel
 
 platform: linux-64
 
@@ -24,7 +24,7 @@ test:
 
 # --- # Windows config starts here
 
-# package: anaconda_project
+# package: conda_kapsel
 
 # platform:
 #   - win-32

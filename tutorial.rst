@@ -29,7 +29,7 @@ Install anaconda-project
 
 If you haven't, install conda (TODO: link to conda install
 instructions), activate any conda environment, then ``conda
-install anaconda_project``.
+install conda_kapsel``.
 
 Be sure you can now run ``anaconda-project --version`` at your
 command prompt and see the version information for

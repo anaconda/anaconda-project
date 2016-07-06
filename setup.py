@@ -120,7 +120,7 @@ def _update_version_file():
     version_code = ('"""Version information."""\n\n' + '# Note: this is a generated file, edit setup.py not here.\n' +
                     ('version = "%s"\n' % VERSION))
     content = coding_utf8_header + copyright_header + version_code
-    version_py = os.path.join(ROOT, 'anaconda_project', 'version.py')
+    version_py = os.path.join(ROOT, 'conda_kapsel', 'version.py')
     try:
         old_content = codecs.open(version_py, 'r', 'utf-8').read()
     except IOError as e:
@@ -147,7 +147,7 @@ class AllTestsCommand(TestCommand):
         # traces huge by showing source code for each frame, so not
         # adding it by default.
         # To see stdout "live" instead of capturing it, use -s.
-        coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=anaconda_project',
+        coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=conda_kapsel',
                          '--cov-report=term-missing', '--cov-report=html', '--cov-fail-under=100', '--no-cov-on-fail']
         if PY2:
             # xdist appears to lock up the test suite with python
@@ -201,7 +201,7 @@ class AllTestsCommand(TestCommand):
             return self._py_files()
 
     def _add_missing_init_py(self):
-        root_modules = ['anaconda_project']
+        root_modules = ['conda_kapsel']
         for srcdir in root_modules:
             for root, dirs, files in os.walk(os.path.join(ROOT, srcdir)):
                 dirs[:] = [d for d in dirs if not (d[0] == '.' or d == '__pycache__')]
@@ -338,7 +338,7 @@ class AllTestsCommand(TestCommand):
         # hack alert (replacing argv temporarily because pep257 looks at it)
         old_argv = sys.argv
         try:
-            sys.argv = ['pep257', os.path.join(ROOT, 'anaconda_project')]
+            sys.argv = ['pep257', os.path.join(ROOT, 'conda_kapsel')]
             code = run_pep257()
         finally:
             sys.argv = old_argv
@@ -527,6 +527,6 @@ setup(name='anaconda-project',
           'bin/anaconda-project'
       ],
       packages=[
-          'anaconda_project', 'anaconda_project.internal', 'anaconda_project.commands', 'anaconda_project.plugins',
-          'anaconda_project.plugins.providers', 'anaconda_project.plugins.requirements'
+          'conda_kapsel', 'conda_kapsel.internal', 'conda_kapsel.commands', 'conda_kapsel.plugins',
+          'conda_kapsel.plugins.providers', 'conda_kapsel.plugins.requirements'
       ])

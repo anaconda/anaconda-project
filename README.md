@@ -85,11 +85,11 @@ superset of `conda env` in that sense.
    to the repo.
  * To only run the formatter and linter, use `python setup.py test
    --format-only`.
- * To only run the tests, use `python -m pytest -vv anaconda_project`
+ * To only run the tests, use `python -m pytest -vv conda_kapsel`
  * To only run a single file of tests use `python -m pytest
-   -vv anaconda_project/test/test_foo.py`
+   -vv conda_kapsel/test/test_foo.py`
  * To only run a single test function `python -m pytest
-   -vv anaconda_project/test/test_foo.py::test_something`
+   -vv conda_kapsel/test/test_foo.py::test_something`
 
 # Architecture
 

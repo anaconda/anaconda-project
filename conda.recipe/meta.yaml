@@ -1,5 +1,5 @@
 package:
-  name: anaconda_project
+  name: conda_kapsel
   version: {{ environ.get('GIT_DESCRIBE_TAG', '').replace('v', '') }}
 
 source:
@@ -11,7 +11,7 @@ source:
 build:
   number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
   entry_points:
-    - anaconda-project = anaconda_project.commands.main:main
+    - anaconda-project = conda_kapsel.commands.main:main
 
 requirements:
   build:
@@ -36,7 +36,7 @@ requirements:
 
 test:
   imports:
-    - anaconda_project
+    - conda_kapsel
   commands:
     - echo "First of test commands"
     - anaconda-project --help

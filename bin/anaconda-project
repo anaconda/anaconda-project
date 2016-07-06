@@ -8,6 +8,6 @@
 
 import sys
 
-from anaconda_project.commands.main import main
+from conda_kapsel.commands.main import main
 
 sys.exit(main())

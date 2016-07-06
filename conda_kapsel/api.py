@@ -1,0 +1,615 @@
+# -*- coding: utf-8 -*-
+# ----------------------------------------------------------------------------
+# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+#
+# The full license is in the file LICENSE.txt, distributed with this software.
+# ----------------------------------------------------------------------------
+"""All-in-one public API module.
+
+It's OK to use anything in conda_kapsel as well, but anything
+with an underscore prefix or inside ``conda_kapsel.internal``
+is considered private.
+
+In this file, we try to export the interesting high-level
+operations in one place so they are easy to find and import.  It
+is a redundant but hopefully convenient wrapper around the entire
+API.
+
+"""
+from __future__ import absolute_import
+
+# This file shouldn't import conda_kapsel.internal, because it's
+# supposed to wrap other public API, not be the only public API.
+from conda_kapsel import prepare, project, provide, project_ops
+
+
+class AnacondaProject(object):
+    """Class containing a consolidated public API for convenience."""
+
+    def __init__(self):
+        """Construct an API instance."""
+        pass
+
+    def load_project(self, directory_path):
+        """Load a project from the given directory.
+
+        If there's a problem, the returned Project instance will
+        have a non-empty ``problems`` attribute. So check
+        ``project.problems`` when you get the result.
+        ``project.problems`` can change anytime changes are made
+        to a project; code must always be ready for a project to
+        have some problems.
+
+        Args:
+            directory_path (str): path to the project directory
+
+        Returns:
+            a Project instance
+
+        """
+        return project.Project(directory_path=directory_path)
+
+    def create_project(self, directory_path, make_directory=False, name=None, icon=None, description=None):
+        """Create a project skeleton in the given directory.
+
+        Returns a Project instance even if creation fails or the directory
+        doesn't exist, but in those cases the ``problems`` attribute
+        of the Project will describe the problem.
+
+        If the project.yml already exists, this simply loads it.
+
+        This will not prepare the project (create environments, etc.),
+        use the separate prepare calls if you want to do that.
+
+        Args:
+            directory_path (str): directory to contain project.yml
+            make_directory (bool): True to create the directory if it doesn't exist
+            name (str): Name of the new project or None to leave unset (uses directory name)
+            icon (str): Icon for the new project or None to leave unset (uses no icon)
+            description (str): Description for the new project or None to leave unset
+
+        Returns:
+            a Project instance
+        """
+        return project_ops.create(directory_path=directory_path,
+                                  make_directory=make_directory,
+                                  name=name,
+                                  icon=icon,
+                                  description=description)
+
+    def prepare_project_locally(self, project, environ, env_spec_name=None, command_name=None, extra_command_args=None):
+        """Prepare a project to run one of its commands.
+
+        "Locally" means a machine where development will go on,
+        contrasted with say a production deployment.
+
+        This method takes any needed actions such as creating
+        environments or starting services, without asking the user
+        for permission.
+
+        This method returns a result object. The result object has
+        a ``failed`` property.  If the result is failed, the
+        ``errors`` property has the errors.  If the result is not
+        failed, the ``command_exec_info`` property has the stuff
+        you need to run the project's default command, and the
+        ``environ`` property has the updated environment. The
+        passed-in ``environ`` is not modified in-place.
+
+        You can update your original environment with
+        ``result.update_environ()`` if you like, but it's probably
+        a bad idea to modify ``os.environ`` in that way because
+        the calling app won't want to have the project
+        environment.
+
+        The ``environ`` should usually be kept between
+        preparations, starting out as ``os.environ`` but then
+        being modified by the user.
+
+        If the project has a non-empty ``problems`` attribute,
+        this function returns the project problems inside a failed
+        result. So ``project.problems`` does not need to be checked in
+        advance.
+
+        Args:
+            project (Project): from the ``load_project`` method
+            environ (dict): os.environ or the previously-prepared environ; not modified in-place
+            env_spec_name (str): the package set name to require, or None for default
+            command_name (str): which named command to choose from the project, None for default
+            extra_command_args (list): extra args to include in the returned command argv
+
+        Returns:
+            a ``PrepareResult`` instance, which has a ``failed`` flag
+
+        """
+        return prepare.prepare_without_interaction(project=project,
+                                                   environ=environ,
+                                                   mode=provide.PROVIDE_MODE_DEVELOPMENT,
+                                                   env_spec_name=env_spec_name,
+                                                   command_name=command_name,
+                                                   extra_command_args=extra_command_args)
+
+    def prepare_project_production(self,
+                                   project,
+                                   environ,
+                                   env_spec_name=None,
+                                   command_name=None,
+                                   extra_command_args=None):
+        """Prepare a project to run one of its commands.
+
+        "Production" means some sort of production deployment, so
+        services have to be 'real' and not some kind of
+        local/temporary throwaway. We won't just start things up
+        willy-nilly.
+
+        We still do some things automatically in production
+        though, such as creating environments.
+
+        This method does not interact with the user; it "does the
+        right thing" without asking.
+
+        See ``prepare_project_locally()`` for additional details
+        that also apply to this method.
+
+        Args:
+            project (Project): from the ``load_project`` method
+            environ (dict): os.environ or the previously-prepared environ; not modified in-place
+            env_spec_name (str): the package set name to require, or None for default
+            command_name (str): which named command to choose from the project, None for default
+            extra_command_args (list): extra args to include in the returned command argv
+
+        Returns:
+            a ``PrepareResult`` instance, which has a ``failed`` flag
+
+        """
+        return prepare.prepare_without_interaction(project=project,
+                                                   environ=environ,
+                                                   mode=provide.PROVIDE_MODE_PRODUCTION,
+                                                   env_spec_name=env_spec_name,
+                                                   command_name=command_name,
+                                                   extra_command_args=extra_command_args)
+
+    def prepare_project_check(self, project, environ, env_spec_name=None, command_name=None, extra_command_args=None):
+        """Prepare a project to run one of its commands.
+
+        This version only checks the status of the project's
+        requirements, but doesn't take any actions; it won't
+        create files or start processes or anything like that.  If
+        it returns a successful result, the project can be
+        prepared without taking any further action.
+
+        See ``prepare_project_locally()`` for additional details
+        that also apply to this method.
+
+        Args:
+            project (Project): from the ``load_project`` method
+            environ (dict): os.environ or the previously-prepared environ; not modified in-place
+            env_spec_name (str): the package set name to require, or None for default
+            command_name (str): which named command to choose from the project, None for default
+            extra_command_args (list): extra args to include in the returned command argv
+
+        Returns:
+            a ``PrepareResult`` instance, which has a ``failed`` flag
+
+        """
+        return prepare.prepare_without_interaction(project=project,
+                                                   environ=environ,
+                                                   mode=provide.PROVIDE_MODE_CHECK,
+                                                   env_spec_name=env_spec_name,
+                                                   command_name=command_name,
+                                                   extra_command_args=extra_command_args)
+
+    def prepare_project_browser(self,
+                                project,
+                                environ,
+                                env_spec_name=None,
+                                command_name=None,
+                                extra_command_args=None,
+                                io_loop=None,
+                                show_url=None):
+        """Prepare a project to run one of its commands.
+
+        This version uses a browser-based UI to allow the user to
+        see and choose how to meet project requirements.
+
+        See ``prepare_project_locally()`` for additional details
+        that also apply to this method.
+
+        Args:
+            project (Project): from the ``load_project`` method
+            environ (dict): os.environ or the previously-prepared environ; not modified in-place
+            env_spec_name (str): the package set name to require, or None for default
+            command_name (str): which named command to choose from the project, None for default
+            extra_command_args (list): extra args to include in the returned command argv
+            io_loop (IOLoop): tornado IOLoop to use, None for default
+            show_url (function): function that's passed the URL to open it for the user
+
+        Returns:
+            a ``PrepareResult`` instance, which has a ``failed`` flag
+
+        """
+        return prepare.prepare_with_browser_ui(project=project,
+                                               environ=environ,
+                                               env_spec_name=env_spec_name,
+                                               command_name=command_name,
+                                               extra_command_args=extra_command_args,
+                                               io_loop=io_loop,
+                                               show_url=show_url)
+
+    def unprepare(self, project, prepare_result, whitelist=None):
+        """Attempt to clean up project-scoped resources allocated by prepare().
+
+        This will retain any user configuration choices about how to
+        provide requirements, but it stops project-scoped services.
+        Global system services or other services potentially shared
+        among projects will not be stopped.
+
+        To stop a single service, use ``whitelist=["SERVICE_VARIABLE"]``.
+
+        Args:
+            project (Project): the project
+            prepare_result (PrepareResult): result from the previous prepare
+            whitelist (iterable of str or type): ONLY call shutdown commands for the listed env vars' requirements
+
+        """
+        return prepare.unprepare(project=project, prepare_result=prepare_result, whitelist=whitelist)
+
+    def set_properties(self, project, name=None, icon=None, description=None):
+        """Set simple properties on a project.
+
+        This doesn't support properties which require prepare()
+        actions to check their effects; see other calls such as
+        ``add_packages()`` for those.
+
+        This will fail if project.problems is non-empty.
+
+        Args:
+            project (``Project``): the project instance
+            name (str): Name of the project or None to leave unmodified
+            icon (str): Icon for the project or None to leave unmodified
+            description (str): description for the project or None to leave unmodified
+
+        Returns:
+            a ``Status`` instance indicating success or failure
+        """
+        return project_ops.set_properties(project=project, name=name, icon=icon, description=description)
+
+    def add_variables(self, project, vars_to_add, defaults):
+        """Add variables in project.yml, optionally setting their defaults.
+
+        Returns a ``Status`` instance which evaluates to True on
+        success and has an ``errors`` property (with a list of error
+        strings) on failure.
+
+        Args:
+            project (Project): the project
+            vars_to_add (list of str): variable names
+            defaults (dict): dictionary from keys to defaults, can be empty
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.add_variables(project=project, vars_to_add=vars_to_add, defaults=defaults)
+
+    def remove_variables(self, project, vars_to_remove, env_spec_name=None):
+        """Remove variables from project.yml and unset their values in local project state.
+
+        Returns a ``Status`` instance which evaluates to True on
+        success and has an ``errors`` property (with a list of error
+        strings) on failure.
+
+        Args:
+            project (Project): the project
+            vars_to_remove (list of tuple): key-value pairs
+            env_spec_name (str): name of env spec to use
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove, env_spec_name=env_spec_name)
+
+    def set_variables(self, project, vars_and_values, env_spec_name=None):
+        """Set variables' values in project-local.yml.
+
+        Returns a ``Status`` instance which evaluates to True on
+        success and has an ``errors`` property (with a list of error
+        strings) on failure.
+
+        Args:
+            project (Project): the project
+            vars_and_values (list of tuple): key-value pairs
+            env_spec_name (str): name of env spec to use
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.set_variables(project=project, vars_and_values=vars_and_values, env_spec_name=env_spec_name)
+
+    def unset_variables(self, project, vars_to_unset, env_spec_name=None):
+        """Unset variables' values in project-local.yml.
+
+        Returns a ``Status`` instance which evaluates to True on
+        success and has an ``errors`` property (with a list of error
+        strings) on failure.
+
+        Args:
+            project (Project): the project
+            vars_to_unset (list of str): variable names
+            env_spec_name (str): name of env spec to use
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.unset_variables(project=project, vars_to_unset=vars_to_unset, env_spec_name=env_spec_name)
+
+    def add_download(self, project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
+        """Attempt to download the URL; if successful, add it as a download to the project.
+
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the download requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            env_var (str): env var to store the local filename
+            url (str): url to download
+            filename (optional, str): Name to give file or directory after downloading
+            hash_algorithm (optional, str): Name of the algorithm to use for checksum verification
+                                       must be present if hash_value is entered
+            hash_value (optional, str): Checksum value to use for verification
+                                           must be present if hash_algorithm is entered
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.add_download(project=project,
+                                        env_var=env_var,
+                                        url=url,
+                                        filename=filename,
+                                        hash_algorithm=hash_algorithm,
+                                        hash_value=hash_value)
+
+    def remove_download(self, project, prepare_result, env_var):
+        """Remove file or directory referenced by ``env_var`` from file system and the project.
+
+        The returned ``Status`` will be an instance of ``SimpleStatus``. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            prepare_result (PrepareResult): result of a previous prepare
+            env_var (str): env var to store the local filename
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.remove_download(project=project, prepare_result=prepare_result, env_var=env_var)
+
+    def add_env_spec(self, project, name, packages, channels):
+        """Attempt to create the environment spec and add it to project.yml.
+
+        The returned ``Status`` will be an instance of ``SimpleStatus``. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            name (str): environment name
+            packages (list of str): packages (with optional version info, as for conda install)
+            channels (list of str): channels (as they should be passed to conda --channel)
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.add_env_spec(project=project, name=name, packages=packages, channels=channels)
+
+    def remove_env_spec(self, project, name):
+        """Remove the environment spec from project directory and remove from project.yml.
+
+        Returns a ``Status`` subtype (it won't be a
+        ``RequirementStatus`` as with some other functions, just a
+        plain status).
+
+        Args:
+            project (Project): the project
+            name (str): environment name
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.remove_env_spec(project=project, name=name)
+
+    def add_packages(self, project, env_spec_name, packages, channels):
+        """Attempt to install packages then add them to project.yml.
+
+        If the environment spec name is None rather than an env
+        name, packages are added in the global packages
+        section (to all environments).
+
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the environment requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
+            packages (list of str): packages (with optional version info, as for conda install)
+            channels (list of str): channels (as they should be passed to conda --channel)
+
+        Returns:
+            ``Status`` instance
+
+        """
+        return project_ops.add_packages(project=project,
+                                        env_spec_name=env_spec_name,
+                                        packages=packages,
+                                        channels=channels)
+
+    def remove_packages(self, project, env_spec_name, packages):
+        """Attempt to remove packages from an environment spec in project.yml.
+
+        If the environment spec name is None rather than an env
+        name, packages are removed from the global
+        packages section (from all environments).
+
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the environment requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            env_spec_name (str): environment name or None for all environments
+            packages (list of str): packages
+
+        Returns:
+            ``Status`` instance
+
+        """
+        return project_ops.remove_packages(project=project, env_spec_name=env_spec_name, packages=packages)
+
+    def add_command(self, project, name, command_type, command, env_spec_name=None):
+        """Add a command to project.yml.
+
+        Returns a ``Status`` subtype (it won't be a
+        ``RequirementStatus`` as with some other functions, just a
+        plain status).
+
+        Args:
+           project (Project): the project
+           name (str): name of the command
+           command_type (str): choice of `bokeh_app`, `notebook`, `unix` or `windows` command
+           command (str): the command line or filename itself
+           env_spec_name (str): env spec to use with this command
+
+        Returns:
+           a ``Status`` instance
+
+        """
+        return project_ops.add_command(project=project,
+                                       name=name,
+                                       command_type=command_type,
+                                       command=command,
+                                       env_spec_name=env_spec_name)
+
+    def update_command(self, project, name, command_type=None, command=None, new_name=None):
+        """Update attributes of a command in project.yml.
+
+        Returns a ``Status`` subtype (it won't be a
+        ``RequirementStatus`` as with some other functions, just a
+        plain status).
+
+        Args:
+           project (Project): the project
+           name (str): name of the command
+           command_type (str or None): choice of `bokeh_app`, `notebook`, `unix` or `windows` command
+           command (str or None): the command line or filename itself; command_type must also be specified
+           new_name (str or None): a new name to reference the command
+
+        Returns:
+           a ``Status`` instance
+        """
+        return project_ops.update_command(project=project,
+                                          name=name,
+                                          command_type=command_type,
+                                          command=command,
+                                          new_name=new_name)
+
+    def remove_command(self, project, name):
+        """Remove a command from project.yml.
+
+        Returns a ``Status`` subtype (it won't be a
+        ``RequirementStatus`` as with some other functions, just a
+        plain status).
+
+        Args:
+           project (Project): the project
+           name (string): name of the command to be removed
+
+        Returns:
+           a ``Status`` instance
+        """
+        return project_ops.remove_command(project=project, name=name)
+
+    def add_service(self, project, service_type, variable_name=None):
+        """Add a service to project.yml.
+
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the service requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            service_type (str): which kind of service
+            variable_name (str): environment variable name (None for default)
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.add_service(project=project, service_type=service_type, variable_name=variable_name)
+
+    def remove_service(self, project, prepare_result, variable_name):
+        """Remove a service to project.yml.
+
+        Returns a ``Status`` instance which evaluates to True on
+        success and has an ``errors`` property (with a list of error
+        strings) on failure.
+
+        Args:
+            project (Project): the project
+            prepare_result (PrepareResult): result of a previous prepare
+            variable_name (str): environment variable name for the service requirement
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.remove_service(project=project, prepare_result=prepare_result, variable_name=variable_name)
+
+    def clean(self, project, prepare_result):
+        """Blow away auto-provided state for the project.
+
+        This should not remove any potential "user data" such as
+        project-local.yml.
+
+        Args:
+            project (Project): the project instance
+            prepare_result (PrepareResult): result of a previous prepare
+
+        Returns:
+            a ``Status`` instance
+
+        """
+        return project_ops.clean(project=project, prepare_result=prepare_result)
+
+    def archive(self, project, filename):
+        """Make an archive of the non-ignored files in the project.
+
+        Args:
+            project (``Project``): the project
+            filename (str): name of a zip, tar.gz, or tar.bz2 archive file
+
+        Returns:
+            a ``Status``, if failed has ``errors``
+        """
+        return project_ops.archive(project=project, filename=filename)
+
+    def upload(self, project, site=None, username=None, token=None, log_level=None):
+        """Upload the project to the Anaconda server.
+
+        Args:
+            project (``Project``): the project
+            site (str): site alias from Anaconda config
+            username (str): Anaconda username
+            token (str): Anaconda auth token
+            log_level (str): Anaconda log level
+
+        Returns:
+            a ``Status``, if failed has ``errors``
+        """
+        return project_ops.upload(project=project, site=site, username=username, token=token, log_level=log_level)
