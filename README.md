@@ -44,7 +44,7 @@ artifacts and doing any necessary setup prior to executing them).
 See ``tutorial.rst`` in this directory for a simple
 getting-started walkthrough.
 
-See ``project-config.rst`` in this directory for more detail on
+See ``kapsel-config.rst`` in this directory for more detail on
 the syntax of the `kapsel.yml` file.
 
 ## If you've been using `conda env` and `environment.yml`
