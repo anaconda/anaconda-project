@@ -1,53 +1,51 @@
-========
-Projects
-========
+==========================
+Conda kapsel configuration
+==========================
 
-The Anaconda platform works with directories named *projects*,
-which can contain scripts, notebooks, data files, and anything
+The ``conda kapsel`` command works with *project directories*,
+which can contain scripts, notebooks, data files... anything
 that is related to your project.
 
-Any directory can function as a project, and you tell Anaconda
-about your project with a configuration file named
-``project.yml``.
+Any directory can become a kapsel; tell conda about your project
+with a configuration file named ``kapsel.yml``.
 
 ``.yml`` files are in the YAML format and follow the YAML syntax.
 
 TIP: Read more about YAML syntax at http://yaml.org/start.html
 
-``project.yml`` and ``project-local.yml``
+``kapsel.yml`` and ``kapsel-local.yml``
 =========================================
 
-Project directories are affected by two configuration files,
-``project.yml`` and ``project-local.yml``.
+Conda kapsels are affected by two configuration files,
+``kapsel.yml`` and ``kapsel-local.yml``.
 
-The file ``project.yml`` contains information about a project that
+The file ``kapsel.yml`` contains information about a project that
 is intended to be shared across users and machines. If you use
-source control, the file ``project.yml`` should probably be put in
+source control, the file ``kapsel.yml`` should probably be put in
 source control.
 
-The file ``project-local.yml``, on the other hand, goes in
+The file ``kapsel-local.yml``, on the other hand, goes in
 ``.gitignore`` (or ``.svnignore`` or equivalent), because it
 contains your local configuration state that you do not
-want to share with others. Typically, the tools maintain the file
-``project-local.yml`` for you and there are few reasons to edit
-it by hand, so in this document we'll discuss editing the file
-``project.yml``.
+want to share with others.
+
+Both files can be manipulated with ``conda`` commands, so there's
+rarely a need to hand-edit them, but you can if you like.
 
 Commands and Requirements
 =========================
 
-In the ``project.yml`` file you can define the *commands* and
+In the ``kapsel.yml`` file you can define *commands* and
 *requirements* that the commands need in order to run them.
 
 For example, let's say you have a script named ``analyze.py``
-in your project directory along with a file ``project.yml``:
+in your project directory along with a file ``kapsel.yml``:
 
   myproject/
      analyze.py
-     project.yml
+     kapsel.yml
 
-The file ``project.yml`` tells Anaconda platform how to run
-your project:
+The file ``kapsel.yml`` tells conda how to run your project:
 
   commands:
     default:
@@ -59,23 +57,23 @@ Mac) and for Windows. If you only care about one platform, you
 are not required to provide command lines for other platforms.
 
 When you send your project to someone else, they can type
-``anaconda-project run`` to run your script. The cool part
-is that ``anaconda-project run`` makes sure that all
+``conda kapsel run`` to run your script. The cool part
+is that ``conda kapsel run`` makes sure that all
 prerequisites are set up *before* it runs the script.
 
 Let's say your script requires a certain conda package to be
-installed. Add the ``redis-py`` package to ``project.yml`` as a
+installed. Add the ``redis-py`` package to ``kapsel.yml`` as a
 dependency:
 
   packages:
     - redis-py
 
-Now when someone runs ``anaconda-project run`` the script is
+Now when someone runs ``conda kapsel run`` the script is
 automatically run in a conda environment that has ``redis-py``
 installed.
 
-(TODO the above is a lie for now because ``anaconda-project
-run`` just complains, while ``anaconda-project prepare`` runs
+(TODO the above is a lie for now because ``conda kapsel
+run`` just complains, while ``conda kapsel prepare`` runs
 the UI to set up the environment. See also
 https://github.com/Anaconda-Server/anaconda-project/issues/54)
 
@@ -89,7 +87,7 @@ downloaded locally:
       url: http://example.com/bigdatafile
       sha1: da39a3ee5e6b4b0d3255bfef95601890afd80709
 
-Now when someone runs ``anaconda-project run``, the file is
+Now when someone runs ``conda kapsel run``, the file is
 downloaded if it hasn't been downloaded already, and the
 environment variable ``MYDATAFILE`` is set to the local
 filename of the data. In your ``analyze.py`` file you can write
@@ -98,15 +96,15 @@ something like this:
    import os
    filename = os.getenv('MYDATAFILE')
    if filename is None:
-     raise Exception("Please use anaconda-project run to start this script")
+     raise Exception("Please use 'conda kapsel run' to start this script")
    with open(filename, 'r') as input:
      data = input.read()
      # and so on
 
-``anaconda-project`` supports many other requirements,
+``conda kapsel`` supports many other requirements,
 too. Instead of writing long documentation about how to set up
 your script before others can run it, simply put the requirements in
-a ``project.yml`` file and let ``anaconda-project`` check the setup
+a ``kapsel.yml`` file and let ``conda kapsel`` check the setup
 automatically.
 
 Multiple Commands
@@ -126,7 +124,7 @@ Environments and Channels
 =========================
 
 You can configure packages in a top level ``packages``
-section of the ``project.yml`` file, as we discussed earlier:
+section of the ``kapsel.yml`` file, as we discussed earlier:
 
   packages:
     - redis-py
@@ -135,12 +133,12 @@ You can also add specific conda channels to be searched for
 packages:
 
   channels:
-    - https://conda.anaconda.org/asmeurer
+    - conda-forge
 
-``anaconda-project`` creates an environment in ``envs/default`` by
+``conda kapsel`` creates an environment in ``envs/default`` by
 default. But if you prefer, you can have multiple named
 environments available in the ``envs`` directory. To do that,
-specify an ``env_specs:`` section of your ``project.yml`` file:
+specify an ``env_specs:`` section of your ``kapsel.yml`` file:
 
   env_specs:
     default:
@@ -148,7 +146,7 @@ specify an ``env_specs:`` section of your ``project.yml`` file:
         - foo
         - bar
       channels:
-        - https://conda.anaconda.org/asmeurer
+        - conda-forge
     python27:
       description: "Uses Python 2 instead of 3"
       packages:
@@ -167,12 +165,12 @@ be instantiated as two environments, ``envs/default`` and
 
 To run a project using a specific env spec, use the ``--env-spec`` option:
 
-  anaconda-project run --env-spec myenvname
+  conda kapsel run --env-spec myenvname
 
-https://github.com/Anaconda-Server/anaconda-project/issues/97
+https://github.com/Anaconda-Server/conda kapsel/issues/97
 
 If you have top level ``channels`` or ``packages`` sections in
-your ``project.yml`` file (not in the ``env_specs:`` section),
+your ``kapsel.yml`` file (not in the ``env_specs:`` section),
 those channels and packages are added to all environment
 specs.
 
@@ -192,9 +190,9 @@ section with a list of pip requirement specifiers.
 Requiring environment variables to be set
 =========================================
 
-Anything in the ``variables:`` section of a ``project.yml`` file
+Anything in the ``variables:`` section of a ``kapsel.yml`` file
 is considered an environment variable needed by your project.
-When someone runs your project, ``anaconda-project`` asks
+When someone runs your project, ``conda kapsel`` asks
 them to set these variables.
 
 For example:
@@ -212,18 +210,18 @@ script, which can be a security risk.
 Variables that contain credentials
 ==================================
 
-TODO this section is partly about project-local.yml despite the
-intro that says we will only discuss project.yml in this document.
+TODO this section is partly about kapsel-local.yml despite the
+intro that says we will only discuss kapsel.yml in this document.
 
 Variables that end in ``_PASSWORD``, ``_ENCRYPTED``,
 ``_SECRET_KEY``, or ``_SECRET`` are treated sensitively by
-default. This means that if ``anaconda-project`` stores a value
-for them in ``project.yml`` or ``project-local.yml`` or elsewhere,
-that value is encrypted. NOTE: ``project-local.yml`` stores and
+default. This means that if ``conda kapsel`` stores a value
+for them in ``kapsel.yml`` or ``kapsel-local.yml`` or elsewhere,
+that value is encrypted. NOTE: ``kapsel-local.yml`` stores and
 encrypts the value that you enter when prompted.
 
 To force a variable to be encrypted or not encrypted, add the
-``encrypted`` option to it in ``project.yml``, like this:
+``encrypted`` option to it in ``kapsel.yml``, like this:
 
   variables:
     # let's encrypt the password but not the username
@@ -240,7 +238,7 @@ Variables with default values
 
 If you make the ``variables:`` section a dictionary instead of a
 list, you can give your variables default values. Anything
-in the environment or in ``project-local.yml`` overrides
+in the environment or in ``kapsel-local.yml`` overrides
 these defaults. To omit a default for a variable, set
 its value to either ``null`` or ``{}``.
 
@@ -273,10 +271,10 @@ For example:
 Variables that are always set
 =============================
 
-``anaconda-project`` ensures that the following variables
+``conda kapsel`` ensures that the following variables
 are always set:
 
- * ``PROJECT_DIR`` is set to the top level directory of your
+ * ``KAPSEL_DIR`` is set to the top level directory of your
    project
  * ``CONDA_ENV_PATH`` is set to the filesystem location of
    the current conda environment
@@ -298,12 +296,12 @@ Services
 Services can be automatically started, and their address
 can be provided to your code by using an environment variable.
 
-For example, you can add a services section to your ``project.yml`` file:
+For example, you can add a services section to your ``kapsel.yml`` file:
 
   services:
     REDIS_URL: redis
 
-Now when someone else runs your project, ``anaconda-project``
+Now when someone else runs your project, ``conda kapsel``
 offers to start a local instance of ``redis-server`` automatically.
 
 There is also a long form of the above service configuration:
@@ -330,7 +328,7 @@ more!)
 File Downloads
 ==============
 
-The ``downloads:`` section of the ``project.yml`` file lets you define
+The ``downloads:`` section of the ``kapsel.yml`` file lets you define
 environment variables that point to downloaded files. For example:
 
   downloads:
@@ -356,20 +354,19 @@ This downloads to ``myfile.csv``, so if your project is in
 ``/home/mystuff/foo`` and the download succeeds, ``MYDATAFILE``
 is set to ``/home/mystuff/foo/myfile.csv``.
 
-If you do not specify a filename, ``anaconda-project`` picks a
+If you do not specify a filename, ``conda kapsel`` picks a
 reasonable default based on the URL.
 
 To avoid the automated download, it's also possible for someone to
 run your project with an existing file path in the environment;
 on Linux or Mac, that looks like:
 
-  MYDATAFILE=/my/already/downloaded/file.csv anaconda-project run
+  MYDATAFILE=/my/already/downloaded/file.csv conda kapsel run
 
-Anaconda Project can auto-unzip a zip file as it is downloaded.
-This is the default if the the URL path ends in ".zip"
-unless the filename also ends in ".zip". For URLs that do not
-end in ".zip", or to change the default, you can specify the "unzip"
-flag:
+Conda can auto-unzip a zip file as it is downloaded.  This is the
+default if the the URL path ends in ".zip" unless the filename
+also ends in ".zip". For URLs that do not end in ".zip", or to
+change the default, you can specify the "unzip" flag:
 
   downloads:
     MYDATAFILE:
@@ -383,16 +380,16 @@ case, then the two are consolidated.
 
 EXAMPLE: If your zip file contains a single directory
 ``foo`` with file ``bar`` inside that, and you specify downloading
-to filename ``foo``, then you'll get ``PROJECT_DIR/foo/bar``, not
-``PROJECT_DIR/foo/foo/bar``.
+to filename ``foo``, then you'll get ``KAPSEL_DIR/foo/bar``, not
+``KAPSEL_DIR/foo/foo/bar``.
 
 
 Describing the Project
 ======================
 
-By default, Anaconda names your project with the same name as
-the directory in which it is located. You can give it a
-different name though in ``project.yml``:
+By default, Conda names your project with the same name as the
+directory in which it is located. You can give it a different name
+though in ``kapsel.yml``:
 
   name: myproject
 
@@ -400,26 +397,23 @@ You can also have an icon file, relative to the project directory:
 
   icon: images/myicon.png
 
-This is used by graphical tools in the Anaconda platform,
-when showing a list of projects.
 
-
-No need to edit ``project.yml`` directly
+No need to edit ``kapsel.yml`` directly
 ========================================
 
-You can edit ``project.yml`` with the ``anaconda-project`` command.
+You can edit ``kapsel.yml`` with the ``conda kapsel`` command.
 
-To add a download to ``project.yml``:
+To add a download to ``kapsel.yml``:
 
-  anaconda-project add-download MYFILE http://example.com/myfile
+  conda kapsel add-download MYFILE http://example.com/myfile
 
 To add a package:
 
-  anaconda-project add-packages redis-py
+  conda kapsel add-packages redis-py
 
 To ask for a running Redis instance:
 
-  anaconda-project add-service redis
+  conda kapsel add-service redis
 
 
 Fallback to meta.yaml
@@ -427,10 +421,10 @@ Fallback to meta.yaml
 
 If you package your project with conda, you may have some
 information already in ``conda.recipe/meta.yaml``;
-``anaconda-project`` uses some of this information too, so you
-do not need to duplicate this information in ``project.yml``.
+``conda kapsel`` uses some of this information too, so you
+do not need to duplicate this information in ``kapsel.yml``.
 
-``anaconda-project`` currently reads these fields in ``meta.yaml``:
+``conda kapsel`` currently reads these fields in ``meta.yaml``:
 
  * `package: name:`
  * `app: entry:`
