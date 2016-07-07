@@ -1,5 +1,5 @@
 # project-local contains your personal configuration choices and state
-/project-local.yml
+/kapsel-local.yml
 
 # Files autocreated by Python
 __pycache__/

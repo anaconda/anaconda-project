@@ -12,7 +12,7 @@ import os
 from conda_kapsel.yaml_file import YamlFile
 
 # these are in the order we'll use them if multiple are present
-possible_local_state_file_names = ("project-local.yml", "project-local.yaml")
+possible_local_state_file_names = ("kapsel-local.yml", "kapsel-local.yaml")
 
 DEFAULT_LOCAL_STATE_FILENAME = possible_local_state_file_names[0]
 

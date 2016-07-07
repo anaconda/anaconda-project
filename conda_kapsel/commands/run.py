@@ -32,7 +32,7 @@ def run_command(project_dir, ui_mode, conda_environment, command, extra_command_
         # errors were printed already
         return
     elif result.command_exec_info is None:
-        print("No known run command for project %s; try adding a 'commands:' section to project.yml" % project_dir,
+        print("No known run command for project %s; try adding a 'commands:' section to kapsel.yml" % project_dir,
               file=sys.stderr)
     else:
         try:

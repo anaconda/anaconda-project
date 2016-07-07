@@ -74,8 +74,8 @@ expected_usage_msg = \
         '    add-variable        Add a required environment variable to the project\n' \
         '    remove-variable     Remove an environment variable from the project\n' \
         '    list-variables      List all variables on the project\n' \
-        '    set-variable        Set an environment variable value in project-local.yml\n'\
-        '    unset-variable      Unset an environment variable value from project-\n' \
+        '    set-variable        Set an environment variable value in kapsel-local.yml\n'\
+        '    unset-variable      Unset an environment variable value from kapsel-\n' \
         '                        local.yml\n' \
         '    add-download        Add a URL to be downloaded before running commands\n' \
         '    remove-download     Remove a download from the project and from the\n' \

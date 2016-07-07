@@ -91,7 +91,7 @@ def test_parse_default_ignore_file():
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
-        assert pattern_strings == ['/project-local.yml', '__pycache__/', '*.pyc', '*.pyo', '*.pyd',
+        assert pattern_strings == ['/kapsel-local.yml', '__pycache__/', '*.pyc', '*.pyo', '*.pyd',
                                    '/.ipynb_checkpoints', '/.spyderproject']
 
     with_directory_contents(dict(), check)

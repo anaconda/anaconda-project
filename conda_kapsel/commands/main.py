@@ -46,14 +46,14 @@ def _parse_args_and_run_subcommand(argv):
         preset.add_argument('--directory',
                             metavar='PROJECT_DIR',
                             default='.',
-                            help="Project directory containing project.yml (defaults to current directory)")
+                            help="Project directory containing kapsel.yml (defaults to current directory)")
 
     def add_env_spec_arg(preset):
         preset.add_argument('--env-spec',
                             metavar='ENVIRONMENT_SPEC_NAME',
                             default=None,
                             action='store',
-                            help="An environment spec name from project.yml")
+                            help="An environment spec name from kapsel.yml")
 
     def add_prepare_args(preset):
         add_directory_arg(preset)
@@ -73,7 +73,7 @@ def _parse_args_and_run_subcommand(argv):
                             '--name',
                             metavar='ENVIRONMENT_SPEC_NAME',
                             action='store',
-                            help="Name of the environment spec from project.yml")
+                            help="Name of the environment spec from kapsel.yml")
 
     preset = subparsers.add_parser('init', help="Initialize a directory with default project configuration")
     add_directory_arg(preset)
@@ -85,7 +85,7 @@ def _parse_args_and_run_subcommand(argv):
                         metavar='COMMAND_NAME',
                         default=None,
                         nargs='?',
-                        help="A command name from project.yml")
+                        help="A command name from kapsel.yml")
     preset.add_argument('extra_args_for_command', metavar='EXTRA_ARGS_FOR_COMMAND', default=None, nargs=REMAINDER)
     preset.set_defaults(main=run.main)
 
@@ -134,12 +134,12 @@ def _parse_args_and_run_subcommand(argv):
     add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_list)
 
-    preset = subparsers.add_parser('set-variable', help="Set an environment variable value in project-local.yml")
+    preset = subparsers.add_parser('set-variable', help="Set an environment variable value in kapsel-local.yml")
     preset.add_argument('vars_and_values', metavar='VARS_AND_VALUES', default=None, nargs=REMAINDER)
     add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_set)
 
-    preset = subparsers.add_parser('unset-variable', help="Unset an environment variable value from project-local.yml")
+    preset = subparsers.add_parser('unset-variable', help="Unset an environment variable value from kapsel-local.yml")
     add_directory_arg(preset)
     preset.add_argument('vars_to_unset', metavar='VARS_TO_UNSET', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main_unset)

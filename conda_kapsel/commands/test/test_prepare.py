@@ -523,7 +523,7 @@ def test_no_ask_variables_interactively_if_no_variables_missing_but_prepare_fail
 
         assert out == ""
         assert err == ("%s: env_specs should be a dictionary from environment name to environment attributes, not 42\n"
-                       "Unable to load the project.\n") % os.path.join(dirname, "project.yml")
+                       "Unable to load the project.\n") % os.path.join(dirname, "kapsel.yml")
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """

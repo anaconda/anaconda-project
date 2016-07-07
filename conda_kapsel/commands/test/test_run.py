@@ -430,7 +430,7 @@ def test_run_command_nonexistent_name(monkeypatch, capsys):
         out, err = capsys.readouterr()
         assert "" == out
         assert (("Command name 'nope' is not in %s, these names were found: bar, default, foo\n") %
-                (os.path.join(dirname, 'project.yml'))) == err
+                (os.path.join(dirname, 'kapsel.yml'))) == err
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """

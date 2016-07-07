@@ -869,7 +869,7 @@ def test_corrupted_project_file_and_meta_file():
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.requirements)
         assert 2 == len(project.problems)
-        assert 'project.yml has a syntax error that needs to be fixed by hand' in project.problems[0]
+        assert 'kapsel.yml has a syntax error that needs to be fixed by hand' in project.problems[0]
         assert 'meta.yaml has a syntax error that needs to be fixed by hand' in project.problems[1]
 
     with_directory_contents(

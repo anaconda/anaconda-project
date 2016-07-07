@@ -565,10 +565,10 @@ class EnvVarProvider(Provider):
         #    (otherwise the UI for configuring the value would end
         #    up ignored)
         #  - value in the keyring overrides (treated the same as
-        #    project-local.yml, but for encrypted variables)
+        #    kapsel-local.yml, but for encrypted variables)
         #  - then anything already set in the environment wins, so you
         #    can override on the command line like `FOO=bar myapp`
-        #  - then the project.yml default value
+        #  - then the kapsel.yml default value
         local_state_override = None
         if requirement.encrypted:
             env_prefix = self._get_env_prefix(context.environ)
@@ -581,7 +581,7 @@ class EnvVarProvider(Provider):
             local_state_override = self._local_state_override(requirement, context.local_state_file)
 
         if local_state_override is not None:
-            # project-local.yml
+            # kapsel-local.yml
             #
             # variables:
             #   REDIS_URL: "redis://example.com:1234"
@@ -590,7 +590,7 @@ class EnvVarProvider(Provider):
             # nothing to do here
             pass
         elif 'default' in requirement.options:
-            # project.yml
+            # kapsel.yml
             #
             # variables:
             #   REDIS_URL:

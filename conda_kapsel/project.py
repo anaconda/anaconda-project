@@ -603,7 +603,7 @@ class Project(object):
     def name(self):
         """Get the project name.
 
-        Prefers in order: `name` field from project.yml, `package:
+        Prefers in order: `name` field from kapsel.yml, `package:
         name:` from meta.yaml, then project directory name.
         """
         return self._updated_cache().name
@@ -617,7 +617,7 @@ class Project(object):
     def icon(self):
         """Get the project's icon as an absolute path or None if no icon.
 
-        Prefers in order: `icon` field from project.yml, `app:
+        Prefers in order: `icon` field from kapsel.yml, `app:
         icon:` from meta.yaml.
         """
         return self._updated_cache().icon
@@ -716,7 +716,7 @@ class Project(object):
     def publication_info(self):
         """Get JSON-serializable information to be stored as metadata when publishing the project.
 
-        This is a "baked" version of project.yml which also
+        This is a "baked" version of kapsel.yml which also
         includes any defaults or automatic configuration.
 
         Before calling this, check that Project.problems is empty.

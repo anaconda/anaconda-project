@@ -56,13 +56,13 @@ class AnacondaProject(object):
         doesn't exist, but in those cases the ``problems`` attribute
         of the Project will describe the problem.
 
-        If the project.yml already exists, this simply loads it.
+        If the kapsel.yml already exists, this simply loads it.
 
         This will not prepare the project (create environments, etc.),
         use the separate prepare calls if you want to do that.
 
         Args:
-            directory_path (str): directory to contain project.yml
+            directory_path (str): directory to contain kapsel.yml
             make_directory (bool): True to create the directory if it doesn't exist
             name (str): Name of the new project or None to leave unset (uses directory name)
             icon (str): Icon for the new project or None to leave unset (uses no icon)
@@ -274,7 +274,7 @@ class AnacondaProject(object):
         return project_ops.set_properties(project=project, name=name, icon=icon, description=description)
 
     def add_variables(self, project, vars_to_add, defaults):
-        """Add variables in project.yml, optionally setting their defaults.
+        """Add variables in kapsel.yml, optionally setting their defaults.
 
         Returns a ``Status`` instance which evaluates to True on
         success and has an ``errors`` property (with a list of error
@@ -291,7 +291,7 @@ class AnacondaProject(object):
         return project_ops.add_variables(project=project, vars_to_add=vars_to_add, defaults=defaults)
 
     def remove_variables(self, project, vars_to_remove, env_spec_name=None):
-        """Remove variables from project.yml and unset their values in local project state.
+        """Remove variables from kapsel.yml and unset their values in local project state.
 
         Returns a ``Status`` instance which evaluates to True on
         success and has an ``errors`` property (with a list of error
@@ -308,7 +308,7 @@ class AnacondaProject(object):
         return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove, env_spec_name=env_spec_name)
 
     def set_variables(self, project, vars_and_values, env_spec_name=None):
-        """Set variables' values in project-local.yml.
+        """Set variables' values in kapsel-local.yml.
 
         Returns a ``Status`` instance which evaluates to True on
         success and has an ``errors`` property (with a list of error
@@ -325,7 +325,7 @@ class AnacondaProject(object):
         return project_ops.set_variables(project=project, vars_and_values=vars_and_values, env_spec_name=env_spec_name)
 
     def unset_variables(self, project, vars_to_unset, env_spec_name=None):
-        """Unset variables' values in project-local.yml.
+        """Unset variables' values in kapsel-local.yml.
 
         Returns a ``Status`` instance which evaluates to True on
         success and has an ``errors`` property (with a list of error
@@ -387,7 +387,7 @@ class AnacondaProject(object):
         return project_ops.remove_download(project=project, prepare_result=prepare_result, env_var=env_var)
 
     def add_env_spec(self, project, name, packages, channels):
-        """Attempt to create the environment spec and add it to project.yml.
+        """Attempt to create the environment spec and add it to kapsel.yml.
 
         The returned ``Status`` will be an instance of ``SimpleStatus``. A False
         status will have an ``errors`` property with a list of error
@@ -405,7 +405,7 @@ class AnacondaProject(object):
         return project_ops.add_env_spec(project=project, name=name, packages=packages, channels=channels)
 
     def remove_env_spec(self, project, name):
-        """Remove the environment spec from project directory and remove from project.yml.
+        """Remove the environment spec from project directory and remove from kapsel.yml.
 
         Returns a ``Status`` subtype (it won't be a
         ``RequirementStatus`` as with some other functions, just a
@@ -421,7 +421,7 @@ class AnacondaProject(object):
         return project_ops.remove_env_spec(project=project, name=name)
 
     def add_packages(self, project, env_spec_name, packages, channels):
-        """Attempt to install packages then add them to project.yml.
+        """Attempt to install packages then add them to kapsel.yml.
 
         If the environment spec name is None rather than an env
         name, packages are added in the global packages
@@ -449,7 +449,7 @@ class AnacondaProject(object):
                                         channels=channels)
 
     def remove_packages(self, project, env_spec_name, packages):
-        """Attempt to remove packages from an environment spec in project.yml.
+        """Attempt to remove packages from an environment spec in kapsel.yml.
 
         If the environment spec name is None rather than an env
         name, packages are removed from the global
@@ -473,7 +473,7 @@ class AnacondaProject(object):
         return project_ops.remove_packages(project=project, env_spec_name=env_spec_name, packages=packages)
 
     def add_command(self, project, name, command_type, command, env_spec_name=None):
-        """Add a command to project.yml.
+        """Add a command to kapsel.yml.
 
         Returns a ``Status`` subtype (it won't be a
         ``RequirementStatus`` as with some other functions, just a
@@ -497,7 +497,7 @@ class AnacondaProject(object):
                                        env_spec_name=env_spec_name)
 
     def update_command(self, project, name, command_type=None, command=None, new_name=None):
-        """Update attributes of a command in project.yml.
+        """Update attributes of a command in kapsel.yml.
 
         Returns a ``Status`` subtype (it won't be a
         ``RequirementStatus`` as with some other functions, just a
@@ -520,7 +520,7 @@ class AnacondaProject(object):
                                           new_name=new_name)
 
     def remove_command(self, project, name):
-        """Remove a command from project.yml.
+        """Remove a command from kapsel.yml.
 
         Returns a ``Status`` subtype (it won't be a
         ``RequirementStatus`` as with some other functions, just a
@@ -536,7 +536,7 @@ class AnacondaProject(object):
         return project_ops.remove_command(project=project, name=name)
 
     def add_service(self, project, service_type, variable_name=None):
-        """Add a service to project.yml.
+        """Add a service to kapsel.yml.
 
         The returned ``Status`` should be a ``RequirementStatus`` for
         the service requirement if it evaluates to True (on success),
@@ -555,7 +555,7 @@ class AnacondaProject(object):
         return project_ops.add_service(project=project, service_type=service_type, variable_name=variable_name)
 
     def remove_service(self, project, prepare_result, variable_name):
-        """Remove a service to project.yml.
+        """Remove a service to kapsel.yml.
 
         Returns a ``Status`` instance which evaluates to True on
         success and has an ``errors`` property (with a list of error
@@ -575,7 +575,7 @@ class AnacondaProject(object):
         """Blow away auto-provided state for the project.
 
         This should not remove any potential "user data" such as
-        project-local.yml.
+        kapsel-local.yml.
 
         Args:
             project (Project): the project instance

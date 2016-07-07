@@ -66,9 +66,9 @@ class CondaEnvProvider(EnvVarProvider):
         assert 'source' in config
 
         # we don't support a default here because it would
-        # need a hardcoded path which the project.yml author
+        # need a hardcoded path which the kapsel.yml author
         # would have no way of providing. Fortunately there's
-        # no syntax in project.yml that should result in setting
+        # no syntax in kapsel.yml that should result in setting
         # a default.
         assert config['source'] != 'default'
 
@@ -86,7 +86,7 @@ class CondaEnvProvider(EnvVarProvider):
 
         # convert 'environ' to 'project' when needed... this would
         # happen if you keep the default 'project' choice, so
-        # there's nothing in project-local.yml
+        # there's nothing in kapsel-local.yml
         if config['source'] == 'environ':
             environ_value = config['value']
             project_dir = environ['PROJECT_DIR']

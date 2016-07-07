@@ -44,7 +44,7 @@ def test_create(monkeypatch):
         assert [("Project directory '%s' does not exist." % subdir)] == project.problems
         monkeypatch.undo()
 
-        # failing to create the .projectignore, but still create dir and project.yml
+        # failing to create the .projectignore, but still create dir and kapsel.yml
         from codecs import open as real_open
 
         def mock_codecs_open(*args, **kwargs):
@@ -1641,16 +1641,16 @@ def test_archive_zip():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'project.yml',
-                                               'project-local.yml'])
+            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'kapsel.yml',
+                                               'kapsel-local.yml'])
 
             # overwriting should work
             status = project_ops.archive(project, archivefile)
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'project.yml',
-                                               'project-local.yml'])
+            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'kapsel.yml',
+                                               'kapsel-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
@@ -1680,16 +1680,16 @@ def test_archive_tar():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                               'project-local.yml'])
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'kapsel.yml',
+                                               'kapsel-local.yml'])
 
             # overwriting should work
             status = project_ops.archive(project, archivefile)
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                               'project-local.yml'])
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'kapsel.yml',
+                                               'kapsel-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
@@ -1719,16 +1719,16 @@ def test_archive_tar_gz():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                               'project-local.yml'])
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'kapsel.yml',
+                                               'kapsel-local.yml'])
 
             # overwriting should work
             status = project_ops.archive(project, archivefile)
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                               'project-local.yml'])
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'kapsel.yml',
+                                               'kapsel-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
@@ -1758,16 +1758,16 @@ def test_archive_tar_bz2():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                               'project-local.yml'])
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'kapsel.yml',
+                                               'kapsel-local.yml'])
 
             # overwriting should work
             status = project_ops.archive(project, archivefile)
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'project.yml',
-                                               'project-local.yml'])
+            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'kapsel.yml',
+                                               'kapsel-local.yml'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
@@ -1850,7 +1850,7 @@ def test_archive_zip_with_gitignore():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['foo.py', '.gitignore', 'project.yml', 'project-local.yml'])
+            _assert_zip_contains(archivefile, ['foo.py', '.gitignore', 'kapsel.yml', 'kapsel-local.yml'])
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
@@ -2039,7 +2039,7 @@ def test_archive_zip_with_downloaded_file():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['foo.py', 'project.yml', 'project-local.yml'])
+            _assert_zip_contains(archivefile, ['foo.py', 'kapsel.yml', 'kapsel-local.yml'])
 
         with_directory_contents(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """
@@ -2066,7 +2066,7 @@ def test_archive_zip_overwrites_but_does_not_include_the_dest_zip():
         assert status
         assert os.path.exists(archivefile)
 
-        _assert_zip_contains(archivefile, ['foo.py', 'project.yml', 'project-local.yml'])
+        _assert_zip_contains(archivefile, ['foo.py', 'kapsel.yml', 'kapsel-local.yml'])
 
         # re-archive to the same file
         status = project_ops.archive(project, archivefile)
@@ -2074,7 +2074,7 @@ def test_archive_zip_overwrites_but_does_not_include_the_dest_zip():
         assert status
         assert os.path.exists(archivefile)
 
-        _assert_zip_contains(archivefile, ['foo.py', 'project.yml', 'project-local.yml'])
+        _assert_zip_contains(archivefile, ['foo.py', 'kapsel.yml', 'kapsel-local.yml'])
 
     with_directory_contents(
         _add_empty_git({DEFAULT_PROJECT_FILENAME: """
@@ -2098,7 +2098,7 @@ def test_archive_zip_with_projectignore():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['foo.py', 'project.yml', '.projectignore', 'bar/'])
+            _assert_zip_contains(archivefile, ['foo.py', 'kapsel.yml', '.projectignore', 'bar/'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """

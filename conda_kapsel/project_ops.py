@@ -30,7 +30,7 @@ from conda_kapsel.internal import keyring
 
 _default_projectignore = """
 # project-local contains your personal configuration choices and state
-/project-local.yml
+/kapsel-local.yml
 
 # Files autocreated by Python
 __pycache__/
@@ -63,13 +63,13 @@ def create(directory_path, make_directory=False, name=None, icon=None, descripti
     doesn't exist, but in those cases the ``problems`` attribute
     of the Project will describe the problem.
 
-    If the project.yml already exists, this simply loads it.
+    If the kapsel.yml already exists, this simply loads it.
 
     This will not prepare the project (create environments, etc.),
     use the separate prepare calls if you want to do that.
 
     Args:
-        directory_path (str): directory to contain project.yml
+        directory_path (str): directory to contain kapsel.yml
         make_directory (bool): True to create the directory if it doesn't exist
         name (str): Name of the new project or None to leave unset (uses directory name)
         icon (str): Icon for the new project or None to leave unset (uses no icon)
@@ -97,7 +97,7 @@ def create(directory_path, make_directory=False, name=None, icon=None, descripti
     if description is not None:
         project.project_file.set_value('description', description)
 
-    # write out the project.yml; note that this will try to create
+    # write out the kapsel.yml; note that this will try to create
     # the directory which we may not want... so only do it if
     # we're problem-free.
     project.project_file.use_changes_without_saving()
@@ -141,7 +141,7 @@ def set_properties(project, name=None, icon=None, description=None):
     project.project_file.use_changes_without_saving()
 
     if len(project.problems) == 0:
-        # write out the project.yml if it looks like we're safe.
+        # write out the kapsel.yml if it looks like we're safe.
         project.project_file.save()
         return SimpleStatus(success=True, description="Project properties updated.")
     else:
@@ -347,7 +347,7 @@ def _update_env_spec(project, name, packages, channels, create):
 
 
 def add_env_spec(project, name, packages, channels):
-    """Attempt to create the environment spec and add it to project.yml.
+    """Attempt to create the environment spec and add it to kapsel.yml.
 
     The returned ``Status`` should be a ``RequirementStatus`` for
     the environment requirement if it evaluates to True (on success),
@@ -370,7 +370,7 @@ def add_env_spec(project, name, packages, channels):
 
 
 def remove_env_spec(project, name):
-    """Remove the environment spec from project directory and remove from project.yml.
+    """Remove the environment spec from project directory and remove from kapsel.yml.
 
     Returns a ``Status`` subtype (it won't be a
     ``RequirementStatus`` as with some other functions, just a
@@ -414,7 +414,7 @@ def remove_env_spec(project, name):
 
 
 def add_packages(project, env_spec_name, packages, channels):
-    """Attempt to install packages then add them to project.yml.
+    """Attempt to install packages then add them to kapsel.yml.
 
     If the env_spec_name is None rather than an env name,
     packages are added in the global packages section (to
@@ -439,7 +439,7 @@ def add_packages(project, env_spec_name, packages, channels):
 
 
 def remove_packages(project, env_spec_name, packages):
-    """Attempt to remove packages from an environment in project.yml.
+    """Attempt to remove packages from an environment in kapsel.yml.
 
     If the env_spec_name is None rather than an env name,
     packages are removed from the global packages section
@@ -460,7 +460,7 @@ def remove_packages(project, env_spec_name, packages):
         ``Status`` instance
     """
     # This is sort of one big ugly. What we SHOULD be able to do
-    # is simply remove the package from project.yml then re-run
+    # is simply remove the package from kapsel.yml then re-run
     # prepare, and if the packages aren't pulled in as deps of
     # something else, they get removed. This would work if our
     # approach was to always force the env to exactly the env
@@ -468,7 +468,7 @@ def remove_packages(project, env_spec_name, packages):
     # But that isn't our approach right now.
     #
     # So what we do right now is remove the package from the env,
-    # and then remove it from project.yml, and then see if we can
+    # and then remove it from kapsel.yml, and then see if we can
     # still prepare the project.
 
     failed = project.problems_status()
@@ -563,7 +563,7 @@ def _prepare_env_prefix(project, env_spec_name):
 
 
 def add_variables(project, vars_to_add, defaults=None):
-    """Add variables in project.yml, optionally setting their defaults.
+    """Add variables in kapsel.yml, optionally setting their defaults.
 
     Returns a ``Status`` instance which evaluates to True on
     success and has an ``errors`` property (with a list of error
@@ -615,7 +615,7 @@ def _unset_variable(project, env_prefix, varname, local_state):
 
 
 def remove_variables(project, vars_to_remove, env_spec_name=None):
-    """Remove variables from project.yml and unset their values in local project state.
+    """Remove variables from kapsel.yml and unset their values in local project state.
 
     Returns a ``Status`` instance which evaluates to True on
     success and has an ``errors`` property (with a list of error
@@ -644,7 +644,7 @@ def remove_variables(project, vars_to_remove, env_spec_name=None):
 
 
 def set_variables(project, vars_and_values, env_spec_name=None):
-    """Set variables' values in project-local.yml.
+    """Set variables' values in kapsel-local.yml.
 
     Returns a ``Status`` instance which evaluates to True on
     success and has an ``errors`` property (with a list of error
@@ -697,7 +697,7 @@ def set_variables(project, vars_and_values, env_spec_name=None):
 
 
 def unset_variables(project, vars_to_unset, env_spec_name=None):
-    """Unset variables' values in project-local.yml.
+    """Unset variables' values in kapsel-local.yml.
 
     Returns a ``Status`` instance which evaluates to True on
     success and has an ``errors`` property (with a list of error
@@ -724,7 +724,7 @@ def unset_variables(project, vars_to_unset, env_spec_name=None):
 
 
 def add_command(project, name, command_type, command, env_spec_name=None):
-    """Add a command to project.yml.
+    """Add a command to kapsel.yml.
 
     Returns a ``Status`` subtype (it won't be a
     ``RequirementStatus`` as with some other functions, just a
@@ -779,7 +779,7 @@ def add_command(project, name, command_type, command, env_spec_name=None):
 
 
 def update_command(project, name, command_type=None, command=None, new_name=None):
-    """Update attributes of a command in project.yml.
+    """Update attributes of a command in kapsel.yml.
 
     Returns a ``Status`` subtype (it won't be a
     ``RequirementStatus`` as with some other functions, just a
@@ -856,7 +856,7 @@ def update_command(project, name, command_type=None, command=None, new_name=None
 
 
 def remove_command(project, name):
-    """Remove a command from project.yml.
+    """Remove a command from kapsel.yml.
 
     Returns a ``Status`` subtype (it won't be a
     ``RequirementStatus`` as with some other functions, just a
@@ -889,7 +889,7 @@ def remove_command(project, name):
 
 
 def add_service(project, service_type, variable_name=None):
-    """Add a service to project.yml.
+    """Add a service to kapsel.yml.
 
     The returned ``Status`` should be a ``RequirementStatus`` for
     the service requirement if it evaluates to True (on success),
@@ -956,7 +956,7 @@ def add_service(project, service_type, variable_name=None):
 
 
 def remove_service(project, prepare_result, variable_name):
-    """Remove a service to project.yml.
+    """Remove a service to kapsel.yml.
 
     Returns a ``Status`` instance which evaluates to True on
     success and has an ``errors`` property (with a list of error
@@ -1004,7 +1004,7 @@ def clean(project, prepare_result):
     """Blow away auto-provided state for the project.
 
     This should not remove any potential "user data" such as
-    project-local.yml.
+    kapsel-local.yml.
 
     This includes a call to ``conda_kapsel.prepare.unprepare``
     but also removes the entire services/ and envs/ directories

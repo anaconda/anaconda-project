@@ -4,7 +4,7 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-"""Commands related to the 'commands' section of project.yml."""
+"""Commands related to the 'commands' section of kapsel.yml."""
 from __future__ import absolute_import, print_function
 
 import os
@@ -41,7 +41,7 @@ def _ask_command(command):
 
 
 def add_command(project_dir, name, command_type, command, env_spec_name):
-    """Add command to project.yml.
+    """Add command to kapsel.yml.
 
     Returns:
         int exit code

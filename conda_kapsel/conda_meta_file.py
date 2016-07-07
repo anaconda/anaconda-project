@@ -24,7 +24,7 @@ DEFAULT_RELATIVE_META_PATH = os.path.join(META_DIRECTORY, DEFAULT_META_FILENAME)
 class CondaMetaFile(YamlFile):
     """Represents the ``conda.recipe/meta.yaml`` file which describes the project for packaging.
 
-    Anaconda Project reads this, if present, for information not found in project.yml.
+    Anaconda Project reads this, if present, for information not found in kapsel.yml.
 
     See file format docs at http://conda.pydata.org/docs/building/meta-yaml.html
     """

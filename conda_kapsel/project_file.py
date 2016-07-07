@@ -21,13 +21,13 @@ except ImportError:  # pragma: no cover
     import ruamel.yaml as ryaml  # pragma: no cover
 
 # these are in the order we'll use them if multiple are present
-possible_project_file_names = ("project.yml", "project.yaml")
+possible_project_file_names = ("kapsel.yml", "kapsel.yaml")
 
 DEFAULT_PROJECT_FILENAME = possible_project_file_names[0]
 
 
 class ProjectFile(YamlFile):
-    """Represents the ``project.yml`` file which describes the project across machines/users.
+    """Represents the ``kapsel.yml`` file which describes the project across machines/users.
 
     State that's specific to a machine/user/checkout/deployment
     should instead be in ``LocalStateFile``.  ``ProjectFile``
