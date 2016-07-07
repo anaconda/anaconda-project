@@ -104,6 +104,12 @@ def test_default_to_system_environ():
             if key == 'PATH' and platform.system() == 'Windows' and result.environ[key] != os.environ[key]:
                 print("prepare changed PATH on Windows and ideally it would not.")
             else:
+                if key == 'PATH' and result.environ[key] != os.environ[key]:
+                    original = os.environ[key].split(os.pathsep)
+                    updated = result.environ[key].split(os.pathsep)
+                    print("ORIGINAL PATH: " + repr(original))
+                    print("UPDATED PATH: " + repr(updated))
+                    assert original == updated
                 assert result.environ[key] == os.environ[key]
 
     with_directory_contents(dict(), prepare_system_environ)
