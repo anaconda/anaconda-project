@@ -6,6 +6,12 @@ python:
 env:
   - TEST_TARGET=tests
   - TEST_TARGET=packaging
+matrix:
+  exclude:
+    - python: "2.7"
+      env: TEST_TARGET=packaging
+    - python: "3.4"
+      env: TEST_TARGET=packaging
 install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       echo "Fetching Python 2 miniconda";
