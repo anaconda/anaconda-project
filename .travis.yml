@@ -1,0 +1,28 @@
+language: python
+python:
+  - "2.7"
+  - "3.4"
+  - "3.5"
+install:
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      echo "Fetching Python 2 miniconda";
+      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+    else
+      echo "Fetching Python 3 miniconda";
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  - conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" pip redis pycrypto bcrypt ipython-notebook bokeh libffi ruamel_yaml anaconda-client requests
+  - source activate test-environment
+  - pip install coverage flake8 pep257 pytest pytest-cov yapf==0.6.2 beautifulsoup4 tornado pytest-xdist
+  - conda install -y -q -c conda-forge keyring
+
+script:
+  - LANG=en_US.UTF-8 python setup.py test
+  - LANG=en_US.UTF-8 python setup.py conda_package
