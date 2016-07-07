@@ -48,5 +48,7 @@ test_script:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - set PATH
   - activate test-environment
+  - conda list
   - echo CONDA_PREFIX %CONDA_PREFIX%
+  - echo PATH %PATH%
   - python setup.py test
