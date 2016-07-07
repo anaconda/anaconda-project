@@ -1,0 +1,52 @@
+matrix:
+  fast_finish: true
+
+environment:
+
+  global:
+    PYTHON: "C:\\conda"
+    CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\ci-helpers\\appveyor\\windows_sdk.cmd"
+    PYTHON_ARCH: "64" # needs to be set for CMD_IN_ENV to succeed. If a mix
+                      # of 32 bit and 64 bit builds are needed, move this
+                      # to the matrix section.
+
+  matrix:
+    - PYTHON_VERSION: "2.7"
+    - PYTHON_VERSION: "3.4"
+    - PYTHON_VERSION: "3.5"
+
+platform:
+  -x64
+
+install:
+  - if "%PYTHON_VERSION%" == "3.4" set "BASE_PYTHON_VERSION=3"
+  - if "%PYTHON_VERSION%" == "3.5" set "BASE_PYTHON_VERSION=35"
+  - if "%PYTHON_ARCH%" == "64" set "ARCH_LABEL=-x64"
+  # These are already installed on appveyor.  Update them.
+  - set "CONDA_ROOT=C:\Miniconda%BASE_PYTHON_VERSION%%ARCH_LABEL%"
+  - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
+  - conda config --set always_yes yes
+  # test with master of conda
+  - conda update -n root -q conda
+  - conda info -a
+  - conda update -n root -q --all
+  - conda create -q -n test-environment python="$PYTHON_VERSION" pip redis pycrypto bcrypt ipython-notebook bokeh libffi ruamel_yaml anaconda-client requests
+  - activate test-environment
+  - pip install coverage flake8 pep257 pytest pytest-cov yapf==0.6.2 beautifulsoup4 tornado pytest-xdist
+  - conda install -y -q -c conda-forge keyring
+  - python -c "import sys; print(sys.version)"
+  - python -c "import sys; print(sys.executable)"
+  - python -c "import sys; print(sys.prefix)"
+  - python --version
+  - echo CONDA_PREFIX %CONDA_PREFIX%
+
+# Not a .NET project, we build in the install step instead
+build: false
+
+test_script:
+  - echo CONDA_PREFIX %CONDA_PREFIX%
+  - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
+  - set PATH
+  - activate test-environment
+  - echo CONDA_PREFIX %CONDA_PREFIX%
+  - python setup.py test
