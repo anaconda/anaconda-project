@@ -30,9 +30,9 @@ install:
   - conda update -n root -q conda
   - conda info -a
   - conda update -n root -q --all
-  - conda create -q -n test-environment python=%PYTHON_VERSION% pip pycrypto bcrypt ipython-notebook bokeh ruamel_yaml anaconda-client requests
+  - conda create -q -n test-environment python=%PYTHON_VERSION% pip pycrypto bcrypt ipython-notebook bokeh ruamel_yaml anaconda-client requests beautifulsoup4 tornado coverage pytest pytest-cov
   - activate test-environment
-  - pip install coverage flake8 pep257 pytest pytest-cov yapf==0.6.2 beautifulsoup4 tornado pytest-xdist
+  - pip install pep257 yapf==0.6.2 pytest-xdist flake8
   - conda install -y -q -c conda-forge keyring
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
