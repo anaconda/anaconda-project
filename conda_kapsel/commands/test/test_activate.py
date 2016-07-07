@@ -56,6 +56,10 @@ def test_activate(monkeypatch):
         if platform.system() == 'Windows':
             result = [line for line in result if not line.startswith("export PATH")]
             print("activate changed PATH on Windows and ideally it would not.")
+        if len(result) > 2:
+            import os
+            print("os.environ=" + repr(os.environ))
+            print("result=" + repr(result))
         assert ['export PROJECT_DIR=' + quote(dirname), 'export REDIS_URL=redis://localhost:6379'] == result
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """

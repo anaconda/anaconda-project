@@ -110,7 +110,7 @@ def test_default_to_system_environ():
                     print("ORIGINAL PATH: " + repr(original))
                     print("UPDATED PATH: " + repr(updated))
                     assert original == updated
-                assert result.environ[key] == os.environ[key]
+                assert result.environ.get(key) == os.environ.get(key)
 
     with_directory_contents(dict(), prepare_system_environ)
 
