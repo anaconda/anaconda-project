@@ -3,6 +3,9 @@ python:
   - "2.7"
   - "3.4"
   - "3.5"
+env:
+  - TEST_TARGET=tests
+  - TEST_TARGET=packaging
 install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       echo "Fetching Python 2 miniconda";
@@ -24,8 +27,10 @@ install:
   - conda install -y -q -c conda-forge keyring
 
 script:
-  - LANG=en_US.UTF-8 python setup.py test
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
+  - if "$TEST_TARGET" = tests; then LANG=en_US.UTF-8 python setup.py test; fi
+  - if test "$TRAVIS_PYTHON_VERSION" = "3.5" && test "$TEST_TARGET" = "packaging"; then
       git fetch --unshallow ;
       LANG=en_US.UTF-8 python setup.py conda_package ;
+    else
+      echo "Not building packages on $TRAVIS_PYTHON_VERSION target=$TEST_TARGET" ;
     fi
