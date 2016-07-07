@@ -47,7 +47,7 @@ __pycache__/
 
 
 def _add_projectignore_if_none(project_directory):
-    filename = os.path.join(project_directory, ".projectignore")
+    filename = os.path.join(project_directory, ".kapselignore")
     if not os.path.exists(filename):
         try:
             with codecs.open(filename, 'w', 'utf-8') as f:

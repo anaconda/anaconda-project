@@ -16,7 +16,7 @@ from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
 def test_parse_ignore_file():
     def check(dirname):
         errors = []
-        patterns = archiver._parse_ignore_file(os.path.join(dirname, ".projectignore"), errors)
+        patterns = archiver._parse_ignore_file(os.path.join(dirname, ".kapselignore"), errors)
         assert [] == errors
 
         pattern_strings = [pattern.pattern for pattern in patterns]
@@ -25,8 +25,8 @@ def test_parse_ignore_file():
                                    'foo # this comment will be part of the pattern', '#patternwithhash', 'hello']
 
     with_directory_contents(
-        {".projectignore": """
-# this is a sample .projectignore
+        {".kapselignore": """
+# this is a sample .kapselignore
    # there can be whitespace before the comment
 bar
 /baz
@@ -44,7 +44,7 @@ hello
 def test_parse_missing_ignore_file():
     def check(dirname):
         errors = []
-        patterns = archiver._parse_ignore_file(os.path.join(dirname, ".projectignore"), errors)
+        patterns = archiver._parse_ignore_file(os.path.join(dirname, ".kapselignore"), errors)
         assert [] == errors
 
         pattern_strings = [pattern.pattern for pattern in patterns]
@@ -57,12 +57,12 @@ def test_parse_missing_ignore_file():
 def test_parse_ignore_file_with_io_error(monkeypatch):
     def check(dirname):
         errors = []
-        ignorefile = os.path.join(dirname, ".projectignore")
+        ignorefile = os.path.join(dirname, ".kapselignore")
 
         from codecs import open as real_open
 
         def mock_codecs_open(*args, **kwargs):
-            if args[0].endswith(".projectignore"):
+            if args[0].endswith(".kapselignore"):
                 raise IOError("NOPE")
             else:
                 return real_open(*args, **kwargs)
@@ -76,13 +76,13 @@ def test_parse_ignore_file_with_io_error(monkeypatch):
         # enable cleaning it up
         os.chmod(ignorefile, 0o777)
 
-    with_directory_contents({".projectignore": ""}, check)
+    with_directory_contents({".kapselignore": ""}, check)
 
 
 def test_parse_default_ignore_file():
     def check(dirname):
         project_ops._add_projectignore_if_none(dirname)
-        ignorefile = os.path.join(dirname, ".projectignore")
+        ignorefile = os.path.join(dirname, ".kapselignore")
         assert os.path.isfile(ignorefile)
 
         errors = []

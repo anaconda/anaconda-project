@@ -125,7 +125,7 @@ def _parse_ignore_file(filename, errors):
                     patterns.append(_FilePattern(pattern=line))
         return patterns
     except (OSError, IOError) as e:
-        # it's ok for .projectignore to be absent, but not OK
+        # it's ok for .kapselignore to be absent, but not OK
         # to fail to read it if present.
         if e.errno == errno.ENOENT:
             # return default patterns anyway
@@ -136,7 +136,7 @@ def _parse_ignore_file(filename, errors):
 
 
 def _load_ignore_file(project_directory, errors):
-    ignore_file = os.path.join(project_directory, ".projectignore")
+    ignore_file = os.path.join(project_directory, ".kapselignore")
     return _parse_ignore_file(ignore_file, errors)
 
 

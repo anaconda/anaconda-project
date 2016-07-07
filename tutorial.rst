@@ -452,13 +452,13 @@ in there::
     ---------  ---------- -----   ----
            16  06-10-2016 10:04   iris/hello.py
           281  06-10-2016 10:22   iris/showdata.py
-          222  06-10-2016 09:46   iris/.projectignore
+          222  06-10-2016 09:46   iris/.kapselignore
          4927  06-10-2016 10:31   iris/kapsel.yml
           557  06-10-2016 10:33   iris/iris_plot/main.py
     ---------                     -------
          6003                     5 files
 
-NOTE: there's a ``.projectignore`` file you can use to manually
+NOTE: there's a ``.kapselignore`` file you can use to manually
 exclude anything you don't want in your archives.
 
 NOTE: ``conda kapsel`` also supports creating ``.tar.gz`` and

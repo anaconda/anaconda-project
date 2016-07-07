@@ -44,11 +44,11 @@ def test_create(monkeypatch):
         assert [("Project directory '%s' does not exist." % subdir)] == project.problems
         monkeypatch.undo()
 
-        # failing to create the .projectignore, but still create dir and kapsel.yml
+        # failing to create the .kapselignore, but still create dir and kapsel.yml
         from codecs import open as real_open
 
         def mock_codecs_open(*args, **kwargs):
-            if args[0].endswith(".projectignore") and args[1] == 'w':
+            if args[0].endswith(".kapselignore") and args[1] == 'w':
                 raise IOError("nope")
             else:
                 return real_open(*args, **kwargs)
@@ -58,13 +58,13 @@ def test_create(monkeypatch):
         monkeypatch.undo()
         assert [] == project.problems
         assert os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))
-        assert not os.path.isfile(os.path.join(subdir, ".projectignore"))
+        assert not os.path.isfile(os.path.join(subdir, ".kapselignore"))
 
-        # add .projectignore if we create again and it isn't there
+        # add .kapselignore if we create again and it isn't there
         project = project_ops.create(subdir, make_directory=True)
         assert [] == project.problems
         assert os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))
-        assert os.path.isfile(os.path.join(subdir, ".projectignore"))
+        assert os.path.isfile(os.path.join(subdir, ".kapselignore"))
 
     with_directory_contents(dict(), check_create)
 
@@ -1977,14 +1977,14 @@ def test_archive_zip_with_unreadable_projectignore(monkeypatch):
 
             project = project_no_dedicated_env(dirname)
 
-            ignorefile = os.path.join(dirname, ".projectignore")
+            ignorefile = os.path.join(dirname, ".kapselignore")
             with codecs.open(ignorefile, 'w', 'utf-8') as f:
                 f.write("\n")
 
             from codecs import open as real_open
 
             def mock_codecs_open(*args, **kwargs):
-                if args[0].endswith(".projectignore"):
+                if args[0].endswith(".kapselignore"):
                     raise IOError("NOPE")
                 else:
                     return real_open(*args, **kwargs)
@@ -2098,7 +2098,7 @@ def test_archive_zip_with_projectignore():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['foo.py', 'kapsel.yml', '.projectignore', 'bar/'])
+            _assert_zip_contains(archivefile, ['foo.py', 'kapsel.yml', '.kapselignore', 'bar/'])
 
         with_directory_contents(
             {DEFAULT_PROJECT_FILENAME: """
