@@ -25,4 +25,7 @@ install:
 
 script:
   - LANG=en_US.UTF-8 python setup.py test
-  - LANG=en_US.UTF-8 python setup.py conda_package
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
+      git fetch --unshallow ;
+      LANG=en_US.UTF-8 python setup.py conda_package ;
+    fi
