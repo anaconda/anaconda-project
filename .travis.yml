@@ -1,11 +1,13 @@
-# language: python sets up virtualenv and pip that we don't need
+# language: python sets up virtualenv and pip that we don't need.
+# omitting language gives us ruby stuff. c seems likely to be a minimal setup.
+language: c
 env:
   - TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests
   - TRAVIS_PYTHON_VERSION=3.4 TEST_TARGET=tests
   - TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=tests
   - TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=packaging
 install:
-  - printenv
+  - printenv | sort
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       echo "Fetching Python 2 miniconda";
       wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -15,13 +17,14 @@ install:
     fi
   - bash miniconda.sh -b -p $HOME/miniconda
   - source "$HOME"/miniconda/bin/activate root
-  - printenv
+  - printenv | sort
   - conda config --set always_yes yes --set changeps1 no
+  - conda update -n root conda
   - conda install -n root conda-build
   - conda info -a
   - conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" pip redis pycrypto bcrypt ipython-notebook bokeh libffi ruamel_yaml anaconda-client requests
   - source activate test-environment
-  - printenv
+  - printenv | sort
   - pip install coverage flake8 pep257 pytest pytest-cov yapf==0.6.2 beautifulsoup4 tornado pytest-xdist
   - conda install -y -q -c conda-forge keyring
 
