@@ -25,6 +25,9 @@ install:
   - conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" pip redis pycrypto bcrypt ipython-notebook bokeh libffi ruamel_yaml anaconda-client requests
   - source activate test-environment
   - printenv | sort
+  - unset CONDA_ENV_PATH # because the older conda in miniconda sets this, confusing some tests
+  - export PATH=`echo "$PATH" | sed -e s@"$HOME"/miniconda/bin:@@g`
+  - printenv | sort
   - pip install coverage flake8 pep257 pytest pytest-cov yapf==0.6.2 beautifulsoup4 tornado pytest-xdist
   - conda install -y -q -c conda-forge keyring
 
