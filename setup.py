@@ -75,12 +75,18 @@ copyright_header = u"""
 
 copyright_re = re.compile('# *Copyright ')
 
-try:
-    import multiprocessing
-    CPU_COUNT = multiprocessing.cpu_count()
-except Exception:
-    print("Using fallback CPU count", file=sys.stderr)
-    CPU_COUNT = 4
+if os.getenv('TRAVIS') == "true":
+    # Travis makes multiprocessing return 32 CPUs,
+    # but really it's a container with 2 cores.
+    print("Using CPU count of 2 because we're on Travis.", file=sys.stderr)
+    CPU_COUNT = 2
+else:
+    try:
+        import multiprocessing
+        CPU_COUNT = multiprocessing.cpu_count()
+    except Exception:
+        print("Using fallback CPU count", file=sys.stderr)
+        CPU_COUNT = 4
 
 
 class Profiler(object):
