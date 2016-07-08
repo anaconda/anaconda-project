@@ -34,7 +34,10 @@ install:
   - conda update -n root conda
   - conda install -n root conda-build
   - conda info -a
-  - conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" pip redis pycrypto bcrypt ipython-notebook bokeh libffi ruamel_yaml anaconda-client requests
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      OS_PACKAGES=libffi ;
+    fi ;
+    conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" pip redis pycrypto bcrypt ipython-notebook bokeh ruamel_yaml anaconda-client requests $OS_PACKAGES
   - source activate test-environment
   - printenv | sort
   - unset CONDA_ENV_PATH # because the older conda in miniconda sets this, confusing some tests
