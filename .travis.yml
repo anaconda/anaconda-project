@@ -6,6 +6,13 @@ env:
   - TRAVIS_PYTHON_VERSION=3.4 TEST_TARGET=tests
   - TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=tests
   - TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=packaging
+os:
+  - linux
+  - osx
+matrix:
+  exclude:
+    - os: osx
+      env: TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=packaging
 install:
   - printenv | sort
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
