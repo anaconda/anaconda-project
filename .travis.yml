@@ -16,13 +16,18 @@ matrix:
 install:
   - printenv | sort
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      echo "Fetching Python 2 miniconda";
-      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+      MINICONDA_VERSION=2 ;
     else
-      echo "Fetching Python 3 miniconda";
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    fi
-  - bash miniconda.sh -b -p $HOME/miniconda
+      MINICONDA_VERSION=3 ;
+    fi ;
+    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      MINICONDA_OS=Linux ;
+    else
+      MINICONDA_OS=MacOSX ;
+    fi ;
+    echo "Fetching Python $MINICONDA_VERSION miniconda for $MINICONDA_OS" ;
+    wget https://repo.continuum.io/miniconda/Miniconda$MINICONDA_VERSION-latest-$MINICONDA_OS-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p "$HOME"/miniconda
   - source "$HOME"/miniconda/bin/activate root
   - printenv | sort
   - conda config --set always_yes yes --set changeps1 no
