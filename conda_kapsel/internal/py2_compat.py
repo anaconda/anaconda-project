@@ -6,6 +6,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import platform
 import sys
 
 _PY2 = sys.version_info[0] == 2
@@ -16,3 +17,17 @@ def is_string(s):
         return isinstance(s, basestring)  # pragma: no cover (py2/py3) # noqa
     else:  # pragma: no cover (py2/py3)
         return isinstance(s, str)  # pragma: no cover (py2/py3)
+
+
+def env_without_unicode(environ):
+    # On Windows / Python 2.7, Popen explodes if given unicode strings in the environment.
+    if _PY2 and platform.system() == 'Windows':  # pragma: no cover (py2/py3)
+        environ_copy = dict()
+        for key, value in environ.items():
+            if isinstance(value, unicode):  # noqa
+                environ_copy[key] = value.encode()
+            else:
+                environ_copy[key] = value
+        return environ_copy
+    else:  # pragma: no cover (py2/py3)
+        return environ

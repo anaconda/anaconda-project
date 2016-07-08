@@ -14,7 +14,7 @@ import os
 import platform
 import sys
 
-from conda_kapsel.internal import conda_api
+from conda_kapsel.internal import (conda_api, py2_compat)
 
 try:  # pragma: no cover
     from shlex import quote  # pragma: no cover
@@ -101,7 +101,11 @@ class CommandExecInfo(object):
         else:
 
             args = self._args
-        return subprocess.Popen(args=args, env=self._env, cwd=self._cwd, shell=self._shell, **kwargs)
+        return subprocess.Popen(args=args,
+                                env=py2_compat.env_without_unicode(self._env),
+                                cwd=self._cwd,
+                                shell=self._shell,
+                                **kwargs)
 
     def execvpe(self):
         """Convenience method exec's the command replacing the current process.
