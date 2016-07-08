@@ -24,15 +24,13 @@ def env_without_unicode(environ):
     if _PY2 and platform.system() == 'Windows':  # pragma: no cover (py2/py3)
         environ_copy = dict()
         for key, value in environ.items():
-            assert isinstance(key, basestring)  # noqa
-            assert isinstance(key, str)
+            if isinstance(key, unicode):  # noqa
+                key = key.encode()
             if isinstance(value, unicode):  # noqa
-                environ_copy[key] = value.encode()
-                assert isinstance(environ_copy[key], str)
-            elif not isinstance(value, str):
-                raise TypeError("Environment contains non-unicode non-str value %r" % value)
-            else:
-                environ_copy[key] = value
+                value = value.encode()
+            assert isinstance(key, str)
+            assert isinstance(value, str)
+            environ_copy[key] = value
         return environ_copy
     else:  # pragma: no cover (py2/py3)
         return environ
