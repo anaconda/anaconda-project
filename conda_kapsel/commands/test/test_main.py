@@ -54,7 +54,7 @@ expected_usage_msg = \
         '                    %s\n' \
         '                    ...\n' \
         '\n' \
-        'Actions on Anaconda projects.\n' \
+        'Actions on kapsels (runnable projects).\n' \
         '\n' \
         'positional arguments:\n' \
         '  %s\n' \
