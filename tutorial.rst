@@ -30,7 +30,7 @@ Install conda kapsel
 
 If you haven't, install conda (`see the instructions here
 <http://conda.pydata.org/docs/install/quick.html>`_), activate any
-conda environment, then ``conda install conda_kapsel``.
+conda environment, then ``conda install conda-kapsel``.
 
 Be sure you can now run ``conda kapsel --version`` at your
 command prompt and see the version information for
