@@ -501,8 +501,6 @@ There's more that ``conda kapsel`` can do.
    Python or otherwise have distinct dependencies.
    ``conda kapsel add-env-spec`` adds these additional
    environment specs.
- * Because projects are self-describing, hosting providers such as
-   Anaconda can automatically deploy them to a server.
-   ``conda kapsel upload`` starts this process.  A deployment
-   will use a particular command, particular env spec, and
-   customized values for your environment variables.
+ * Commands can be ipython notebooks. Try creating a notebook in
+   your project directory; it should automatically be listed in
+   ``conda kapsel list-commands``.
