@@ -28,9 +28,9 @@ and run it with a single command.
 Install conda kapsel
 ====================
 
-If you haven't, install conda (TODO: link to conda install
-instructions), activate any conda environment, then ``conda
-install conda_kapsel``.
+If you haven't, install conda (`see the instructions here
+<http://conda.pydata.org/docs/install/quick.html>`_), activate any
+conda environment, then ``conda install conda_kapsel``.
 
 Be sure you can now run ``conda kapsel --version`` at your
 command prompt and see the version information for
@@ -361,8 +361,10 @@ directory, and in it put a file ``main.py`` with these contents::
     curdoc().add_root(p)
 
 You should now have a file ``iris_plot/main.py`` inside the
-project. The ``iris_plot`` directory is a simple Bokeh app. (TODO
-link to info on Bokeh apps)
+project. The ``iris_plot`` directory is a simple Bokeh
+app. (`Learn more about Bokeh here
+<http://bokeh.pydata.org/en/latest/>`_ if you aren't familiar with
+it.)
 
 To tell ``conda kapsel`` about the Bokeh app be sure you are in the
 directory "iris" and type::

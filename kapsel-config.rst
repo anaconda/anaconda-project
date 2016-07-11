@@ -72,11 +72,6 @@ Now when someone runs ``conda kapsel run`` the script is
 automatically run in a conda environment that has ``redis-py``
 installed.
 
-(TODO the above is a lie for now because ``conda kapsel
-run`` just complains, while ``conda kapsel prepare`` runs
-the UI to set up the environment. See also
-https://github.com/Anaconda-Server/conda-kapsel/issues/54)
-
 Here's another example. Let's say your script requires a huge
 data file that you don't want to put in source control and
 you don't want to email. You can add a requirement to be
@@ -110,15 +105,19 @@ automatically.
 Multiple Commands
 =================
 
-TODO describe
-https://github.com/Anaconda-Server/conda-kapsel/issues/80
-and https://github.com/Anaconda-Server/conda-kapsel/issues/81
-when those are implemented
+A ``kapsel.yml`` can list multiple commands. Each command has a
+name; ``conda kapsel run COMMAND_NAME`` runs the command named
+``COMMAND_NAME``.
 
-TODO mention that commands can have a 'description' field.
+``conda kapsel list-commands`` lists commands, along with a
+description of each command. To customize a command's description,
+add a ``description:`` field in ``kapsel.yml``, like this:
 
-TODO mention that commands can have an 'env_spec' field giving the
-env spec name to use by default with the command.
+  commands:
+    mycommand:
+      unix: "python ${PROJECT_DIR}/analyze.py"
+      windows: "python %PROJECT_DIR%\analyze.py"
+      description: "This command runs the analysis"
 
 Environments and Channels
 =========================
@@ -174,8 +173,18 @@ your ``kapsel.yml`` file (not in the ``env_specs:`` section),
 those channels and packages are added to all environment
 specs.
 
+The default environment spec can be specified for each command,
+like this:
+
+  commands:
+    mycommand:
+      unix: "python ${PROJECT_DIR}/analyze.py"
+      windows: "python %PROJECT_DIR%\analyze.py"
+      env_spec: my_env_spec_name
+
+
 pip packages
-================
+============
 
 Underneath any `packages:` section, you can add a `pip:`
 section with a list of pip requirement specifiers.
@@ -209,9 +218,6 @@ script, which can be a security risk.
 
 Variables that contain credentials
 ==================================
-
-TODO this section is partly about kapsel-local.yml despite the
-intro that says we will only discuss kapsel.yml in this document.
 
 Variables that end in ``_PASSWORD``, ``_ENCRYPTED``,
 ``_SECRET_KEY``, or ``_SECRET`` are treated sensitively by
@@ -316,13 +322,8 @@ and you can set a default and any options a service may have:
        type: redis
        default: "redis://localhost:5895"
 
-The full list of supported services includes:
-
- * REDIS_URL
- * (TODO right now it's only ``REDIS_URL`` of course, haven't added
-more!)
- * TODO DB_URL
- * TODO BLAZE_URL
+Right now, there's only one supported service (Redis) as a
+demo. However, we hope to support more soon.
 
 
 File Downloads
