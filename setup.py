@@ -21,30 +21,40 @@ from distutils.core import setup, Command
 from setuptools.command.test import test as TestCommand
 from setup_atomic_replace import atomic_replace
 
+ROOT = dirname(realpath(__file__))
+VERSION_PY = os.path.join(ROOT, 'conda_kapsel', 'version.py')
+
 
 def _obtain_version():
-    tag = os.environ.get("GIT_DESCRIBE_TAG", None)
-    if tag is None or tag == "":
-        out = subprocess.check_output(['git', 'describe', '--tags'])
-        tag = out.decode('utf-8').strip()
-        if tag == '':
-            raise Exception("git describe didn't give us a tag")
-    if tag is None:
-        raise Exception("Could not obtain git tag")
+    # if we're running on a git checkout we generate
+    # version.py and if we're running from a source dist
+    # we use the existing version.py
+    if os.path.isdir(os.path.join(ROOT, ".git")):
+        tag = os.environ.get("GIT_DESCRIBE_TAG", None)
+        if tag is None or tag == "":
+            out = subprocess.check_output(['git', 'describe', '--tags'])
+            tag = out.decode('utf-8').strip()
+            if tag == '':
+                raise Exception("git describe didn't give us a tag")
+        if tag is None:
+            raise Exception("Could not obtain git tag")
 
-    # the tag may be only "v2.1" or may be "v2.1-NN-ABCEFG",
-    # if the latter we drop the extra stuff
-    pieces = tag.replace("v", "").split("-")
-    version = pieces[0]
-    print("git tag is %s, version is %s" % (tag, version))
-    return version
+        # the tag may be only "v2.1" or may be "v2.1-NN-ABCEFG",
+        # if the latter we drop the extra stuff
+        pieces = tag.replace("v", "").split("-")
+        version = pieces[0]
+        print("git tag is %s, version is %s" % (tag, version))
+        return version
+    elif os.path.isfile(VERSION_PY):
+        from conda_kapsel.version import version
+        return version
+    else:
+        raise Exception("Not a git checkout and no file %s" % VERSION_PY)
 
 
 VERSION = _obtain_version()
 
 assert VERSION != ''
-
-ROOT = dirname(realpath(__file__))
 
 PY2 = sys.version_info[0] == 2
 
@@ -126,17 +136,16 @@ def _update_version_file():
     version_code = ('"""Version information."""\n\n' + '# Note: this is a generated file, edit setup.py not here.\n' +
                     ('version = "%s"\n' % VERSION))
     content = coding_utf8_header + copyright_header + version_code
-    version_py = os.path.join(ROOT, 'conda_kapsel', 'version.py')
     try:
-        old_content = codecs.open(version_py, 'r', 'utf-8').read()
+        old_content = codecs.open(VERSION_PY, 'r', 'utf-8').read()
     except IOError as e:
         if e.errno == errno.ENOENT:
             old_content = ""
         else:
             raise e
     if old_content != content:
-        print("Updating " + version_py + " with version " + VERSION)
-        atomic_replace(version_py, content, 'utf-8')
+        print("Updating " + VERSION_PY + " with version " + VERSION)
+        atomic_replace(VERSION_PY, content, 'utf-8')
 
 
 class AllTestsCommand(TestCommand):
