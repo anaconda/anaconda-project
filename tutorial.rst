@@ -41,9 +41,9 @@ it "kapsel-tutorial".
   conda create -n kapsel-tutorial python
   source activate kapsel-tutorial
 
-Next, use conda to install conda-kapsel::
+Next, use conda to install conda-kapsel from the conda-kapsel channel::
 
-  conda install conda-kapsel
+  conda install -c conda-kapsel conda-kapsel
 
 Test your installation by running the "version" command::
 
