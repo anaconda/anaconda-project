@@ -41,7 +41,7 @@ artifacts and doing any necessary setup prior to executing them).
    it gets outdated, or that people don't read it, and then you
    have to help them diagnose the problem. `conda kapsel`
    automates the setup steps; the README can say "type `conda
-   kapsel run`" and that it.
+   kapsel run`" and that's it.
  * Do you need everyone working on a project to have the same
    dependencies in their conda environment? `conda kapsel`
    automates environment creation and verifies that environments
