@@ -66,14 +66,14 @@ We'll create a project directory called ``iris``. At the command
 prompt, switch to a directory you'd like to contain the ``iris``
 project, such as "iris". To do this, type::
 
-    conda kapsel init --project iris
+    conda kapsel init --directory iris
 
 It will ask you whether to create the ``iris`` directory. Type "y"
 to confirm.  Your command line session will look something like
 this::
 
     $ cd /home/alice/mystuff
-    $ conda kapsel init --project iris
+    $ conda kapsel init --directory iris
     Create directory '/home/alice/mystuff/iris'? y
     Project configuration is in /home/alice/mystuff/iris/kapsel.yml
 
@@ -81,6 +81,10 @@ Optional: You can use your editor now to look through the file
 ``iris/kapsel.yml``. We won't edit ``kapsel.yml`` manually in this
 tutorial, but you will see later that the commands we use in this
 tutorial will modify it.
+
+Before continuing, change into your new ``iris`` directory::
+
+    cd iris
 
 ==========================
 Get some data to work with
@@ -170,14 +174,14 @@ our ``iris/envs/default`` environment yet: Bokeh and Pandas.
 
 In your ``iris`` directory, type::
 
-    conda kapsel add-packages bokeh=0.11.1 pandas
+    conda kapsel add-packages bokeh=0.12 pandas
 
 The command line session will look something like::
 
-    $ conda kapsel add-packages bokeh=0.11.1 pandas
+    $ conda kapsel add-packages bokeh=0.12 pandas
     conda install: Using Anaconda Cloud api site https://api.anaconda.org
     Using Conda environment /home/alice/mystuff/iris/envs/default.
-    Added packages to project file: bokeh=0.11.1, pandas.
+    Added packages to project file: bokeh=0.12, pandas.
 
 If you look at ``kapsel.yml`` now, you'll see bokeh and pandas
 listed under the ``packages:`` section. You will also see files
@@ -306,6 +310,12 @@ will be ignored.  You can unset your local override with::
 
 The default will then be used when you ``conda kapsel run showdata``.
 
+NOTE: ``unset-variable`` removes the variable value, but keeps the
+requirement that ``COLUMN_TO_SHOW`` must be set.
+``remove-variable`` removes the variable requirement from
+``kapsel.yml`` so that the project will no longer require a
+``COLUMN_TO_SHOW`` value in order to run.
+
 ============================
 An encrypted custom variable
 ============================
@@ -343,11 +353,6 @@ now remove it. Type::
 
   conda kapsel remove-variable DB_PASSWORD
 
-NOTE: ``unset-variable`` removes the variable value, but keeps the
-requirement that ``DB_PASSWORD`` must be set.  ``remove-variable``
-removes the variable itself so that the project will no longer
-require a ``DB_PASSWORD`` in order to run.
-
 ====================
 Creating a Bokeh app
 ====================
@@ -355,8 +360,8 @@ Creating a Bokeh app
 Let's plot that flower data!
 
 Inside your ``iris`` project directory, create a new directory
-``iris_plot``, change to the new directory, and in it save a new
-file named``main.py`` with these contents::
+``iris_plot``, and in it save a new file named``main.py`` with
+these contents::
 
     import os
     import pandas as pd
