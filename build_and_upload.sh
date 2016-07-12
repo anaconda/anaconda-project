@@ -10,4 +10,4 @@ test -d conda_kapsel || exit 1
 python setup.py test
 python setup.py conda_package
 
-anaconda upload -u binstar --label dev build/packages/**/**/*.tar.bz2
+anaconda upload -u conda-kapsel --label dev build/packages/**/**/*.tar.bz2
