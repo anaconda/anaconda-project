@@ -98,10 +98,11 @@ def _parse_args_and_run_subcommand(argv):
     add_directory_arg(preset)
     preset.set_defaults(main=clean.main)
 
-    preset = subparsers.add_parser('activate',
-                                   help="Set up the project and output shell export commands reflecting the setup")
-    add_prepare_args(preset)
-    preset.set_defaults(main=activate.main)
+    if not conda_kapsel._beta_test_mode:
+        preset = subparsers.add_parser('activate',
+                                       help="Set up the project and output shell export commands reflecting the setup")
+        add_prepare_args(preset)
+        preset.set_defaults(main=activate.main)
 
     preset = subparsers.add_parser('archive',
                                    help="Create a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
