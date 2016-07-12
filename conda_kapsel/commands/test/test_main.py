@@ -49,7 +49,7 @@ def test_main_bad_subcommand(capsys):
     assert 2 == code
 
 
-expected_usage_msg = \
+expected_usage_msg_format = \
         'usage: conda-kapsel [-h] [-v]\n' \
         '                    %s\n' \
         '                    ...\n' \
@@ -66,8 +66,7 @@ expected_usage_msg = \
         '                        project\n' \
         '    clean               Removes generated state (stops services, deletes\n' \
         '                        environment files, etc)\n' \
-        '    activate            Set up the project and output shell export commands\n' \
-        '                        reflecting the setup\n' \
+        '%s' \
         '    archive             Create a .zip, .tar.gz, or .tar.bz2 archive with\n' \
         '                        project files in it\n'\
         '    upload              Upload the project to Anaconda Cloud\n' \
@@ -97,7 +96,14 @@ expected_usage_msg = \
         'optional arguments:\n' \
         '  -h, --help            show this help message and exit\n' \
         "  -v, --version         show program's version number and exit\n"
-expected_usage_msg = expected_usage_msg % (all_subcommands_in_curlies, all_subcommands_in_curlies)
+
+activate_help = '    activate            Set up the project and output shell export commands\n' \
+                '                        reflecting the setup\n'
+
+expected_usage_msg = expected_usage_msg_format % (all_subcommands_in_curlies, all_subcommands_in_curlies, activate_help)
+
+expected_usage_msg_without_activate = expected_usage_msg_format % (all_subcommands_in_curlies.replace(
+    ",activate", ""), all_subcommands_in_curlies.replace(",activate", ""), "")
 
 
 def test_main_help(capsys):
@@ -121,7 +127,7 @@ def test_main_help_via_entry_point(capsys, monkeypatch):
     out, err = capsys.readouterr()
 
     assert "" == err
-    assert expected_usage_msg == out
+    assert expected_usage_msg_without_activate == out
 
     assert 0 == code
 
@@ -151,7 +157,3 @@ def test_main_calls_run(monkeypatch, capsys):
 
 def test_main_calls_prepare(monkeypatch, capsys):
     _main_calls_subcommand(monkeypatch, capsys, 'prepare')
-
-
-def test_main_calls_activate(monkeypatch, capsys):
-    _main_calls_subcommand(monkeypatch, capsys, 'activate')
