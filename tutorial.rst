@@ -41,7 +41,13 @@ it "kapsel-tutorial".
   conda create -n kapsel-tutorial python
   source activate kapsel-tutorial
 
-Next, use conda to install conda-kapsel from the conda-kapsel channel::
+Next, use conda to install the keyring package from the
+conda-forge channel::
+
+  conda install -c conda-forge keyring
+
+Next, use conda to install conda-kapsel from the conda-kapsel
+channel::
 
   conda install -c conda-kapsel conda-kapsel
 
