@@ -94,6 +94,16 @@ In addition to environment creation, `conda kapsel` can perform
 other kinds of setup, such as adding data files and running a
 database server. It's a superset of `conda env` in that sense.
 
+# Stability note
+
+For the time being, the conda kapsel API and command line syntax
+are subject to change in future releases. A project created with
+the current “beta” version of conda kapsel may always need to be
+run with that version of conda kapsel and not conda
+kapsel 1.0. When we think things are solid, we’ll switch from
+“beta” to “1.0” and you’ll be able to rely on long-term interface
+stability.
+
 # Bug Reports
 
 Please report issues right here on GitHub.
