@@ -100,8 +100,10 @@ Please report issues right here on GitHub.
 
 # Contributing
 
-This repository contains command line tools and a library for
-manipulating conda kapsels.
+Please join our chat room at https://gitter.im/conda/kapsel if you
+have questions, feedback, or just want to say hi.
+
+Here's how to work on the code:
 
  * `python setup.py test` is configured to run all the checks that
    have to pass before you commit or push. It also reformats the
