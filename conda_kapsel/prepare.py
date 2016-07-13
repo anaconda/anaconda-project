@@ -434,9 +434,9 @@ def _in_provide_whitelist(provide_whitelist, requirement):
 
 
 def _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success, mode,
-                           provide_whitelist, overrides, command_name, extra_command_args):
+                           provide_whitelist, overrides, command, extra_command_args):
 
-    default_env_spec_name = project.default_env_spec_name_for_command(command_name)
+    default_env_spec_name = project.default_env_spec_name_for_command(command)
 
     def provide_stage(stage):
         def get_missing_to_provide(status):
@@ -499,9 +499,10 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             else:
                 return None
         else:
-            exec_info = project.exec_info_for_environment(environ,
-                                                          command_name=command_name,
-                                                          extra_args=extra_command_args)
+            if command is None:
+                exec_info = None
+            else:
+                exec_info = command.exec_info_for_environment(environ, extra_args=extra_command_args)
             stage.set_result(
                 PrepareSuccess(logs=logs,
                                statuses=result_statuses,
@@ -556,7 +557,7 @@ def _partition_first_group_to_configure(environ, local_state, statuses):
 
 
 def _process_requirement_statuses(project, environ, local_state, current_statuses, all_statuses,
-                                  keep_going_until_success, mode, provide_whitelist, overrides, command_name,
+                                  keep_going_until_success, mode, provide_whitelist, overrides, command,
                                   extra_command_args):
     (initial, remaining) = _partition_first_group_to_configure(environ, local_state, current_statuses)
 
@@ -570,7 +571,7 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
 
     def _stages_for(statuses):
         return _configure_and_provide(project, environ, local_state, statuses, all_statuses, keep_going_until_success,
-                                      mode, provide_whitelist, overrides, command_name, extra_command_args)
+                                      mode, provide_whitelist, overrides, command, extra_command_args)
 
     if len(initial) > 0 and len(remaining) > 0:
 
@@ -578,8 +579,8 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
             # get the new status for each remaining requirement
             updated = _refresh_status_list(remaining, updated_all_statuses)
             return _process_requirement_statuses(project, environ, local_state, updated, updated_all_statuses,
-                                                 keep_going_until_success, mode, provide_whitelist, overrides,
-                                                 command_name, extra_command_args)
+                                                 keep_going_until_success, mode, provide_whitelist, overrides, command,
+                                                 extra_command_args)
 
         return _after_stage_success(_stages_for(initial), process_remaining)
     elif len(initial) > 0:
@@ -597,7 +598,7 @@ def _process_requirement_statuses(project, environ, local_state, current_statuse
 # this used to create requirement objects for missing reqs, but
 # at the moment missing reqs aren't possible, so it's changed to
 # an assertion until it's possible again.
-def _assert_no_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses):
+def _assert_no_missing_env_var_requirements(project, environ, local_state, overrides, command, statuses):
     by_env_var = dict()
     for status in statuses:
         # if we add requirements with no env_var, change this to
@@ -620,24 +621,24 @@ def _assert_no_missing_env_var_requirements(project, environ, local_state, overr
     #         requirement = project.plugin_registry.find_requirement_by_env_var(env_var, options=dict())
     #         statuses.append(requirement.check_status(environ,
     #                                                  local_state,
-    #                                                  project.default_env_spec_name_for_command(command_name),
+    #                                                  project.default_env_spec_name_for_command(command),
     #                                                  overrides,
     #                                                  latest_provide_result=None))
 
     # if created_anything:
     #     # run the whole above again to find any transitive requirements of the new providers
-    #     _add_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses)
+    #     _add_missing_env_var_requirements(project, environ, local_state, overrides, command, statuses)
 
 
 def _first_stage(project, environ, local_state, statuses, keep_going_until_success, mode, provide_whitelist, overrides,
-                 command_name, extra_command_args):
+                 command, extra_command_args):
     assert 'PROJECT_DIR' in environ
 
-    _assert_no_missing_env_var_requirements(project, environ, local_state, overrides, command_name, statuses)
+    _assert_no_missing_env_var_requirements(project, environ, local_state, overrides, command, statuses)
 
     first_stage = _process_requirement_statuses(project, environ, local_state, statuses, statuses,
-                                                keep_going_until_success, mode, provide_whitelist, overrides,
-                                                command_name, extra_command_args)
+                                                keep_going_until_success, mode, provide_whitelist, overrides, command,
+                                                extra_command_args)
 
     return first_stage
 
@@ -682,13 +683,19 @@ def _prepare_environ_and_overrides(project, environ=None, env_spec_name=None):
 
 
 def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_until_success, mode, provide_whitelist,
-                                command_name, extra_command_args):
+                                command_name, command, extra_command_args):
     assert not project.problems
     if mode not in _all_provide_modes:
         raise ValueError("invalid provide mode " + mode)
 
+    assert not (command_name is not None and command is not None)
     assert command_name is None or command_name in project.commands
     assert overrides.env_spec_name is None or overrides.env_spec_name in project.env_specs
+
+    if command is None:
+        command = project.command_for_name(command_name)
+        # at this point, "command" is only None if there are no
+        # commands for this project.
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
@@ -696,13 +703,13 @@ def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_unt
     for requirement in project.requirements:
         status = requirement.check_status(environ_copy,
                                           local_state,
-                                          project.default_env_spec_name_for_command(command_name),
+                                          project.default_env_spec_name_for_command(command),
                                           overrides,
                                           latest_provide_result=None)
         statuses.append(status)
 
     return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode, provide_whitelist,
-                        overrides, command_name, extra_command_args)
+                        overrides, command, extra_command_args)
 
 
 def prepare_in_stages(project,
@@ -712,6 +719,7 @@ def prepare_in_stages(project,
                       provide_whitelist=None,
                       env_spec_name=None,
                       command_name=None,
+                      command=None,
                       extra_command_args=None):
     """Get a chain of all steps needed to get a project ready to execute.
 
@@ -737,6 +745,7 @@ def prepare_in_stages(project,
         provide_whitelist (iterable of str): ONLY call provide() for the listed env vars' requirements
         env_spec_name (str): the environment spec name to require, or None for default
         command_name (str): which named command to choose from the project, None for default
+        command (ProjectCommand): command object, None for default
         extra_command_args (list of str): extra args for the command we prepare
 
     Returns:
@@ -752,6 +761,7 @@ def prepare_in_stages(project,
                                        mode=mode,
                                        provide_whitelist=provide_whitelist,
                                        command_name=command_name,
+                                       command=command,
                                        extra_command_args=extra_command_args)
 
 
@@ -784,7 +794,8 @@ def _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ, overr
         return None
 
 
-def _check_prepare_prerequisites(project, env_spec_name, command_name, environ, overrides):
+def _check_prepare_prerequisites(project, env_spec_name, command_name, command, environ, overrides):
+    assert not (command_name is not None and command is not None)
     failed = _project_problems_to_prepare_failure(project, environ, overrides)
     if failed is None:
         failed = _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ, overrides)
@@ -799,6 +810,7 @@ def prepare_without_interaction(project,
                                 provide_whitelist=None,
                                 env_spec_name=None,
                                 command_name=None,
+                                command=None,
                                 extra_command_args=None):
     """Prepare a project to run one of its commands.
 
@@ -838,6 +850,7 @@ def prepare_without_interaction(project,
         provide_whitelist (iterable of str): ONLY call provide() for the listed env vars' requirements
         env_spec_name (str): the environment spec name to require, or None for default
         command_name (str): which named command to choose from the project, None for default
+        command (ProjectCommand): command object, None for default
         extra_command_args (list): extra args to include in the returned command argv
 
     Returns:
@@ -846,7 +859,7 @@ def prepare_without_interaction(project,
     """
     (environ_copy, overrides) = _prepare_environ_and_overrides(project, environ, env_spec_name)
 
-    failure = _check_prepare_prerequisites(project, env_spec_name, command_name, environ_copy, overrides)
+    failure = _check_prepare_prerequisites(project, env_spec_name, command_name, command, environ_copy, overrides)
     if failure is not None:
         return failure
 
@@ -857,6 +870,7 @@ def prepare_without_interaction(project,
                                         mode=mode,
                                         provide_whitelist=provide_whitelist,
                                         command_name=command_name,
+                                        command=command,
                                         extra_command_args=extra_command_args)
 
     return prepare_execute_without_interaction(stage)
@@ -866,6 +880,7 @@ def prepare_with_browser_ui(project,
                             environ=None,
                             env_spec_name=None,
                             command_name=None,
+                            command=None,
                             extra_command_args=None,
                             keep_going_until_success=True,
                             io_loop=None,
@@ -902,6 +917,7 @@ def prepare_with_browser_ui(project,
         environ (dict): os.environ or the previously-prepared environ; not modified in-place
         env_spec_name (str): the environment spec name to require, or None for default
         command_name (str): which named command to choose from the project, None for default
+        command (ProjectCommand): command object, None for default
         extra_command_args (list): extra args to include in the returned command argv
         keep_going_until_success (bool): whether to loop until requirements are met
         io_loop (IOLoop): tornado IOLoop to use, None for default
@@ -913,7 +929,7 @@ def prepare_with_browser_ui(project,
     """
     (environ_copy, overrides) = _prepare_environ_and_overrides(project, environ, env_spec_name)
 
-    failure = _check_prepare_prerequisites(project, env_spec_name, command_name, environ_copy, overrides)
+    failure = _check_prepare_prerequisites(project, env_spec_name, command_name, command, environ_copy, overrides)
     if failure is not None:
         return failure
 
@@ -923,6 +939,7 @@ def prepare_with_browser_ui(project,
                                         keep_going_until_success=keep_going_until_success,
                                         mode=PROVIDE_MODE_DEVELOPMENT,
                                         command_name=command_name,
+                                        command=command,
                                         provide_whitelist=None,
                                         extra_command_args=extra_command_args)
 

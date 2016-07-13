@@ -1309,7 +1309,7 @@ def test_run_argv_from_project_file_windows(monkeypatch):
 
         environ = minimal_environ(PROJECT_DIR=dirname)
 
-        exec_info = project.exec_info_for_environment(environ)
+        exec_info = project.default_exec_info_for_environment(environ)
         assert exec_info.shell
 
     with_directory_contents(
@@ -1329,7 +1329,7 @@ def test_exec_info_is_none_when_no_commands():
 
         environ = minimal_environ(PROJECT_DIR=dirname)
 
-        exec_info = project.exec_info_for_environment(environ)
+        exec_info = project.default_exec_info_for_environment(environ)
         assert exec_info is None
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
@@ -1346,7 +1346,7 @@ def test_exec_info_is_none_when_command_not_for_our_platform():
 
         environ = minimal_environ(PROJECT_DIR=dirname)
 
-        exec_info = project.exec_info_for_environment(environ)
+        exec_info = project.default_exec_info_for_environment(environ)
         assert exec_info is None
 
     import platform
@@ -1421,7 +1421,7 @@ def _run_argv_for_environment(environ,
         try:
             project = project_no_dedicated_env(dirname)
             assert [] == project.problems
-            exec_info = project.exec_info_for_environment(environ, extra_args=extra_args)
+            exec_info = project.default_exec_info_for_environment(environ, extra_args=extra_args)
             if exec_info.shell:
                 args = exec_info.args[0]
             else:
@@ -1519,7 +1519,7 @@ def test_run_command_is_on_system_path():
         environ = minimal_environ(PROJECT_DIR=dirname)
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        exec_info = project.exec_info_for_environment(environ)
+        exec_info = project.default_exec_info_for_environment(environ)
         output = subprocess.check_output(exec_info.args, shell=exec_info.shell, stderr=subprocess.STDOUT).decode()
         assert output.startswith("Python")
 
@@ -1537,7 +1537,7 @@ def test_run_command_does_not_exist():
         environ = minimal_environ(PROJECT_DIR=dirname)
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        exec_info = project.exec_info_for_environment(environ)
+        exec_info = project.default_exec_info_for_environment(environ)
         assert exec_info.args[0] == 'this-command-does-not-exist'
         try:
             FileNotFoundError
@@ -1566,7 +1566,7 @@ def test_run_command_stuff_missing_from_environment():
             environ_copy = deepcopy(environ)
             del environ_copy[key]
             with pytest.raises(ValueError) as excinfo:
-                project.exec_info_for_environment(environ_copy)
+                project.default_exec_info_for_environment(environ_copy)
             assert ('%s must be set' % key) in repr(excinfo.value)
 
     with_directory_contents(

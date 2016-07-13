@@ -156,7 +156,7 @@ def _append_extra_args_to_command_line(command, extra_args):
 
 
 class ProjectCommand(object):
-    """Represents an command from the project file."""
+    """Represents a command from the project file."""
 
     def __init__(self, name, attributes):
         """Construct a command with the given attributes.
