@@ -61,10 +61,10 @@ artifacts and doing any necessary setup prior to executing them).
 
 ## Learn more
 
-See ``tutorial.rst`` in this directory for a simple
+See http://conda.pydata.org/docs/kapsel/ for a simple
 getting-started walkthrough.
 
-See ``kapsel-config.rst`` in this directory for more detail on
+See http://conda.pydata.org/docs/kapsel/config.html for more detail on
 the syntax of the `kapsel.yml` file.
 
 ## If you've been using `conda env` and `environment.yml`
