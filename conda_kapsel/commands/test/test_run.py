@@ -57,7 +57,7 @@ def test_run_command(monkeypatch):
         result = run_command(dirname,
                              UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
                              conda_environment=None,
-                             command=None,
+                             command_name=None,
                              extra_command_args=None)
         assert result is None
         assert 'file' in executed
@@ -86,7 +86,7 @@ def test_run_command_no_app_entry(capsys):
         result = run_command(dirname,
                              UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
                              conda_environment=None,
-                             command=None,
+                             command_name=None,
                              extra_command_args=None)
         assert result is None
 
@@ -119,7 +119,7 @@ def test_run_command_failed_prepare(capsys):
         result = run_command(dirname,
                              UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
                              conda_environment=None,
-                             command=None,
+                             command_name=None,
                              extra_command_args=None)
         assert result is None
 
@@ -341,7 +341,11 @@ commands:
     assert "" == err
 
 
-def _test_run_command_foo(command_line, monkeypatch, capsys):
+def _is_python_exe(path):
+    assert path.endswith(python_exe)
+
+
+def _test_run_command_foo(command_line, monkeypatch, capsys, file_assertion=_is_python_exe):
     executed = {}
 
     def mock_execvpe(file, args, env):
@@ -374,7 +378,7 @@ def _test_run_command_foo(command_line, monkeypatch, capsys):
         assert 'file' in executed
         assert 'args' in executed
         assert 'env' in executed
-        assert executed['file'].endswith(python_exe)
+        file_assertion(executed['file'])
 
         out, err = capsys.readouterr()
         assert "" == out
@@ -410,6 +414,30 @@ def test_run_command_omit_name_use_default(monkeypatch, capsys):
     assert args == ['--version', 'def']
 
 
+# can't put an assert in a lambda so this makes us a "lambda" with
+# an assert in it
+def _func_asserting_ends_with(what):
+    def f(s):
+        assert s.endswith(what)
+
+    return f
+
+
+def test_run_command_executable_not_in_config(monkeypatch, capsys):
+    args = _test_run_command_foo(
+        ['conda-kapsel', 'run', '--directory', '<DIRNAME>', 'something1',
+         'something2'], monkeypatch, capsys, _func_asserting_ends_with('something1'))
+    assert args == ['something2']
+
+
+def test_run_notebook_not_in_config(monkeypatch, capsys):
+    args = _test_run_command_foo(
+        ['conda-kapsel', 'run', '--directory', '<DIRNAME>',
+         'something.ipynb'], monkeypatch, capsys, _func_asserting_ends_with('jupyter-notebook'))
+    assert len(args) == 1
+    assert args[0].endswith('something.ipynb')
+
+
 def test_run_command_nonexistent_name(monkeypatch, capsys):
     def check_run_main(dirname):
         from os.path import abspath as real_abspath
@@ -429,8 +457,7 @@ def test_run_command_nonexistent_name(monkeypatch, capsys):
 
         out, err = capsys.readouterr()
         assert "" == out
-        assert (("Command name 'nope' is not in %s, these names were found: bar, default, foo\n") %
-                (os.path.join(dirname, 'kapsel.yml'))) == err
+        assert "Failed to execute 'nope'" in err
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """

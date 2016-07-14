@@ -722,8 +722,10 @@ class Project(object):
             command_name = self._updated_cache().default_command_name
         if command_name is None:
             return None
-        assert command_name in self._updated_cache().commands
-        return self._updated_cache().commands[command_name]
+        if command_name in self._updated_cache().commands:
+            return self._updated_cache().commands[command_name]
+        else:
+            return None
 
     def publication_info(self):
         """Get JSON-serializable information to be stored as metadata when publishing the project.

@@ -257,6 +257,19 @@ commands:
          "foo.py": "# foo"}, check)
 
 
+def test_prepare_bad_command_name():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ(BAR='bar')
+        result = prepare_without_interaction(project, environ=environ, command_name="blah")
+        assert not result
+        assert result.errors
+        assert "Command name 'blah' is not in" in result.errors[0]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+"""}, check)
+
+
 def _push_fake_env_creator():
     class HappyCondaManager(CondaManager):
         def find_environment_deviations(self, prefix, spec):

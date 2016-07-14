@@ -74,6 +74,7 @@ def prepare_with_ui_mode_printing_errors(project,
                                          ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
                                          env_spec_name=None,
                                          command_name=None,
+                                         command=None,
                                          extra_command_args=None):
     """Perform all steps needed to get a project ready to execute.
 
@@ -88,6 +89,7 @@ def prepare_with_ui_mode_printing_errors(project,
                        ``UI_MODE_TEXT_ASSUME_YES_PRODUCTION``, ``UI_MODE_TEXT_ASSUME_NO``
         env_spec_name (str): the environment spec name to require, or None for default
         command_name (str): command name to use or None for default
+        command (ProjectCommand): a command object or None
         extra_command_args (list of str): extra args for the command we prepare
 
     Returns:
@@ -101,6 +103,7 @@ def prepare_with_ui_mode_printing_errors(project,
                                                  environ,
                                                  env_spec_name=env_spec_name,
                                                  command_name=command_name,
+                                                 command=command,
                                                  extra_command_args=extra_command_args,
                                                  keep_going_until_success=True)
     else:
@@ -124,6 +127,7 @@ def prepare_with_ui_mode_printing_errors(project,
                                                          mode=provide_mode,
                                                          env_spec_name=env_spec_name,
                                                          command_name=command_name,
+                                                         command=command,
                                                          extra_command_args=extra_command_args)
 
             if result.failed:
