@@ -11,9 +11,26 @@ import sys
 
 from conda_kapsel.commands.prepare_with_mode import prepare_with_ui_mode_printing_errors
 from conda_kapsel.project import Project
+from conda_kapsel.project_commands import ProjectCommand
 
 
-def run_command(project_dir, ui_mode, conda_environment, command, extra_command_args):
+def _command_from_name(project, command_name):
+    command = project.command_for_name(command_name)
+    if command is None and command_name is not None:
+        # if the command name isn't a configured command name,
+        # interpret the command as a notebook or executable.
+        attrs = dict(env_spec=project.default_env_spec_name)
+        if command_name.lower().endswith(".ipynb"):
+            attrs['notebook'] = command_name
+        else:
+            attrs['args'] = [command_name]
+
+        command = ProjectCommand(name=command_name, attributes=attrs)
+
+    return command
+
+
+def run_command(project_dir, ui_mode, conda_environment, command_name, extra_command_args):
     """Run the project.
 
     Returns:
@@ -21,10 +38,13 @@ def run_command(project_dir, ui_mode, conda_environment, command, extra_command_
     """
     project = Project(project_dir)
     environ = None
+
+    command = _command_from_name(project, command_name)
+
     result = prepare_with_ui_mode_printing_errors(project,
                                                   ui_mode=ui_mode,
                                                   env_spec_name=conda_environment,
-                                                  command_name=command,
+                                                  command=command,
                                                   extra_command_args=extra_command_args,
                                                   environ=environ)
 

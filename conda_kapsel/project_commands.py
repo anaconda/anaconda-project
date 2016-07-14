@@ -156,7 +156,7 @@ def _append_extra_args_to_command_line(command, extra_args):
 
 
 class ProjectCommand(object):
-    """Represents an command from the project file."""
+    """Represents a command from the project file."""
 
     def __init__(self, name, attributes):
         """Construct a command with the given attributes.
@@ -203,6 +203,16 @@ class ProjectCommand(object):
         ``exec_info_for_environment()`` for executing.
         """
         return self._attributes.get('windows', None)
+
+    @property
+    def args(self):
+        """Argv to exec directly, or None.
+
+        This isn't allowed in the config file but we do generate
+        it on the fly when we run stuff that isn't a configured
+        project command.
+        """
+        return self._attributes.get('args', None)
 
     @property
     def conda_app_entry(self):
@@ -267,6 +277,9 @@ class ProjectCommand(object):
         if self.bokeh_app is not None:
             path = os.path.join(environ['PROJECT_DIR'], self.bokeh_app)
             args = ['bokeh', 'serve', path]
+
+        if self.args is not None:
+            args = self.args
 
         if args is not None:
             if extra_args is not None:

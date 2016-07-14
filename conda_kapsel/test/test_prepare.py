@@ -20,6 +20,7 @@ from conda_kapsel.prepare import (prepare_without_interaction, prepare_with_brow
                                   PrepareSuccess, PrepareFailure, _after_stage_success, _FunctionPrepareStage)
 from conda_kapsel.project import Project
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
+from conda_kapsel.project_commands import ProjectCommand
 from conda_kapsel.local_state_file import LocalStateFile
 from conda_kapsel.plugins.requirement import (EnvVarRequirement, UserConfigOverrides)
 from conda_kapsel.conda_manager import (push_conda_manager_class, pop_conda_manager_class, CondaManager,
@@ -231,6 +232,42 @@ commands:
 """,
          "foo.py": "# foo",
          "bar.py": "# bar"}, check)
+
+
+def test_prepare_command_not_in_project():
+    def check(dirname):
+        # create a command that isn't in the Project
+        project = project_no_dedicated_env(dirname)
+        command = ProjectCommand(name="foo",
+                                 attributes=dict(bokeh_app="foo.py",
+                                                 env_spec=project.default_env_spec_name))
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ, command=command)
+        assert result
+        assert result.command_exec_info.bokeh_app == 'foo.py'
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+commands:
+  decoy:
+    description: "do not use me"
+    unix: foobar
+    windows: foobar
+""",
+         "foo.py": "# foo"}, check)
+
+
+def test_prepare_bad_command_name():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ(BAR='bar')
+        result = prepare_without_interaction(project, environ=environ, command_name="blah")
+        assert not result
+        assert result.errors
+        assert "Command name 'blah' is not in" in result.errors[0]
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+"""}, check)
 
 
 def _push_fake_env_creator():

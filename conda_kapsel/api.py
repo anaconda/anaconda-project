@@ -77,7 +77,13 @@ class AnacondaProject(object):
                                   icon=icon,
                                   description=description)
 
-    def prepare_project_locally(self, project, environ, env_spec_name=None, command_name=None, extra_command_args=None):
+    def prepare_project_locally(self,
+                                project,
+                                environ,
+                                env_spec_name=None,
+                                command_name=None,
+                                command=None,
+                                extra_command_args=None):
         """Prepare a project to run one of its commands.
 
         "Locally" means a machine where development will go on,
@@ -115,6 +121,7 @@ class AnacondaProject(object):
             environ (dict): os.environ or the previously-prepared environ; not modified in-place
             env_spec_name (str): the package set name to require, or None for default
             command_name (str): which named command to choose from the project, None for default
+            command (ProjectCommand): a command object (alternative to command_name)
             extra_command_args (list): extra args to include in the returned command argv
 
         Returns:
@@ -126,6 +133,7 @@ class AnacondaProject(object):
                                                    mode=provide.PROVIDE_MODE_DEVELOPMENT,
                                                    env_spec_name=env_spec_name,
                                                    command_name=command_name,
+                                                   command=command,
                                                    extra_command_args=extra_command_args)
 
     def prepare_project_production(self,
@@ -133,6 +141,7 @@ class AnacondaProject(object):
                                    environ,
                                    env_spec_name=None,
                                    command_name=None,
+                                   command=None,
                                    extra_command_args=None):
         """Prepare a project to run one of its commands.
 
@@ -155,6 +164,7 @@ class AnacondaProject(object):
             environ (dict): os.environ or the previously-prepared environ; not modified in-place
             env_spec_name (str): the package set name to require, or None for default
             command_name (str): which named command to choose from the project, None for default
+            command (ProjectCommand): a command object (alternative to command_name)
             extra_command_args (list): extra args to include in the returned command argv
 
         Returns:
@@ -166,9 +176,16 @@ class AnacondaProject(object):
                                                    mode=provide.PROVIDE_MODE_PRODUCTION,
                                                    env_spec_name=env_spec_name,
                                                    command_name=command_name,
+                                                   command=command,
                                                    extra_command_args=extra_command_args)
 
-    def prepare_project_check(self, project, environ, env_spec_name=None, command_name=None, extra_command_args=None):
+    def prepare_project_check(self,
+                              project,
+                              environ,
+                              env_spec_name=None,
+                              command_name=None,
+                              command=None,
+                              extra_command_args=None):
         """Prepare a project to run one of its commands.
 
         This version only checks the status of the project's
@@ -185,6 +202,7 @@ class AnacondaProject(object):
             environ (dict): os.environ or the previously-prepared environ; not modified in-place
             env_spec_name (str): the package set name to require, or None for default
             command_name (str): which named command to choose from the project, None for default
+            command (ProjectCommand): a command object (alternative to command_name)
             extra_command_args (list): extra args to include in the returned command argv
 
         Returns:
@@ -196,6 +214,7 @@ class AnacondaProject(object):
                                                    mode=provide.PROVIDE_MODE_CHECK,
                                                    env_spec_name=env_spec_name,
                                                    command_name=command_name,
+                                                   command=command,
                                                    extra_command_args=extra_command_args)
 
     def prepare_project_browser(self,
@@ -203,6 +222,7 @@ class AnacondaProject(object):
                                 environ,
                                 env_spec_name=None,
                                 command_name=None,
+                                command=None,
                                 extra_command_args=None,
                                 io_loop=None,
                                 show_url=None):
@@ -219,6 +239,7 @@ class AnacondaProject(object):
             environ (dict): os.environ or the previously-prepared environ; not modified in-place
             env_spec_name (str): the package set name to require, or None for default
             command_name (str): which named command to choose from the project, None for default
+            command (ProjectCommand): a command object (alternative to command_name)
             extra_command_args (list): extra args to include in the returned command argv
             io_loop (IOLoop): tornado IOLoop to use, None for default
             show_url (function): function that's passed the URL to open it for the user
@@ -231,6 +252,7 @@ class AnacondaProject(object):
                                                environ=environ,
                                                env_spec_name=env_spec_name,
                                                command_name=command_name,
+                                               command=command,
                                                extra_command_args=extra_command_args,
                                                io_loop=io_loop,
                                                show_url=show_url)

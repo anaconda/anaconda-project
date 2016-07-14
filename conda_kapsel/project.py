@@ -660,15 +660,16 @@ class Project(object):
         """
         return self._updated_cache().default_env_spec_name
 
-    def default_env_spec_name_for_command(self, command_name):
-        """Get the named environment to use by default for a given command name.
+    def default_env_spec_name_for_command(self, command):
+        """Get the named environment to use by default for a given ProjectCommand.
 
-        the command name may be ``None``
+        the command may be ``None``
         """
-        if command_name is None:
+        if command is None:
             return self.default_env_spec_name
         else:
-            return self.commands[command_name].default_env_spec_name
+            assert isinstance(command, ProjectCommand)
+            return command.default_env_spec_name
 
     @property
     def commands(self):
@@ -694,24 +695,37 @@ class Project(object):
         else:
             return cache.commands[cache.default_command_name]
 
-    def exec_info_for_environment(self, environ, command_name=None, extra_args=None):
-        """Get the information needed to run the project.
+    def default_exec_info_for_environment(self, environ, extra_args=None):
+        """Get the information needed to run the project's default command.
 
         Args:
             environ (dict): the environment
-            command_name (str): the command to get info for, None for the default
             extra_args (list of str): extra args to append to the command line
         Returns:
-            argv as list of strings, or None if no commands are configured that work on our platform
+            a CommandExecInfo instance
+        """
+        command = self.default_command
+        if command is None:
+            return None
+        else:
+            return command.exec_info_for_environment(environ=environ, extra_args=extra_args)
+
+    def command_for_name(self, command_name):
+        """Get the ProjectCommand for the given command name, or None if no commands.
+
+        Args:
+           command_name (str): the command name
+        Returns:
+           a ProjectCommand instance or None
         """
         if command_name is None:
             command_name = self._updated_cache().default_command_name
         if command_name is None:
             return None
-        assert command_name in self._updated_cache().commands
-        command = self._updated_cache().commands[command_name]
-
-        return command.exec_info_for_environment(environ, extra_args)
+        if command_name in self._updated_cache().commands:
+            return self._updated_cache().commands[command_name]
+        else:
+            return None
 
     def publication_info(self):
         """Get JSON-serializable information to be stored as metadata when publishing the project.
