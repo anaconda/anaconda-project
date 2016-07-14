@@ -416,9 +416,9 @@ def test_run_command_omit_name_use_default(monkeypatch, capsys):
 
 # can't put an assert in a lambda so this makes us a "lambda" with
 # an assert in it
-def _func_asserting_ends_with(what):
+def _func_asserting_contains(what):
     def f(s):
-        assert s.endswith(what)
+        assert what in s
 
     return f
 
@@ -426,14 +426,14 @@ def _func_asserting_ends_with(what):
 def test_run_command_executable_not_in_config(monkeypatch, capsys):
     args = _test_run_command_foo(
         ['conda-kapsel', 'run', '--directory', '<DIRNAME>', 'something1',
-         'something2'], monkeypatch, capsys, _func_asserting_ends_with('something1'))
+         'something2'], monkeypatch, capsys, _func_asserting_contains('something1'))
     assert args == ['something2']
 
 
 def test_run_notebook_not_in_config(monkeypatch, capsys):
     args = _test_run_command_foo(
         ['conda-kapsel', 'run', '--directory', '<DIRNAME>',
-         'something.ipynb'], monkeypatch, capsys, _func_asserting_ends_with('jupyter-notebook'))
+         'something.ipynb'], monkeypatch, capsys, _func_asserting_contains('jupyter-notebook'))
     assert len(args) == 1
     assert args[0].endswith('something.ipynb')
 
