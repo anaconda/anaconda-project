@@ -61,7 +61,7 @@ def fallback_data():
 
 try:
     import keyring
-except NameError:  # pragma: no cover
+except ImportError:  # pragma: no cover
     keyring = None  # pragma: no cover
     _onetime_keyring_complain_and_disable("Module 'keyring' not available, try installing the 'keyring' package.")
 
