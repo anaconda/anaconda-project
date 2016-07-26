@@ -10,6 +10,7 @@ from __future__ import print_function
 
 import codecs
 import errno
+import multiprocessing
 import os
 import platform
 import re
@@ -92,7 +93,6 @@ if os.getenv('TRAVIS') == "true":
     CPU_COUNT = 2
 else:
     try:
-        import multiprocessing
         CPU_COUNT = multiprocessing.cpu_count()
     except Exception:
         print("Using fallback CPU count", file=sys.stderr)
@@ -524,6 +524,8 @@ class CondaPackageCommand(Command):
 
         print("Packages in " + self.packages_dir)
 
+
+multiprocessing.freeze_support()
 
 setup(name='conda-kapsel',
       version=VERSION,
