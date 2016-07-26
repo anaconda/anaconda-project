@@ -525,25 +525,26 @@ class CondaPackageCommand(Command):
         print("Packages in " + self.packages_dir)
 
 
-multiprocessing.freeze_support()
+if __name__ == '__main__':
+    multiprocessing.freeze_support()
 
-setup(name='conda-kapsel',
-      version=VERSION,
-      author="Continuum Analytics",
-      author_email='info@continuum.io',
-      url='http://github.com/Anaconda-Server/conda-kapsel',
-      description='Library to load and manipulate project directories',
-      license='New BSD',
-      zip_safe=False,
-      install_requires=REQUIRES,
-      tests_require=TEST_REQUIRES,
-      cmdclass=dict(test=AllTestsCommand,
-                    conda_package=CondaPackageCommand,
-                    version_module=VersionModuleCommand),
-      scripts=[
-          'bin/conda-kapsel'
-      ],
-      packages=[
-          'conda_kapsel', 'conda_kapsel.internal', 'conda_kapsel.commands', 'conda_kapsel.plugins',
-          'conda_kapsel.plugins.providers', 'conda_kapsel.plugins.requirements'
-      ])
+    setup(name='conda-kapsel',
+          version=VERSION,
+          author="Continuum Analytics",
+          author_email='info@continuum.io',
+          url='http://github.com/Anaconda-Server/conda-kapsel',
+          description='Library to load and manipulate project directories',
+          license='New BSD',
+          zip_safe=False,
+          install_requires=REQUIRES,
+          tests_require=TEST_REQUIRES,
+          cmdclass=dict(test=AllTestsCommand,
+                        conda_package=CondaPackageCommand,
+                        version_module=VersionModuleCommand),
+          scripts=[
+              'bin/conda-kapsel'
+          ],
+          packages=[
+              'conda_kapsel', 'conda_kapsel.internal', 'conda_kapsel.commands', 'conda_kapsel.plugins',
+              'conda_kapsel.plugins.providers', 'conda_kapsel.plugins.requirements'
+          ])
