@@ -60,7 +60,7 @@ PY2 = sys.version_info[0] == 2
 
 REQUIRES = ['beautifulsoup4 >= 4.3', 'tornado >= 4.2', 'keyring >= 9.0']
 
-TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2', 'pytest-xdist']
+TEST_REQUIRES = ['coverage', 'flake8>=3.0.1', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2', 'pytest-xdist']
 
 # clean up leftover trash as best we can
 BUILD_TMP = os.path.join(ROOT, 'build', 'tmp')
@@ -324,7 +324,7 @@ class AllTestsCommand(TestCommand):
         assert [] == processes
 
     def _flake8(self):
-        from flake8.engine import get_style_guide
+        from flake8.api.legacy import get_style_guide
         flake8_style = get_style_guide(paths=self._git_staged_or_all_py_files(),
                                        max_line_length=120,
                                        ignore=[
