@@ -10,7 +10,6 @@ from __future__ import print_function
 
 import codecs
 import errno
-import multiprocessing
 import os
 import platform
 import re
@@ -61,7 +60,7 @@ PY2 = sys.version_info[0] == 2
 
 REQUIRES = ['beautifulsoup4 >= 4.3', 'tornado >= 4.2', 'keyring >= 9.0']
 
-TEST_REQUIRES = ['coverage', 'flake8>=3.0.1', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2', 'pytest-xdist']
+TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2', 'pytest-xdist']
 
 # clean up leftover trash as best we can
 BUILD_TMP = os.path.join(ROOT, 'build', 'tmp')
@@ -93,6 +92,7 @@ if os.getenv('TRAVIS') == "true":
     CPU_COUNT = 2
 else:
     try:
+        import multiprocessing
         CPU_COUNT = multiprocessing.cpu_count()
     except Exception:
         print("Using fallback CPU count", file=sys.stderr)
@@ -324,7 +324,7 @@ class AllTestsCommand(TestCommand):
         assert [] == processes
 
     def _flake8(self):
-        from flake8.api.legacy import get_style_guide
+        from flake8.engine import get_style_guide
         flake8_style = get_style_guide(paths=self._git_staged_or_all_py_files(),
                                        max_line_length=120,
                                        ignore=[
@@ -525,26 +525,23 @@ class CondaPackageCommand(Command):
         print("Packages in " + self.packages_dir)
 
 
-if __name__ == '__main__':
-    multiprocessing.freeze_support()
-
-    setup(name='conda-kapsel',
-          version=VERSION,
-          author="Continuum Analytics",
-          author_email='info@continuum.io',
-          url='http://github.com/Anaconda-Server/conda-kapsel',
-          description='Library to load and manipulate project directories',
-          license='New BSD',
-          zip_safe=False,
-          install_requires=REQUIRES,
-          tests_require=TEST_REQUIRES,
-          cmdclass=dict(test=AllTestsCommand,
-                        conda_package=CondaPackageCommand,
-                        version_module=VersionModuleCommand),
-          scripts=[
-              'bin/conda-kapsel'
-          ],
-          packages=[
-              'conda_kapsel', 'conda_kapsel.internal', 'conda_kapsel.commands', 'conda_kapsel.plugins',
-              'conda_kapsel.plugins.providers', 'conda_kapsel.plugins.requirements'
-          ])
+setup(name='conda-kapsel',
+      version=VERSION,
+      author="Continuum Analytics",
+      author_email='info@continuum.io',
+      url='http://github.com/Anaconda-Server/conda-kapsel',
+      description='Library to load and manipulate project directories',
+      license='New BSD',
+      zip_safe=False,
+      install_requires=REQUIRES,
+      tests_require=TEST_REQUIRES,
+      cmdclass=dict(test=AllTestsCommand,
+                    conda_package=CondaPackageCommand,
+                    version_module=VersionModuleCommand),
+      scripts=[
+          'bin/conda-kapsel'
+      ],
+      packages=[
+          'conda_kapsel', 'conda_kapsel.internal', 'conda_kapsel.commands', 'conda_kapsel.plugins',
+          'conda_kapsel.plugins.providers', 'conda_kapsel.plugins.requirements'
+      ])
