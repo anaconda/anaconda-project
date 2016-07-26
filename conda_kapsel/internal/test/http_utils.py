@@ -6,6 +6,8 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import copy
+
 from conda_kapsel.internal.test.multipart import MultipartEncoder
 
 from tornado import gen
@@ -13,12 +15,9 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
 
 @gen.coroutine
-def _http_fetch(request, host=None):
+def _http_fetch(request):
     http_client = AsyncHTTPClient()
-    headers = dict()
-    if host is not None:
-        headers['Host'] = host
-    response = yield http_client.fetch(request, headers=headers)
+    response = yield http_client.fetch(request)
 
     if response.error:
         raise response.error
@@ -27,7 +26,10 @@ def _http_fetch(request, host=None):
 
 
 def http_get_async(url, host=None):
-    return _http_fetch(HTTPRequest(url=url, method='GET'), host=host)
+    headers = dict()
+    if host is not None:
+        headers['Host'] = host
+    return _http_fetch(HTTPRequest(url=url, method='GET', headers=headers))
 
 
 def http_post_async(url, body=None, host=None, headers=None, form=None):
@@ -38,7 +40,11 @@ def http_post_async(url, body=None, host=None, headers=None, form=None):
         body = encoder.to_string()
         headers = {'Content-Type': encoder.content_type}
 
-    return _http_fetch(HTTPRequest(url=url, method='POST', body=body, headers=headers), host=host)
+    if host is not None:
+        headers = copy.copy(headers)
+        headers['Host'] = host
+
+    return _http_fetch(HTTPRequest(url=url, method='POST', body=body, headers=headers))
 
 
 def http_get(io_loop, url, host=None):
