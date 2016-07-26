@@ -60,7 +60,7 @@ PY2 = sys.version_info[0] == 2
 
 REQUIRES = ['beautifulsoup4 >= 4.3', 'tornado >= 4.2', 'keyring >= 9.0']
 
-TEST_REQUIRES = ['coverage', 'flake8', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2', 'pytest-xdist']
+TEST_REQUIRES = ['coverage', 'flake8 == 2.6.2', 'pep257', 'pytest', 'pytest-cov', 'yapf == 0.6.2', 'pytest-xdist']
 
 # clean up leftover trash as best we can
 BUILD_TMP = os.path.join(ROOT, 'build', 'tmp')
