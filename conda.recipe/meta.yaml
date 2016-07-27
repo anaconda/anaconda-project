@@ -19,6 +19,8 @@ requirements:
     - setuptools
     - psutil # needed by conda
     - tornado
+    - "backports_abc >=0.4" # [py2k]
+    - singledispatch
     - ruamel_yaml
     - beautifulsoup4
     - requests
