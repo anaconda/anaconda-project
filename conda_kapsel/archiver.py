@@ -245,7 +245,7 @@ def _leaf_infos(infos):
                 del all_by_name[parent]
             parent = os.path.dirname(parent)
 
-    return all_by_name.values()
+    return sorted(all_by_name.values(), key=lambda x: x.relative_path)
 
 
 def _write_tar(archive_root_name, infos, filename, compression, logs):
