@@ -117,10 +117,9 @@ class ProjectFile(YamlFile):
             "In the channels section, list any Conda channel URLs to be searched\n" + "for packages.\n" + "\n" +
             "For example,\n" + "\n" + "channels:\n" + "   - https://conda.anaconda.org/asmeurer\n")
 
-        sections['env_specs'] = ("If you like, you can define multiple, named environment specs.\n" +
-                                 "There's an implicit environment spec called 'default', which you can\n" +
-                                 "tune by naming it explicitly here.\n"
-                                 "Use `conda-kapsel add-env-spec` to add environment specs.\n")
+        sections['env_specs'] = (
+            "You can define multiple, named environment specs.\n" + "Each inherits any global packages or channels,\n" +
+            "but can have its own unique ones also.\n" + "Use `conda-kapsel add-env-spec` to add environment specs.\n")
 
         # we make a big string and then parse it because I can't figure out the
         # ruamel.yaml API to insert comments in front of map keys.
@@ -129,10 +128,15 @@ class ProjectFile(YamlFile):
 
         to_parse = comment_out(header)
         for section_name, comment in sections.items():
+            # future: this is if/else is silly, we should be
+            # assigning these bodies up above when we assign the
+            # comments.
             if section_name in ('name', 'icon'):
                 section_body = ""
             elif section_name in ('channels', 'packages'):
                 section_body = "  []"
+            elif section_name in ('env_specs', ):
+                section_body = "  default:\n" + "    packages: []\n" + "    channels: []\n"
             else:
                 section_body = "  {}"
             to_parse = to_parse + "\n#\n" + comment_out(comment) + section_name + ":\n" + section_body + "\n\n\n"

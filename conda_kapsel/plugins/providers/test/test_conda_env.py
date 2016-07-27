@@ -14,7 +14,7 @@ import conda_kapsel.internal.pip_api as pip_api
 from conda_kapsel.test.environ_utils import (minimal_environ, minimal_environ_no_conda_env,
                                              strip_environ_keeping_conda_env)
 from conda_kapsel.internal.test.http_utils import http_get_async, http_post_async
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from conda_kapsel.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
 from conda_kapsel.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare)
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
@@ -86,7 +86,7 @@ def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
         assert status.errors == []
         assert not os.path.exists(expected_env)
 
-    with_directory_contents(dict(), prepare_project_scoped_env)
+    with_directory_contents_completing_project_file(dict(), prepare_project_scoped_env)
 
 
 def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
@@ -110,7 +110,7 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
         assert status.errors == []
         assert status.status_description == "Nothing to clean up for environment 'default'."
 
-    with_directory_contents(dict(), prepare_project_scoped_env_fails)
+    with_directory_contents_completing_project_file(dict(), prepare_project_scoped_env_fails)
 
 
 def test_unprepare_gets_error_on_delete(monkeypatch):
@@ -143,7 +143,7 @@ def test_unprepare_gets_error_on_delete(monkeypatch):
         # so we can rmtree our tmp directory
         monkeypatch.undo()
 
-    with_directory_contents(dict(), prepare_project_scoped_env)
+    with_directory_contents_completing_project_file(dict(), prepare_project_scoped_env)
 
 
 def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
@@ -170,7 +170,7 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
         assert status.errors == []
         assert status.status_description == ("Nothing to clean up for environment 'default'.")
 
-    with_directory_contents(dict(), prepare_project_scoped_env_not_attempted)
+    with_directory_contents_completing_project_file(dict(), prepare_project_scoped_env_not_attempted)
 
 
 def test_prepare_project_scoped_env_with_packages(monkeypatch):
@@ -215,7 +215,7 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         result = prepare_without_interaction(project, environ=environ)
         assert not result
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 packages:
     - ipython
@@ -286,7 +286,7 @@ def _run_browser_ui_test(monkeypatch,
 
         final_result_check(dirname, result)
 
-    with_directory_contents(directory_contents, do_browser_ui_test)
+    with_directory_contents_completing_project_file(directory_contents, do_browser_ui_test)
 
 
 def _extract_radio_items(response):

@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function
 
 from conda_kapsel.commands.variable_commands import main_add, main_remove
 from conda_kapsel.commands.main import _parse_args_and_run_subcommand
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from conda_kapsel.internal.simple_status import SimpleStatus
 from conda_kapsel.internal import conda_api
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
@@ -84,7 +84,7 @@ def test_add_variable_project_problem(capsys):
         res = main_add(args)
         assert res == 1
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("variables:\n" "  42")}, check_problem)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ("variables:\n" "  42")}, check_problem)
 
     out, err = capsys.readouterr()
     assert out == ''
@@ -107,7 +107,7 @@ def test_remove_variable_command(monkeypatch):
         assert res == 0
         assert len(params) == 1
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: ("variables:\n"
                                     "  foo: {default: test}\n"
                                     "  baz: {default: bar}")}, check_remove_variable)
@@ -119,7 +119,9 @@ def test_remove_variable_project_problem(monkeypatch):
         res = main_remove(args)
         assert res == 1
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("variables:\n" "  foo: true")}, check_problem_remove)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: ("variables:\n"
+                                    "  foo: true")}, check_problem_remove)
 
 
 def test_list_variables(capsys):
@@ -141,7 +143,7 @@ test{space}A downloaded file which is referenced by test.
            space="".ljust(len(PLATFORM_ENV_VAR) - 2)).strip() + "\n"
         assert out == expected_out
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: ('downloads:\n'
                                     '  test: http://localhost:8000/test.tgz\n'
                                     '  tes2: http://localhost:8000/train.tgz\n')}, check_list_not_empty)
@@ -164,7 +166,7 @@ Name{space}Description
            space="".ljust(len(PLATFORM_ENV_VAR) - 2)).strip() + "\n"
         assert out == expected_out
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)
 
 
 def test_list_variables_with_project_file_problems(capsys):
@@ -178,7 +180,7 @@ def test_list_variables_with_project_file_problems(capsys):
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_set_variables_with_project_file_problems(capsys):
@@ -192,7 +194,7 @@ def test_set_variables_with_project_file_problems(capsys):
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_unset_variables_with_project_file_problems(capsys):
@@ -206,7 +208,7 @@ def test_unset_variables_with_project_file_problems(capsys):
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_set_variable_command(monkeypatch):
@@ -224,7 +226,7 @@ def test_set_variable_command(monkeypatch):
                                               'baz=qux', 'has_two_equals=foo=bar'])
         assert res == 0
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
   - foo
@@ -267,7 +269,8 @@ def test_unset_variable_command(monkeypatch):
         res = _parse_args_and_run_subcommand(['conda-kapsel', 'unset-variable', '--directory', dirname, 'foo', 'baz'])
         assert res == 0
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   - foo
   - baz

@@ -16,7 +16,7 @@ import platform
 from conda_kapsel.commands.main import _parse_args_and_run_subcommand
 from conda_kapsel.commands.activate import activate, main
 from conda_kapsel.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 from conda_kapsel.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from conda_kapsel.test.project_utils import project_dir_disable_dedicated_env
@@ -62,7 +62,8 @@ def test_activate(monkeypatch):
             print("result=" + repr(result))
         assert ['export PROJECT_DIR=' + quote(dirname), 'export REDIS_URL=redis://localhost:6379'] == result
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
     """}, activate_redis_url)
@@ -78,7 +79,7 @@ def test_activate_quoting(monkeypatch):
             print("activate changed PATH on Windows and ideally it would not.")
         assert ["export FOO='$! boo'", 'export PROJECT_DIR=' + quote(dirname)] == result
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: """
 variables:
@@ -103,7 +104,8 @@ def test_main(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         main(Args(directory=dirname))
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, main_redis_url)
@@ -133,7 +135,8 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         code = _parse_args_and_run_subcommand(['conda-kapsel', 'activate'])
         assert code == 0
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, main_redis_url)
@@ -154,7 +157,8 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
         code = _parse_args_and_run_subcommand(['conda-kapsel', 'activate', '--directory', dirname])
         assert code == 0
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, main_redis_url)
@@ -185,7 +189,8 @@ def test_main_fails_to_redis(monkeypatch, capsys):
         code = main(Args(directory=dirname))
         assert 1 == code
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, main_redis_url)

@@ -14,7 +14,8 @@ import subprocess
 
 from conda_kapsel.test.environ_utils import minimal_environ, strip_environ
 from conda_kapsel.test.project_utils import project_no_dedicated_env
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import (with_directory_contents,
+                                                      with_directory_contents_completing_project_file)
 from conda_kapsel.internal import conda_api
 from conda_kapsel.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare, prepare_in_stages,
                                   PrepareSuccess, PrepareFailure, _after_stage_success, _FunctionPrepareStage)
@@ -76,7 +77,7 @@ def test_unprepare_problem_project():
         assert status.errors == ['variables section contains wrong value type 42, ' +
                                  'should be dict or list of requirements']
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, unprepare_problems)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, unprepare_problems)
 
 
 def test_unprepare_nothing_to_do():
@@ -125,7 +126,8 @@ def test_prepare_some_env_var_already_set():
         assert dict(FOO='bar', PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict(FOO='bar') == strip_environ(environ)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
 """}, prepare_some_env_var)
@@ -139,7 +141,8 @@ def test_prepare_some_env_var_not_set():
         assert not result
         assert dict(BAR='bar') == strip_environ(environ)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
 """}, prepare_some_env_var)
@@ -165,7 +168,8 @@ def test_prepare_some_env_var_not_set_keep_going():
             stage = next_stage
         assert dict(BAR='bar') == strip_environ(environ)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
 """}, prepare_some_env_var_keep_going)
@@ -193,7 +197,7 @@ def test_prepare_with_app_entry():
         assert out.decode().strip() == ("['echo.py', '%s', 'foo', 'bar']" % (env_path.replace("\\", "\\\\")))
         assert err.decode() == ""
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
@@ -222,7 +226,7 @@ def test_prepare_choose_command():
         assert result
         assert result.command_exec_info.bokeh_app == 'bar.py'
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 commands:
     foo:
@@ -246,7 +250,7 @@ def test_prepare_command_not_in_project():
         assert result
         assert result.command_exec_info.bokeh_app == 'foo.py'
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 commands:
   decoy:
@@ -266,7 +270,7 @@ def test_prepare_bad_command_name():
         assert result.errors
         assert "Command name 'blah' is not in" in result.errors[0]
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 """}, check)
 
 
@@ -361,7 +365,8 @@ def test_update_environ():
         result.update_environ(other)
         assert dict(FOO='bar', BAR='baz', PROJECT_DIR=dirname) == strip_environ(other)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
 """}, prepare_then_update_environ)
@@ -563,7 +568,8 @@ def test_prepare_with_browser(monkeypatch):
         assert 200 == http_results['get'].code
         assert 200 == http_results['post'].code
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
 """}, prepare_with_browser)
@@ -664,7 +670,8 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
 
     keyring.enable_fallback_keyring()
     try:
-        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+        with_directory_contents_completing_project_file(
+            {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO_PASSWORD: {}
 """}, prepare_with_browser)
@@ -683,7 +690,7 @@ def test_prepare_problem_project_with_browser(monkeypatch):
         assert [('Icon file %s does not exist.' % os.path.join(dirname, 'foo.png')), 'Unable to load the project.'
                 ] == result.errors
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 icon: foo.png
 """}, check)
 

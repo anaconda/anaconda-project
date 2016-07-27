@@ -49,6 +49,13 @@ def _atomic_replace(path, contents, encoding='utf-8'):
             pass
 
 
+def _load_string(contents):
+    # using RoundTripLoader incorporates safe_load
+    # (we don't load code)
+    assert issubclass(ryaml.RoundTripLoader, ryaml.constructor.SafeConstructor)
+    return ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+
+
 class YamlFile(object):
     """Abstract YAML file, base class for ``ProjectFile`` and ``LocalStateFile``.
 
@@ -91,13 +98,10 @@ class YamlFile(object):
         self._corrupted_error_message = None
         self._change_count = self._change_count + 1
 
-        # using RoundTripLoader incorporates safe_load
-        # (we don't load code)
-        assert issubclass(ryaml.RoundTripLoader, ryaml.constructor.SafeConstructor)
         try:
             with codecs.open(self.filename, 'r', 'utf-8') as file:
                 contents = file.read()
-            self._yaml = ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+            self._yaml = _load_string(contents)
             self._dirty = False
         except IOError as e:
             if e.errno == errno.ENOENT:

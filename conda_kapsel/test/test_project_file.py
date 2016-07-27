@@ -64,12 +64,15 @@ packages: []
 #
 channels: []
 #
-# If you like, you can define multiple, named environment specs.
-# There's an implicit environment spec called 'default', which you can
-# tune by naming it explicitly here.
+# You can define multiple, named environment specs.
+# Each inherits any global packages or channels,
+# but can have its own unique ones also.
 # Use `conda-kapsel add-env-spec` to add environment specs.
 #
-env_specs: {}
+env_specs:
+  default:
+    packages: []
+    channels: []
 """
 
 

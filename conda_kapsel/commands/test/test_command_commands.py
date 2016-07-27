@@ -11,7 +11,7 @@ import pytest
 
 from conda_kapsel.commands.command_commands import main
 from conda_kapsel.commands.main import _parse_args_and_run_subcommand
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 from conda_kapsel.project import Project
 
@@ -48,7 +48,7 @@ def test_add_command_ask_type(monkeypatch):
         assert command['bokeh_app'] == 'file.py'
         assert command['env_spec'] == 'default'
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 
 
 def test_add_command_not_interactive(monkeypatch, capsys):
@@ -66,7 +66,7 @@ def test_add_command_not_interactive(monkeypatch, capsys):
         assert '' == out
         assert 'Specify the --type option to add this command.\n' == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check)
 
 
 def test_add_command_ask_type_interrupted(monkeypatch, capsys):
@@ -90,7 +90,7 @@ def test_add_command_ask_type_interrupted(monkeypatch, capsys):
         assert out == ''
         assert err == '\nCanceling\n\n'
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 
 
 def test_add_command_ask_other_shell(monkeypatch):
@@ -121,7 +121,7 @@ def test_add_command_ask_other_shell(monkeypatch):
         assert command['unix'] == 'echo hello'
         assert command['env_spec'] == 'default'
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check)
 
 
 def test_add_command_ask_other_windows(monkeypatch):
@@ -152,7 +152,7 @@ def test_add_command_ask_other_windows(monkeypatch):
         assert command['windows'] == 'echo hello'
         assert command['env_spec'] == 'default'
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check)
 
 
 def test_add_command_ask_type_twice(monkeypatch, capsys):
@@ -189,7 +189,7 @@ def test_add_command_ask_type_twice(monkeypatch, capsys):
                        "    A command line is any command you might type at the command prompt.\n"
                        "Added a command 'test' to the project. Run it with `conda-kapsel run test`.\n")
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 
 
 def test_add_command_specifying_notebook(monkeypatch, capsys):
@@ -205,7 +205,7 @@ def test_add_command_specifying_notebook(monkeypatch, capsys):
         assert command['env_spec'] == 'default'
         assert len(command.keys()) == 2
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_specifying_notebook)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_specifying_notebook)
 
 
 def test_add_command_guessing_notebook(monkeypatch, capsys):
@@ -221,7 +221,9 @@ def test_add_command_guessing_notebook(monkeypatch, capsys):
         assert command['env_spec'] == 'default'
         assert len(command.keys()) == 2
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: '', 'file.ipynb': ""}, check_guessing_notebook)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: '',
+         'file.ipynb': ""}, check_guessing_notebook)
 
 
 def test_add_command_with_env_spec(monkeypatch, capsys):
@@ -237,7 +239,8 @@ def test_add_command_with_env_spec(monkeypatch, capsys):
         assert command['env_spec'] == 'foo'
         assert len(command.keys()) == 2
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
 
 
 def _test_command_command_project_problem(capsys, monkeypatch, command, append_dir=False):
@@ -252,7 +255,7 @@ def _test_command_command_project_problem(capsys, monkeypatch, command, append_d
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_add_command_project_problem(capsys, monkeypatch):
@@ -275,7 +278,8 @@ def test_add_command_breaks_project(capsys, monkeypatch):
         assert (("%s: command 'test' has multiple commands in it, 'notebook' can't go with 'unix'\n" % os.path.join(
             dirname, DEFAULT_PROJECT_FILENAME)) + "Unable to add the command.\n") == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    unix: foo\n")}, check_problem_add_cmd)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    unix: foo\n")}, check_problem_add_cmd)
 
 
 def test_remove_command_with_project_file_problems(capsys, monkeypatch):
@@ -299,7 +303,8 @@ def test_remove_command(monkeypatch, capsys):
         assert out == "Removed the command 'test' from the project.\n"
         assert err == ''
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'commands:\n  test:\n    notebook: file.ipynb'}, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'commands:\n  test:\n    notebook: file.ipynb'}, check)
 
 
 def test_remove_command_missing(monkeypatch, capsys):
@@ -311,7 +316,7 @@ def test_remove_command_missing(monkeypatch, capsys):
         assert err == "Command: 'test' not found in project file.\n"
         assert out == ''
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check)
 
 
 def test_remove_command_auto_generated(monkeypatch, capsys):
@@ -329,7 +334,7 @@ def test_remove_command_auto_generated(monkeypatch, capsys):
         assert err == "Cannot remove auto-generated command: 'file.ipynb'.\n"
         assert out == ''
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: '', 'file.ipynb': ""}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: '', 'file.ipynb': ""}, check)
 
 
 def test_list_commands_with_project_file_problems(capsys, monkeypatch):
@@ -345,7 +350,7 @@ def test_list_commands_empty_project(capsys):
         assert '' == err
         assert ("No commands found for project: {}\n\n".format(dirname)) == out
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_empty_project)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_empty_project)
 
 
 def test_list_commands(capsys):
@@ -367,7 +372,7 @@ run_notebook  Notebook test.ipynb
 
         assert expected_out == out
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: ("commands:\n"
                                     "  default:\n"
                                     "    bokeh_app: test.py\n"

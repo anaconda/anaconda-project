@@ -11,7 +11,8 @@ import os
 import platform
 
 from conda_kapsel.test.project_utils import project_no_dedicated_env
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import (with_directory_contents,
+                                                      with_directory_contents_completing_project_file)
 from conda_kapsel.test.environ_utils import minimal_environ, strip_environ
 from conda_kapsel.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from conda_kapsel.local_state_file import LocalStateFile
@@ -178,7 +179,8 @@ def test_prepare_redis_url_with_dict_in_variables_section(monkeypatch):
                     PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, prepare_redis_url)
@@ -252,7 +254,8 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         local_state_file.load()
         assert dict() == local_state_file.get_service_run_state("REDIS_URL")
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, start_local_redis)
@@ -282,7 +285,8 @@ def test_prepare_and_unprepare_local_redis_server_with_failed_unprovide(monkeypa
         assert not status
         assert status.status_description == 'Shutdown commands failed for REDIS_URL.'
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, start_local_redis)
@@ -313,7 +317,7 @@ def test_prepare_and_unprepare_two_local_redis_servers_with_failed_unprovide(mon
         assert not status
         assert status.status_description == 'Failed to clean up REDIS_URL, REDIS_URL_2.'
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
@@ -388,7 +392,8 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         local_state_file.load()
         assert dict() == local_state_file.get_service_run_state("REDIS_URL")
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, start_local_redis)
@@ -450,7 +455,8 @@ def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
         assert "redis-server started successfully, but we timed out trying to connect to it on port" in out
         assert "redis-server process failed or timed out, exited with code 0" in err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, start_local_redis_and_time_out)
@@ -481,7 +487,8 @@ def test_fail_to_prepare_local_redis_server_no_port_available(monkeypatch, capsy
         assert not result
         assert 73 == len(can_connect_args_list)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, start_local_redis)
@@ -502,7 +509,8 @@ def test_do_not_start_local_redis_server_in_prod_mode(monkeypatch, capsys):
         assert not result
         assert 3 == len(can_connect_args_list)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, no_start_local_redis)
@@ -523,7 +531,8 @@ def test_do_not_start_local_redis_server_in_check_mode(monkeypatch, capsys):
         assert not result
         assert 3 == len(can_connect_args_list)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, no_start_local_redis)
@@ -550,7 +559,7 @@ def test_fail_to_prepare_local_redis_server_scope_system(monkeypatch, capsys):
         result = _prepare_printing_errors(project, environ=minimal_environ())
         assert not result
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
@@ -578,7 +587,7 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
         assert not result
         assert 36 == len(can_connect_args_list)
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
@@ -644,7 +653,8 @@ sys.exit(1)
         result = _prepare_printing_errors(project, environ=minimal_environ())
         assert not result
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, start_local_redis)
@@ -703,7 +713,8 @@ def test_fail_to_prepare_local_redis_server_not_on_path(monkeypatch, capsys):
         result = _prepare_printing_errors(project, environ=minimal_environ())
         assert not result
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, start_local_redis)
@@ -804,7 +815,8 @@ def test_set_scope_in_local_state(monkeypatch):
                     PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, prepare_after_setting_scope)

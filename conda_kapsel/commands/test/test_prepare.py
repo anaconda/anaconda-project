@@ -12,7 +12,7 @@ from conda_kapsel.commands.main import _parse_args_and_run_subcommand
 from conda_kapsel.commands.prepare import prepare_command, main
 from conda_kapsel.commands.prepare_with_mode import (UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
                                                      UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_NO)
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 from conda_kapsel.local_state_file import LocalStateFile
 
@@ -53,7 +53,8 @@ def _test_prepare_command(monkeypatch, ui_mode):
         assert can_connect_args['port'] == 6379
         assert result
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, prepare_redis_url)
@@ -143,7 +144,8 @@ def test_main(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         main(Args(directory=dirname, mode='browser'))
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, main_redis_url)
@@ -173,7 +175,8 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         code = _parse_args_and_run_subcommand(['conda-kapsel', 'prepare', '--mode=browser'])
         assert code == 0
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, main_redis_url)
@@ -194,7 +197,8 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
         code = _parse_args_and_run_subcommand(['conda-kapsel', 'prepare', '--directory', dirname, '--mode=browser'])
         assert code == 0
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, main_redis_url)
@@ -236,7 +240,8 @@ def test_main_fails_to_redis(monkeypatch, capsys):
         code = main(Args(directory=dirname))
         assert 1 == code
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """}, main_redis_url)
@@ -269,7 +274,7 @@ def test_prepare_command_choose_environment(capsys, monkeypatch):
         package_json = os.path.join(envdir, "conda-meta", "nonexistent_bar-0.1-pyNN.json")
         assert os.path.isfile(package_json)
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
@@ -292,13 +297,13 @@ def test_prepare_command_choose_environment_does_not_exist(capsys):
         result = _parse_args_and_run_subcommand(['conda-kapsel', 'prepare', '--directory', dirname, '--env-spec=nope'])
         assert result == 1
 
-        expected_error = ("Environment name 'nope' is not in %s, these names were found: bar, default, foo" %
+        expected_error = ("Environment name 'nope' is not in %s, these names were found: bar, foo" %
                           os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
         out, err = capsys.readouterr()
         assert out == ""
         assert expected_error in err
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
@@ -336,7 +341,8 @@ def test_ask_variables_interactively(monkeypatch):
 
     keyring.enable_fallback_keyring()
     try:
-        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+        with_directory_contents_completing_project_file(
+            {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR_PASSWORD: null
@@ -368,7 +374,8 @@ def test_ask_variables_interactively_empty_answer_re_asks(monkeypatch):
         assert local_state.get_value(['variables', 'FOO']) == 'foo'
         assert local_state.get_value(['variables', 'BAR']) == 'bar'
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: null
@@ -398,7 +405,8 @@ def test_ask_variables_interactively_whitespace_answer_re_asks(monkeypatch):
         assert local_state.get_value(['variables', 'FOO']) == 'foo'
         assert local_state.get_value(['variables', 'BAR']) == 'bar'
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: null
@@ -432,7 +440,8 @@ def test_ask_variables_interactively_eof_answer_gives_up(monkeypatch, capsys):
 
         assert err == _foo_and_bar_missing
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: null
@@ -467,7 +476,8 @@ def test_ask_variables_interactively_then_set_variable_fails(monkeypatch, capsys
 
         assert err == _foo_and_bar_missing + "Set variables FAIL\n"
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: null
@@ -495,7 +505,8 @@ def test_no_ask_variables_interactively_not_interactive(monkeypatch, capsys):
 
         assert err == _foo_and_bar_missing
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: null
@@ -525,7 +536,7 @@ def test_no_ask_variables_interactively_if_no_variables_missing_but_prepare_fail
         assert err == ("%s: env_specs should be a dictionary from environment name to environment attributes, not 42\n"
                        "Unable to load the project.\n") % os.path.join(dirname, "kapsel.yml")
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: { default: "foo" }

@@ -7,7 +7,7 @@
 from __future__ import absolute_import, print_function
 
 from conda_kapsel.commands.main import _parse_args_and_run_subcommand
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from conda_kapsel.internal.simple_status import SimpleStatus
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 
@@ -35,7 +35,7 @@ def test_upload_command_on_empty_project(capsys, monkeypatch):
         assert 'Hello\nYay\n' == out
         assert '' == err
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_upload_command_on_invalid_project(capsys):
@@ -48,7 +48,7 @@ def test_upload_command_on_invalid_project(capsys):
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_upload_command_with_token_and_user(capsys, monkeypatch):
@@ -66,4 +66,4 @@ def test_upload_command_with_token_and_user(capsys, monkeypatch):
         assert params['kwargs']['token'] == 'bar'
         assert params['kwargs']['username'] == 'foo'
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)

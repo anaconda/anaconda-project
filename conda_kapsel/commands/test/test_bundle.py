@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 import os
 
 from conda_kapsel.commands.main import _parse_args_and_run_subcommand
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 
 
@@ -20,10 +20,11 @@ def test_archive_command_on_empty_project(capsys):
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert ('Created project archive %s\n' % archivefile) == out
+        assert ('  added %s\nCreated project archive %s\n' % (os.path.join(
+            os.path.basename(dirname), "kapsel.yml"), archivefile)) == out
         assert '' == err
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_archive_command_on_simple_project(capsys):
@@ -33,11 +34,12 @@ def test_archive_command_on_simple_project(capsys):
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert ('  added %s\nCreated project archive %s\n' % (os.path.join(
-            os.path.basename(dirname), "foo.py"), archivefile)) == out
+        assert ('  added %s\n  added %s\nCreated project archive %s\n' % (os.path.join(
+            os.path.basename(dirname), "foo.py"), os.path.join(
+                os.path.basename(dirname), "kapsel.yml"), archivefile)) == out
         assert '' == err
 
-    with_directory_contents({'foo.py': 'print("hello")\n'}, check)
+    with_directory_contents_completing_project_file({'foo.py': 'print("hello")\n'}, check)
 
 
 def test_archive_command_on_invalid_project(capsys):
@@ -50,4 +52,4 @@ def test_archive_command_on_invalid_project(capsys):
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)

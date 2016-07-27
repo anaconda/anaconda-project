@@ -10,7 +10,7 @@ import os
 
 from conda_kapsel.commands.main import _parse_args_and_run_subcommand
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from conda_kapsel.internal.simple_status import SimpleStatus
 from conda_kapsel.project import Project
 
@@ -80,7 +80,7 @@ def _test_environment_command_with_project_file_problems(capsys, monkeypatch, co
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_add_env_spec_no_packages(capsys, monkeypatch):
@@ -95,7 +95,7 @@ def test_add_env_spec_no_packages(capsys, monkeypatch):
         assert ('Environment looks good.\n' + 'Added environment foo to the project file.\n') == out
         assert '' == err
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_add_env_spec_with_packages(capsys, monkeypatch):
@@ -116,7 +116,7 @@ def test_add_env_spec_with_packages(capsys, monkeypatch):
         assert 1 == len(params['args'])
         assert dict(name='foo', packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_add_env_spec_fails(capsys, monkeypatch):
@@ -135,7 +135,7 @@ def test_add_env_spec_fails(capsys, monkeypatch):
         assert '' == out
         assert 'This is a log message.\nThis is an error message.\nEnvironment variable MYDATA is not set.\n' == err
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_remove_env_spec_missing(capsys, monkeypatch):
@@ -148,7 +148,7 @@ def test_remove_env_spec_missing(capsys, monkeypatch):
         assert '' == out
         assert "Environment spec foo doesn't exist.\n" == err
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_remove_env_spec_fails(capsys, monkeypatch):
@@ -177,9 +177,10 @@ def test_remove_env_spec_fails(capsys, monkeypatch):
         assert '' == out
         assert ("Failed to remove environment files in %s: Error.\n" % os.path.join(dirname, "envs", "foo")) == err
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n',
+            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
+            '  baz:\n    channels: []\n    packages:\n    - bar\n',
             'envs/foo/bin/test': 'code here'
         }, check)
 
@@ -196,25 +197,30 @@ def test_remove_env_spec(capsys, monkeypatch):
         assert ('Deleted environment files in %s.\nRemoved environment foo from the project file.\n' % os.path.join(
             dirname, "envs", "foo")) == out
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n',
+            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
+            '  bar:\n    channels: []\n    packages:\n    - baz\n',
             'envs/foo/bin/test': 'code here'
         }, check)
 
 
-def test_remove_env_spec_default(capsys, monkeypatch):
+def test_remove_only_env_spec(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-env-spec', '--name', 'default'])
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-env-spec', '--name', 'foo'])
         assert code == 1
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert "Cannot remove default environment spec.\n" == err
+        assert "At least one environment spec is required; 'foo' is the only one left.\n" == err
 
-    with_directory_contents({}, check)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n',
+            'envs/foo/bin/test': 'code here'
+        }, check)
 
 
 def test_add_env_spec_with_project_file_problems(capsys, monkeypatch):
@@ -252,7 +258,7 @@ def test_add_packages_to_all_environments(capsys, monkeypatch):
         assert 1 == len(params['args'])
         assert dict(env_spec_name=None, packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_add_packages_to_specific_environment(capsys, monkeypatch):
@@ -271,7 +277,8 @@ def test_add_packages_to_specific_environment(capsys, monkeypatch):
         assert 1 == len(params['args'])
         assert dict(env_spec_name='foo', packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
    packages:
@@ -294,7 +301,7 @@ def test_remove_packages_from_all_environments(capsys, monkeypatch):
         assert 1 == len(params['args'])
         assert dict(env_spec_name=None, packages=['bar']) == params['kwargs']
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_remove_packages_from_specific_environment(capsys, monkeypatch):
@@ -312,7 +319,7 @@ def test_remove_packages_from_specific_environment(capsys, monkeypatch):
         assert 1 == len(params['args'])
         assert dict(env_spec_name='foo', packages=['bar']) == params['kwargs']
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_list_environments(capsys, monkeypatch):
@@ -324,16 +331,15 @@ def test_list_environments(capsys, monkeypatch):
         expected_out = """
 Environments for project: {dirname}
 
-Name     Description
-====     ===========
+Name  Description
+====  ===========
 bar
-default  Default
 foo
 """.format(dirname=dirname).strip() + "\n"
 
         assert out == expected_out
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
                                     '  foo:\n'
                                     '    packages:\n'
@@ -354,11 +360,11 @@ Environments for project: {dirname}
 
 Name     Description
 ====     ===========
-default  Default
+default
 """.format(dirname=dirname).strip() + "\n"
         assert out == expected_out
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)
 
 
 def test_list_environments_with_project_file_problems(capsys, monkeypatch):
@@ -382,13 +388,13 @@ def test_list_packages_wrong_env(capsys):
         assert out == ""
         assert err == expected_err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_missing_env)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_missing_env)
 
 
 def _test_list_packages(capsys, env, expected_deps):
     def check_list_not_empty(dirname):
         params = ['conda-kapsel', 'list-packages', '--directory', dirname]
-        if env:
+        if env is not None:
             params.extend(['--env-spec', env])
 
         code = _parse_args_and_run_subcommand(params)
@@ -397,8 +403,8 @@ def _test_list_packages(capsys, env, expected_deps):
         out, err = capsys.readouterr()
 
         project = Project(dirname)
-        expected_out = "Packages for environment '{}':\n{}".format(
-            (env or project.default_env_spec_name), expected_deps)
+        assert project.default_env_spec_name == 'foo'
+        expected_out = "Packages for environment '{}':\n{}".format(env or project.default_env_spec_name, expected_deps)
         assert out == expected_out
 
     project_contents = ('env_specs:\n'
@@ -413,7 +419,7 @@ def _test_list_packages(capsys, env, expected_deps):
                         'packages:\n'
                         ' - mandatory_package\n')
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: project_contents}, check_list_not_empty)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: project_contents}, check_list_not_empty)
 
 
 def test_list_packages_from_env(capsys):
@@ -421,8 +427,8 @@ def test_list_packages_from_env(capsys):
     _test_list_packages(capsys, 'foo', '\nflask\nmandatory_package\nrequests\n\n')
 
 
-def test_list_packages_default_env(capsys):
-    _test_list_packages(capsys, None, '\nmandatory_package\n\n')
+def test_list_packages_from_env_default(capsys):
+    _test_list_packages(capsys, None, '\nflask\nmandatory_package\nrequests\n\n')
 
 
 def test_list_packages_with_project_file_problems(capsys, monkeypatch):

@@ -7,7 +7,7 @@
 from __future__ import absolute_import, print_function
 
 from conda_kapsel.commands.main import _parse_args_and_run_subcommand
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 
 
@@ -20,7 +20,7 @@ def test_clean_command_on_empty_project(capsys):
         assert 'Cleaned.\n' == out
         assert '' == err
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_clean_command_on_invalid_project(capsys):
@@ -33,4 +33,4 @@ def test_clean_command_on_invalid_project(capsys):
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n' + 'Failed to clean everything up.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
