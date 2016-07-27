@@ -19,6 +19,7 @@ requirements:
     - setuptools
     - psutil # needed by conda
     - tornado
+    - "backports_abc >=0.4" # required by tornado, not pulled in automatically?
     - ruamel_yaml
     - beautifulsoup4
     - requests
