@@ -93,7 +93,7 @@ class FileDownloader(object):
                                              streaming_callback=writer,
                                              request_timeout=timeout_in_seconds)
             try:
-                response = yield self._client.fetch(request, request_timeout=timeout_in_seconds)
+                response = yield self._client.fetch(request)
             except Exception as e:
                 self._errors.append("Failed download to %s: %s" % (self._filename, str(e)))
                 raise gen.Return(None)

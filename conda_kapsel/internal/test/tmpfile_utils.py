@@ -31,6 +31,10 @@ class TmpDir(object):
             # prefer original exception to rmtree exception
             if value is None:
                 print("Exception cleaning up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
+                try:
+                    print("Files in %s: %r" % (self._dir, os.listdir(self._dir)), file=sys.stderr)
+                except Exception:
+                    pass
                 raise e
             else:
                 print("Failed to clean up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
