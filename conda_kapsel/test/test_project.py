@@ -12,6 +12,8 @@ import os
 import platform
 import stat
 import subprocess
+import sys
+import time
 
 import pytest
 
@@ -1457,6 +1459,18 @@ def _run_argv_for_environment(environ,
         finally:
             if old_dir is not None:
                 os.chdir(old_dir)
+            # this should happen automatically but it's failing sometimes on
+            # Windows maybe because of a race where echo_stuff.bat is still
+            # in use.
+            batscript = os.path.join(dirname, "echo_stuff.bat")
+            attempts = 3
+            while attempts > 0 and os.path.exists(batscript):
+                try:
+                    os.remove(batscript)
+                except Exception as e:
+                    print("Failed to remove %s: %s" % (batscript, str(e)), file=sys.stderr)
+                    time.sleep(1)
+                    attempts = attempts - 1
 
     with_directory_contents_completing_project_file(
         {
