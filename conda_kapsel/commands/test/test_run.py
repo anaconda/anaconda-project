@@ -450,6 +450,13 @@ def test_run_command_nonexistent_name(monkeypatch, capsys):
 
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
+        def mock_execvpe(file, args, env):
+            assert file == 'nope'
+            assert args == ['nope']
+            raise OSError("no such file nope")
+
+        monkeypatch.setattr('os.execvpe', mock_execvpe)
+
         project_dir_disable_dedicated_env(dirname)
         result = _parse_args_and_run_subcommand(['conda-kapsel', 'run', '--directory', dirname, 'nope'])
 
