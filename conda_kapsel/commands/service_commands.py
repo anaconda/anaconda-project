@@ -7,7 +7,7 @@
 """Commands related to the downloads section."""
 from __future__ import absolute_import, print_function
 
-from conda_kapsel.project import Project
+from conda_kapsel.commands.project_load import load_project
 from conda_kapsel import project_ops
 from conda_kapsel.commands import console_utils
 from conda_kapsel.prepare import prepare_without_interaction
@@ -16,7 +16,7 @@ from conda_kapsel.provide import PROVIDE_MODE_CHECK
 
 def add_service(project_dir, service_type, variable_name):
     """Add an item to the services section."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     status = project_ops.add_service(project, service_type=service_type, variable_name=variable_name)
     if status:
         print(status.status_description)
@@ -30,7 +30,7 @@ def add_service(project_dir, service_type, variable_name):
 
 def remove_service(project_dir, variable_name):
     """Remove an item from the services section."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
     status = project_ops.remove_service(project, result, variable_name=variable_name)
     if status:
@@ -43,7 +43,7 @@ def remove_service(project_dir, variable_name):
 
 def list_services(project_dir):
     """List the services listed on the project."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     if console_utils.print_project_problems(project):
         return 1
 

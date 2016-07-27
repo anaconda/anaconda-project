@@ -375,7 +375,8 @@ class _ConfigCache(object):
                 project.project_file.save()
 
             problems.append(ProjectProblem(text=("%s has an empty env_specs section." % project_file.filename),
-                                           fix_prompt="Add an environment spec?",
+                                           fix_prompt=("Add an environment spec to %s?" % os.path.basename(
+                                               project_file.filename)),
                                            fix_function=add_default_env_spec))
 
         # this is only used for commands that don't specify anything

@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from conda_kapsel.project import Project
+from conda_kapsel.commands.project_load import load_project
 from conda_kapsel import project_ops
 from conda_kapsel.commands import console_utils
 from conda_kapsel.prepare import prepare_without_interaction
@@ -18,7 +18,7 @@ from conda_kapsel.provide import PROVIDE_MODE_CHECK
 
 def add_download(project_dir, filename_variable, download_url, filename, hash_algorithm, hash_value):
     """Add an item to the downloads section."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     if (hash_algorithm or hash_value) and not bool(hash_algorithm and hash_value):
         print("Error: mutually dependant parameters: --hash-algorithm and --hash-value.", file=sys.stderr)
         return 1
@@ -39,7 +39,7 @@ def add_download(project_dir, filename_variable, download_url, filename, hash_al
 
 def remove_download(project_dir, filename_variable):
     """Remove a download requirement from project and from file system."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
     status = project_ops.remove_download(project, result, env_var=filename_variable)
     if status:
@@ -53,7 +53,7 @@ def remove_download(project_dir, filename_variable):
 
 def list_downloads(project_dir):
     """List the downloads present in project."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     if console_utils.print_project_problems(project):
         return 1
 

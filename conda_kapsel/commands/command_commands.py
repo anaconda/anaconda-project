@@ -11,7 +11,7 @@ import os
 import platform
 import sys
 
-from conda_kapsel.project import Project
+from conda_kapsel.commands.project_load import load_project
 from conda_kapsel import project_ops
 from conda_kapsel.commands import console_utils
 
@@ -46,7 +46,7 @@ def add_command(project_dir, name, command_type, command, env_spec_name):
     Returns:
         int exit code
     """
-    project = Project(project_dir)
+    project = load_project(project_dir)
 
     command_as_filename = os.path.join(project.directory_path, command)
 
@@ -75,7 +75,7 @@ def remove_command(project_dir, name):
     Returns:
         int exit code
     """
-    project = Project(project_dir)
+    project = load_project(project_dir)
 
     status = project_ops.remove_command(project, name)
     if not status:
@@ -92,7 +92,7 @@ def list_commands(project_dir):
     Returns:
         int exit code
     """
-    project = Project(project_dir)
+    project = load_project(project_dir)
     if console_utils.print_project_problems(project):
         return 1
 

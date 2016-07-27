@@ -7,7 +7,7 @@
 """The ``clean`` command removes generated state."""
 from __future__ import absolute_import, print_function
 
-from conda_kapsel.project import Project
+from conda_kapsel.commands.project_load import load_project
 from conda_kapsel.prepare import prepare_without_interaction
 from conda_kapsel.provide import PROVIDE_MODE_CHECK
 from conda_kapsel.commands import console_utils
@@ -20,7 +20,7 @@ def clean_command(project_dir):
     Returns:
         exit code
     """
-    project = Project(project_dir)
+    project = load_project(project_dir)
     result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
     status = project_ops.clean(project, result)
     if status:
