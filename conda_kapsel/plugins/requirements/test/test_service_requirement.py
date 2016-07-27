@@ -8,7 +8,7 @@ from conda_kapsel.project import Project
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 from conda_kapsel.plugins.requirements.service import ServiceRequirement
 
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 
 
 def _load_service_requirement(dirname):
@@ -26,7 +26,7 @@ def test_service_dict_with_options():
         assert req.options == dict(type='redis', foo='bar', default='hello')
         assert req.env_var == 'FOOBAR'
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 services:
     FOOBAR: { type: redis, foo: bar, default: hello }
@@ -38,7 +38,8 @@ def test_service_dict_with_bad_value():
         project = Project(dirname)
         assert ["Service FOOBAR should have a service type string or a dictionary as its value."] == project.problems
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
     FOOBAR:
      - 42
@@ -50,7 +51,8 @@ def test_service_with_bad_service_type():
         project = Project(dirname)
         assert ["Service FOOBAR has an unknown type 'not_a_service'."] == project.problems
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
     FOOBAR: not_a_service
     """}, check)
@@ -61,7 +63,8 @@ def test_service_dict_with_no_service_type():
         project = Project(dirname)
         assert ["Service FOOBAR doesn't contain a 'type' field."] == project.problems
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 services:
     FOOBAR: {}
     """}, check)
@@ -72,7 +75,7 @@ def test_service_dict_bad_default():
         project = Project(dirname)
         assert ["default value for variable FOOBAR must be null, a string, or a number, not []."] == project.problems
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 services:
     FOOBAR: { type: redis, default: [] }

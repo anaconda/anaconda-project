@@ -8,7 +8,7 @@
 from __future__ import absolute_import, print_function
 
 from conda_kapsel.commands.prepare_with_mode import prepare_with_ui_mode_printing_errors
-from conda_kapsel.project import Project
+from conda_kapsel.commands.project_load import load_project
 
 
 def prepare_command(project_dir, ui_mode, conda_environment):
@@ -17,7 +17,7 @@ def prepare_command(project_dir, ui_mode, conda_environment):
     Returns:
         Prepare result (can be treated as True on success).
     """
-    project = Project(project_dir)
+    project = load_project(project_dir)
     result = prepare_with_ui_mode_printing_errors(project, env_spec_name=conda_environment, ui_mode=ui_mode)
 
     return result

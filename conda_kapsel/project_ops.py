@@ -384,8 +384,6 @@ def remove_env_spec(project, name):
         ``Status`` instance
     """
     assert name is not None
-    if name == 'default':
-        return SimpleStatus(success=False, description="Cannot remove default environment spec.")
 
     failed = project.problems_status()
     if failed is not None:
@@ -393,6 +391,10 @@ def remove_env_spec(project, name):
 
     if name not in project.env_specs:
         problem = "Environment spec {} doesn't exist.".format(name)
+        return SimpleStatus(success=False, description=problem)
+
+    if len(project.env_specs) == 1:
+        problem = "At least one environment spec is required; '{}' is the only one left.".format(name)
         return SimpleStatus(success=False, description=problem)
 
     env_path = project.env_specs[name].path(project.directory_path)

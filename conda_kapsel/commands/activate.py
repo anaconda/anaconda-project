@@ -15,7 +15,7 @@ except ImportError:  # pragma: no cover (py2 only)
     from pipes import quote
 
 from conda_kapsel.commands.prepare_with_mode import prepare_with_ui_mode_printing_errors
-from conda_kapsel.project import Project
+from conda_kapsel.commands.project_load import load_project
 
 
 def activate(dirname, ui_mode, conda_environment):
@@ -26,7 +26,7 @@ def activate(dirname, ui_mode, conda_environment):
     Returns:
         None on failure or a list of lines to print.
     """
-    project = Project(dirname)
+    project = load_project(dirname)
     result = prepare_with_ui_mode_printing_errors(project, ui_mode=ui_mode, env_spec_name=conda_environment)
     if result.failed:
         return None

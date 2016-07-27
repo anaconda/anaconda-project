@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from conda_kapsel.project import Project
+from conda_kapsel.commands.project_load import load_project
 from conda_kapsel import project_ops
 from conda_kapsel.commands import console_utils
 
@@ -25,7 +25,7 @@ def add_variables(project_dir, vars_to_add, default):
               "add one variable at a time if using --default.",
               file=sys.stderr)
         return 1
-    project = Project(project_dir)
+    project = load_project(project_dir)
     status = project_ops.add_variables(project, vars_to_add, {vars_to_add[0]: default})
     if status:
         return 0
@@ -40,7 +40,7 @@ def remove_variables(project_dir, vars_to_remove):
     Returns:
         Returns exit code
     """
-    project = Project(project_dir)
+    project = load_project(project_dir)
     status = project_ops.remove_variables(project, vars_to_remove)
     if status:
         return 0
@@ -51,7 +51,7 @@ def remove_variables(project_dir, vars_to_remove):
 
 def list_variables(project_dir):
     """List variables present in project."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     if console_utils.print_project_problems(project):
         return 1
     print("Variables for project: {}\n".format(project_dir))
@@ -72,7 +72,7 @@ def set_variables(project_dir, vars_and_values):
             return 1
         # maxsplit=1 -- no maxsplit keywork in py27
         fixed_vars.append(tuple(var.split('=', 1)))
-    project = Project(project_dir)
+    project = load_project(project_dir)
     status = project_ops.set_variables(project, fixed_vars)
     if status:
         print(status.status_description)
@@ -88,7 +88,7 @@ def unset_variables(project_dir, vars_to_unset):
     Returns:
         Returns exit code
     """
-    project = Project(project_dir)
+    project = load_project(project_dir)
     status = project_ops.unset_variables(project, vars_to_unset)
     if status:
         print(status.status_description)

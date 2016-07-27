@@ -7,7 +7,7 @@
 """The ``upload`` command makes an archive of the project."""
 from __future__ import absolute_import, print_function
 
-from conda_kapsel.project import Project
+from conda_kapsel.commands.project_load import load_project
 from conda_kapsel.commands import console_utils
 import conda_kapsel.project_ops as project_ops
 
@@ -18,7 +18,7 @@ def upload_command(project_dir, site, username, token):
     Returns:
         exit code
     """
-    project = Project(project_dir)
+    project = load_project(project_dir)
     status = project_ops.upload(project, site=site, username=username, token=token)
     if status:
         for line in status.logs:

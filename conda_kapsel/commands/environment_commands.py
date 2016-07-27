@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 
-from conda_kapsel.project import Project
+from conda_kapsel.commands.project_load import load_project
 from conda_kapsel import project_ops
 from conda_kapsel.commands import console_utils
 
@@ -26,21 +26,21 @@ def _handle_status(status, success_message):
 
 def add_env_spec(project_dir, name, packages, channels):
     """Add an environment with packages from specified channels to the project."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     status = project_ops.add_env_spec(project, name=name, packages=packages, channels=channels)
     return _handle_status(status, "Added environment {} to the project file.".format(name))
 
 
 def remove_env_spec(project_dir, name):
     """Remove an environment with packages from the project."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     status = project_ops.remove_env_spec(project, name=name)
     return _handle_status(status, "Removed environment {} from the project file.".format(name))
 
 
 def add_packages(project, environment, packages, channels):
     """Add packages to the project."""
-    project = Project(project)
+    project = load_project(project)
     status = project_ops.add_packages(project, env_spec_name=environment, packages=packages, channels=channels)
     package_list = ", ".join(packages)
     if environment is None:
@@ -52,7 +52,7 @@ def add_packages(project, environment, packages, channels):
 
 def remove_packages(project, environment, packages):
     """Remove packages from the project."""
-    project = Project(project)
+    project = load_project(project)
     status = project_ops.remove_packages(project, env_spec_name=environment, packages=packages)
     package_list = ", ".join(packages)
     if environment is None:
@@ -64,7 +64,7 @@ def remove_packages(project, environment, packages):
 
 def list_env_specs(project_dir):
     """List environments in the project."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     if console_utils.print_project_problems(project):
         return 1
     print("Environments for project: {}\n".format(project_dir))
@@ -74,7 +74,7 @@ def list_env_specs(project_dir):
 
 def list_packages(project_dir, environment):
     """List the packages for an environment in the project."""
-    project = Project(project_dir)
+    project = load_project(project_dir)
     if console_utils.print_project_problems(project):
         return 1
     if environment is None:

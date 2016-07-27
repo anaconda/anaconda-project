@@ -12,7 +12,9 @@ import shutil
 import zipfile
 
 from conda_kapsel.test.project_utils import project_no_dedicated_env
-from conda_kapsel.internal.test.tmpfile_utils import (with_directory_contents, with_tmp_zipfile)
+from conda_kapsel.internal.test.tmpfile_utils import (with_directory_contents,
+                                                      with_directory_contents_completing_project_file, with_tmp_zipfile,
+                                                      complete_project_file_content)
 from conda_kapsel.test.environ_utils import minimal_environ, strip_environ
 from conda_kapsel.internal.test.http_utils import http_get_async, http_post_async
 from conda_kapsel.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
@@ -86,7 +88,7 @@ def test_prepare_and_unprepare_download(monkeypatch):
         assert status
         assert not os.path.exists(filename)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
 
 def test_prepare_download_mismatched_checksum_after_download(monkeypatch):
@@ -111,7 +113,7 @@ def test_prepare_download_mismatched_checksum_after_download(monkeypatch):
         assert ('Error downloading http://localhost/data.csv: mismatched hashes. '
                 'Expected: 12345abcdef, calculated: mismatched') in result.errors
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
 
 def test_prepare_download_exception(monkeypatch):
@@ -133,7 +135,7 @@ def test_prepare_download_exception(monkeypatch):
                                ("Current environment is not in %s, no need to delete it." % dirname)]
         assert status.status_description == 'Success.'
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
 
 def test_unprepare_download_fails(monkeypatch):
@@ -172,7 +174,7 @@ def test_unprepare_download_fails(monkeypatch):
 
         monkeypatch.undo()  # so os.remove isn't broken during directory cleanup
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
 
 def test_provide_minimal(monkeypatch):
@@ -196,7 +198,7 @@ def test_provide_minimal(monkeypatch):
         assert hasattr(result, 'environ')
         assert 'DATAFILE' in result.environ
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: MIN_DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: MIN_DATAFILE_CONTENT}, provide_download)
 
 
 def test_provide_no_download_in_check_mode(monkeypatch):
@@ -215,7 +217,7 @@ def test_provide_no_download_in_check_mode(monkeypatch):
                                              mode=provide.PROVIDE_MODE_CHECK)
         assert not result
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: MIN_DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: MIN_DATAFILE_CONTENT}, provide_download)
 
 
 def test_provide_missing_url(monkeypatch):
@@ -226,7 +228,7 @@ def test_provide_missing_url(monkeypatch):
         prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert "Download item DATAFILE doesn't contain a 'url' field." in project.problems
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
 
 
 def test_provide_empty_url(monkeypatch):
@@ -237,7 +239,7 @@ def test_provide_empty_url(monkeypatch):
         prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert "Download item DATAFILE has an empty 'url' field." in project.problems
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
 
 
 def test_provide_multiple_checksums(monkeypatch):
@@ -252,7 +254,7 @@ def test_provide_multiple_checksums(monkeypatch):
         prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
         assert "Multiple checksums for download DATAFILE: md5 and sha1." in project.problems
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
 
 
 def test_provide_wrong_form(monkeypatch):
@@ -264,7 +266,7 @@ def test_provide_wrong_form(monkeypatch):
         assert ("%s: 'downloads:' section should be a dictionary, found ['http://localhost/data.csv']" % os.path.join(
             dirname, DEFAULT_PROJECT_FILENAME)) in project.problems
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
 
 
 def test_failed_download(monkeypatch):
@@ -285,7 +287,7 @@ def test_failed_download(monkeypatch):
         assert ('missing requirement to run this project: A downloaded file which is referenced by DATAFILE.'
                 ) in result.errors
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
 
 def test_failed_download_before_connect(monkeypatch):
@@ -304,7 +306,7 @@ def test_failed_download_before_connect(monkeypatch):
         assert ('missing requirement to run this project: A downloaded file which is referenced by DATAFILE.'
                 ) in result.errors
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
 
 
 def test_file_exists(monkeypatch):
@@ -324,7 +326,7 @@ def test_file_exists(monkeypatch):
 
     LOCAL_STATE = ("DATAFILE:\n" "  filename: data.csv")
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT,
             DEFAULT_LOCAL_STATE_FILENAME: LOCAL_STATE
@@ -334,7 +336,7 @@ def test_file_exists(monkeypatch):
 def test_prepare_download_of_zip_file(monkeypatch):
     def provide_download_of_zip(zipname, dirname):
         with codecs.open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME), 'w', 'utf-8') as f:
-            f.write(ZIPPED_DATAFILE_CONTENT)
+            f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT))
 
         @gen.coroutine
         def mock_downloader_run(self, loop):
@@ -365,7 +367,7 @@ def test_prepare_download_of_zip_file(monkeypatch):
 def test_prepare_download_of_zip_file_checksum(monkeypatch):
     def provide_download_of_zip(zipname, dirname):
         with codecs.open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME), 'w', 'utf-8') as f:
-            f.write(ZIPPED_DATAFILE_CONTENT_CHECKSUM)
+            f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT_CHECKSUM))
 
         @gen.coroutine
         def mock_downloader_run(self, loop):
@@ -402,7 +404,7 @@ def test_prepare_download_of_zip_file_checksum(monkeypatch):
 def test_prepare_download_of_zip_file_no_unzip(monkeypatch):
     def provide_download_of_zip_no_unzip(zipname, dirname):
         with codecs.open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME), 'w', 'utf-8') as f:
-            f.write(ZIPPED_DATAFILE_CONTENT_NO_UNZIP)
+            f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT_NO_UNZIP))
 
         @gen.coroutine
         def mock_downloader_run(self, loop):
@@ -435,7 +437,7 @@ def test_prepare_download_of_zip_file_no_unzip(monkeypatch):
 def test_prepare_download_of_zip_file_no_zip_extension(monkeypatch):
     def provide_download_of_zip(zipname, dirname):
         with codecs.open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME), 'w', 'utf-8') as f:
-            f.write(ZIPPED_DATAFILE_CONTENT_NO_ZIP_SUFFIX)
+            f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT_NO_ZIP_SUFFIX))
 
         @gen.coroutine
         def mock_downloader_run(self, loop):
@@ -467,7 +469,7 @@ def test_prepare_download_of_zip_file_no_zip_extension(monkeypatch):
 def test_prepare_download_of_broken_zip_file(monkeypatch):
     def provide_download_of_zip(dirname):
         with codecs.open(os.path.join(dirname, DEFAULT_PROJECT_FILENAME), 'w', 'utf-8') as f:
-            f.write(ZIPPED_DATAFILE_CONTENT)
+            f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT))
 
         @gen.coroutine
         def mock_downloader_run(self, loop):
@@ -515,7 +517,7 @@ def test_config_html(monkeypatch):
         expected_choice = 'Use already-downloaded file {}'.format(FILENAME)
         assert expected_choice in html
 
-    with_directory_contents({DEFAULT_LOCAL_STATE_FILENAME: DATAFILE_CONTENT}, config_html)
+    with_directory_contents_completing_project_file({DEFAULT_LOCAL_STATE_FILENAME: DATAFILE_CONTENT}, config_html)
 
 
 def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_actions, final_result_check):
@@ -583,7 +585,7 @@ def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_
 
         final_result_check(dirname, result)
 
-    with_directory_contents(directory_contents, do_browser_ui_test)
+    with_directory_contents_completing_project_file(directory_contents, do_browser_ui_test)
 
 
 def _extract_radio_items(response, provider='DownloadProvider'):

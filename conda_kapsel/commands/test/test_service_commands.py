@@ -15,7 +15,8 @@ from conda_kapsel.commands.main import _parse_args_and_run_subcommand
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 from conda_kapsel.plugins.requirements.redis import RedisRequirement
 from conda_kapsel.plugins.registry import PluginRegistry
-from conda_kapsel.internal.test.tmpfile_utils import (with_directory_contents, tmp_script_commandline)
+from conda_kapsel.internal.test.tmpfile_utils import (tmp_script_commandline,
+                                                      with_directory_contents_completing_project_file)
 from conda_kapsel.internal.simple_status import SimpleStatus
 from conda_kapsel.local_state_file import LocalStateFile
 
@@ -63,7 +64,7 @@ def test_add_service(capsys, monkeypatch):
             'Service added.\n' + 'Added service redis to the project file, its address will be in REDIS_URL.\n') == out
         assert '' == err
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_add_service_fails(capsys, monkeypatch):
@@ -78,7 +79,7 @@ def test_add_service_fails(capsys, monkeypatch):
         assert '' == out
         assert 'Service add FAIL.\n' == err
 
-    with_directory_contents(dict(), check)
+    with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_remove_service(capsys, monkeypatch):
@@ -97,7 +98,8 @@ def test_remove_service(capsys, monkeypatch):
         expected_out = ("Removed service 'TEST' from the project file.\n")
         assert expected_out == out
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
 
 
 def test_remove_service_shutdown_fails(capsys, monkeypatch):
@@ -119,7 +121,7 @@ sys.exit(1)
         assert expected_err == err
         assert '' == out
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  TEST: redis'}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: 'services:\n  TEST: redis'}, check)
 
 
 def test_remove_service_by_type(capsys, monkeypatch):
@@ -137,7 +139,7 @@ def test_remove_service_by_type(capsys, monkeypatch):
         expected_out = ("Removed service 'redis' from the project file.\n")
         assert expected_out == out
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  TEST: redis'}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: 'services:\n  TEST: redis'}, check)
 
 
 def test_remove_service_duplicate(capsys, monkeypatch):
@@ -157,7 +159,8 @@ def test_remove_service_duplicate(capsys, monkeypatch):
                         " to identify which service you want to remove\n")
         assert expected_err == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
 
 
 def test_remove_service_running_redis(monkeypatch):
@@ -205,7 +208,8 @@ def test_remove_service_running_redis(monkeypatch):
         local_state_file.load()
         assert dict() == local_state_file.get_service_run_state("REDIS_URL")
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis"}, start_local_redis)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis"}, start_local_redis)
 
 
 def test_remove_service_missing_variable(capsys, monkeypatch):
@@ -220,7 +224,7 @@ def test_remove_service_missing_variable(capsys, monkeypatch):
         assert "Service 'TEST' not found in the project file.\n" == err
         assert '' == out
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check)
 
 
 def _test_service_command_with_project_file_problems(capsys, monkeypatch, command):
@@ -235,7 +239,7 @@ def _test_service_command_with_project_file_problems(capsys, monkeypatch, comman
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_add_service_with_project_file_problems(capsys, monkeypatch):
@@ -267,7 +271,8 @@ REDIS_URL  A running Redis server, located by a redis: URL set as REDIS_URL.
 """.format(dirname=dirname).strip() + "\n"
         assert out == expected_out
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis\n"}, check_list)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis\n"}, check_list)
 
 
 def test_list_service_with_empty_project(capsys, monkeypatch):
@@ -280,4 +285,4 @@ def test_list_service_with_empty_project(capsys, monkeypatch):
         assert err == ''
         assert out == "No services found for project: {}\n".format(dirname)
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check_empty)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_empty)

@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 import os
 
 from conda_kapsel.commands.main import _parse_args_and_run_subcommand
-from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents
+from conda_kapsel.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from conda_kapsel.project import Project
 from conda_kapsel.project_file import DEFAULT_PROJECT_FILENAME
 
@@ -69,7 +69,7 @@ def _test_add_download(capsys, monkeypatch, command):
         assert '' == err
         return params
 
-    return with_directory_contents(dict(), check)
+    return with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_add_download(capsys, monkeypatch):
@@ -131,7 +131,7 @@ def _test_add_download_with_only_one_hash_param(capsys, monkeypatch, command):
         assert '' == out
         return params
 
-    return with_directory_contents(dict(), check)
+    return with_directory_contents_completing_project_file(dict(), check)
 
 
 def test_add_download_with_only_hash_algorithm(capsys, monkeypatch):
@@ -162,7 +162,7 @@ def _test_download_command_with_project_file_problems(capsys, monkeypatch, comma
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_add_download_command_with_project_file_problems(capsys, monkeypatch):
@@ -189,7 +189,7 @@ def test_remove_download(capsys, monkeypatch):
         assert ("Removed downloaded file %s.\nRemoved TEST_FILE from the project file.\n" % filename) == out
         assert '' == err
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: "downloads:\n  TEST_FILE: http://localhost/foo.tgz",
             'foo.tgz': 'data here'
@@ -210,7 +210,7 @@ def test_remove_download_dir(capsys, monkeypatch):
         assert ("Removed downloaded file %s.\nRemoved TEST_FILE from the project file.\n" % filename) == out
         assert '' == err
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: "downloads:\n  TEST_FILE: http://localhost/foo.zip",
             'foo/data.txt': 'data here'
@@ -243,7 +243,7 @@ def test_remove_download_file_error(capsys, monkeypatch):
         assert '' == out
         assert "Failed to remove {}: Error.\n".format(test_filename) == err
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: "downloads:\n  TEST_FILE: http://localhost/foo.tgz",
             'foo.tgz': 'data here'
@@ -276,7 +276,7 @@ def test_remove_download_directory_error(capsys, monkeypatch):
         assert '' == out
         assert "Failed to remove {}: Error.\n".format(test_filename) == err
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: "downloads:\n  TEST_FILE: http://localhost/foo.zip",
             'foo/data.txt': 'data here'
@@ -296,7 +296,8 @@ def test_remove_download_missing_var(capsys, monkeypatch):
         assert ("Download requirement: TEST_FILE not found.\n") == err
         assert '' == out
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: 'variables:\n  foo: {default: bar}'}, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'variables:\n  foo: {default: bar}'}, check)
 
 
 def test_list_downloads_with_project_file_problems(capsys, monkeypatch):
@@ -311,7 +312,7 @@ def test_list_downloads_with_project_file_problems(capsys, monkeypatch):
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
                 'Unable to load the project.\n') == err
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
 def test_list_empty_downloads(capsys, monkeypatch):
@@ -324,7 +325,7 @@ def test_list_empty_downloads(capsys, monkeypatch):
         expected_out = "No downloads found in project.\n"
         assert out == expected_out
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_list_empty)
 
 
 def test_list_downloads(capsys, monkeypatch):
@@ -344,7 +345,7 @@ train  A downloaded file which is referenced by train.
 """.format(dirname=dirname).strip() + "\n"
         assert out == expected_out
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: ('downloads:\n'
                                     '  test: http://localhost:8000/test.tgz\n'
                                     '  train: http://localhost:8000/train.tgz\n')}, check_list_not_empty)

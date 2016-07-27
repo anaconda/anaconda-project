@@ -38,6 +38,40 @@ ALL_COMMAND_TYPES = (COMMAND_TYPE_CONDA_APP_ENTRY, COMMAND_TYPE_SHELL, COMMAND_T
                      COMMAND_TYPE_BOKEH_APP)
 
 
+class ProjectProblem(object):
+    """A possibly-autofixable problem with a project."""
+
+    def __init__(self, text, fix_prompt=None, fix_function=None):
+        """Create a project problem."""
+        self.text = text
+        self.fix_prompt = fix_prompt
+        self.fix_function = fix_function
+
+    @property
+    def can_fix(self):
+        """True if the problem can be auto-fixed."""
+        return self.fix_function is not None
+
+    def fix(self, project):
+        """Perform the auto-fix."""
+        if self.fix_function is not None:
+            return self.fix_function(project)
+        else:
+            return None
+
+
+# given a list of mixed strings and ProjectProblem, make
+# them all into ProjectProblem
+def _make_problems_into_objects(problems):
+    new_problems = []
+    for p in problems:
+        if isinstance(p, ProjectProblem):
+            new_problems.append(p)
+        else:
+            new_problems.append(ProjectProblem(text=p))
+    return new_problems
+
+
 class _ConfigCache(object):
     def __init__(self, directory_path, registry):
         self.directory_path = directory_path
@@ -95,7 +129,8 @@ class _ConfigCache(object):
             self._update_commands(problems, project_file, conda_meta_file, requirements)
 
         self.requirements = requirements
-        self.problems = problems
+        self.problems = _make_problems_into_objects(problems)
+        self.problem_strings = list([p.text for p in self.problems])
 
     def _update_name(self, problems, project_file, conda_meta_file):
         name = project_file.get_value('name', None)
@@ -294,7 +329,12 @@ class _ConfigCache(object):
         (shared_deps, shared_pip_deps) = _parse_packages(project_file.root)
         shared_channels = _parse_channels(project_file.root)
         env_specs = project_file.get_value('env_specs', default={})
+        first_env_spec_name = None
+        env_specs_is_empty_or_missing = False  # this should be iff it's an empty dict or absent entirely
+
         if isinstance(env_specs, dict):
+            if len(env_specs) == 0:
+                env_specs_is_empty_or_missing = True
             for (name, attrs) in env_specs.items():
                 if name.strip() == '':
                     problems.append("Environment spec name cannot be empty string, found: '{}' as name".format(name))
@@ -318,22 +358,33 @@ class _ConfigCache(object):
                                                pip_packages=all_pip_deps,
                                                channels=all_channels,
                                                description=description)
+                if first_env_spec_name is None:
+                    first_env_spec_name = name
         else:
             problems.append(
                 "%s: env_specs should be a dictionary from environment name to environment attributes, not %r" %
                 (project_file.filename, env_specs))
 
-        # We ALWAYS have an environment named 'default' which is the default,
-        # even if not explicitly listed.
-        if 'default' not in self.env_specs:
-            self.env_specs['default'] = EnvSpec(name='default',
-                                                conda_packages=shared_deps,
-                                                pip_packages=shared_pip_deps,
-                                                channels=shared_channels,
-                                                description="Default")
+        if env_specs_is_empty_or_missing:
+            # we do NOT want to add this problem if we merely
+            # failed to parse individual env specs; it must be
+            # safe to overwrite the env_specs key, so it has to
+            # be empty or missing entirely.
+            def add_default_env_spec(project):
+                project.project_file.set_value(['env_specs', 'default'], dict(packages=[], channels=[]))
+                project.project_file.save()
+
+            problems.append(ProjectProblem(text=("%s has an empty env_specs section." % project_file.filename),
+                                           fix_prompt=("Add an environment spec to %s?" % os.path.basename(
+                                               project_file.filename)),
+                                           fix_function=add_default_env_spec))
 
         # this is only used for commands that don't specify anything
-        self.default_env_spec_name = 'default'
+        # (when/if we require all commands to specify, then remove this.)
+        if 'default' in self.env_specs:
+            self.default_env_spec_name = 'default'
+        else:
+            self.default_env_spec_name = first_env_spec_name
 
     def _update_conda_env_requirements(self, requirements, problems, project_file):
         if problems:
@@ -585,7 +636,17 @@ class Project(object):
         config files; it does not contain missing requirements and other "expected"
         problems.
         """
+        return self._updated_cache().problem_strings
+
+    @property
+    def problem_objects(self):
+        """List of ProjectProblem instances describing problems with the project configuration."""
         return self._updated_cache().problems
+
+    @property
+    def fixable_problems(self):
+        """List of ProjectProblem that have associated fix prompts."""
+        return [p for p in self.problem_objects if p.can_fix]
 
     def problems_status(self, description=None):
         """Get a ``Status`` describing project problems, or ``None`` if no problems."""

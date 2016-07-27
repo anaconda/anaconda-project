@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function
 import sys
 
 from conda_kapsel.commands.prepare_with_mode import prepare_with_ui_mode_printing_errors
-from conda_kapsel.project import Project
+from conda_kapsel.commands.project_load import load_project
 from conda_kapsel.project_commands import ProjectCommand
 
 
@@ -36,7 +36,7 @@ def run_command(project_dir, ui_mode, conda_environment, command_name, extra_com
     Returns:
         Does not return if successful.
     """
-    project = Project(project_dir)
+    project = load_project(project_dir)
     environ = None
 
     command = _command_from_name(project, command_name)

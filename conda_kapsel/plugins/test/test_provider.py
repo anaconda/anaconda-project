@@ -10,7 +10,8 @@ import os
 
 import pytest
 
-from conda_kapsel.internal.test.tmpfile_utils import (with_directory_contents, tmp_script_commandline)
+from conda_kapsel.internal.test.tmpfile_utils import (with_directory_contents, tmp_script_commandline,
+                                                      with_directory_contents_completing_project_file)
 from conda_kapsel.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
 from conda_kapsel.plugins.provider import (Provider, ProvideContext, EnvVarProvider, ProvideResult,
                                            shutdown_service_run_state)
@@ -99,7 +100,8 @@ def test_env_var_provider_with_no_value():
         provider.provide(requirement, context=context)
         assert 'FOO' not in context.environ
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   - FOO
 """}, check_env_var_provider)
@@ -122,7 +124,7 @@ def test_env_var_provider_with_default_value_in_project_file():
         assert 'FOO' in context.environ
         assert 'from_default' == context.environ['FOO']
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO:
@@ -152,7 +154,7 @@ def test_env_var_provider_with_unencrypted_default_value_in_project_file_for_enc
         assert 'FOO_SECRET' in context.environ
         assert 'from_default' == context.environ['FOO_SECRET']
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO_SECRET:
@@ -179,7 +181,7 @@ def test_env_var_provider_with_value_set_in_environment():
         assert 'from_environ' == context.environ['FOO']
 
     # set a default to be sure we prefer 'environ' instead
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO:
@@ -206,7 +208,7 @@ def test_env_var_provider_with_value_set_in_local_state():
         assert 'FOO' in context.environ
         assert 'from_local_state' == context.environ['FOO']
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO:
@@ -238,7 +240,7 @@ def test_env_var_provider_with_encrypted_value_set_in_local_state():
         assert 'FOO_PASSWORD' in context.environ
         assert 'from_local_state' == context.environ['FOO_PASSWORD']
 
-    with_directory_contents(
+    with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO_PASSWORD:
@@ -289,7 +291,8 @@ def test_env_var_provider_configure_local_state_value():
         local_state_file_3 = LocalStateFile.load_for_directory(dirname)
         assert local_state_file_3.get_value(['variables', 'FOO']) is None
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   - FOO
 """}, check_env_var_provider_config_local_state)
@@ -332,7 +335,8 @@ def test_env_var_provider_configure_encrypted_value():
 
     keyring.enable_fallback_keyring()
     try:
-        with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+        with_directory_contents_completing_project_file(
+            {DEFAULT_PROJECT_FILENAME: """
 variables:
   - FOO_PASSWORD
 """}, check_env_var_provider_config_local_state)
@@ -368,7 +372,8 @@ def test_env_var_provider_configure_disabled_local_state_value():
         config = provider.read_config(requirement, environ, local_state_file, 'default', UserConfigOverrides())
         assert config == dict(source='unset', value='bar')
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   - FOO
 """}, check_env_var_provider_config_disabled_local_state)
@@ -412,7 +417,8 @@ def test_env_var_provider_config_html():
         assert 'Use this value instead:' in html
 
     # set a default to be sure we prefer 'environ' instead
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   - FOO
 """}, check_env_var_provider_config)
@@ -429,7 +435,8 @@ def test_env_var_provider_prepare_unprepare():
         assert status.logs == ["Nothing to clean up for FOO.",
                                ("Current environment is not in %s, no need to delete it." % dirname)]
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
 """}, check_env_var_provider_prepare)
