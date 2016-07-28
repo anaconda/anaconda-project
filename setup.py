@@ -488,7 +488,7 @@ class CondaPackageCommand(Command):
                     print("Already built for python %s at %s" % (python_version, package_path))
                 else:
                     print("Calling conda build for %s %s" % (python_version, build_arch))
-                    code = subprocess.call(['conda', 'build', '--channel', 'conda-forge', '--no-binstar-upload',
+                    code = subprocess.call(['conda', 'build', '--channel', 'conda-kapsel', '--no-binstar-upload',
                                             '--python', python_version, recipe_dir])
                     if code != 0:
                         raise Exception("Failed to build for python version " + python_version)
