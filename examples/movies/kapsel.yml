@@ -1,14 +1,15 @@
-name: "Movie Example"
-
-description: "An example Bokeh app"
-
+name: Movie Example
+description: An example Bokeh app
 commands:
   default:
     bokeh_app: main.py
 
 downloads:
-  MOVIE_DATA: 'https://s3.amazonaws.com/bokeh_data/movies.db.zip'
-
+  MOVIE_DATA: https://s3.amazonaws.com/bokeh_data/movies.db.zip
 packages:
-  - bokeh
-  - pandas
+- bokeh
+- pandas
+env_specs:
+  default:
+    channels: []
+    packages: []
