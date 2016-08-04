@@ -1,14 +1,15 @@
-name: "Stocks Example"
-
-description: "An example Bokeh app."
-
+name: Stocks Example
+description: An example Bokeh app.
 commands:
   default:
     bokeh_app: main.py
 
 downloads:
-  QUANTQUOTE: 'http://quantquote.com/files/quantquote_daily_sp500_83986.zip'
-
+  QUANTQUOTE: http://quantquote.com/files/quantquote_daily_sp500_83986.zip
 packages:
-  - bokeh=0.11.1
-  - pandas
+- bokeh=0.11.1
+- pandas
+env_specs:
+  default:
+    channels: []
+    packages: []
