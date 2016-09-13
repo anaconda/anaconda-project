@@ -104,9 +104,10 @@ class DefaultCondaManager(CondaManager):
                 raise CondaManagerError("Failed to create environment at %s: %s" % (prefix, str(e)))
 
         # now add pip if needed
-        if len(deviations.missing_pip_packages) > 0:
+        missing = list(deviations.missing_pip_packages)
+        if len(missing) > 0:
             try:
-                pip_api.install(prefix=prefix, pkgs=list(deviations.missing_pip_packages))
+                pip_api.install(prefix=prefix, pkgs=missing)
             except pip_api.PipError as e:
                 raise CondaManagerError("Failed to install missing pip packages: " + ", ".join(missing))
 
