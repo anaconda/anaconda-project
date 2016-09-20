@@ -987,6 +987,19 @@ def test_command_with_non_string_description():
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     description: []\n"}, check)
 
 
+def test_command_with_non_boolean_supports_http_options():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        expected_error = "%s: 'supports_http_options' field of command %s must be a boolean" % (
+            project.project_file.filename, 'default')
+        assert expected_error == project.problems[0]
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     supports_http_options: 'blah'\n"},
+        check)
+
+
 def test_command_with_custom_description():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1140,6 +1153,112 @@ def test_notebook_command_extra_args():
         check_notebook_command_extra_args)
 
 
+def test_notebook_command_with_kapsel_http_args():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.notebook == 'test.ipynb'
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert not command.auto_generated
+        assert command.supports_http_options
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(
+            environ,
+            extra_args=['foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host',
+                        'example.com', '--kapsel-no-browser'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        jupyter_notebook = find_executable('jupyter-notebook', path)
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--no-browser', '--port',
+                                 '1234', '--NotebookApp.base_url', 'blah', 'foo', 'bar']
+        assert cmd_exec.shell is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check)
+
+
+def test_notebook_command_disabled_kapsel_http_args():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.notebook == 'test.ipynb'
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert not command.auto_generated
+        assert not command.supports_http_options
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(
+            environ,
+            extra_args=['foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host',
+                        'example.com', '--kapsel-no-browser'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        jupyter_notebook = find_executable('jupyter-notebook', path)
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(
+            dirname, 'test.ipynb'), 'foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234',
+                                 '--kapsel-host', 'example.com', '--kapsel-no-browser']
+        assert cmd_exec.shell is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME:
+         "commands:\n default:\n    notebook: test.ipynb\n    supports_http_options: false\n"}, check)
+
+
+def test_notebook_command_kapsel_http_args_after_double_hyphen():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.notebook == 'test.ipynb'
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert not command.auto_generated
+        assert command.supports_http_options
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(
+            environ,
+            extra_args=['--', 'foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host',
+                        'example.com', '--kapsel-no-browser'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        jupyter_notebook = find_executable('jupyter-notebook', path)
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(
+            dirname, 'test.ipynb'), '--', 'foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234',
+                                 '--kapsel-host', 'example.com', '--kapsel-no-browser']
+        assert cmd_exec.shell is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check)
+
+
+def test_notebook_command_with_kapsel_http_args_separated_by_equals():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.notebook == 'test.ipynb'
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert not command.auto_generated
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(
+            environ,
+            extra_args=['foo', 'bar', '--kapsel-url-prefix=blah', '--kapsel-port=1234', '--kapsel-host=example.com',
+                        '--kapsel-no-browser'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        jupyter_notebook = find_executable('jupyter-notebook', path)
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--no-browser', '--port',
+                                 '1234', '--NotebookApp.base_url', 'blah', 'foo', 'bar']
+        assert cmd_exec.shell is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check)
+
+
 def test_notebook_guess_command():
     def check_notebook_guess_command(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1237,7 +1356,7 @@ def test_bokeh_command():
         cmd_exec = command.exec_info_for_environment(environ)
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         bokeh = find_executable('bokeh', path)
-        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py')]
+        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--show']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1256,14 +1375,95 @@ def test_bokeh_command_with_extra_args():
         assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
-        cmd_exec = command.exec_info_for_environment(environ, extra_args=['--show'])
+        cmd_exec = command.exec_info_for_environment(environ, extra_args=['--foo'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         bokeh = find_executable('bokeh', path)
-        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--show']
+        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--show', '--foo']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check_bokeh_command_extra_args)
+
+
+def test_bokeh_command_with_kapsel_http_args():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.bokeh_app == 'test.py'
+        assert command.notebook is None
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert command.supports_http_options
+        assert not command.auto_generated
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(
+            environ,
+            extra_args=['--foo', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host', 'example.com',
+                        '--kapsel-no-browser'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        bokeh = find_executable('bokeh', path)
+        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--host', 'example.com', '--port',
+                                 '1234', '--prefix', 'blah', '--foo']
+        assert cmd_exec.shell is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check)
+
+
+def test_bokeh_command_with_value_missing_for_kapsel_http_args():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.bokeh_app == 'test.py'
+        assert command.notebook is None
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert command.supports_http_options
+        assert not command.auto_generated
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(
+            environ,
+            extra_args=['--foo', '--kapsel-url-prefix', '--kapsel-port', '--kapsel-host'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        bokeh = find_executable('bokeh', path)
+        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--host', '', '--show', '--port', '',
+                                 '--prefix', '', '--foo']
+        assert cmd_exec.shell is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check)
+
+
+def test_bokeh_command_with_disabled_kapsel_http_args():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.bokeh_app == 'test.py'
+        assert command.notebook is None
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert not command.supports_http_options
+        assert not command.auto_generated
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(
+            environ,
+            extra_args=['--foo', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host', 'example.com',
+                        '--kapsel-no-browser'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        bokeh = find_executable('bokeh', path)
+        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--foo', '--kapsel-url-prefix',
+                                 'blah', '--kapsel-port', '1234', '--kapsel-host', 'example.com', '--kapsel-no-browser']
+        assert cmd_exec.shell is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n    supports_http_options: false\n"},
+        check)
 
 
 def test_run_argv_from_project_file_app_entry():
@@ -1647,6 +1847,7 @@ commands:
   foo:
     unix: echo hi
     description: "say hi"
+    supports_http_options: true
   bar:
     windows: echo boo
     env_spec: lol
@@ -1697,18 +1898,23 @@ def test_get_publication_info_from_complex_project():
             'name': 'foobar',
             'description': 'A very complicated project.',
             'commands': {'bar': {'description': 'echo boo',
-                                 'env_spec': 'lol'},
+                                 'env_spec': 'lol',
+                                 'supports_http_options': False},
                          'baz': {'description': 'echo blah',
-                                 'env_spec': 'default'},
+                                 'env_spec': 'default',
+                                 'supports_http_options': False},
                          'foo': {'description': 'say hi',
                                  'default': True,
-                                 'env_spec': 'default'},
+                                 'env_spec': 'default',
+                                 'supports_http_options': True},
                          'myapp': {'description': 'Bokeh app main.py',
                                    'bokeh_app': 'main.py',
-                                   'env_spec': 'woot'},
+                                   'env_spec': 'woot',
+                                   'supports_http_options': True},
                          'foo.ipynb': {'description': 'Notebook foo.ipynb',
                                        'notebook': 'foo.ipynb',
-                                       'env_spec': 'default'}},
+                                       'env_spec': 'default',
+                                       'supports_http_options': True}},
             'downloads': {'FOO': {'encrypted': False,
                                   'title': 'FOO',
                                   'description': 'A downloaded file which is referenced by FOO.',

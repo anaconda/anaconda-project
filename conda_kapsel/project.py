@@ -431,6 +431,11 @@ class _ConfigCache(object):
                         project_file.filename, name))
                     failed = True
 
+                if 'supports_http_options' in attrs and not isinstance(attrs['supports_http_options'], bool):
+                    problems.append("{}: 'supports_http_options' field of command {} must be a boolean".format(
+                        project_file.filename, name))
+                    failed = True
+
                 if 'env_spec' in attrs:
                     if not is_string(attrs['env_spec']):
                         problems.append(
@@ -812,6 +817,7 @@ class Project(object):
             if command is self.default_command:
                 commands[key]['default'] = True
             commands[key]['env_spec'] = command.default_env_spec_name
+            commands[key]['supports_http_options'] = command.supports_http_options
         json['commands'] = commands
         envs = dict()
         for key, env in self.env_specs.items():

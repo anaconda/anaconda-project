@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 from copy import copy
+from collections import namedtuple
 from distutils.spawn import find_executable
 
 import os
@@ -26,6 +27,114 @@ def _is_windows():
     # it's tempting to cache this but it hoses our test monkeypatching so don't.
     # or at least be aware you'll have to fix tests...
     return (platform.system() == 'Windows')
+
+
+_ArgSpec = namedtuple('_ArgSpec', ['option', 'has_value'])
+
+_http_specs = (_ArgSpec('--kapsel-host', True), _ArgSpec('--kapsel-port', True), _ArgSpec('--kapsel-url-prefix', True),
+               _ArgSpec('--kapsel-no-browser', False))
+
+
+class _ArgsTransformer(object):
+    def __init__(self, specs):
+        self.specs = specs
+
+    def _parse_args_removing_known(self, results, args):
+        if not args:
+            return []
+
+        arg = args[0]
+
+        if arg == '--':
+            return args
+
+        for spec in self.specs:
+            if spec.has_value:
+                with_equals = spec.option + "="
+                if arg == spec.option:
+                    if len(args) == 1 or args[1].startswith("-"):
+                        # This means there isn't a value for the option, which
+                        # ideally might report a syntax error, but we have to
+                        # do a significant refactoring to get a syntax error
+                        # up to a user-visible place from here. Hopefully
+                        # the command we are launching will complain about the
+                        # empty value.
+                        results[spec.option].append('')
+                        return self._parse_args_removing_known(results, args[1:])
+                    else:
+                        results[spec.option].append(args[1])
+                        return self._parse_args_removing_known(results, args[2:])
+                elif arg.startswith(with_equals):
+                    results[spec.option].append(arg[len(with_equals):])
+                    return self._parse_args_removing_known(results, args[1:])
+            elif arg == spec.option:
+                results[spec.option] = [True]
+                return self._parse_args_removing_known(results, args[1:])
+
+        return [arg] + self._parse_args_removing_known(results, args[1:])
+
+    def transform_args(self, args):
+        results = {spec.option: [] for spec in self.specs}
+        with_removed = self._parse_args_removing_known(results, args)
+        # flatten results with deterministic sort to ease testing
+        results_list = sorted(results.items(), key=lambda x: x[0])
+        return self.add_args(results_list, with_removed)
+
+    def add_args(self, results, args):
+        raise RuntimeError("not implemented")  # pragma: no cover
+
+
+class _BokehArgsTransformer(_ArgsTransformer):
+    def __init__(self):
+        super(_BokehArgsTransformer, self).__init__(_http_specs)
+
+    def add_args(self, results, args):
+        added = []
+        for (option, values) in results:
+            if option in ('--kapsel-host', '--kapsel-port'):
+                for v in values:
+                    added.append(option.replace('kapsel-', ''))
+                    added.append(v)
+            elif option == '--kapsel-url-prefix':
+                for v in values:
+                    added.append('--prefix')
+                    added.append(v)
+            elif option == '--kapsel-no-browser':
+                if not values:
+                    added.append('--show')
+            else:
+                raise RuntimeError("unhandled http option for notebook")  # pragma: no cover
+
+        return added + args
+
+
+class _NotebookArgsTransformer(_ArgsTransformer):
+    def __init__(self):
+        super(_NotebookArgsTransformer, self).__init__(_http_specs)
+
+    def add_args(self, results, args):
+        added = []
+        for (option, values) in results:
+            # currently we do nothing with --kapsel-host for notebooks, is this ok?
+            if option == '--kapsel-host':
+                pass
+            # pass through --port
+            elif option == '--kapsel-port':
+                for v in values:
+                    added.append(option.replace('kapsel-', ''))
+                    added.append(v)
+            elif option == '--kapsel-no-browser':
+                if values and values[0] is True:
+                    added.append('--no-browser')
+            # rename --kapsel-url-prefix to --NotebookApp.base_url
+            elif option == '--kapsel-url-prefix':
+                for v in values:
+                    added.append('--NotebookApp.base_url')
+                    added.append(v)
+            else:
+                raise RuntimeError("unhandled http option for notebooks")  # pragma: no cover
+
+        return added + args
 
 
 class CommandExecInfo(object):
@@ -163,6 +272,12 @@ class ProjectCommand(object):
         return self._name
 
     @property
+    def supports_http_options(self):
+        """Can accept the --kapsel-* options for HTTP servers."""
+        default = (self.notebook is not None or self.bokeh_app is not None)
+        return self._attributes.get('supports_http_options', default)
+
+    @property
     def notebook(self):
         """Notebook filename relative to project directory, or None."""
         return self._attributes.get('notebook', None)
@@ -261,10 +376,14 @@ class ProjectCommand(object):
         if self.notebook is not None:
             path = os.path.join(environ['PROJECT_DIR'], self.notebook)
             args = ['jupyter-notebook', path]
+            if self.supports_http_options:
+                extra_args = _NotebookArgsTransformer().transform_args(extra_args)
 
         if self.bokeh_app is not None:
             path = os.path.join(environ['PROJECT_DIR'], self.bokeh_app)
             args = ['bokeh', 'serve', path]
+            if self.supports_http_options:
+                extra_args = _BokehArgsTransformer().transform_args(extra_args)
 
         if self.args is not None:
             args = self.args
