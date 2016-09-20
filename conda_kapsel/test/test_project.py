@@ -1113,7 +1113,6 @@ def test_notebook_command():
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb')]
         assert cmd_exec.shell is False
-        assert cmd_exec.notebook == 'test.ipynb'
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check_notebook_command)
@@ -1135,7 +1134,6 @@ def test_notebook_command_extra_args():
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), 'foo', 'bar']
         assert cmd_exec.shell is False
-        assert cmd_exec.notebook == 'test.ipynb'
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"},
@@ -1164,7 +1162,6 @@ def test_notebook_guess_command():
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, expected_nb_path]
         assert cmd_exec.shell is False
-        assert cmd_exec.notebook == 'test.ipynb'
 
     with_directory_contents_completing_project_file(
         {
@@ -1242,7 +1239,6 @@ def test_bokeh_command():
         bokeh = find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py')]
         assert cmd_exec.shell is False
-        assert cmd_exec.bokeh_app == 'test.py'
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check_bokeh_command)
@@ -1265,7 +1261,6 @@ def test_bokeh_command_with_extra_args():
         bokeh = find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--show']
         assert cmd_exec.shell is False
-        assert cmd_exec.bokeh_app == 'test.py'
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check_bokeh_command_extra_args)

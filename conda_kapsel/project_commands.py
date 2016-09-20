@@ -37,8 +37,6 @@ class CommandExecInfo(object):
         self._args = args
         self._shell = shell
         self._env = env
-        self._notebook = notebook
-        self._bokeh_app = bokeh_app
         assert shell is False or len(args) == 1
 
     @property
@@ -64,16 +62,6 @@ class CommandExecInfo(object):
     def env(self):
         """Environment to run the command in."""
         return self._env
-
-    @property
-    def notebook(self):
-        """Notebook filename relative to project directory, or None."""
-        return self._notebook
-
-    @property
-    def bokeh_app(self):
-        """Bokeh app filename relative to project directory, or None."""
-        return self._bokeh_app
 
     def popen(self, **kwargs):
         """Convenience method runs the command using Popen.
@@ -355,9 +343,4 @@ class ProjectCommand(object):
         # more useful. This way apps can for example find
         # sample data files relative to the project
         # directory.
-        return CommandExecInfo(cwd=environ['PROJECT_DIR'],
-                               args=args,
-                               env=environ,
-                               shell=shell,
-                               notebook=self.notebook,
-                               bokeh_app=self.bokeh_app)
+        return CommandExecInfo(cwd=environ['PROJECT_DIR'], args=args, env=environ, shell=shell)
