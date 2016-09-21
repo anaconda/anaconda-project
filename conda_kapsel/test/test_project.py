@@ -1689,13 +1689,20 @@ def _run_argv_for_environment(environ,
             print("os.path.exists(%s) = %s" % (batscript, repr(os.path.exists(batscript))), file=sys.stderr)
             while attempts > 0 and os.path.exists(batscript):
                 try:
+                    print("Attempting to remove %s" % (batscript), file=sys.stderr)
                     os.remove(batscript)
                 except Exception as e:
                     print("Failed to remove %s: %s" % (batscript, str(e)), file=sys.stderr)
                     time.sleep(1)
                     attempts = attempts - 1
                 else:
-                    print("Removed %s successfully" % (batscript), file=sys.stderr)
+                    print("os.remove did not throw removing %s" % (batscript), file=sys.stderr)
+                    print("after remove, os.path.exists(%s) = %s" % (batscript, repr(os.path.exists(batscript))),
+                          file=sys.stderr)
+                    try:
+                        print("after remove, files in %s: %r" % (dirname, os.listdir(dirname)), file=sys.stderr)
+                    except Exception:
+                        pass
 
     with_directory_contents_completing_project_file(
         {
