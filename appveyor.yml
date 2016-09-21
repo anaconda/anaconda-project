@@ -34,6 +34,9 @@ install:
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda info -a
   - conda create -q -n test-environment python=%PYTHON_VERSION% pip pycrypto bcrypt ipython-notebook bokeh ruamel_yaml anaconda-client requests beautifulsoup4 tornado coverage pytest pytest-cov
+  # this is because some tests seem to fail because we try to unpack the python 3.5 package
+  # before it's downloaded, or something... by preseeding the cache maybe we can fix it.
+  - if "%PYTHON_VERSION%" == "3.4" conda create -q -n throwaway-python5 python
 
 # Not a .NET project, we build in the install step instead
 build: false
