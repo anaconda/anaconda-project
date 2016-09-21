@@ -1679,12 +1679,14 @@ def _run_argv_for_environment(environ,
             assert output.strip() == expected_output.format(dirname=dirname)
         finally:
             if old_dir is not None:
+                print("Changing back to %s from %s" % (old_dir, dirname), file=sys.stderr)
                 os.chdir(old_dir)
             # this should happen automatically but it's failing sometimes on
             # Windows maybe because of a race where echo_stuff.bat is still
             # in use.
             batscript = os.path.join(dirname, "echo_stuff.bat")
-            attempts = 3
+            attempts = 6
+            print("os.path.exists(%s) = %s" % (batscript, repr(os.path.exists(batscript))), file=sys.stderr)
             while attempts > 0 and os.path.exists(batscript):
                 try:
                     os.remove(batscript)
@@ -1692,6 +1694,8 @@ def _run_argv_for_environment(environ,
                     print("Failed to remove %s: %s" % (batscript, str(e)), file=sys.stderr)
                     time.sleep(1)
                     attempts = attempts - 1
+                else:
+                    print("Removed %s successfully" % (batscript), file=sys.stderr)
 
     with_directory_contents_completing_project_file(
         {
