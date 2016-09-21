@@ -1687,6 +1687,8 @@ def _run_argv_for_environment(environ,
             batscript = os.path.join(dirname, "echo_stuff.bat")
             attempts = 6
             print("os.path.exists(%s) = %s" % (batscript, repr(os.path.exists(batscript))), file=sys.stderr)
+            print("before remove, os.stat(%s) = %r" % (batscript, os.stat(batscript)))
+            print("before remove, os.stat(%s) = %r" % (dirname, os.stat(dirname)))
             while attempts > 0 and os.path.exists(batscript):
                 try:
                     print("Attempting to remove %s" % (batscript), file=sys.stderr)
@@ -1699,6 +1701,11 @@ def _run_argv_for_environment(environ,
                     print("os.remove did not throw removing %s" % (batscript), file=sys.stderr)
                     print("after remove, os.path.exists(%s) = %s" % (batscript, repr(os.path.exists(batscript))),
                           file=sys.stderr)
+                    try:
+                        print("after remove, os.stat(%s) = %r" % (batscript, os.stat(batscript)))
+                    except Exception as e:
+                        print("after remove, could not stat the script")
+
                     try:
                         print("after remove, files in %s: %r" % (dirname, os.listdir(dirname)), file=sys.stderr)
                     except Exception:
