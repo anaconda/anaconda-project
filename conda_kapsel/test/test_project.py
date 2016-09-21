@@ -1412,6 +1412,32 @@ def test_bokeh_command_with_kapsel_http_args():
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check)
 
 
+def test_bokeh_command_with_multiple_host_args():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.bokeh_app == 'test.py'
+        assert command.notebook is None
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert command.supports_http_options
+        assert not command.auto_generated
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(
+            environ,
+            extra_args=['--kapsel-host', 'example.com', '--kapsel-host', 'example2.com'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        bokeh = find_executable('bokeh', path)
+        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--host', 'example.com', '--host',
+                                 'example2.com', '--show']
+        assert cmd_exec.shell is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check)
+
+
 def test_bokeh_command_with_value_missing_for_kapsel_http_args():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
