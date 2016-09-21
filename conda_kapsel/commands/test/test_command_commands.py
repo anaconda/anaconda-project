@@ -23,6 +23,7 @@ class Args(object):
         self.command = command
         self.directory = directory
         self.env_spec = None
+        self.supports_http_options = None
 
 
 def test_add_command_ask_type(monkeypatch):
@@ -238,6 +239,43 @@ def test_add_command_with_env_spec(monkeypatch, capsys):
         assert command['notebook'] == 'file.ipynb'
         assert command['env_spec'] == 'foo'
         assert len(command.keys()) == 2
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
+
+
+def test_add_command_with_supports_http_options(monkeypatch, capsys):
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'add-command', '--directory', dirname,
+                                               '--supports-http-options', '--type', 'notebook', 'test', 'file.ipynb'])
+        assert code == 0
+
+        project = Project(dirname)
+
+        command = project.project_file.get_value(['commands', 'test'])
+        assert command['notebook'] == 'file.ipynb'
+        assert command['env_spec'] == 'default'
+        assert command['supports_http_options'] is True
+        assert len(command.keys()) == 3
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
+
+
+def test_add_command_with_no_supports_http_options(monkeypatch, capsys):
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(
+            ['conda-kapsel', 'add-command', '--directory', dirname, '--no-supports-http-options', '--type', 'notebook',
+             'test', 'file.ipynb'])
+        assert code == 0
+
+        project = Project(dirname)
+
+        command = project.project_file.get_value(['commands', 'test'])
+        assert command['notebook'] == 'file.ipynb'
+        assert command['env_spec'] == 'default'
+        assert command['supports_http_options'] is False
+        assert len(command.keys()) == 3
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)

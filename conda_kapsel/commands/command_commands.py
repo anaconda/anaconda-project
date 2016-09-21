@@ -40,7 +40,7 @@ def _ask_command(command):
         return choices[data]
 
 
-def add_command(project_dir, name, command_type, command, env_spec_name):
+def add_command(project_dir, name, command_type, command, env_spec_name, supports_http_options):
     """Add command to kapsel.yml.
 
     Returns:
@@ -60,7 +60,7 @@ def add_command(project_dir, name, command_type, command, env_spec_name):
         print("Specify the --type option to add this command.", file=sys.stderr)
         return 1
 
-    status = project_ops.add_command(project, name, command_type, command, env_spec_name)
+    status = project_ops.add_command(project, name, command_type, command, env_spec_name, supports_http_options)
     if not status:
         console_utils.print_status_errors(status)
         return 1
@@ -106,7 +106,7 @@ def list_commands(project_dir):
 
 def main(args):
     """Submit the add command with args and returns exit code."""
-    return add_command(args.directory, args.name, args.type, args.command, args.env_spec)
+    return add_command(args.directory, args.name, args.type, args.command, args.env_spec, args.supports_http_options)
 
 
 def main_remove(args):
