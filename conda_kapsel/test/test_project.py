@@ -1172,7 +1172,7 @@ def test_notebook_command_with_kapsel_http_args():
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--no-browser', '--port',
-                                 '1234', '--NotebookApp.base_url', 'blah', 'foo', 'bar']
+                                 '1234', '--NotebookApp.base_url=blah', 'foo', 'bar']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1252,7 +1252,7 @@ def test_notebook_command_with_kapsel_http_args_separated_by_equals():
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--no-browser', '--port',
-                                 '1234', '--NotebookApp.base_url', 'blah', 'foo', 'bar']
+                                 '1234', '--NotebookApp.base_url=blah', 'foo', 'bar']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(

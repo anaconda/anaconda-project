@@ -129,8 +129,9 @@ class _NotebookArgsTransformer(_ArgsTransformer):
             # rename --kapsel-url-prefix to --NotebookApp.base_url
             elif option == '--kapsel-url-prefix':
                 for v in values:
-                    added.append('--NotebookApp.base_url')
-                    added.append(v)
+                    # notebook does not support the two-arg form
+                    # without '=' here, for some reason.
+                    added.append('--NotebookApp.base_url=' + v)
             else:
                 raise RuntimeError("unhandled http option for notebooks")  # pragma: no cover
 
