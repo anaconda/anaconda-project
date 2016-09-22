@@ -15,6 +15,28 @@ class QuoteResource(object):
         resp.body = json.dumps(quote)
 
 
+# A Falcon resource that explains what this server is
+class IndexResource(object):
+    def __init__(self, prefix):
+        self.prefix = prefix
+
+    def on_get(self, req, resp):
+        """Handles GET requests"""
+        resp.body = """
+<html>
+  <head>
+    <title>Quote API Server</title>
+  </head>
+  <body>
+    <p>This is a toy JSON API server example.</p>
+    <p>Make a GET request to <a href="%s/quote">%s/quote</a></p>
+  </body>
+</html>
+""" % (self.prefix, self.prefix)
+        resp.content_type = "text/html"
+        resp.status = falcon.HTTP_200
+
+
 # A Falcon middleware to implement validation of the Host header in requests
 class HostFilter(object):
     def __init__(self, hosts):
@@ -39,6 +61,7 @@ class QuoteApplication(gunicorn.app.base.BaseApplication):
         assert port is not None
         self.application = falcon.API(middleware=HostFilter(hosts))
         self.application.add_route(prefix + '/quote', QuoteResource())
+        self.application.add_route(prefix + "/", IndexResource(prefix))
         self.port = port
         super(QuoteApplication, self).__init__()
 
