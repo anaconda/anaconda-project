@@ -567,6 +567,83 @@ def test_add_command_modifies_env_spec():
                                     '    bokeh_app: replaced.py\n')}, check_add_command)
 
 
+def test_add_command_leaves_supports_http_options():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project,
+                                         'bokeh_test',
+                                         'bokeh_app',
+                                         'file.py',
+                                         env_spec_name=None,
+                                         supports_http_options=None)
+        assert result
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'bokeh_test'])
+        assert command['bokeh_app'] == 'file.py'
+        assert command['env_spec'] == 'foo'
+        assert command['supports_http_options'] is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                    '  foo: {}\n'
+                                    'commands:\n'
+                                    '  bokeh_test:\n'
+                                    '    supports_http_options: false\n'
+                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+
+
+def test_add_command_leaves_supports_http_options_unset():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project,
+                                         'bokeh_test',
+                                         'bokeh_app',
+                                         'file.py',
+                                         env_spec_name=None,
+                                         supports_http_options=None)
+        assert result
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'bokeh_test'])
+        assert command['bokeh_app'] == 'file.py'
+        assert command['env_spec'] == 'foo'
+        assert 'supports_http_options' not in command
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                    '  foo: {}\n'
+                                    'commands:\n'
+                                    '  bokeh_test:\n'
+                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+
+
+def test_add_command_modifies_supports_http_options():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project,
+                                         'bokeh_test',
+                                         'bokeh_app',
+                                         'file.py',
+                                         env_spec_name=None,
+                                         supports_http_options=True)
+        assert result
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'bokeh_test'])
+        assert command['bokeh_app'] == 'file.py'
+        assert command['env_spec'] == 'foo'
+        assert command['supports_http_options'] is True
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                    '  foo: {}\n'
+                                    'commands:\n'
+                                    '  bokeh_test:\n'
+                                    '    supports_http_options: false\n'
+                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+
+
 def test_add_command_invalid_type():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)

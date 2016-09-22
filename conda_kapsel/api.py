@@ -494,7 +494,7 @@ class AnacondaProject(object):
         """
         return project_ops.remove_packages(project=project, env_spec_name=env_spec_name, packages=packages)
 
-    def add_command(self, project, name, command_type, command, env_spec_name=None):
+    def add_command(self, project, name, command_type, command, env_spec_name=None, supports_http_options=None):
         """Add a command to kapsel.yml.
 
         Returns a ``Status`` subtype (it won't be a
@@ -507,6 +507,7 @@ class AnacondaProject(object):
            command_type (str): choice of `bokeh_app`, `notebook`, `unix` or `windows` command
            command (str): the command line or filename itself
            env_spec_name (str): env spec to use with this command
+           supports_http_options (bool): whether command supports --kapsel-* http server options
 
         Returns:
            a ``Status`` instance
@@ -516,7 +517,8 @@ class AnacondaProject(object):
                                        name=name,
                                        command_type=command_type,
                                        command=command,
-                                       env_spec_name=env_spec_name)
+                                       env_spec_name=env_spec_name,
+                                       supports_http_options=supports_http_options)
 
     def update_command(self, project, name, command_type=None, command=None, new_name=None):
         """Update attributes of a command in kapsel.yml.

@@ -27,8 +27,8 @@ install:
   - set PATH
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda config --set always_yes yes
-  # upgrade to latest conda
-  - conda update -n root -q conda
+  # upgrade (or downgrade) to our pinned conda version
+  - conda install -n root -q conda=4.1.12
   # activate with newer conda, may set different variables
   - "%CONDA_ROOT%\\Scripts\\activate root"
   - echo CONDA_PREFIX %CONDA_PREFIX%

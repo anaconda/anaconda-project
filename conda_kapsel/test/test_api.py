@@ -385,7 +385,12 @@ def test_add_command(monkeypatch):
 
     p = api.AnacondaProject()
 
-    kwargs = dict(project=43, command_type='bokeh_app', name='name', command='file.py', env_spec_name='foo')
+    kwargs = dict(project=43,
+                  command_type='bokeh_app',
+                  name='name',
+                  command='file.py',
+                  env_spec_name='foo',
+                  supports_http_options=True)
     result = p.add_command(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

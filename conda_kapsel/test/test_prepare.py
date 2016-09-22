@@ -219,12 +219,12 @@ def test_prepare_choose_command():
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ, command_name='foo')
         assert result
-        assert result.command_exec_info.bokeh_app == 'foo.py'
+        assert os.path.join(project.directory_path, 'foo.py') in result.command_exec_info.args
 
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ, command_name='bar')
         assert result
-        assert result.command_exec_info.bokeh_app == 'bar.py'
+        assert os.path.join(project.directory_path, 'bar.py') in result.command_exec_info.args
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -248,7 +248,7 @@ def test_prepare_command_not_in_project():
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ, command=command)
         assert result
-        assert result.command_exec_info.bokeh_app == 'foo.py'
+        assert os.path.join(project.directory_path, 'foo.py') in result.command_exec_info.args
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """

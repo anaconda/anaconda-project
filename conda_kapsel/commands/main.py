@@ -237,8 +237,16 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('--type', action="store", choices=command_choices, help="Command type to add")
     add_command_name_arg(preset)
     add_env_spec_arg(preset)
+    preset.add_argument('--supports-http-options',
+                        dest='supports_http_options',
+                        action="store_true",
+                        help="The command supports kapsel's HTTP server options")
+    preset.add_argument('--no-supports-http-options',
+                        dest='supports_http_options',
+                        action="store_false",
+                        help=" The command does not support kapsel's HTTP server options")
     preset.add_argument('command', metavar="COMMAND", help="Command line or app filename to add")
-    preset.set_defaults(main=command_commands.main)
+    preset.set_defaults(main=command_commands.main, supports_http_options=None)
 
     preset = subparsers.add_parser('remove-command', help="Remove a command from the project")
     add_directory_arg(preset)

@@ -725,7 +725,7 @@ def unset_variables(project, vars_to_unset, env_spec_name=None):
     return SimpleStatus(success=True, description=("Variables were unset."))
 
 
-def add_command(project, name, command_type, command, env_spec_name=None):
+def add_command(project, name, command_type, command, env_spec_name=None, supports_http_options=None):
     """Add a command to kapsel.yml.
 
     Returns a ``Status`` subtype (it won't be a
@@ -738,6 +738,7 @@ def add_command(project, name, command_type, command, env_spec_name=None):
        command_type (str): choice of `bokeh_app`, `notebook`, `unix` or `windows` command
        command (str): the command line or filename itself
        env_spec_name (str): env spec to use with this command
+       supports_http_options (bool): None for leave it alone, otherwise true or false
 
     Returns:
        a ``Status`` instance
@@ -767,6 +768,10 @@ def add_command(project, name, command_type, command, env_spec_name=None):
         # env_spec every time.
     else:
         command_dict['env_spec'] = env_spec_name
+
+    if supports_http_options is not None:
+        assert isinstance(supports_http_options, bool)
+        command_dict['supports_http_options'] = supports_http_options
 
     project.project_file.use_changes_without_saving()
 
