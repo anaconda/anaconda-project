@@ -9,7 +9,7 @@ notebooks.
 
 To run this example:
 ```
-conda kapsel run quote_api  --kapsel-port 8081 --kapsel-host example.com --kapsel-no-browser --kapsel-url-prefix /foo
+conda kapsel run quote_api  --kapsel-port 8081 --kapsel-host localhost:8081 --kapsel-no-browser --kapsel-url-prefix /foo
 ```
 
 The options are:
