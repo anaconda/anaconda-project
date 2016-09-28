@@ -87,9 +87,13 @@ parser.add_argument('--kapsel-host', action='append', help='Hostname to allow in
 parser.add_argument('--kapsel-no-browser', action='store_true', default=False, help='Disable opening in a browser')
 parser.add_argument('--kapsel-url-prefix', action='store', default='', help='Prefix in front of urls')
 parser.add_argument('--kapsel-port', action='store', default='8080', help='Port to listen on')
+parser.add_argument('--kapsel-iframe-hosts',
+                    action='append',
+                    help='Space-separated hosts which can embed us in an iframe per our Content-Security-Policy')
 
 if __name__ == '__main__':
-    # This app accepts but ignores --kapsel-no-browser because we never bother to open a browser
+    # This app accepts but ignores --kapsel-no-browser because we never bother to open a browser,
+    # and accepts but ignores --kapsel-iframe-hosts since iframing an API makes no sense.
     args = parser.parse_args(sys.argv[1:])
     if not args.kapsel_host:
         args.kapsel_host = ['localhost:' + args.kapsel_port]

@@ -32,7 +32,7 @@ def _is_windows():
 _ArgSpec = namedtuple('_ArgSpec', ['option', 'has_value'])
 
 _http_specs = (_ArgSpec('--kapsel-host', True), _ArgSpec('--kapsel-port', True), _ArgSpec('--kapsel-url-prefix', True),
-               _ArgSpec('--kapsel-no-browser', False))
+               _ArgSpec('--kapsel-no-browser', False), _ArgSpec('--kapsel-iframe-hosts', True))
 
 
 class _ArgsTransformer(object):
@@ -102,6 +102,9 @@ class _BokehArgsTransformer(_ArgsTransformer):
             elif option == '--kapsel-no-browser':
                 if not values:
                     added.append('--show')
+            elif option == '--kapsel-iframe-hosts':
+                # bokeh doesn't have a way to set this
+                pass
             else:
                 raise RuntimeError("unhandled http option for notebook")  # pragma: no cover
 
@@ -132,6 +135,17 @@ class _NotebookArgsTransformer(_ArgsTransformer):
                     # notebook does not support the two-arg form
                     # without '=' here, for some reason.
                     added.append('--NotebookApp.base_url=' + v)
+            elif option == '--kapsel-iframe-hosts':
+                if len(values) > 0:
+                    # the quoting here is sort of a headache. We need to get
+                    # a python dictionary literal onto the command line for
+                    # jupyter, containing the Content-Security-Policy header value.
+                    # The single quotes around 'self' should be in the header value
+                    # sent to the browser.
+                    full_list = "'self' " + " ".join(values)
+                    python_dict_literal = """{ 'headers': { 'Content-Security-Policy': "frame-ancestors """ + \
+                                          full_list + '" } }'
+                    added.append('--NotebookApp.tornado_settings=' + python_dict_literal)
             else:
                 raise RuntimeError("unhandled http option for notebooks")  # pragma: no cover
 

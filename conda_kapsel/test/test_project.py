@@ -1168,11 +1168,14 @@ def test_notebook_command_with_kapsel_http_args():
         cmd_exec = command.exec_info_for_environment(
             environ,
             extra_args=['foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host',
-                        'example.com', '--kapsel-no-browser'])
+                        'example.com', '--kapsel-no-browser', '--kapsel-iframe-hosts=foo1.com *.foo2.com'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
-        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--no-browser', '--port',
-                                 '1234', '--NotebookApp.base_url=blah', 'foo', 'bar']
+        assert cmd_exec.args == [
+            jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--NotebookApp.tornado_settings=' +
+            """{ 'headers': { 'Content-Security-Policy': "frame-ancestors 'self' foo1.com *.foo2.com" } }""",
+            '--no-browser', '--port', '1234', '--NotebookApp.base_url=blah', 'foo', 'bar'
+        ]
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1401,7 +1404,7 @@ def test_bokeh_command_with_kapsel_http_args():
         cmd_exec = command.exec_info_for_environment(
             environ,
             extra_args=['--foo', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host', 'example.com',
-                        '--kapsel-no-browser'])
+                        '--kapsel-no-browser', '--kapsel-iframe-hosts=foo1.com *.foo2.com'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         bokeh = find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--host', 'example.com', '--port',
@@ -1436,6 +1439,34 @@ def test_bokeh_command_with_multiple_host_args():
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check)
+
+
+def test_bokeh_command_with_multiple_iframe_hosts_args():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.bokeh_app is None
+        assert command.notebook == "test.ipynb"
+        assert command.unix_shell_commandline is None
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+        assert command.supports_http_options
+        assert not command.auto_generated
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(
+            environ,
+            extra_args=['--kapsel-iframe-hosts', 'example.com', '--kapsel-iframe-hosts', 'foo1.com *.foo2.com'])
+        path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
+        jupyter = find_executable('jupyter-notebook', path)
+        assert cmd_exec.args == [
+            jupyter, os.path.join(dirname, 'test.ipynb'), '--NotebookApp.tornado_settings=' +
+            """{ 'headers': { 'Content-Security-Policy': "frame-ancestors 'self' example.com foo1.com *.foo2.com" } }"""
+        ]
+        assert cmd_exec.shell is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check)
 
 
 def test_bokeh_command_with_value_missing_for_kapsel_http_args():
