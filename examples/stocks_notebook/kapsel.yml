@@ -1,0 +1,15 @@
+name: StocksLive
+
+commands:
+  stocks_live:
+    notebook: stocks_live.ipynb
+
+# packages that apply to all env specs
+packages:
+- ipython-notebook
+- bokeh
+
+env_specs:
+  default:
+    channels: []
+    packages: []
