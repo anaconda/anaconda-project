@@ -386,7 +386,7 @@ def _extract_files_tar(tar_path, src_and_dest, logs):
 
             try:
                 tf.chown(member, dest, False)  # pragma: no cover (python 3.5 has another param)
-            except TypeError:
+            except TypeError:  # pragma: no cover
                 tf.chown(member, dest)  # pragma: no cover (python 2.7, 3.4)
             tf.chmod(member, dest)
             tf.utime(member, dest)
