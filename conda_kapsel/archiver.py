@@ -381,7 +381,7 @@ def _extract_files_tar(tar_path, src_and_dest, logs):
                 makedirs_ok_if_exists(os.path.dirname(dest))
                 tf.makefile(member, dest)
             else:
-                assert member.isdir()
+                assert member.isdir()  # we filtered out other types
                 makedirs_ok_if_exists(dest)
 
             tf.chown(member, dest)
