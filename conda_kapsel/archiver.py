@@ -526,7 +526,8 @@ def _unarchive_project(archive_filename, project_dir, parent_dir=None):
                                 description=("Could not unpack archive %s" % archive_filename),
                                 errors=["Archive does not contain a project directory or is empty."])
 
-        makedirs_ok_if_exists(canonical_project_dir)
+        assert not os.path.exists(canonical_project_dir)
+        os.makedirs(canonical_project_dir)
 
         extract_files(archive_filename, src_and_dest, logs)
 
