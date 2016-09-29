@@ -60,6 +60,9 @@ class QuoteApplication(gunicorn.app.base.BaseApplication):
         assert prefix is not None
         assert port is not None
         self.application = falcon.API(middleware=HostFilter(hosts))
+        # add_route is pedantic about this
+        if prefix != '' and not prefix.startswith("/"):
+            prefix = "/" + prefix
         self.application.add_route(prefix + '/quote', QuoteResource())
         self.application.add_route(prefix + "/", IndexResource(prefix))
         self.port = port
