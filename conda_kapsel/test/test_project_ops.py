@@ -2808,6 +2808,83 @@ def test_unarchive_abs_project_dir_with_parent_dir():
     assert "If supplying parent_dir to unarchive, project_dir must be relative or None" == str(excinfo.value)
 
 
+def test_unarchive_tar_error_on_writing_removes_dir(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a/b.txt': _CONTENTS_FILE, 'a/c.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+
+            # this test is trying to prove that we clean up the dest
+            # directory if we get IO errors partway through creating
+            # it.
+            state = dict(count=0)
+
+            def mock_copyfileobj(*args, **kwargs):
+                # assert that 'unpacked' exists at some point
+                assert os.path.exists(unpacked)
+                state['count'] = state['count'] + 1
+                if state['count'] == 2:
+                    raise IOError("Not copying second file")
+
+            monkeypatch.setattr('tarfile.copyfileobj', mock_copyfileobj)
+
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert state['count'] == 2
+            assert not os.path.exists(unpacked)
+            message = "Not copying second file"
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar_error_on_writing_then_error_removing_dir(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a/b.txt': _CONTENTS_FILE, 'a/c.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+
+            state = dict(count=0, rmtree_count=0)
+
+            def mock_copyfileobj(*args, **kwargs):
+                # assert that 'unpacked' exists at some point
+                assert os.path.exists(unpacked)
+                state['count'] = state['count'] + 1
+                if state['count'] == 2:
+                    raise IOError("Not copying second file")
+
+            monkeypatch.setattr('tarfile.copyfileobj', mock_copyfileobj)
+
+            # this test is trying to prove that we ignore an exception
+            # from rmtree when cleaning up "unpacked"
+            def mock_rmtree(path):
+                assert os.path.exists(unpacked)
+                state['rmtree_count'] = state['rmtree_count'] + 1
+                raise IOError("rmtree failed")
+
+            monkeypatch.setattr('shutil.rmtree', mock_rmtree)
+
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            monkeypatch.undo()
+
+            assert state['count'] == 2
+            assert state['rmtree_count'] == 1
+            assert os.path.exists(unpacked)  # since the rmtree failed
+            message = "Not copying second file"
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
 def test_upload(monkeypatch):
     def check(dirname):
         with fake_server(monkeypatch, expected_basename='foo.tar.bz2'):

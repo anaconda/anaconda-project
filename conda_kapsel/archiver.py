@@ -529,7 +529,14 @@ def _unarchive_project(archive_filename, project_dir, parent_dir=None):
         assert not os.path.exists(canonical_project_dir)
         os.makedirs(canonical_project_dir)
 
-        extract_files(archive_filename, src_and_dest, logs)
+        try:
+            extract_files(archive_filename, src_and_dest, logs)
+        except Exception:
+            try:
+                shutil.rmtree(canonical_project_dir)
+            except (IOError, OSError):
+                pass
+            raise
 
         return _UnarchiveStatus(success=True,
                                 description=("Project archive unpacked to %s." % canonical_project_dir),
