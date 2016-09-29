@@ -531,12 +531,12 @@ def _unarchive_project(archive_filename, project_dir, parent_dir=None):
 
         try:
             extract_files(archive_filename, src_and_dest, logs)
-        except Exception:
+        except Exception as e:
             try:
                 shutil.rmtree(canonical_project_dir)
             except (IOError, OSError):
                 pass
-            raise
+            raise e
 
         return _UnarchiveStatus(success=True,
                                 description=("Project archive unpacked to %s." % canonical_project_dir),
