@@ -23,6 +23,7 @@ import conda_kapsel.commands.run as run
 import conda_kapsel.commands.prepare as prepare
 import conda_kapsel.commands.clean as clean
 import conda_kapsel.commands.archive as archive
+import conda_kapsel.commands.unarchive as unarchive
 import conda_kapsel.commands.upload as upload
 import conda_kapsel.commands.activate as activate
 import conda_kapsel.commands.variable_commands as variable_commands
@@ -109,6 +110,13 @@ def _parse_args_and_run_subcommand(argv):
     add_directory_arg(preset)
     preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
     preset.set_defaults(main=archive.main)
+
+    preset = subparsers.add_parser('unarchive',
+                                   help="Unpack a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
+    preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
+    preset.add_argument('directory', metavar='DESTINATION_DIRECTORY', default=None, nargs='?')
+
+    preset.set_defaults(main=unarchive.main)
 
     preset = subparsers.add_parser('upload', help="Upload the project to Anaconda Cloud")
     add_directory_arg(preset)
@@ -268,8 +276,9 @@ def _parse_args_and_run_subcommand(argv):
     except SystemExit as e:
         return e.code
 
-    # '--directory' is used for all subcommands now, but may not be always
-    if 'directory' in args:
+    # '--directory' is used for most subcommands; for unarchive,
+    # args.directory is positional and may be None
+    if 'directory' in args and args.directory is not None:
         args.directory = os.path.abspath(args.directory)
     return args.main(args)
 

@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 import codecs
 import os
 from tornado import gen
+import platform
 import pytest
 import tarfile
 import zipfile
@@ -1747,6 +1748,25 @@ def _assert_tar_contains(tar_path, filenames):
         assert sorted(_strip_prefixes(tf.getnames())) == sorted(filenames)
 
 
+def _relative_to(root, path):
+    prefix = root + os.sep
+    assert path.startswith(prefix)
+    return path[len(prefix):]
+
+
+def _recursive_list(dir_path):
+    for root, directories, filenames in os.walk(dir_path):
+        for dir in directories:
+            if not os.listdir(os.path.join(root, dir)):
+                yield _relative_to(dir_path, os.path.join(root, dir))
+        for filename in filenames:
+            yield _relative_to(dir_path, os.path.join(root, filename))
+
+
+def _assert_dir_contains(dir_path, filenames):
+    assert sorted([filename.replace("\\", "/") for filename in _recursive_list(dir_path)]) == sorted(filenames)
+
+
 def test_archive_zip():
     def archivetest(archive_dest_dir):
         archivefile = os.path.join(archive_dest_dir, "foo.zip")
@@ -2230,6 +2250,639 @@ name: archivedproj
              "bar/blah.pyc": ""}, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
+
+
+_CONTENTS_DIR = 1
+_CONTENTS_FILE = 2
+_CONTENTS_SYMLINK = 3
+
+
+def _make_zip(archive_dest_dir, contents):
+    archivefile = os.path.join(archive_dest_dir, "foo.zip")
+    with zipfile.ZipFile(archivefile, 'w') as zf:
+        for (key, what) in contents.items():
+            if what is _CONTENTS_DIR:
+                # create a directory
+                if not key.endswith(os.sep):
+                    key = key + os.sep
+                zf.writestr(key, "")
+            elif what is _CONTENTS_FILE:
+                zf.writestr(key, "hello")
+            else:
+                raise AssertionError("can't put this in a zip")
+    return archivefile
+
+
+def _make_tar(archive_dest_dir, contents, compression=None):
+    mode = 'w'
+    extension = '.tar'
+    if compression == 'gz':
+        mode = mode + ':gz'
+        extension = extension + '.gz'
+    elif compression == 'bz2':
+        mode = mode + ':bz2'
+        extension = extension + '.bz2'
+
+    # the tarfile API only lets us put in files, so we need
+    # files to put in
+    a_directory = os.path.join(archive_dest_dir, "a_directory")
+    os.mkdir(a_directory)
+    a_file = os.path.join(archive_dest_dir, "a_file")
+    with open(a_file, 'w') as f:
+        f.write("hello")
+    a_symlink = os.path.join(archive_dest_dir, "a_link")
+    if _CONTENTS_SYMLINK in contents.values():
+        os.symlink("/somewhere", a_symlink)
+
+    archivefile = os.path.join(archive_dest_dir, "foo" + extension)
+    with tarfile.open(archivefile, mode) as tf:
+        for (key, what) in contents.items():
+            t = tarfile.TarInfo(key)
+            if what is _CONTENTS_DIR:
+                t.type = tarfile.DIRTYPE
+            elif what is _CONTENTS_FILE:
+                pass
+            elif what is _CONTENTS_SYMLINK:
+                t.type = tarfile.SYMTYPE
+            tf.addfile(t)
+
+    os.remove(a_file)
+    os.rmdir(a_directory)
+    if os.path.exists(a_symlink):
+        os.remove(a_symlink)
+
+    return archivefile
+
+
+def _test_unarchive_tar(compression):
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir,
+                                {'a/a.txt': _CONTENTS_FILE,
+                                 'a/q/b.txt': _CONTENTS_FILE,
+                                 'a/c': _CONTENTS_DIR,
+                                 'a': _CONTENTS_DIR},
+                                compression=compression)
+        # with tarfile.open(archivefile, 'r') as tf:
+        #     tf.list()
+        if compression is not None:
+            assert archivefile.endswith(compression)
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+            _assert_dir_contains(unpacked, ['a.txt', 'c', 'q/b.txt'])
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar():
+    _test_unarchive_tar(compression=None)
+
+
+def test_unarchive_tar_gz():
+    _test_unarchive_tar(compression='gz')
+
+
+def test_unarchive_tar_bz2():
+    _test_unarchive_tar(compression='bz2')
+
+
+def test_unarchive_zip():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_zip(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
+                                                   'a/q/b.txt': _CONTENTS_FILE,
+                                                   'a/c': _CONTENTS_DIR,
+                                                   'a': _CONTENTS_DIR})
+
+        # with zipfile.ZipFile(archivefile, 'r') as zf:
+        #    print(repr(zf.namelist()))
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+            _assert_dir_contains(unpacked, ['a.txt', 'c', 'q/b.txt'])
+            assert status.project_dir == unpacked
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_zip_to_current_directory():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_zip(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
+                                                   'a/q/b.txt': _CONTENTS_FILE,
+                                                   'a/c': _CONTENTS_DIR,
+                                                   'a': _CONTENTS_DIR})
+
+        # with zipfile.ZipFile(archivefile, 'r') as zf:
+        #    print(repr(zf.namelist()))
+
+        def check(dirname):
+            old = os.getcwd()
+            try:
+                os.chdir(dirname)
+                status = project_ops.unarchive(archivefile, project_dir=None)
+            finally:
+                os.chdir(old)
+
+            unpacked = os.path.join(dirname, "a")
+
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+            _assert_dir_contains(unpacked, ['a.txt', 'c', 'q/b.txt'])
+            assert status.project_dir == unpacked
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_zip_to_parent_dir_with_auto_project_dir():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_zip(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
+                                                   'a/q/b.txt': _CONTENTS_FILE,
+                                                   'a/c': _CONTENTS_DIR})
+
+        # with zipfile.ZipFile(archivefile, 'r') as zf:
+        #    print(repr(zf.namelist()))
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "a")
+            status = project_ops.unarchive(archivefile, project_dir=None, parent_dir=dirname)
+
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+            _assert_dir_contains(unpacked, ['a.txt', 'c', 'q/b.txt'])
+            assert status.project_dir == unpacked
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar_to_parent_dir_with_auto_project_dir():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
+                                                   'a/q/b.txt': _CONTENTS_FILE,
+                                                   'a/c': _CONTENTS_DIR})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "a")
+            status = project_ops.unarchive(archivefile, project_dir=None, parent_dir=dirname)
+
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+            _assert_dir_contains(unpacked, ['a.txt', 'c', 'q/b.txt'])
+            assert status.project_dir == unpacked
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_error_on_dest_dir_exists():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            os.mkdir(unpacked)
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            message = "Directory '%s' already exists." % unpacked
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_ignore_rmtree_fail_when_unzipping(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = _make_zip(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+
+            def mock_rmtree(*args, **kwargs):
+                raise IOError("FAILURE")
+
+            monkeypatch.setattr('shutil.rmtree', mock_rmtree)
+
+            status = project_ops.unarchive(archivefile, unpacked)
+            monkeypatch.undo()
+
+            assert status
+            assert os.path.isdir(unpacked)
+            assert os.path.isfile(os.path.join(unpacked, "a.txt"))
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_error_on_bad_extension():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.bar")
+        with open(archivefile, 'w') as f:
+            f.write("hello")
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            message = "Unsupported archive filename %s, must be a .zip, .tar.gz, or .tar.bz2" % archivefile
+            assert status.errors == [message]
+            assert not status
+            assert not os.path.isdir(unpacked)
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_error_on_corrupt_zip():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
+        with open(archivefile, 'w') as f:
+            f.write("hello")
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            message = "File is not a zip file"
+            assert status.errors == [message]
+            assert not status
+            assert not os.path.isdir(unpacked)
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_error_on_corrupt_tar():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.tar")
+        with open(archivefile, 'w') as f:
+            f.write("hello")
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            message = "file could not be opened successfully"
+            assert status.errors == [message]
+            assert not status
+            assert not os.path.isdir(unpacked)
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_error_on_nonexistent_tar():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.tar")
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            # the exact message here varies by OS so not checking
+            assert len(status.errors) == 1
+            assert not status
+            assert not os.path.isdir(unpacked)
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_error_on_nonexistent_zip():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            # the exact message here varies by OS so not checking
+            assert len(status.errors) == 1
+            assert not status
+            assert not os.path.isdir(unpacked)
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar_ignores_symlink():
+    if platform.system() == 'Windows':
+        print("Can't test tars with symlinks on Windows because there's no way to create one")
+        return
+
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
+                                                   'a/q/b.txt': _CONTENTS_FILE,
+                                                   'a/c': _CONTENTS_DIR,
+                                                   'a/link': _CONTENTS_SYMLINK})
+        with tarfile.open(archivefile, 'r') as tf:
+            member = tf.getmember('a/link')
+            assert member is not None
+            assert member.issym()
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+            _assert_dir_contains(unpacked, ['a.txt', 'c', 'q/b.txt'])
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar_error_on_relative_path():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a/../a.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert not os.path.exists(unpacked)
+            message = "Archive entry 'a/../a.txt' would end up at '%s' which is outside '%s'." % (os.path.join(
+                dirname, "a.txt"), os.path.join(unpacked))
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar_error_on_root_relative_path():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'../a.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            # root relative path fails when project_dir=None
+            status = project_ops.unarchive(archivefile, project_dir=None, parent_dir=dirname)
+
+            message = "Archive contains relative path '../a.txt' which is not allowed."
+            assert status.errors == [message]
+            assert not status
+
+            # and also when it is specified
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, project_dir=unpacked)
+
+            message = "Archive contains relative path '../a.txt' which is not allowed."
+            assert status.errors == [message]
+            assert not status
+            assert not os.path.isdir(unpacked)
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_zip_error_on_relative_path():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_zip(archive_dest_dir, {'a/../a.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            message = "Archive entry 'a/../a.txt' would end up at '%s' which is outside '%s'." % (os.path.join(
+                dirname, "a.txt"), os.path.join(unpacked))
+            assert status.errors == [message]
+            assert not status
+            assert not os.path.exists(unpacked)
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_zip_error_on_root_relative_path():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_zip(archive_dest_dir, {'../a.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            # root relative path fails when project_dir=None
+            status = project_ops.unarchive(archivefile, project_dir=None, parent_dir=dirname)
+
+            message = "Archive contains relative path '../a.txt' which is not allowed."
+            assert status.errors == [message]
+            assert not status
+
+            # and also when it is specified
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, project_dir=unpacked)
+
+            message = "Archive contains relative path '../a.txt' which is not allowed."
+            assert status.errors == [message]
+            assert not status
+            assert not os.path.isdir(unpacked)
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar_error_on_no_directory():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert not os.path.exists(unpacked)
+            message = "Archive does not contain a project directory or is empty."
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar_error_on_only_directory():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a': _CONTENTS_DIR})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert not os.path.exists(unpacked)
+            message = "Archive does not contain a project directory or is empty."
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar_error_on_multiple_directories():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a/b.txt': _CONTENTS_FILE, 'c/d.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert not os.path.exists(unpacked)
+            message = "A valid project archive contains only one project directory " + \
+                      "with all files inside that directory. 'c/d.txt' is outside 'a'."
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar_error_on_empty():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert not os.path.exists(unpacked)
+            message = "A valid project archive must contain at least one file."
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_zip_error_on_empty():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_zip(archive_dest_dir, {})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert not os.path.exists(unpacked)
+            message = "A valid project archive must contain at least one file."
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_abs_project_dir_with_parent_dir():
+    with pytest.raises(ValueError) as excinfo:
+        project_ops.unarchive("foo.tar.gz", "/absolute", "/bar")
+    assert "If supplying parent_dir to unarchive, project_dir must be relative or None" == str(excinfo.value)
+
+
+def test_unarchive_tar_error_on_writing_removes_dir(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a/b.txt': _CONTENTS_FILE, 'a/c.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+
+            # this test is trying to prove that we clean up the dest
+            # directory if we get IO errors partway through creating
+            # it.
+            state = dict(count=0)
+
+            def mock_copyfileobj(*args, **kwargs):
+                # assert that 'unpacked' exists at some point
+                assert os.path.exists(unpacked)
+                state['count'] = state['count'] + 1
+                if state['count'] == 2:
+                    raise IOError("Not copying second file")
+
+            monkeypatch.setattr('tarfile.copyfileobj', mock_copyfileobj)
+
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert state['count'] == 2
+            assert not os.path.exists(unpacked)
+            message = "Not copying second file"
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_tar_error_on_writing_then_error_removing_dir(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {'a/b.txt': _CONTENTS_FILE, 'a/c.txt': _CONTENTS_FILE})
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+
+            state = dict(count=0, rmtree_count=0)
+
+            def mock_copyfileobj(*args, **kwargs):
+                # assert that 'unpacked' exists at some point
+                assert os.path.exists(unpacked)
+                state['count'] = state['count'] + 1
+                if state['count'] == 2:
+                    raise IOError("Not copying second file")
+
+            monkeypatch.setattr('tarfile.copyfileobj', mock_copyfileobj)
+
+            # this test is trying to prove that we ignore an exception
+            # from rmtree when cleaning up "unpacked"
+            def mock_rmtree(path):
+                assert os.path.exists(unpacked)
+                state['rmtree_count'] = state['rmtree_count'] + 1
+                raise IOError("rmtree failed")
+
+            monkeypatch.setattr('shutil.rmtree', mock_rmtree)
+
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            monkeypatch.undo()
+
+            assert state['count'] == 2
+            assert state['rmtree_count'] == 1
+            assert os.path.exists(unpacked)  # since the rmtree failed
+            message = "Not copying second file"
+            assert status.errors == [message]
+            assert not status
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
 
 
 def test_upload(monkeypatch):

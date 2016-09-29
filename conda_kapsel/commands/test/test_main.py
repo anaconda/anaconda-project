@@ -12,7 +12,7 @@ import os
 import conda_kapsel
 from conda_kapsel.commands.main import _parse_args_and_run_subcommand
 
-all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'upload', 'add-variable',
+all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'unarchive', 'upload', 'add-variable',
                    'remove-variable', 'list-variables', 'set-variable', 'unset-variable', 'add-download',
                    'remove-download', 'list-downloads', 'add-service', 'remove-service', 'list-services',
                    'add-env-spec', 'remove-env-spec', 'list-env-specs', 'add-packages', 'remove-packages',
@@ -68,6 +68,8 @@ expected_usage_msg_format = \
         '                        environment files, etc)\n' \
         '%s' \
         '    archive             Create a .zip, .tar.gz, or .tar.bz2 archive with\n' \
+        '                        project files in it\n'\
+        '    unarchive           Unpack a .zip, .tar.gz, or .tar.bz2 archive with\n' \
         '                        project files in it\n'\
         '    upload              Upload the project to Anaconda Cloud\n' \
         '    add-variable        Add a required environment variable to the project\n' \

@@ -12,14 +12,17 @@ import errno
 import fnmatch
 import os
 import platform
+import shutil
 import subprocess
 import tarfile
+import tempfile
 import uuid
 import zipfile
 
 from conda_kapsel.internal.simple_status import SimpleStatus
 from conda_kapsel.internal.directory_contains import subdirectory_relative_to_directory
 from conda_kapsel.internal.rename import rename_over_existing
+from conda_kapsel.internal.makedirs import makedirs_ok_if_exists
 
 
 class _FileInfo(object):
@@ -329,3 +332,218 @@ def _archive_project(project, filename):
             pass
 
     return SimpleStatus(success=True, description=("Created project archive %s" % filename), logs=logs)
+
+
+def _list_files_zip(zip_path):
+    with zipfile.ZipFile(zip_path, mode='r') as zf:
+        return sorted(zf.namelist())
+
+
+def _list_files_tar(tar_path):
+    with tarfile.open(tar_path, mode='r') as tf:
+        # we don't want links or block devices or anything weird, they could be a security problem
+        return sorted([member.name for member in tf.getmembers() if member.isreg() or member.isdir()])
+
+
+def _extract_files_zip(zip_path, src_and_dest, logs):
+    # the zipfile API has no way to extract to a filename of
+    # our choice, so we have to unpack to a temporary location,
+    # then copy those files over.
+    tmpdir = tempfile.mkdtemp()
+    try:
+        with zipfile.ZipFile(zip_path, mode='r') as zf:
+            zf.extractall(tmpdir)
+            for (src, dest) in src_and_dest:
+                logs.append("Unpacking %s to %s" % (src, dest))
+                src_path = os.path.join(tmpdir, src)
+                if os.path.isdir(src_path):
+                    makedirs_ok_if_exists(dest)
+                    shutil.copystat(src_path, dest)
+                else:
+                    makedirs_ok_if_exists(os.path.dirname(dest))
+                    shutil.copy2(src_path, dest)
+    finally:
+        try:
+            shutil.rmtree(tmpdir)
+        except (IOError, OSError):
+            pass
+
+
+def _extract_files_tar(tar_path, src_and_dest, logs):
+    with tarfile.open(tar_path, mode='r') as tf:
+        for (src, dest) in src_and_dest:
+            logs.append("Unpacking %s to %s" % (src, dest))
+            member = tf.getmember(src)
+            # we could also use tf._extract_member here, but the
+            # solution below with only the public API isn't that
+            # bad.
+            if member.isreg():
+                makedirs_ok_if_exists(os.path.dirname(dest))
+                tf.makefile(member, dest)
+            else:
+                assert member.isdir()  # we filtered out other types
+                makedirs_ok_if_exists(dest)
+
+            try:
+                tf.chown(member, dest, False)  # pragma: no cover (python 3.5 has another param)
+            except TypeError:  # pragma: no cover
+                tf.chown(member, dest)  # pragma: no cover (python 2.7, 3.4)
+            tf.chmod(member, dest)
+            tf.utime(member, dest)
+
+
+def _split_after_first(path):
+    # starting from archive name, be sure we have a valid path for this OS
+    path = path.replace("/", os.sep)
+
+    def _helper(head, tail):
+        (dirname, filename) = os.path.split(head)
+        if dirname == '':
+            # head had no separators, so return it as the first
+            return (head, tail)
+        elif tail is None:
+            # we were called with no tail, so create the first tail
+            return _helper(dirname, filename)
+        else:
+            # add filename to the tail
+            return _helper(dirname, os.path.join(filename, tail))
+
+    return _helper(path, None)
+
+
+def _get_source_and_dest_files(archive_path, list_files, project_dir, parent_dir, errors):
+    names = list_files(archive_path)
+    if len(names) == 0:
+        errors.append("A valid project archive must contain at least one file.")
+        return None
+    items = [(name, prefix, remainder)
+             for (name, (prefix, remainder)) in zip(names, [_split_after_first(name) for name in names])]
+    candidate_prefix = items[0][1]
+    if candidate_prefix == "..":
+        errors.append("Archive contains relative path '%s' which is not allowed." % (items[0][0]))
+        return None
+
+    if project_dir is None:
+        project_dir = candidate_prefix
+
+    if os.path.isabs(project_dir):
+        assert parent_dir is None
+        canonical_project_dir = os.path.realpath(os.path.abspath(project_dir))
+        canonical_parent_dir = os.path.dirname(canonical_project_dir)
+    else:
+        if parent_dir is None:
+            parent_dir = os.getcwd()
+
+        canonical_parent_dir = os.path.realpath(os.path.abspath(parent_dir))
+        canonical_project_dir = os.path.realpath(os.path.abspath(os.path.join(canonical_parent_dir, project_dir)))
+
+    # candidate_prefix is untrusted and may try to send us outside of parent_dir.
+    # this assertion is because of the check for candidate_prefix == ".." above.
+    assert canonical_project_dir.startswith(canonical_parent_dir)
+
+    if os.path.exists(canonical_project_dir):
+        # This is an error to ensure we always do a "fresh" unpack
+        # without worrying about overwriting stuff.
+        errors.append("Directory '%s' already exists." % canonical_project_dir)
+        return None
+
+    src_and_dest = []
+    for (name, prefix, remainder) in items:
+        if prefix != candidate_prefix:
+            errors.append(("A valid project archive contains only one project directory " +
+                           "with all files inside that directory. '%s' is outside '%s'.") % (name, candidate_prefix))
+            return None
+        if remainder is None:
+            # this is an entry that's either the prefix dir itself,
+            # or a file at the root not in any dir
+            continue
+        dest = os.path.realpath(os.path.abspath(os.path.join(canonical_project_dir, remainder)))
+        # this check deals with ".." in the name for example
+        if not dest.startswith(canonical_project_dir):
+            errors.append("Archive entry '%s' would end up at '%s' which is outside '%s'." %
+                          (name, dest, canonical_project_dir))
+            return None
+        src_and_dest.append((name, dest))
+
+    return (canonical_project_dir, src_and_dest)
+
+
+class _UnarchiveStatus(SimpleStatus):
+    def __init__(self, success, description, logs, project_dir):
+        super(_UnarchiveStatus, self).__init__(success=success, description=description, logs=logs)
+        self.project_dir = project_dir
+
+
+# function exported for project_ops.py
+def _unarchive_project(archive_filename, project_dir, parent_dir=None):
+    """Unpack an archive of files in the project.
+
+    This takes care of several details, for example it deals with
+    hostile archives containing files outside of the dest
+    directory, and it handles both tar and zip.
+
+    It does not load or validate the unpacked project.
+
+    project_dir can be None to auto-choose one.
+
+    If parent_dir is non-None, place the project_dir in it. This is most useful
+    if project_dir is None.
+
+    Args:
+        archive_filename (str): the tar or zip archive file
+        project_dir (str): the directory that will contain the project config file
+        parent_dir (str): place project directory in here
+
+    Returns:
+        a ``Status``, if failed has ``errors``, on success has a ``project_dir`` property
+    """
+    if project_dir is not None and os.path.isabs(project_dir) and parent_dir is not None:
+        raise ValueError("If supplying parent_dir to unarchive, project_dir must be relative or None")
+
+    list_files = None
+    extract_files = None
+    if archive_filename.endswith(".zip"):
+        list_files = _list_files_zip
+        extract_files = _extract_files_zip
+    elif any([archive_filename.endswith(suffix) for suffix in [".tar", ".tar.gz", ".tar.bz2"]]):
+        list_files = _list_files_tar
+        extract_files = _extract_files_tar
+    else:
+        return SimpleStatus(
+            success=False,
+            description=("Could not unpack archive %s" % archive_filename),
+            errors=["Unsupported archive filename %s, must be a .zip, .tar.gz, or .tar.bz2" % (archive_filename)])
+
+    logs = []
+    errors = []
+    try:
+        result = _get_source_and_dest_files(archive_filename, list_files, project_dir, parent_dir, errors)
+        if result is None:
+            return SimpleStatus(success=False,
+                                description=("Could not unpack archive %s" % archive_filename),
+                                errors=errors)
+        (canonical_project_dir, src_and_dest) = result
+
+        if len(src_and_dest) == 0:
+            return SimpleStatus(success=False,
+                                description=("Could not unpack archive %s" % archive_filename),
+                                errors=["Archive does not contain a project directory or is empty."])
+
+        assert not os.path.exists(canonical_project_dir)
+        os.makedirs(canonical_project_dir)
+
+        try:
+            extract_files(archive_filename, src_and_dest, logs)
+        except Exception as e:
+            try:
+                shutil.rmtree(canonical_project_dir)
+            except (IOError, OSError):
+                pass
+            raise e
+
+        return _UnarchiveStatus(success=True,
+                                description=("Project archive unpacked to %s." % canonical_project_dir),
+                                logs=logs,
+                                project_dir=canonical_project_dir)
+    except (IOError, OSError, zipfile.error, tarfile.TarError) as e:
+        return SimpleStatus(success=False, description="Failed to read project archive.", errors=[str(e)], logs=logs)

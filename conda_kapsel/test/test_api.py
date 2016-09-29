@@ -518,6 +518,26 @@ def test_archive(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_unarchive(monkeypatch):
+    import conda_kapsel.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.unarchive, project_ops.unarchive)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_unarchive(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('conda_kapsel.project_ops.unarchive', mock_unarchive)
+
+    p = api.AnacondaProject()
+    kwargs = dict(filename=43, project_dir=123, parent_dir=456)
+    result = p.unarchive(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_upload(monkeypatch):
     import conda_kapsel.project_ops as project_ops
     _verify_args_match(api.AnacondaProject.upload, project_ops.upload)

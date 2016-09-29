@@ -1066,6 +1066,32 @@ def archive(project, filename):
     return archiver._archive_project(project, filename)
 
 
+def unarchive(filename, project_dir, parent_dir=None):
+    """Unpack an archive of the project.
+
+    The archive can be untrusted (we will safely defeat attempts
+    to put evil links in it, for example), but this function
+    doesn't load or validate the unpacked project.
+
+    The target directory must not exist or it's an error.
+
+    project_dir can be None to auto-choose one.
+
+    If parent_dir is non-None, place the project_dir in it. This is most useful
+    if project_dir is None.
+
+    Args:
+        filename (str): name of a zip, tar.gz, or tar.bz2 archive file
+        project_dir (str): the directory to place the project inside
+        parent_dir (str): directory to place project_dir within
+
+    Returns:
+        a ``Status``, if failed has ``errors``, on success has ``project_dir`` property.
+
+    """
+    return archiver._unarchive_project(filename, project_dir=project_dir, parent_dir=parent_dir)
+
+
 def upload(project, site=None, username=None, token=None, log_level=None):
     """Upload the project to the Anaconda server.
 
