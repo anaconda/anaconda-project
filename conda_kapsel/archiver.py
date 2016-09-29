@@ -535,5 +535,5 @@ def _unarchive_project(archive_filename, project_dir, parent_dir=None):
                                 description=("Project archive unpacked to %s." % canonical_project_dir),
                                 logs=logs,
                                 project_dir=canonical_project_dir)
-    except (IOError, OSError, zipfile.BadZipFile, tarfile.TarError) as e:
+    except (IOError, OSError, zipfile.error, tarfile.TarError) as e:
         return SimpleStatus(success=False, description="Failed to read project archive.", errors=[str(e)], logs=logs)
