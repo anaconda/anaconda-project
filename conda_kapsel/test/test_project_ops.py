@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 import codecs
 import os
 from tornado import gen
+import platform
 import pytest
 import tarfile
 import zipfile
@@ -2592,6 +2593,10 @@ def test_unarchive_error_on_nonexistent_zip():
 
 
 def test_unarchive_tar_ignores_symlink():
+    if platform.system() == 'Windows':
+        print("Can't test tars with symlinks on Windows because there's no way to create one")
+        return
+
     def archivetest(archive_dest_dir):
         archivefile = _make_tar(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
                                                    'a/q/b.txt': _CONTENTS_FILE,
