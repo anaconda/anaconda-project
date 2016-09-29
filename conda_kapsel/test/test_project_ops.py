@@ -1764,7 +1764,7 @@ def _recursive_list(dir_path):
 
 
 def _assert_dir_contains(dir_path, filenames):
-    assert sorted([filename for filename in _recursive_list(dir_path)]) == sorted(filenames)
+    assert sorted([filename.replace("\\", "/") for filename in _recursive_list(dir_path)]) == sorted(filenames)
 
 
 def test_archive_zip():
