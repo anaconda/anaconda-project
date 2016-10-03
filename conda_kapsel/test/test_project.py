@@ -40,6 +40,7 @@ def test_properties():
         assert dirname == os.path.dirname(project.project_file.filename)
         assert dirname == os.path.dirname(os.path.dirname(project.conda_meta_file.filename))
         assert project.name == os.path.basename(dirname)
+        assert project.url_friendly_name == os.path.basename(dirname)
         assert project.description == ''
 
     with_directory_contents(dict(), check_properties)
@@ -1891,6 +1892,7 @@ def test_get_publication_info_from_empty_project():
         project = project_no_dedicated_env(dirname)
         expected = {
             'name': os.path.basename(dirname),
+            'url_friendly_name': os.path.basename(dirname),
             'description': '',
             'commands': {},
             'env_specs': {
@@ -1915,7 +1917,7 @@ env_specs:
 
 
 _complicated_project_contents = """
-name: foobar
+name: foo bar
 description: "A very complicated project."
 
 commands:
@@ -1970,7 +1972,8 @@ def test_get_publication_info_from_complex_project():
         project = project_no_dedicated_env(dirname)
 
         expected = {
-            'name': 'foobar',
+            'name': 'foo bar',
+            'url_friendly_name': 'foo-bar',
             'description': 'A very complicated project.',
             'commands': {'bar': {'description': 'echo boo',
                                  'env_spec': 'lol',
