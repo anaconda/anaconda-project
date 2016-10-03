@@ -25,12 +25,17 @@ def slugify(s):
         s = s.decode(encoding='utf-8', errors='replace')
     s = unicodedata.normalize('NFC', s)
 
-    # Using `re.sub(_remove_chars, '-', s)` results in
-    # a different number of hyphens on OS X vs. Linux,
-    # maybe due to some Python re code confusing bytes vs. chars?
-    # So we manually do our own replacement.
+    # The complicating mess here is that "narrow" builds of Python
+    # are really UTF-16, not arrays of unicode characters, so we have
+    # to deal with surrogate pairs. re.sub, len(), etc. will all treat
+    # surrogate pairs as multiple characters. We have to deal with that
+    # by hand to avoid a different slug on different platforms.
     def replace(c):
-        if _remove_chars.match(c):
+        # ignore the first half of any surrogate pair, the
+        # second half will become a hyphen.
+        if 0xD800 <= ord(c[0]) <= 0xDBFF:
+            return ""  # pragma: no cover (only on "narrow" python builds)
+        elif _remove_chars.match(c):
             return "-"
         else:
             return c
