@@ -23,6 +23,7 @@ from conda_kapsel.archiver import _list_relative_paths_for_unignored_project_fil
 
 from conda_kapsel.internal.py2_compat import is_string
 from conda_kapsel.internal.simple_status import SimpleStatus
+from conda_kapsel.internal.slugify import slugify
 import conda_kapsel.internal.conda_api as conda_api
 import conda_kapsel.internal.pip_api as pip_api
 
@@ -667,12 +668,17 @@ class Project(object):
 
     @property
     def name(self):
-        """Get the project name.
+        """Get the project's human-readable name.
 
         Prefers in order: `name` field from kapsel.yml, `package:
         name:` from meta.yaml, then project directory name.
         """
         return self._updated_cache().name
+
+    @property
+    def url_friendly_name(self):
+        """Get the project's url-friendly name."""
+        return slugify(self.name)
 
     @property
     def description(self):
@@ -806,6 +812,10 @@ class Project(object):
         """
         json = dict()
         json['name'] = self.name
+        # the recipient will have to validate this; including it here
+        # mostly because we might eventually allow the kapsel.yml to
+        # manually provide it.
+        json['url_friendly_name'] = self.url_friendly_name
         json['description'] = self.description
         commands = dict()
         for key, command in self.commands.items():
