@@ -6,7 +6,10 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+from conda_kapsel.internal.py2_compat import is_unicode
+
 import re
+import unicodedata
 
 _remove_chars = re.compile('[^A-Za-z0-9-_]', re.UNICODE)
 
@@ -17,4 +20,7 @@ def slugify(s):
     This keeps ascii alphanumerics, -, and _, but replaces
     everything else with hyphen.
     """
-    return re.sub(_remove_chars, '-', s)
+    if not is_unicode(s):
+        # normalize() requires a unicode string
+        s = s.decode(encoding='utf-8', errors='replace')
+    return re.sub(_remove_chars, '-', unicodedata.normalize('NFC', s))

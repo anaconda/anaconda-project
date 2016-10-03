@@ -24,3 +24,7 @@ def test_replace_unicode():
 
 def test_replace_specials():
     assert "-----------------" == slugify("!@#$%^&*()<>\"':/\\")
+
+
+def test_replace_bytes():
+    assert "-" == slugify(u"🌟".encode('utf-8'))

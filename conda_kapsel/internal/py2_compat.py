@@ -12,6 +12,13 @@ import sys
 _PY2 = sys.version_info[0] == 2
 
 
+def is_unicode(s):
+    if _PY2:  # pragma: no cover (py2/py3)
+        return isinstance(s, unicode)  # pragma: no cover (py2/py3) # noqa
+    else:  # pragma: no cover (py2/py3)
+        return isinstance(s, str)  # pragma: no cover (py2/py3)
+
+
 def is_string(s):
     if _PY2:  # pragma: no cover (py2/py3)
         return isinstance(s, basestring)  # pragma: no cover (py2/py3) # noqa
