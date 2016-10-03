@@ -19,7 +19,7 @@ def test_replace_spaces():
 
 
 def test_replace_unicode():
-    assert "-" == slugify("🌟")
+    assert "-" == slugify(u"🌟")
 
 
 def test_replace_specials():

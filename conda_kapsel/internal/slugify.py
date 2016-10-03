@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function
 
 import re
 
-_remove_chars = re.compile('[^A-Za-z0-9-_]')
+_remove_chars = re.compile('[^A-Za-z0-9-_]', re.UNICODE)
 
 
 def slugify(s):
