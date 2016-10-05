@@ -97,11 +97,23 @@ def create(directory_path, make_directory=False, name=None, icon=None, descripti
     if description is not None:
         project.project_file.set_value('description', description)
 
-    # write out the kapsel.yml; note that this will try to create
-    # the directory which we may not want... so only do it if
-    # we're problem-free.
+    # dirty the project with the above new values
     project.project_file.use_changes_without_saving()
+
+    # if we're creating kapsel.yml, why not auto-fix any problems,
+    # such as environment.yaml import. Obtuse to ask since there's
+    # no existing kapsel.yml to mess up.
+    if not os.path.exists(project.project_file.filename):
+        for problem in project.fixable_problems:
+            problem.fix(project)
+
+    # dirty the project with the problem fixes
+    project.project_file.use_changes_without_saving()
+
     if len(project.problems) == 0:
+        # write out the kapsel.yml; note that this will try to create
+        # the directory which we may not want... so only do it if
+        # we're problem-free.
         project.project_file.save()
 
     return project

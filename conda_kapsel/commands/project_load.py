@@ -17,15 +17,15 @@ def load_project(dirname):
     project = Project(dirname)
 
     if console_utils.stdin_is_interactive():
-        fixed_any = False
         for problem in project.fixable_problems:
             print(problem.text)
             should_fix = console_utils.console_ask_yes_or_no(problem.fix_prompt, default=False)
             if should_fix:
                 problem.fix(project)
-                fixed_any = True
+            else:
+                problem.no_fix(project)
 
-        if fixed_any:
-            project.project_file.save()
+        # no-op if the fixes didn't do anything
+        project.project_file.save()
 
     return project

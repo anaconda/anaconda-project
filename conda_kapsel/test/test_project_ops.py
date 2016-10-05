@@ -88,6 +88,53 @@ def test_create_with_properties():
     with_directory_contents({'something.png': 'not a real png'}, check_create)
 
 
+def test_create_imports_environment_yml():
+    def check_create(dirname):
+        project = project_ops.create(dirname,
+                                     make_directory=False,
+                                     name='hello',
+                                     icon='something.png',
+                                     description="Hello World")
+        assert [] == project.problems
+        assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+
+        assert sorted(list(project.env_specs.keys())) == sorted(['stuff', 'default'])
+        spec = project.env_specs['stuff']
+        assert spec.conda_packages == ('a', 'b')
+        assert spec.pip_packages == ('foo', )
+        assert spec.channels == ('bar', )
+
+    with_directory_contents(
+        {'something.png': 'not a real png',
+         "environment.yml": """
+name: stuff
+dependencies:
+ - a
+ - b
+ - pip:
+   - foo
+channels:
+ - bar
+"""}, check_create)
+
+
+def test_create_with_invalid_environment_yml():
+    def check_create(dirname):
+        project = project_ops.create(dirname, make_directory=False)
+        project_filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
+        assert ["%s: invalid package specification: b $ 1.0" % project_filename] == project.problems
+        # we should NOT create the kapsel.yml if it would be broken
+        assert not os.path.isfile(project_filename)
+
+    with_directory_contents(
+        {'something.png': 'not a real png',
+         "environment.yml": """
+name: stuff
+dependencies:
+ - b $ 1.0
+"""}, check_create)
+
+
 def test_set_properties():
     def check(dirname):
         project = project_ops.create(dirname, make_directory=False)
