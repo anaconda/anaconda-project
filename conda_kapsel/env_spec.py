@@ -132,7 +132,7 @@ def _load_environment_yml(filename):
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
         yaml = _load_string(contents)
-    except (IOError, _YAMLError) as e:
+    except (IOError, _YAMLError):
         return None
 
     name = None
