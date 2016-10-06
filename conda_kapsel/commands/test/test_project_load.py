@@ -57,3 +57,28 @@ def test_interactively_fix_project(monkeypatch, capsys):
         assert err == ""
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo"}, check)
+
+
+def test_interactively_no_fix_project(monkeypatch, capsys):
+    def check(dirname):
+
+        broken_project = Project(dirname)
+        assert len(broken_project.fixable_problems) == 1
+
+        def mock_isatty_true():
+            return True
+
+        # python 2 can throw a "readonly" error if you try to patch sys.stdin.isatty itself
+        monkeypatch.setattr('conda_kapsel.commands.console_utils.stdin_is_interactive', mock_isatty_true)
+        _monkeypatch_input(monkeypatch, ["n"])
+
+        project = load_project(dirname)
+        assert project.problems == ["%s has an empty env_specs section." % os.path.join(dirname,
+                                                                                        DEFAULT_PROJECT_FILENAME)]
+
+        out, err = capsys.readouterr()
+        assert out == ("%s has an empty env_specs section.\nAdd an environment spec to kapsel.yml? " % os.path.join(
+            dirname, DEFAULT_PROJECT_FILENAME))
+        assert err == ""
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo"}, check)

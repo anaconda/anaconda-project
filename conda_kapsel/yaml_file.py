@@ -33,6 +33,9 @@ from conda_kapsel.internal.makedirs import makedirs_ok_if_exists
 from conda_kapsel.internal.rename import rename_over_existing
 from conda_kapsel.internal.py2_compat import is_string
 
+# We use this in other files (to abstract over the imports above)
+_YAMLError = YAMLError
+
 
 def _atomic_replace(path, contents, encoding='utf-8'):
     tmp = path + ".tmp-" + str(uuid.uuid4())

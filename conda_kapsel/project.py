@@ -10,7 +10,7 @@ from __future__ import absolute_import
 from copy import deepcopy, copy
 import os
 
-from conda_kapsel.env_spec import EnvSpec
+from conda_kapsel.env_spec import EnvSpec, _find_out_of_sync_environment_yml_spec
 from conda_kapsel.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from conda_kapsel.plugins.registry import PluginRegistry
 from conda_kapsel.plugins.requirement import EnvVarRequirement
@@ -42,11 +42,12 @@ ALL_COMMAND_TYPES = (COMMAND_TYPE_CONDA_APP_ENTRY, COMMAND_TYPE_SHELL, COMMAND_T
 class ProjectProblem(object):
     """A possibly-autofixable problem with a project."""
 
-    def __init__(self, text, fix_prompt=None, fix_function=None):
+    def __init__(self, text, fix_prompt=None, fix_function=None, no_fix_function=None):
         """Create a project problem."""
         self.text = text
         self.fix_prompt = fix_prompt
         self.fix_function = fix_function
+        self.no_fix_function = no_fix_function
 
     @property
     def can_fix(self):
@@ -57,6 +58,13 @@ class ProjectProblem(object):
         """Perform the auto-fix."""
         if self.fix_function is not None:
             return self.fix_function(project)
+        else:
+            return None
+
+    def no_fix(self, project):
+        """Take an action on deciding not to fix."""
+        if self.no_fix_function is not None:
+            return self.no_fix_function(project)
         else:
             return None
 
@@ -366,14 +374,51 @@ class _ConfigCache(object):
                 "%s: env_specs should be a dictionary from environment name to environment attributes, not %r" %
                 (project_file.filename, env_specs))
 
-        if env_specs_is_empty_or_missing:
+        env_yaml_filename = "environment.yml"
+        env_yaml_spec = _find_out_of_sync_environment_yml_spec(self.env_specs.values(),
+                                                               os.path.join(self.directory_path, env_yaml_filename))
+        if env_yaml_spec is None:
+            env_yaml_filename = "environment.yaml"
+            env_yaml_spec = _find_out_of_sync_environment_yml_spec(self.env_specs.values(),
+                                                                   os.path.join(self.directory_path, env_yaml_filename))
+
+        if env_yaml_spec is not None:
+            skip_spec_import = project_file.get_value(['skip_imports', 'environment_yml'])
+            if skip_spec_import == env_yaml_spec.channels_and_packages_hash:
+                env_yaml_spec = None
+
+        if env_yaml_spec is not None:
+            old = self.env_specs.get(env_yaml_spec.name)
+            if old is None:
+                text = "Environment spec '%s' from %s is not in %s." % (env_yaml_spec.name, env_yaml_filename,
+                                                                        os.path.basename(project_file.filename))
+                prompt = "Add env spec %s to %s?" % (env_yaml_spec.name, os.path.basename(project_file.filename))
+            else:
+                text = "Environment spec '%s' from %s is out of sync with %s. Diff:\n%s" % (
+                    env_yaml_spec.name, env_yaml_filename, os.path.basename(project_file.filename),
+                    env_yaml_spec.diff_from(old))
+                prompt = "Overwrite env spec %s with the changes from %s?" % (env_yaml_spec.name, env_yaml_filename)
+
+            def overwrite_env_spec_from_environment_yml(project):
+                project.project_file.set_value(['env_specs', env_yaml_spec.name], env_yaml_spec.to_json())
+
+            def remember_no_import_environment_yml(project):
+                project.project_file.set_value(['skip_imports', 'environment_yml'],
+                                               env_yaml_spec.channels_and_packages_hash)
+
+            problems.append(ProjectProblem(text=text,
+                                           fix_prompt=prompt,
+                                           fix_function=overwrite_env_spec_from_environment_yml,
+                                           no_fix_function=remember_no_import_environment_yml))
+        elif env_specs_is_empty_or_missing:
             # we do NOT want to add this problem if we merely
             # failed to parse individual env specs; it must be
             # safe to overwrite the env_specs key, so it has to
-            # be empty or missing entirely.
+            # be empty or missing entirely. Also, we do NOT want
+            # to add this if we are going to ask about environment.yml
+            # import, above.
             def add_default_env_spec(project):
                 project.project_file.set_value(['env_specs', 'default'], dict(packages=[], channels=[]))
-                project.project_file.save()
 
             problems.append(ProjectProblem(text=("%s has an empty env_specs section." % project_file.filename),
                                            fix_prompt=("Add an environment spec to %s?" % os.path.basename(

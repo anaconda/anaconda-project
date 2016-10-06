@@ -2164,3 +2164,106 @@ def test_auto_fix_empty_env_specs_section():
         assert list(project.env_specs.keys()) == ['default']
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\n"}, check)
+
+
+def test_auto_fix_env_spec_import():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert len(project.problems) == 1
+        assert len(project.problem_objects) == 1
+        assert len(project.fixable_problems) == 1
+        problem = project.problem_objects[0]
+        assert problem.text == "Environment spec 'stuff' from environment.yml is not in kapsel.yml."
+        assert problem.can_fix
+
+        problem.fix(project)
+        project.project_file.save()
+
+        assert project.problems == []
+        assert list(project.env_specs.keys()) == ['stuff']
+        spec = project.env_specs['stuff']
+        assert spec.conda_packages == ('a', 'b')
+        assert spec.pip_packages == ('foo', )
+        assert spec.channels == ('bar', )
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\n",
+         "environment.yml": """
+name: stuff
+dependencies:
+ - a
+ - b
+ - pip:
+   - foo
+channels:
+ - bar
+"""}, check)
+
+
+def test_auto_fix_env_spec_out_of_sync():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert len(project.problems) == 1
+        assert len(project.problem_objects) == 1
+        assert len(project.fixable_problems) == 1
+        problem = project.problem_objects[0]
+        assert ("Environment spec 'stuff' from environment.yml is out of sync with kapsel.yml. Diff:\n" +
+                "  channels:\n    + bar\n+ a\n+ b\n  pip:\n    + foo") == problem.text
+        assert problem.can_fix
+
+        problem.fix(project)
+        project.project_file.save()
+
+        assert project.problems == []
+        assert list(project.env_specs.keys()) == ['stuff']
+        spec = project.env_specs['stuff']
+        assert spec.conda_packages == ('a', 'b')
+        assert spec.pip_packages == ('foo', )
+        assert spec.channels == ('bar', )
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\n",
+         "environment.yml": """
+name: stuff
+dependencies:
+ - a
+ - b
+ - pip:
+   - foo
+channels:
+ - bar
+"""}, check)
+
+
+def test_auto_fix_env_spec_import_saying_no():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert len(project.problems) == 1
+        assert len(project.problem_objects) == 1
+        assert len(project.fixable_problems) == 1
+        problem = project.problem_objects[0]
+        assert problem.text == "Environment spec 'stuff' from environment.yml is not in kapsel.yml."
+        assert problem.can_fix
+
+        problem.no_fix(project)
+        project.project_file.save()
+
+        assert project.problems == []
+        assert list(project.env_specs.keys()) == ['default']
+
+        skip_importing_hash = project.project_file.get_value(['skip_imports', 'environment_yml'])
+        assert skip_importing_hash is not None
+        assert skip_importing_hash != ''
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {'default':{'packages':[]}}\n",
+         "environment.yml": """
+name: stuff
+dependencies:
+ - a
+ - b
+ - pip:
+   - foo
+channels:
+ - bar
+"""}, check)
