@@ -159,3 +159,28 @@ def test_main_calls_run(monkeypatch, capsys):
 
 def test_main_calls_prepare(monkeypatch, capsys):
     _main_calls_subcommand(monkeypatch, capsys, 'prepare')
+
+
+def test_main_when_buggy(capsys, monkeypatch):
+    from conda_kapsel.commands.main import main
+
+    def mock_main():
+        raise AssertionError("It did not work")
+
+    monkeypatch.setattr('conda_kapsel.commands.main._main_without_bug_handler', mock_main)
+    monkeypatch.setattr("sys.argv", ['conda-kapsel'])
+
+    result = main()
+    assert result is 1
+    out, err = capsys.readouterr()
+
+    assert '' == out
+    assert err.startswith("""An unexpected error occurred, most likely a bug in conda-kapsel.
+    (The error was: AssertionError: It did not work)
+Details about the error were saved to """)
+    filename = err.split()[-1]
+    assert filename.endswith(".txt")
+    assert os.path.basename(filename).startswith("bug_details_conda-kapsel_")
+    assert os.path.isfile(filename)
+
+    os.remove(filename)

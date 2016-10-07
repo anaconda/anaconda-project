@@ -18,6 +18,7 @@ from conda_kapsel.project import ALL_COMMAND_TYPES
 from conda_kapsel.plugins.registry import PluginRegistry
 from conda_kapsel.plugins.requirements.download import _hash_algorithms
 import conda_kapsel
+from conda_kapsel.commands.bug_handler import handle_bugs
 import conda_kapsel.commands.init as init
 import conda_kapsel.commands.run as run
 import conda_kapsel.commands.prepare as prepare
@@ -283,10 +284,15 @@ def _parse_args_and_run_subcommand(argv):
     return args.main(args)
 
 
+def _main_without_bug_handler():
+    conda_kapsel._enter_beta_test_mode()
+    return _parse_args_and_run_subcommand(sys.argv)
+
+
 def main():
     """conda-kapsel command line tool Conda-style entry point.
 
     Conda expects us to take no args and return an exit code.
     """
-    conda_kapsel._enter_beta_test_mode()
-    return _parse_args_and_run_subcommand(sys.argv)
+    details = {'version': version}
+    return handle_bugs(_main_without_bug_handler, program_name='conda-kapsel', details_dict=details)
