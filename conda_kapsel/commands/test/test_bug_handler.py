@@ -87,3 +87,16 @@ def test_bug_handling_is_buggy(capsys, monkeypatch):
     assert """An unexpected error occurred, most likely a bug in myprogram.
     (The error was: AssertionError: It did not work)
 """ == err
+
+
+def test_keyboard_interrupt(capsys):
+    def buggy_main():
+        raise KeyboardInterrupt("ctrl-c")
+
+    code = handle_bugs(buggy_main, program_name=u"myprogram", details_dict=dict())
+
+    assert code is 1
+    out, err = capsys.readouterr()
+
+    assert '' == out
+    assert 'myprogram was interrupted.\n' == err

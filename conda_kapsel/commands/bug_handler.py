@@ -27,6 +27,12 @@ def handle_bugs(main_func, program_name, details_dict):
 
     try:
         return main_func()
+    except KeyboardInterrupt:
+        # KeyboardInterrupt doesn't derive from Exception, but the default handler
+        # prints a stack trace which is sort of ugly, so we replace the default
+        # with this.
+        print("%s was interrupted." % program_name, file=sys.stderr)
+        return 1
     except Exception:
         (exception_type, exception_value, exception_trace) = sys.exc_info()
 
