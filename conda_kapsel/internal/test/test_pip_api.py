@@ -158,3 +158,39 @@ def test_parse_spec():
                  'SomeProject~=1.4.2', "SomeProject ==5.4 ; python_version < '2.7'",
                  "SomeProject; sys_platform == 'win32'"]:
         assert "SomeProject" == pip_api.parse_spec(spec).name
+
+
+def test_format_flag(monkeypatch):
+    call_pip_results = [
+        "pip 8.2.1 from /blah/blah (python 3.5)\n", "abc (1.2)\nxyz (3.4)\n",
+        "pip 9.0.1 from /blah/blah (python 3.5)\n", "abc (1.2)\nxyz (3.4)\n", "pip WTF from /blah/blah (python 3.5)\n",
+        "abc (1.2)\nxyz (3.4)\n"
+    ]
+    call_pip_results = [r.encode('utf-8') for r in call_pip_results]
+    pip_extra_args = []
+
+    def mock_call_pip(prefix, extra_args):
+        pip_extra_args.append(extra_args)
+        assert len(call_pip_results) > 0
+        return call_pip_results.pop(0)
+
+    monkeypatch.setattr('conda_kapsel.internal.pip_api._call_pip', mock_call_pip)
+
+    def do_test(dirname):
+        envdir = dirname  # has to exist because .installed short-circuits if not
+        assert len(call_pip_results) == 6
+        installed = pip_api.installed(prefix=envdir)
+        assert 'abc' in installed
+        assert [['--version'], ['list']] == pip_extra_args
+        assert len(call_pip_results) == 4
+        installed = pip_api.installed(prefix=envdir)
+        assert 'abc' in installed
+        assert [['--version'], ['list'], ['--version'], ['list', '--format=legacy']] == pip_extra_args
+        assert len(call_pip_results) == 2
+        installed = pip_api.installed(prefix=envdir)
+        assert 'abc' in installed
+        assert [['--version'], ['list'], ['--version'], ['list', '--format=legacy'], ['--version'],
+                ['list', '--format=legacy']] == pip_extra_args
+        assert len(call_pip_results) == 0
+
+    with_directory_contents(dict(), do_test)

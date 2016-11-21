@@ -82,13 +82,33 @@ def installed(prefix):
     """Get a dict of package names to (name, version) tuples."""
     if not os.path.isdir(prefix):
         return dict()
+
+    # In pip 9, there's a big ugly deprecation warning by default if
+    # you type `pip list`, unless you do `pip list --format=legacy`
+    # pip 8 of course does not support --format=legacy, so that
+    # can't be done unconditionally.
+    format_args = ["--format=legacy"]
     try:
-        out = _call_pip(prefix, extra_args=['list']).decode('utf-8')
+        out = _call_pip(prefix, extra_args=['--version']).decode('utf-8')
+
+        if out.startswith("pip "):
+            try:
+                major_version = int(out[4])
+                if major_version <= 8:
+                    format_args = []
+            except ValueError:
+                # didn't get an integer, who knows
+                pass
+    except PipNotInstalledError:
+        pass
+
+    try:
+        out = _call_pip(prefix, extra_args=(['list'] + format_args)).decode('utf-8')
         # on Windows, $ in a regex doesn't match \r\n, we need to get rid of \r
         out = out.replace("\r\n", "\n")
     except PipNotInstalledError:
         out = ""  # if pip isn't installed, there are no pip packages
-    # the output to parse looks like:
+    # the output to parse ("legacy" format mode) looks like this:
     #   ympy (0.7.6.1)
     #   tables (3.2.2)
     #   terminado (0.5)
