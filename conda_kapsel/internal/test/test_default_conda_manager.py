@@ -6,12 +6,14 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import json
 import os
 import platform
 import pytest
 
 from conda_kapsel.env_spec import EnvSpec
 from conda_kapsel.conda_manager import CondaManagerError
+from conda_kapsel.version import version
 
 from conda_kapsel.internal.default_conda_manager import DefaultCondaManager
 import conda_kapsel.internal.pip_api as pip_api
@@ -28,11 +30,13 @@ else:
     IPYTHON_BINARY = "bin/ipython"
     FLAKE8_BINARY = "bin/flake8"
 
+test_spec = EnvSpec(name='myenv', conda_packages=['ipython'], pip_packages=['flake8'], channels=[])
+
 
 def test_conda_create_and_install_and_remove(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
-    spec = EnvSpec(name='myenv', conda_packages=['ipython'], pip_packages=['flake8'], channels=[])
+    spec = test_spec
     assert spec.conda_packages == ('ipython', )
     assert spec.pip_packages == ('flake8', )
 
@@ -51,6 +55,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         assert not os.path.isdir(envdir)
         assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
         assert not os.path.exists(os.path.join(envdir, FLAKE8_BINARY))
+        assert not manager._timestamp_file_up_to_date(envdir, spec)
 
         deviations = manager.find_environment_deviations(envdir, spec)
 
@@ -64,6 +69,9 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         assert os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
         assert os.path.exists(os.path.join(envdir, FLAKE8_BINARY))
 
+        assert manager._timestamp_file_up_to_date(envdir, spec)
+        assert not manager._timestamp_file_up_to_date(envdir, spec_with_phony_pip_package)
+
         # test bad pip package throws error
         deviations = manager.find_environment_deviations(envdir, spec_with_phony_pip_package)
 
@@ -73,15 +81,19 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         with pytest.raises(CondaManagerError) as excinfo:
             manager.fix_environment_deviations(envdir, spec, deviations)
         assert 'Failed to install missing pip packages' in str(excinfo.value)
+        assert not manager._timestamp_file_up_to_date(envdir, spec_with_phony_pip_package)
 
         # test that we can remove a package
+        assert manager._timestamp_file_up_to_date(envdir, spec)
         manager.remove_packages(prefix=envdir, packages=['ipython'])
         assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
+        assert not manager._timestamp_file_up_to_date(envdir, spec)
 
         # test for error removing
         with pytest.raises(CondaManagerError) as excinfo:
             manager.remove_packages(prefix=envdir, packages=['ipython'])
         assert 'no packages found to remove' in str(excinfo.value)
+        assert not manager._timestamp_file_up_to_date(envdir, spec)
 
         # test failure to exec pip
         def mock_call_pip(*args, **kwargs):
@@ -92,5 +104,97 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         with pytest.raises(CondaManagerError) as excinfo:
             deviations = manager.find_environment_deviations(envdir, spec)
         assert 'pip failed while listing' in str(excinfo.value)
+
+    with_directory_contents(dict(), do_test)
+
+
+def test_timestamp_file_avoids_package_manager_calls(monkeypatch):
+    monkeypatch_conda_not_to_use_links(monkeypatch)
+
+    spec = test_spec
+
+    def do_test(dirname):
+        envdir = os.path.join(dirname, spec.name)
+
+        manager = DefaultCondaManager()
+
+        assert not os.path.isdir(envdir)
+        assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
+        assert not os.path.exists(os.path.join(envdir, FLAKE8_BINARY))
+        assert not manager._timestamp_file_up_to_date(envdir, spec)
+
+        deviations = manager.find_environment_deviations(envdir, spec)
+
+        assert deviations.missing_packages == ('ipython', )
+        assert deviations.missing_pip_packages == ('flake8', )
+
+        manager.fix_environment_deviations(envdir, spec, deviations)
+
+        assert os.path.isdir(envdir)
+        assert os.path.isdir(os.path.join(envdir, "conda-meta"))
+        assert os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
+        assert os.path.exists(os.path.join(envdir, FLAKE8_BINARY))
+
+        assert manager._timestamp_file_up_to_date(envdir, spec)
+
+        def assert_no_pip(*args, **kwargs):
+            raise AssertionError("Should not have called pip with args %r %r" % (args, kwargs))
+
+        monkeypatch.setattr('conda_kapsel.internal.pip_api._call_pip', assert_no_pip)
+
+        def assert_no_conda(*args, **kwargs):
+            raise AssertionError("Should not have called conda with args %r %r" % (args, kwargs))
+
+        monkeypatch.setattr('conda_kapsel.internal.conda_api._call_conda', assert_no_conda)
+
+        deviations = manager.find_environment_deviations(envdir, spec)
+
+        assert deviations.missing_packages == ()
+        assert deviations.missing_pip_packages == ()
+
+        assert manager._timestamp_file_up_to_date(envdir, spec)
+
+    with_directory_contents(dict(), do_test)
+
+
+def test_timestamp_file_ignores_failed_write(monkeypatch):
+    monkeypatch_conda_not_to_use_links(monkeypatch)
+
+    spec = test_spec
+
+    def do_test(dirname):
+        from codecs import open as real_open
+
+        envdir = os.path.join(dirname, spec.name)
+
+        manager = DefaultCondaManager()
+
+        counts = dict(calls=0)
+
+        def mock_open(*args, **kwargs):
+            counts['calls'] += 1
+            if counts['calls'] == 1:
+                raise IOError("did not open")
+            else:
+                return real_open(*args, **kwargs)
+
+        monkeypatch.setattr('codecs.open', mock_open)
+
+        # this should NOT throw but also should not write the
+        # timestamp file (we ignore errors)
+        filename = manager._timestamp_file(envdir, spec)
+        assert filename.startswith(envdir)
+        assert not os.path.exists(filename)
+        manager._write_timestamp_file(envdir, spec)
+        assert not os.path.exists(filename)
+        # the second time we really write it (this is to prove we
+        # are looking at the right filename)
+        manager._write_timestamp_file(envdir, spec)
+        assert os.path.exists(filename)
+
+        # check on the file contents
+        with real_open(filename, 'r', encoding='utf-8') as f:
+            content = json.loads(f.read())
+            assert dict(conda_kapsel_version=version) == content
 
     with_directory_contents(dict(), do_test)

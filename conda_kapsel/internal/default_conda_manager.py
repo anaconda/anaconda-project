@@ -7,14 +7,84 @@
 """Abstract high-level interface to Conda."""
 from __future__ import absolute_import
 
+import codecs
+import glob
+import json
 import os
 
 from conda_kapsel.conda_manager import CondaManager, CondaEnvironmentDeviations, CondaManagerError
 import conda_kapsel.internal.conda_api as conda_api
 import conda_kapsel.internal.pip_api as pip_api
+import conda_kapsel.internal.makedirs as makedirs
+
+from conda_kapsel.version import version
 
 
 class DefaultCondaManager(CondaManager):
+    def _timestamp_file(self, prefix, spec):
+        return os.path.join(prefix, "var", "cache", "conda-kapsel", "env-specs", spec.channels_and_packages_hash)
+
+    def _timestamp_file_up_to_date(self, prefix, spec):
+        # The goal here is to return False if 1) the env spec
+        # has changed (different hash) or 2) the environment has
+        # been modified (e.g. by pip or conda).
+
+        filename = self._timestamp_file(prefix, spec)
+        try:
+            stamp_mtime = os.path.getmtime(filename)
+        except OSError:
+            return False
+
+        # this is a little bit heuristic; we are trying to detect
+        # if any packages are installed or removed. This may need
+        # to become more comprehensive.  We don't want to check
+        # directories that would change at runtime like /var/run,
+        # and we need this to be reasonably fast (so we can't do a
+        # full directory walk or something).
+
+        # Linux
+        dirs = list(glob.iglob(os.path.join(prefix, "lib", "python*", "site-packages")))
+        dirs.append(os.path.join(prefix, "bin"))
+        dirs.append(os.path.join(prefix, "lib"))
+        # Windows
+        dirs.append(os.path.join(prefix, "Lib", "site-packages"))
+        dirs.append(os.path.join(prefix, "Library", "bin"))
+        dirs.append(os.path.join(prefix, "Scripts"))
+        # conda-meta
+        dirs.append(os.path.join(prefix, "conda-meta"))
+        # prefix itself
+        dirs.append(prefix)
+
+        # get the newest mtime in the list
+        newest_mtime = 0
+        for d in dirs:
+            try:
+                d_mtime = os.path.getmtime(d)
+            except OSError:
+                d_mtime = 0
+            if d_mtime > newest_mtime:
+                newest_mtime = d_mtime
+        if newest_mtime > stamp_mtime:
+            return False
+        else:
+            return True
+
+    def _write_timestamp_file(self, prefix, spec):
+        filename = self._timestamp_file(prefix, spec)
+        makedirs.makedirs_ok_if_exists(os.path.dirname(filename))
+
+        try:
+            with codecs.open(filename, 'w', encoding='utf-8') as f:
+                # we don't read the contents of the file for now, but
+                # recording the version in it in case in the future
+                # that is useful. We need to write something to the
+                # file to bump its mtime if it already exists...
+                f.write(json.dumps(dict(conda_kapsel_version=version)) + "\n")
+        except (IOError, OSError):
+            # ignore errors because this is just an optimization, if we
+            # fail we will survive
+            pass
+
     def _find_conda_missing(self, prefix, spec):
         try:
             installed = conda_api.installed(prefix)
@@ -64,8 +134,12 @@ class DefaultCondaManager(CondaManager):
                 wrong_version_pip_packages=(),
                 broken=True)
 
-        conda_missing = self._find_conda_missing(prefix, spec)
-        pip_missing = self._find_pip_missing(prefix, spec)
+        if self._timestamp_file_up_to_date(prefix, spec):
+            conda_missing = []
+            pip_missing = []
+        else:
+            conda_missing = self._find_conda_missing(prefix, spec)
+            pip_missing = self._find_pip_missing(prefix, spec)
 
         if len(conda_missing) > 0 or len(pip_missing) > 0:
             summary = "Conda environment is missing packages: %s" % (", ".join(conda_missing + pip_missing))
@@ -110,6 +184,9 @@ class DefaultCondaManager(CondaManager):
                 pip_api.install(prefix=prefix, pkgs=missing)
             except pip_api.PipError as e:
                 raise CondaManagerError("Failed to install missing pip packages: " + ", ".join(missing))
+
+        # write a file to tell us we can short-circuit next time
+        self._write_timestamp_file(prefix, spec)
 
     def remove_packages(self, prefix, packages):
         try:
