@@ -139,7 +139,12 @@ def _monkeypatch_client_config(monkeypatch, url):
     def _mock_get_config(user=True, site=True, remote_site=None):
         return {'url': url}
 
-    monkeypatch.setattr('binstar_client.utils.get_config', _mock_get_config)
+    # get_config moved into a `config` submodule at some point in anaconda-client
+    try:
+        import binstar_client.utils.config  # noqa # (unused import)
+        monkeypatch.setattr('binstar_client.utils.config.get_config', _mock_get_config)
+    except Exception:
+        monkeypatch.setattr('binstar_client.utils.get_config', _mock_get_config)
 
 
 class FakeServerContext(object):
