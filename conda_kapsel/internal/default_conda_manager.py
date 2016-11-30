@@ -55,19 +55,15 @@ class DefaultCondaManager(CondaManager):
         # prefix itself
         dirs.append(prefix)
 
-        # get the newest mtime in the list
-        newest_mtime = 0
         for d in dirs:
             try:
                 d_mtime = os.path.getmtime(d)
             except OSError:
                 d_mtime = 0
-            if d_mtime > newest_mtime:
-                newest_mtime = d_mtime
-        if newest_mtime > stamp_mtime:
-            return False
-        else:
-            return True
+            if d_mtime > stamp_mtime:
+                return False
+
+        return True
 
     def _write_timestamp_file(self, prefix, spec):
         filename = self._timestamp_file(prefix, spec)
