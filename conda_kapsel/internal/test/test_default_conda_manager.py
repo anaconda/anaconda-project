@@ -6,6 +6,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import codecs
 import json
 import os
 import platform
@@ -137,20 +138,51 @@ def test_timestamp_file_avoids_package_manager_calls(monkeypatch):
 
         assert manager._timestamp_file_up_to_date(envdir, spec)
 
-        def assert_no_pip(*args, **kwargs):
-            raise AssertionError("Should not have called pip with args %r %r" % (args, kwargs))
+        called = []
+        from conda_kapsel.internal.pip_api import _call_pip as real_call_pip
+        from conda_kapsel.internal.conda_api import _call_conda as real_call_conda
 
-        monkeypatch.setattr('conda_kapsel.internal.pip_api._call_pip', assert_no_pip)
+        def traced_call_pip(*args, **kwargs):
+            called.append(("pip", args, kwargs))
+            return real_call_pip(*args, **kwargs)
 
-        def assert_no_conda(*args, **kwargs):
-            raise AssertionError("Should not have called conda with args %r %r" % (args, kwargs))
+        monkeypatch.setattr('conda_kapsel.internal.pip_api._call_pip', traced_call_pip)
 
-        monkeypatch.setattr('conda_kapsel.internal.conda_api._call_conda', assert_no_conda)
+        def traced_call_conda(*args, **kwargs):
+            called.append(("conda", args, kwargs))
+            return real_call_conda(*args, **kwargs)
+
+        monkeypatch.setattr('conda_kapsel.internal.conda_api._call_conda', traced_call_conda)
 
         deviations = manager.find_environment_deviations(envdir, spec)
 
+        assert [] == called
+
         assert deviations.missing_packages == ()
         assert deviations.missing_pip_packages == ()
+
+        assert manager._timestamp_file_up_to_date(envdir, spec)
+
+        # now modify conda-meta and check that we DO call the package managers
+        inside_conda_meta = os.path.join(envdir, "conda-meta", "thing.txt")
+        with codecs.open(inside_conda_meta, 'w', encoding='utf-8') as f:
+            f.write(u"This file should change the mtime on conda-meta\n")
+        os.remove(inside_conda_meta)
+
+        assert not manager._timestamp_file_up_to_date(envdir, spec)
+
+        deviations = manager.find_environment_deviations(envdir, spec)
+
+        assert len(called) == 2
+
+        assert deviations.missing_packages == ()
+        assert deviations.missing_pip_packages == ()
+
+        assert not manager._timestamp_file_up_to_date(envdir, spec)
+
+        # we want to be sure we update the timestamp file even though
+        # there wasn't any actual work to do
+        manager.fix_environment_deviations(envdir, spec, deviations)
 
         assert manager._timestamp_file_up_to_date(envdir, spec)
 
