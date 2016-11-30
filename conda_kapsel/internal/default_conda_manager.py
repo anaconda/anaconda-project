@@ -136,25 +136,26 @@ class DefaultCondaManager(CondaManager):
         if self._timestamp_file_up_to_date(prefix, spec):
             conda_missing = []
             pip_missing = []
+            timestamp_ok = True
         else:
             conda_missing = self._find_conda_missing(prefix, spec)
             pip_missing = self._find_pip_missing(prefix, spec)
+            timestamp_ok = False
 
         if len(conda_missing) > 0 or len(pip_missing) > 0:
             summary = "Conda environment is missing packages: %s" % (", ".join(conda_missing + pip_missing))
-            return CondaEnvironmentDeviations(summary=summary,
-                                              missing_packages=conda_missing,
-                                              wrong_version_packages=(),
-                                              missing_pip_packages=pip_missing,
-                                              wrong_version_pip_packages=())
+        elif not timestamp_ok:
+            summary = "Conda environment needs to be marked as up-to-date"
         else:
-            return CondaEnvironmentDeviations(summary="OK",
-                                              missing_packages=(),
-                                              wrong_version_packages=(),
-                                              missing_pip_packages=(),
-                                              wrong_version_pip_packages=())
+            summary = "OK"
+        return CondaEnvironmentDeviations(summary=summary,
+                                          missing_packages=conda_missing,
+                                          wrong_version_packages=(),
+                                          missing_pip_packages=pip_missing,
+                                          wrong_version_pip_packages=(),
+                                          broken=(not timestamp_ok))
 
-    def fix_environment_deviations(self, prefix, spec, deviations=None):
+    def fix_environment_deviations(self, prefix, spec, deviations=None, create=True):
         if deviations is None:
             deviations = self.find_environment_deviations(prefix, spec)
 
@@ -169,12 +170,14 @@ class DefaultCondaManager(CondaManager):
                     conda_api.install(prefix=prefix, pkgs=list(missing), channels=spec.channels)
                 except conda_api.CondaError as e:
                     raise CondaManagerError("Failed to install missing packages: " + ", ".join(missing))
-        else:
+        elif create:
             # Create environment from scratch
             try:
                 conda_api.create(prefix=prefix, pkgs=list(command_line_packages), channels=spec.channels)
             except conda_api.CondaError as e:
                 raise CondaManagerError("Failed to create environment at %s: %s" % (prefix, str(e)))
+        else:
+            raise CondaManagerError("Conda environment at %s does not exist" % (prefix))
 
         # now add pip if needed
         missing = list(deviations.missing_pip_packages)

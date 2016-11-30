@@ -1221,7 +1221,7 @@ def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove
             else:
                 return self.deviations
 
-        def fix_environment_deviations(self, prefix, spec, deviations=None):
+        def fix_environment_deviations(self, prefix, spec, deviations=None, create=True):
             if self.fix_works:
                 self.fixed = True
 

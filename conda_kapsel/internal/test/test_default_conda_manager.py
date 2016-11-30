@@ -128,6 +128,7 @@ def test_timestamp_file_avoids_package_manager_calls(monkeypatch):
 
         assert deviations.missing_packages == ('ipython', )
         assert deviations.missing_pip_packages == ('flake8', )
+        assert not deviations.ok
 
         manager.fix_environment_deviations(envdir, spec, deviations)
 
@@ -160,6 +161,7 @@ def test_timestamp_file_avoids_package_manager_calls(monkeypatch):
 
         assert deviations.missing_packages == ()
         assert deviations.missing_pip_packages == ()
+        assert deviations.ok
 
         assert manager._timestamp_file_up_to_date(envdir, spec)
 
@@ -177,6 +179,8 @@ def test_timestamp_file_avoids_package_manager_calls(monkeypatch):
 
         assert deviations.missing_packages == ()
         assert deviations.missing_pip_packages == ()
+        # deviations should not be ok (due to timestamp)
+        assert not deviations.ok
 
         assert not manager._timestamp_file_up_to_date(envdir, spec)
 
