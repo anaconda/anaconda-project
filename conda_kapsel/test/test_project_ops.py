@@ -2044,8 +2044,11 @@ def test_archive_zip_with_gitignore():
 name: archivedproj
         """,
                             "foo.py": "print('hello')\n",
-                            '.gitignore': "/ignored.py\n",
-                            'ignored.py': 'print("ignore me!")'}), check)
+                            '.gitignore': "/ignored.py\n/subdir\n/subwithslash/\n",
+                            'ignored.py': 'print("ignore me!")',
+                            'subdir/foo.py': 'foo',
+                            'subdir/subsub/bar.py': 'bar',
+                            'subwithslash/something.py': 'something'}), check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
