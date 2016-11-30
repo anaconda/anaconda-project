@@ -24,17 +24,7 @@ class DefaultCondaManager(CondaManager):
     def _timestamp_file(self, prefix, spec):
         return os.path.join(prefix, "var", "cache", "conda-kapsel", "env-specs", spec.channels_and_packages_hash)
 
-    def _timestamp_file_up_to_date(self, prefix, spec):
-        # The goal here is to return False if 1) the env spec
-        # has changed (different hash) or 2) the environment has
-        # been modified (e.g. by pip or conda).
-
-        filename = self._timestamp_file(prefix, spec)
-        try:
-            stamp_mtime = os.path.getmtime(filename)
-        except OSError:
-            return False
-
+    def _timestamp_comparison_directories(self, prefix):
         # this is a little bit heuristic; we are trying to detect
         # if any packages are installed or removed. This may need
         # to become more comprehensive.  We don't want to check
@@ -58,12 +48,31 @@ class DefaultCondaManager(CondaManager):
         # conda-meta
         dirs.append(os.path.join(prefix, "conda-meta"))
 
+        return dirs
+
+    def _timestamp_file_up_to_date(self, prefix, spec):
+        # The goal here is to return False if 1) the env spec
+        # has changed (different hash) or 2) the environment has
+        # been modified (e.g. by pip or conda).
+
+        filename = self._timestamp_file(prefix, spec)
+        try:
+            stamp_mtime = os.path.getmtime(filename)
+        except OSError:
+            return False
+
+        dirs = self._timestamp_comparison_directories(prefix)
+
         for d in dirs:
             try:
                 d_mtime = os.path.getmtime(d)
             except OSError:
                 d_mtime = 0
-            if d_mtime > stamp_mtime:
+            # When we write the timestamp, we put it 1s in the
+            # future, so we want >= here (if the d_mtime has gone
+            # into the future from when we wrote the timestamp,
+            # the directory has changed).
+            if d_mtime >= stamp_mtime:
                 return False
 
         return True
@@ -79,6 +88,18 @@ class DefaultCondaManager(CondaManager):
                 # that is useful. We need to write something to the
                 # file to bump its mtime if it already exists...
                 f.write(json.dumps(dict(conda_kapsel_version=version)) + "\n")
+            # set the timestamp 1s in the future, which guarantees
+            # it doesn't have the same mtime as any files in the
+            # environment changed by us; if another process
+            # changes some files during the current second, then
+            # we would not notice those changes. The alternative
+            # is that we falsely believe we changed things
+            # ourselves. Ultimately clock resolution keeps us from
+            # perfection here without some sort of cross-process
+            # locking.
+            actual_time = os.path.getmtime(filename)
+            next_tick_time = actual_time + 1
+            os.utime(filename, (next_tick_time, next_tick_time))
         except (IOError, OSError):
             # ignore errors because this is just an optimization, if we
             # fail we will survive

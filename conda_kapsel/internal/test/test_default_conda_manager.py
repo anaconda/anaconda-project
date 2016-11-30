@@ -11,6 +11,7 @@ import json
 import os
 import platform
 import pytest
+import time
 
 from conda_kapsel.env_spec import EnvSpec
 from conda_kapsel.conda_manager import CondaManagerError
@@ -109,7 +110,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     with_directory_contents(dict(), do_test)
 
 
-def test_timestamp_file_avoids_package_manager_calls(monkeypatch):
+def test_timestamp_file_works(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
     spec = test_spec
@@ -118,6 +119,24 @@ def test_timestamp_file_avoids_package_manager_calls(monkeypatch):
         envdir = os.path.join(dirname, spec.name)
 
         manager = DefaultCondaManager()
+
+        def print_timestamps(when):
+            newest_in_prefix = 0
+            for d in manager._timestamp_comparison_directories(envdir):
+                try:
+                    t = os.path.getmtime(d)
+                    if t > newest_in_prefix:
+                        newest_in_prefix = t
+                except Exception:
+                    pass
+            timestamp_file = 0
+            try:
+                timestamp_file = os.path.getmtime(manager._timestamp_file(envdir, spec))
+            except Exception:
+                pass
+            print("%s: timestamp file %d prefix %d" % (when, timestamp_file, newest_in_prefix))
+
+        print_timestamps("before env creation")
 
         assert not os.path.isdir(envdir)
         assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
@@ -131,6 +150,8 @@ def test_timestamp_file_avoids_package_manager_calls(monkeypatch):
         assert not deviations.ok
 
         manager.fix_environment_deviations(envdir, spec, deviations)
+
+        print_timestamps("after fixing deviations")
 
         assert os.path.isdir(envdir)
         assert os.path.isdir(os.path.join(envdir, "conda-meta"))
@@ -166,10 +187,17 @@ def test_timestamp_file_avoids_package_manager_calls(monkeypatch):
         assert manager._timestamp_file_up_to_date(envdir, spec)
 
         # now modify conda-meta and check that we DO call the package managers
-        inside_conda_meta = os.path.join(envdir, "conda-meta", "thing.txt")
+        time.sleep(1.1)  # be sure we are in a new second
+        conda_meta_dir = os.path.join(envdir, "conda-meta")
+        print("conda-meta original timestamp: %d" % os.path.getmtime(conda_meta_dir))
+        inside_conda_meta = os.path.join(conda_meta_dir, "thing.txt")
         with codecs.open(inside_conda_meta, 'w', encoding='utf-8') as f:
             f.write(u"This file should change the mtime on conda-meta\n")
+        print("file inside conda-meta %d and conda-meta itself %d" % (os.path.getmtime(inside_conda_meta),
+                                                                      os.path.getmtime(conda_meta_dir)))
         os.remove(inside_conda_meta)
+
+        print_timestamps("after touching conda-meta")
 
         assert not manager._timestamp_file_up_to_date(envdir, spec)
 
@@ -187,6 +215,8 @@ def test_timestamp_file_avoids_package_manager_calls(monkeypatch):
         # we want to be sure we update the timestamp file even though
         # there wasn't any actual work to do
         manager.fix_environment_deviations(envdir, spec, deviations)
+
+        print_timestamps("after fixing deviations 2")
 
         assert manager._timestamp_file_up_to_date(envdir, spec)
 
