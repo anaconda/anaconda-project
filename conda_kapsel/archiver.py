@@ -157,9 +157,10 @@ def _git_ignored_files(project_directory, errors):
     # --other means show untracked (not added) files
     # --ignored means show ignored files
     # --exclude-standard means use the usual .gitignore and other configuration
+    # --directory means output "node_modules/" if it's ignored, not 100000 JS files
     try:
         output = subprocess.check_output(
-            ['git', 'ls-files', '--others', '--ignored', '--exclude-standard'],
+            ['git', 'ls-files', '--others', '--ignored', '--exclude-standard', '--directory'],
             cwd=project_directory)
         # for whatever reason, git doesn't include the ".git" in the ignore list
         return [".git"] + output.decode('utf-8').splitlines()
@@ -184,7 +185,8 @@ def _git_filter(project_directory, errors):
         path = info.relative_path
         while path != '':
             assert path != '/'  # would infinite loop
-            if path in git_ignored:
+            # git ls-files seems to append "/" to dirs when using --directory
+            if path in git_ignored or (path + '/') in git_ignored:
                 return True
             path = os.path.dirname(path)
         return False
