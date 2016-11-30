@@ -40,7 +40,12 @@ class DefaultCondaManager(CondaManager):
         # to become more comprehensive.  We don't want to check
         # directories that would change at runtime like /var/run,
         # and we need this to be reasonably fast (so we can't do a
-        # full directory walk or something).
+        # full directory walk or something). Remember that on
+        # Linux at least a new mtime on a directory means
+        # _immediate_ child directory entries were added or
+        # removed, changing the files themselves or the files in
+        # subdirs will not affect mtime. Windows may be a bit
+        # different.
 
         # Linux
         dirs = list(glob.iglob(os.path.join(prefix, "lib", "python*", "site-packages")))
@@ -52,8 +57,6 @@ class DefaultCondaManager(CondaManager):
         dirs.append(os.path.join(prefix, "Scripts"))
         # conda-meta
         dirs.append(os.path.join(prefix, "conda-meta"))
-        # prefix itself
-        dirs.append(prefix)
 
         for d in dirs:
             try:
