@@ -77,7 +77,7 @@ class CondaManager(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @abstractmethod
-    def fix_environment_deviations(self, prefix, spec, deviations=None):
+    def fix_environment_deviations(self, prefix, spec, deviations=None, create=True):
         """Fix deviations of the env in prefix from the spec.
 
         Raised exceptions that are user-interesting conda problems
@@ -89,6 +89,7 @@ class CondaManager(with_metaclass(ABCMeta)):
             prefix (str): the environment prefix (absolute path)
             spec (EnvSpec): specification for the environment
             deviations (CondaEnvironmentDeviations): optional previous result from find_environment_deviations()
+            create (bool): True if we should create if completely nonexistent
 
         Returns:
             None

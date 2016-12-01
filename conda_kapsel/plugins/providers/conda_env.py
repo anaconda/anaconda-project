@@ -117,6 +117,8 @@ class CondaEnvProvider(EnvVarProvider):
             env = requirement.env_specs.get(config['env_name'])
             config['value'] = env.path(project_dir)
 
+        assert 'env_name' in config
+
         # print("read_config " + repr(config))
 
         return config
@@ -196,37 +198,40 @@ class CondaEnvProvider(EnvVarProvider):
 
         project_dir = context.environ['PROJECT_DIR']
 
-        # FIXME no
+        env_name = context.status.analysis.config.get('env_name', context.default_env_spec_name)
+        env_spec = requirement.env_specs.get(env_name)
+
         if context.status.analysis.config['source'] == 'inherited':
             prefix = context.environ.get(requirement.env_var, None)
+            inherited = True
         else:
             prefix = None
+            inherited = False
 
         if prefix is None:
             # use the default environment
-            env_name = context.status.analysis.config.get('env_name', context.default_env_spec_name)
-            env = requirement.env_specs.get(env_name)
-            assert env is not None
-            prefix = env.path(project_dir)
+            prefix = env_spec.path(project_dir)
 
         assert prefix is not None
+
+        # if the value has changed, choose the matching env spec
+        # (something feels wrong here; should this be in read_config?
+        # or not at all?)
+        for env in requirement.env_specs.values():
+            if env.path(project_dir) == prefix:
+                env_spec = env
+                break
 
         if context.mode != PROVIDE_MODE_CHECK:
             # we update the environment in both prod and dev mode
 
-            env_spec = None
-            for env in requirement.env_specs.values():
-                if env.path(project_dir) == prefix:
-                    env_spec = env
-                    break
-
             # TODO if not creating a named env, we could use the
             # shared packages, but for now we leave it alone
-            if env_spec is not None:
-                try:
-                    self._conda.fix_environment_deviations(prefix, env_spec)
-                except CondaManagerError as e:
-                    return super_result.copy_with_additions(errors=[str(e)])
+            assert env_spec is not None
+            try:
+                self._conda.fix_environment_deviations(prefix, env_spec, create=(not inherited))
+            except CondaManagerError as e:
+                return super_result.copy_with_additions(errors=[str(e)])
 
         conda_api.environ_set_prefix(context.environ, prefix, varname=requirement.env_var)
 

@@ -283,7 +283,7 @@ def _push_fake_env_creator():
                                               missing_pip_packages=(),
                                               wrong_version_pip_packages=())
 
-        def fix_environment_deviations(self, prefix, spec, deviations=None):
+        def fix_environment_deviations(self, prefix, spec, deviations=None, create=True):
             pass
 
         def remove_packages(self, prefix, packages):
