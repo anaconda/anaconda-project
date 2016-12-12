@@ -484,6 +484,14 @@ def remove_packages(project, env_spec_name, packages):
     # and then remove it from kapsel.yml, and then see if we can
     # still prepare the project.
 
+    # TODO this should handle env spec inheritance in the same way
+    # it handles the global packages list, that is, removing a package
+    # from a spec should also remove it from its ancestors (and possibly
+    # add it to other children of those ancestors).
+    # Not doing it at the time of writing this comment because it might
+    # be nicer to rewrite this whole thing when we add version pinning
+    # anyway.
+
     failed = project.problems_status()
     if failed is not None:
         return failed

@@ -629,16 +629,36 @@ def test_load_environments():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.env_specs) == 2
+        assert len(project.env_specs) == 4
         assert 'foo' in project.env_specs
         assert 'bar' in project.env_specs
+        assert 'foo_child' in project.env_specs
+        assert 'foo_grandchild' in project.env_specs
         assert project.default_env_spec_name == 'foo'
         foo = project.env_specs['foo']
         bar = project.env_specs['bar']
+        foo_child = project.env_specs['foo_child']
+        foo_grandchild = project.env_specs['foo_grandchild']
         assert foo.conda_packages == ('python', 'dog', 'cat', 'zebra')
         assert foo.description == "THE FOO"
+        assert foo.pip_packages == ()
+        assert foo.inherit_from is None
         assert bar.conda_packages == ()
         assert bar.description == "bar"
+        assert bar.pip_packages == ()
+        assert bar.inherit_from is None
+
+        assert foo_child.description == 'foo_child'
+        assert foo_child.conda_packages == ('python', 'cat', 'zebra', 'dog=2.0', 'lion')
+        assert foo_child.pip_packages == ('fish', )
+        assert foo_child.channels == ('abc', )
+        assert foo_child.inherit_from is foo
+
+        assert foo_grandchild.description == 'foo_grandchild'
+        assert foo_grandchild.conda_packages == ('python', 'cat', 'zebra', 'lion', 'walrus', 'dog=3.0')
+        assert foo_grandchild.pip_packages == ('fish', 'seahorse')
+        assert foo_grandchild.channels == ('abc', 'nbc')
+        assert foo_grandchild.inherit_from is foo_child
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -651,6 +671,24 @@ env_specs:
        - cat
        - zebra
   bar: {}
+  foo_child:
+    inherit_from: foo
+    packages:
+       - dog=2.0
+       - lion
+       - pip:
+          - fish
+    channels:
+       - abc
+  foo_grandchild:
+    inherit_from: foo_child
+    packages:
+       - walrus
+       - dog=3.0
+       - pip:
+         - seahorse
+    channels:
+       - nbc
     """}, check_environments)
 
 
@@ -751,6 +789,20 @@ env_specs:
     """}, check_environments)
 
 
+def test_complain_about_non_string_inherit_from():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["%s: 'inherit_from' field of environment foo must be a string" %
+                (project.project_file.filename)] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   foo:
+     inherit_from: []
+    """}, check_environments)
+
+
 def test_complain_about_packages_list_of_wrong_thing():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
@@ -762,6 +814,59 @@ def test_complain_about_packages_list_of_wrong_thing():
 packages:
     - 42
     """}, check_get_packages)
+
+
+def test_complain_about_env_spec_inherits_from_nonexistent():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["%s: 'inherit_from' field of env spec foo does not match the name of another env spec" %
+                (project.project_file.filename)] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   foo:
+      inherit_from: bar
+    """}, check_environments)
+
+
+def test_complain_about_cycle_of_two_env_specs():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["%s: 'inherit_from' fields create circular inheritance among these env specs: bar, foo" %
+                (project.project_file.filename)] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   foo:
+      inherit_from: bar
+   bar:
+      inherit_from: foo
+    """}, check_environments)
+
+
+def test_complain_about_cycle_of_many_env_specs():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["%s: 'inherit_from' fields create circular inheritance among these env specs: a, b, c, d, e" %
+                (project.project_file.filename)] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   a:
+      inherit_from: b
+   b:
+      inherit_from: c
+   c:
+      inherit_from: d
+   d:
+      inherit_from: e
+   e:
+      inherit_from: a
+
+    """}, check_environments)
 
 
 def test_load_list_of_variables_requirements():

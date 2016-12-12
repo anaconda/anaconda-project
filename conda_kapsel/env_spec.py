@@ -27,10 +27,41 @@ except ImportError:  # pragma: no cover
     import ruamel.yaml as ryaml  # pragma: no cover
 
 
+def _combine_keeping_last_duplicate(items1, items2, key_func=None):
+    def default_key(item):
+        return item
+
+    if key_func is None:
+        key_func = default_key
+    items2_keys = set([key_func(item) for item in items2])
+    combined = list([item for item in items1 if key_func(item) not in items2_keys])
+    combined = combined + list(items2)
+    return tuple(combined)
+
+
+def _conda_combine_key(spec):
+    parsed = conda_api.parse_spec(spec)
+    assert parsed is not None
+    return parsed.name
+
+
+def _pip_combine_key(spec):
+    parsed = pip_api.parse_spec(spec)
+    assert parsed is not None
+    return parsed.name
+
+
 class EnvSpec(object):
     """Represents a set of required conda packages we could potentially instantiate as a Conda environment."""
 
-    def __init__(self, name, conda_packages, channels, pip_packages=(), description=None):
+    def __init__(self,
+                 name,
+                 conda_packages,
+                 channels,
+                 pip_packages=(),
+                 description=None,
+                 inherit_from_name=None,
+                 inherit_from=None):
         """Construct a package set with the given name and packages.
 
         Args:
@@ -39,6 +70,8 @@ class EnvSpec(object):
             channels (list): list of channel names
             pip_packages (list): list of pip package specs to pass to pip
             description (str or None): one-sentence-ish summary of what this env is
+            inherit_from_name (str or None): name of what we inherit from
+            inherit_from (EnvSpec or None): pull in packages and channels from
         """
         self._name = name
         self._conda_packages = tuple(conda_packages)
@@ -46,6 +79,14 @@ class EnvSpec(object):
         self._pip_packages = tuple(pip_packages)
         self._description = description
         self._channels_and_packages_hash = None
+        self._inherit_from_name = inherit_from_name
+        self._inherit_from = inherit_from
+
+        # we can have only a name, that we failed to build an EnvSpec from,
+        # or we can have name and EnvSpec that match.
+        assert self._inherit_from is None or \
+            (self._inherit_from_name is not None and
+             self._inherit_from_name == self._inherit_from.name)
 
         conda_specs_by_name = dict()
         for spec in self.conda_packages:
@@ -97,20 +138,30 @@ class EnvSpec(object):
             self._channels_and_packages_hash = m.hexdigest()
         return self._channels_and_packages_hash
 
+    def _get_inherited(self, public_attr, key_func=None):
+        private_attr = '_' + public_attr
+        if self._inherit_from is not None:
+            return _combine_keeping_last_duplicate(
+                getattr(self._inherit_from, public_attr),
+                getattr(self, private_attr),
+                key_func=key_func)
+        else:
+            return getattr(self, private_attr)
+
     @property
     def conda_packages(self):
         """Get the conda packages to install in the environment as an iterable."""
-        return self._conda_packages
+        return self._get_inherited('conda_packages', _conda_combine_key)
 
     @property
     def channels(self):
         """Get the channels to install conda packages from."""
-        return self._channels
+        return self._get_inherited('channels')
 
     @property
     def pip_packages(self):
         """Get the pip packages to install in the environment as an iterable."""
-        return self._pip_packages
+        return self._get_inherited('pip_packages', _pip_combine_key)
 
     @property
     def conda_package_names_set(self):
@@ -137,6 +188,16 @@ class EnvSpec(object):
     def specs_for_pip_package_names(self, names):
         """Get the full install specs given an iterable of package names."""
         return self._specs_for_package_names(names, self._pip_specs_by_name)
+
+    @property
+    def inherit_from(self):
+        """Env spec that we inherit stuff from."""
+        return self._inherit_from
+
+    @property
+    def inherit_from_name(self):
+        """Env spec name that we inherit stuff from."""
+        return self._inherit_from_name
 
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""
@@ -200,6 +261,9 @@ class EnvSpec(object):
 
         template_json['something']['packages'] = packages
         template_json['something']['channels'] = channels
+
+        if self.inherit_from_name is not None:
+            template_json['something']['inherit_from'] = self.inherit_from_name
 
         return template_json['something']
 

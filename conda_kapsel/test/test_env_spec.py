@@ -242,10 +242,14 @@ def test_find_out_of_sync_does_not_exist():
 
 
 def test_to_json():
-    spec = EnvSpec(name="foo", conda_packages=['a', 'b'], pip_packages=['c', 'd'], channels=['x', 'y'])
+    spec = EnvSpec(name="foo",
+                   conda_packages=['a', 'b'],
+                   pip_packages=['c', 'd'],
+                   channels=['x', 'y'],
+                   inherit_from_name='hi')
     json = spec.to_json()
 
-    assert {'channels': ['x', 'y'], 'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
+    assert {'channels': ['x', 'y'], 'inherit_from': 'hi', 'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
 
 
 def test_diff_from():

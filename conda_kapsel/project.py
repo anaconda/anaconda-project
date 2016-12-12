@@ -338,13 +338,13 @@ class _ConfigCache(object):
 
             return (deps, pip_deps)
 
-        self.env_specs = dict()
         (shared_deps, shared_pip_deps) = _parse_packages(project_file.root)
         shared_channels = _parse_channels(project_file.root)
         env_specs = project_file.get_value('env_specs', default={})
         first_env_spec_name = None
         env_specs_is_empty_or_missing = False  # this should be iff it's an empty dict or absent entirely
 
+        env_spec_attrs = dict()
         if isinstance(env_specs, dict):
             if len(env_specs) == 0:
                 env_specs_is_empty_or_missing = True
@@ -357,6 +357,11 @@ class _ConfigCache(object):
                     problems.append("{}: 'description' field of environment {} must be a string".format(
                         project_file.filename, name))
                     continue
+                inherit_from_name = attrs.get('inherit_from', None)
+                if inherit_from_name is not None and not is_string(inherit_from_name):
+                    problems.append("{}: 'inherit_from' field of environment {} must be a string".format(
+                        project_file.filename, name))
+                    continue
                 (deps, pip_deps) = _parse_packages(attrs)
                 channels = _parse_channels(attrs)
                 # ideally we would merge same-name packages here, choosing the
@@ -366,17 +371,57 @@ class _ConfigCache(object):
                 all_pip_deps = shared_pip_deps + pip_deps
                 all_channels = shared_channels + channels
 
-                self.env_specs[name] = EnvSpec(name=name,
-                                               conda_packages=all_deps,
-                                               pip_packages=all_pip_deps,
-                                               channels=all_channels,
-                                               description=description)
+                env_spec_attrs[name] = dict(name=name,
+                                            conda_packages=all_deps,
+                                            pip_packages=all_pip_deps,
+                                            channels=all_channels,
+                                            description=description,
+                                            inherit_from_name=inherit_from_name,
+                                            inherit_from=None)
+
                 if first_env_spec_name is None:
                     first_env_spec_name = name
         else:
             problems.append(
                 "%s: env_specs should be a dictionary from environment name to environment attributes, not %r" %
                 (project_file.filename, env_specs))
+
+        self.env_specs = dict()
+
+        def make_env_spec(name, trail):
+            assert name in env_spec_attrs
+
+            if name not in self.env_specs:
+                was_cycle = False
+                if name in trail:
+                    problems.append(
+                        "{}: 'inherit_from' fields create circular inheritance among these env specs: {}".format(
+                            project_file.filename, ", ".join(sorted(trail))))
+                    was_cycle = True
+                trail.append(name)
+
+                attrs = env_spec_attrs[name]
+
+                inherit_from_name = attrs['inherit_from_name']
+                if inherit_from_name is not None and not was_cycle:
+                    if inherit_from_name not in env_spec_attrs:
+                        problems.append(("{}: 'inherit_from' field of env spec {} does not match the name " +
+                                         "of another env spec").format(project_file.filename, attrs['name']))
+                    else:
+                        inherit_from = make_env_spec(inherit_from_name, trail)
+                        attrs['inherit_from'] = inherit_from
+
+                self.env_specs[name] = EnvSpec(**attrs)
+
+            return self.env_specs[name]
+
+        for name in env_spec_attrs.keys():
+            make_env_spec(name, [])
+            assert name in self.env_specs
+
+        # it's important to create all the env specs when possible
+        # even if they are broken (e.g. bad inherit_from), so they
+        # can be edited in order to fix them
 
         (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
                                                                                    self.directory_path)
