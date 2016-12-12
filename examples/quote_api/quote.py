@@ -88,6 +88,10 @@ class QuoteApplication(gunicorn.app.base.BaseApplication):
 parser = ArgumentParser(prog="quote-api", description="API server that returns a quote.")
 parser.add_argument('--kapsel-host', action='append', help='Hostname to allow in requests')
 parser.add_argument('--kapsel-no-browser', action='store_true', default=False, help='Disable opening in a browser')
+parser.add_argument('--kapsel-use-xheaders',
+                    action='store_true',
+                    default=False,
+                    help='Trust X-headers from reverse proxy')
 parser.add_argument('--kapsel-url-prefix', action='store', default='', help='Prefix in front of urls')
 parser.add_argument('--kapsel-port', action='store', default='8080', help='Port to listen on')
 parser.add_argument('--kapsel-iframe-hosts',

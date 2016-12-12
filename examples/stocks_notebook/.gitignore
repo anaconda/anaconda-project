@@ -1,0 +1,18 @@
+# project-local contains your personal configuration choices and state
+/kapsel-local.yml
+
+# Files autocreated by Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Notebook stuff
+/.ipynb_checkpoints
+
+# Spyder stuff
+/.spyderproject
+
+/envs/
+/services/
+/quantquote_daily_sp500_83986/
