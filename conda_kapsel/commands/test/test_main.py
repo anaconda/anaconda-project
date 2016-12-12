@@ -29,7 +29,7 @@ def test_main_no_subcommand(capsys):
     out, err = capsys.readouterr()
     assert "" == out
     expected_error_msg = ('Must specify a subcommand.\n'
-                          'usage: conda-kapsel [-h] [-v]\n'
+                          'usage: conda-kapsel [-h] [-v] [--verbose]\n'
                           '                    %s\n'
                           '                    ...\n') % all_subcommands_in_curlies
     assert expected_error_msg == err
@@ -39,7 +39,7 @@ def test_main_bad_subcommand(capsys):
     code = _parse_args_and_run_subcommand(['project', 'foo'])
 
     out, err = capsys.readouterr()
-    expected_error_msg = ("usage: conda-kapsel [-h] [-v]\n"
+    expected_error_msg = ("usage: conda-kapsel [-h] [-v] [--verbose]\n"
                           "                    %s\n"
                           "                    ...\nconda-kapsel: error: invalid choice: 'foo' "
                           "(choose from %s)\n") % (all_subcommands_in_curlies, all_subcommands_comma_space)
@@ -50,7 +50,7 @@ def test_main_bad_subcommand(capsys):
 
 
 expected_usage_msg_format = \
-        'usage: conda-kapsel [-h] [-v]\n' \
+        'usage: conda-kapsel [-h] [-v] [--verbose]\n' \
         '                    %s\n' \
         '                    ...\n' \
         '\n' \
@@ -97,7 +97,8 @@ expected_usage_msg_format = \
         '\n' \
         'optional arguments:\n' \
         '  -h, --help            show this help message and exit\n' \
-        "  -v, --version         show program's version number and exit\n"
+        "  -v, --version         show program's version number and exit\n" \
+        '  --verbose             show verbose debugging details\n'
 
 activate_help = '    activate            Set up the project and output shell export commands\n' \
                 '                        reflecting the setup\n'

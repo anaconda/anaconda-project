@@ -12,6 +12,8 @@ import os
 import re
 import sys
 
+from conda_kapsel.internal import logged_subprocess
+
 
 class PipError(Exception):
     """General pip error."""
@@ -42,7 +44,7 @@ def _call_pip(prefix, extra_args):
     cmd_list = _get_pip_command(prefix, extra_args)
 
     try:
-        p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = logged_subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError as e:
         raise PipError("failed to run: %r: %r" % (" ".join(cmd_list), repr(e)))
     (out, err) = p.communicate()

@@ -19,6 +19,7 @@ import tempfile
 import uuid
 import zipfile
 
+from conda_kapsel.internal import logged_subprocess
 from conda_kapsel.internal.simple_status import SimpleStatus
 from conda_kapsel.internal.directory_contains import subdirectory_relative_to_directory
 from conda_kapsel.internal.rename import rename_over_existing
@@ -159,7 +160,7 @@ def _git_ignored_files(project_directory, errors):
     # --exclude-standard means use the usual .gitignore and other configuration
     # --directory means output "node_modules/" if it's ignored, not 100000 JS files
     try:
-        output = subprocess.check_output(
+        output = logged_subprocess.check_output(
             ['git', 'ls-files', '--others', '--ignored', '--exclude-standard', '--directory'],
             cwd=project_directory)
         # for whatever reason, git doesn't include the ".git" in the ignore list

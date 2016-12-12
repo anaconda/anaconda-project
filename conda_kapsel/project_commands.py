@@ -15,7 +15,8 @@ import os
 import platform
 import sys
 
-from conda_kapsel.internal import (conda_api, py2_compat)
+from conda_kapsel.verbose import _verbose_logger
+from conda_kapsel.internal import (conda_api, logged_subprocess, py2_compat)
 
 try:  # pragma: no cover
     from shlex import quote  # pragma: no cover
@@ -203,8 +204,6 @@ class CommandExecInfo(object):
         Returns:
             Popen instance
         """
-        import subprocess
-
         if self._shell:
             # on Windows, with shell=True Python interprets the args as NOT quoted
             # and quotes them, but assumes a single string parameter is pre-quoted
@@ -220,11 +219,11 @@ class CommandExecInfo(object):
         else:
 
             args = self._args
-        return subprocess.Popen(args=args,
-                                env=py2_compat.env_without_unicode(self._env),
-                                cwd=self._cwd,
-                                shell=self._shell,
-                                **kwargs)
+        return logged_subprocess.Popen(args=args,
+                                       env=py2_compat.env_without_unicode(self._env),
+                                       cwd=self._cwd,
+                                       shell=self._shell,
+                                       **kwargs)
 
     def execvpe(self):
         """Convenience method exec's the command replacing the current process.
@@ -253,6 +252,7 @@ class CommandExecInfo(object):
             os.chdir(self._cwd)
             sys.stderr.flush()
             sys.stdout.flush()
+            _verbose_logger().info("$ %s", " ".join(args))
             os.execvpe(args[0], args, self._env)
         finally:
             # avoid side effect if exec fails (or is mocked in tests)
