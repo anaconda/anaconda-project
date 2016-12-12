@@ -22,7 +22,7 @@ class ArrayHandler(logging.Handler):
 
 
 def _test_logger():
-    logger = logging.getLogger(name="test_logged_subprocess")
+    logger = (logging.getLoggerClass())(name="test_logged_subprocess")
     logger.setLevel(logging.DEBUG)
     handler = ArrayHandler()
     logger.addHandler(handler)

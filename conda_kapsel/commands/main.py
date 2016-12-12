@@ -278,7 +278,7 @@ def _parse_args_and_run_subcommand(argv):
         return e.code
 
     if args.verbose:
-        logger = logging.getLogger(name="conda_kapsel_verbose")
+        logger = (logging.getLoggerClass())(name="conda_kapsel_verbose")
         logger.setLevel(logging.DEBUG)
         handler = logging.StreamHandler(stream=sys.stderr)
         logger.addHandler(handler)
