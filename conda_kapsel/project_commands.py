@@ -32,7 +32,8 @@ def _is_windows():
 _ArgSpec = namedtuple('_ArgSpec', ['option', 'has_value'])
 
 _http_specs = (_ArgSpec('--kapsel-host', True), _ArgSpec('--kapsel-port', True), _ArgSpec('--kapsel-url-prefix', True),
-               _ArgSpec('--kapsel-no-browser', False), _ArgSpec('--kapsel-iframe-hosts', True))
+               _ArgSpec('--kapsel-no-browser', False), _ArgSpec('--kapsel-iframe-hosts', True),
+               _ArgSpec('--kapsel-use-xheaders', False))
 
 
 class _ArgsTransformer(object):
@@ -102,6 +103,9 @@ class _BokehArgsTransformer(_ArgsTransformer):
             elif option == '--kapsel-no-browser':
                 if not values:
                     added.append('--show')
+            elif option == '--kapsel-use-xheaders':
+                if values and values[0] is True:
+                    added.append('--use-xheaders')
             elif option == '--kapsel-iframe-hosts':
                 # bokeh doesn't have a way to set this
                 pass
@@ -146,6 +150,9 @@ class _NotebookArgsTransformer(_ArgsTransformer):
                     python_dict_literal = """{ 'headers': { 'Content-Security-Policy': "frame-ancestors """ + \
                                           full_list + '" } }'
                     added.append('--NotebookApp.tornado_settings=' + python_dict_literal)
+            elif option == '--kapsel-use-xheaders':
+                if values and values[0] is True:
+                    added.append('--NotebookApp.trust_xheaders=True')
             else:
                 raise RuntimeError("unhandled http option for notebooks")  # pragma: no cover
 

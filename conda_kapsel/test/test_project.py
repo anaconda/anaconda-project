@@ -1169,13 +1169,15 @@ def test_notebook_command_with_kapsel_http_args():
         cmd_exec = command.exec_info_for_environment(
             environ,
             extra_args=['foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host',
-                        'example.com', '--kapsel-no-browser', '--kapsel-iframe-hosts=foo1.com *.foo2.com'])
+                        'example.com', '--kapsel-no-browser', '--kapsel-iframe-hosts=foo1.com *.foo2.com',
+                        '--kapsel-use-xheaders'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [
             jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--NotebookApp.tornado_settings=' +
             """{ 'headers': { 'Content-Security-Policy': "frame-ancestors 'self' foo1.com *.foo2.com" } }""",
-            '--no-browser', '--port', '1234', '--NotebookApp.base_url=blah', 'foo', 'bar'
+            '--no-browser', '--port', '1234', '--NotebookApp.base_url=blah', '--NotebookApp.trust_xheaders=True', 'foo',
+            'bar'
         ]
         assert cmd_exec.shell is False
 
@@ -1198,12 +1200,12 @@ def test_notebook_command_disabled_kapsel_http_args():
         cmd_exec = command.exec_info_for_environment(
             environ,
             extra_args=['foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host',
-                        'example.com', '--kapsel-no-browser'])
+                        'example.com', '--kapsel-no-browser', '--kapsel-use-xheaders'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(
             dirname, 'test.ipynb'), 'foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234',
-                                 '--kapsel-host', 'example.com', '--kapsel-no-browser']
+                                 '--kapsel-host', 'example.com', '--kapsel-no-browser', '--kapsel-use-xheaders']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1226,12 +1228,12 @@ def test_notebook_command_kapsel_http_args_after_double_hyphen():
         cmd_exec = command.exec_info_for_environment(
             environ,
             extra_args=['--', 'foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host',
-                        'example.com', '--kapsel-no-browser'])
+                        'example.com', '--kapsel-no-browser', '--kapsel-use-xheaders'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(
             dirname, 'test.ipynb'), '--', 'foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234',
-                                 '--kapsel-host', 'example.com', '--kapsel-no-browser']
+                                 '--kapsel-host', 'example.com', '--kapsel-no-browser', '--kapsel-use-xheaders']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1405,11 +1407,11 @@ def test_bokeh_command_with_kapsel_http_args():
         cmd_exec = command.exec_info_for_environment(
             environ,
             extra_args=['--foo', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host', 'example.com',
-                        '--kapsel-no-browser', '--kapsel-iframe-hosts=foo1.com *.foo2.com'])
+                        '--kapsel-no-browser', '--kapsel-iframe-hosts=foo1.com *.foo2.com', '--kapsel-use-xheaders'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         bokeh = find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--host', 'example.com', '--port',
-                                 '1234', '--prefix', 'blah', '--foo']
+                                 '1234', '--prefix', 'blah', '--use-xheaders', '--foo']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1512,11 +1514,12 @@ def test_bokeh_command_with_disabled_kapsel_http_args():
         cmd_exec = command.exec_info_for_environment(
             environ,
             extra_args=['--foo', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host', 'example.com',
-                        '--kapsel-no-browser'])
+                        '--kapsel-no-browser', '--kapsel-use-xheaders'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         bokeh = find_executable('bokeh', path)
-        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--foo', '--kapsel-url-prefix',
-                                 'blah', '--kapsel-port', '1234', '--kapsel-host', 'example.com', '--kapsel-no-browser']
+        assert cmd_exec.args == [bokeh, 'serve', os.path.join(
+            dirname, 'test.py'), '--foo', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host',
+                                 'example.com', '--kapsel-no-browser', '--kapsel-use-xheaders']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
