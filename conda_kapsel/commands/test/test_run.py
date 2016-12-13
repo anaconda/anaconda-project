@@ -296,6 +296,60 @@ commands:
     assert "" == err
 
 
+def test_run_command_verbose(monkeypatch, capsys):
+    executed = {}
+
+    def mock_execvpe(file, args, env):
+        executed['file'] = file
+        executed['args'] = args
+        executed['env'] = env
+
+    monkeypatch.setattr('os.execvpe', mock_execvpe)
+
+    def check_run_main(dirname):
+        from os.path import abspath as real_abspath
+
+        def mock_abspath(path):
+            if path == ".":
+                return dirname
+            else:
+                return real_abspath(path)
+
+        monkeypatch.setattr('os.path.abspath', mock_abspath)
+
+        project_dir_disable_dedicated_env(dirname)
+        result = _parse_args_and_run_subcommand(['conda-kapsel', '--verbose', 'run', '--directory', dirname, 'default'])
+
+        assert 1 == result
+        assert 'file' in executed
+        assert 'args' in executed
+        assert 'env' in executed
+        assert executed['file'].endswith(python_exe)
+        assert executed['args'][0].endswith(python_exe)
+        assert len(executed['args']) == 2
+        assert '--version' == executed['args'][1]
+
+        # conda info is cached so may not be here depending on
+        # which other tests run
+        log_lines = ["$ conda info --json", "$ %s --version" % executed['args'][0]]
+        log_lines_without_conda_info = log_lines[1:]
+
+        def nl(lines):
+            return ("\n".join(lines) + "\n")
+
+        out, err = capsys.readouterr()
+        assert "" == out
+        assert nl(log_lines) == err or nl(log_lines_without_conda_info) == err
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+commands:
+  default:
+    conda_app_entry: python --version
+
+"""}, check_run_main)
+
+
 def test_run_command_extra_args_with_double_hyphen(monkeypatch, capsys):
     executed = {}
 

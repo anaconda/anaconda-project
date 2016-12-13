@@ -15,6 +15,7 @@ import platform
 import re
 import sys
 
+from conda_kapsel.internal import logged_subprocess
 from conda_kapsel.internal.directory_contains import subdirectory_relative_to_directory
 
 
@@ -42,7 +43,7 @@ def _call_conda(extra_args):
     cmd_list = _get_conda_command(extra_args)
 
     try:
-        p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = logged_subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError as e:
         raise CondaError("failed to run: %r: %r" % (" ".join(cmd_list), repr(e)))
     (out, err) = p.communicate()

@@ -11,9 +11,9 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 import os
 import shutil
-import subprocess
 
 from conda_kapsel.internal import conda_api
+from conda_kapsel.internal import logged_subprocess
 from conda_kapsel.internal.metaclass import with_metaclass
 from conda_kapsel.internal.makedirs import makedirs_ok_if_exists
 from conda_kapsel.internal.simple_status import SimpleStatus
@@ -124,7 +124,7 @@ def shutdown_service_run_state(local_state_file, service_name):
     if 'shutdown_commands' in state:
         commands = state['shutdown_commands']
         for command in commands:
-            code = subprocess.call(command)
+            code = logged_subprocess.call(command)
             if code != 0:
                 errors.append("Shutting down %s, command %s failed with code %d." % (service_name, repr(command), code))
     # clear out the run state once we try to shut it down

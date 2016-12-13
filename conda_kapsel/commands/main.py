@@ -7,6 +7,7 @@
 """The ``main`` function chooses and runs a subcommand."""
 from __future__ import absolute_import, print_function
 
+import logging
 import os
 import sys
 from argparse import ArgumentParser, REMAINDER
@@ -14,6 +15,7 @@ from argparse import ArgumentParser, REMAINDER
 from conda_kapsel.commands.prepare_with_mode import (UI_MODE_TEXT_ASK_QUESTIONS,
                                                      UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK, _all_ui_modes)
 from conda_kapsel.version import version
+from conda_kapsel.verbose import push_verbose_logger, pop_verbose_logger
 from conda_kapsel.project import ALL_COMMAND_TYPES
 from conda_kapsel.plugins.registry import PluginRegistry
 from conda_kapsel.plugins.requirements.download import _hash_algorithms
@@ -37,12 +39,10 @@ import conda_kapsel.commands.command_commands as command_commands
 def _parse_args_and_run_subcommand(argv):
     parser = ArgumentParser(prog="conda-kapsel", description="Actions on kapsels (runnable projects).")
 
-    # future: make setup.py store our version in a version.py then use that here
-    # parser.add_argument('-v', '--version', action='version', version='0.1')
-
     subparsers = parser.add_subparsers(help="Sub-commands")
 
     parser.add_argument('-v', '--version', action='version', version=version)
+    parser.add_argument('--verbose', action='store_true', default=False, help="show verbose debugging details")
 
     def add_directory_arg(preset):
         preset.add_argument('--directory',
@@ -277,11 +277,22 @@ def _parse_args_and_run_subcommand(argv):
     except SystemExit as e:
         return e.code
 
-    # '--directory' is used for most subcommands; for unarchive,
-    # args.directory is positional and may be None
-    if 'directory' in args and args.directory is not None:
-        args.directory = os.path.abspath(args.directory)
-    return args.main(args)
+    if args.verbose:
+        logger = (logging.getLoggerClass())(name="conda_kapsel_verbose")
+        logger.setLevel(logging.DEBUG)
+        handler = logging.StreamHandler(stream=sys.stderr)
+        logger.addHandler(handler)
+        push_verbose_logger(logger)
+
+    try:
+        # '--directory' is used for most subcommands; for unarchive,
+        # args.directory is positional and may be None
+        if 'directory' in args and args.directory is not None:
+            args.directory = os.path.abspath(args.directory)
+        return args.main(args)
+    finally:
+        if args.verbose:
+            pop_verbose_logger()
 
 
 def _main_without_bug_handler():

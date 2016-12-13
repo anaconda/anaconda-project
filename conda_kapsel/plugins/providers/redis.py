@@ -19,6 +19,7 @@ from conda_kapsel.plugins.provider import (EnvVarProvider, ProviderAnalysis, shu
 import conda_kapsel.plugins.network_util as network_util
 from conda_kapsel.provide import PROVIDE_MODE_DEVELOPMENT
 from conda_kapsel.internal import py2_compat
+from conda_kapsel.internal import logged_subprocess
 
 _DEFAULT_SYSTEM_REDIS_HOST = "localhost"
 _DEFAULT_SYSTEM_REDIS_PORT = 6379
@@ -245,9 +246,9 @@ class RedisProvider(EnvVarProvider):
             # keep us from collected stderr. But on Unix it's kinda broken not
             # to close_fds. Hmm.
             try:
-                popen = subprocess.Popen(args=command,
-                                         stderr=subprocess.PIPE,
-                                         env=py2_compat.env_without_unicode(context.environ))
+                popen = logged_subprocess.Popen(args=command,
+                                                stderr=subprocess.PIPE,
+                                                env=py2_compat.env_without_unicode(context.environ))
             except Exception as e:
                 errors.append("Error executing redis-server: %s" % (str(e)))
                 return None
