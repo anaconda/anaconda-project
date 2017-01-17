@@ -26,11 +26,11 @@ install:
       MINICONDA_OS=MacOSX ;
     fi ;
     echo "Fetching Python $MINICONDA_VERSION miniconda for $MINICONDA_OS" ;
-    wget https://repo.continuum.io/miniconda/Miniconda$MINICONDA_VERSION-latest-$MINICONDA_OS-x86_64.sh -O miniconda.sh
+    wget https://repo.continuum.io/miniconda/Miniconda$MINICONDA_VERSION-4.2.12-$MINICONDA_OS-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p "$HOME"/miniconda
   - source "$HOME"/miniconda/bin/activate root
   - printenv | sort
-  - conda config --set always_yes yes --set changeps1 no
+  - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
   - conda update -n root conda
   - conda install -n root conda-build
   - conda info -a
