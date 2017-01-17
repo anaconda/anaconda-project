@@ -490,8 +490,9 @@ def test_run_notebook_not_in_config(monkeypatch, capsys):
     args = _test_run_command_foo(
         ['conda-kapsel', 'run', '--directory', '<DIRNAME>',
          'something.ipynb'], monkeypatch, capsys, _func_asserting_contains('jupyter-notebook'))
-    assert len(args) == 1
+    assert len(args) == 2
     assert args[0].endswith('something.ipynb')
+    assert args[1] == '--NotebookApp.default_url=/notebooks/something.ipynb'
 
 
 def test_run_command_nonexistent_name(monkeypatch, capsys):

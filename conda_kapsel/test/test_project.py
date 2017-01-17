@@ -1125,7 +1125,8 @@ def test_notebook_command():
         cmd_exec = command.exec_info_for_environment(environ)
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
-        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb')]
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'),
+                                 '--NotebookApp.default_url=/notebooks/test.ipynb']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1146,7 +1147,8 @@ def test_notebook_command_extra_args():
         cmd_exec = command.exec_info_for_environment(environ, extra_args=['foo', 'bar'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
-        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), 'foo', 'bar']
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'),
+                                 '--NotebookApp.default_url=/notebooks/test.ipynb', 'foo', 'bar']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1174,7 +1176,8 @@ def test_notebook_command_with_kapsel_http_args():
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [
-            jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--NotebookApp.tornado_settings=' +
+            jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb',
+            '--NotebookApp.tornado_settings=' +
             """{ 'headers': { 'Content-Security-Policy': "frame-ancestors 'self' foo1.com *.foo2.com" } }""",
             '--no-browser', '--port', '1234', '--NotebookApp.base_url=blah', '--NotebookApp.trust_xheaders=True', 'foo',
             'bar'
@@ -1232,8 +1235,9 @@ def test_notebook_command_kapsel_http_args_after_double_hyphen():
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(
-            dirname, 'test.ipynb'), '--', 'foo', 'bar', '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234',
-                                 '--kapsel-host', 'example.com', '--kapsel-no-browser', '--kapsel-use-xheaders']
+            dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb', '--', 'foo', 'bar',
+                                 '--kapsel-url-prefix', 'blah', '--kapsel-port', '1234', '--kapsel-host', 'example.com',
+                                 '--kapsel-no-browser', '--kapsel-use-xheaders']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1257,8 +1261,9 @@ def test_notebook_command_with_kapsel_http_args_separated_by_equals():
                         '--kapsel-no-browser'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
-        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--no-browser', '--port',
-                                 '1234', '--NotebookApp.base_url=blah', 'foo', 'bar']
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(
+            dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb', '--no-browser', '--port', '1234',
+                                 '--NotebookApp.base_url=blah', 'foo', 'bar']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1285,7 +1290,7 @@ def test_notebook_guess_command():
         cmd_exec = command.exec_info_for_environment(environ)
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = find_executable('jupyter-notebook', path)
-        assert cmd_exec.args == [jupyter_notebook, expected_nb_path]
+        assert cmd_exec.args == [jupyter_notebook, expected_nb_path, '--NotebookApp.default_url=/notebooks/test.ipynb']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
@@ -1463,7 +1468,8 @@ def test_bokeh_command_with_multiple_iframe_hosts_args():
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter = find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [
-            jupyter, os.path.join(dirname, 'test.ipynb'), '--NotebookApp.tornado_settings=' +
+            jupyter, os.path.join(dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb',
+            '--NotebookApp.tornado_settings=' +
             """{ 'headers': { 'Content-Security-Policy': "frame-ancestors 'self' example.com foo1.com *.foo2.com" } }"""
         ]
         assert cmd_exec.shell is False

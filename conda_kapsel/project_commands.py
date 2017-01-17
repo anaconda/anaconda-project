@@ -23,6 +23,11 @@ try:  # pragma: no cover
 except ImportError:  # pragma: no cover
     from pipes import quote  # pragma: no cover
 
+try:
+    from urllib.parse import quote as url_quote
+except ImportError:  # pragma: no cover (py2 only)
+    from urllib import quote as url_quote  # pragma: no cover (py2 only)
+
 
 def _is_windows():
     # it's tempting to cache this but it hoses our test monkeypatching so don't.
@@ -117,11 +122,23 @@ class _BokehArgsTransformer(_ArgsTransformer):
 
 
 class _NotebookArgsTransformer(_ArgsTransformer):
-    def __init__(self):
+    def __init__(self, command):
         super(_NotebookArgsTransformer, self).__init__(_http_specs)
+        self.command = command
 
     def add_args(self, results, args):
         added = []
+
+        # Notes about default_url
+        #  * it should not include the base_url above, because Jupyter adds that
+        #  * if the notebook is in a subdir, the subdir is not included in the
+        #    url, only the basename
+        #  * jupyter-notebook doesn't seem to encode or decode in any way
+        #    so we need to do the url %hexcode escaping here
+        filename = os.path.basename(self.command.notebook)
+        default_url_arg = '--NotebookApp.default_url=/notebooks/%s' % url_quote(filename)
+        added.append(default_url_arg)
+
         for (option, values) in results:
             # currently we do nothing with --kapsel-host for notebooks, is this ok?
             if option == '--kapsel-host':
@@ -399,7 +416,7 @@ class ProjectCommand(object):
             path = os.path.join(environ['PROJECT_DIR'], self.notebook)
             args = ['jupyter-notebook', path]
             if self.supports_http_options:
-                extra_args = _NotebookArgsTransformer().transform_args(extra_args)
+                extra_args = _NotebookArgsTransformer(self).transform_args(extra_args)
 
         if self.bokeh_app is not None:
             path = os.path.join(environ['PROJECT_DIR'], self.bokeh_app)
