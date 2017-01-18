@@ -195,6 +195,7 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         project.project_file.save()
         environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare_without_interaction(project, environ=environ)
+        result.print_output()
         assert result
 
         prefix = result.environ[conda_env_var]
