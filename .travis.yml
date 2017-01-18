@@ -26,18 +26,17 @@ install:
       MINICONDA_OS=MacOSX ;
     fi ;
     echo "Fetching Python $MINICONDA_VERSION miniconda for $MINICONDA_OS" ;
-    wget https://repo.continuum.io/miniconda/Miniconda$MINICONDA_VERSION-latest-$MINICONDA_OS-x86_64.sh -O miniconda.sh
+    wget https://repo.continuum.io/miniconda/Miniconda$MINICONDA_VERSION-4.1.11-$MINICONDA_OS-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p "$HOME"/miniconda
   - source "$HOME"/miniconda/bin/activate root
   - printenv | sort
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -n root conda
-  - conda install -n root conda-build
+  - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
+  - conda install -n root conda-build psutil
   - conda info -a
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       OS_PACKAGES=libffi ;
     fi ;
-    conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" pip redis pycrypto bcrypt ipython-notebook bokeh ruamel_yaml anaconda-client requests $OS_PACKAGES
+    conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" pip redis pycrypto bcrypt ipython-notebook bokeh ruamel_yaml anaconda-client requests psutil $OS_PACKAGES
   - source activate test-environment
   - printenv | sort
   - unset CONDA_ENV_PATH # because the older conda in miniconda sets this, confusing some tests

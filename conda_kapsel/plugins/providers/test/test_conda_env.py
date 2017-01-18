@@ -187,14 +187,15 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
 
         assert 'ipython' in installed
         assert 'numpy' in installed
-        assert 'ipython-notebook' not in installed
+        assert 'bokeh' not in installed
 
         # Preparing it again with new packages added should add those
         deps = project.project_file.get_value('packages')
-        project.project_file.set_value('packages', deps + ['ipython-notebook'])
+        project.project_file.set_value('packages', deps + ['bokeh'])
         project.project_file.save()
         environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare_without_interaction(project, environ=environ)
+        result.print_output()
         assert result
 
         prefix = result.environ[conda_env_var]
@@ -202,7 +203,7 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
 
         assert 'ipython' in installed
         assert 'numpy' in installed
-        assert 'ipython-notebook' in installed
+        assert 'bokeh' in installed
 
         installed_pip = pip_api.installed(prefix)
         assert 'flake8' in installed_pip

@@ -169,7 +169,10 @@ class AllTestsCommand(TestCommand):
             # 2, maybe due to an interaction with coverage
             enable_xdist = []
         else:
-            enable_xdist = ['-n', str(CPU_COUNT)]
+            # Recent conda downright explodes if run from multiple processes at once,
+            # so skip xdist until we add our own locking layer or something.
+            enable_xdist = []
+            # enable_xdist = ['-n', str(CPU_COUNT)]
         self.pytest_args = ['-rfew', '--durations=10'] + enable_xdist
         # 100% coverage on Windows requires us to do extra mocks because generally Windows
         # can't run all the servers, such as redis-server. So we relax the coverage requirement
