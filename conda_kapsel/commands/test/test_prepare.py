@@ -26,6 +26,7 @@ class Args(object):
         self.directory = "."
         self.env_spec = None
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
+        self.command = None
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -49,7 +50,7 @@ def _test_prepare_command(monkeypatch, ui_mode):
 
     def prepare_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = prepare_command(dirname, ui_mode, conda_environment=None)
+        result = prepare_command(dirname, ui_mode, conda_environment=None, command_name=None)
         assert can_connect_args['port'] == 6379
         assert result
 
@@ -313,6 +314,47 @@ env_specs:
     packages:
         - nonexistent_bar
 """}, check_prepare_choose_environment_does_not_exist)
+
+
+def test_prepare_command_choose_command_chooses_env_spec(capsys):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+        result = _parse_args_and_run_subcommand(['conda-kapsel', 'prepare', '--directory', dirname, '--command=with_bar'
+                                                 ])
+        assert result == 1
+
+        out, err = capsys.readouterr()
+        assert out == ""
+        assert 'nonexistent_bar' in err
+        assert 'nonexistent_foo' not in err
+
+        result = _parse_args_and_run_subcommand(['conda-kapsel', 'prepare', '--directory', dirname, '--command=with_foo'
+                                                 ])
+        assert result == 1
+
+        out, err = capsys.readouterr()
+        assert out == ""
+        assert 'nonexistent_foo' in err
+        assert 'nonexistent_bar' not in err
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+  foo:
+    packages:
+        - nonexistent_foo
+  bar:
+    packages:
+        - nonexistent_bar
+commands:
+  with_foo:
+    conda_app_entry: python --version
+    env_spec: foo
+  with_bar:
+    conda_app_entry: python --version
+    env_spec: bar
+
+"""}, check)
 
 
 def test_ask_variables_interactively(monkeypatch):

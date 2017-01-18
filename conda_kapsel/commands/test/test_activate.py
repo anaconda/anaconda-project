@@ -27,6 +27,7 @@ class Args(object):
         self.directory = "."
         self.env_spec = None
         self.mode = UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
+        self.command = None
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
@@ -50,7 +51,7 @@ def test_activate(monkeypatch):
 
     def activate_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None)
+        result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None, command_name=None)
         assert can_connect_args['port'] == 6379
         assert result is not None
         if platform.system() == 'Windows':
@@ -72,7 +73,7 @@ services:
 def test_activate_quoting(monkeypatch):
     def activate_foo(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None)
+        result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None, command_name=None)
         assert result is not None
         if platform.system() == 'Windows':
             result = [line for line in result if not line.startswith("export PATH")]
@@ -169,6 +170,22 @@ services:
     assert "export PROJECT_DIR" in out
     assert "export REDIS_URL=redis://localhost:6379\n" in out
     assert "" == err
+
+
+def test_main_bad_command_provided(capsys):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'activate', '--directory', dirname, '--command', 'nope'])
+        assert code == 1
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+services:
+  REDIS_URL: redis
+"""}, check)
+
+    out, err = capsys.readouterr()
+    assert err.startswith("Command name 'nope' is not in")
 
 
 def _monkeypatch_can_connect_to_socket_to_fail_to_find_redis(monkeypatch):
