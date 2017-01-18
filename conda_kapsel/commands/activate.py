@@ -18,7 +18,7 @@ from conda_kapsel.commands.prepare_with_mode import prepare_with_ui_mode_printin
 from conda_kapsel.commands.project_load import load_project
 
 
-def activate(dirname, ui_mode, conda_environment):
+def activate(dirname, ui_mode, conda_environment, command_name):
     """Prepare project and return lines to be sourced.
 
     Future direction: should also activate the proper conda env.
@@ -27,7 +27,10 @@ def activate(dirname, ui_mode, conda_environment):
         None on failure or a list of lines to print.
     """
     project = load_project(dirname)
-    result = prepare_with_ui_mode_printing_errors(project, ui_mode=ui_mode, env_spec_name=conda_environment)
+    result = prepare_with_ui_mode_printing_errors(project,
+                                                  ui_mode=ui_mode,
+                                                  env_spec_name=conda_environment,
+                                                  command_name=command_name)
     if result.failed:
         return None
 
@@ -44,7 +47,7 @@ def activate(dirname, ui_mode, conda_environment):
 
 def main(args):
     """Start the activate command and return exit status code."""
-    result = activate(args.directory, args.mode, args.env_spec)
+    result = activate(args.directory, args.mode, args.env_spec, args.command)
     if result is None:
         return 1
     else:

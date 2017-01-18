@@ -57,7 +57,7 @@ def _parse_args_and_run_subcommand(argv):
                             action='store',
                             help="An environment spec name from kapsel.yml")
 
-    def add_prepare_args(preset):
+    def add_prepare_args(preset, include_command=True):
         add_directory_arg(preset)
         add_env_spec_arg(preset)
         all_supported_modes = list(_all_ui_modes)
@@ -69,6 +69,12 @@ def _parse_args_and_run_subcommand(argv):
                             choices=_all_ui_modes,
                             action='store',
                             help="One of " + ", ".join(_all_ui_modes))
+        if include_command:
+            preset.add_argument('--command',
+                                metavar='COMMAND_NAME',
+                                default=None,
+                                action='store',
+                                help="A command name from kapsel.yml (env spec for this command will be used)")
 
     def add_env_spec_name_arg(preset):
         preset.add_argument('-n',
@@ -82,7 +88,7 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=init.main)
 
     preset = subparsers.add_parser('run', help="Run the project, setting up requirements first")
-    add_prepare_args(preset)
+    add_prepare_args(preset, include_command=False)
     preset.add_argument('command',
                         metavar='COMMAND_NAME',
                         default=None,
