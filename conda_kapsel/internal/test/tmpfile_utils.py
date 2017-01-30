@@ -104,6 +104,18 @@ def with_temporary_file(func, dir=None):
         os.remove(f.name)
 
 
+def with_named_file_contents(filename, contents, func, dir=None):
+    if dir is None:
+        dir = local_tmp
+
+    with (TmpDir(prefix="test-")) as dirname:
+        full = os.path.join(dirname, filename)
+        with codecs.open(full, 'w', encoding='utf-8') as f:
+            f.write(contents)
+            f.flush()
+        return func(full)
+
+
 def with_file_contents(contents, func, dir=None):
     def with_file_object(f):
         f.write(contents.encode("UTF-8"))

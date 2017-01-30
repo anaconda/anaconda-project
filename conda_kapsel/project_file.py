@@ -26,6 +26,10 @@ possible_project_file_names = ("kapsel.yml", "kapsel.yaml")
 DEFAULT_PROJECT_FILENAME = possible_project_file_names[0]
 
 
+def _function_returning_none():
+    return None
+
+
 class ProjectFile(YamlFile):
     """Represents the ``kapsel.yml`` file which describes the project across machines/users.
 
@@ -41,7 +45,7 @@ class ProjectFile(YamlFile):
     """
 
     @classmethod
-    def load_for_directory(cls, directory):
+    def load_for_directory(cls, directory, default_env_specs_func=_function_returning_none):
         """Load the project file from the given directory, even if it doesn't exist.
 
         If the directory has no project file, the loaded
@@ -57,6 +61,7 @@ class ProjectFile(YamlFile):
 
         Args:
             directory (str): path to the project directory
+            default_env_specs_func (function makes list of EnvSpec): if file is created, use these
 
         Returns:
             a new ``ProjectFile``
@@ -66,9 +71,9 @@ class ProjectFile(YamlFile):
             path = os.path.join(directory, name)
             if os.path.isfile(path):
                 return ProjectFile(path)
-        return ProjectFile(os.path.join(directory, DEFAULT_PROJECT_FILENAME))
+        return ProjectFile(os.path.join(directory, DEFAULT_PROJECT_FILENAME), default_env_specs_func)
 
-    def __init__(self, filename):
+    def __init__(self, filename, default_env_specs_func=_function_returning_none):
         """Construct a ``ProjectFile`` with the given filename and requirement registry.
 
         It's easier to use ``ProjectFile.load_for_directory()`` in most cases.
@@ -82,8 +87,10 @@ class ProjectFile(YamlFile):
 
         Args:
             filename (str): path to the project file
+            default_env_specs_func (function makes list of EnvSpec): if file is created, use these
 
         """
+        self._default_env_specs_func = default_env_specs_func
         super(ProjectFile, self).__init__(filename)
 
     def _default_content(self):
@@ -121,6 +128,10 @@ class ProjectFile(YamlFile):
             "You can define multiple, named environment specs.\n" + "Each inherits any global packages or channels,\n" +
             "but can have its own unique ones also.\n" + "Use `conda-kapsel add-env-spec` to add environment specs.\n")
 
+        default_env_specs = self._default_env_specs_func()
+        # clear it out so anything in the closure can gc
+        self._default_env_specs_func = _function_returning_none
+
         # we make a big string and then parse it because I can't figure out the
         # ruamel.yaml API to insert comments in front of map keys.
         def comment_out(comment):
@@ -136,9 +147,19 @@ class ProjectFile(YamlFile):
             elif section_name in ('channels', 'packages'):
                 section_body = "  []"
             elif section_name in ('env_specs', ):
-                section_body = "  default:\n" + "    packages: []\n" + "    channels: []\n"
+                if default_env_specs is None:
+                    section_body = "  default:\n" + "    packages: []\n" + "    channels: []\n"
+                else:
+                    # we'll fill this in below after we parse the string
+                    section_body = "  {}"
             else:
                 section_body = "  {}"
             to_parse = to_parse + "\n#\n" + comment_out(comment) + section_name + ":\n" + section_body + "\n\n\n"
 
-        return ryaml.load(to_parse, Loader=ryaml.RoundTripLoader)
+        as_json = ryaml.load(to_parse, Loader=ryaml.RoundTripLoader)
+
+        if default_env_specs is not None:
+            for env_spec in default_env_specs:
+                as_json['env_specs'][env_spec.name] = env_spec.to_json()
+
+        return as_json

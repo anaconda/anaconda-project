@@ -179,15 +179,26 @@ def _load_environment_yml(filename):
     return EnvSpec(name=name, conda_packages=conda_packages, channels=channels, pip_packages=pip_packages)
 
 
-def _find_out_of_sync_environment_yml_spec(project_specs, filename):
-    spec = _load_environment_yml(filename)
+def _find_environment_yml_spec(directory_path):
+    filenames = ("environment.yml", "environment.yaml")
+    for filename in filenames:
+        full = os.path.join(directory_path, filename)
+        spec = _load_environment_yml(full)
+        if spec is not None:
+            return (spec, filename)
+
+    return (None, None)
+
+
+def _find_out_of_sync_environment_yml_spec(project_specs, directory_path):
+    (spec, filename) = _find_environment_yml_spec(directory_path)
 
     if spec is None:
-        return None
+        return (None, None)
 
     for existing in project_specs:
         if existing.name == spec.name and \
            existing.channels_and_packages_hash == spec.channels_and_packages_hash:
-            return None
+            return (None, None)
 
-    return spec
+    return (spec, filename)
