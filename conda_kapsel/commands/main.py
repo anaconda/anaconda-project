@@ -85,6 +85,7 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('init', help="Initialize a directory with default project configuration")
     add_directory_arg(preset)
+    preset.add_argument('-y', '--yes', action='store_true', help="Assume yes to all confirmation prompts", default=None)
     preset.set_defaults(main=init.main)
 
     preset = subparsers.add_parser('run', help="Run the project, setting up requirements first")

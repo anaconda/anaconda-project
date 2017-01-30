@@ -123,3 +123,27 @@ def test_init_do_not_create_directory_not_interactive(capsys, monkeypatch):
         assert ("Project directory '%s' does not exist.\nUnable to load the project.\n" % subdir) == err
 
     with_directory_contents(dict(), check)
+
+
+def test_init_create_directory_not_interactive_with_yes(capsys, monkeypatch):
+    _monkeypatch_isatty(monkeypatch, False)
+
+    def mock_input(prompt):
+        raise RuntimeError("This should not have been called")
+
+    monkeypatch.setattr('conda_kapsel.commands.console_utils._input', mock_input)
+
+    def check(dirname):
+        subdir = os.path.join(dirname, "foo")
+
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'init', '--yes', '--directory', subdir])
+        assert code == 0
+
+        assert os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))
+        assert os.path.isdir(subdir)
+
+        out, err = capsys.readouterr()
+        assert ("Project configuration is in %s\n" % (os.path.join(subdir, DEFAULT_PROJECT_FILENAME))) == out
+        assert '' == err
+
+    with_directory_contents(dict(), check)

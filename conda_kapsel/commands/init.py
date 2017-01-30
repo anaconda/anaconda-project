@@ -13,18 +13,26 @@ from conda_kapsel import project_ops
 from conda_kapsel.commands.console_utils import (print_project_problems, console_ask_yes_or_no)
 
 
-def init_command(project_dir):
+def init_command(project_dir, assume_yes):
     """Initialize a new project.
 
     Returns:
         Exit code (0 on success)
     """
+    # we don't want False right now because either you specify
+    # --yes or we go with the default in project_ops.create
+    # (depends on whether project file already exists).
+    assert assume_yes is None or assume_yes is True
+
     if not os.path.exists(project_dir):
-        make_directory = console_ask_yes_or_no("Create directory '%s'?" % project_dir, False)
+        if assume_yes:
+            make_directory = True
+        else:
+            make_directory = console_ask_yes_or_no("Create directory '%s'?" % project_dir, default=False)
     else:
         make_directory = False
 
-    project = project_ops.create(project_dir, make_directory=make_directory)
+    project = project_ops.create(project_dir, make_directory=make_directory, fix_problems=assume_yes)
     if print_project_problems(project):
         return 1
     else:
@@ -34,4 +42,4 @@ def init_command(project_dir):
 
 def main(args):
     """Start the init command and return exit status code."""
-    return init_command(args.directory)
+    return init_command(args.directory, args.yes)
