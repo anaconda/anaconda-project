@@ -11,6 +11,7 @@ import os
 from collections import OrderedDict
 
 from conda_kapsel.yaml_file import YamlFile
+from conda_kapsel.env_spec import EnvSpec
 
 try:
     # this is the conda-packaged version of ruamel.yaml which has the
@@ -26,8 +27,8 @@ possible_project_file_names = ("kapsel.yml", "kapsel.yaml")
 DEFAULT_PROJECT_FILENAME = possible_project_file_names[0]
 
 
-def _function_returning_none():
-    return None
+def _empty_default_env_spec():
+    return (EnvSpec(name="default", channels=[], conda_packages=()), )
 
 
 class ProjectFile(YamlFile):
@@ -45,7 +46,7 @@ class ProjectFile(YamlFile):
     """
 
     @classmethod
-    def load_for_directory(cls, directory, default_env_specs_func=_function_returning_none):
+    def load_for_directory(cls, directory, default_env_specs_func=_empty_default_env_spec):
         """Load the project file from the given directory, even if it doesn't exist.
 
         If the directory has no project file, the loaded
@@ -73,7 +74,7 @@ class ProjectFile(YamlFile):
                 return ProjectFile(path)
         return ProjectFile(os.path.join(directory, DEFAULT_PROJECT_FILENAME), default_env_specs_func)
 
-    def __init__(self, filename, default_env_specs_func=_function_returning_none):
+    def __init__(self, filename, default_env_specs_func=_empty_default_env_spec):
         """Construct a ``ProjectFile`` with the given filename and requirement registry.
 
         It's easier to use ``ProjectFile.load_for_directory()`` in most cases.
@@ -128,9 +129,9 @@ class ProjectFile(YamlFile):
             "You can define multiple, named environment specs.\n" + "Each inherits any global packages or channels,\n" +
             "but can have its own unique ones also.\n" + "Use `conda-kapsel add-env-spec` to add environment specs.\n")
 
+        assert self._default_env_specs_func is not None
         default_env_specs = self._default_env_specs_func()
-        # clear it out so anything in the closure can gc
-        self._default_env_specs_func = _function_returning_none
+        assert default_env_specs is not None
 
         # we make a big string and then parse it because I can't figure out the
         # ruamel.yaml API to insert comments in front of map keys.
@@ -146,20 +147,13 @@ class ProjectFile(YamlFile):
                 section_body = ""
             elif section_name in ('channels', 'packages'):
                 section_body = "  []"
-            elif section_name in ('env_specs', ):
-                if default_env_specs is None:
-                    section_body = "  default:\n" + "    packages: []\n" + "    channels: []\n"
-                else:
-                    # we'll fill this in below after we parse the string
-                    section_body = "  {}"
             else:
                 section_body = "  {}"
             to_parse = to_parse + "\n#\n" + comment_out(comment) + section_name + ":\n" + section_body + "\n\n\n"
 
         as_json = ryaml.load(to_parse, Loader=ryaml.RoundTripLoader)
 
-        if default_env_specs is not None:
-            for env_spec in default_env_specs:
-                as_json['env_specs'][env_spec.name] = env_spec.to_json()
+        for env_spec in default_env_specs:
+            as_json['env_specs'][env_spec.name] = env_spec.to_json()
 
         return as_json
