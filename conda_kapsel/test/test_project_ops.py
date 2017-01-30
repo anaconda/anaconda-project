@@ -98,11 +98,74 @@ def test_create_imports_environment_yml():
         assert [] == project.problems
         assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
 
+        # TODO we shouldn't BOTH create 'default' and import 'stuff' probably
         assert sorted(list(project.env_specs.keys())) == sorted(['stuff', 'default'])
         spec = project.env_specs['stuff']
         assert spec.conda_packages == ('a', 'b')
         assert spec.pip_packages == ('foo', )
         assert spec.channels == ('bar', )
+
+    with_directory_contents(
+        {'something.png': 'not a real png',
+         "environment.yml": """
+name: stuff
+dependencies:
+ - a
+ - b
+ - pip:
+   - foo
+channels:
+ - bar
+"""}, check_create)
+
+
+def test_create_imports_environment_yml_when_kapsel_yml_exists_and_fix_problems():
+    def check_create(dirname):
+        project = project_ops.create(dirname,
+                                     make_directory=False,
+                                     name='hello',
+                                     icon='something.png',
+                                     description="Hello World",
+                                     fix_problems=True)
+        assert [] == project.problems
+        assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+
+        assert sorted(list(project.env_specs.keys())) == sorted(['stuff'])
+        spec = project.env_specs['stuff']
+        assert spec.conda_packages == ('a', 'b')
+        assert spec.pip_packages == ('foo', )
+        assert spec.channels == ('bar', )
+
+    with_directory_contents(
+        {'something.png': 'not a real png',
+         "kapsel.yml": """
+name: foo
+""",
+         "environment.yml": """
+name: stuff
+dependencies:
+ - a
+ - b
+ - pip:
+   - foo
+channels:
+ - bar
+"""}, check_create)
+
+
+def test_create_no_import_environment_yml_when_not_fix_problems():
+    def check_create(dirname):
+        project_filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
+
+        project = project_ops.create(dirname,
+                                     make_directory=False,
+                                     name='hello',
+                                     icon='something.png',
+                                     description="Hello World",
+                                     fix_problems=False)
+        assert not os.path.isfile(project_filename)
+
+        assert ["Environment spec 'stuff' from environment.yml is not in kapsel.yml."] == project.problems
 
     with_directory_contents(
         {'something.png': 'not a real png',

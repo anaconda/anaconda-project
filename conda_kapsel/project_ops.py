@@ -56,7 +56,7 @@ def _add_projectignore_if_none(project_directory):
             pass
 
 
-def create(directory_path, make_directory=False, name=None, icon=None, description=None):
+def create(directory_path, make_directory=False, name=None, icon=None, description=None, fix_problems=None):
     """Create a project skeleton in the given directory.
 
     Returns a Project instance even if creation fails or the directory
@@ -74,6 +74,7 @@ def create(directory_path, make_directory=False, name=None, icon=None, descripti
         name (str): Name of the new project or None to leave unset (uses directory name)
         icon (str): Icon for the new project or None to leave unset (uses no icon)
         description (str): Description for the new project or None to leave unset
+        fix_problems (bool): True to always fix problems even if project file existed
 
     Returns:
         a Project instance
@@ -103,7 +104,9 @@ def create(directory_path, make_directory=False, name=None, icon=None, descripti
     # if we're creating kapsel.yml, why not auto-fix any problems,
     # such as environment.yaml import. Obtuse to ask since there's
     # no existing kapsel.yml to mess up.
-    if not os.path.exists(project.project_file.filename):
+    if fix_problems is None:
+        fix_problems = not os.path.exists(project.project_file.filename)
+    if fix_problems:
         for problem in project.fixable_problems:
             problem.fix(project)
 
