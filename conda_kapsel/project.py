@@ -10,7 +10,8 @@ from __future__ import absolute_import
 from copy import deepcopy, copy
 import os
 
-from conda_kapsel.env_spec import (EnvSpec, _find_environment_yml_spec, _find_out_of_sync_environment_yml_spec)
+from conda_kapsel.env_spec import (EnvSpec, _anaconda_default_env_spec, _find_environment_yml_spec,
+                                   _find_out_of_sync_environment_yml_spec)
 from conda_kapsel.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from conda_kapsel.plugins.registry import PluginRegistry
 from conda_kapsel.plugins.requirement import EnvVarRequirement
@@ -413,7 +414,8 @@ class _ConfigCache(object):
             # to add this if we are going to ask about environment.yml
             # import, above.
             def add_default_env_spec(project):
-                project.project_file.set_value(['env_specs', 'default'], dict(packages=[], channels=[]))
+                default_spec = _anaconda_default_env_spec()
+                project.project_file.set_value(['env_specs', default_spec.name], default_spec.to_json())
 
             problems.append(ProjectProblem(text=("%s has an empty env_specs section." % project_file.filename),
                                            fix_prompt=("Add an environment spec to %s?" % os.path.basename(
@@ -599,7 +601,7 @@ class Project(object):
             if env_yml_spec is not None:
                 return [env_yml_spec]
             else:
-                return None
+                return [_anaconda_default_env_spec()]
 
         self._project_file = ProjectFile.load_for_directory(directory_path, default_env_specs_func=load_default_specs)
         self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)

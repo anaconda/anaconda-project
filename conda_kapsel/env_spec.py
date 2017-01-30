@@ -202,3 +202,10 @@ def _find_out_of_sync_environment_yml_spec(project_specs, directory_path):
             return (None, None)
 
     return (spec, filename)
+
+
+def _anaconda_default_env_spec():
+    return EnvSpec(name="default",
+                   conda_packages=["anaconda"],
+                   channels=[],
+                   description="Default environment spec for running commands")
