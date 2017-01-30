@@ -10,7 +10,7 @@ from __future__ import absolute_import
 from copy import deepcopy, copy
 import os
 
-from conda_kapsel.env_spec import EnvSpec, _find_out_of_sync_environment_yml_spec
+from conda_kapsel.env_spec import (EnvSpec, _find_environment_yml_spec, _find_out_of_sync_environment_yml_spec)
 from conda_kapsel.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from conda_kapsel.plugins.registry import PluginRegistry
 from conda_kapsel.plugins.requirement import EnvVarRequirement
@@ -374,13 +374,8 @@ class _ConfigCache(object):
                 "%s: env_specs should be a dictionary from environment name to environment attributes, not %r" %
                 (project_file.filename, env_specs))
 
-        env_yaml_filename = "environment.yml"
-        env_yaml_spec = _find_out_of_sync_environment_yml_spec(self.env_specs.values(),
-                                                               os.path.join(self.directory_path, env_yaml_filename))
-        if env_yaml_spec is None:
-            env_yaml_filename = "environment.yaml"
-            env_yaml_spec = _find_out_of_sync_environment_yml_spec(self.env_specs.values(),
-                                                                   os.path.join(self.directory_path, env_yaml_filename))
+        (env_yaml_spec, env_yaml_filename) = _find_out_of_sync_environment_yml_spec(self.env_specs.values(),
+                                                                                    self.directory_path)
 
         if env_yaml_spec is not None:
             skip_spec_import = project_file.get_value(['skip_imports', 'environment_yml'])
@@ -598,7 +593,15 @@ class Project(object):
             plugin_registry (PluginRegistry): where to look up Requirement and Provider instances, None for default
         """
         self._directory_path = os.path.realpath(directory_path)
-        self._project_file = ProjectFile.load_for_directory(directory_path)
+
+        def load_default_specs():
+            (env_yml_spec, env_yml_filename) = _find_environment_yml_spec(directory_path)
+            if env_yml_spec is not None:
+                return [env_yml_spec]
+            else:
+                return None
+
+        self._project_file = ProjectFile.load_for_directory(directory_path, default_env_specs_func=load_default_specs)
         self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
         self._config_cache = _ConfigCache(self._directory_path, plugin_registry)

@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from conda_kapsel.internal.test.tmpfile_utils import with_file_contents
+from conda_kapsel.internal.test.tmpfile_utils import (with_file_contents, with_named_file_contents)
 
 from conda_kapsel.env_spec import EnvSpec, _load_environment_yml, _find_out_of_sync_environment_yml_spec
 
@@ -131,10 +131,11 @@ def test_find_in_sync_environment_yml():
 
         assert spec is not None
 
-        desynced = _find_out_of_sync_environment_yml_spec([spec], filename)
+        (desynced, name) = _find_out_of_sync_environment_yml_spec([spec], os.path.dirname(filename))
         assert desynced is None
+        assert name is None
 
-    with_file_contents("""
+    with_named_file_contents("environment.yml", """
 name: foo
 dependencies:
   - bar=1.0
@@ -159,11 +160,12 @@ def test_find_out_of_sync_environment_yml():
                           pip_packages=spec.pip_packages,
                           channels=spec.channels)
 
-        desynced = _find_out_of_sync_environment_yml_spec([changed], filename)
+        (desynced, name) = _find_out_of_sync_environment_yml_spec([changed], os.path.dirname(filename))
         assert desynced is not None
         assert desynced.channels_and_packages_hash == spec.channels_and_packages_hash
+        assert name == os.path.basename(filename)
 
-    with_file_contents("""
+    with_named_file_contents("environment.yaml", """
 name: foo
 dependencies:
   - bar=1.0
@@ -183,8 +185,9 @@ def test_load_environment_yml_does_not_exist():
 
 
 def test_find_out_of_sync_does_not_exist():
-    spec = _find_out_of_sync_environment_yml_spec([], "nopenopenope")
+    (spec, name) = _find_out_of_sync_environment_yml_spec([], "nopenopenope")
     assert spec is None
+    assert name is None
 
 
 def test_to_json():
