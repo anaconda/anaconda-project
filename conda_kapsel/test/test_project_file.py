@@ -69,10 +69,7 @@ channels: []
 # but can have its own unique ones also.
 # Use `conda-kapsel add-env-spec` to add environment specs.
 #
-env_specs:
-  default:
-    packages: []
-    channels: []
+env_specs: {default: {packages: [], channels: []}}
 """
 
 

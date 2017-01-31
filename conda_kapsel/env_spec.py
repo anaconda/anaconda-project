@@ -17,6 +17,14 @@ from conda_kapsel.internal.py2_compat import is_string
 
 from conda_kapsel.yaml_file import _load_string, _YAMLError
 
+try:
+    # this is the conda-packaged version of ruamel.yaml which has the
+    # module renamed
+    import ruamel_yaml as ryaml
+except ImportError:  # pragma: no cover
+    # this is the upstream version
+    import ruamel.yaml as ryaml  # pragma: no cover
+
 
 class EnvSpec(object):
     """Represents a set of required conda packages we could potentially instantiate as a Conda environment."""
@@ -123,7 +131,18 @@ class EnvSpec(object):
         if pip_packages:
             packages.append(dict(pip=pip_packages))
         channels = list(self.channels)
-        return dict(packages=packages, channels=channels)
+
+        # this is a gross, roundabout hack to get ryaml dicts that
+        # have ordering... OrderedDict doesn't work because the
+        # yaml saver saves them as some "!!omap" nonsense. Other
+        # than ordering, the formatting isn't even preserved here.
+        template_json = ryaml.load("something:\n    packages: []\n" + "    channels: []\n",
+                                   Loader=ryaml.RoundTripLoader)
+
+        template_json['something']['packages'] = packages
+        template_json['something']['channels'] = channels
+
+        return template_json['something']
 
 
 def _load_environment_yml(filename):
@@ -202,3 +221,10 @@ def _find_out_of_sync_environment_yml_spec(project_specs, directory_path):
             return (None, None)
 
     return (spec, filename)
+
+
+def _anaconda_default_env_spec():
+    return EnvSpec(name="default",
+                   conda_packages=["anaconda"],
+                   channels=[],
+                   description="Default environment spec for running commands")

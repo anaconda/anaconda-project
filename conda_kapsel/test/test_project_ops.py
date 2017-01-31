@@ -69,6 +69,12 @@ def test_create(monkeypatch):
         assert os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))
         assert os.path.isfile(os.path.join(subdir, ".kapselignore"))
 
+        assert sorted(list(project.env_specs.keys())) == sorted(['default'])
+        spec = project.env_specs['default']
+        assert spec.conda_packages == ('anaconda', )
+        assert spec.pip_packages == ()
+        assert spec.channels == ()
+
     with_directory_contents(dict(), check_create)
 
 
