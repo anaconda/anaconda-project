@@ -46,6 +46,24 @@ class EnvSpec(object):
         self._description = description
         self._channels_and_packages_hash = None
 
+        conda_specs_by_name = dict()
+        for spec in self.conda_packages:
+            # we quietly skip invalid specs here and let them fail
+            # somewhere we can more easily report an error message.
+            parsed = conda_api.parse_spec(spec)
+            if parsed is not None:
+                conda_specs_by_name[parsed.name] = spec
+        self._conda_specs_by_name = conda_specs_by_name
+
+        pip_specs_by_name = dict()
+        for spec in self.pip_packages:
+            # we quietly skip invalid specs here and let them fail
+            # somewhere we can more easily report an error message.
+            parsed = pip_api.parse_spec(spec)
+            if parsed is not None:
+                pip_specs_by_name[parsed.name] = spec
+        self._pip_specs_by_name = pip_specs_by_name
+
     @property
     def name(self):
         """Get name of the package set."""
@@ -96,18 +114,28 @@ class EnvSpec(object):
     @property
     def conda_package_names_set(self):
         """Conda package names that we require, as a Python set."""
-        names = set()
-        for spec in self.conda_packages:
-            names.add(conda_api.parse_spec(spec).name)
-        return names
+        return set(self._conda_specs_by_name.keys())
 
     @property
     def pip_package_names_set(self):
         """Pip package names that we require, as a Python set."""
-        names = set()
-        for spec in self.pip_packages:
-            names.add(pip_api.parse_spec(spec).name)
-        return names
+        return set(self._pip_specs_by_name.keys())
+
+    def _specs_for_package_names(self, names, mapping):
+        specs = []
+        for name in names:
+            spec = mapping.get(name, None)
+            if spec is not None:
+                specs.append(spec)
+        return specs
+
+    def specs_for_conda_package_names(self, names):
+        """Get the full install specs given an iterable of package names."""
+        return self._specs_for_package_names(names, self._conda_specs_by_name)
+
+    def specs_for_pip_package_names(self, names):
+        """Get the full install specs given an iterable of package names."""
+        return self._specs_for_package_names(names, self._pip_specs_by_name)
 
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""

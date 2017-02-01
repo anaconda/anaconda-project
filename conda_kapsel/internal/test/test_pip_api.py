@@ -152,12 +152,28 @@ def test_parse_spec():
     assert "foo" == pip_api.parse_spec("foo==1.3").name
     # these three punctuation chars are allowed
     assert "a-_." == pip_api.parse_spec("a-_.").name
+    # we use this in some tests
+    assert "nope_not_a_thing" == pip_api.parse_spec("nope_not_a_thing").name
 
     # a bunch of examples from the pip docs
     for spec in ['SomeProject', 'SomeProject == 1.3', 'SomeProject >=1.2,<.2.0', 'SomeProject[foo, bar]',
                  'SomeProject~=1.4.2', "SomeProject ==5.4 ; python_version < '2.7'",
                  "SomeProject; sys_platform == 'win32'"]:
         assert "SomeProject" == pip_api.parse_spec(spec).name
+
+
+def test_parse_spec_url():
+    assert "bar" == pip_api.parse_spec("http://example.com/foo#egg=bar").name
+    assert "bar" == pip_api.parse_spec("https://example.com/foo#egg=bar").name
+    # ignore after extra &
+    assert "bar" == pip_api.parse_spec("https://example.com/foo#egg=bar&subdirectory=blah").name
+    # ignore "-1.3" type of stuff after the package name
+    assert "bar" == pip_api.parse_spec("https://example.com/foo#egg=bar-1.3").name
+    # ignore if no #egg fragment
+    assert pip_api.parse_spec("http://example.com/foo") is None
+
+    # this was a real-world example with an url and [] after package name
+    assert 'dask' == pip_api.parse_spec('git+https://github.com/blaze/dask.git#egg=dask[complete]').name
 
 
 def test_format_flag(monkeypatch):

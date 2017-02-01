@@ -185,10 +185,10 @@ class DefaultCondaManager(CondaManager):
         if os.path.isdir(os.path.join(prefix, 'conda-meta')):
             missing = deviations.missing_packages
             if len(missing) > 0:
+                specs = spec.specs_for_conda_package_names(missing)
+                assert len(specs) == len(missing)
                 try:
-                    # TODO we are ignoring package versions here
-                    # https://github.com/Anaconda-Server/conda-kapsel/issues/77
-                    conda_api.install(prefix=prefix, pkgs=list(missing), channels=spec.channels)
+                    conda_api.install(prefix=prefix, pkgs=specs, channels=spec.channels)
                 except conda_api.CondaError as e:
                     raise CondaManagerError("Failed to install missing packages: " + ", ".join(missing))
         elif create:
@@ -203,8 +203,10 @@ class DefaultCondaManager(CondaManager):
         # now add pip if needed
         missing = list(deviations.missing_pip_packages)
         if len(missing) > 0:
+            specs = spec.specs_for_pip_package_names(missing)
+            assert len(specs) == len(missing)
             try:
-                pip_api.install(prefix=prefix, pkgs=missing)
+                pip_api.install(prefix=prefix, pkgs=specs)
             except pip_api.PipError as e:
                 raise CondaManagerError("Failed to install missing pip packages: " + ", ".join(missing))
 
