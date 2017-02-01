@@ -233,6 +233,8 @@ commands:
        bokeh_app: foo.py
     bar:
        bokeh_app: bar.py
+packages:
+  - bokeh
 """,
          "foo.py": "# foo",
          "bar.py": "# bar"}, check)

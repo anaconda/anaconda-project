@@ -138,6 +138,8 @@ class _ConfigCache(object):
             # this MUST be after we update env reqs so we have the valid env spec names
             self._update_commands(problems, project_file, conda_meta_file, requirements)
 
+            self._verify_command_dependencies(problems, project_file)
+
         self.requirements = requirements
         self.problems = _make_problems_into_objects(problems)
         self.problem_strings = list([p.text for p in self.problems])
@@ -577,6 +579,31 @@ class _ConfigCache(object):
                                                              attributes={'notebook': relative_name,
                                                                          'auto_generated': True,
                                                                          'env_spec': self.default_env_spec_name})
+
+    def _verify_command_dependencies(self, problems, project_file):
+        for command in self.commands.values():
+            env_spec = self.env_specs[command.default_env_spec_name]
+            missing = command.missing_packages(env_spec)
+            if len(missing) > 0:
+
+                def add_packages_to_env_spec(project):
+                    env_dict = project.project_file.get_value(['env_specs', env_spec.name])
+                    assert env_dict is not None
+                    packages = env_dict.get('packages', [])
+                    for m in missing:
+                        # m would already be in there if we fixed the same env spec
+                        # twice because two commands used it, for example.
+                        if m not in packages:
+                            packages.append(m)
+                    project.project_file.set_value(['env_specs', env_spec.name, 'packages'], packages)
+
+                problem = ProjectProblem(
+                    text=("%s: Command %s uses env spec %s which does not have the packages: %s" % (
+                        project_file.filename, command.name, env_spec.name, ", ".join(missing))),
+                    fix_prompt=("Add %s to env spec %s in %s?" % (", ".join(missing), env_spec.name, os.path.basename(
+                        project_file.filename))),
+                    fix_function=add_packages_to_env_spec)
+                problems.append(problem)
 
 
 class Project(object):
