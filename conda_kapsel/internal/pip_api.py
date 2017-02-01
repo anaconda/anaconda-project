@@ -60,7 +60,8 @@ def _call_pip(prefix, extra_args):
 def install(prefix, pkgs=None):
     """Install packages into an environment."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
-        raise TypeError('must specify a list of one or more packages to install into existing environment')
+        raise TypeError('must specify a list of one or more packages to install into existing environment, not %r' %
+                        pkgs)
 
     # --no-deps is because we don't want to pull in pip versions of
     # everything that conda has.
@@ -125,6 +126,47 @@ ParsedPipSpec = collections.namedtuple('ParsedPipSpec', ['name'])
 
 _spec_pat = re.compile(' *([a-zA-Z0-9][-_.a-zA-Z0-9]+)')
 
+_egg_fragment_re = re.compile(r'[#&]egg=([^&]*)')
+
+_egg_fragment_postfix_re = re.compile('^(.*?)(?:-dev|-\d.*)$')
+
+_url_schemes = set(('http', 'https', 'file', 'ftp', 'git', 'git+http', 'git+https', 'git+ssh', 'git+git', 'git+file',
+                    'hg', 'hg+http', 'hg+https', 'hg+ssh', 'hg+static-http'
+                    'bzr', 'bzr+http', 'bzr+https', 'bzr+ssh', 'bzr+sftp', 'bzr+ftp', 'bzr+lp', 'svn', 'svn+ssh',
+                    'svn+http', 'svn+https', 'svn+svn'))
+
+
+def _is_pip_understood_url(s):
+    if ':' in s:
+        scheme = s.split(':', 1)[0]
+        return scheme.lower() in _url_schemes
+    else:
+        return False
+
+
+def _extract_name(spec):
+    m = _spec_pat.match(spec)
+    if m is not None:
+        return m.group(1)
+    else:
+        return None
+
+
+def _extract_name_from_egg_fragment(url):
+    m = _egg_fragment_re.search(url)
+    if m is not None:
+        fragment = _extract_name(m.group(1))
+        if fragment is not None:
+            # it's allowed to put "#egg=foo-1.2" but then pip just
+            # ignores the "-1.2"
+            m = _egg_fragment_postfix_re.search(fragment)
+            if m is not None:
+                return m.group(1)
+            else:
+                return fragment
+    else:
+        return None
+
 
 def parse_spec(spec):
     """Parse a pip spec, right now we only understand the name portion.
@@ -133,12 +175,20 @@ def parse_spec(spec):
     we would pretty much have to import the pip code.
     So for now we'll "fail late" when we invoke pip.
 
+    What we understand currently is an url with a "#egg=foo"
+    fragment, and a plain package name (possibly with version info
+    on it). We don't understand filesystem paths yet.
+
     Returns:
        ``ParsedPipSpec`` or None on failure
 
     """
-    m = _spec_pat.match(spec)
-    if m is None:
+    if _is_pip_understood_url(spec):
+        name = _extract_name_from_egg_fragment(spec)
+    else:
+        name = _extract_name(spec)
+
+    if name is None:
         return None
-    name = m.group(1)
-    return ParsedPipSpec(name=name)
+    else:
+        return ParsedPipSpec(name=name)

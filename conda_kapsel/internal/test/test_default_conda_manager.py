@@ -48,6 +48,17 @@ def test_conda_create_and_install_and_remove(monkeypatch):
                                           channels=[])
     assert spec_with_phony_pip_package.conda_packages == ('ipython', )
     assert spec_with_phony_pip_package.pip_packages == ('flake8', 'nope_not_a_thing')
+    assert spec_with_phony_pip_package.pip_package_names_set == set(('flake8', 'nope_not_a_thing'))
+
+    # package url is supposed to be on a nonexistent port, if it
+    # causes a problem we need to mock
+    spec_with_bad_url_pip_package = EnvSpec(name='myenv',
+                                            conda_packages=['ipython'],
+                                            pip_packages=['flake8', 'https://127.0.0.1:24729/nope#egg=phony'],
+                                            channels=[])
+    assert spec_with_bad_url_pip_package.conda_packages == ('ipython', )
+    assert spec_with_bad_url_pip_package.pip_packages == ('flake8', 'https://127.0.0.1:24729/nope#egg=phony')
+    assert spec_with_bad_url_pip_package.pip_package_names_set == set(('flake8', 'phony'))
 
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
@@ -81,9 +92,20 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         assert deviations.missing_pip_packages == ('nope_not_a_thing', )
 
         with pytest.raises(CondaManagerError) as excinfo:
-            manager.fix_environment_deviations(envdir, spec, deviations)
+            manager.fix_environment_deviations(envdir, spec_with_phony_pip_package, deviations)
         assert 'Failed to install missing pip packages' in str(excinfo.value)
         assert not manager._timestamp_file_up_to_date(envdir, spec_with_phony_pip_package)
+
+        # test bad url package throws error
+        deviations = manager.find_environment_deviations(envdir, spec_with_bad_url_pip_package)
+
+        assert deviations.missing_packages == ()
+        assert deviations.missing_pip_packages == ('phony', )
+
+        with pytest.raises(CondaManagerError) as excinfo:
+            manager.fix_environment_deviations(envdir, spec_with_bad_url_pip_package, deviations)
+        assert 'Failed to install missing pip packages' in str(excinfo.value)
+        assert not manager._timestamp_file_up_to_date(envdir, spec_with_bad_url_pip_package)
 
         # test that we can remove a package
         assert manager._timestamp_file_up_to_date(envdir, spec)
