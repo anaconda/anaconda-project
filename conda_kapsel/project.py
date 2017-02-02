@@ -381,9 +381,7 @@ class _ConfigCache(object):
                                                                                    self.directory_path)
 
         if importable_spec is not None:
-            # TODO skip_imports:environment_yml can now be a hash of a requirements.txt,
-            # which is a bit strange.
-            skip_spec_import = project_file.get_value(['skip_imports', 'environment_yml'])
+            skip_spec_import = project_file.get_value(['skip_imports', 'environment'])
             if skip_spec_import == importable_spec.channels_and_packages_hash:
                 importable_spec = None
 
@@ -415,17 +413,17 @@ class _ConfigCache(object):
                     importable_spec.diff_from(old))
                 prompt = "Overwrite env spec %s with the changes from %s?" % (importable_spec.name, importable_filename)
 
-            def overwrite_env_spec_from_environment_yml(project):
+            def overwrite_env_spec_from_importable(project):
                 project.project_file.set_value(['env_specs', importable_spec.name], importable_spec.to_json())
 
-            def remember_no_import_environment_yml(project):
-                project.project_file.set_value(['skip_imports', 'environment_yml'],
+            def remember_no_import_importable(project):
+                project.project_file.set_value(['skip_imports', 'environment'],
                                                importable_spec.channels_and_packages_hash)
 
             problems.append(ProjectProblem(text=text,
                                            fix_prompt=prompt,
-                                           fix_function=overwrite_env_spec_from_environment_yml,
-                                           no_fix_function=remember_no_import_environment_yml))
+                                           fix_function=overwrite_env_spec_from_importable,
+                                           no_fix_function=remember_no_import_importable))
         elif env_specs_is_empty_or_missing:
             # we do NOT want to add this problem if we merely
             # failed to parse individual env specs; it must be

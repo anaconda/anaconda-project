@@ -2295,7 +2295,7 @@ def test_auto_fix_env_spec_import_saying_no():
         assert project.problems == []
         assert list(project.env_specs.keys()) == ['default']
 
-        skip_importing_hash = project.project_file.get_value(['skip_imports', 'environment_yml'])
+        skip_importing_hash = project.project_file.get_value(['skip_imports', 'environment'])
         assert skip_importing_hash is not None
         assert skip_importing_hash != ''
 
