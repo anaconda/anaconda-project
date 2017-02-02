@@ -10,8 +10,8 @@ from __future__ import absolute_import
 from copy import deepcopy, copy
 import os
 
-from conda_kapsel.env_spec import (EnvSpec, _anaconda_default_env_spec, _find_environment_yml_spec,
-                                   _find_out_of_sync_environment_yml_spec)
+from conda_kapsel.env_spec import (EnvSpec, _anaconda_default_env_spec, _find_importable_spec,
+                                   _find_out_of_sync_importable_spec)
 from conda_kapsel.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from conda_kapsel.plugins.registry import PluginRegistry
 from conda_kapsel.plugins.requirement import EnvVarRequirement
@@ -377,16 +377,18 @@ class _ConfigCache(object):
                 "%s: env_specs should be a dictionary from environment name to environment attributes, not %r" %
                 (project_file.filename, env_specs))
 
-        (env_yaml_spec, env_yaml_filename) = _find_out_of_sync_environment_yml_spec(self.env_specs.values(),
-                                                                                    self.directory_path)
+        (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
+                                                                                   self.directory_path)
 
-        if env_yaml_spec is not None:
+        if importable_spec is not None:
+            # TODO skip_imports:environment_yml can now be a hash of a requirements.txt,
+            # which is a bit strange.
             skip_spec_import = project_file.get_value(['skip_imports', 'environment_yml'])
-            if skip_spec_import == env_yaml_spec.channels_and_packages_hash:
-                env_yaml_spec = None
+            if skip_spec_import == importable_spec.channels_and_packages_hash:
+                importable_spec = None
 
-        if env_yaml_spec is not None:
-            old = self.env_specs.get(env_yaml_spec.name)
+        if importable_spec is not None:
+            old = self.env_specs.get(importable_spec.name)
 
         # this is a pretty bad hack, but if we injected "notebook"
         # or "bokeh" deps to make a notebook/bokeh command work,
@@ -398,27 +400,27 @@ class _ConfigCache(object):
         # missing notebook dep, add it, then complain about environment.yml
         # out of sync, and `conda-kapsel init` in a directory with a .ipynb
         # and an environment.yml doesn't result in a valid project.
-        if env_yaml_spec is not None and old is not None and \
-           env_yaml_spec.diff_only_removes_notebook_or_bokeh(old):
-            env_yaml_spec = None
+        if importable_spec is not None and old is not None and \
+           importable_spec.diff_only_removes_notebook_or_bokeh(old):
+            importable_spec = None
 
-        if env_yaml_spec is not None:
+        if importable_spec is not None:
             if old is None:
-                text = "Environment spec '%s' from %s is not in %s." % (env_yaml_spec.name, env_yaml_filename,
+                text = "Environment spec '%s' from %s is not in %s." % (importable_spec.name, importable_filename,
                                                                         os.path.basename(project_file.filename))
-                prompt = "Add env spec %s to %s?" % (env_yaml_spec.name, os.path.basename(project_file.filename))
+                prompt = "Add env spec %s to %s?" % (importable_spec.name, os.path.basename(project_file.filename))
             else:
                 text = "Environment spec '%s' from %s is out of sync with %s. Diff:\n%s" % (
-                    env_yaml_spec.name, env_yaml_filename, os.path.basename(project_file.filename),
-                    env_yaml_spec.diff_from(old))
-                prompt = "Overwrite env spec %s with the changes from %s?" % (env_yaml_spec.name, env_yaml_filename)
+                    importable_spec.name, importable_filename, os.path.basename(project_file.filename),
+                    importable_spec.diff_from(old))
+                prompt = "Overwrite env spec %s with the changes from %s?" % (importable_spec.name, importable_filename)
 
             def overwrite_env_spec_from_environment_yml(project):
-                project.project_file.set_value(['env_specs', env_yaml_spec.name], env_yaml_spec.to_json())
+                project.project_file.set_value(['env_specs', importable_spec.name], importable_spec.to_json())
 
             def remember_no_import_environment_yml(project):
                 project.project_file.set_value(['skip_imports', 'environment_yml'],
-                                               env_yaml_spec.channels_and_packages_hash)
+                                               importable_spec.channels_and_packages_hash)
 
             problems.append(ProjectProblem(text=text,
                                            fix_prompt=prompt,
@@ -640,9 +642,9 @@ class Project(object):
         self._directory_path = os.path.realpath(directory_path)
 
         def load_default_specs():
-            (env_yml_spec, env_yml_filename) = _find_environment_yml_spec(directory_path)
-            if env_yml_spec is not None:
-                return [env_yml_spec]
+            (importable_spec, importable_filename) = _find_importable_spec(directory_path)
+            if importable_spec is not None:
+                return [importable_spec]
             else:
                 return [_anaconda_default_env_spec()]
 
