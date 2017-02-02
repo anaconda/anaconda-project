@@ -1010,7 +1010,8 @@ def test_command_with_custom_description():
         assert command.description == 'hi'
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n    description: hi\n"}, check)
+        {DEFAULT_PROJECT_FILENAME:
+         "commands:\n default:\n    bokeh_app: test.py\n    description: hi\npackages:\n - bokeh\n"}, check)
 
 
 def test_command_with_non_string_env_spec():
@@ -1295,7 +1296,8 @@ def test_notebook_guess_command():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\n",
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
             'test.ipynb': 'pretend there is notebook data here',
             'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
             'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
@@ -1316,6 +1318,7 @@ def test_notebook_guess_command_can_be_default():
 
     with_directory_contents_completing_project_file(
         {
+            DEFAULT_PROJECT_FILENAME: "packages: ['notebook']\n",
             # we pick the first command alphabetically in this case
             # so the test looks for that
             'a.ipynb': 'pretend there is notebook data here',
@@ -1952,9 +1955,12 @@ channels:
 env_specs:
   default:
     description: "Default"
+    packages:
+      - notebook
   woot:
     packages:
       - blah
+      - bokeh
     channels:
       - woohoo
   w00t:
@@ -2007,7 +2013,7 @@ def test_get_publication_info_from_complex_project():
                                   'description': 'A downloaded file which is referenced by FOO.',
                                   'url': 'https://example.com/blah'}},
             'env_specs': {'default': {'channels': ['bar'],
-                                      'packages': ['foo'],
+                                      'packages': ['foo', 'notebook'],
                                       'description': 'Default'},
                           'lol': {'channels': ['bar'],
                                   'packages': ['foo'],
@@ -2016,7 +2022,7 @@ def test_get_publication_info_from_complex_project():
                                    'packages': ['foo', 'something'],
                                    'description': 'double 0'},
                           'woot': {'channels': ['bar', 'woohoo'],
-                                   'packages': ['foo', 'blah'],
+                                   'packages': ['foo', 'blah', 'bokeh'],
                                    'description': 'woot'}},
             'variables': {'SOMETHING': {'encrypted': False,
                                         'title': 'SOMETHING',
@@ -2276,3 +2282,183 @@ dependencies:
 channels:
  - bar
 """}, check)
+
+
+def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert len(project.problems) == 1
+        assert len(project.problem_objects) == 1
+        assert len(project.fixable_problems) == 1
+        problem = project.problem_objects[0]
+        assert ("Environment spec 'stuff' from environment.yml is out of sync with kapsel.yml. Diff:\n" +
+                "  channels:\n    + bar\n+ a\n+ b\n  pip:\n    + foo") == problem.text
+        assert problem.can_fix
+
+        problem.fix(project)
+        project.project_file.save()
+
+        assert project.problems == []
+        assert list(project.env_specs.keys()) == ['stuff']
+        spec = project.env_specs['stuff']
+        assert spec.conda_packages == ('a', 'b')
+        assert spec.pip_packages == ('foo', )
+        assert spec.channels == ('bar', )
+
+        # add bokeh and notebook, which we should ignore
+        packages = project.project_file.get_value(['env_specs', 'stuff', 'packages'])
+        packages.extend(['bokeh', 'notebook'])
+        project.project_file.set_value(['env_specs', 'stuff', 'packages'], packages)
+        project.project_file.save()
+
+        # no problems despite the diff
+        assert project.problems == []
+        spec = project.env_specs['stuff']
+        assert spec.conda_packages == ('a', 'b', 'bokeh', 'notebook')
+
+        # add some other package, should NOT ignore
+        packages = project.project_file.get_value(['env_specs', 'stuff', 'packages'])
+        packages.extend(['someother'])
+        project.project_file.set_value(['env_specs', 'stuff', 'packages'], packages)
+        project.project_file.save()
+
+        assert len(project.problems) == 1
+
+        # remove that again
+        packages = project.project_file.get_value(['env_specs', 'stuff', 'packages'])
+        packages.remove('someother')
+        project.project_file.set_value(['env_specs', 'stuff', 'packages'], packages)
+        project.project_file.save()
+
+        assert len(project.problems) == 0
+
+        # add a channel, should NOT ignore
+        channels = project.project_file.get_value(['env_specs', 'stuff', 'channels'])
+        channels.append("boo")
+        project.project_file.set_value(['env_specs', 'stuff', 'channels'], channels)
+        project.project_file.save()
+
+        assert len(project.problems) == 1
+        spec = project.env_specs['stuff']
+        assert spec.channels == ('bar', 'boo')
+
+        # remove the channel
+        channels = project.project_file.get_value(['env_specs', 'stuff', 'channels'])
+        channels.remove("boo")
+        project.project_file.set_value(['env_specs', 'stuff', 'channels'], channels)
+        project.project_file.save()
+
+        assert len(project.problems) == 0
+
+        # add a pip package, should NOT ignore
+        packages = project.project_file.get_value(['env_specs', 'stuff', 'packages'])
+        pip_list = None
+        for p in packages:
+            if isinstance(p, dict):
+                pip_list = p['pip']
+        pip_list.append('someother')
+        project.project_file.use_changes_without_saving()
+        project.project_file.save()
+
+        assert len(project.problems) == 1
+        spec = project.env_specs['stuff']
+        assert spec.pip_packages == ('foo', 'someother')
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\n",
+         "environment.yml": """
+name: stuff
+dependencies:
+ - a
+ - b
+ - pip:
+   - foo
+channels:
+ - bar
+"""}, check)
+
+
+def test_auto_fix_notebook_dep():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert len(project.problems) == 1
+        assert len(project.problem_objects) == 1
+        assert len(project.fixable_problems) == 1
+        assert len(project.env_specs['default'].conda_package_names_set) == 0
+
+        problem = project.problem_objects[0]
+        assert ("%s: Command foo.ipynb uses env spec default which does not have the packages: notebook" %
+                project.project_file.filename) == problem.text
+        assert problem.can_fix
+
+        problem.fix(project)
+        project.project_file.save()
+
+        assert project.problems == []
+        assert project.env_specs['default'].conda_package_names_set == set(['notebook'])
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  foo.ipynb:\n'
+                                    '    notebook: foo.ipynb\n'),
+         'foo.ipynb': 'not a real notebook'}, check)
+
+
+def test_no_auto_fix_notebook_dep_if_we_have_anaconda():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert project.problems == []
+        assert project.env_specs['default'].conda_package_names_set == set(['anaconda'])
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: ('packages:\n'
+                                    ' - anaconda\n'
+                                    'commands:\n'
+                                    '  foo.ipynb:\n'
+                                    '    notebook: foo.ipynb\n'),
+         'foo.ipynb': 'not a real notebook'}, check)
+
+
+def test_no_auto_fix_notebook_dep_if_we_have_notebook():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert project.problems == []
+        assert project.env_specs['default'].conda_package_names_set == set(['notebook'])
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: ('packages:\n'
+                                    ' - notebook\n'
+                                    'commands:\n'
+                                    '  foo.ipynb:\n'
+                                    '    notebook: foo.ipynb\n'),
+         'foo.ipynb': 'not a real notebook'}, check)
+
+
+def test_auto_fix_bokeh_dep():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert len(project.problems) == 1
+        assert len(project.problem_objects) == 1
+        assert len(project.fixable_problems) == 1
+        assert len(project.env_specs['default'].conda_package_names_set) == 0
+
+        problem = project.problem_objects[0]
+        assert ("%s: Command bokeh_test uses env spec default which does not have the packages: bokeh" %
+                project.project_file.filename) == problem.text
+        assert problem.can_fix
+
+        problem.fix(project)
+        project.project_file.save()
+
+        assert project.problems == []
+        assert project.env_specs['default'].conda_package_names_set == set(['bokeh'])
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                    '  bokeh_test:\n'
+                                    '    bokeh_app: main.py\n'),
+         'main.py': 'hello'}, check)

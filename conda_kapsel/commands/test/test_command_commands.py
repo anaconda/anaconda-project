@@ -206,7 +206,8 @@ def test_add_command_specifying_notebook(monkeypatch, capsys):
         assert command['env_spec'] == 'default'
         assert len(command.keys()) == 2
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_specifying_notebook)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n'}, check_specifying_notebook)
 
 
 def test_add_command_guessing_notebook(monkeypatch, capsys):
@@ -223,7 +224,7 @@ def test_add_command_guessing_notebook(monkeypatch, capsys):
         assert len(command.keys()) == 2
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: '',
+        {DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n',
          'file.ipynb': ""}, check_guessing_notebook)
 
 
@@ -342,7 +343,7 @@ def test_remove_command(monkeypatch, capsys):
         assert err == ''
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'commands:\n  test:\n    notebook: file.ipynb'}, check)
+        {DEFAULT_PROJECT_FILENAME: 'packages: ["notebook"]\ncommands:\n  test:\n    notebook: file.ipynb'}, check)
 
 
 def test_remove_command_missing(monkeypatch, capsys):
@@ -372,7 +373,9 @@ def test_remove_command_auto_generated(monkeypatch, capsys):
         assert err == "Cannot remove auto-generated command: 'file.ipynb'.\n"
         assert out == ''
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: '', 'file.ipynb': ""}, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n',
+         'file.ipynb': ""}, check)
 
 
 def test_list_commands_with_project_file_problems(capsys, monkeypatch):
@@ -415,4 +418,7 @@ run_notebook  Notebook test.ipynb
                                     "  default:\n"
                                     "    bokeh_app: test.py\n"
                                     "  run_notebook:\n"
-                                    "    notebook: test.ipynb\n")}, check_empty_project)
+                                    "    notebook: test.ipynb\n"
+                                    "packages:\n"
+                                    " - bokeh\n"
+                                    " - notebook\n")}, check_empty_project)

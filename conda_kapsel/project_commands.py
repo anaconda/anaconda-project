@@ -502,3 +502,25 @@ class ProjectCommand(object):
         # sample data files relative to the project
         # directory.
         return CommandExecInfo(cwd=environ['PROJECT_DIR'], args=args, env=environ, shell=shell)
+
+    def missing_packages(self, env_spec):
+        """List packages required by this command which are not in the env spec.
+
+        This is used to be sure if you add a notebook command you depend on
+        notebook, and if you add a Bokeh command you depend on bokeh, etc.
+        """
+        missing = []
+        # we assume 'anaconda' has both bokeh and notebook
+        # already...  ideally we'd do a dependency resolution and
+        # handle any transitive pull-in of bokeh or notebook, but
+        # we aren't that clever right now.  when/if we do package
+        # pinning we might have the dep resolution cached and we
+        # could easily look in the pinned list instead of the root
+        # dependency list.
+        if 'anaconda' not in env_spec.conda_package_names_set:
+            if self.bokeh_app is not None and 'bokeh' not in env_spec.conda_package_names_set:
+                missing.append('bokeh')
+            if self.notebook is not None and 'notebook' not in env_spec.conda_package_names_set:
+                missing.append('notebook')
+
+        return missing

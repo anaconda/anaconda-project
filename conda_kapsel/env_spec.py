@@ -152,6 +152,36 @@ class EnvSpec(object):
             channels_diff = ["  channels:"] + list(map(lambda x: "    " + x, channels_diff))
         return "\n".join(channels_diff + conda_diff + pip_diff)
 
+    def diff_only_removes_notebook_or_bokeh(self, old):
+        """Check whether the diff is exclusively removing 'bokeh' or 'notebook'.
+
+        This is used for a hack, because we can auto-add 'bokeh' or 'notebook'
+        packages when we conda-kapsel init, and that alone shouldn't result
+        in being out of sync with the environment.yml.
+        """
+        to_remove = [("- " + r) for r in ("bokeh", "notebook")]
+
+        def filter_context(items):
+            return list(filter(lambda line: line.startswith("- ") or line.startswith("+ "), items))
+
+        conda_diff = filter_context(difflib.ndiff(old.conda_packages, self.conda_packages))
+        for r in to_remove:
+            if r in conda_diff:
+                conda_diff.remove(r)
+
+        if len(conda_diff) > 0:
+            return False
+
+        channels_diff = filter_context(difflib.ndiff(old.channels, self.channels))
+        if len(channels_diff) > 0:
+            return False
+
+        pip_diff = filter_context(difflib.ndiff(old.pip_packages, self.pip_packages))
+        if len(pip_diff) > 0:
+            return False
+
+        return True
+
     def to_json(self):
         """Get JSON for a kapsel.yml env spec section."""
         packages = list(self.conda_packages)
