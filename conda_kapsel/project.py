@@ -387,6 +387,22 @@ class _ConfigCache(object):
 
         if env_yaml_spec is not None:
             old = self.env_specs.get(env_yaml_spec.name)
+
+        # this is a pretty bad hack, but if we injected "notebook"
+        # or "bokeh" deps to make a notebook/bokeh command work,
+        # we will end up out-of-sync for that reason
+        # alone. environment.yml seems to typically not have
+        # "notebook" in it because the environment.yml is used for
+        # the kernel but not Jupyter itself.
+        # We then end up in a problem loop where we complain about
+        # missing notebook dep, add it, then complain about environment.yml
+        # out of sync, and `conda-kapsel init` in a directory with a .ipynb
+        # and an environment.yml doesn't result in a valid project.
+        if env_yaml_spec is not None and old is not None and \
+           env_yaml_spec.diff_only_removes_notebook_or_bokeh(old):
+            env_yaml_spec = None
+
+        if env_yaml_spec is not None:
             if old is None:
                 text = "Environment spec '%s' from %s is not in %s." % (env_yaml_spec.name, env_yaml_filename,
                                                                         os.path.basename(project_file.filename))
