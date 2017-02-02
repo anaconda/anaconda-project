@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import codecs
 import difflib
 import os
+import re
 
 import conda_kapsel.internal.conda_api as conda_api
 import conda_kapsel.internal.pip_api as pip_api
@@ -256,19 +257,72 @@ def _load_environment_yml(filename):
     return EnvSpec(name=name, conda_packages=conda_packages, channels=channels, pip_packages=pip_packages)
 
 
-def _find_environment_yml_spec(directory_path):
-    filenames = ("environment.yml", "environment.yaml")
+_requirement_option_re = re.compile('^-([-a-zA-Z0-9]+)\s(.*)')
+
+
+def _load_requirements_txt(filename):
+    """Load a requirements.txt as an EnvSpec, or None if not loaded."""
+    try:
+        with codecs.open(filename, 'r', 'utf-8') as file:
+            lines = file.readlines()
+    except (IOError, _YAMLError):
+        return None
+
+    # We don't do too much validation here because we end up doing it
+    # later if we import this into the project, and then load it from
+    # the project file. We will do the import such that we don't end up
+    # keeping the new project file if it's messed up.
+    #
+    # However we do try to avoid crashing on None or type errors here.
+
+    packages = []
+    for line in lines:
+        line = line.strip()
+        # note: comments MUST be at start of line, because
+        # urls can have a hash mark in them
+        if line.startswith("#") or line == '':
+            continue
+        m = _requirement_option_re.search(line)
+        if m is not None:
+            option = m.group(1)
+            package = m.group(2)
+            # '-e' means a URL requirement.  '-r' means to
+            # recursively include another file. other options are
+            # simply ignored right now, which won't really work
+            # out well, but.
+            if option == 'e':
+                packages.append(package)
+            elif option == 'r':
+                path = os.path.join(os.path.dirname(filename), package)
+                child_spec = _load_requirements_txt(path)
+                if child_spec is not None:
+                    packages.extend(child_spec.pip_packages)
+        else:
+            packages.append(line)
+
+    return EnvSpec(name='default', conda_packages=(), channels=(), pip_packages=packages)
+
+
+def _load_importable(filename):
+    if filename.endswith(".txt"):
+        return _load_requirements_txt(filename)
+    else:
+        return _load_environment_yml(filename)
+
+
+def _find_importable_spec(directory_path):
+    filenames = ("environment.yml", "environment.yaml", 'requirements.txt')
     for filename in filenames:
         full = os.path.join(directory_path, filename)
-        spec = _load_environment_yml(full)
+        spec = _load_importable(full)
         if spec is not None:
             return (spec, filename)
 
     return (None, None)
 
 
-def _find_out_of_sync_environment_yml_spec(project_specs, directory_path):
-    (spec, filename) = _find_environment_yml_spec(directory_path)
+def _find_out_of_sync_importable_spec(project_specs, directory_path):
+    (spec, filename) = _find_importable_spec(directory_path)
 
     if spec is None:
         return (None, None)

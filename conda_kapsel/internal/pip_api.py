@@ -126,7 +126,7 @@ ParsedPipSpec = collections.namedtuple('ParsedPipSpec', ['name'])
 
 _spec_pat = re.compile(' *([a-zA-Z0-9][-_.a-zA-Z0-9]+)')
 
-_egg_fragment_re = re.compile(r'[#&]egg=([^&]*)')
+_egg_fragment_re = re.compile('[#&]egg=([^&]*)')
 
 _egg_fragment_postfix_re = re.compile('^(.*?)(?:-dev|-\d.*)$')
 

@@ -2215,6 +2215,35 @@ channels:
 """}, check)
 
 
+def test_auto_fix_requirements_txt_import():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert len(project.problems) == 1
+        assert len(project.problem_objects) == 1
+        assert len(project.fixable_problems) == 1
+        problem = project.problem_objects[0]
+        assert problem.text == "Environment spec 'default' from requirements.txt is not in kapsel.yml."
+        assert problem.can_fix
+
+        problem.fix(project)
+        project.project_file.save()
+
+        assert project.problems == []
+        assert list(project.env_specs.keys()) == ['default']
+        spec = project.env_specs['default']
+        assert spec.conda_packages == ()
+        assert spec.pip_packages == ('abc', 'efg')
+        assert spec.channels == ()
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\n",
+         "requirements.txt": """
+# these are some pip packages.
+abc
+efg
+"""}, check)
+
+
 def test_auto_fix_env_spec_out_of_sync():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -2266,7 +2295,7 @@ def test_auto_fix_env_spec_import_saying_no():
         assert project.problems == []
         assert list(project.env_specs.keys()) == ['default']
 
-        skip_importing_hash = project.project_file.get_value(['skip_imports', 'environment_yml'])
+        skip_importing_hash = project.project_file.get_value(['skip_imports', 'environment'])
         assert skip_importing_hash is not None
         assert skip_importing_hash != ''
 
