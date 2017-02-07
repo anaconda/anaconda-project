@@ -367,11 +367,6 @@ class ProjectCommand(object):
         return self._attributes.get('conda_app_entry', None)
 
     @property
-    def auto_generated(self):
-        """Get the boolean indicating if the command is auto generated."""
-        return self._attributes.get('auto_generated', False)
-
-    @property
     def default_env_spec_name(self):
         """Get the environment spec name used for this command unless user specified otherwise."""
         return self._attributes.get('env_spec')

@@ -457,14 +457,6 @@ class _ConfigCache(object):
     def _update_commands(self, problems, project_file, conda_meta_file, requirements):
         failed = False
 
-        app_entry_from_meta_yaml = conda_meta_file.app_entry
-        if app_entry_from_meta_yaml is not None:
-            if not is_string(app_entry_from_meta_yaml):
-                problems.append("%s: app: entry: should be a string not '%r'" %
-                                (conda_meta_file.filename, app_entry_from_meta_yaml))
-                app_entry_from_meta_yaml = None
-                failed = True
-
         first_command_name = None
         commands = dict()
         commands_section = project_file.get_value('commands', None)
@@ -546,25 +538,13 @@ class _ConfigCache(object):
                 if not failed:
                     commands[name] = ProjectCommand(name=name, attributes=copied_attrs)
 
-        self._add_notebook_commands(commands, problems, requirements)
+        self._verify_notebook_commands(commands, problems, requirements, project_file)
 
         if failed:
             self.commands = dict()
             self.default_command_name = None
         else:
-            # if no commands and we have a meta.yaml app entry, use the meta.yaml
-            if app_entry_from_meta_yaml is not None and len(commands) == 0:
-                commands['default'] = ProjectCommand(name='default',
-                                                     attributes=dict(conda_app_entry=app_entry_from_meta_yaml,
-                                                                     auto_generated=True,
-                                                                     env_spec=self.default_env_spec_name))
-
             self.commands = commands
-
-        if first_command_name is None and len(commands) > 0:
-            # this happens if we created a command automatically
-            # from a notebook file or conda meta.yaml
-            first_command_name = sorted(commands.keys())[0]
 
         if 'default' in self.commands:
             self.default_command_name = 'default'
@@ -573,7 +553,19 @@ class _ConfigCache(object):
             # note: this may be None
             self.default_command_name = first_command_name
 
-    def _add_notebook_commands(self, commands, problems, requirements):
+    def _verify_notebook_commands(self, commands, problems, requirements, project_file):
+        skipped_notebooks = project_file.get_value(['skip_imports', 'notebooks'])
+        if skipped_notebooks is not None:
+            if skipped_notebooks is True:
+                # skip ALL notebooks forever
+                return
+            elif not isinstance(skipped_notebooks, list):
+                problems.append("{}: 'skip_imports: notebooks:' value should be a list, found {}".format(
+                    project_file.filename, repr(skipped_notebooks)))
+                return
+        else:
+            skipped_notebooks = []
+
         files = _list_relative_paths_for_unignored_project_files(self.directory_path,
                                                                  problems,
                                                                  requirements=requirements)
@@ -588,13 +580,68 @@ class _ConfigCache(object):
         # ".foo.ipynb" per se.
         files = [f for f in files if not f[0] == '.']
 
+        # use a deterministic order because the first command is the default
+        files = sorted(files)
+
+        def need_to_import_notebook(relative_name):
+            for command in commands.values():
+                if command.notebook == relative_name:
+                    return False
+
+            if relative_name in skipped_notebooks:
+                return False
+
+            return True
+
+        def make_add_notebook_func(relative_name, env_spec_name):
+            def add_notebook(project):
+                command_dict = {'notebook': relative_name, 'env_spec': env_spec_name}
+                project.project_file.set_value(['commands', relative_name], command_dict)
+
+            return add_notebook
+
+        def make_no_add_notebook_func(relative_name):
+            def no_add_notebook(project):
+                skipped_notebooks = project.project_file.get_value(['skip_imports', 'notebooks'], default=[])
+                skipped_notebooks.append(relative_name)
+                project.project_file.set_value(['skip_imports', 'notebooks'], skipped_notebooks)
+
+            return no_add_notebook
+
+        need_to_import = []
         for relative_name in files:
             if relative_name.endswith('.ipynb'):
-                if relative_name not in commands:
-                    commands[relative_name] = ProjectCommand(name=relative_name,
-                                                             attributes={'notebook': relative_name,
-                                                                         'auto_generated': True,
-                                                                         'env_spec': self.default_env_spec_name})
+                if need_to_import_notebook(relative_name):
+                    need_to_import.append(relative_name)
+
+        if len(need_to_import) == 1:
+            relative_name = need_to_import[0]
+            problem = ProjectProblem(
+                text="%s: No command runs notebook %s" % (project_file.filename, relative_name),
+                fix_prompt="Create a command in %s for %s?" % (os.path.basename(project_file.filename), relative_name),
+                fix_function=make_add_notebook_func(relative_name, self.default_env_spec_name),
+                no_fix_function=make_no_add_notebook_func(relative_name))
+            problems.append(problem)
+        elif len(need_to_import) > 1:
+            add_funcs = [make_add_notebook_func(relative_name, self.default_env_spec_name)
+                         for relative_name in need_to_import]
+            no_add_funcs = [make_no_add_notebook_func(relative_name) for relative_name in need_to_import]
+
+            def add_all(project):
+                for f in add_funcs:
+                    f(project)
+
+            def no_add_all(project):
+                for f in no_add_funcs:
+                    f(project)
+
+            problem = ProjectProblem(
+                text="%s: No commands run notebooks %s" % (project_file.filename, ", ".join(need_to_import)),
+                fix_prompt="Create commands in %s for all missing notebooks?" % (os.path.basename(project_file.filename)
+                                                                                 ),
+                fix_function=add_all,
+                no_fix_function=no_add_all)
+            problems.append(problem)
 
     def _verify_command_dependencies(self, problems, project_file):
         for command in self.commands.values():
