@@ -59,6 +59,26 @@ def _load_string(contents):
     return ryaml.load(contents, Loader=ryaml.RoundTripLoader)
 
 
+def _save_file(yaml, filename):
+    contents = ryaml.dump(yaml, Dumper=ryaml.RoundTripDumper)
+
+    try:
+        # This is to ensure we don't corrupt the file, even if ruamel.yaml is broken
+        ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+    except YAMLError as e:  # pragma: no cover (should not happen)
+        print("ruamel.yaml bug; it failed to parse a file that it generated.", file=sys.stderr)
+        print("  the parse error was: " + str(e), file=sys.stderr)
+        print("Generated file was:", file=sys.stderr)
+        print(contents, file=sys.stderr)
+        raise RuntimeError("Bug in ruamel.yaml library; failed to parse a file that it generated: " + str(e))
+
+    if not os.path.isfile(filename):
+        # might have to make the directory
+        dirname = os.path.dirname(filename)
+        makedirs_ok_if_exists(dirname)
+    _atomic_replace(filename, contents)
+
+
 class YamlFile(object):
     """Abstract YAML file, base class for ``ProjectFile`` and ``LocalStateFile``.
 
@@ -190,23 +210,8 @@ class YamlFile(object):
         if not self._dirty:
             return
 
-        contents = ryaml.dump(self._yaml, Dumper=ryaml.RoundTripDumper)
+        _save_file(self._yaml, self.filename)
 
-        try:
-            # This is to ensure we don't corrupt the file, even if ruamel.yaml is broken
-            ryaml.load(contents, Loader=ryaml.RoundTripLoader)
-        except YAMLError as e:  # pragma: no cover (should not happen)
-            print("ruamel.yaml bug; it failed to parse a file that it generated.", file=sys.stderr)
-            print("  the parse error was: " + str(e), file=sys.stderr)
-            print("Generated file was:", file=sys.stderr)
-            print(contents, file=sys.stderr)
-            raise RuntimeError("Bug in ruamel.yaml library; failed to parse a file that it generated: " + str(e))
-
-        if not os.path.isfile(self.filename):
-            # might have to make the directory
-            dirname = os.path.dirname(self.filename)
-            makedirs_ok_if_exists(dirname)
-        _atomic_replace(self.filename, contents)
         self._change_count = self._change_count + 1
         self._dirty = False
 
