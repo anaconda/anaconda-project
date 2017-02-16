@@ -41,14 +41,20 @@ def _combine_keeping_last_duplicate(items1, items2, key_func=None):
 
 def _conda_combine_key(spec):
     parsed = conda_api.parse_spec(spec)
-    assert parsed is not None
-    return parsed.name
+    if parsed is None:
+        # this is broken but we complain about it in project.py, carry on here
+        return spec
+    else:
+        return parsed.name
 
 
 def _pip_combine_key(spec):
     parsed = pip_api.parse_spec(spec)
-    assert parsed is not None
-    return parsed.name
+    if parsed is None:
+        # this is broken but we complain about it in project.py, carry on here
+        return spec
+    else:
+        return parsed.name
 
 
 class EnvSpec(object):
@@ -60,8 +66,8 @@ class EnvSpec(object):
                  channels,
                  pip_packages=(),
                  description=None,
-                 inherit_from_name=None,
-                 inherit_from=None):
+                 inherit_from_names=(),
+                 inherit_from=()):
         """Construct a package set with the given name and packages.
 
         Args:
@@ -79,14 +85,13 @@ class EnvSpec(object):
         self._pip_packages = tuple(pip_packages)
         self._description = description
         self._channels_and_packages_hash = None
-        self._inherit_from_name = inherit_from_name
+        self._inherit_from_names = inherit_from_names
         self._inherit_from = inherit_from
 
-        # we can have only a name, that we failed to build an EnvSpec from,
-        # or we can have name and EnvSpec that match.
-        assert self._inherit_from is None or \
-            (self._inherit_from_name is not None and
-             self._inherit_from_name == self._inherit_from.name)
+        # inherit_from must be a subset of inherit_from_names; if there was
+        # an error, it would be a subset rather than equal.
+        for name in tuple([spec.name for spec in self._inherit_from]):
+            assert name in self._inherit_from_names
 
         conda_specs_by_name = dict()
         for spec in self.conda_packages:
@@ -140,13 +145,15 @@ class EnvSpec(object):
 
     def _get_inherited(self, public_attr, key_func=None):
         private_attr = '_' + public_attr
+        to_combine = []
         if self._inherit_from is not None:
-            return _combine_keeping_last_duplicate(
-                getattr(self._inherit_from, public_attr),
-                getattr(self, private_attr),
-                key_func=key_func)
-        else:
-            return getattr(self, private_attr)
+            for spec in self._inherit_from:
+                to_combine.append(getattr(spec, public_attr))
+        to_combine.append(getattr(self, private_attr))
+        combined = []
+        for item in to_combine:
+            combined = _combine_keeping_last_duplicate(combined, item, key_func=key_func)
+        return combined
 
     @property
     def conda_packages(self):
@@ -195,9 +202,9 @@ class EnvSpec(object):
         return self._inherit_from
 
     @property
-    def inherit_from_name(self):
-        """Env spec name that we inherit stuff from."""
-        return self._inherit_from_name
+    def inherit_from_names(self):
+        """Env spec names that we inherit stuff from."""
+        return self._inherit_from_names
 
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""
@@ -262,8 +269,12 @@ class EnvSpec(object):
         template_json['something']['packages'] = packages
         template_json['something']['channels'] = channels
 
-        if self.inherit_from_name is not None:
-            template_json['something']['inherit_from'] = self.inherit_from_name
+        if len(self.inherit_from_names) > 0:
+            if len(self.inherit_from_names) == 1:
+                names = self.inherit_from_names[0]
+            else:
+                names = list(self.inherit_from_names)
+            template_json['something']['inherit_from'] = names
 
         return template_json['something']
 

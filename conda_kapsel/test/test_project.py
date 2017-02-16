@@ -629,36 +629,42 @@ def test_load_environments():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.env_specs) == 4
+        assert len(project.env_specs) == 5
         assert 'foo' in project.env_specs
         assert 'bar' in project.env_specs
         assert 'foo_child' in project.env_specs
         assert 'foo_grandchild' in project.env_specs
+        assert 'mixin' in project.env_specs
         assert project.default_env_spec_name == 'foo'
         foo = project.env_specs['foo']
         bar = project.env_specs['bar']
         foo_child = project.env_specs['foo_child']
         foo_grandchild = project.env_specs['foo_grandchild']
+        mixin = project.env_specs['mixin']
         assert foo.conda_packages == ('python', 'dog', 'cat', 'zebra')
         assert foo.description == "THE FOO"
         assert foo.pip_packages == ()
-        assert foo.inherit_from is None
+        assert foo.inherit_from == ()
         assert bar.conda_packages == ()
         assert bar.description == "bar"
         assert bar.pip_packages == ()
-        assert bar.inherit_from is None
+        assert bar.inherit_from == ()
+
+        assert mixin.conda_packages == ('bunny', 'walrus=1.0')
+        assert mixin.pip_packages == ('bear', )
+        assert mixin.channels == ('hbo', )
 
         assert foo_child.description == 'foo_child'
         assert foo_child.conda_packages == ('python', 'cat', 'zebra', 'dog=2.0', 'lion')
         assert foo_child.pip_packages == ('fish', )
         assert foo_child.channels == ('abc', )
-        assert foo_child.inherit_from is foo
+        assert foo_child.inherit_from == (foo, )
 
         assert foo_grandchild.description == 'foo_grandchild'
-        assert foo_grandchild.conda_packages == ('python', 'cat', 'zebra', 'lion', 'walrus', 'dog=3.0')
-        assert foo_grandchild.pip_packages == ('fish', 'seahorse')
-        assert foo_grandchild.channels == ('abc', 'nbc')
-        assert foo_grandchild.inherit_from is foo_child
+        assert foo_grandchild.conda_packages == ('python', 'cat', 'zebra', 'lion', 'bunny', 'walrus=2.0', 'dog=3.0')
+        assert foo_grandchild.pip_packages == ('fish', 'bear', 'seahorse')
+        assert foo_grandchild.channels == ('abc', 'hbo', 'nbc')
+        assert foo_grandchild.inherit_from == (foo_child, mixin)
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -680,10 +686,18 @@ env_specs:
           - fish
     channels:
        - abc
-  foo_grandchild:
-    inherit_from: foo_child
+  mixin:
     packages:
-       - walrus
+       - bunny
+       - walrus=1.0
+       - pip:
+         - bear
+    channels:
+       - hbo
+  foo_grandchild:
+    inherit_from: [foo_child, mixin]
+    packages:
+       - walrus=2.0
        - dog=3.0
        - pip:
          - seahorse
@@ -792,14 +806,14 @@ env_specs:
 def test_complain_about_non_string_inherit_from():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
-        assert ["%s: 'inherit_from' field of environment foo must be a string" %
+        assert ["%s: inherit_from: value should be a list of env spec names, not 'CommentedMap()'" %
                 (project.project_file.filename)] == project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 env_specs:
    foo:
-     inherit_from: []
+     inherit_from: {}
     """}, check_environments)
 
 
@@ -819,7 +833,7 @@ packages:
 def test_complain_about_env_spec_inherits_from_nonexistent():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
-        assert ["%s: 'inherit_from' field of env spec foo does not match the name of another env spec" %
+        assert ["%s: name 'bar' in 'inherit_from' field of env spec foo does not match the name of another env spec" %
                 (project.project_file.filename)] == project.problems
 
     with_directory_contents_completing_project_file(

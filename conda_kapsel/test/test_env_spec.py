@@ -246,10 +246,23 @@ def test_to_json():
                    conda_packages=['a', 'b'],
                    pip_packages=['c', 'd'],
                    channels=['x', 'y'],
-                   inherit_from_name='hi')
+                   inherit_from_names=('hi', ))
     json = spec.to_json()
 
     assert {'channels': ['x', 'y'], 'inherit_from': 'hi', 'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
+
+
+def test_to_json_multiple_inheritance():
+    spec = EnvSpec(name="foo",
+                   conda_packages=['a', 'b'],
+                   pip_packages=['c', 'd'],
+                   channels=['x', 'y'],
+                   inherit_from_names=('hi', 'hello'))
+    json = spec.to_json()
+
+    assert {'channels': ['x', 'y'],
+            'inherit_from': ['hi', 'hello'],
+            'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
 
 
 def test_diff_from():

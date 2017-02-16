@@ -357,11 +357,20 @@ class _ConfigCache(object):
                     problems.append("{}: 'description' field of environment {} must be a string".format(
                         project_file.filename, name))
                     continue
-                inherit_from_name = attrs.get('inherit_from', None)
-                if inherit_from_name is not None and not is_string(inherit_from_name):
-                    problems.append("{}: 'inherit_from' field of environment {} must be a string".format(
-                        project_file.filename, name))
+
+                problem_count = len(problems)
+                inherit_from_names = attrs.get('inherit_from', None)
+                if inherit_from_names is None:
+                    inherit_from_names = []
+                elif is_string(inherit_from_names):
+                    inherit_from_names = [inherit_from_names.strip()]
+                else:
+                    inherit_from_names = _parse_string_list(attrs, 'inherit_from', 'env spec name')
+
+                if len(problems) > problem_count:
+                    # we got a new problem from the bad inherit_from
                     continue
+
                 (deps, pip_deps) = _parse_packages(attrs)
                 channels = _parse_channels(attrs)
                 # ideally we would merge same-name packages here, choosing the
@@ -376,8 +385,8 @@ class _ConfigCache(object):
                                             pip_packages=all_pip_deps,
                                             channels=all_channels,
                                             description=description,
-                                            inherit_from_name=inherit_from_name,
-                                            inherit_from=None)
+                                            inherit_from_names=tuple(inherit_from_names),
+                                            inherit_from=())
 
                 if first_env_spec_name is None:
                     first_env_spec_name = name
@@ -402,14 +411,16 @@ class _ConfigCache(object):
 
                 attrs = env_spec_attrs[name]
 
-                inherit_from_name = attrs['inherit_from_name']
-                if inherit_from_name is not None and not was_cycle:
-                    if inherit_from_name not in env_spec_attrs:
-                        problems.append(("{}: 'inherit_from' field of env spec {} does not match the name " +
-                                         "of another env spec").format(project_file.filename, attrs['name']))
-                    else:
-                        inherit_from = make_env_spec(inherit_from_name, trail)
-                        attrs['inherit_from'] = inherit_from
+                if not was_cycle:
+                    inherit_from_names = attrs['inherit_from_names']
+                    for parent in inherit_from_names:
+                        if parent not in env_spec_attrs:
+                            problems.append(("{}: name '{}' in 'inherit_from' field of env spec {} does not match " +
+                                             "the name of another env spec").format(project_file.filename, parent,
+                                                                                    attrs['name']))
+                        else:
+                            inherit_from = make_env_spec(parent, trail)
+                            attrs['inherit_from'] = attrs['inherit_from'] + (inherit_from, )
 
                 self.env_specs[name] = EnvSpec(**attrs)
 
