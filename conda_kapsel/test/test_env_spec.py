@@ -242,11 +242,19 @@ def test_find_out_of_sync_does_not_exist():
 
 
 def test_to_json():
+    # the stuff from this parent env spec should NOT end up in the JSON
+    hi = EnvSpec(name="hi",
+                 conda_packages=['q', 'r'],
+                 pip_packages=['zoo', 'boo'],
+                 channels=['x1', 'y1'],
+                 inherit_from_names=(),
+                 inherit_from=())
     spec = EnvSpec(name="foo",
                    conda_packages=['a', 'b'],
                    pip_packages=['c', 'd'],
                    channels=['x', 'y'],
-                   inherit_from_names=('hi', ))
+                   inherit_from_names=('hi', ),
+                   inherit_from=(hi, ))
     json = spec.to_json()
 
     assert {'channels': ['x', 'y'], 'inherit_from': 'hi', 'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json

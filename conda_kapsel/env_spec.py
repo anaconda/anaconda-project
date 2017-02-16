@@ -253,11 +253,14 @@ class EnvSpec(object):
 
     def to_json(self):
         """Get JSON for a kapsel.yml env spec section."""
-        packages = list(self.conda_packages)
-        pip_packages = list(self.pip_packages)
+        # Note that we use _conda_packages (only the packages we
+        # introduce ourselves) rather than conda_packages
+        # (includes inherited packages).
+        packages = list(self._conda_packages)
+        pip_packages = list(self._pip_packages)
         if pip_packages:
             packages.append(dict(pip=pip_packages))
-        channels = list(self.channels)
+        channels = list(self._channels)
 
         # this is a gross, roundabout hack to get ryaml dicts that
         # have ordering... OrderedDict doesn't work because the
