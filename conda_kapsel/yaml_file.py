@@ -259,7 +259,9 @@ class YamlFile(object):
         current = self._yaml
         for p in pieces:
             if p not in current or not isinstance(current[p], dict):
-                current[p] = dict()
+                # It's important to use CommentedMap because it preserves
+                # order.
+                current[p] = CommentedMap()
                 self._dirty = True
 
             current = current[p]

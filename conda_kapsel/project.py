@@ -43,12 +43,13 @@ ALL_COMMAND_TYPES = (COMMAND_TYPE_CONDA_APP_ENTRY, COMMAND_TYPE_SHELL, COMMAND_T
 class ProjectProblem(object):
     """A possibly-autofixable problem with a project."""
 
-    def __init__(self, text, fix_prompt=None, fix_function=None, no_fix_function=None):
+    def __init__(self, text, fix_prompt=None, fix_function=None, no_fix_function=None, only_a_suggestion=False):
         """Create a project problem."""
         self.text = text
         self.fix_prompt = fix_prompt
         self.fix_function = fix_function
         self.no_fix_function = no_fix_function
+        self.only_a_suggestion = only_a_suggestion
 
     @property
     def can_fix(self):
@@ -142,7 +143,7 @@ class _ConfigCache(object):
 
         self.requirements = requirements
         self.problems = _make_problems_into_objects(problems)
-        self.problem_strings = list([p.text for p in self.problems])
+        self.problem_strings = list([p.text for p in self.problems if not p.only_a_suggestion])
 
     def _update_name(self, problems, project_file, conda_meta_file):
         name = project_file.get_value('name', None)
@@ -457,14 +458,6 @@ class _ConfigCache(object):
     def _update_commands(self, problems, project_file, conda_meta_file, requirements):
         failed = False
 
-        app_entry_from_meta_yaml = conda_meta_file.app_entry
-        if app_entry_from_meta_yaml is not None:
-            if not is_string(app_entry_from_meta_yaml):
-                problems.append("%s: app: entry: should be a string not '%r'" %
-                                (conda_meta_file.filename, app_entry_from_meta_yaml))
-                app_entry_from_meta_yaml = None
-                failed = True
-
         first_command_name = None
         commands = dict()
         commands_section = project_file.get_value('commands', None)
@@ -546,25 +539,13 @@ class _ConfigCache(object):
                 if not failed:
                     commands[name] = ProjectCommand(name=name, attributes=copied_attrs)
 
-        self._add_notebook_commands(commands, problems, requirements)
+        self._verify_notebook_commands(commands, problems, requirements, project_file)
 
         if failed:
             self.commands = dict()
             self.default_command_name = None
         else:
-            # if no commands and we have a meta.yaml app entry, use the meta.yaml
-            if app_entry_from_meta_yaml is not None and len(commands) == 0:
-                commands['default'] = ProjectCommand(name='default',
-                                                     attributes=dict(conda_app_entry=app_entry_from_meta_yaml,
-                                                                     auto_generated=True,
-                                                                     env_spec=self.default_env_spec_name))
-
             self.commands = commands
-
-        if first_command_name is None and len(commands) > 0:
-            # this happens if we created a command automatically
-            # from a notebook file or conda meta.yaml
-            first_command_name = sorted(commands.keys())[0]
 
         if 'default' in self.commands:
             self.default_command_name = 'default'
@@ -573,7 +554,19 @@ class _ConfigCache(object):
             # note: this may be None
             self.default_command_name = first_command_name
 
-    def _add_notebook_commands(self, commands, problems, requirements):
+    def _verify_notebook_commands(self, commands, problems, requirements, project_file):
+        skipped_notebooks = project_file.get_value(['skip_imports', 'notebooks'])
+        if skipped_notebooks is not None:
+            if skipped_notebooks is True:
+                # skip ALL notebooks forever
+                return
+            elif not isinstance(skipped_notebooks, list):
+                problems.append("{}: 'skip_imports: notebooks:' value should be a list, found {}".format(
+                    project_file.filename, repr(skipped_notebooks)))
+                return
+        else:
+            skipped_notebooks = []
+
         files = _list_relative_paths_for_unignored_project_files(self.directory_path,
                                                                  problems,
                                                                  requirements=requirements)
@@ -588,13 +581,76 @@ class _ConfigCache(object):
         # ".foo.ipynb" per se.
         files = [f for f in files if not f[0] == '.']
 
+        # always use unix file separator
+        files = [f.replace("\\", "/") for f in files]
+
+        # use a deterministic order because the first command is the default
+        files = sorted(files)
+
+        def need_to_import_notebook(relative_name):
+            for command in commands.values():
+                if command.notebook == relative_name:
+                    return False
+
+            if relative_name in skipped_notebooks:
+                return False
+
+            return True
+
+        def make_add_notebook_func(relative_name, env_spec_name):
+            def add_notebook(project):
+                command_dict = {'notebook': relative_name, 'env_spec': env_spec_name}
+                project.project_file.set_value(['commands', relative_name], command_dict)
+
+            return add_notebook
+
+        def make_no_add_notebook_func(relative_name):
+            def no_add_notebook(project):
+                skipped_notebooks = project.project_file.get_value(['skip_imports', 'notebooks'], default=[])
+                skipped_notebooks.append(relative_name)
+                project.project_file.set_value(['skip_imports', 'notebooks'], skipped_notebooks)
+
+            return no_add_notebook
+
+        need_to_import = []
         for relative_name in files:
             if relative_name.endswith('.ipynb'):
-                if relative_name not in commands:
-                    commands[relative_name] = ProjectCommand(name=relative_name,
-                                                             attributes={'notebook': relative_name,
-                                                                         'auto_generated': True,
-                                                                         'env_spec': self.default_env_spec_name})
+                if need_to_import_notebook(relative_name):
+                    need_to_import.append(relative_name)
+
+        # make tests deterministic
+        need_to_import.sort()
+
+        if len(need_to_import) == 1:
+            relative_name = need_to_import[0]
+            problem = ProjectProblem(
+                text="%s: No command runs notebook %s" % (project_file.filename, relative_name),
+                fix_prompt="Create a command in %s for %s?" % (os.path.basename(project_file.filename), relative_name),
+                fix_function=make_add_notebook_func(relative_name, self.default_env_spec_name),
+                no_fix_function=make_no_add_notebook_func(relative_name),
+                only_a_suggestion=True)
+            problems.append(problem)
+        elif len(need_to_import) > 1:
+            add_funcs = [make_add_notebook_func(relative_name, self.default_env_spec_name)
+                         for relative_name in need_to_import]
+            no_add_funcs = [make_no_add_notebook_func(relative_name) for relative_name in need_to_import]
+
+            def add_all(project):
+                for f in add_funcs:
+                    f(project)
+
+            def no_add_all(project):
+                for f in no_add_funcs:
+                    f(project)
+
+            problem = ProjectProblem(
+                text="%s: No commands run notebooks %s" % (project_file.filename, ", ".join(need_to_import)),
+                fix_prompt="Create commands in %s for all missing notebooks?" % (os.path.basename(project_file.filename)
+                                                                                 ),
+                fix_function=add_all,
+                no_fix_function=no_add_all,
+                only_a_suggestion=True)
+            problems.append(problem)
 
     def _verify_command_dependencies(self, problems, project_file):
         for command in self.commands.values():
@@ -618,7 +674,8 @@ class _ConfigCache(object):
                         project_file.filename, command.name, env_spec.name, ", ".join(missing))),
                     fix_prompt=("Add %s to env spec %s in %s?" % (", ".join(missing), env_spec.name, os.path.basename(
                         project_file.filename))),
-                    fix_function=add_packages_to_env_spec)
+                    fix_function=add_packages_to_env_spec,
+                    only_a_suggestion=True)
                 problems.append(problem)
 
 
@@ -740,12 +797,12 @@ class Project(object):
     @property
     def problem_objects(self):
         """List of ProjectProblem instances describing problems with the project configuration."""
-        return self._updated_cache().problems
+        return [problem for problem in self._updated_cache().problems if not problem.only_a_suggestion]
 
     @property
     def fixable_problems(self):
         """List of ProjectProblem that have associated fix prompts."""
-        return [p for p in self.problem_objects if p.can_fix]
+        return [p for p in self.problem_objects if p.can_fix and not p.only_a_suggestion]
 
     def problems_status(self, description=None):
         """Get a ``Status`` describing project problems, or ``None`` if no problems."""
@@ -758,6 +815,35 @@ class Project(object):
             return SimpleStatus(success=False, description=description, logs=[], errors=errors)
         else:
             return None
+
+    @property
+    def suggestions(self):
+        """List of strings describing suggested changes to the project configuration."""
+        return [problem.text for problem in self.suggestion_objects]
+
+    @property
+    def suggestion_objects(self):
+        """List of ProjectProblem instances describing suggested changes to the project configuration."""
+        return [problem for problem in self._updated_cache().problems if problem.only_a_suggestion]
+
+    def fix_problems_and_suggestions(self):
+        """Fix fixable problems and suggestions."""
+        # the idea of this loop is that by fixing a problem we may
+        # create a new one, for example we add a notebook command
+        # and then the env spec needs to depend on "notebook".
+        # However, we have no real way to detect an infinite
+        # ping-pong of mutually-causing problems, so we cap
+        # the iterations at an arbitrary number.
+        iterations = 5
+        while iterations > 0:
+            fixed_a_thing = False
+            for problem in self._updated_cache().problems:
+                if problem.can_fix:
+                    problem.fix(self)
+                    fixed_a_thing = True
+            if fixed_a_thing:
+                self.project_file.use_changes_without_saving()
+            iterations -= 1
 
     @property
     def name(self):

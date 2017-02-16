@@ -907,17 +907,6 @@ package:
 """}, check_problem)
 
 
-def test_non_dict_meta_yaml_app_entry():
-    def check_app_entry(dirname):
-        project = project_no_dedicated_env(dirname)
-        assert project.conda_meta_file.app_entry == 42
-        assert 1 == len(project.problems)
-        expected_error = "%s: app: entry: should be a string not '%r'" % (project.conda_meta_file.filename, 42)
-        assert expected_error == project.problems[0]
-
-    with_directory_contents({DEFAULT_RELATIVE_META_PATH: "app:\n  entry: 42\n"}, check_app_entry)
-
-
 def test_non_dict_commands_section():
     def check_app_entry(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1065,7 +1054,7 @@ def test_command_with_bogus_key_and_ok_key():
         command = project.default_command
         assert command.name == 'default'
         assert command.unix_shell_commandline == 'bar'
-        assert not command.auto_generated
+
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
 
@@ -1120,7 +1109,6 @@ def test_notebook_command():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
@@ -1142,7 +1130,6 @@ def test_notebook_command_extra_args():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ, extra_args=['foo', 'bar'])
@@ -1165,7 +1152,7 @@ def test_notebook_command_with_kapsel_http_args():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
+
         assert command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -1197,7 +1184,7 @@ def test_notebook_command_disabled_kapsel_http_args():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
+
         assert not command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -1225,7 +1212,7 @@ def test_notebook_command_kapsel_http_args_after_double_hyphen():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
+
         assert command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -1253,7 +1240,6 @@ def test_notebook_command_with_kapsel_http_args_separated_by_equals():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1274,6 +1260,12 @@ def test_notebook_command_with_kapsel_http_args_separated_by_equals():
 def test_notebook_guess_command():
     def check_notebook_guess_command(dirname):
         project = project_no_dedicated_env(dirname)
+
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+
+        project.suggestion_objects[0].fix(project)
+        project.project_file.save()
+
         assert 'test.ipynb' in project.commands
         assert 'default' in project.commands
         assert len(project.commands) == 2  # we should have ignored all the ignored ones
@@ -1284,7 +1276,6 @@ def test_notebook_guess_command():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert command.auto_generated
 
         expected_nb_path = os.path.join(dirname, 'test.ipynb')
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -1311,10 +1302,19 @@ def test_notebook_guess_command():
 def test_notebook_guess_command_can_be_default():
     def check_notebook_guess_command_can_be_default(dirname):
         project = project_no_dedicated_env(dirname)
+
+        assert ["%s: No commands run notebooks a.ipynb, b.ipynb, c.ipynb, d/d.ipynb, e.ipynb, f.ipynb" %
+                project.project_file.filename] == project.suggestions
+
+        project.suggestion_objects[0].fix(project)
+        project.project_file.save()
+
         assert [] == project.problems
-        assert len(project.commands) == 4
+        assert len(project.commands) == 6
         assert project.default_command is not None
         assert project.default_command.notebook == 'a.ipynb'
+        assert ['a.ipynb', 'b.ipynb', 'c.ipynb', 'd/d.ipynb', 'e.ipynb', 'f.ipynb'
+                ] == sorted([c for c in project.commands])
 
     with_directory_contents_completing_project_file(
         {
@@ -1324,9 +1324,112 @@ def test_notebook_guess_command_can_be_default():
             'a.ipynb': 'pretend there is notebook data here',
             'b.ipynb': 'pretend there is notebook data here',
             'c.ipynb': 'pretend there is notebook data here',
-            'd.ipynb': 'pretend there is notebook data here'
+            'd/d.ipynb': 'pretend there is notebook data here',
+            'e.ipynb': 'pretend there is notebook data here',
+            'f.ipynb': 'pretend there is notebook data here'
         },
         check_notebook_guess_command_can_be_default)
+
+
+def test_multiple_notebooks_suggestion_rejected():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["%s: No commands run notebooks foo/test2.ipynb, test.ipynb" % project.project_file.filename
+                ] == project.suggestions
+
+        project.suggestion_objects[0].no_fix(project)
+        project.project_file.save()
+
+        assert 'test.ipynb' not in project.commands
+        assert 'foo/test2.ipynb' not in project.commands
+        assert 'default' in project.commands
+        assert len(project.commands) == 1  # we should have ignored all the ignored ones
+        assert project.default_command.name == 'default'
+
+        # now we're skipping the import so it should have gone away
+        assert project.suggestions == []
+
+        assert ['foo/test2.ipynb', 'test.ipynb'] == project.project_file.get_value(['skip_imports', 'notebooks'])
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': 'pretend there is notebook data here',
+            'foo/test2.ipynb': 'pretend there is notebook data here',
+            'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            '.should_ignore_dotfile.ipynb': 'moar fake notebook',
+            '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
+        }, check)
+
+
+def test_skip_all_notebook_imports():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert [] == project.problems
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+
+        project.project_file.set_value(['skip_imports', 'notebooks'], True)
+        project.project_file.save()
+
+        assert [] == project.suggestions
+        assert [] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': 'pretend there is notebook data here'
+        }, check)
+
+
+def test_invalid_skip_imports_notebooks():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["%s: 'skip_imports: notebooks:' value should be a list, found CommentedMap()" %
+                project.project_file.filename] == project.problems
+        assert [] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: ("commands:\n default:\n    unix: echo 'pass'\nservices:\n" +
+                                       "REDIS_URL: redis\npackages: ['notebook']\nskip_imports:\n  notebooks: {}\n")
+        }, check)
+
+
+def test_single_notebook_suggestion_rejected():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+
+        project.suggestion_objects[0].no_fix(project)
+        project.project_file.save()
+
+        assert 'test.ipynb' not in project.commands
+        assert 'default' in project.commands
+        assert len(project.commands) == 1  # we should have ignored all the ignored ones
+        assert project.default_command.name == 'default'
+
+        # now we're skipping the import so it should have gone away
+        assert project.suggestions == []
+
+        assert ['test.ipynb'] == project.project_file.get_value(['skip_imports', 'notebooks'])
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': 'pretend there is notebook data here',
+            'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            '.should_ignore_dotfile.ipynb': 'moar fake notebook',
+            '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
+        }, check)
 
 
 def test_notebook_command_conflict():
@@ -1364,7 +1467,6 @@ def test_bokeh_command():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
@@ -1386,7 +1488,6 @@ def test_bokeh_command_with_extra_args():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ, extra_args=['--foo'])
@@ -1409,7 +1510,6 @@ def test_bokeh_command_with_kapsel_http_args():
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
         assert command.supports_http_options
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1436,7 +1536,6 @@ def test_bokeh_command_with_multiple_host_args():
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
         assert command.supports_http_options
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1462,7 +1561,6 @@ def test_bokeh_command_with_multiple_iframe_hosts_args():
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
         assert command.supports_http_options
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1491,7 +1589,6 @@ def test_bokeh_command_with_value_missing_for_kapsel_http_args():
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
         assert command.supports_http_options
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1517,7 +1614,6 @@ def test_bokeh_command_with_disabled_kapsel_http_args():
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
         assert not command.supports_http_options
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1543,7 +1639,6 @@ def test_run_argv_from_project_file_app_entry():
         command = project.default_command
         assert command.name == 'foo'
         assert command.conda_app_entry == "foo bar ${PREFIX}"
-        assert not command.auto_generated
 
         assert 1 == len(project.commands)
         assert 'foo' in project.commands
@@ -1564,7 +1659,6 @@ def test_run_argv_from_project_file_shell():
         command = project.default_command
         assert command.name == 'foo'
         assert command.unix_shell_commandline == "foo bar ${PREFIX}"
-        assert not command.auto_generated
 
         assert 1 == len(project.commands)
         assert 'foo' in project.commands
@@ -1586,7 +1680,6 @@ def test_run_argv_from_project_file_windows(monkeypatch):
         assert command.name == 'foo'
         assert command.windows_cmd_commandline == "foo bar %CONDA_DEFAULT_ENV%"
         assert command.unix_shell_commandline is None
-        assert not command.auto_generated
 
         assert 1 == len(project.commands)
         assert 'foo' in project.commands
@@ -1649,24 +1742,6 @@ commands:
   foo:
     %s: foo
 """ % not_us}, check_exec_info)
-
-
-def test_run_argv_from_meta_file():
-    def check_run_argv(dirname):
-        project = project_no_dedicated_env(dirname)
-        assert [] == project.problems
-        command = project.default_command
-        assert command.name == 'default'
-        assert command.conda_app_entry == 'foo bar ${PREFIX}'
-        assert command.unix_shell_commandline is None
-        assert command.windows_cmd_commandline is None
-        assert command.auto_generated
-
-    with_directory_contents_completing_project_file(
-        {DEFAULT_RELATIVE_META_PATH: """
-app:
-  entry: foo bar ${PREFIX}
-"""}, check_run_argv)
 
 
 # we used to fill in empty commands from meta.yaml, but no more,
@@ -1945,6 +2020,9 @@ commands:
   myapp:
     bokeh_app: main.py
     env_spec: woot
+  foo.ipynb:
+    description: 'Notebook foo.ipynb'
+    notebook: foo.ipynb
 
 packages:
   - foo
@@ -2411,12 +2489,14 @@ def test_auto_fix_notebook_dep():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
-        assert len(project.problems) == 1
-        assert len(project.problem_objects) == 1
-        assert len(project.fixable_problems) == 1
+        assert len(project.problems) == 0
+        assert len(project.problem_objects) == 0
+        assert len(project.fixable_problems) == 0
+        assert len(project.suggestions) == 1
+        assert len(project.suggestion_objects) == 1
         assert len(project.env_specs['default'].conda_package_names_set) == 0
 
-        problem = project.problem_objects[0]
+        problem = project.suggestion_objects[0]
         assert ("%s: Command foo.ipynb uses env spec default which does not have the packages: notebook" %
                 project.project_file.filename) == problem.text
         assert problem.can_fix
@@ -2425,6 +2505,7 @@ def test_auto_fix_notebook_dep():
         project.project_file.save()
 
         assert project.problems == []
+        assert project.suggestions == []
         assert project.env_specs['default'].conda_package_names_set == set(['notebook'])
 
     with_directory_contents_completing_project_file(
@@ -2439,6 +2520,7 @@ def test_no_auto_fix_notebook_dep_if_we_have_anaconda():
         project = project_no_dedicated_env(dirname)
 
         assert project.problems == []
+        assert project.suggestions == []
         assert project.env_specs['default'].conda_package_names_set == set(['anaconda'])
 
     with_directory_contents_completing_project_file(
@@ -2470,12 +2552,14 @@ def test_auto_fix_bokeh_dep():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
-        assert len(project.problems) == 1
-        assert len(project.problem_objects) == 1
-        assert len(project.fixable_problems) == 1
+        assert len(project.problems) == 0
+        assert len(project.problem_objects) == 0
+        assert len(project.fixable_problems) == 0
+        assert len(project.suggestions) == 1
+        assert len(project.suggestion_objects) == 1
         assert len(project.env_specs['default'].conda_package_names_set) == 0
 
-        problem = project.problem_objects[0]
+        problem = project.suggestion_objects[0]
         assert ("%s: Command bokeh_test uses env spec default which does not have the packages: bokeh" %
                 project.project_file.filename) == problem.text
         assert problem.can_fix
