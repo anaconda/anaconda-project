@@ -468,7 +468,7 @@ class CondaPackageCommand(Command):
 
     def _real_run(self):
         recipe_dir = os.path.join(ROOT, 'conda.recipe')
-        python_versions = ('2.7', '3.4', '3.5')
+        python_versions = ('2.7', '3.4', '3.5', '3.6')
         all_final_package_paths = []
         for python_version in python_versions:
             out = subprocess.check_output(['conda', 'build', '--output', '--python', python_version, recipe_dir])
