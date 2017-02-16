@@ -581,6 +581,9 @@ class _ConfigCache(object):
         # ".foo.ipynb" per se.
         files = [f for f in files if not f[0] == '.']
 
+        # always use unix file separator
+        files = [f.replace("\\", "/") for f in files]
+
         # use a deterministic order because the first command is the default
         files = sorted(files)
 
