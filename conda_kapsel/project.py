@@ -43,12 +43,13 @@ ALL_COMMAND_TYPES = (COMMAND_TYPE_CONDA_APP_ENTRY, COMMAND_TYPE_SHELL, COMMAND_T
 class ProjectProblem(object):
     """A possibly-autofixable problem with a project."""
 
-    def __init__(self, text, fix_prompt=None, fix_function=None, no_fix_function=None):
+    def __init__(self, text, fix_prompt=None, fix_function=None, no_fix_function=None, only_a_suggestion=False):
         """Create a project problem."""
         self.text = text
         self.fix_prompt = fix_prompt
         self.fix_function = fix_function
         self.no_fix_function = no_fix_function
+        self.only_a_suggestion = only_a_suggestion
 
     @property
     def can_fix(self):
@@ -142,7 +143,7 @@ class _ConfigCache(object):
 
         self.requirements = requirements
         self.problems = _make_problems_into_objects(problems)
-        self.problem_strings = list([p.text for p in self.problems])
+        self.problem_strings = list([p.text for p in self.problems if not p.only_a_suggestion])
 
     def _update_name(self, problems, project_file, conda_meta_file):
         name = project_file.get_value('name', None)
@@ -614,13 +615,17 @@ class _ConfigCache(object):
                 if need_to_import_notebook(relative_name):
                     need_to_import.append(relative_name)
 
+        # make tests deterministic
+        need_to_import.sort()
+
         if len(need_to_import) == 1:
             relative_name = need_to_import[0]
             problem = ProjectProblem(
                 text="%s: No command runs notebook %s" % (project_file.filename, relative_name),
                 fix_prompt="Create a command in %s for %s?" % (os.path.basename(project_file.filename), relative_name),
                 fix_function=make_add_notebook_func(relative_name, self.default_env_spec_name),
-                no_fix_function=make_no_add_notebook_func(relative_name))
+                no_fix_function=make_no_add_notebook_func(relative_name),
+                only_a_suggestion=True)
             problems.append(problem)
         elif len(need_to_import) > 1:
             add_funcs = [make_add_notebook_func(relative_name, self.default_env_spec_name)
@@ -640,7 +645,8 @@ class _ConfigCache(object):
                 fix_prompt="Create commands in %s for all missing notebooks?" % (os.path.basename(project_file.filename)
                                                                                  ),
                 fix_function=add_all,
-                no_fix_function=no_add_all)
+                no_fix_function=no_add_all,
+                only_a_suggestion=True)
             problems.append(problem)
 
     def _verify_command_dependencies(self, problems, project_file):
@@ -665,7 +671,8 @@ class _ConfigCache(object):
                         project_file.filename, command.name, env_spec.name, ", ".join(missing))),
                     fix_prompt=("Add %s to env spec %s in %s?" % (", ".join(missing), env_spec.name, os.path.basename(
                         project_file.filename))),
-                    fix_function=add_packages_to_env_spec)
+                    fix_function=add_packages_to_env_spec,
+                    only_a_suggestion=True)
                 problems.append(problem)
 
 
@@ -787,12 +794,12 @@ class Project(object):
     @property
     def problem_objects(self):
         """List of ProjectProblem instances describing problems with the project configuration."""
-        return self._updated_cache().problems
+        return [problem for problem in self._updated_cache().problems if not problem.only_a_suggestion]
 
     @property
     def fixable_problems(self):
         """List of ProjectProblem that have associated fix prompts."""
-        return [p for p in self.problem_objects if p.can_fix]
+        return [p for p in self.problem_objects if p.can_fix and not p.only_a_suggestion]
 
     def problems_status(self, description=None):
         """Get a ``Status`` describing project problems, or ``None`` if no problems."""
@@ -805,6 +812,35 @@ class Project(object):
             return SimpleStatus(success=False, description=description, logs=[], errors=errors)
         else:
             return None
+
+    @property
+    def suggestions(self):
+        """List of strings describing suggested changes to the project configuration."""
+        return [problem.text for problem in self.suggestion_objects]
+
+    @property
+    def suggestion_objects(self):
+        """List of ProjectProblem instances describing suggested changes to the project configuration."""
+        return [problem for problem in self._updated_cache().problems if problem.only_a_suggestion]
+
+    def fix_problems_and_suggestions(self):
+        """Fix fixable problems and suggestions."""
+        # the idea of this loop is that by fixing a problem we may
+        # create a new one, for example we add a notebook command
+        # and then the env spec needs to depend on "notebook".
+        # However, we have no real way to detect an infinite
+        # ping-pong of mutually-causing problems, so we cap
+        # the iterations at an arbitrary number.
+        iterations = 5
+        while iterations > 0:
+            fixed_a_thing = False
+            for problem in self._updated_cache().problems:
+                if problem.can_fix:
+                    problem.fix(self)
+                    fixed_a_thing = True
+            if fixed_a_thing:
+                self.project_file.use_changes_without_saving()
+            iterations -= 1
 
     @property
     def name(self):

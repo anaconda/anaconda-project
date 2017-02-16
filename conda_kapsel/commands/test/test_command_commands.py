@@ -210,8 +210,7 @@ def test_add_command_specifying_notebook(monkeypatch, capsys):
         {DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n'}, check_specifying_notebook)
 
 
-# TODO: re-enable this once we can have Project.problems but still add commands
-def disabled_test_add_command_guessing_notebook(monkeypatch, capsys):
+def test_add_command_guessing_notebook(monkeypatch, capsys):
     def check_guessing_notebook(dirname):
         args = Args(None, 'test', 'file.ipynb', directory=dirname)
         res = main(args)

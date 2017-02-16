@@ -1261,9 +1261,9 @@ def test_notebook_guess_command():
     def check_notebook_guess_command(dirname):
         project = project_no_dedicated_env(dirname)
 
-        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.problems
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
 
-        project.fixable_problems[0].fix(project)
+        project.suggestion_objects[0].fix(project)
         project.project_file.save()
 
         assert 'test.ipynb' in project.commands
@@ -1304,9 +1304,9 @@ def test_notebook_guess_command_can_be_default():
         project = project_no_dedicated_env(dirname)
 
         assert ["%s: No commands run notebooks a.ipynb, b.ipynb, c.ipynb, d/d.ipynb, e.ipynb, f.ipynb" %
-                project.project_file.filename] == project.problems
+                project.project_file.filename] == project.suggestions
 
-        project.fixable_problems[0].fix(project)
+        project.suggestion_objects[0].fix(project)
         project.project_file.save()
 
         assert [] == project.problems
@@ -1329,6 +1329,107 @@ def test_notebook_guess_command_can_be_default():
             'f.ipynb': 'pretend there is notebook data here'
         },
         check_notebook_guess_command_can_be_default)
+
+
+def test_multiple_notebooks_suggestion_rejected():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["%s: No commands run notebooks foo/test2.ipynb, test.ipynb" % project.project_file.filename
+                ] == project.suggestions
+
+        project.suggestion_objects[0].no_fix(project)
+        project.project_file.save()
+
+        assert 'test.ipynb' not in project.commands
+        assert 'foo/test2.ipynb' not in project.commands
+        assert 'default' in project.commands
+        assert len(project.commands) == 1  # we should have ignored all the ignored ones
+        assert project.default_command.name == 'default'
+
+        # now we're skipping the import so it should have gone away
+        assert project.suggestions == []
+
+        assert ['foo/test2.ipynb', 'test.ipynb'] == project.project_file.get_value(['skip_imports', 'notebooks'])
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': 'pretend there is notebook data here',
+            'foo/test2.ipynb': 'pretend there is notebook data here',
+            'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            '.should_ignore_dotfile.ipynb': 'moar fake notebook',
+            '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
+        }, check)
+
+
+def test_skip_all_notebook_imports():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert [] == project.problems
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+
+        project.project_file.set_value(['skip_imports', 'notebooks'], True)
+        project.project_file.save()
+
+        assert [] == project.suggestions
+        assert [] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': 'pretend there is notebook data here'
+        }, check)
+
+
+def test_invalid_skip_imports_notebooks():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["%s: 'skip_imports: notebooks:' value should be a list, found CommentedMap()" %
+                project.project_file.filename] == project.problems
+        assert [] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: ("commands:\n default:\n    unix: echo 'pass'\nservices:\n" +
+                                       "REDIS_URL: redis\npackages: ['notebook']\nskip_imports:\n  notebooks: {}\n")
+        }, check)
+
+
+def test_single_notebook_suggestion_rejected():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+
+        project.suggestion_objects[0].no_fix(project)
+        project.project_file.save()
+
+        assert 'test.ipynb' not in project.commands
+        assert 'default' in project.commands
+        assert len(project.commands) == 1  # we should have ignored all the ignored ones
+        assert project.default_command.name == 'default'
+
+        # now we're skipping the import so it should have gone away
+        assert project.suggestions == []
+
+        assert ['test.ipynb'] == project.project_file.get_value(['skip_imports', 'notebooks'])
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': 'pretend there is notebook data here',
+            'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            '.should_ignore_dotfile.ipynb': 'moar fake notebook',
+            '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
+        }, check)
 
 
 def test_notebook_command_conflict():
@@ -2388,12 +2489,14 @@ def test_auto_fix_notebook_dep():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
-        assert len(project.problems) == 1
-        assert len(project.problem_objects) == 1
-        assert len(project.fixable_problems) == 1
+        assert len(project.problems) == 0
+        assert len(project.problem_objects) == 0
+        assert len(project.fixable_problems) == 0
+        assert len(project.suggestions) == 1
+        assert len(project.suggestion_objects) == 1
         assert len(project.env_specs['default'].conda_package_names_set) == 0
 
-        problem = project.problem_objects[0]
+        problem = project.suggestion_objects[0]
         assert ("%s: Command foo.ipynb uses env spec default which does not have the packages: notebook" %
                 project.project_file.filename) == problem.text
         assert problem.can_fix
@@ -2402,6 +2505,7 @@ def test_auto_fix_notebook_dep():
         project.project_file.save()
 
         assert project.problems == []
+        assert project.suggestions == []
         assert project.env_specs['default'].conda_package_names_set == set(['notebook'])
 
     with_directory_contents_completing_project_file(
@@ -2416,6 +2520,7 @@ def test_no_auto_fix_notebook_dep_if_we_have_anaconda():
         project = project_no_dedicated_env(dirname)
 
         assert project.problems == []
+        assert project.suggestions == []
         assert project.env_specs['default'].conda_package_names_set == set(['anaconda'])
 
     with_directory_contents_completing_project_file(
@@ -2447,12 +2552,14 @@ def test_auto_fix_bokeh_dep():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
-        assert len(project.problems) == 1
-        assert len(project.problem_objects) == 1
-        assert len(project.fixable_problems) == 1
+        assert len(project.problems) == 0
+        assert len(project.problem_objects) == 0
+        assert len(project.fixable_problems) == 0
+        assert len(project.suggestions) == 1
+        assert len(project.suggestion_objects) == 1
         assert len(project.env_specs['default'].conda_package_names_set) == 0
 
-        problem = project.problem_objects[0]
+        problem = project.suggestion_objects[0]
         assert ("%s: Command bokeh_test uses env spec default which does not have the packages: bokeh" %
                 project.project_file.filename) == problem.text
         assert problem.can_fix

@@ -56,13 +56,6 @@ def _add_projectignore_if_none(project_directory):
             pass
 
 
-def _fix_fixable_problems(project):
-    if len(project.fixable_problems) > 0:
-        for problem in project.fixable_problems:
-            problem.fix(project)
-        project.project_file.use_changes_without_saving()
-
-
 def create(directory_path, make_directory=False, name=None, icon=None, description=None, fix_problems=None):
     """Create a project skeleton in the given directory.
 
@@ -114,7 +107,7 @@ def create(directory_path, make_directory=False, name=None, icon=None, descripti
     if fix_problems is None:
         fix_problems = not os.path.exists(project.project_file.filename)
     if fix_problems:
-        _fix_fixable_problems(project)
+        project.fix_problems_and_suggestions()
 
     if len(project.problems) == 0:
         # write out the kapsel.yml; note that this will try to create
@@ -793,10 +786,6 @@ def add_command(project, name, command_type, command, env_spec_name=None, suppor
 
     project.project_file.use_changes_without_saving()
 
-    # one reason for this is that the env may not have bokeh or
-    # notebook packages in it, which the command might need.
-    _fix_fixable_problems(project)
-
     failed = project.problems_status(description="Unable to add the command.")
     if failed is not None:
         # reset, maybe someone added conflicting command line types or something
@@ -867,10 +856,6 @@ def update_command(project, name, command_type=None, command=None, new_name=None
         command_dict[command_type] = command
 
     project.project_file.use_changes_without_saving()
-
-    # one reason for this is that the env may not have bokeh or
-    # notebook packages in it, which the command might need.
-    _fix_fixable_problems(project)
 
     failed = project.problems_status(description="Unable to add the command.")
     if failed is not None:
