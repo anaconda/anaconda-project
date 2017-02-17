@@ -79,6 +79,9 @@ class EnvSpec(object):
             inherit_from_name (str or None): name of what we inherit from
             inherit_from (EnvSpec or None): pull in packages and channels from
         """
+        assert inherit_from_names is not None
+        assert inherit_from is not None
+
         self._name = name
         self._conda_packages = tuple(conda_packages)
         self._channels = tuple(channels)
@@ -152,12 +155,20 @@ class EnvSpec(object):
         return self._channels_and_packages_hash
 
     def _get_inherited(self, public_attr, key_func=None):
+        def _linearized_ancestors(specs, accumulator):
+            for spec in specs:
+                if spec not in accumulator:
+                    _linearized_ancestors(spec._inherit_from, accumulator)
+                    accumulator.append(spec)
+
+        ancestors = []
+        _linearized_ancestors([self], ancestors)
+        assert ancestors[-1] is self
+
         private_attr = '_' + public_attr
         to_combine = []
-        if self._inherit_from is not None:
-            for spec in self._inherit_from:
-                to_combine.append(getattr(spec, public_attr))
-        to_combine.append(getattr(self, private_attr))
+        for spec in ancestors:
+            to_combine.append(getattr(spec, private_attr))
         combined = []
         for item in to_combine:
             combined = _combine_keeping_last_duplicate(combined, item, key_func=key_func)

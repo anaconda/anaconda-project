@@ -641,33 +641,44 @@ def test_load_environments():
         foo_child = project.env_specs['foo_child']
         foo_grandchild = project.env_specs['foo_grandchild']
         mixin = project.env_specs['mixin']
-        assert foo.conda_packages == ('python', 'dog', 'cat', 'zebra')
+        assert foo.conda_packages == ('global1=1.0', 'global2=1.0', 'python', 'dog', 'cat', 'zebra')
         assert foo.description == "THE FOO"
         assert foo.pip_packages == ()
+        assert foo.channels == ('univision', )
         assert foo.inherit_from == (project.global_base_env_spec, )
-        assert bar.conda_packages == ()
+        assert bar.conda_packages == ('global1=1.0', 'global2=1.0')
         assert bar.description == "bar"
         assert bar.pip_packages == ()
+        assert bar.channels == ('univision', )
         assert bar.inherit_from == (project.global_base_env_spec, )
 
-        assert mixin.conda_packages == ('bunny', 'walrus=1.0')
+        assert mixin.conda_packages == ('global1=1.0', 'bunny', 'walrus=1.0', 'global2=2.0')
         assert mixin.pip_packages == ('bear', )
-        assert mixin.channels == ('hbo', )
+        assert mixin.channels == ('univision', 'hbo', )
 
         assert foo_child.description == 'foo_child'
-        assert foo_child.conda_packages == ('python', 'cat', 'zebra', 'dog=2.0', 'lion')
+        assert foo_child.conda_packages == ('global2=1.0', 'python', 'cat', 'zebra', 'dog=2.0', 'global1=2.0', 'lion')
         assert foo_child.pip_packages == ('fish', )
-        assert foo_child.channels == ('abc', )
+        assert foo_child.channels == ('univision', 'abc', )
         assert foo_child.inherit_from == (foo, )
 
         assert foo_grandchild.description == 'foo_grandchild'
-        assert foo_grandchild.conda_packages == ('python', 'cat', 'zebra', 'lion', 'bunny', 'walrus=2.0', 'dog=3.0')
+        # the resulting order here is important, and reflects that we linearized
+        # the inheritance hierarchy
+        assert foo_grandchild.conda_packages == ('python', 'cat', 'zebra', 'global1=2.0', 'lion', 'bunny',
+                                                 'global2=2.0', 'walrus=2.0', 'dog=3.0')
         assert foo_grandchild.pip_packages == ('fish', 'bear', 'seahorse')
-        assert foo_grandchild.channels == ('abc', 'hbo', 'nbc')
+        assert foo_grandchild.channels == ('univision', 'abc', 'hbo', 'nbc')
         assert foo_grandchild.inherit_from == (foo_child, mixin)
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
+packages:
+  - global1=1.0
+  - global2=1.0
+channels:
+  - univision
+
 env_specs:
   foo:
     description: "THE FOO"
@@ -681,6 +692,7 @@ env_specs:
     inherit_from: foo
     packages:
        - dog=2.0
+       - global1=2.0
        - lion
        - pip:
           - fish
@@ -690,6 +702,7 @@ env_specs:
     packages:
        - bunny
        - walrus=1.0
+       - global2=2.0
        - pip:
          - bear
     channels:
