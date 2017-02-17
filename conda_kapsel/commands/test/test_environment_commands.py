@@ -223,6 +223,38 @@ def test_remove_only_env_spec(capsys, monkeypatch):
         }, check)
 
 
+def test_remove_env_spec_in_use(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-env-spec', '--name', 'bar'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert '' == out
+        assert (("%s: env_spec 'bar' for command 'foo' does not appear in the env_specs section\n" % os.path.join(
+            dirname, DEFAULT_PROJECT_FILENAME)) + "Unable to load the project.\n") == err
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+commands:
+  foo:
+    unix: envs/foo/bin/test
+    env_spec: bar
+
+env_specs:
+  other:
+      packages:
+         - hello
+  bar:
+      packages:
+        - boo
+""",
+            'envs/foo/bin/test': 'code here'
+        }, check)
+
+
 def test_add_env_spec_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys, monkeypatch,
                                                          ['conda-kapsel', 'add-env-spec', '--name', 'foo'])
