@@ -644,11 +644,11 @@ def test_load_environments():
         assert foo.conda_packages == ('python', 'dog', 'cat', 'zebra')
         assert foo.description == "THE FOO"
         assert foo.pip_packages == ()
-        assert foo.inherit_from == ()
+        assert foo.inherit_from == (project.global_base_env_spec, )
         assert bar.conda_packages == ()
         assert bar.description == "bar"
         assert bar.pip_packages == ()
-        assert bar.inherit_from == ()
+        assert bar.inherit_from == (project.global_base_env_spec, )
 
         assert mixin.conda_packages == ('bunny', 'walrus=1.0')
         assert mixin.pip_packages == ('bear', )

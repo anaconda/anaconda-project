@@ -88,10 +88,14 @@ class EnvSpec(object):
         self._inherit_from_names = inherit_from_names
         self._inherit_from = inherit_from
 
-        # inherit_from must be a subset of inherit_from_names; if there was
-        # an error, it would be a subset rather than equal.
+        # inherit_from must be a subset of inherit_from_names
+        # except that we can have an anonymous base env spec for
+        # the global packages/channels sections; if there was an
+        # error that kept us from creating one of the specs we
+        # name as a parent, then self._inherit_from would be a
+        # subset rather than equal.
         for name in tuple([spec.name for spec in self._inherit_from]):
-            assert name in self._inherit_from_names
+            assert name is None or name in self._inherit_from_names
 
         conda_specs_by_name = dict()
         for spec in self.conda_packages:
@@ -113,7 +117,11 @@ class EnvSpec(object):
 
     @property
     def name(self):
-        """Get name of the package set."""
+        """Get name of the package set.
+
+        May be None for the anonymous shared base spec
+        (toplevel packages, channels sections).
+        """
         return self._name
 
     @property
@@ -413,8 +421,14 @@ def _find_out_of_sync_importable_spec(project_specs, directory_path):
     return (spec, filename)
 
 
-def _anaconda_default_env_spec():
+def _anaconda_default_env_spec(shared_base_spec):
+    if shared_base_spec is None:
+        inherit_from = ()
+    else:
+        inherit_from = (shared_base_spec, )
     return EnvSpec(name="default",
                    conda_packages=["anaconda"],
                    channels=[],
-                   description="Default environment spec for running commands")
+                   description="Default environment spec for running commands",
+                   inherit_from_names=(),
+                   inherit_from=inherit_from)

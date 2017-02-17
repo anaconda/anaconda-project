@@ -99,6 +99,7 @@ class _ConfigCache(object):
         self.conda_meta_file_count = 0
         self.env_specs = dict()
         self.default_env_spec_name = None
+        self.global_base_env_spec = None
 
     def update(self, project_file, conda_meta_file):
         if project_file.change_count == self.project_file_count and \
@@ -344,6 +345,15 @@ class _ConfigCache(object):
         first_env_spec_name = None
         env_specs_is_empty_or_missing = False  # this should be iff it's an empty dict or absent entirely
 
+        # this one isn't in the env_specs dict
+        self.global_base_env_spec = EnvSpec(name=None,
+                                            conda_packages=shared_deps,
+                                            pip_packages=shared_pip_deps,
+                                            channels=shared_channels,
+                                            description="Global packages and channels",
+                                            inherit_from_names=(),
+                                            inherit_from=())
+
         env_spec_attrs = dict()
         if isinstance(env_specs, dict):
             if len(env_specs) == 0:
@@ -373,17 +383,11 @@ class _ConfigCache(object):
 
                 (deps, pip_deps) = _parse_packages(attrs)
                 channels = _parse_channels(attrs)
-                # ideally we would merge same-name packages here, choosing the
-                # highest of the two versions or something. maybe conda will
-                # do that for us anyway?
-                all_deps = shared_deps + deps
-                all_pip_deps = shared_pip_deps + pip_deps
-                all_channels = shared_channels + channels
 
                 env_spec_attrs[name] = dict(name=name,
-                                            conda_packages=all_deps,
-                                            pip_packages=all_pip_deps,
-                                            channels=all_channels,
+                                            conda_packages=deps,
+                                            pip_packages=pip_deps,
+                                            channels=channels,
                                             description=description,
                                             inherit_from_names=tuple(inherit_from_names),
                                             inherit_from=())
@@ -421,6 +425,11 @@ class _ConfigCache(object):
                         else:
                             inherit_from = make_env_spec(parent, trail)
                             attrs['inherit_from'] = attrs['inherit_from'] + (inherit_from, )
+
+                # All parent-less env specs get the global base spec as parent,
+                # which means the global base spec is in everyone's ancestry
+                if attrs['inherit_from'] == ():
+                    attrs['inherit_from'] = (self.global_base_env_spec, )
 
                 self.env_specs[name] = EnvSpec(**attrs)
 
@@ -489,7 +498,7 @@ class _ConfigCache(object):
             # to add this if we are going to ask about environment.yml
             # import, above.
             def add_default_env_spec(project):
-                default_spec = _anaconda_default_env_spec()
+                default_spec = _anaconda_default_env_spec(self.global_base_env_spec)
                 project.project_file.set_value(['env_specs', default_spec.name], default_spec.to_json())
 
             problems.append(ProjectProblem(text=("%s has an empty env_specs section." % project_file.filename),
@@ -757,7 +766,7 @@ class Project(object):
             if importable_spec is not None:
                 return [importable_spec]
             else:
-                return [_anaconda_default_env_spec()]
+                return [_anaconda_default_env_spec(shared_base_spec=None)]
 
         self._project_file = ProjectFile.load_for_directory(directory_path, default_env_specs_func=load_default_specs)
         self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)
@@ -933,6 +942,15 @@ class Project(object):
     def env_specs(self):
         """Get a dictionary of environment names to CondaEnvironment instances."""
         return self._updated_cache().env_specs
+
+    @property
+    def global_base_env_spec(self):
+        """Get the env spec representing global packages and channels sections.
+
+        This env spec has no name (its name is None) and can't be used directly
+        to create environments, but every other env spec inherits from it.
+        """
+        return self._updated_cache().global_base_env_spec
 
     @property
     def all_variables(self):
