@@ -426,6 +426,41 @@ def remove_env_spec(project, name):
     return status
 
 
+def export_env_spec(project, name, filename):
+    """Export the environment spec as an environment.yml-type file.
+
+    Returns a ``Status`` subtype (it won't be a
+    ``RequirementStatus`` as with some other functions, just a
+    plain status).
+
+    Args:
+        project (Project): the project
+        name (str): environment spec name
+        filename (str): file to export to
+
+    Returns:
+        ``Status`` instance
+    """
+    assert name is not None
+
+    failed = project.problems_status()
+    if failed is not None:
+        return failed
+
+    if name not in project.env_specs:
+        problem = "Environment spec {} doesn't exist.".format(name)
+        return SimpleStatus(success=False, description=problem)
+
+    spec = project.env_specs[name]
+
+    try:
+        spec.save_environment_yml(filename)
+    except Exception as e:
+        return SimpleStatus(success=False, description="Failed to save {}: {}.".format(filename, str(e)))
+
+    return SimpleStatus(success=True, description="Exported environment spec {} to {}.".format(name, filename))
+
+
 def add_packages(project, env_spec_name, packages, channels):
     """Attempt to install packages then add them to kapsel.yml.
 

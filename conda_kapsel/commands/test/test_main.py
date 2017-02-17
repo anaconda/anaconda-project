@@ -15,8 +15,8 @@ from conda_kapsel.commands.main import _parse_args_and_run_subcommand
 all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'unarchive', 'upload', 'add-variable',
                    'remove-variable', 'list-variables', 'set-variable', 'unset-variable', 'add-download',
                    'remove-download', 'list-downloads', 'add-service', 'remove-service', 'list-services',
-                   'add-env-spec', 'remove-env-spec', 'list-env-specs', 'add-packages', 'remove-packages',
-                   'list-packages', 'add-command', 'remove-command', 'list-commands')
+                   'add-env-spec', 'remove-env-spec', 'list-env-specs', 'export-env-spec', 'add-packages',
+                   'remove-packages', 'list-packages', 'add-command', 'remove-command', 'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -88,6 +88,7 @@ expected_usage_msg_format = \
         '    add-env-spec        Add a new environment spec to the project\n' \
         '    remove-env-spec     Remove an environment spec from the project\n' \
         '    list-env-specs      List all environment specs for the project\n' \
+        '    export-env-spec     Save an environment spec as a conda environment file\n' \
         '    add-packages        Add packages to one or all project environments\n' \
         '    remove-packages     Remove packages from one or all project environments\n' \
         '    list-packages       List packages for an environment on the project\n' \

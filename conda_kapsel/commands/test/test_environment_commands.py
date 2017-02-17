@@ -233,6 +233,45 @@ def test_remove_env_spec_with_project_file_problems(capsys, monkeypatch):
                                                          ['conda-kapsel', 'remove-env-spec', '--name', 'foo'])
 
 
+def test_export_env_spec(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        exported = os.path.join(dirname, "exported.yml")
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'export-env-spec', '--name', 'foo', exported])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert '' == err
+        assert ('Exported environment spec foo to %s.\n' % exported) == out
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
+            '  bar:\n    channels: []\n    packages:\n    - baz\n',
+            'envs/foo/bin/test': 'code here'
+        }, check)
+
+
+def test_export_env_spec_no_filename(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        code = _parse_args_and_run_subcommand(['conda-kapsel', 'export-env-spec', '--name', 'foo'])
+        assert code == 2
+
+        out, err = capsys.readouterr()
+        assert 'ENVIRONMENT_FILE' in err
+        assert '' == out
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
+            '  bar:\n    channels: []\n    packages:\n    - baz\n',
+            'envs/foo/bin/test': 'code here'
+        }, check)
+
+
 def test_add_packages_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['conda-kapsel', 'add-packages', 'foo'])
 

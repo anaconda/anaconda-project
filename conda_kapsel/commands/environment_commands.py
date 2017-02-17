@@ -14,10 +14,11 @@ from conda_kapsel import project_ops
 from conda_kapsel.commands import console_utils
 
 
-def _handle_status(status, success_message):
+def _handle_status(status, success_message=None):
     if status:
         print(status.status_description)
-        print(success_message)
+        if success_message is not None:
+            print(success_message)
         return 0
     else:
         console_utils.print_status_errors(status)
@@ -36,6 +37,13 @@ def remove_env_spec(project_dir, name):
     project = load_project(project_dir)
     status = project_ops.remove_env_spec(project, name=name)
     return _handle_status(status, "Removed environment {} from the project file.".format(name))
+
+
+def export_env_spec(project_dir, name, filename):
+    """Save an environment.yml file."""
+    project = load_project(project_dir)
+    status = project_ops.export_env_spec(project, name=name, filename=filename)
+    return _handle_status(status)
 
 
 def add_packages(project, environment, packages, channels):
@@ -96,6 +104,11 @@ def main_add(args):
 def main_remove(args):
     """Start the remove-environment command and return exit status code."""
     return remove_env_spec(args.directory, args.name)
+
+
+def main_export(args):
+    """Start the export env spec command and return exit status code."""
+    return export_env_spec(args.directory, args.name, args.filename)
 
 
 def main_add_packages(args):

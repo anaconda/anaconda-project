@@ -1622,6 +1622,88 @@ def test_remove_packages_with_project_file_problems():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
+def test_export_env_spec():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        exported = os.path.join(dirname, "exported.yml")
+        status = project_ops.export_env_spec(project, name='default', filename=exported)
+        assert status
+        assert status.status_description == ('Exported environment spec default to %s.' % exported)
+
+    with_directory_contents_completing_project_file(
+        {
+            "kapsel.yml": """
+env_specs:
+  default:
+    packages:
+      - blah
+    channels:
+      - boo
+"""
+        }, check)
+
+
+def test_export_nonexistent_env_spec():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        exported = os.path.join(dirname, "exported.yml")
+        status = project_ops.export_env_spec(project, name='bar', filename=exported)
+        assert not status
+        assert not os.path.exists(exported)
+        assert status.status_description == "Environment spec bar doesn't exist."
+
+    with_directory_contents_completing_project_file(
+        {
+            "kapsel.yml": """
+env_specs:
+  default:
+    packages:
+      - blah
+    channels:
+      - boo
+"""
+        }, check)
+
+
+def test_export_env_spec_io_error(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        exported = os.path.join(dirname, "exported.yml")
+
+        def mock_atomic_replace(*args, **kwargs):
+            raise IOError("NOOO")
+
+        monkeypatch.setattr('conda_kapsel.yaml_file._atomic_replace', mock_atomic_replace)
+        status = project_ops.export_env_spec(project, name='default', filename=exported)
+        assert not status
+        assert not os.path.exists(exported)
+        assert status.status_description == ("Failed to save %s: NOOO." % exported)
+
+    with_directory_contents_completing_project_file(
+        {
+            "kapsel.yml": """
+env_specs:
+  default:
+    packages:
+      - blah
+    channels:
+      - boo
+"""
+        }, check)
+
+
+def test_export_env_spec_broken_project(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.export_env_spec(project, name='default', filename='foo')
+        assert not status
+        assert status.status_description == 'Unable to load the project.'
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+name: broken
+"""}, check)
+
+
 def _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch):
     from conda_kapsel.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
 

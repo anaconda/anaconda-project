@@ -17,6 +17,7 @@ import time
 
 import pytest
 
+from conda_kapsel.env_spec import _load_environment_yml
 from conda_kapsel.conda_meta_file import DEFAULT_RELATIVE_META_PATH, META_DIRECTORY
 from conda_kapsel.internal.test.tmpfile_utils import (with_directory_contents,
                                                       with_directory_contents_completing_project_file)
@@ -670,6 +671,20 @@ def test_load_environments():
         assert foo_grandchild.pip_packages == ('fish', 'bear', 'seahorse')
         assert foo_grandchild.channels == ('univision', 'abc', 'hbo', 'nbc')
         assert foo_grandchild.inherit_from == (foo_child, mixin)
+
+        # While we have this complicated inheritance tree around, be
+        # sure we can round-trip save it to environment.yml files
+        for spec in (foo, bar, mixin, foo_child, foo_grandchild):
+            saved = os.path.join(dirname, "saved-%s" % spec.name)
+            spec.save_environment_yml(saved)
+            loaded = _load_environment_yml(saved)
+
+            assert loaded.inherit_from == ()
+            assert loaded.inherit_from_names == ()
+            assert loaded.name == spec.name
+            assert loaded.conda_packages == spec.conda_packages
+            assert loaded.pip_packages == spec.pip_packages
+            assert loaded.channels == spec.channels
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
