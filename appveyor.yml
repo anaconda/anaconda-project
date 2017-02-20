@@ -11,6 +11,7 @@ environment:
     - PYTHON_VERSION: "2.7"
     - PYTHON_VERSION: "3.4"
     - PYTHON_VERSION: "3.5"
+    - PYTHON_VERSION: "3.6"
 
 platform:
   -x64
@@ -18,6 +19,7 @@ platform:
 install:
   - if "%PYTHON_VERSION%" == "3.4" set "BASE_PYTHON_VERSION=3"
   - if "%PYTHON_VERSION%" == "3.5" set "BASE_PYTHON_VERSION=35"
+  - if "%PYTHON_VERSION%" == "3.6" set "BASE_PYTHON_VERSION=3"
   - if "%PYTHON_ARCH%" == "64" set "ARCH_LABEL=-x64"
   # These are already installed on appveyor.  Update them.
   - set "CONDA_ROOT=C:\Miniconda%BASE_PYTHON_VERSION%%ARCH_LABEL%"
@@ -33,7 +35,7 @@ install:
   - "%CONDA_ROOT%\\Scripts\\activate root"
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda info -a
-  - conda create -q -n test-environment python=%PYTHON_VERSION% pip pycrypto bcrypt ipython-notebook bokeh ruamel_yaml anaconda-client requests beautifulsoup4 tornado coverage pytest pytest-cov
+  - conda create -q -n test-environment python=%PYTHON_VERSION% pip pycrypto bcrypt notebook bokeh ruamel_yaml anaconda-client requests beautifulsoup4 tornado coverage pytest pytest-cov
 
 # Not a .NET project, we build in the install step instead
 build: false
