@@ -26,7 +26,6 @@ from conda_kapsel.plugins.providers.conda_env import _remove_env_path
 from conda_kapsel.internal.simple_status import SimpleStatus
 import conda_kapsel.conda_manager as conda_manager
 from conda_kapsel.internal.conda_api import parse_spec
-from conda_kapsel.internal import keyring
 
 _default_projectignore = """
 # project-local contains your personal configuration choices and state
@@ -677,6 +676,10 @@ def _unset_variable(project, env_prefix, varname, local_state):
     if len(reqs) > 0:
         req = reqs[0]
         if req.encrypted:
+            # import keyring locally because it's an optional dependency
+            # that prints a warning when it's needed but not found.
+            from conda_kapsel.internal import keyring
+
             keyring.unset(env_prefix, varname)
         else:
             local_state.unset_value(['variables', varname])
@@ -741,6 +744,10 @@ def set_variables(project, vars_and_values, env_spec_name=None):
     for varname, value in vars_and_values:
         if varname in present_vars:
             if var_reqs[varname].encrypted:
+                # import keyring locally because it's an optional dependency
+                # that prints a warning when it's needed but not found.
+                from conda_kapsel.internal import keyring
+
                 keyring.set(env_prefix, varname, value)
                 keyring_count = keyring_count + 1
             else:
