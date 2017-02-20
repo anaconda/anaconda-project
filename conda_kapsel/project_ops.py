@@ -26,7 +26,6 @@ from conda_kapsel.plugins.providers.conda_env import _remove_env_path
 from conda_kapsel.internal.simple_status import SimpleStatus
 import conda_kapsel.conda_manager as conda_manager
 from conda_kapsel.internal.conda_api import parse_spec
-from conda_kapsel.internal import keyring
 
 _default_projectignore = """
 # project-local contains your personal configuration choices and state
@@ -54,13 +53,6 @@ def _add_projectignore_if_none(project_directory):
                 f.write(_default_projectignore)
         except IOError:
             pass
-
-
-def _fix_fixable_problems(project):
-    if len(project.fixable_problems) > 0:
-        for problem in project.fixable_problems:
-            problem.fix(project)
-        project.project_file.use_changes_without_saving()
 
 
 def create(directory_path, make_directory=False, name=None, icon=None, description=None, fix_problems=None):
@@ -114,7 +106,7 @@ def create(directory_path, make_directory=False, name=None, icon=None, descripti
     if fix_problems is None:
         fix_problems = not os.path.exists(project.project_file.filename)
     if fix_problems:
-        _fix_fixable_problems(project)
+        project.fix_problems_and_suggestions()
 
     if len(project.problems) == 0:
         # write out the kapsel.yml; note that this will try to create
@@ -181,7 +173,15 @@ def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=Non
                                                  env_spec_name=env_spec_name)
 
     status = result.status_for(env_var_or_class)
-    if status is None or not status:
+    if status is None:
+        # I _think_ this is currently impossible, but if it were possible,
+        # we'd need to below code and it's hard to prove it's impossible.
+        status = project.problems_status()  # pragma: no cover # no way to cause right now?
+        # caller was supposed to expect env_var_or_class to still exist,
+        # unless project file got mangled
+        assert status is not None  # pragma: no cover
+
+    if not status:
         # reload from disk, discarding our changes because they did not work
         project.project_file.load()
     else:
@@ -427,10 +427,49 @@ def remove_env_spec(project, name):
     if status:
         project.project_file.unset_value(['env_specs', name])
         project.project_file.use_changes_without_saving()
-        assert project.problems == []
-        project.project_file.save()
+        if project.problems_status() is None:
+            project.project_file.save()
+        else:
+            # revert and return the problems
+            status = project.problems_status()
+            project.project_file.load()
 
     return status
+
+
+def export_env_spec(project, name, filename):
+    """Export the environment spec as an environment.yml-type file.
+
+    Returns a ``Status`` subtype (it won't be a
+    ``RequirementStatus`` as with some other functions, just a
+    plain status).
+
+    Args:
+        project (Project): the project
+        name (str): environment spec name
+        filename (str): file to export to
+
+    Returns:
+        ``Status`` instance
+    """
+    assert name is not None
+
+    failed = project.problems_status()
+    if failed is not None:
+        return failed
+
+    if name not in project.env_specs:
+        problem = "Environment spec {} doesn't exist.".format(name)
+        return SimpleStatus(success=False, description=problem)
+
+    spec = project.env_specs[name]
+
+    try:
+        spec.save_environment_yml(filename)
+    except Exception as e:
+        return SimpleStatus(success=False, description="Failed to save {}: {}.".format(filename, str(e)))
+
+    return SimpleStatus(success=True, description="Exported environment spec {} to {}.".format(name, filename))
 
 
 def add_packages(project, env_spec_name, packages, channels):
@@ -490,6 +529,14 @@ def remove_packages(project, env_spec_name, packages):
     # So what we do right now is remove the package from the env,
     # and then remove it from kapsel.yml, and then see if we can
     # still prepare the project.
+
+    # TODO this should handle env spec inheritance in the same way
+    # it handles the global packages list, that is, removing a package
+    # from a spec should also remove it from its ancestors (and possibly
+    # add it to other children of those ancestors).
+    # Not doing it at the time of writing this comment because it might
+    # be nicer to rewrite this whole thing when we add version pinning
+    # anyway.
 
     failed = project.problems_status()
     if failed is not None:
@@ -629,6 +676,10 @@ def _unset_variable(project, env_prefix, varname, local_state):
     if len(reqs) > 0:
         req = reqs[0]
         if req.encrypted:
+            # import keyring locally because it's an optional dependency
+            # that prints a warning when it's needed but not found.
+            from conda_kapsel.internal import keyring
+
             keyring.unset(env_prefix, varname)
         else:
             local_state.unset_value(['variables', varname])
@@ -693,6 +744,10 @@ def set_variables(project, vars_and_values, env_spec_name=None):
     for varname, value in vars_and_values:
         if varname in present_vars:
             if var_reqs[varname].encrypted:
+                # import keyring locally because it's an optional dependency
+                # that prints a warning when it's needed but not found.
+                from conda_kapsel.internal import keyring
+
                 keyring.set(env_prefix, varname, value)
                 keyring_count = keyring_count + 1
             else:
@@ -793,10 +848,6 @@ def add_command(project, name, command_type, command, env_spec_name=None, suppor
 
     project.project_file.use_changes_without_saving()
 
-    # one reason for this is that the env may not have bokeh or
-    # notebook packages in it, which the command might need.
-    _fix_fixable_problems(project)
-
     failed = project.problems_status(description="Unable to add the command.")
     if failed is not None:
         # reset, maybe someone added conflicting command line types or something
@@ -845,12 +896,6 @@ def update_command(project, name, command_type=None, command=None, new_name=None
                             description="Failed to update command.",
                             errors=[("No command '%s' found." % name)])
 
-    command_object = project.commands[name]
-    if command_object.auto_generated:
-        return SimpleStatus(success=False,
-                            description="Failed to update command.",
-                            errors=[("Autogenerated command '%s' can't be modified." % name)])
-
     command_dict = project.project_file.get_value(['commands', name])
     assert command_dict is not None
 
@@ -873,10 +918,6 @@ def update_command(project, name, command_type=None, command=None, new_name=None
         command_dict[command_type] = command
 
     project.project_file.use_changes_without_saving()
-
-    # one reason for this is that the env may not have bokeh or
-    # notebook packages in it, which the command might need.
-    _fix_fixable_problems(project)
 
     failed = project.problems_status(description="Unable to add the command.")
     if failed is not None:
@@ -910,11 +951,19 @@ def remove_command(project, name):
         return SimpleStatus(success=False, description="Command: '{}' not found in project file.".format(name))
 
     command = project.commands[name]
-    if command.auto_generated:
-        return SimpleStatus(success=False, description="Cannot remove auto-generated command: '{}'.".format(name))
+
+    # if we remove a notebook, it's an error normally, we have to mark it skipped
+    # TODO share this code with the no_fix function in project.py
+    if command.notebook is not None:
+        skipped_notebooks = project.project_file.get_value(['skip_imports', 'notebooks'], default=[])
+        if isinstance(skipped_notebooks, list) and \
+           command.notebook not in skipped_notebooks:
+            skipped_notebooks.append(command.notebook)
+            project.project_file.set_value(['skip_imports', 'notebooks'], skipped_notebooks)
 
     project.project_file.unset_value(['commands', name])
     project.project_file.use_changes_without_saving()
+
     assert project.problems == []
     project.project_file.save()
 

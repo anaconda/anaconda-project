@@ -16,7 +16,7 @@ import conda_kapsel.internal.conda_api as conda_api
 import conda_kapsel.internal.pip_api as pip_api
 from conda_kapsel.internal.py2_compat import is_string
 
-from conda_kapsel.yaml_file import _load_string, _YAMLError
+from conda_kapsel.yaml_file import _load_string, _save_file, _YAMLError
 
 try:
     # this is the conda-packaged version of ruamel.yaml which has the
@@ -27,10 +27,47 @@ except ImportError:  # pragma: no cover
     import ruamel.yaml as ryaml  # pragma: no cover
 
 
+def _combine_keeping_last_duplicate(items1, items2, key_func=None):
+    def default_key(item):
+        return item
+
+    if key_func is None:
+        key_func = default_key
+    items2_keys = set([key_func(item) for item in items2])
+    combined = list([item for item in items1 if key_func(item) not in items2_keys])
+    combined = combined + list(items2)
+    return tuple(combined)
+
+
+def _conda_combine_key(spec):
+    parsed = conda_api.parse_spec(spec)
+    if parsed is None:
+        # this is broken but we complain about it in project.py, carry on here
+        return spec
+    else:
+        return parsed.name
+
+
+def _pip_combine_key(spec):
+    parsed = pip_api.parse_spec(spec)
+    if parsed is None:
+        # this is broken but we complain about it in project.py, carry on here
+        return spec
+    else:
+        return parsed.name
+
+
 class EnvSpec(object):
     """Represents a set of required conda packages we could potentially instantiate as a Conda environment."""
 
-    def __init__(self, name, conda_packages, channels, pip_packages=(), description=None):
+    def __init__(self,
+                 name,
+                 conda_packages,
+                 channels,
+                 pip_packages=(),
+                 description=None,
+                 inherit_from_names=(),
+                 inherit_from=()):
         """Construct a package set with the given name and packages.
 
         Args:
@@ -39,13 +76,29 @@ class EnvSpec(object):
             channels (list): list of channel names
             pip_packages (list): list of pip package specs to pass to pip
             description (str or None): one-sentence-ish summary of what this env is
+            inherit_from_name (str or None): name of what we inherit from
+            inherit_from (EnvSpec or None): pull in packages and channels from
         """
+        assert inherit_from_names is not None
+        assert inherit_from is not None
+
         self._name = name
         self._conda_packages = tuple(conda_packages)
         self._channels = tuple(channels)
         self._pip_packages = tuple(pip_packages)
         self._description = description
         self._channels_and_packages_hash = None
+        self._inherit_from_names = inherit_from_names
+        self._inherit_from = inherit_from
+
+        # inherit_from must be a subset of inherit_from_names
+        # except that we can have an anonymous base env spec for
+        # the global packages/channels sections; if there was an
+        # error that kept us from creating one of the specs we
+        # name as a parent, then self._inherit_from would be a
+        # subset rather than equal.
+        for name in tuple([spec.name for spec in self._inherit_from]):
+            assert name is None or name in self._inherit_from_names
 
         conda_specs_by_name = dict()
         for spec in self.conda_packages:
@@ -67,7 +120,11 @@ class EnvSpec(object):
 
     @property
     def name(self):
-        """Get name of the package set."""
+        """Get name of the package set.
+
+        May be None for the anonymous shared base spec
+        (toplevel packages, channels sections).
+        """
         return self._name
 
     @property
@@ -97,20 +154,40 @@ class EnvSpec(object):
             self._channels_and_packages_hash = m.hexdigest()
         return self._channels_and_packages_hash
 
+    def _get_inherited(self, public_attr, key_func=None):
+        def _linearized_ancestors(specs, accumulator):
+            for spec in specs:
+                if spec not in accumulator:
+                    _linearized_ancestors(spec._inherit_from, accumulator)
+                    accumulator.append(spec)
+
+        ancestors = []
+        _linearized_ancestors([self], ancestors)
+        assert ancestors[-1] is self
+
+        private_attr = '_' + public_attr
+        to_combine = []
+        for spec in ancestors:
+            to_combine.append(getattr(spec, private_attr))
+        combined = []
+        for item in to_combine:
+            combined = _combine_keeping_last_duplicate(combined, item, key_func=key_func)
+        return combined
+
     @property
     def conda_packages(self):
         """Get the conda packages to install in the environment as an iterable."""
-        return self._conda_packages
+        return self._get_inherited('conda_packages', _conda_combine_key)
 
     @property
     def channels(self):
         """Get the channels to install conda packages from."""
-        return self._channels
+        return self._get_inherited('channels')
 
     @property
     def pip_packages(self):
         """Get the pip packages to install in the environment as an iterable."""
-        return self._pip_packages
+        return self._get_inherited('pip_packages', _pip_combine_key)
 
     @property
     def conda_package_names_set(self):
@@ -137,6 +214,16 @@ class EnvSpec(object):
     def specs_for_pip_package_names(self, names):
         """Get the full install specs given an iterable of package names."""
         return self._specs_for_package_names(names, self._pip_specs_by_name)
+
+    @property
+    def inherit_from(self):
+        """Env spec that we inherit stuff from."""
+        return self._inherit_from
+
+    @property
+    def inherit_from_names(self):
+        """Env spec names that we inherit stuff from."""
+        return self._inherit_from_names
 
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""
@@ -185,11 +272,14 @@ class EnvSpec(object):
 
     def to_json(self):
         """Get JSON for a kapsel.yml env spec section."""
-        packages = list(self.conda_packages)
-        pip_packages = list(self.pip_packages)
+        # Note that we use _conda_packages (only the packages we
+        # introduce ourselves) rather than conda_packages
+        # (includes inherited packages).
+        packages = list(self._conda_packages)
+        pip_packages = list(self._pip_packages)
         if pip_packages:
             packages.append(dict(pip=pip_packages))
-        channels = list(self.channels)
+        channels = list(self._channels)
 
         # this is a gross, roundabout hack to get ryaml dicts that
         # have ordering... OrderedDict doesn't work because the
@@ -201,7 +291,32 @@ class EnvSpec(object):
         template_json['something']['packages'] = packages
         template_json['something']['channels'] = channels
 
+        if len(self.inherit_from_names) > 0:
+            if len(self.inherit_from_names) == 1:
+                names = self.inherit_from_names[0]
+            else:
+                names = list(self.inherit_from_names)
+            template_json['something']['inherit_from'] = names
+
         return template_json['something']
+
+    def save_environment_yml(self, filename):
+        """Save as an environment.yml file."""
+        # here we want to flatten the env spec to include all inherited stuff
+        packages = list(self.conda_packages)
+        pip_packages = list(self.pip_packages)
+        if pip_packages:
+            packages.append(dict(pip=pip_packages))
+        channels = list(self.channels)
+
+        yaml = ryaml.load("name: " "\ndependencies: []\nchannels: []\n", Loader=ryaml.RoundTripLoader)
+
+        assert self.name is not None  # the global anonymous spec can't be saved
+        yaml['name'] = self.name
+        yaml['dependencies'] = packages
+        yaml['channels'] = channels
+
+        _save_file(yaml, filename)
 
 
 def _load_environment_yml(filename):
@@ -335,8 +450,14 @@ def _find_out_of_sync_importable_spec(project_specs, directory_path):
     return (spec, filename)
 
 
-def _anaconda_default_env_spec():
+def _anaconda_default_env_spec(shared_base_spec):
+    if shared_base_spec is None:
+        inherit_from = ()
+    else:
+        inherit_from = (shared_base_spec, )
     return EnvSpec(name="default",
                    conda_packages=["anaconda"],
                    channels=[],
-                   description="Default environment spec for running commands")
+                   description="Default environment spec for running commands",
+                   inherit_from_names=(),
+                   inherit_from=inherit_from)

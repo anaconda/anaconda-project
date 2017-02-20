@@ -442,6 +442,23 @@ class AnacondaProject(object):
         """
         return project_ops.remove_env_spec(project=project, name=name)
 
+    def export_env_spec(self, project, name, filename):
+        """Export the environment spec as an environment.yml-type file.
+
+        Returns a ``Status`` subtype (it won't be a
+        ``RequirementStatus`` as with some other functions, just a
+        plain status).
+
+        Args:
+            project (Project): the project
+            name (str): environment spec name
+            filename (str): file to export to
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.export_env_spec(project=project, name=name, filename=filename)
+
     def add_packages(self, project, env_spec_name, packages, channels):
         """Attempt to install packages then add them to kapsel.yml.
 

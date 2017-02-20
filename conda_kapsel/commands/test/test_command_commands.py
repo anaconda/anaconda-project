@@ -343,7 +343,7 @@ def test_remove_command(monkeypatch, capsys):
         assert err == ''
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'packages: ["notebook"]\ncommands:\n  test:\n    notebook: file.ipynb'}, check)
+        {DEFAULT_PROJECT_FILENAME: 'packages: ["notebook"]\ncommands:\n  test:\n    notebook: file.ipynb\n'}, check)
 
 
 def test_remove_command_missing(monkeypatch, capsys):
@@ -356,26 +356,6 @@ def test_remove_command_missing(monkeypatch, capsys):
         assert out == ''
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check)
-
-
-def test_remove_command_auto_generated(monkeypatch, capsys):
-    def check(dirname):
-        code = _parse_args_and_run_subcommand(['conda-kapsel', 'remove-command', 'file.ipynb', '--directory', dirname])
-        assert code == 1
-
-        project = Project(dirname)
-        assert 'file.ipynb' in project.commands
-        command = project.commands['file.ipynb']
-        assert command is not None
-        assert command.notebook == 'file.ipynb'
-
-        out, err = capsys.readouterr()
-        assert err == "Cannot remove auto-generated command: 'file.ipynb'.\n"
-        assert out == ''
-
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n',
-         'file.ipynb': ""}, check)
 
 
 def test_list_commands_with_project_file_problems(capsys, monkeypatch):

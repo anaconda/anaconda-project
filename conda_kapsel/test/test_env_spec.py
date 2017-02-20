@@ -242,10 +242,35 @@ def test_find_out_of_sync_does_not_exist():
 
 
 def test_to_json():
-    spec = EnvSpec(name="foo", conda_packages=['a', 'b'], pip_packages=['c', 'd'], channels=['x', 'y'])
+    # the stuff from this parent env spec should NOT end up in the JSON
+    hi = EnvSpec(name="hi",
+                 conda_packages=['q', 'r'],
+                 pip_packages=['zoo', 'boo'],
+                 channels=['x1', 'y1'],
+                 inherit_from_names=(),
+                 inherit_from=())
+    spec = EnvSpec(name="foo",
+                   conda_packages=['a', 'b'],
+                   pip_packages=['c', 'd'],
+                   channels=['x', 'y'],
+                   inherit_from_names=('hi', ),
+                   inherit_from=(hi, ))
     json = spec.to_json()
 
-    assert {'channels': ['x', 'y'], 'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
+    assert {'channels': ['x', 'y'], 'inherit_from': 'hi', 'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
+
+
+def test_to_json_multiple_inheritance():
+    spec = EnvSpec(name="foo",
+                   conda_packages=['a', 'b'],
+                   pip_packages=['c', 'd'],
+                   channels=['x', 'y'],
+                   inherit_from_names=('hi', 'hello'))
+    json = spec.to_json()
+
+    assert {'channels': ['x', 'y'],
+            'inherit_from': ['hi', 'hello'],
+            'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
 
 
 def test_diff_from():
@@ -254,3 +279,47 @@ def test_diff_from():
     diff = spec2.diff_from(spec1)
 
     assert '  channels:\n      x\n      y\n    + z\n  a\n  b\n+ q\n  pip:\n      c\n    - d' == diff
+
+
+def test_save_environment_yml():
+    def check_save(spec, dirname):
+        saved = os.path.join(dirname, 'saved.yml')
+        spec.save_environment_yml(saved)
+
+        spec2 = _load_environment_yml(saved)
+
+        assert spec2 is not None
+        assert spec2.name == 'foo'
+        assert spec2.conda_packages == ('xyz', 'bar=1.0', 'baz', 'abc')
+        assert spec2.pip_packages == ('pippy', 'poppy==2.0')
+        assert spec2.channels == ('channel1', 'channel2')
+
+        assert spec2.channels_and_packages_hash == 'ee1be9dc875857a69ccabb96cb45b5b828a6dff9'
+
+    def check(filename):
+        spec = _load_environment_yml(filename)
+
+        assert spec is not None
+        assert spec.name == 'foo'
+        assert spec.conda_packages == ('xyz', 'bar=1.0', 'baz', 'abc')
+        assert spec.pip_packages == ('pippy', 'poppy==2.0')
+        assert spec.channels == ('channel1', 'channel2')
+
+        assert spec.channels_and_packages_hash == 'ee1be9dc875857a69ccabb96cb45b5b828a6dff9'
+
+        with_directory_contents({}, lambda dirname: check_save(spec, dirname))
+
+    with_file_contents("""
+name: foo
+dependencies:
+  - xyz
+  - bar=1.0
+  - baz
+  - abc
+  - pip:
+    - pippy
+    - poppy==2.0
+channels:
+  - channel1
+  - channel2
+    """, check)

@@ -17,6 +17,7 @@ import time
 
 import pytest
 
+from conda_kapsel.env_spec import _load_environment_yml
 from conda_kapsel.conda_meta_file import DEFAULT_RELATIVE_META_PATH, META_DIRECTORY
 from conda_kapsel.internal.test.tmpfile_utils import (with_directory_contents,
                                                       with_directory_contents_completing_project_file)
@@ -629,19 +630,70 @@ def test_load_environments():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
-        assert len(project.env_specs) == 2
+        assert len(project.env_specs) == 5
         assert 'foo' in project.env_specs
         assert 'bar' in project.env_specs
+        assert 'foo_child' in project.env_specs
+        assert 'foo_grandchild' in project.env_specs
+        assert 'mixin' in project.env_specs
         assert project.default_env_spec_name == 'foo'
         foo = project.env_specs['foo']
         bar = project.env_specs['bar']
-        assert foo.conda_packages == ('python', 'dog', 'cat', 'zebra')
+        foo_child = project.env_specs['foo_child']
+        foo_grandchild = project.env_specs['foo_grandchild']
+        mixin = project.env_specs['mixin']
+        assert foo.conda_packages == ('global1=1.0', 'global2=1.0', 'python', 'dog', 'cat', 'zebra')
         assert foo.description == "THE FOO"
-        assert bar.conda_packages == ()
+        assert foo.pip_packages == ()
+        assert foo.channels == ('univision', )
+        assert foo.inherit_from == (project.global_base_env_spec, )
+        assert bar.conda_packages == ('global1=1.0', 'global2=1.0')
         assert bar.description == "bar"
+        assert bar.pip_packages == ()
+        assert bar.channels == ('univision', )
+        assert bar.inherit_from == (project.global_base_env_spec, )
+
+        assert mixin.conda_packages == ('global1=1.0', 'bunny', 'walrus=1.0', 'global2=2.0')
+        assert mixin.pip_packages == ('bear', )
+        assert mixin.channels == ('univision', 'hbo', )
+
+        assert foo_child.description == 'foo_child'
+        assert foo_child.conda_packages == ('global2=1.0', 'python', 'cat', 'zebra', 'dog=2.0', 'global1=2.0', 'lion')
+        assert foo_child.pip_packages == ('fish', )
+        assert foo_child.channels == ('univision', 'abc', )
+        assert foo_child.inherit_from == (foo, )
+
+        assert foo_grandchild.description == 'foo_grandchild'
+        # the resulting order here is important, and reflects that we linearized
+        # the inheritance hierarchy
+        assert foo_grandchild.conda_packages == ('python', 'cat', 'zebra', 'global1=2.0', 'lion', 'bunny',
+                                                 'global2=2.0', 'walrus=2.0', 'dog=3.0')
+        assert foo_grandchild.pip_packages == ('fish', 'bear', 'seahorse')
+        assert foo_grandchild.channels == ('univision', 'abc', 'hbo', 'nbc')
+        assert foo_grandchild.inherit_from == (foo_child, mixin)
+
+        # While we have this complicated inheritance tree around, be
+        # sure we can round-trip save it to environment.yml files
+        for spec in (foo, bar, mixin, foo_child, foo_grandchild):
+            saved = os.path.join(dirname, "saved-%s" % spec.name)
+            spec.save_environment_yml(saved)
+            loaded = _load_environment_yml(saved)
+
+            assert loaded.inherit_from == ()
+            assert loaded.inherit_from_names == ()
+            assert loaded.name == spec.name
+            assert loaded.conda_packages == spec.conda_packages
+            assert loaded.pip_packages == spec.pip_packages
+            assert loaded.channels == spec.channels
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
+packages:
+  - global1=1.0
+  - global2=1.0
+channels:
+  - univision
+
 env_specs:
   foo:
     description: "THE FOO"
@@ -651,6 +703,34 @@ env_specs:
        - cat
        - zebra
   bar: {}
+  foo_child:
+    inherit_from: foo
+    packages:
+       - dog=2.0
+       - global1=2.0
+       - lion
+       - pip:
+          - fish
+    channels:
+       - abc
+  mixin:
+    packages:
+       - bunny
+       - walrus=1.0
+       - global2=2.0
+       - pip:
+         - bear
+    channels:
+       - hbo
+  foo_grandchild:
+    inherit_from: [foo_child, mixin]
+    packages:
+       - walrus=2.0
+       - dog=3.0
+       - pip:
+         - seahorse
+    channels:
+       - nbc
     """}, check_environments)
 
 
@@ -751,6 +831,20 @@ env_specs:
     """}, check_environments)
 
 
+def test_complain_about_non_string_inherit_from():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["%s: inherit_from: value should be a list of env spec names, not 'CommentedMap()'" %
+                (project.project_file.filename)] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   foo:
+     inherit_from: {}
+    """}, check_environments)
+
+
 def test_complain_about_packages_list_of_wrong_thing():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
@@ -762,6 +856,59 @@ def test_complain_about_packages_list_of_wrong_thing():
 packages:
     - 42
     """}, check_get_packages)
+
+
+def test_complain_about_env_spec_inherits_from_nonexistent():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["%s: name 'bar' in 'inherit_from' field of env spec foo does not match the name of another env spec" %
+                (project.project_file.filename)] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   foo:
+      inherit_from: bar
+    """}, check_environments)
+
+
+def test_complain_about_cycle_of_two_env_specs():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["%s: 'inherit_from' fields create circular inheritance among these env specs: bar, foo" %
+                (project.project_file.filename)] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   foo:
+      inherit_from: bar
+   bar:
+      inherit_from: foo
+    """}, check_environments)
+
+
+def test_complain_about_cycle_of_many_env_specs():
+    def check_environments(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["%s: 'inherit_from' fields create circular inheritance among these env specs: a, b, c, d, e" %
+                (project.project_file.filename)] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   a:
+      inherit_from: b
+   b:
+      inherit_from: c
+   c:
+      inherit_from: d
+   d:
+      inherit_from: e
+   e:
+      inherit_from: a
+
+    """}, check_environments)
 
 
 def test_load_list_of_variables_requirements():
@@ -905,17 +1052,6 @@ package:
   name: foo
   version: 1.2.3
 """}, check_problem)
-
-
-def test_non_dict_meta_yaml_app_entry():
-    def check_app_entry(dirname):
-        project = project_no_dedicated_env(dirname)
-        assert project.conda_meta_file.app_entry == 42
-        assert 1 == len(project.problems)
-        expected_error = "%s: app: entry: should be a string not '%r'" % (project.conda_meta_file.filename, 42)
-        assert expected_error == project.problems[0]
-
-    with_directory_contents({DEFAULT_RELATIVE_META_PATH: "app:\n  entry: 42\n"}, check_app_entry)
 
 
 def test_non_dict_commands_section():
@@ -1065,7 +1201,7 @@ def test_command_with_bogus_key_and_ok_key():
         command = project.default_command
         assert command.name == 'default'
         assert command.unix_shell_commandline == 'bar'
-        assert not command.auto_generated
+
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
 
@@ -1120,7 +1256,6 @@ def test_notebook_command():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
@@ -1142,7 +1277,6 @@ def test_notebook_command_extra_args():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ, extra_args=['foo', 'bar'])
@@ -1165,7 +1299,7 @@ def test_notebook_command_with_kapsel_http_args():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
+
         assert command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -1197,7 +1331,7 @@ def test_notebook_command_disabled_kapsel_http_args():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
+
         assert not command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -1225,7 +1359,7 @@ def test_notebook_command_kapsel_http_args_after_double_hyphen():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
+
         assert command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -1253,7 +1387,6 @@ def test_notebook_command_with_kapsel_http_args_separated_by_equals():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1274,6 +1407,12 @@ def test_notebook_command_with_kapsel_http_args_separated_by_equals():
 def test_notebook_guess_command():
     def check_notebook_guess_command(dirname):
         project = project_no_dedicated_env(dirname)
+
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+
+        project.suggestion_objects[0].fix(project)
+        project.project_file.save()
+
         assert 'test.ipynb' in project.commands
         assert 'default' in project.commands
         assert len(project.commands) == 2  # we should have ignored all the ignored ones
@@ -1284,7 +1423,6 @@ def test_notebook_guess_command():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert command.auto_generated
 
         expected_nb_path = os.path.join(dirname, 'test.ipynb')
         environ = minimal_environ(PROJECT_DIR=dirname)
@@ -1311,10 +1449,19 @@ def test_notebook_guess_command():
 def test_notebook_guess_command_can_be_default():
     def check_notebook_guess_command_can_be_default(dirname):
         project = project_no_dedicated_env(dirname)
+
+        assert ["%s: No commands run notebooks a.ipynb, b.ipynb, c.ipynb, d/d.ipynb, e.ipynb, f.ipynb" %
+                project.project_file.filename] == project.suggestions
+
+        project.suggestion_objects[0].fix(project)
+        project.project_file.save()
+
         assert [] == project.problems
-        assert len(project.commands) == 4
+        assert len(project.commands) == 6
         assert project.default_command is not None
         assert project.default_command.notebook == 'a.ipynb'
+        assert ['a.ipynb', 'b.ipynb', 'c.ipynb', 'd/d.ipynb', 'e.ipynb', 'f.ipynb'
+                ] == sorted([c for c in project.commands])
 
     with_directory_contents_completing_project_file(
         {
@@ -1324,9 +1471,112 @@ def test_notebook_guess_command_can_be_default():
             'a.ipynb': 'pretend there is notebook data here',
             'b.ipynb': 'pretend there is notebook data here',
             'c.ipynb': 'pretend there is notebook data here',
-            'd.ipynb': 'pretend there is notebook data here'
+            'd/d.ipynb': 'pretend there is notebook data here',
+            'e.ipynb': 'pretend there is notebook data here',
+            'f.ipynb': 'pretend there is notebook data here'
         },
         check_notebook_guess_command_can_be_default)
+
+
+def test_multiple_notebooks_suggestion_rejected():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["%s: No commands run notebooks foo/test2.ipynb, test.ipynb" % project.project_file.filename
+                ] == project.suggestions
+
+        project.suggestion_objects[0].no_fix(project)
+        project.project_file.save()
+
+        assert 'test.ipynb' not in project.commands
+        assert 'foo/test2.ipynb' not in project.commands
+        assert 'default' in project.commands
+        assert len(project.commands) == 1  # we should have ignored all the ignored ones
+        assert project.default_command.name == 'default'
+
+        # now we're skipping the import so it should have gone away
+        assert project.suggestions == []
+
+        assert ['foo/test2.ipynb', 'test.ipynb'] == project.project_file.get_value(['skip_imports', 'notebooks'])
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': 'pretend there is notebook data here',
+            'foo/test2.ipynb': 'pretend there is notebook data here',
+            'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            '.should_ignore_dotfile.ipynb': 'moar fake notebook',
+            '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
+        }, check)
+
+
+def test_skip_all_notebook_imports():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert [] == project.problems
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+
+        project.project_file.set_value(['skip_imports', 'notebooks'], True)
+        project.project_file.save()
+
+        assert [] == project.suggestions
+        assert [] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': 'pretend there is notebook data here'
+        }, check)
+
+
+def test_invalid_skip_imports_notebooks():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["%s: 'skip_imports: notebooks:' value should be a list, found CommentedMap()" %
+                project.project_file.filename] == project.problems
+        assert [] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: ("commands:\n default:\n    unix: echo 'pass'\nservices:\n" +
+                                       "REDIS_URL: redis\npackages: ['notebook']\nskip_imports:\n  notebooks: {}\n")
+        }, check)
+
+
+def test_single_notebook_suggestion_rejected():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+
+        project.suggestion_objects[0].no_fix(project)
+        project.project_file.save()
+
+        assert 'test.ipynb' not in project.commands
+        assert 'default' in project.commands
+        assert len(project.commands) == 1  # we should have ignored all the ignored ones
+        assert project.default_command.name == 'default'
+
+        # now we're skipping the import so it should have gone away
+        assert project.suggestions == []
+
+        assert ['test.ipynb'] == project.project_file.get_value(['skip_imports', 'notebooks'])
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': 'pretend there is notebook data here',
+            'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            '.should_ignore_dotfile.ipynb': 'moar fake notebook',
+            '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
+        }, check)
 
 
 def test_notebook_command_conflict():
@@ -1364,7 +1614,6 @@ def test_bokeh_command():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
@@ -1386,7 +1635,6 @@ def test_bokeh_command_with_extra_args():
         assert command.unix_shell_commandline is None
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ, extra_args=['--foo'])
@@ -1409,7 +1657,6 @@ def test_bokeh_command_with_kapsel_http_args():
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
         assert command.supports_http_options
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1436,7 +1683,6 @@ def test_bokeh_command_with_multiple_host_args():
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
         assert command.supports_http_options
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1462,7 +1708,6 @@ def test_bokeh_command_with_multiple_iframe_hosts_args():
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
         assert command.supports_http_options
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1491,7 +1736,6 @@ def test_bokeh_command_with_value_missing_for_kapsel_http_args():
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
         assert command.supports_http_options
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1517,7 +1761,6 @@ def test_bokeh_command_with_disabled_kapsel_http_args():
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
         assert not command.supports_http_options
-        assert not command.auto_generated
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(
@@ -1543,7 +1786,6 @@ def test_run_argv_from_project_file_app_entry():
         command = project.default_command
         assert command.name == 'foo'
         assert command.conda_app_entry == "foo bar ${PREFIX}"
-        assert not command.auto_generated
 
         assert 1 == len(project.commands)
         assert 'foo' in project.commands
@@ -1564,7 +1806,6 @@ def test_run_argv_from_project_file_shell():
         command = project.default_command
         assert command.name == 'foo'
         assert command.unix_shell_commandline == "foo bar ${PREFIX}"
-        assert not command.auto_generated
 
         assert 1 == len(project.commands)
         assert 'foo' in project.commands
@@ -1586,7 +1827,6 @@ def test_run_argv_from_project_file_windows(monkeypatch):
         assert command.name == 'foo'
         assert command.windows_cmd_commandline == "foo bar %CONDA_DEFAULT_ENV%"
         assert command.unix_shell_commandline is None
-        assert not command.auto_generated
 
         assert 1 == len(project.commands)
         assert 'foo' in project.commands
@@ -1649,24 +1889,6 @@ commands:
   foo:
     %s: foo
 """ % not_us}, check_exec_info)
-
-
-def test_run_argv_from_meta_file():
-    def check_run_argv(dirname):
-        project = project_no_dedicated_env(dirname)
-        assert [] == project.problems
-        command = project.default_command
-        assert command.name == 'default'
-        assert command.conda_app_entry == 'foo bar ${PREFIX}'
-        assert command.unix_shell_commandline is None
-        assert command.windows_cmd_commandline is None
-        assert command.auto_generated
-
-    with_directory_contents_completing_project_file(
-        {DEFAULT_RELATIVE_META_PATH: """
-app:
-  entry: foo bar ${PREFIX}
-"""}, check_run_argv)
 
 
 # we used to fill in empty commands from meta.yaml, but no more,
@@ -1945,6 +2167,9 @@ commands:
   myapp:
     bokeh_app: main.py
     env_spec: woot
+  foo.ipynb:
+    description: 'Notebook foo.ipynb'
+    notebook: foo.ipynb
 
 packages:
   - foo
@@ -2411,12 +2636,14 @@ def test_auto_fix_notebook_dep():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
-        assert len(project.problems) == 1
-        assert len(project.problem_objects) == 1
-        assert len(project.fixable_problems) == 1
+        assert len(project.problems) == 0
+        assert len(project.problem_objects) == 0
+        assert len(project.fixable_problems) == 0
+        assert len(project.suggestions) == 1
+        assert len(project.suggestion_objects) == 1
         assert len(project.env_specs['default'].conda_package_names_set) == 0
 
-        problem = project.problem_objects[0]
+        problem = project.suggestion_objects[0]
         assert ("%s: Command foo.ipynb uses env spec default which does not have the packages: notebook" %
                 project.project_file.filename) == problem.text
         assert problem.can_fix
@@ -2425,6 +2652,7 @@ def test_auto_fix_notebook_dep():
         project.project_file.save()
 
         assert project.problems == []
+        assert project.suggestions == []
         assert project.env_specs['default'].conda_package_names_set == set(['notebook'])
 
     with_directory_contents_completing_project_file(
@@ -2439,6 +2667,7 @@ def test_no_auto_fix_notebook_dep_if_we_have_anaconda():
         project = project_no_dedicated_env(dirname)
 
         assert project.problems == []
+        assert project.suggestions == []
         assert project.env_specs['default'].conda_package_names_set == set(['anaconda'])
 
     with_directory_contents_completing_project_file(
@@ -2470,12 +2699,14 @@ def test_auto_fix_bokeh_dep():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
-        assert len(project.problems) == 1
-        assert len(project.problem_objects) == 1
-        assert len(project.fixable_problems) == 1
+        assert len(project.problems) == 0
+        assert len(project.problem_objects) == 0
+        assert len(project.fixable_problems) == 0
+        assert len(project.suggestions) == 1
+        assert len(project.suggestion_objects) == 1
         assert len(project.env_specs['default'].conda_package_names_set) == 0
 
-        problem = project.problem_objects[0]
+        problem = project.suggestion_objects[0]
         assert ("%s: Command bokeh_test uses env spec default which does not have the packages: bokeh" %
                 project.project_file.filename) == problem.text
         assert problem.can_fix

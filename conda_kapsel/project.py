@@ -43,12 +43,13 @@ ALL_COMMAND_TYPES = (COMMAND_TYPE_CONDA_APP_ENTRY, COMMAND_TYPE_SHELL, COMMAND_T
 class ProjectProblem(object):
     """A possibly-autofixable problem with a project."""
 
-    def __init__(self, text, fix_prompt=None, fix_function=None, no_fix_function=None):
+    def __init__(self, text, fix_prompt=None, fix_function=None, no_fix_function=None, only_a_suggestion=False):
         """Create a project problem."""
         self.text = text
         self.fix_prompt = fix_prompt
         self.fix_function = fix_function
         self.no_fix_function = no_fix_function
+        self.only_a_suggestion = only_a_suggestion
 
     @property
     def can_fix(self):
@@ -98,6 +99,7 @@ class _ConfigCache(object):
         self.conda_meta_file_count = 0
         self.env_specs = dict()
         self.default_env_spec_name = None
+        self.global_base_env_spec = None
 
     def update(self, project_file, conda_meta_file):
         if project_file.change_count == self.project_file_count and \
@@ -142,7 +144,7 @@ class _ConfigCache(object):
 
         self.requirements = requirements
         self.problems = _make_problems_into_objects(problems)
-        self.problem_strings = list([p.text for p in self.problems])
+        self.problem_strings = list([p.text for p in self.problems if not p.only_a_suggestion])
 
     def _update_name(self, problems, project_file, conda_meta_file):
         name = project_file.get_value('name', None)
@@ -337,13 +339,22 @@ class _ConfigCache(object):
 
             return (deps, pip_deps)
 
-        self.env_specs = dict()
         (shared_deps, shared_pip_deps) = _parse_packages(project_file.root)
         shared_channels = _parse_channels(project_file.root)
         env_specs = project_file.get_value('env_specs', default={})
         first_env_spec_name = None
         env_specs_is_empty_or_missing = False  # this should be iff it's an empty dict or absent entirely
 
+        # this one isn't in the env_specs dict
+        self.global_base_env_spec = EnvSpec(name=None,
+                                            conda_packages=shared_deps,
+                                            pip_packages=shared_pip_deps,
+                                            channels=shared_channels,
+                                            description="Global packages and channels",
+                                            inherit_from_names=(),
+                                            inherit_from=())
+
+        env_spec_attrs = dict()
         if isinstance(env_specs, dict):
             if len(env_specs) == 0:
                 env_specs_is_empty_or_missing = True
@@ -356,26 +367,81 @@ class _ConfigCache(object):
                     problems.append("{}: 'description' field of environment {} must be a string".format(
                         project_file.filename, name))
                     continue
+
+                problem_count = len(problems)
+                inherit_from_names = attrs.get('inherit_from', None)
+                if inherit_from_names is None:
+                    inherit_from_names = []
+                elif is_string(inherit_from_names):
+                    inherit_from_names = [inherit_from_names.strip()]
+                else:
+                    inherit_from_names = _parse_string_list(attrs, 'inherit_from', 'env spec name')
+
+                if len(problems) > problem_count:
+                    # we got a new problem from the bad inherit_from
+                    continue
+
                 (deps, pip_deps) = _parse_packages(attrs)
                 channels = _parse_channels(attrs)
-                # ideally we would merge same-name packages here, choosing the
-                # highest of the two versions or something. maybe conda will
-                # do that for us anyway?
-                all_deps = shared_deps + deps
-                all_pip_deps = shared_pip_deps + pip_deps
-                all_channels = shared_channels + channels
 
-                self.env_specs[name] = EnvSpec(name=name,
-                                               conda_packages=all_deps,
-                                               pip_packages=all_pip_deps,
-                                               channels=all_channels,
-                                               description=description)
+                env_spec_attrs[name] = dict(name=name,
+                                            conda_packages=deps,
+                                            pip_packages=pip_deps,
+                                            channels=channels,
+                                            description=description,
+                                            inherit_from_names=tuple(inherit_from_names),
+                                            inherit_from=())
+
                 if first_env_spec_name is None:
                     first_env_spec_name = name
         else:
             problems.append(
                 "%s: env_specs should be a dictionary from environment name to environment attributes, not %r" %
                 (project_file.filename, env_specs))
+
+        self.env_specs = dict()
+
+        def make_env_spec(name, trail):
+            assert name in env_spec_attrs
+
+            if name not in self.env_specs:
+                was_cycle = False
+                if name in trail:
+                    problems.append(
+                        "{}: 'inherit_from' fields create circular inheritance among these env specs: {}".format(
+                            project_file.filename, ", ".join(sorted(trail))))
+                    was_cycle = True
+                trail.append(name)
+
+                attrs = env_spec_attrs[name]
+
+                if not was_cycle:
+                    inherit_from_names = attrs['inherit_from_names']
+                    for parent in inherit_from_names:
+                        if parent not in env_spec_attrs:
+                            problems.append(("{}: name '{}' in 'inherit_from' field of env spec {} does not match " +
+                                             "the name of another env spec").format(project_file.filename, parent,
+                                                                                    attrs['name']))
+                        else:
+                            inherit_from = make_env_spec(parent, trail)
+                            attrs['inherit_from'] = attrs['inherit_from'] + (inherit_from, )
+
+                # All parent-less env specs get the global base spec as parent,
+                # which means the global base spec is in everyone's ancestry
+                if attrs['inherit_from'] == ():
+                    attrs['inherit_from'] = (self.global_base_env_spec, )
+
+                self.env_specs[name] = EnvSpec(**attrs)
+
+            return self.env_specs[name]
+
+        for name in env_spec_attrs.keys():
+            make_env_spec(name, [])
+            assert name in self.env_specs
+
+        # it's important to create all the env specs when possible
+        # even if they are broken (e.g. bad inherit_from), so they
+        # can be edited in order to fix them
 
         (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
                                                                                    self.directory_path)
@@ -432,7 +498,7 @@ class _ConfigCache(object):
             # to add this if we are going to ask about environment.yml
             # import, above.
             def add_default_env_spec(project):
-                default_spec = _anaconda_default_env_spec()
+                default_spec = _anaconda_default_env_spec(self.global_base_env_spec)
                 project.project_file.set_value(['env_specs', default_spec.name], default_spec.to_json())
 
             problems.append(ProjectProblem(text=("%s has an empty env_specs section." % project_file.filename),
@@ -456,14 +522,6 @@ class _ConfigCache(object):
 
     def _update_commands(self, problems, project_file, conda_meta_file, requirements):
         failed = False
-
-        app_entry_from_meta_yaml = conda_meta_file.app_entry
-        if app_entry_from_meta_yaml is not None:
-            if not is_string(app_entry_from_meta_yaml):
-                problems.append("%s: app: entry: should be a string not '%r'" %
-                                (conda_meta_file.filename, app_entry_from_meta_yaml))
-                app_entry_from_meta_yaml = None
-                failed = True
 
         first_command_name = None
         commands = dict()
@@ -546,25 +604,13 @@ class _ConfigCache(object):
                 if not failed:
                     commands[name] = ProjectCommand(name=name, attributes=copied_attrs)
 
-        self._add_notebook_commands(commands, problems, requirements)
+        self._verify_notebook_commands(commands, problems, requirements, project_file)
 
         if failed:
             self.commands = dict()
             self.default_command_name = None
         else:
-            # if no commands and we have a meta.yaml app entry, use the meta.yaml
-            if app_entry_from_meta_yaml is not None and len(commands) == 0:
-                commands['default'] = ProjectCommand(name='default',
-                                                     attributes=dict(conda_app_entry=app_entry_from_meta_yaml,
-                                                                     auto_generated=True,
-                                                                     env_spec=self.default_env_spec_name))
-
             self.commands = commands
-
-        if first_command_name is None and len(commands) > 0:
-            # this happens if we created a command automatically
-            # from a notebook file or conda meta.yaml
-            first_command_name = sorted(commands.keys())[0]
 
         if 'default' in self.commands:
             self.default_command_name = 'default'
@@ -573,7 +619,19 @@ class _ConfigCache(object):
             # note: this may be None
             self.default_command_name = first_command_name
 
-    def _add_notebook_commands(self, commands, problems, requirements):
+    def _verify_notebook_commands(self, commands, problems, requirements, project_file):
+        skipped_notebooks = project_file.get_value(['skip_imports', 'notebooks'])
+        if skipped_notebooks is not None:
+            if skipped_notebooks is True:
+                # skip ALL notebooks forever
+                return
+            elif not isinstance(skipped_notebooks, list):
+                problems.append("{}: 'skip_imports: notebooks:' value should be a list, found {}".format(
+                    project_file.filename, repr(skipped_notebooks)))
+                return
+        else:
+            skipped_notebooks = []
+
         files = _list_relative_paths_for_unignored_project_files(self.directory_path,
                                                                  problems,
                                                                  requirements=requirements)
@@ -588,13 +646,76 @@ class _ConfigCache(object):
         # ".foo.ipynb" per se.
         files = [f for f in files if not f[0] == '.']
 
+        # always use unix file separator
+        files = [f.replace("\\", "/") for f in files]
+
+        # use a deterministic order because the first command is the default
+        files = sorted(files)
+
+        def need_to_import_notebook(relative_name):
+            for command in commands.values():
+                if command.notebook == relative_name:
+                    return False
+
+            if relative_name in skipped_notebooks:
+                return False
+
+            return True
+
+        def make_add_notebook_func(relative_name, env_spec_name):
+            def add_notebook(project):
+                command_dict = {'notebook': relative_name, 'env_spec': env_spec_name}
+                project.project_file.set_value(['commands', relative_name], command_dict)
+
+            return add_notebook
+
+        def make_no_add_notebook_func(relative_name):
+            def no_add_notebook(project):
+                skipped_notebooks = project.project_file.get_value(['skip_imports', 'notebooks'], default=[])
+                skipped_notebooks.append(relative_name)
+                project.project_file.set_value(['skip_imports', 'notebooks'], skipped_notebooks)
+
+            return no_add_notebook
+
+        need_to_import = []
         for relative_name in files:
             if relative_name.endswith('.ipynb'):
-                if relative_name not in commands:
-                    commands[relative_name] = ProjectCommand(name=relative_name,
-                                                             attributes={'notebook': relative_name,
-                                                                         'auto_generated': True,
-                                                                         'env_spec': self.default_env_spec_name})
+                if need_to_import_notebook(relative_name):
+                    need_to_import.append(relative_name)
+
+        # make tests deterministic
+        need_to_import.sort()
+
+        if len(need_to_import) == 1:
+            relative_name = need_to_import[0]
+            problem = ProjectProblem(
+                text="%s: No command runs notebook %s" % (project_file.filename, relative_name),
+                fix_prompt="Create a command in %s for %s?" % (os.path.basename(project_file.filename), relative_name),
+                fix_function=make_add_notebook_func(relative_name, self.default_env_spec_name),
+                no_fix_function=make_no_add_notebook_func(relative_name),
+                only_a_suggestion=True)
+            problems.append(problem)
+        elif len(need_to_import) > 1:
+            add_funcs = [make_add_notebook_func(relative_name, self.default_env_spec_name)
+                         for relative_name in need_to_import]
+            no_add_funcs = [make_no_add_notebook_func(relative_name) for relative_name in need_to_import]
+
+            def add_all(project):
+                for f in add_funcs:
+                    f(project)
+
+            def no_add_all(project):
+                for f in no_add_funcs:
+                    f(project)
+
+            problem = ProjectProblem(
+                text="%s: No commands run notebooks %s" % (project_file.filename, ", ".join(need_to_import)),
+                fix_prompt="Create commands in %s for all missing notebooks?" % (os.path.basename(project_file.filename)
+                                                                                 ),
+                fix_function=add_all,
+                no_fix_function=no_add_all,
+                only_a_suggestion=True)
+            problems.append(problem)
 
     def _verify_command_dependencies(self, problems, project_file):
         for command in self.commands.values():
@@ -618,7 +739,8 @@ class _ConfigCache(object):
                         project_file.filename, command.name, env_spec.name, ", ".join(missing))),
                     fix_prompt=("Add %s to env spec %s in %s?" % (", ".join(missing), env_spec.name, os.path.basename(
                         project_file.filename))),
-                    fix_function=add_packages_to_env_spec)
+                    fix_function=add_packages_to_env_spec,
+                    only_a_suggestion=True)
                 problems.append(problem)
 
 
@@ -644,7 +766,7 @@ class Project(object):
             if importable_spec is not None:
                 return [importable_spec]
             else:
-                return [_anaconda_default_env_spec()]
+                return [_anaconda_default_env_spec(shared_base_spec=None)]
 
         self._project_file = ProjectFile.load_for_directory(directory_path, default_env_specs_func=load_default_specs)
         self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)
@@ -740,12 +862,12 @@ class Project(object):
     @property
     def problem_objects(self):
         """List of ProjectProblem instances describing problems with the project configuration."""
-        return self._updated_cache().problems
+        return [problem for problem in self._updated_cache().problems if not problem.only_a_suggestion]
 
     @property
     def fixable_problems(self):
         """List of ProjectProblem that have associated fix prompts."""
-        return [p for p in self.problem_objects if p.can_fix]
+        return [p for p in self.problem_objects if p.can_fix and not p.only_a_suggestion]
 
     def problems_status(self, description=None):
         """Get a ``Status`` describing project problems, or ``None`` if no problems."""
@@ -758,6 +880,35 @@ class Project(object):
             return SimpleStatus(success=False, description=description, logs=[], errors=errors)
         else:
             return None
+
+    @property
+    def suggestions(self):
+        """List of strings describing suggested changes to the project configuration."""
+        return [problem.text for problem in self.suggestion_objects]
+
+    @property
+    def suggestion_objects(self):
+        """List of ProjectProblem instances describing suggested changes to the project configuration."""
+        return [problem for problem in self._updated_cache().problems if problem.only_a_suggestion]
+
+    def fix_problems_and_suggestions(self):
+        """Fix fixable problems and suggestions."""
+        # the idea of this loop is that by fixing a problem we may
+        # create a new one, for example we add a notebook command
+        # and then the env spec needs to depend on "notebook".
+        # However, we have no real way to detect an infinite
+        # ping-pong of mutually-causing problems, so we cap
+        # the iterations at an arbitrary number.
+        iterations = 5
+        while iterations > 0:
+            fixed_a_thing = False
+            for problem in self._updated_cache().problems:
+                if problem.can_fix:
+                    problem.fix(self)
+                    fixed_a_thing = True
+            if fixed_a_thing:
+                self.project_file.use_changes_without_saving()
+            iterations -= 1
 
     @property
     def name(self):
@@ -791,6 +942,15 @@ class Project(object):
     def env_specs(self):
         """Get a dictionary of environment names to CondaEnvironment instances."""
         return self._updated_cache().env_specs
+
+    @property
+    def global_base_env_spec(self):
+        """Get the env spec representing global packages and channels sections.
+
+        This env spec has no name (its name is None) and can't be used directly
+        to create environments, but every other env spec inherits from it.
+        """
+        return self._updated_cache().global_base_env_spec
 
     @property
     def all_variables(self):
