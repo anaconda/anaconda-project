@@ -174,7 +174,15 @@ def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=Non
                                                  env_spec_name=env_spec_name)
 
     status = result.status_for(env_var_or_class)
-    if status is None or not status:
+    if status is None:
+        # I _think_ this is currently impossible, but if it were possible,
+        # we'd need to below code and it's hard to prove it's impossible.
+        status = project.problems_status()  # pragma: no cover # no way to cause right now?
+        # caller was supposed to expect env_var_or_class to still exist,
+        # unless project file got mangled
+        assert status is not None  # pragma: no cover
+
+    if not status:
         # reload from disk, discarding our changes because they did not work
         project.project_file.load()
     else:
@@ -420,8 +428,12 @@ def remove_env_spec(project, name):
     if status:
         project.project_file.unset_value(['env_specs', name])
         project.project_file.use_changes_without_saving()
-        assert project.problems == []
-        project.project_file.save()
+        if project.problems_status() is None:
+            project.project_file.save()
+        else:
+            # revert and return the problems
+            status = project.problems_status()
+            project.project_file.load()
 
     return status
 
