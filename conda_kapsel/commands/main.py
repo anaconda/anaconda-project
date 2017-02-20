@@ -226,6 +226,12 @@ def _parse_args_and_run_subcommand(argv):
     add_directory_arg(preset)
     preset.set_defaults(main=environment_commands.main_list_env_specs)
 
+    preset = subparsers.add_parser('export-env-spec', help="Save an environment spec as a conda environment file")
+    add_directory_arg(preset)
+    add_env_spec_name_arg(preset)
+    preset.add_argument('filename', metavar='ENVIRONMENT_FILE')
+    preset.set_defaults(main=environment_commands.main_export)
+
     preset = subparsers.add_parser('add-packages', help="Add packages to one or all project environments")
     add_directory_arg(preset)
     add_env_spec_arg(preset)

@@ -330,6 +330,26 @@ def test_remove_env_spec(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_export_env_spec(monkeypatch):
+    import conda_kapsel.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.export_env_spec, project_ops.export_env_spec)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_export_env_spec(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('conda_kapsel.project_ops.export_env_spec', mock_export_env_spec)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, name='foo', filename='bar')
+    result = p.export_env_spec(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_add_packages(monkeypatch):
     import conda_kapsel.project_ops as project_ops
     _verify_args_match(api.AnacondaProject.add_packages, project_ops.add_packages)

@@ -16,7 +16,7 @@ import conda_kapsel.internal.conda_api as conda_api
 import conda_kapsel.internal.pip_api as pip_api
 from conda_kapsel.internal.py2_compat import is_string
 
-from conda_kapsel.yaml_file import _load_string, _YAMLError
+from conda_kapsel.yaml_file import _load_string, _save_file, _YAMLError
 
 try:
     # this is the conda-packaged version of ruamel.yaml which has the
@@ -299,6 +299,24 @@ class EnvSpec(object):
             template_json['something']['inherit_from'] = names
 
         return template_json['something']
+
+    def save_environment_yml(self, filename):
+        """Save as an environment.yml file."""
+        # here we want to flatten the env spec to include all inherited stuff
+        packages = list(self.conda_packages)
+        pip_packages = list(self.pip_packages)
+        if pip_packages:
+            packages.append(dict(pip=pip_packages))
+        channels = list(self.channels)
+
+        yaml = ryaml.load("name: " "\ndependencies: []\nchannels: []\n", Loader=ryaml.RoundTripLoader)
+
+        assert self.name is not None  # the global anonymous spec can't be saved
+        yaml['name'] = self.name
+        yaml['dependencies'] = packages
+        yaml['channels'] = channels
+
+        _save_file(yaml, filename)
 
 
 def _load_environment_yml(filename):
