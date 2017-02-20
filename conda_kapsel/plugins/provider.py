@@ -17,7 +17,6 @@ from conda_kapsel.internal import logged_subprocess
 from conda_kapsel.internal.metaclass import with_metaclass
 from conda_kapsel.internal.makedirs import makedirs_ok_if_exists
 from conda_kapsel.internal.simple_status import SimpleStatus
-import conda_kapsel.internal.keyring as keyring
 
 
 def _service_directory(local_state_file, relative_name):
@@ -407,6 +406,10 @@ class EnvVarProvider(Provider):
         config = dict()
         value = None
         if requirement.encrypted:
+            # import keyring locally because it's an optional dependency
+            # that prints a warning when it's needed but not found.
+            import conda_kapsel.internal.keyring as keyring
+
             env_prefix = self._get_env_prefix(environ)
             if env_prefix is None:
                 value = None
@@ -488,6 +491,10 @@ class EnvVarProvider(Provider):
 
     def _set_encrypted_config_values_as_strings(self, requirement, environ, local_state_file, default_env_spec_name,
                                                 overrides, values):
+        # import keyring locally because it's an optional dependency
+        # that prints a warning when it's needed but not found.
+        import conda_kapsel.internal.keyring as keyring
+
         env_prefix = self._get_env_prefix(environ)
         from_keyring = keyring.get(env_prefix, requirement.env_var)
         value_string = values.get('value', from_keyring)
@@ -571,6 +578,10 @@ class EnvVarProvider(Provider):
         #  - then the kapsel.yml default value
         local_state_override = None
         if requirement.encrypted:
+            # import keyring locally because it's an optional dependency
+            # that prints a warning when it's needed but not found.
+            import conda_kapsel.internal.keyring as keyring
+
             env_prefix = self._get_env_prefix(context.environ)
             if env_prefix is not None:
                 local_state_override = keyring.get(env_prefix, requirement.env_var)
