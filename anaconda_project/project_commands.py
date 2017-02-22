@@ -100,7 +100,7 @@ class _BokehArgsTransformer(_ArgsTransformer):
         for (option, values) in results:
             if option in ('--anaconda-project-host', '--anaconda-project-port'):
                 for v in values:
-                    added.append(option.replace('project-', ''))
+                    added.append(option.replace('anaconda-project-', ''))
                     added.append(v)
             elif option == '--anaconda-project-url-prefix':
                 for v in values:
@@ -146,7 +146,7 @@ class _NotebookArgsTransformer(_ArgsTransformer):
             # pass through --port
             elif option == '--anaconda-project-port':
                 for v in values:
-                    added.append(option.replace('project-', ''))
+                    added.append(option.replace('anaconda-project-', ''))
                     added.append(v)
             elif option == '--anaconda-project-no-browser':
                 if values and values[0] is True:

@@ -30,8 +30,8 @@ def test_main_no_subcommand(capsys):
     assert "" == out
     expected_error_msg = ('Must specify a subcommand.\n'
                           'usage: anaconda-project [-h] [-v] [--verbose]\n'
-                          '                    %s\n'
-                          '                    ...\n') % all_subcommands_in_curlies
+                          '                        %s\n'
+                          '                        ...\n') % all_subcommands_in_curlies
     assert expected_error_msg == err
 
 
@@ -40,8 +40,8 @@ def test_main_bad_subcommand(capsys):
 
     out, err = capsys.readouterr()
     expected_error_msg = ("usage: anaconda-project [-h] [-v] [--verbose]\n"
-                          "                    %s\n"
-                          "                    ...\nanaconda-project: error: invalid choice: 'foo' "
+                          "                        %s\n"
+                          "                        ...\nanaconda-project: error: invalid choice: 'foo' "
                           "(choose from %s)\n") % (all_subcommands_in_curlies, all_subcommands_comma_space)
     assert expected_error_msg == err
     assert "" == out
@@ -51,8 +51,8 @@ def test_main_bad_subcommand(capsys):
 
 expected_usage_msg_format = \
         'usage: anaconda-project [-h] [-v] [--verbose]\n' \
-        '                    %s\n' \
-        '                    ...\n' \
+        '                        %s\n' \
+        '                        ...\n' \
         '\n' \
         'Actions on projects (runnable projects).\n' \
         '\n' \
@@ -75,9 +75,10 @@ expected_usage_msg_format = \
         '    add-variable        Add a required environment variable to the project\n' \
         '    remove-variable     Remove an environment variable from the project\n' \
         '    list-variables      List all variables on the project\n' \
-        '    set-variable        Set an environment variable value in anaconda-project-local.yml\n'\
-        '    unset-variable      Unset an environment variable value from project-\n' \
-        '                        local.yml\n' \
+        '    set-variable        Set an environment variable value in anaconda-project-\n' \
+        '                        local.yml\n'\
+        '    unset-variable      Unset an environment variable value from anaconda-\n' \
+        '                        project-local.yml\n' \
         '    add-download        Add a URL to be downloaded before running commands\n' \
         '    remove-download     Remove a download from the project and from the\n' \
         '                        filesystem\n' \

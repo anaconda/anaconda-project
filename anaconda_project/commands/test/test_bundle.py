@@ -35,8 +35,8 @@ def test_archive_command_on_simple_project(capsys):
 
         out, err = capsys.readouterr()
         assert ('  added %s\n  added %s\nCreated project archive %s\n' % (os.path.join(
-            os.path.basename(dirname), "foo.py"), os.path.join(
-                os.path.basename(dirname), "anaconda-project.yml"), archivefile)) == out
+            os.path.basename(dirname), "anaconda-project.yml"), os.path.join(
+                os.path.basename(dirname), "foo.py"), archivefile)) == out
         assert '' == err
 
     with_directory_contents_completing_project_file({'foo.py': 'print("hello")\n'}, check)
