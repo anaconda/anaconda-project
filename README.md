@@ -1,19 +1,23 @@
 # Anaconda Project
 
-*Anaconda projects are reproducible, executable project directories.*
+*Reproducible, executable project directories.*
 
 Take any directory full of stuff that you're working on; web apps,
 scripts, Jupyter notebooks, data files, whatever it may be.
 
-By adding an `anaconda-project.yml` to this project directory, you can tell
-[conda](https://github.com/conda/conda) how to run it.
+By adding an `anaconda-project.yml` to this project directory, you
+can tell the Anaconda platform how to run it. The simplest way to
+run it, using command line tools, is `anaconda-project run`.
+
+Anaconda projects should run in the same way on your machine, on a
+colleague's machine, or when deployed to a server.
 
 Running an Anaconda project executes a command specified in the
 `anaconda-project.yml` (any arbitrary commands can be configured).
 
-`anaconda-project.yml` also tells conda how to automate project setup; conda
-can establish all prerequisite conditions for the project's
-commands to execute successfully. These conditions could include:
+`anaconda-project.yml` automates project setup; Anaconda can
+establish all prerequisite conditions for the project's commands
+to execute successfully. These conditions could include:
 
  * creating a conda environment with certain packages in it
  * prompting the user for passwords or other configuration
@@ -24,34 +28,34 @@ The goal is that if your project runs on your machine, it will
 also run on others' machines (or on your future machine after you
 reboot a few times and forget how your project works).
 
-The command `Anaconda project init DIRECTORY_NAME` creates a
-`anaconda-project.yml`, converting your project directory into a conda
-project.
+The command `anaconda-project init DIRECTORY_NAME` creates an
+`anaconda-project.yml`, converting your project directory into an
+Anaconda project.
 
 ## Put another way...
 
 Traditional build scripts such as `setup.py` automate "building"
 the project (going from source code to something runnable), while
-Anaconda project automates "running" the project (taking build
+`anaconda-project` automates "running" the project (taking build
 artifacts and doing any necessary setup prior to executing them).
 
 ## Why?
 
  * Do you have a README with setup steps in it? You may find that
    it gets outdated, or that people don't read it, and then you
-   have to help them diagnose the problem. `Anaconda project`
-   automates the setup steps; the README can say "type `conda
-   project run`" and that's it.
+   have to help them diagnose the problem. `anaconda-project`
+   automates the setup steps; the README can say "type
+   `anaconda-project run`" and that's it.
  * Do you need everyone working on a project to have the same
-   dependencies in their conda environment? `Anaconda project`
+   dependencies in their conda environment? `anaconda-project`
    automates environment creation and verifies that environments
    have the right versions of packages.
  * Do you sometimes include your personal passwords or secret keys
    in your code, because it's too complicated to do otherwise?
-   With `Anaconda project`, you can `os.getenv("DB_PASSWORD")` and
-   configure `Anaconda project` to prompt the user for any missing
+   With `anaconda-project`, you can `os.getenv("DB_PASSWORD")` and
+   configure `anaconda-project` to prompt the user for any missing
    credentials.
- * Do you want improved reproducibility? With `Anaconda project`,
+ * Do you want improved reproducibility? With `anaconda-project`,
    someone who wants to reproduce your analysis can ensure they
    have exactly the same setup that you have on your machine.
  * Do you want to deploy your analysis as a web application? The
@@ -69,28 +73,28 @@ the syntax of the `anaconda-project.yml` file.
 
 ## If you've been using `conda env` and `environment.yml`
 
-`Anaconda project` has similar functionality and may be more
-convenient. The advantage of `Anaconda project` for environment
+`anaconda-project` has similar functionality and may be more
+convenient. The advantage of `anaconda-project` for environment
 handling is that it performs conda operations, _and_ records them
 in a config file for reproducibility, in one step.
 
-For example, if you do `Anaconda project add-packages bokeh=0.11`,
+For example, if you do `anaconda-project add-packages bokeh=0.11`,
 that will install Bokeh with conda, _and_ add `bokeh=0.11` to an
 environment spec in `anaconda-project.yml` (the effect is comparable to
 adding it to `environment.yml`). In this way, "your current conda
 environment's state" and "your configuration to be shared with
 others" won't get out of sync.
 
-`Anaconda project` will also automatically set up environments for a
-colleague when they type `Anaconda project run` on their machine; they
+`anaconda-project` will also automatically set up environments for a
+colleague when they type `anaconda-project run` on their machine; they
 don't have to do a separate step to create, update, or activate
 environments before they run the code. This may be especially
 useful when you change the required dependencies; with `conda env`
 people can forget to re-run it and update their packages, while
-`Anaconda project run` will automatically add missing packages every
+`anaconda-project run` will automatically add missing packages every
 time.
 
-In addition to environment creation, `Anaconda project` can perform
+In addition to environment creation, `anaconda-project` can perform
 other kinds of setup, such as adding data files and running a
 database server. It's a superset of `conda env` in that sense.
 
