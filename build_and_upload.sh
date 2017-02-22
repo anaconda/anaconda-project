@@ -4,7 +4,7 @@ set -e
 
 # be sure we are in the right place
 test -e setup.py || exit 1
-test -d conda_kapsel || exit 1
+test -d anaconda_project || exit 1
 
 (test -d build/packages && /bin/rm -r build/packages) || true
 python setup.py test

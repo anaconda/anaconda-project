@@ -98,4 +98,4 @@ htmlcov
 /.envs
 /record.txt
 # version.py is a generated file
-/conda_kapsel/version.py
+/anaconda_project/version.py

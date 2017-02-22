@@ -5,7 +5,7 @@ Inspired by the [Shiny Movie Explorer.](http://shiny.rstudio.com/gallery/movie-e
 ## Start
 
 ```
-conda-kapsel run
+anaconda-project run
 ```
 
 Then visit [http://localhost:5006/main](http://localhost:5006/main)
