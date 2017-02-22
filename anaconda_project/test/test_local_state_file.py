@@ -11,7 +11,7 @@ import pytest
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.local_state_file import (LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME, SERVICE_RUN_STATES_SECTION,
-                                           possible_local_state_file_names)
+                                               possible_local_state_file_names)
 
 
 def test_create_missing_local_state_file():

@@ -15,17 +15,18 @@ import subprocess
 from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
-                                                      with_directory_contents_completing_project_file)
+                                                          with_directory_contents_completing_project_file)
 from anaconda_project.internal import conda_api
-from anaconda_project.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare, prepare_in_stages,
-                                  PrepareSuccess, PrepareFailure, _after_stage_success, _FunctionPrepareStage)
+from anaconda_project.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare,
+                                      prepare_in_stages, PrepareSuccess, PrepareFailure, _after_stage_success,
+                                      _FunctionPrepareStage)
 from anaconda_project.project import Project
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project_commands import ProjectCommand
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.requirement import (EnvVarRequirement, UserConfigOverrides)
 from anaconda_project.conda_manager import (push_conda_manager_class, pop_conda_manager_class, CondaManager,
-                                        CondaEnvironmentDeviations)
+                                            CondaEnvironmentDeviations)
 import anaconda_project.internal.keyring as keyring
 
 

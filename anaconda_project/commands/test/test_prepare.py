@@ -11,7 +11,7 @@ import os
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.commands.prepare import prepare_command, main
 from anaconda_project.commands.prepare_with_mode import (UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
-                                                     UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_NO)
+                                                         UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_NO)
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.local_state_file import LocalStateFile
@@ -266,7 +266,8 @@ def test_prepare_command_choose_environment(capsys, monkeypatch):
     def check_prepare_choose_environment(dirname):
         wrong_envdir = os.path.join(dirname, "envs", "foo")
         envdir = os.path.join(dirname, "envs", "bar")
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--env-spec=bar'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--env-spec=bar'
+                                                 ])
         assert result == 0
 
         assert os.path.isdir(envdir)
@@ -295,7 +296,8 @@ env_specs:
 def test_prepare_command_choose_environment_does_not_exist(capsys):
     def check_prepare_choose_environment_does_not_exist(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--env-spec=nope'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname,
+                                                 '--env-spec=nope'])
         assert result == 1
 
         expected_error = ("Environment name 'nope' is not in %s, these names were found: bar, foo" %
@@ -319,8 +321,8 @@ env_specs:
 def test_prepare_command_choose_command_chooses_env_spec(capsys):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--command=with_bar'
-                                                 ])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname,
+                                                 '--command=with_bar'])
         assert result == 1
 
         out, err = capsys.readouterr()
@@ -328,8 +330,8 @@ def test_prepare_command_choose_command_chooses_env_spec(capsys):
         assert 'nonexistent_bar' in err
         assert 'nonexistent_foo' not in err
 
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--command=with_foo'
-                                                 ])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname,
+                                                 '--command=with_foo'])
         assert result == 1
 
         out, err = capsys.readouterr()

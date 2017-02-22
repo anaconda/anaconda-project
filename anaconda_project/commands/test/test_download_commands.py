@@ -88,7 +88,8 @@ def test_add_download(capsys, monkeypatch):
 
 def test_add_download_with_filename(capsys, monkeypatch):
     called_params = _test_add_download(
-        capsys, monkeypatch, ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--filename', 'foo'])
+        capsys, monkeypatch,
+        ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--filename', 'foo'])
     assert len(called_params['args']) == 1
     expected_kwargs = {
         'env_var': 'MYDATA',
@@ -102,8 +103,8 @@ def test_add_download_with_filename(capsys, monkeypatch):
 
 def test_add_download_with_checksum(capsys, monkeypatch):
     called_params = _test_add_download(capsys, monkeypatch, [
-        'anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-algorithm', 'md5', '--hash-value',
-        'foo'
+        'anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-algorithm', 'md5',
+        '--hash-value', 'foo'
     ])
     assert len(called_params['args']) == 1
     expected_kwargs = {

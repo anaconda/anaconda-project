@@ -52,8 +52,8 @@ def test_interactively_fix_project(monkeypatch, capsys):
         assert project.problems == []
 
         out, err = capsys.readouterr()
-        assert out == ("%s has an empty env_specs section.\nAdd an environment spec to anaconda-project.yml? " % os.path.join(
-            dirname, DEFAULT_PROJECT_FILENAME))
+        assert out == ("%s has an empty env_specs section.\nAdd an environment spec to anaconda-project.yml? " %
+                       os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
         assert err == ""
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo"}, check)
@@ -77,8 +77,8 @@ def test_interactively_no_fix_project(monkeypatch, capsys):
                                                                                         DEFAULT_PROJECT_FILENAME)]
 
         out, err = capsys.readouterr()
-        assert out == ("%s has an empty env_specs section.\nAdd an environment spec to anaconda-project.yml? " % os.path.join(
-            dirname, DEFAULT_PROJECT_FILENAME))
+        assert out == ("%s has an empty env_specs section.\nAdd an environment spec to anaconda-project.yml? " %
+                       os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
         assert err == ""
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo"}, check)

@@ -10,7 +10,7 @@ import platform
 import pytest
 
 from anaconda_project.internal.windows_cmdline import (windows_split_command_line, windows_join_command_line,
-                                                   WindowsCommandLineException)
+                                                       WindowsCommandLineException)
 
 
 def _roundtrip(args):

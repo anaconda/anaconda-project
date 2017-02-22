@@ -13,8 +13,8 @@ import zipfile
 
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
-                                                      with_directory_contents_completing_project_file, with_tmp_zipfile,
-                                                      complete_project_file_content)
+                                                          with_directory_contents_completing_project_file,
+                                                          with_tmp_zipfile, complete_project_file_content)
 from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
 from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME

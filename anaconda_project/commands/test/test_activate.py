@@ -175,7 +175,8 @@ services:
 def test_main_bad_command_provided(capsys):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', '--directory', dirname, '--command', 'nope'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', '--directory', dirname, '--command',
+                                               'nope'])
         assert code == 1
 
     with_directory_contents_completing_project_file(

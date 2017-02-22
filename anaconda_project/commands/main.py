@@ -13,7 +13,7 @@ import sys
 from argparse import ArgumentParser, REMAINDER
 
 from anaconda_project.commands.prepare_with_mode import (UI_MODE_TEXT_ASK_QUESTIONS,
-                                                     UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK, _all_ui_modes)
+                                                         UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK, _all_ui_modes)
 from anaconda_project.version import version
 from anaconda_project.verbose import push_verbose_logger, pop_verbose_logger
 from anaconda_project.project import ALL_COMMAND_TYPES
@@ -70,11 +70,12 @@ def _parse_args_and_run_subcommand(argv):
                             action='store',
                             help="One of " + ", ".join(_all_ui_modes))
         if include_command:
-            preset.add_argument('--command',
-                                metavar='COMMAND_NAME',
-                                default=None,
-                                action='store',
-                                help="A command name from anaconda-project.yml (env spec for this command will be used)")
+            preset.add_argument(
+                '--command',
+                metavar='COMMAND_NAME',
+                default=None,
+                action='store',
+                help="A command name from anaconda-project.yml (env spec for this command will be used)")
 
     def add_env_spec_name_arg(preset):
         preset.add_argument('-n',
@@ -151,12 +152,14 @@ def _parse_args_and_run_subcommand(argv):
     add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_list)
 
-    preset = subparsers.add_parser('set-variable', help="Set an environment variable value in anaconda-project-local.yml")
+    preset = subparsers.add_parser('set-variable',
+                                   help="Set an environment variable value in anaconda-project-local.yml")
     preset.add_argument('vars_and_values', metavar='VARS_AND_VALUES', default=None, nargs=REMAINDER)
     add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_set)
 
-    preset = subparsers.add_parser('unset-variable', help="Unset an environment variable value from anaconda-project-local.yml")
+    preset = subparsers.add_parser('unset-variable',
+                                   help="Unset an environment variable value from anaconda-project-local.yml")
     add_directory_arg(preset)
     preset.add_argument('vars_to_unset', metavar='VARS_TO_UNSET', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main_unset)

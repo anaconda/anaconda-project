@@ -8,7 +8,7 @@ import os
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.conda_meta_file import (CondaMetaFile, META_DIRECTORY, DEFAULT_RELATIVE_META_PATH,
-                                          possible_meta_file_names)
+                                              possible_meta_file_names)
 
 
 def _use_existing_meta_file(relative_name):

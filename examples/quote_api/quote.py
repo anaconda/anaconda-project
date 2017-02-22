@@ -87,7 +87,10 @@ class QuoteApplication(gunicorn.app.base.BaseApplication):
 # arg parser for the standard project options
 parser = ArgumentParser(prog="quote-api", description="API server that returns a quote.")
 parser.add_argument('--anaconda-project-host', action='append', help='Hostname to allow in requests')
-parser.add_argument('--anaconda-project-no-browser', action='store_true', default=False, help='Disable opening in a browser')
+parser.add_argument('--anaconda-project-no-browser',
+                    action='store_true',
+                    default=False,
+                    help='Disable opening in a browser')
 parser.add_argument('--anaconda-project-use-xheaders',
                     action='store_true',
                     default=False,

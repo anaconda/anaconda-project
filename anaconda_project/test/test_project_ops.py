@@ -16,12 +16,12 @@ import zipfile
 
 from anaconda_project import project_ops
 from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaManagerError,
-                                        push_conda_manager_class, pop_conda_manager_class)
+                                            push_conda_manager_class, pop_conda_manager_class)
 from anaconda_project.project import Project
 import anaconda_project.prepare as prepare
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, with_temporary_script_commandline,
-                                                      with_directory_contents_completing_project_file,
-                                                      complete_project_file_content)
+                                                          with_directory_contents_completing_project_file,
+                                                          complete_project_file_content)
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
 from anaconda_project.test.project_utils import project_no_dedicated_env
@@ -1996,16 +1996,16 @@ def test_archive_zip():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'anaconda-project.yml',
-                                               'anaconda-project-local.yml'])
+            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py',
+                                               'anaconda-project.yml', 'anaconda-project-local.yml'])
 
             # overwriting should work
             status = project_ops.archive(project, archivefile)
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'anaconda-project.yml',
-                                               'anaconda-project-local.yml'])
+            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py',
+                                               'anaconda-project.yml', 'anaconda-project-local.yml'])
 
         with_directory_contents_completing_project_file(
             {DEFAULT_PROJECT_FILENAME: """
@@ -2205,7 +2205,8 @@ def test_archive_zip_with_gitignore():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['foo.py', '.gitignore', 'anaconda-project.yml', 'anaconda-project-local.yml'])
+            _assert_zip_contains(archivefile, ['foo.py', '.gitignore', 'anaconda-project.yml',
+                                               'anaconda-project-local.yml'])
 
         with_directory_contents_completing_project_file(
             _add_empty_git({DEFAULT_PROJECT_FILENAME: """

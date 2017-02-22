@@ -266,8 +266,8 @@ def test_add_command_with_supports_http_options(monkeypatch, capsys):
 def test_add_command_with_no_supports_http_options(monkeypatch, capsys):
     def check(dirname):
         code = _parse_args_and_run_subcommand(
-            ['anaconda-project', 'add-command', '--directory', dirname, '--no-supports-http-options', '--type', 'notebook',
-             'test', 'file.ipynb'])
+            ['anaconda-project', 'add-command', '--directory', dirname, '--no-supports-http-options', '--type',
+             'notebook', 'test', 'file.ipynb'])
         assert code == 0
 
         project = Project(dirname)
@@ -301,7 +301,8 @@ def test_add_command_project_problem(capsys, monkeypatch):
     _test_command_command_project_problem(capsys,
                                           monkeypatch,
                                           [
-                                              'anaconda-project', 'add-command', '--type', 'notebook', 'test', 'file.ipynb'
+                                              'anaconda-project', 'add-command', '--type', 'notebook', 'test',
+                                              'file.ipynb'
                                           ],
                                           append_dir=True)
 

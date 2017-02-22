@@ -11,7 +11,7 @@ from copy import deepcopy, copy
 import os
 
 from anaconda_project.env_spec import (EnvSpec, _anaconda_default_env_spec, _find_importable_spec,
-                                   _find_out_of_sync_importable_spec)
+                                       _find_out_of_sync_importable_spec)
 from anaconda_project.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement

@@ -145,7 +145,8 @@ def _main_calls_subcommand(monkeypatch, capsys, subcommand):
         assert args.directory == os.path.abspath('MYPROJECT')
         return 27
 
-    monkeypatch.setattr('anaconda_project.commands.{}.main'.format(subcommand), partial(mock_subcommand_main, subcommand))
+    monkeypatch.setattr('anaconda_project.commands.{}.main'.format(subcommand), partial(mock_subcommand_main,
+                                                                                        subcommand))
     code = _parse_args_and_run_subcommand(['anaconda-project', subcommand, '--directory', 'MYPROJECT'])
 
     assert 27 == code

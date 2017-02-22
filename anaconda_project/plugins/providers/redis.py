@@ -15,7 +15,7 @@ import sys
 import time
 
 from anaconda_project.plugins.provider import (EnvVarProvider, ProviderAnalysis, shutdown_service_run_state,
-                                           delete_service_directory)
+                                               delete_service_directory)
 import anaconda_project.plugins.network_util as network_util
 from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
 from anaconda_project.internal import py2_compat

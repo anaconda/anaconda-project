@@ -12,7 +12,7 @@ import platform
 
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
-                                                      with_directory_contents_completing_project_file)
+                                                          with_directory_contents_completing_project_file)
 from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from anaconda_project.local_state_file import LocalStateFile

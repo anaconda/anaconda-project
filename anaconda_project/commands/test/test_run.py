@@ -15,7 +15,7 @@ from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.commands.run import run_command, main
 from anaconda_project.commands.prepare_with_mode import UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
-                                                      with_directory_contents_completing_project_file)
+                                                          with_directory_contents_completing_project_file)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 from anaconda_project.test.project_utils import project_dir_disable_dedicated_env
@@ -318,7 +318,8 @@ def test_run_command_verbose(monkeypatch, capsys):
         monkeypatch.setattr('os.path.abspath', mock_abspath)
 
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', '--verbose', 'run', '--directory', dirname, 'default'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', '--verbose', 'run', '--directory', dirname,
+                                                 'default'])
 
         assert 1 == result
         assert 'file' in executed
@@ -373,7 +374,8 @@ def test_run_command_extra_args_with_double_hyphen(monkeypatch, capsys):
 
         project_dir_disable_dedicated_env(dirname)
         # double hyphen lets us specify "--foo" as a command name
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--directory', dirname, '--', '--foo', '--bar'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'run', '--directory', dirname, '--', '--foo',
+                                                 '--bar'])
 
         assert 1 == result
         assert 'file' in executed

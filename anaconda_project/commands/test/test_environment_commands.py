@@ -305,7 +305,8 @@ def test_export_env_spec_no_filename(capsys, monkeypatch):
 
 
 def test_add_packages_with_project_file_problems(capsys, monkeypatch):
-    _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'add-packages', 'foo'])
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'add-packages',
+                                                                               'foo'])
 
 
 def test_remove_packages_with_project_file_problems(capsys, monkeypatch):
@@ -318,8 +319,8 @@ def test_add_packages_to_all_environments(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_add_packages(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-packages', '--channel', 'c1', '--channel=c2', 'a',
-                                               'b'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-packages', '--channel', 'c1', '--channel=c2',
+                                               'a', 'b'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -337,8 +338,8 @@ def test_add_packages_to_specific_environment(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_add_packages(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-packages', '--env-spec', 'foo', '--channel', 'c1',
-                                               '--channel=c2', 'a', 'b'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-packages', '--env-spec', 'foo', '--channel',
+                                               'c1', '--channel=c2', 'a', 'b'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -448,8 +449,8 @@ def test_list_environments_with_project_file_problems(capsys, monkeypatch):
 def test_list_packages_wrong_env(capsys):
     def check_missing_env(dirname):
         env_name = 'not-there'
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-packages', '--directory', dirname, '--env-spec',
-                                               env_name])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-packages', '--directory', dirname,
+                                               '--env-spec', env_name])
 
         assert code == 1
 

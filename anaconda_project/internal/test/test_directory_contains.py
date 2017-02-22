@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function
 import os
 
 from anaconda_project.internal.directory_contains import (directory_contains_subdirectory,
-                                                      subdirectory_relative_to_directory)
+                                                          subdirectory_relative_to_directory)
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 

@@ -16,7 +16,7 @@ from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.plugins.requirements.redis import RedisRequirement
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.internal.test.tmpfile_utils import (tmp_script_commandline,
-                                                      with_directory_contents_completing_project_file)
+                                                          with_directory_contents_completing_project_file)
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.local_state_file import LocalStateFile
 
@@ -198,7 +198,8 @@ def test_remove_service_running_redis(monkeypatch):
         assert real_can_connect_to_socket(host='localhost', port=port)
 
         # now clean it up
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'REDIS_URL', '--directory', dirname])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-service', 'REDIS_URL', '--directory', dirname
+                                               ])
         assert code == 0
 
         assert not os.path.exists(pidfile)
@@ -247,7 +248,8 @@ def test_add_service_with_project_file_problems(capsys, monkeypatch):
 
 
 def test_remove_service_with_project_file_problems(capsys, monkeypatch):
-    _test_service_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'remove-service', 'TEST'])
+    _test_service_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'remove-service',
+                                                                           'TEST'])
 
 
 def test_list_service_with_project_file_problems(capsys, monkeypatch):

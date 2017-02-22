@@ -9,10 +9,10 @@ from __future__ import absolute_import, print_function
 import os
 
 from anaconda_project.internal.test.tmpfile_utils import (with_file_contents, with_named_file_contents,
-                                                      with_directory_contents)
+                                                          with_directory_contents)
 
 from anaconda_project.env_spec import (EnvSpec, _load_environment_yml, _load_requirements_txt,
-                                   _find_out_of_sync_importable_spec)
+                                       _find_out_of_sync_importable_spec)
 
 
 def test_load_environment_yml():

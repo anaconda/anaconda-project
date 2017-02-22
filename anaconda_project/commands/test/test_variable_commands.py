@@ -266,7 +266,8 @@ def test_unset_variable_command(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.unset_variables', mock_unset_variables)
 
     def check(dirname):
-        res = _parse_args_and_run_subcommand(['anaconda-project', 'unset-variable', '--directory', dirname, 'foo', 'baz'])
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'unset-variable', '--directory', dirname, 'foo', 'baz'
+                                              ])
         assert res == 0
 
     with_directory_contents_completing_project_file(

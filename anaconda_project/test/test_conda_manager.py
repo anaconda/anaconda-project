@@ -7,7 +7,7 @@
 from __future__ import absolute_import
 
 from anaconda_project.conda_manager import (push_conda_manager_class, pop_conda_manager_class, new_conda_manager,
-                                        CondaManager)
+                                            CondaManager)
 
 
 def test_use_non_default_conda_manager():

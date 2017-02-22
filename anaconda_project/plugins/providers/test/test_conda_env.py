@@ -12,7 +12,7 @@ import platform
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
 from anaconda_project.test.environ_utils import (minimal_environ, minimal_environ_no_conda_env,
-                                             strip_environ_keeping_conda_env)
+                                                 strip_environ_keeping_conda_env)
 from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links

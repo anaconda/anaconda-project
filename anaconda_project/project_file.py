@@ -127,7 +127,8 @@ class ProjectFile(YamlFile):
 
         sections['env_specs'] = (
             "You can define multiple, named environment specs.\n" + "Each inherits any global packages or channels,\n" +
-            "but can have its own unique ones also.\n" + "Use `anaconda-project add-env-spec` to add environment specs.\n")
+            "but can have its own unique ones also.\n" +
+            "Use `anaconda-project add-env-spec` to add environment specs.\n")
 
         assert self._default_env_specs_func is not None
         default_env_specs = self._default_env_specs_func()
