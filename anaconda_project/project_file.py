@@ -22,7 +22,7 @@ except ImportError:  # pragma: no cover
     import ruamel.yaml as ryaml  # pragma: no cover
 
 # these are in the order we'll use them if multiple are present
-possible_project_file_names = ("anaconda-project.yml", "anaconda-project.yaml")
+possible_project_file_names = ("anaconda-project.yml", "anaconda-project.yaml", "kapsel.yml", "kapsel.yaml")
 
 DEFAULT_PROJECT_FILENAME = possible_project_file_names[0]
 
