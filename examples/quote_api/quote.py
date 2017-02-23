@@ -72,11 +72,11 @@ class QuoteApplication(gunicorn.app.base.BaseApplication):
         print("Starting API server. Try http://localhost:%s%s" % (self.port, prefix + '/quote'))
 
     def load_config(self):
-        # Note that --kapsel-host is NOT this address; it is NOT
-        # the address to listen on. --kapsel-host specifies the
+        # Note that --anaconda-project-host is NOT this address; it is NOT
+        # the address to listen on. --anaconda-project-host specifies the
         # allowed values of the Host header in an http request,
         # which is totally different. Another way to put it is
-        # that --kapsel-host is the public hostname:port browsers will
+        # that --anaconda-project-host is the public hostname:port browsers will
         # be connecting to.
         self.cfg.set('bind', '%s:%s' % ('0.0.0.0', self.port))
         self.cfg.set('workers', (multiprocessing.cpu_count() * 2) + 1)
@@ -84,24 +84,27 @@ class QuoteApplication(gunicorn.app.base.BaseApplication):
     def load(self):
         return self.application
 
-# arg parser for the standard kapsel options
+# arg parser for the standard project options
 parser = ArgumentParser(prog="quote-api", description="API server that returns a quote.")
-parser.add_argument('--kapsel-host', action='append', help='Hostname to allow in requests')
-parser.add_argument('--kapsel-no-browser', action='store_true', default=False, help='Disable opening in a browser')
-parser.add_argument('--kapsel-use-xheaders',
+parser.add_argument('--anaconda-project-host', action='append', help='Hostname to allow in requests')
+parser.add_argument('--anaconda-project-no-browser',
+                    action='store_true',
+                    default=False,
+                    help='Disable opening in a browser')
+parser.add_argument('--anaconda-project-use-xheaders',
                     action='store_true',
                     default=False,
                     help='Trust X-headers from reverse proxy')
-parser.add_argument('--kapsel-url-prefix', action='store', default='', help='Prefix in front of urls')
-parser.add_argument('--kapsel-port', action='store', default='8080', help='Port to listen on')
-parser.add_argument('--kapsel-iframe-hosts',
+parser.add_argument('--anaconda-project-url-prefix', action='store', default='', help='Prefix in front of urls')
+parser.add_argument('--anaconda-project-port', action='store', default='8080', help='Port to listen on')
+parser.add_argument('--anaconda-project-iframe-hosts',
                     action='append',
                     help='Space-separated hosts which can embed us in an iframe per our Content-Security-Policy')
 
 if __name__ == '__main__':
-    # This app accepts but ignores --kapsel-no-browser because we never bother to open a browser,
-    # and accepts but ignores --kapsel-iframe-hosts since iframing an API makes no sense.
+    # This app accepts but ignores --anaconda-project-no-browser because we never bother to open a browser,
+    # and accepts but ignores --anaconda-project-iframe-hosts since iframing an API makes no sense.
     args = parser.parse_args(sys.argv[1:])
-    if not args.kapsel_host:
-        args.kapsel_host = ['localhost:' + args.kapsel_port]
-    QuoteApplication(port=args.kapsel_port, prefix=args.kapsel_url_prefix, hosts=args.kapsel_host).run()
+    if not args.project_host:
+        args.project_host = ['localhost:' + args.project_port]
+    QuoteApplication(port=args.project_port, prefix=args.project_url_prefix, hosts=args.project_host).run()

@@ -1,5 +1,5 @@
 package:
-  name: conda-kapsel
+  name: anaconda-project
   version: {{ environ.get('GIT_DESCRIBE_TAG', '').replace('v', '') }}
 
 source:
@@ -11,7 +11,7 @@ source:
 build:
   number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
   entry_points:
-    - conda-kapsel = conda_kapsel.commands.main:main
+    - anaconda-project = anaconda_project.commands.main:main
 
 requirements:
   build:
@@ -36,13 +36,13 @@ requirements:
 
 test:
   imports:
-    - conda_kapsel
+    - anaconda_project
   commands:
     - echo "First of test commands"
-    - conda-kapsel --help
-    - conda-kapsel --version
+    - anaconda-project --help
+    - anaconda-project --version
     - echo "Last of test commands"
 
 about:
-  home: https://github.com/Anaconda-Platform/conda-kapsel/
+  home: https://github.com/Anaconda-Platform/anaconda-project/
   license: BSD

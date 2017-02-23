@@ -1,0 +1,73 @@
+# This is an Anaconda project file.
+#
+# Here you can describe your project and how to run it.
+# Use `anaconda-project run` to run the project.
+# The file is in YAML format, please see http://www.yaml.org/start.html for more.
+#
+
+#
+# Set the 'name' key to name your project
+#
+name:
+#
+# Set the 'icon' key to give your project an icon
+#
+icon:
+#
+# In the commands section, list your runnable scripts, notebooks, and other code.
+# Use `anaconda-project add-command` to add commands.
+#
+commands:
+  quote_api:
+    unix: python ${PROJECT_DIR}/quote.py
+    windows: python %PROJECT_DIR%\quote.py
+    supports_http_options: true
+
+#
+# In the variables section, list any environment variables your code depends on.
+# Use `anaconda-project add-variable` to add variables.
+#
+variables: {}
+#
+# In the services section, list any services that should be
+# available before your code runs.
+# Use `anaconda-project add-service` to add services.
+#
+services: {}
+#
+# In the downloads section, list any URLs to download to local files
+# before your code runs.
+# Use `anaconda-project add-download` to add downloads.
+#
+downloads: {}
+#
+# In the packages section, list any packages that must be installed
+# before your code runs.
+# Use `anaconda-project add-packages` to add packages.
+#
+packages:
+ - six>=1.4.0
+ - gunicorn==19.1.0
+ - pip:
+   - python-mimeparse
+   - falcon==1.0.0
+#
+# In the channels section, list any Conda channel URLs to be searched
+# for packages.
+#
+# For example,
+#
+# channels:
+#    - https://conda.anaconda.org/asmeurer
+#
+channels: []
+#
+# You can define multiple, named environment specs.
+# Each inherits any global packages or channels,
+# but can have its own unique ones also.
+# Use `anaconda-project add-env-spec` to add environment specs.
+#
+env_specs:
+  default:
+    packages: []
+    channels: []

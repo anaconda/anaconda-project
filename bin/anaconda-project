@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+
+# Note: in meta.yaml we have an entry_points which
+# conda uses to generate a binary; that is normally
+# used "for real" rather than this wrapper script.
+# This is here though for development purposes or
+# scenarios where you don't have the conda package.
+
+import sys
+
+from anaconda_project.commands.main import main
+
+sys.exit(main())
