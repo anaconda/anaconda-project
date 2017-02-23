@@ -1,6 +1,9 @@
 # language: python sets up virtualenv and pip that we don't need.
 # omitting language gives us ruby stuff. c seems likely to be a minimal setup.
 language: c
+# this is here to avoid a hang with python 2.7, suggested in
+# https://github.com/travis-ci/travis-ci/issues/6861
+sudo: required
 env:
   - TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests
   - TRAVIS_PYTHON_VERSION=3.4 TEST_TARGET=tests
