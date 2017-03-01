@@ -1565,7 +1565,7 @@ def test_invalid_skip_imports_notebooks():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: ("commands:\n default:\n    unix: echo 'pass'\nservices:\n" +
-                                       "REDIS_URL: redis\npackages: ['notebook']\nskip_imports:\n  notebooks: {}\n")
+                                       "  REDIS_URL: redis\npackages: ['notebook']\nskip_imports:\n  notebooks: {}\n")
         }, check)
 
 
@@ -2287,6 +2287,7 @@ def test_get_publication_info_from_complex_project():
         }
 
         assert expected == project.publication_info()
+        assert len(project.suggestions) == 0
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
@@ -2747,3 +2748,35 @@ def test_auto_fix_bokeh_dep():
                                     '  bokeh_test:\n'
                                     '    bokeh_app: main.py\n'),
          'main.py': 'hello'}, check)
+
+
+def test_unknown_field_in_root():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.project_file.filename)
+        assert [expected_suggestion] == project.suggestions
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "somejunk: False\n"}, check)
+
+
+def test_unknown_field_in_command():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.project_file.filename)
+        assert [expected_suggestion] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n  foo:\n    unix: something\n    somejunk: True\n"}, check)
+
+
+def test_unknown_field_in_env_spec():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.project_file.filename)
+        assert [expected_suggestion] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "env_specs:\n  foo:\n    packages: [something]\n    somejunk: True\n"}, check)

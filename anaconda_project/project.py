@@ -102,6 +102,14 @@ def _file_problem(problems, yaml_file, text):
     problems.append(ProjectProblem(text=text, filename=yaml_file.filename))
 
 
+def _unknown_field_suggestions(project_file, problems, yaml_dict, known_fields):
+    for key in yaml_dict.keys():
+        if key not in known_fields:
+            problems.append(ProjectProblem(text="Unknown field name '%s'" % (key),
+                                           filename=project_file.filename,
+                                           only_a_suggestion=True))
+
+
 class _ConfigCache(object):
     def __init__(self, directory_path, registry):
         self.directory_path = directory_path
@@ -147,6 +155,10 @@ class _ConfigCache(object):
                                            column_number=project_file.corrupted_maybe_column))
 
         if project_exists and not (project_file.corrupted or conda_meta_file.corrupted):
+            _unknown_field_suggestions(project_file, problems, project_file.root,
+                                       ('name', 'description', 'icon', 'variables', 'downloads', 'services',
+                                        'env_specs', 'commands', 'packages', 'channels', 'skip_imports'))
+
             self._update_name(problems, project_file, conda_meta_file)
             self._update_description(problems, project_file)
             self._update_icon(problems, project_file, conda_meta_file)
@@ -426,6 +438,9 @@ class _ConfigCache(object):
 
                 if first_env_spec_name is None:
                     first_env_spec_name = name
+
+                _unknown_field_suggestions(project_file, problems, attrs, ('packages', 'channels', 'description',
+                                                                           'inherit_from'))
         else:
             _file_problem(problems, project_file,
                           "env_specs should be a dictionary from environment name to environment attributes, not %r" %
@@ -582,6 +597,10 @@ class _ConfigCache(object):
                                   (name, attrs))
                     failed = True
                     continue
+
+                _unknown_field_suggestions(project_file, problems, attrs,
+                                           ('description', 'env_spec', 'supports_http_options', 'bokeh_app', 'notebook',
+                                            'unix', 'windows', 'conda_app_entry'))
 
                 if 'description' in attrs and not is_string(attrs['description']):
                     _file_problem(problems, project_file,
