@@ -50,7 +50,7 @@ install:
   - conda install -y -q -c conda-forge keyring
 
 script:
-  - if test "$TEST_TARGET" = tests; then LANG=en_US.UTF-8 python setup.py test; fi
+  - if test "$TEST_TARGET" = tests; then LANG=en_US.UTF-8 python setup.py test -a '-vv'; fi
   - if test "$TRAVIS_PYTHON_VERSION" = "3.5" && test "$TEST_TARGET" = "packaging"; then
       git fetch --unshallow ;
       LANG=en_US.UTF-8 python setup.py conda_package ;
