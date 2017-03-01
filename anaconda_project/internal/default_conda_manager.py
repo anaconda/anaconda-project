@@ -180,7 +180,10 @@ class DefaultCondaManager(CondaManager):
         if deviations is None:
             deviations = self.find_environment_deviations(prefix, spec)
 
-        command_line_packages = set(['python']).union(set(spec.conda_packages))
+        command_line_packages = set(spec.conda_packages)
+        # conda won't let us create a completely empty environment
+        if len(command_line_packages) == 0:
+            command_line_packages = set(['python'])
 
         if os.path.isdir(os.path.join(prefix, 'conda-meta')):
             missing = deviations.missing_packages
