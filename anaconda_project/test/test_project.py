@@ -1040,6 +1040,14 @@ def test_corrupted_project_file_and_meta_file():
         assert 'anaconda-project.yml has a syntax error that needs to be fixed by hand' in project.problems[0]
         assert 'meta.yaml has a syntax error that needs to be fixed by hand' in project.problems[1]
 
+        problem1 = project.problem_objects[0]
+        assert problem1.maybe_line_number == 2
+        assert problem1.maybe_column_number == 9
+
+        problem2 = project.problem_objects[1]
+        assert problem2.maybe_line_number == 2
+        assert problem2.maybe_column_number == 9
+
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 ^

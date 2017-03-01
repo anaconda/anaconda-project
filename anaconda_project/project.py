@@ -43,13 +43,22 @@ ALL_COMMAND_TYPES = (COMMAND_TYPE_CONDA_APP_ENTRY, COMMAND_TYPE_SHELL, COMMAND_T
 class ProjectProblem(object):
     """A possibly-autofixable problem with a project."""
 
-    def __init__(self, text, fix_prompt=None, fix_function=None, no_fix_function=None, only_a_suggestion=False):
+    def __init__(self,
+                 text,
+                 fix_prompt=None,
+                 fix_function=None,
+                 no_fix_function=None,
+                 only_a_suggestion=False,
+                 line_number=None,
+                 column_number=None):
         """Create a project problem."""
         self.text = text
         self.fix_prompt = fix_prompt
         self.fix_function = fix_function
         self.no_fix_function = no_fix_function
         self.only_a_suggestion = only_a_suggestion
+        self.maybe_line_number = line_number
+        self.maybe_column_number = column_number
 
     @property
     def can_fix(self):
@@ -117,11 +126,15 @@ class _ConfigCache(object):
             problems.append("Project directory '%s' does not exist." % self.directory_path)
 
         if project_file.corrupted:
-            problems.append("%s has a syntax error that needs to be fixed by hand: %s" %
-                            (project_file.filename, project_file.corrupted_error_message))
+            problems.append(ProjectProblem(text=("%s has a syntax error that needs to be fixed by hand: %s" % (
+                project_file.filename, project_file.corrupted_error_message)),
+                                           line_number=project_file.corrupted_maybe_line,
+                                           column_number=project_file.corrupted_maybe_column))
         if conda_meta_file.corrupted:
-            problems.append("%s has a syntax error that needs to be fixed by hand: %s" %
-                            (conda_meta_file.filename, conda_meta_file.corrupted_error_message))
+            problems.append(ProjectProblem(text=("%s has a syntax error that needs to be fixed by hand: %s" % (
+                conda_meta_file.filename, conda_meta_file.corrupted_error_message)),
+                                           line_number=project_file.corrupted_maybe_line,
+                                           column_number=project_file.corrupted_maybe_column))
 
         if project_exists and not (project_file.corrupted or conda_meta_file.corrupted):
             self._update_name(problems, project_file, conda_meta_file)
