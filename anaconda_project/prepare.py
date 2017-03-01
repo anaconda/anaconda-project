@@ -114,6 +114,11 @@ class PrepareResult(with_metaclass(ABCMeta)):
         """Override object which was passed to prepare()."""
         return self._overrides
 
+    @property
+    def errors(self):
+        """Get lines of error output."""
+        raise NotImplementedError()  # pragma: no cover
+
 
 class PrepareSuccess(PrepareResult):
     """Class describing the successful result of preparing the project to run."""
@@ -132,6 +137,11 @@ class PrepareSuccess(PrepareResult):
     def command_exec_info(self):
         """``CommandExecInfo`` instance if available, None if not."""
         return self._command_exec_info
+
+    @property
+    def errors(self):
+        """Get empty list of errors."""
+        return []
 
     def update_environ(self, environ):
         """Overwrite ``environ`` with any additions from the prepared environ.
@@ -156,7 +166,7 @@ class PrepareFailure(PrepareResult):
 
     @property
     def errors(self):
-        """Get lines of error output."""
+        """Get non-empty list of errors."""
         return self._errors
 
     def print_output(self):
