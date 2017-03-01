@@ -252,8 +252,8 @@ def test_set_properties_with_project_file_problems():
         project = Project(dirname)
         status = project_ops.set_properties(project, name='foo')
         assert not status
-        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
-                ] == status.errors
+        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+                project.project_file.filename] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -829,8 +829,8 @@ def test_update_command_with_project_file_problems():
         status = project_ops.update_command(project, 'foo', 'unix', 'echo hello')
 
         assert not status
-        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
-                ] == status.errors
+        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+                project.project_file.filename] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -1252,8 +1252,8 @@ def test_add_download_with_project_file_problems():
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert not status
-        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
-                ] == status.errors
+        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+                project.project_file.filename] == status.errors
 
         # be sure download was NOT added to the file
         project2 = project_no_dedicated_env(dirname)
@@ -1616,8 +1616,8 @@ def test_remove_packages_with_project_file_problems():
         status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo'])
 
         assert not status
-        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
-                ] == status.errors
+        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+                project.project_file.filename] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -1767,8 +1767,8 @@ def test_add_service_with_project_file_problems():
         status = project_ops.add_service(project, service_type='redis')
 
         assert not status
-        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
-                ] == status.errors
+        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+                project.project_file.filename] == status.errors
 
         # be sure service was NOT added to the file
         project2 = Project(dirname)
@@ -3123,8 +3123,8 @@ def test_upload_with_project_file_problems():
         project = Project(dirname)
         status = project_ops.upload(project)
         assert not status
-        assert ["variables section contains wrong value type 42, should be dict or list of requirements"
-                ] == status.errors
+        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+                project.project_file.filename] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 

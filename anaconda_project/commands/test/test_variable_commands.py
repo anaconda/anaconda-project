@@ -90,7 +90,7 @@ def test_add_variable_project_problem(capsys):
     assert out == ''
     expected_err = ('variables section contains wrong value type 42, should be dict or list of requirements\n'
                     'Unable to load the project.\n')
-    assert err == expected_err
+    assert expected_err in err
 
 
 def test_remove_variable_command(monkeypatch):
@@ -178,7 +178,7 @@ def test_list_variables_with_project_file_problems(capsys):
         out, err = capsys.readouterr()
         assert '' == out
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
-                'Unable to load the project.\n') == err
+                'Unable to load the project.\n') in err
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -192,7 +192,7 @@ def test_set_variables_with_project_file_problems(capsys):
         out, err = capsys.readouterr()
         assert '' == out
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
-                'Unable to load the project.\n') == err
+                'Unable to load the project.\n') in err
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -206,7 +206,7 @@ def test_unset_variables_with_project_file_problems(capsys):
         out, err = capsys.readouterr()
         assert '' == out
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
-                'Unable to load the project.\n') == err
+                'Unable to load the project.\n') in err
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 

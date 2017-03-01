@@ -238,7 +238,7 @@ def _test_service_command_with_project_file_problems(capsys, monkeypatch, comman
         out, err = capsys.readouterr()
         assert '' == out
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
-                'Unable to load the project.\n') == err
+                'Unable to load the project.\n') in err
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 

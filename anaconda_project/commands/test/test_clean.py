@@ -31,6 +31,6 @@ def test_clean_command_on_invalid_project(capsys):
         out, err = capsys.readouterr()
         assert '' == out
         assert ('variables section contains wrong value type 42,' + ' should be dict or list of requirements\n' +
-                'Unable to load the project.\n' + 'Failed to clean everything up.\n') == err
+                'Unable to load the project.\n' + 'Failed to clean everything up.\n') in err
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
