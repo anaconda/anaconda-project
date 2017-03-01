@@ -193,7 +193,8 @@ class DefaultCondaManager(CondaManager):
                 try:
                     conda_api.install(prefix=prefix, pkgs=specs, channels=spec.channels)
                 except conda_api.CondaError as e:
-                    raise CondaManagerError("Failed to install missing packages: " + ", ".join(missing))
+                    raise CondaManagerError("Failed to install missing packages: {}: {}".format(", ".join(missing), str(
+                        e)))
         elif create:
             # Create environment from scratch
             try:
@@ -211,7 +212,8 @@ class DefaultCondaManager(CondaManager):
             try:
                 pip_api.install(prefix=prefix, pkgs=specs)
             except pip_api.PipError as e:
-                raise CondaManagerError("Failed to install missing pip packages: " + ", ".join(missing))
+                raise CondaManagerError("Failed to install missing pip packages: {}: {}".format(", ".join(missing), str(
+                    e)))
 
         # write a file to tell us we can short-circuit next time
         self._write_timestamp_file(prefix, spec)
