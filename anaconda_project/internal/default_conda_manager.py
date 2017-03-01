@@ -180,7 +180,10 @@ class DefaultCondaManager(CondaManager):
         if deviations is None:
             deviations = self.find_environment_deviations(prefix, spec)
 
-        command_line_packages = set(['python']).union(set(spec.conda_packages))
+        command_line_packages = set(spec.conda_packages)
+        # conda won't let us create a completely empty environment
+        if len(command_line_packages) == 0:
+            command_line_packages = set(['python'])
 
         if os.path.isdir(os.path.join(prefix, 'conda-meta')):
             missing = deviations.missing_packages
@@ -190,7 +193,8 @@ class DefaultCondaManager(CondaManager):
                 try:
                     conda_api.install(prefix=prefix, pkgs=specs, channels=spec.channels)
                 except conda_api.CondaError as e:
-                    raise CondaManagerError("Failed to install missing packages: " + ", ".join(missing))
+                    raise CondaManagerError("Failed to install missing packages: {}: {}".format(", ".join(missing), str(
+                        e)))
         elif create:
             # Create environment from scratch
             try:
@@ -208,7 +212,8 @@ class DefaultCondaManager(CondaManager):
             try:
                 pip_api.install(prefix=prefix, pkgs=specs)
             except pip_api.PipError as e:
-                raise CondaManagerError("Failed to install missing pip packages: " + ", ".join(missing))
+                raise CondaManagerError("Failed to install missing pip packages: {}: {}".format(", ".join(missing), str(
+                    e)))
 
         # write a file to tell us we can short-circuit next time
         self._write_timestamp_file(prefix, spec)

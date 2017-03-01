@@ -32,9 +32,10 @@ import anaconda_project.internal.keyring as keyring
 
 def test_prepare_empty_directory():
     def prepare_empty(dirname):
-        project = project_no_dedicated_env(dirname)
+        project = Project(dirname)
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ)
+        assert result.errors == []
         assert result
         assert dict(PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict() == strip_environ(environ)
@@ -56,9 +57,10 @@ def test_prepare_bad_provide_mode():
 
 def test_unprepare_empty_directory():
     def unprepare_empty(dirname):
-        project = project_no_dedicated_env(dirname)
+        project = Project(dirname)
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ)
+        assert result.errors == []
         assert result
         status = unprepare(project, result)
         assert status
@@ -83,9 +85,10 @@ def test_unprepare_problem_project():
 
 def test_unprepare_nothing_to_do():
     def unprepare_nothing(dirname):
-        project = project_no_dedicated_env(dirname)
+        project = Project(dirname)
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ)
+        assert result.errors == []
         assert result
         status = unprepare(project, result, whitelist=[])
         assert status
@@ -113,9 +116,16 @@ def test_default_to_system_environ():
                     print("ORIGINAL PATH: " + repr(original))
                     print("UPDATED PATH: " + repr(updated))
                     assert original == updated
+                assert result.errors == []
+                assert result
                 assert result.environ.get(key) == os.environ.get(key)
 
-    with_directory_contents(dict(), prepare_system_environ)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages: []
+        """
+        }, prepare_system_environ)
 
 
 def test_prepare_some_env_var_already_set():
@@ -123,6 +133,7 @@ def test_prepare_some_env_var_already_set():
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(FOO='bar')
         result = prepare_without_interaction(project, environ=environ)
+        assert result.errors == []
         assert result
         assert dict(FOO='bar', PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict(FOO='bar') == strip_environ(environ)
@@ -219,11 +230,13 @@ def test_prepare_choose_command():
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ, command_name='foo')
+        assert result.errors == []
         assert result
         assert os.path.join(project.directory_path, 'foo.py') in result.command_exec_info.args
 
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ, command_name='bar')
+        assert result.errors == []
         assert result
         assert os.path.join(project.directory_path, 'bar.py') in result.command_exec_info.args
 
@@ -250,6 +263,7 @@ def test_prepare_command_not_in_project():
                                                  env_spec=project.default_env_spec_name))
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ, command=command)
+        assert result.errors == []
         assert result
         assert os.path.join(project.directory_path, 'foo.py') in result.command_exec_info.args
 
@@ -313,6 +327,7 @@ def test_prepare_choose_environment():
 
             environ = minimal_environ()
             result = prepare_without_interaction(project, environ=environ, env_spec_name='bar')
+            assert result.errors == []
             assert result
             expected_path = project.env_specs['bar'].path(project.directory_path)
             assert result.environ[env_var] == expected_path
@@ -362,6 +377,7 @@ def test_update_environ():
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(FOO='bar')
         result = prepare_without_interaction(project, environ=environ)
+        assert result.errors == []
         assert result
 
         other = minimal_environ(BAR='baz')
@@ -643,6 +659,7 @@ def test_prepare_asking_for_password_with_browser(monkeypatch):
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ()
         result = prepare_with_browser_ui(project, environ=environ, keep_going_until_success=False, io_loop=io_loop)
+        assert result.errors == []
         assert result
         assert dict(FOO_PASSWORD='bloop', PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict() == strip_environ(environ)
