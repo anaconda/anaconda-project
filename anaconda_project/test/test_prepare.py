@@ -32,7 +32,7 @@ import anaconda_project.internal.keyring as keyring
 
 def test_prepare_empty_directory():
     def prepare_empty(dirname):
-        project = project_no_dedicated_env(dirname)
+        project = Project(dirname)
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ)
         assert result.errors == []
@@ -57,7 +57,7 @@ def test_prepare_bad_provide_mode():
 
 def test_unprepare_empty_directory():
     def unprepare_empty(dirname):
-        project = project_no_dedicated_env(dirname)
+        project = Project(dirname)
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ)
         assert result.errors == []
@@ -85,7 +85,7 @@ def test_unprepare_problem_project():
 
 def test_unprepare_nothing_to_do():
     def unprepare_nothing(dirname):
-        project = project_no_dedicated_env(dirname)
+        project = Project(dirname)
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ)
         assert result.errors == []
@@ -120,7 +120,12 @@ def test_default_to_system_environ():
                 assert result
                 assert result.environ.get(key) == os.environ.get(key)
 
-    with_directory_contents(dict(), prepare_system_environ)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages: []
+        """
+        }, prepare_system_environ)
 
 
 def test_prepare_some_env_var_already_set():
