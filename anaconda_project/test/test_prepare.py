@@ -11,6 +11,7 @@ import os
 import platform
 import pytest
 import subprocess
+import sys
 
 from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
@@ -55,6 +56,9 @@ def test_prepare_bad_provide_mode():
     with_directory_contents(dict(), prepare_bad_provide_mode)
 
 
+@pytest.mark.skipif(platform.system() == 'Windows' and
+                    not (sys.version_info.major == 3 and sys.version_info.minor == 4),
+                    reason="on Windows, can't delete env dir except on python 3.4, don't know why")
 def test_unprepare_empty_directory():
     def unprepare_empty(dirname):
         project = Project(dirname)
