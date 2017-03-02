@@ -7,9 +7,11 @@
 from __future__ import print_function, absolute_import
 
 import codecs
+import errno
 import os
 import platform
 import shutil
+import stat
 import sys
 import tempfile
 import time
@@ -29,6 +31,17 @@ class TmpDir(object):
         self._dir = tempfile.mkdtemp(prefix=prefix, dir=local_tmp)
 
     def __exit__(self, type, value, traceback):
+        def onerror(func, path, exc):
+            print("Error on func %r path %r exc %r" % (func, path, exc), file=sys.stderr)
+            e = exc[1]
+            if e.errno == errno.EACCES:
+                os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+            try:
+                func(path)
+                print("  It worked after chmod!")
+            except Exception as e2:
+                print("Error again after chmod %s" % str(e2), file=sys.stderr)
+
         # On Windows, this rmtree will give a permission denied
         # error seemingly at random; so far can't figure out
         # what's causing it, but it makes the CI very flaky.
@@ -39,7 +52,7 @@ class TmpDir(object):
             retries = 1
         while retries > 0:
             try:
-                shutil.rmtree(path=self._dir)
+                shutil.rmtree(path=self._dir, onerror=onerror)
                 break
             except Exception as e:
                 if retries == 1:
