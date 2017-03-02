@@ -32,15 +32,15 @@ class TmpDir(object):
 
     def __exit__(self, type, value, traceback):
         def onerror(func, path, exc):
-            print("Error on func %r path %r exc %r" % (func, path, exc), file=sys.stderr)
+            print("%s: Error on func %r exc %r" % (path, func, exc), file=sys.stderr)
             e = exc[1]
             if e.errno == errno.EACCES:
-                os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+                os.chmod(path, stat.S_IWRITE)
             try:
                 func(path)
-                print("  It worked after chmod!")
+                print("%s:  It worked after chmod!" % path)
             except Exception as e2:
-                print("Error again after chmod %s" % str(e2), file=sys.stderr)
+                print("%s: Error again after chmod %s" % (path, str(e2)), file=sys.stderr)
 
         # On Windows, this rmtree will give a permission denied
         # error seemingly at random; so far can't figure out
@@ -53,6 +53,17 @@ class TmpDir(object):
         while retries > 0:
             try:
                 shutil.rmtree(path=self._dir, onerror=onerror)
+
+                if os.path.isdir(self._dir) and platform.system() == 'Windows':
+                    assert '"' not in self._dir
+                    print("%s: Attempting rmdir command, rmtree did not work" % self._dir, file=sys.stderr)
+                    os.system('rmdir /S /Q "{}"'.format(self._dir))
+
+                    if os.path.isdir(self._dir):
+                        print("%s: rmdir did not work either" % self._dir, file=sys.stderr)
+                    else:
+                        print("%s: rmdir worked!" % self._dir, file=sys.stderr)
+
                 break
             except Exception as e:
                 if retries == 1:
