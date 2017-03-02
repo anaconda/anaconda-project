@@ -7,10 +7,11 @@
 from __future__ import print_function, absolute_import
 
 import codecs
-import tempfile
-import shutil
 import os
+import platform
+import shutil
 import sys
+import tempfile
 import zipfile
 
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
@@ -27,8 +28,22 @@ class TmpDir(object):
         self._dir = tempfile.mkdtemp(prefix=prefix, dir=local_tmp)
 
     def __exit__(self, type, value, traceback):
+        def log_errors(func, path, exc):
+            print("%s: Error on func %r exc %r" % (path, func, exc), file=sys.stderr)
+
+        if platform.system() == 'Windows':
+            onerror = log_errors
+        else:
+            onerror = None
+
+        # On Windows, this rmtree will give a permission denied
+        # error seemingly at random; so far can't figure out
+        # what's causing it, but it makes the CI very flaky.  So
+        # we just log the errors on Windows (the onerror handler
+        # should prevent exceptions from being raised). Unix
+        # should catch any true logic errors.
         try:
-            shutil.rmtree(path=self._dir)
+            shutil.rmtree(path=self._dir, onerror=onerror)
         except Exception as e:
             # prefer original exception to rmtree exception
             if value is None:
