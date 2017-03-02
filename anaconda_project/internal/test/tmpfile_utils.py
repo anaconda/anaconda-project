@@ -7,14 +7,11 @@
 from __future__ import print_function, absolute_import
 
 import codecs
-import errno
 import os
 import platform
 import shutil
-import stat
 import sys
 import tempfile
-import time
 import zipfile
 
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
@@ -31,59 +28,34 @@ class TmpDir(object):
         self._dir = tempfile.mkdtemp(prefix=prefix, dir=local_tmp)
 
     def __exit__(self, type, value, traceback):
-        def onerror(func, path, exc):
+        def log_errors(func, path, exc):
             print("%s: Error on func %r exc %r" % (path, func, exc), file=sys.stderr)
-            e = exc[1]
-            if e.errno == errno.EACCES:
-                os.chmod(path, stat.S_IWRITE)
-            try:
-                func(path)
-                print("%s:  It worked after chmod!" % path)
-            except Exception as e2:
-                print("%s: Error again after chmod %s" % (path, str(e2)), file=sys.stderr)
+
+        if platform.system() == 'Windows':
+            onerror = log_errors
+        else:
+            onerror = None
 
         # On Windows, this rmtree will give a permission denied
         # error seemingly at random; so far can't figure out
-        # what's causing it, but it makes the CI very flaky.
-        # So attempting a sledgehammer solution here.
-        if platform.system() == 'Windows':
-            retries = 5
-        else:
-            retries = 1
-        while retries > 0:
-            try:
-                shutil.rmtree(path=self._dir, onerror=onerror)
-
-                if os.path.isdir(self._dir) and platform.system() == 'Windows':
-                    assert '"' not in self._dir
-                    print("%s: Attempting rmdir command, rmtree did not work" % self._dir, file=sys.stderr)
-                    os.system('rmdir /S /Q "{}"'.format(self._dir))
-
-                    if os.path.isdir(self._dir):
-                        print("%s: rmdir did not work either" % self._dir, file=sys.stderr)
-                    else:
-                        print("%s: rmdir worked!" % self._dir, file=sys.stderr)
-
-                break
-            except Exception as e:
-                if retries == 1:
-                    # prefer original exception to rmtree exception
-                    if value is None:
-                        print("Exception cleaning up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
-                        try:
-                            print("Files in %s: %r" % (self._dir, os.listdir(self._dir)), file=sys.stderr)
-                        except Exception:
-                            pass
-                        raise e
-                    else:
-                        print("Failed to clean up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
-                        raise value
-                else:
-                    print("Exception cleaning up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
-                    retries -= 1
-                    assert retries > 0
-                    print("Sleeping before retrying rmtree %d more times" % retries, file=sys.stderr)
-                    time.sleep(1)
+        # what's causing it, but it makes the CI very flaky.  So
+        # we just log the errors on Windows (the onerror handler
+        # should prevent exceptions from being raised). Unix
+        # should catch any true logic errors.
+        try:
+            shutil.rmtree(path=self._dir, onerror=onerror)
+        except Exception as e:
+            # prefer original exception to rmtree exception
+            if value is None:
+                print("Exception cleaning up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
+                try:
+                    print("Files in %s: %r" % (self._dir, os.listdir(self._dir)), file=sys.stderr)
+                except Exception:
+                    pass
+                raise e
+            else:
+                print("Failed to clean up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
+                raise value
 
     def __enter__(self):
         return self._dir
