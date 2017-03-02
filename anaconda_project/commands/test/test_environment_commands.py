@@ -232,8 +232,8 @@ def test_remove_env_spec_in_use(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert (("%s: env_spec 'bar' for command 'foo' does not appear in the env_specs section\n" % os.path.join(
-            dirname, DEFAULT_PROJECT_FILENAME)) + "Unable to load the project.\n") == err
+        assert (("%s: env_spec 'bar' for command 'foo' does not appear in the env_specs section\n" %
+                 DEFAULT_PROJECT_FILENAME) + "Unable to load the project.\n") == err
 
     with_directory_contents_completing_project_file(
         {

@@ -6,7 +6,6 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-import os
 import sys
 
 from anaconda_project.project import Project
@@ -53,7 +52,7 @@ def test_interactively_fix_project(monkeypatch, capsys):
 
         out, err = capsys.readouterr()
         assert out == ("%s: The env_specs section is empty.\nAdd an environment spec to anaconda-project.yml? " %
-                       os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+                       DEFAULT_PROJECT_FILENAME)
         assert err == ""
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo"}, check)
@@ -73,12 +72,11 @@ def test_interactively_no_fix_project(monkeypatch, capsys):
         _monkeypatch_input(monkeypatch, ["n"])
 
         project = load_project(dirname)
-        assert project.problems == ["%s: The env_specs section is empty." % os.path.join(dirname,
-                                                                                         DEFAULT_PROJECT_FILENAME)]
+        assert project.problems == ["%s: The env_specs section is empty." % DEFAULT_PROJECT_FILENAME]
 
         out, err = capsys.readouterr()
         assert out == ("%s: The env_specs section is empty.\nAdd an environment spec to anaconda-project.yml? " %
-                       os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+                       DEFAULT_PROJECT_FILENAME)
         assert err == ""
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo"}, check)

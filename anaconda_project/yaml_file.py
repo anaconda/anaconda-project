@@ -167,6 +167,11 @@ class YamlFile(object):
                              (self.filename, self._corrupted_error_message))
 
     @property
+    def basename(self):
+        """Basename of the filename."""
+        return os.path.basename(self.filename)
+
+    @property
     def corrupted(self):
         """Get whether the file is corrupted.
 

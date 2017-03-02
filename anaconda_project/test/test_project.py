@@ -32,6 +32,10 @@ from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
 
+# someday we might like this to be "conda.recipe/meta.yaml" but
+# hasn't been important enough for now.
+META_YAML_IN_ERRORS = "meta.yaml"
+
 
 def test_properties():
     def check_properties(dirname):
@@ -189,7 +193,7 @@ def test_problem_empty_names():
         project = project_no_dedicated_env(dirname)
 
         def _fn(s):
-            return "%s: %s" % (project.project_file.filename, s)
+            return "%s: %s" % (project.project_file.basename, s)
 
         assert _fn("Variable name cannot be empty string, found: ' ' as name") in project.problems
         assert _fn("Download name cannot be empty string, found: ' ' as name") in project.problems
@@ -219,7 +223,7 @@ def test_problem_empty_names_var_list():
     def check_problem(dirname):
         project = project_no_dedicated_env(dirname)
         assert ("%s: Variable name cannot be empty string, found: ' ' as name" %
-                project.project_file.filename) in project.problems
+                project.project_file.basename) in project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -302,10 +306,7 @@ package:
 def test_broken_name_in_conda_meta_yaml():
     def check_name_from_meta_file(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [
-            (os.path.join(dirname, DEFAULT_RELATIVE_META_PATH) +
-             ": package: name: field should have a string value not []")
-        ] == project.problems
+        assert [(META_YAML_IN_ERRORS + ": package: name: field should have a string value not []")] == project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_RELATIVE_META_PATH: """
@@ -334,8 +335,7 @@ package:
 def test_broken_name_in_project_file():
     def check_name_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [(os.path.join(dirname, DEFAULT_PROJECT_FILENAME) + ": name: field should have a string value not []")
-                ] == project.problems
+        assert [(DEFAULT_PROJECT_FILENAME + ": name: field should have a string value not []")] == project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -388,7 +388,7 @@ def test_broken_description_in_project_file():
     def check_description_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
         assert [
-            (os.path.join(dirname, DEFAULT_PROJECT_FILENAME) + ": description: field should have a string value not []")
+            (DEFAULT_PROJECT_FILENAME + ": description: field should have a string value not []")
         ] == project.problems
 
     with_directory_contents_completing_project_file(
@@ -413,9 +413,7 @@ app:
 def test_broken_icon_in_conda_meta_yaml():
     def check_icon_from_meta_file(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [
-            (os.path.join(dirname, DEFAULT_RELATIVE_META_PATH) + ": app: icon: field should have a string value not []")
-        ] == project.problems
+        assert [(META_YAML_IN_ERRORS + ": app: icon: field should have a string value not []")] == project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_RELATIVE_META_PATH: """
@@ -446,8 +444,7 @@ app:
 def test_broken_icon_in_project_file():
     def check_icon_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [(os.path.join(dirname, DEFAULT_PROJECT_FILENAME) + ": icon: field should have a string value not []")
-                ] == project.problems
+        assert [(DEFAULT_PROJECT_FILENAME + ": icon: field should have a string value not []")] == project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -583,7 +580,7 @@ packages:
 def test_complain_about_packages_bad_spec():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
-        filename = project.project_file.filename
+        filename = project.project_file.basename
         assert ["%s: invalid package specification: =" % filename, "%s: invalid package specification: foo bar" %
                 filename, "%s: invalid pip package specifier: %%" % filename] == project.problems
 
@@ -600,7 +597,7 @@ packages:
 def test_complain_about_conda_env_in_variables_list():
     def check_complain_about_conda_env_var(dirname):
         project = project_no_dedicated_env(dirname)
-        template = (project.project_file.filename + ": Environment variable %s is reserved for Conda's use, " +
+        template = (project.project_file.basename + ": Environment variable %s is reserved for Conda's use, " +
                     "so it can't appear in the variables section.")
         assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV', template % 'CONDA_PREFIX'
                 ] == project.problems
@@ -617,7 +614,7 @@ variables:
 def test_complain_about_conda_env_in_variables_dict():
     def check_complain_about_conda_env_var(dirname):
         project = project_no_dedicated_env(dirname)
-        template = (project.project_file.filename + ": Environment variable %s is reserved for Conda's use, " +
+        template = (project.project_file.basename + ": Environment variable %s is reserved for Conda's use, " +
                     "so it can't appear in the variables section.")
         assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV', template % 'CONDA_PREFIX'
                 ] == project.problems
@@ -826,7 +823,7 @@ def test_complain_about_non_string_environment_description():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert ["%s: 'description' field of environment foo must be a string" %
-                (project.project_file.filename)] == project.problems
+                (project.project_file.basename)] == project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -840,7 +837,7 @@ def test_complain_about_non_string_inherit_from():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert ["%s: inherit_from: value should be a list of env spec names, not 'CommentedMap()'" %
-                (project.project_file.filename)] == project.problems
+                (project.project_file.basename)] == project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -867,7 +864,7 @@ def test_complain_about_env_spec_inherits_from_nonexistent():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert ["%s: name 'bar' in 'inherit_from' field of env spec foo does not match the name of another env spec" %
-                (project.project_file.filename)] == project.problems
+                (project.project_file.basename)] == project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -881,7 +878,7 @@ def test_complain_about_cycle_of_two_env_specs():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert ["%s: 'inherit_from' fields create circular inheritance among these env specs: bar, foo" %
-                (project.project_file.filename)] == project.problems
+                (project.project_file.basename)] == project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -897,7 +894,7 @@ def test_complain_about_cycle_of_many_env_specs():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert ["%s: 'inherit_from' fields create circular inheritance among these env specs: a, b, c, d, e" %
-                (project.project_file.filename)] == project.problems
+                (project.project_file.basename)] == project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -1076,7 +1073,7 @@ def test_non_dict_commands_section():
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         expected_error = "%s: 'commands:' section should be a dictionary from command names to attributes, not %r" % (
-            project.project_file.filename, 42)
+            project.project_file.basename, 42)
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "commands:\n  42\n"}, check_app_entry)
@@ -1087,7 +1084,7 @@ def test_non_dict_services_section():
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         expected_error = ("%s: 'services:' section should be a dictionary from environment variable " +
-                          "to service type, found %r") % (project.project_file.filename, 42)
+                          "to service type, found %r") % (project.project_file.basename, 42)
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "services:\n  42\n"}, check_app_entry)
@@ -1098,7 +1095,7 @@ def test_non_string_as_value_of_command():
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         expected_error = "%s: command name '%s' should be followed by a dictionary of attributes not %r" % (
-            project.project_file.filename, 'default', 42)
+            project.project_file.basename, 'default', 42)
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
@@ -1109,7 +1106,7 @@ def test_empty_command():
     def check_app_entry(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        expected_error = "%s: command '%s' does not have a command line in it" % (project.project_file.filename,
+        expected_error = "%s: command '%s' does not have a command line in it" % (project.project_file.basename,
                                                                                   'default')
         assert expected_error == project.problems[0]
 
@@ -1121,7 +1118,7 @@ def test_command_with_bogus_key():
     def check_app_entry(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        expected_error = "%s: command '%s' does not have a command line in it" % (project.project_file.filename,
+        expected_error = "%s: command '%s' does not have a command line in it" % (project.project_file.basename,
                                                                                   'default')
         assert expected_error == project.problems[0]
 
@@ -1133,7 +1130,7 @@ def test_command_with_non_string_description():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        expected_error = "%s: 'description' field of command %s must be a string" % (project.project_file.filename,
+        expected_error = "%s: 'description' field of command %s must be a string" % (project.project_file.basename,
                                                                                      'default')
         assert expected_error == project.problems[0]
 
@@ -1146,7 +1143,7 @@ def test_command_with_non_boolean_supports_http_options():
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         expected_error = "%s: 'supports_http_options' field of command %s must be a boolean" % (
-            project.project_file.filename, 'default')
+            project.project_file.basename, 'default')
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
@@ -1171,7 +1168,7 @@ def test_command_with_non_string_env_spec():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         expected_error = "%s: 'env_spec' field of command %s must be a string (an environment spec name)" % (
-            project.project_file.filename, 'default')
+            project.project_file.basename, 'default')
         assert [expected_error] == project.problems
 
     with_directory_contents_completing_project_file(
@@ -1182,7 +1179,7 @@ def test_command_with_nonexistent_env_spec():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         expected_error = "%s: env_spec 'boo' for command '%s' does not appear in the env_specs section" % (
-            project.project_file.filename, 'default')
+            project.project_file.basename, 'default')
         assert [expected_error] == project.problems
 
     with_directory_contents_completing_project_file(
@@ -1197,7 +1194,7 @@ def test_command_with_many_problems_at_once():
             "%s: env_spec 'nonexistent' for command 'default' does not appear in the env_specs section",
             "%s: command 'default' has multiple commands in it, 'notebook' can't go with 'unix'"
         ]
-        expected_errors = list(map(lambda e: e % project.project_file.filename, expected_errors))
+        expected_errors = list(map(lambda e: e % project.project_file.basename, expected_errors))
         assert expected_errors == project.problems
 
     with_directory_contents_completing_project_file(
@@ -1230,9 +1227,9 @@ def test_two_empty_commands():
     def check_app_entry(dirname):
         project = project_no_dedicated_env(dirname)
         assert 2 == len(project.problems)
-        expected_error_1 = "%s: command '%s' does not have a command line in it" % (project.project_file.filename,
+        expected_error_1 = "%s: command '%s' does not have a command line in it" % (project.project_file.basename,
                                                                                     'foo')
-        expected_error_2 = "%s: command '%s' does not have a command line in it" % (project.project_file.filename,
+        expected_error_2 = "%s: command '%s' does not have a command line in it" % (project.project_file.basename,
                                                                                     'bar')
         assert expected_error_1 == project.problems[0]
         assert expected_error_2 == project.problems[1]
@@ -1246,7 +1243,7 @@ def test_non_string_as_value_of_conda_app_entry():
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         expected_error = "%s: command '%s' attribute '%s' should be a string not '%r'" % (
-            project.project_file.filename, 'default', 'conda_app_entry', 42)
+            project.project_file.basename, 'default', 'conda_app_entry', 42)
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
@@ -1257,7 +1254,7 @@ def test_non_string_as_value_of_shell():
     def check_shell_non_dict(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        expected_error = "%s: command '%s' attribute '%s' should be a string not '%r'" % (project.project_file.filename,
+        expected_error = "%s: command '%s' attribute '%s' should be a string not '%r'" % (project.project_file.basename,
                                                                                           'default', 'unix', 42)
         assert expected_error == project.problems[0]
 
@@ -1429,7 +1426,7 @@ def test_notebook_guess_command():
     def check_notebook_guess_command(dirname):
         project = project_no_dedicated_env(dirname)
 
-        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.basename] == project.suggestions
 
         project.suggestion_objects[0].fix(project)
         project.project_file.save()
@@ -1472,7 +1469,7 @@ def test_notebook_guess_command_can_be_default():
         project = project_no_dedicated_env(dirname)
 
         assert ["%s: No commands run notebooks a.ipynb, b.ipynb, c.ipynb, d/d.ipynb, e.ipynb, f.ipynb" %
-                project.project_file.filename] == project.suggestions
+                project.project_file.basename] == project.suggestions
 
         project.suggestion_objects[0].fix(project)
         project.project_file.save()
@@ -1503,7 +1500,7 @@ def test_multiple_notebooks_suggestion_rejected():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
-        assert ["%s: No commands run notebooks foo/test2.ipynb, test.ipynb" % project.project_file.filename
+        assert ["%s: No commands run notebooks foo/test2.ipynb, test.ipynb" % project.project_file.basename
                 ] == project.suggestions
 
         project.suggestion_objects[0].no_fix(project)
@@ -1538,7 +1535,7 @@ def test_skip_all_notebook_imports():
         project = project_no_dedicated_env(dirname)
 
         assert [] == project.problems
-        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.basename] == project.suggestions
 
         project.project_file.set_value(['skip_imports', 'notebooks'], True)
         project.project_file.save()
@@ -1559,7 +1556,7 @@ def test_invalid_skip_imports_notebooks():
         project = project_no_dedicated_env(dirname)
 
         assert ["%s: 'skip_imports: notebooks:' value should be a list, found CommentedMap()" %
-                project.project_file.filename] == project.problems
+                project.project_file.basename] == project.problems
         assert [] == project.suggestions
 
     with_directory_contents_completing_project_file(
@@ -1573,7 +1570,7 @@ def test_single_notebook_suggestion_rejected():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
-        assert ["%s: No command runs notebook test.ipynb" % project.project_file.filename] == project.suggestions
+        assert ["%s: No command runs notebook test.ipynb" % project.project_file.basename] == project.suggestions
 
         project.suggestion_objects[0].no_fix(project)
         project.project_file.save()
@@ -1605,7 +1602,7 @@ def test_notebook_command_conflict():
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         expected_error = "%s: command '%s' has multiple commands in it, 'notebook' can't go with 'unix'" % (
-            project.project_file.filename, 'default')
+            project.project_file.basename, 'default')
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
@@ -1618,7 +1615,7 @@ def test_bokeh_command_conflict():
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         expected_error = "%s: command '%s' has multiple commands in it, 'bokeh_app' can't go with 'unix'" % (
-            project.project_file.filename, 'default')
+            project.project_file.basename, 'default')
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
@@ -1920,7 +1917,7 @@ commands:
 def test_run_argv_from_meta_file_with_name_in_project_file():
     def check_run_argv(dirname):
         project = project_no_dedicated_env(dirname)
-        assert ["%s: command 'foo' does not have a command line in it" % project.project_file.filename
+        assert ["%s: command 'foo' does not have a command line in it" % project.project_file.basename
                 ] == project.problems
 
     with_directory_contents_completing_project_file(
@@ -2401,7 +2398,7 @@ def test_auto_fix_missing_env_specs_section():
         assert len(project.problems) == 1
         assert len(project.problem_objects) == 1
         problem = project.problem_objects[0]
-        assert problem.text == ("%s: The env_specs section is empty." % os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+        assert problem.text == ("%s: The env_specs section is empty." % DEFAULT_PROJECT_FILENAME)
         assert problem.can_fix
 
         problem.fix(project)
@@ -2420,7 +2417,7 @@ def test_auto_fix_empty_env_specs_section():
         assert len(project.problem_objects) == 1
         assert len(project.fixable_problems) == 1
         problem = project.problem_objects[0]
-        assert problem.text == ("%s: The env_specs section is empty." % os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+        assert problem.text == ("%s: The env_specs section is empty." % DEFAULT_PROJECT_FILENAME)
         assert problem.can_fix
 
         problem.fix(project)
@@ -2671,7 +2668,7 @@ def test_auto_fix_notebook_dep():
 
         problem = project.suggestion_objects[0]
         assert ("%s: Command foo.ipynb uses env spec default which does not have the packages: notebook" %
-                project.project_file.filename) == problem.text
+                project.project_file.basename) == problem.text
         assert problem.can_fix
 
         problem.fix(project)
@@ -2734,7 +2731,7 @@ def test_auto_fix_bokeh_dep():
 
         problem = project.suggestion_objects[0]
         assert ("%s: Command bokeh_test uses env spec default which does not have the packages: bokeh" %
-                project.project_file.filename) == problem.text
+                project.project_file.basename) == problem.text
         assert problem.can_fix
 
         problem.fix(project)
@@ -2754,7 +2751,7 @@ def test_unknown_field_in_root():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.project_file.filename)
+        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.project_file.basename)
         assert [expected_suggestion] == project.suggestions
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "somejunk: False\n"}, check)
@@ -2764,7 +2761,7 @@ def test_unknown_field_in_command():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.project_file.filename)
+        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.project_file.basename)
         assert [expected_suggestion] == project.suggestions
 
     with_directory_contents_completing_project_file(
@@ -2775,7 +2772,7 @@ def test_unknown_field_in_env_spec():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.project_file.filename)
+        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.project_file.basename)
         assert [expected_suggestion] == project.suggestions
 
     with_directory_contents_completing_project_file(

@@ -57,7 +57,7 @@ class ProjectProblem(object):
         if filename is None:
             self.text = text
         else:
-            self.text = "%s: %s" % (filename, text)
+            self.text = "%s: %s" % (os.path.basename(filename), text)
         self.fix_prompt = fix_prompt
         self.fix_function = fix_function
         self.no_fix_function = no_fix_function
