@@ -7,10 +7,12 @@
 from __future__ import print_function, absolute_import
 
 import codecs
-import tempfile
-import shutil
 import os
+import platform
+import shutil
 import sys
+import tempfile
+import time
 import zipfile
 
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
@@ -27,20 +29,37 @@ class TmpDir(object):
         self._dir = tempfile.mkdtemp(prefix=prefix, dir=local_tmp)
 
     def __exit__(self, type, value, traceback):
-        try:
-            shutil.rmtree(path=self._dir)
-        except Exception as e:
-            # prefer original exception to rmtree exception
-            if value is None:
-                print("Exception cleaning up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
-                try:
-                    print("Files in %s: %r" % (self._dir, os.listdir(self._dir)), file=sys.stderr)
-                except Exception:
-                    pass
-                raise e
-            else:
-                print("Failed to clean up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
-                raise value
+        # On Windows, this rmtree will give a permission denied
+        # error seemingly at random; so far can't figure out
+        # what's causing it, but it makes the CI very flaky.
+        # So attempting a sledgehammer solution here.
+        if platform.system() == 'Windows':
+            retries = 5
+        else:
+            retries = 1
+        while retries > 0:
+            try:
+                shutil.rmtree(path=self._dir)
+                break
+            except Exception as e:
+                if retries == 1:
+                    # prefer original exception to rmtree exception
+                    if value is None:
+                        print("Exception cleaning up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
+                        try:
+                            print("Files in %s: %r" % (self._dir, os.listdir(self._dir)), file=sys.stderr)
+                        except Exception:
+                            pass
+                        raise e
+                    else:
+                        print("Failed to clean up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
+                        raise value
+                else:
+                    print("Exception cleaning up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
+                    retries -= 1
+                    assert retries > 0
+                    print("Sleeping before retrying rmtree %d more times" % retries, file=sys.stderr)
+                    time.sleep(1)
 
     def __enter__(self):
         return self._dir
