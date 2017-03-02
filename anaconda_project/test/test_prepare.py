@@ -63,6 +63,7 @@ def test_unprepare_empty_directory():
         assert result.errors == []
         assert result
         status = unprepare(project, result)
+        assert status.errors == []
         assert status
 
     with_directory_contents(dict(), unprepare_empty)
@@ -91,6 +92,7 @@ def test_unprepare_nothing_to_do():
         assert result.errors == []
         assert result
         status = unprepare(project, result, whitelist=[])
+        assert status.errors == []
         assert status
         assert status.status_description == 'Nothing to clean up.'
 
