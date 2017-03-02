@@ -1,8 +1,8 @@
 :orphan:
 
-==========================
+==============================
 Anaconda project configuration
-==========================
+==============================
 
 The ``anaconda-project`` command works with *project directories*,
 which can contain scripts, notebooks, data files... anything
@@ -15,8 +15,11 @@ with a configuration file named ``anaconda-project.yml``.
 
 TIP: Read more about YAML syntax at http://yaml.org/start.html
 
+TIP: You may want to go through :doc:`the anaconda-project tutorial</index>`
+before digging into the details in this document.
+
 ``anaconda-project.yml`` and ``anaconda-project-local.yml``
-=========================================
+===========================================================
 
 Anaconda projects are affected by two configuration files,
 ``anaconda-project.yml`` and ``anaconda-project-local.yml``.
@@ -31,8 +34,9 @@ The file ``anaconda-project-local.yml``, on the other hand, goes in
 contains your local configuration state that you do not
 want to share with others.
 
-Both files can be manipulated with ``conda`` commands, so there's
-rarely a need to hand-edit them, but you can if you like.
+These files can be manipulated with ``anaconda-project`` commands,
+or with Anaconda Navigator, or you can edit them with any text
+editor.
 
 Commands and Requirements
 =========================
@@ -117,7 +121,7 @@ automatically.
 Multiple Commands
 =================
 
-A ``anaconda-project.yml`` can list multiple commands. Each command has a
+An ``anaconda-project.yml`` can list multiple commands. Each command has a
 name; ``anaconda-project run COMMAND_NAME`` runs the command named
 ``COMMAND_NAME``.
 
@@ -132,6 +136,91 @@ add a ``description:`` field in ``anaconda-project.yml``, like this:
       unix: "python ${PROJECT_DIR}/analyze.py"
       windows: "python %PROJECT_DIR%\analyze.py"
       description: "This command runs the analysis"
+
+Special command types
+=====================
+
+Bokeh apps and notebooks have a shorthand syntax:
+
+.. code-block:: yaml
+
+  commands:
+    foo:
+      bokeh_app: foo
+      description: "Runs the bokeh app in the foo subdirectory"
+    bar:
+      notebook: bar.ipynb
+      description: "Opens the notebook bar.ipynb"
+
+
+HTTP Commands
+=============
+
+``anaconda-project`` can be used to pack up web applications and
+run them on a server. Web applications include Bokeh
+applications, notebooks, APIs, and anything else that speaks HTTP.
+
+To make an ``anaconda-project`` command into a deployable web
+application, it has to support a list of command-line
+options.
+
+Any command with ``notebook:`` or ``bokeh_app:`` automatically
+supports these options, because ``anaconda-project`` translates
+them into the native options supplied by the Bokeh and Jupyter
+command lines.
+
+Shell commands (those with ``unix:`` or ``windows:``) must
+implement the options themselves. If you've implemented support
+for these options in your shell command, add the
+``supports_http_options: true`` field:
+
+.. code-block:: yaml
+
+  commands:
+    myapp:
+      unix: launch_flask_app.py
+      description: "Launches a Flask web app"
+      supports_http_options: true
+
+In the above example, you'd have a command line option parser in
+your script ``launch_flask_app.py`` to support the expected options.
+
+The options your command should handle before specifying
+``supports_http_options: true`` are:
+
+ * ``--anaconda-project-host=HOST:PORT`` can be specified multiple
+   times and indicates a permitted value for the HTTP Host
+   header. The value may include a port as well. There will be one
+   ``--anaconda-project-host`` option for each host that browsers
+   can connect to.
+ * ``--anaconda-project-port=PORT`` indicates the local port the
+   application should listen on; unlike the port which may be
+   included in the ``--anaconda-project-host`` option, this port
+   will not always be the one that browsers connect to. In a
+   typical deployment, applications listen on a local-only port
+   while a reverse proxy such as nginx listens on a public port
+   and forwards traffic to the local port. In this scenario, the
+   public port is part of ``--anaconda-project-host`` and the
+   local port is provided as ``--anaconda-project-port``.
+ * ``--anaconda-project-url-prefix=PREFIX`` gives a path that all
+   routes in your application should be underneath, so for example
+   if you usually have a page ``/foo.html``, and the prefix is
+   ``/bar``, you would now have a page ``/bar/foo.html``.
+ * ``--anaconda-project-no-browser`` means "don't open a web
+   browser when the command is run"; if your command never does
+   that anyway, you should accept but ignore this option.
+ * ``--anaconda-project-iframe-hosts=HOST:PORT`` gives a value to
+   be included in the ``Content-Security-Policy`` header
+   as a value for ``frame-ancestors`` when you serve an HTTP
+   response. The effect of this is to allow the page to be
+   embedded in an iframe by the supplied HOST:PORT.
+ * ``--anaconda-project-use-xheaders`` tells your application that
+   it's behind a reverse proxy and can trust "X-" headers, such
+   as ``X-Forwarded-For`` or ``X-Host``.
+
+A deployment service based on ``anaconda-project`` can (in
+principle) deploy any application which supports these options.
+
 
 Environments and Channels
 =========================
@@ -203,6 +292,34 @@ like this:
       unix: "python ${PROJECT_DIR}/analyze.py"
       windows: "python %PROJECT_DIR%\analyze.py"
       env_spec: my_env_spec_name
+
+Environment specs can also inherit from one another. List a single
+environment spec or a list of environment specs to inherit from,
+something like this:
+
+.. code-block:: yaml
+
+  env_specs:
+    test_packages:
+      description: "Packages used for testing"
+      packages:
+        - pytest
+        - pytest-cov
+    app_dependencies:
+      description: "Packages used by myapp"
+      packages:
+        - bokeh
+    app_test_dependencies:
+      description: Packages used to test my app"
+      inherit_from: [test_packages, app_dependencies]
+
+  commands:
+    default:
+       unix: start_my_app.py
+       env_spec: app_dependencies
+    test:
+       unix: python -m pytest myapp/tests
+       env_spec: app_test_dependencies
 
 
 pip packages
@@ -333,6 +450,8 @@ file from your project directory, try this in your Python code
 Services
 ========
 
+TIP: Services are a proof-of-concept demo feature for now.
+
 Services can be automatically started, and their address
 can be provided to your code by using an environment variable.
 
@@ -436,9 +555,9 @@ to filename ``foo``, then you'll get ``KAPSEL_DIR/foo/bar``, not
 Describing the Project
 ======================
 
-By default, Conda names your project with the same name as the
-directory in which it is located. You can give it a different name
-though in ``anaconda-project.yml``:
+By default, ``anaconda-project`` names your project with the same
+name as the directory in which it is located. You can give it a
+different name though in ``anaconda-project.yml``:
 
 .. code-block:: yaml
 
@@ -452,7 +571,7 @@ You can also have an icon file, relative to the project directory:
 
 
 No need to edit ``anaconda-project.yml`` directly
-========================================
+=================================================
 
 You can edit ``anaconda-project.yml`` with the ``anaconda-project`` command.
 
@@ -486,7 +605,6 @@ do not need to duplicate this information in ``anaconda-project.yml``.
 ``anaconda-project`` currently reads these fields in ``meta.yaml``:
 
  * `package: name:`
- * `app: entry:`
  * `app: icon:`
 
 For more about ``meta.yaml`` see https://conda.io/docs/building/meta-yaml.html

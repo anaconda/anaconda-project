@@ -1,10 +1,10 @@
 :orphan:
 
-=====================
-Anaconda project tutorial
-=====================
+=============================
+``anaconda-project`` tutorial
+=============================
 
-Anaconda project automates setup steps such as installing the right
+``anaconda-project`` automates setup steps such as installing the right
 packages, downloading files, and configuring passwords so that
 anyone who wants to look at your notebooks, Bokeh plots or other
 analysis code can type ``anaconda-project run`` and have it Just
@@ -13,6 +13,11 @@ Work(tm).
 Even if you never share your project with others, you will find it
 more convenient to use ``anaconda-project`` than to manually maintain
 an environment with commands such as ``conda install``.
+
+``anaconda-project`` also works with deployment services such as
+Anaconda Enterprise. The setup steps you specify with
+``anaconda-project`` allow the deployment service to run your
+application on a server.
 
 In this tutorial, you will create a project containing a Bokeh
 application, then package it up as a zip file and "send" it to an
@@ -26,35 +31,30 @@ NOTE: You must have `conda installed
 <https://conda.io/docs/install/quick.html>`_ before
 beginning this tutorial.
 
-NOTE: Windows users using Python 3.5.1 should upgrade to Python 3.5.2+ 
-with the command ``conda update python`` to avoid an issue with 
+NOTE: Windows users using Python 3.5.1 should upgrade to Python 3.5.2+
+with the command ``conda update python`` to avoid an issue with
 Windows and Python 3.5.1.
 
-Install Anaconda project
-====================
+Install ``anaconda-project``
+============================
 
 Create and activate a conda environment for this tutorial, naming
 it "project-tutorial".
 
 **On Windows**::
 
-  conda create -n project-tutorial python
+  conda create -n project-tutorial anaconda-project
   activate project-tutorial
 
 **On OS X or Linux**::
 
-  conda create -n project-tutorial python
+  conda create -n project-tutorial anaconda-project
   source activate project-tutorial
 
 Next, use conda to install the keyring package from the
 conda-forge channel::
 
   conda install -c conda-forge keyring
-
-Next, use conda to install anaconda-project from the anaconda-project
-channel::
-
-  conda install -c conda-kapsel anaconda-project
 
 Test your installation by running the "version" command::
 
@@ -185,8 +185,8 @@ The command line session will look something like::
     Added packages to project file: bokeh=0.12, pandas.
 
 If you look at ``anaconda-project.yml`` now, you'll see bokeh and pandas
-listed under the ``packages:`` section. Since the packages have 
-now been installed in your project's environment, you will also 
+listed under the ``packages:`` section. Since the packages have
+now been installed in your project's environment, you will also
 see files such as ``envs/YOUR-PATH-TO/bokeh``.
 
 Configure your project with environment variables
@@ -503,6 +503,7 @@ Then your colleague can type ``anaconda-project run showdata`` (for
 example), and ``anaconda-project`` will download the data, install
 needed packages, and run the command.
 
+
 Next steps
 ==========
 
@@ -520,5 +521,6 @@ There's much more that ``anaconda-project`` can do.
    dependencies. ``anaconda-project add-env-spec`` adds these
    additional environment specs.
  * Commands can be ipython notebooks. If you create a notebook in
-   your project directory it will automatically be listed in
-   ``anaconda-project list-commands``.
+   your project directory add it with ``anaconda-project
+   add-command mynotebook.ipynb``.
+ * Read details on :doc:`the anaconda-project.yml format</config>`.
