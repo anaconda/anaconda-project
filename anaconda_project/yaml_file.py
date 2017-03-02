@@ -119,6 +119,8 @@ class YamlFile(object):
         """
         self._corrupted = False
         self._corrupted_error_message = None
+        self._corrupted_maybe_line = None
+        self._corrupted_maybe_column = None
         self._change_count = self._change_count + 1
 
         try:
@@ -134,6 +136,15 @@ class YamlFile(object):
         except YAMLError as e:
             self._corrupted = True
             self._corrupted_error_message = str(e)
+            # Not sure all this paranoia is needed
+            # about whether these values really exist,
+            # but hard to prove it isn't.
+            mark = getattr(e, 'problem_mark', None)
+            if mark is not None:
+                if mark.line is not None and mark.line >= 0:
+                    self._corrupted_maybe_line = mark.line
+                if mark.column is not None and mark.column >= 0:
+                    self._corrupted_maybe_column = mark.column
             self._yaml = None
 
         if self._yaml is None:
@@ -177,6 +188,24 @@ class YamlFile(object):
             Corruption message or None.
         """
         return self._corrupted_error_message
+
+    @property
+    def corrupted_maybe_line(self):
+        """Get the line number for syntax error, or None if unavailable.
+
+        Returns:
+            Corruption line or None.
+        """
+        return self._corrupted_maybe_line
+
+    @property
+    def corrupted_maybe_column(self):
+        """Get the column for syntax error, or None if unavailable.
+
+        Returns:
+            Corruption column or None.
+        """
+        return self._corrupted_maybe_column
 
     @property
     def change_count(self):

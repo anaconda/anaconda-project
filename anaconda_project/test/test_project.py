@@ -187,11 +187,15 @@ variables:
 def test_problem_empty_names():
     def check_problem(dirname):
         project = project_no_dedicated_env(dirname)
-        assert "Variable name cannot be empty string, found: ' ' as name" in project.problems
-        assert "Download name cannot be empty string, found: ' ' as name" in project.problems
-        assert "Service name cannot be empty string, found: ' ' as name" in project.problems
-        assert "Environment spec name cannot be empty string, found: ' ' as name" in project.problems
-        assert "Command variable name cannot be empty string, found: ' ' as name" in project.problems
+
+        def _fn(s):
+            return "%s: %s" % (project.project_file.filename, s)
+
+        assert _fn("Variable name cannot be empty string, found: ' ' as name") in project.problems
+        assert _fn("Download name cannot be empty string, found: ' ' as name") in project.problems
+        assert _fn("Service name cannot be empty string, found: ' ' as name") in project.problems
+        assert _fn("Environment spec name cannot be empty string, found: ' ' as name") in project.problems
+        assert _fn("Command variable name cannot be empty string, found: ' ' as name") in project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -214,7 +218,8 @@ commands:
 def test_problem_empty_names_var_list():
     def check_problem(dirname):
         project = project_no_dedicated_env(dirname)
-        assert "Variable name cannot be empty string, found: ' ' as name" in project.problems
+        assert ("%s: Variable name cannot be empty string, found: ' ' as name" %
+                project.project_file.filename) in project.problems
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -595,8 +600,8 @@ packages:
 def test_complain_about_conda_env_in_variables_list():
     def check_complain_about_conda_env_var(dirname):
         project = project_no_dedicated_env(dirname)
-        template = "Environment variable %s is reserved for Conda's use, " + \
-                   "so it can't appear in the variables section."
+        template = (project.project_file.filename + ": Environment variable %s is reserved for Conda's use, " +
+                    "so it can't appear in the variables section.")
         assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV', template % 'CONDA_PREFIX'
                 ] == project.problems
 
@@ -612,8 +617,8 @@ variables:
 def test_complain_about_conda_env_in_variables_dict():
     def check_complain_about_conda_env_var(dirname):
         project = project_no_dedicated_env(dirname)
-        template = "Environment variable %s is reserved for Conda's use, " + \
-                   "so it can't appear in the variables section."
+        template = (project.project_file.filename + ": Environment variable %s is reserved for Conda's use, " +
+                    "so it can't appear in the variables section.")
         assert [template % 'CONDA_ENV_PATH', template % 'CONDA_DEFAULT_ENV', template % 'CONDA_PREFIX'
                 ] == project.problems
 
@@ -1037,8 +1042,20 @@ def test_corrupted_project_file_and_meta_file():
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.requirements)
         assert 2 == len(project.problems)
-        assert 'anaconda-project.yml has a syntax error that needs to be fixed by hand' in project.problems[0]
-        assert 'meta.yaml has a syntax error that needs to be fixed by hand' in project.problems[1]
+        assert 'anaconda-project.yml: Syntax error: ' in project.problems[0]
+        assert 'meta.yaml: Syntax error: ' in project.problems[1]
+
+        problem1 = project.problem_objects[0]
+        assert problem1.maybe_line_number == 2
+        assert problem1.maybe_column_number == 9
+        assert problem1.maybe_filename == project.project_file.filename
+        assert problem1.text_without_filename.startswith("Syntax error:")
+
+        problem2 = project.problem_objects[1]
+        assert problem2.maybe_line_number == 2
+        assert problem2.maybe_column_number == 9
+        assert problem2.maybe_filename == project.conda_meta_file.filename
+        assert problem2.text_without_filename.startswith("Syntax error:")
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
@@ -2383,7 +2400,7 @@ def test_auto_fix_missing_env_specs_section():
         assert len(project.problems) == 1
         assert len(project.problem_objects) == 1
         problem = project.problem_objects[0]
-        assert problem.text == ("%s has an empty env_specs section." % os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+        assert problem.text == ("%s: The env_specs section is empty." % os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
         assert problem.can_fix
 
         problem.fix(project)
@@ -2402,7 +2419,7 @@ def test_auto_fix_empty_env_specs_section():
         assert len(project.problem_objects) == 1
         assert len(project.fixable_problems) == 1
         problem = project.problem_objects[0]
-        assert problem.text == ("%s has an empty env_specs section." % os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+        assert problem.text == ("%s: The env_specs section is empty." % os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
         assert problem.can_fix
 
         problem.fix(project)

@@ -52,7 +52,7 @@ def test_interactively_fix_project(monkeypatch, capsys):
         assert project.problems == []
 
         out, err = capsys.readouterr()
-        assert out == ("%s has an empty env_specs section.\nAdd an environment spec to anaconda-project.yml? " %
+        assert out == ("%s: The env_specs section is empty.\nAdd an environment spec to anaconda-project.yml? " %
                        os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
         assert err == ""
 
@@ -73,11 +73,11 @@ def test_interactively_no_fix_project(monkeypatch, capsys):
         _monkeypatch_input(monkeypatch, ["n"])
 
         project = load_project(dirname)
-        assert project.problems == ["%s has an empty env_specs section." % os.path.join(dirname,
-                                                                                        DEFAULT_PROJECT_FILENAME)]
+        assert project.problems == ["%s: The env_specs section is empty." % os.path.join(dirname,
+                                                                                         DEFAULT_PROJECT_FILENAME)]
 
         out, err = capsys.readouterr()
-        assert out == ("%s has an empty env_specs section.\nAdd an environment spec to anaconda-project.yml? " %
+        assert out == ("%s: The env_specs section is empty.\nAdd an environment spec to anaconda-project.yml? " %
                        os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
         assert err == ""
 

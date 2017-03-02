@@ -43,13 +43,28 @@ ALL_COMMAND_TYPES = (COMMAND_TYPE_CONDA_APP_ENTRY, COMMAND_TYPE_SHELL, COMMAND_T
 class ProjectProblem(object):
     """A possibly-autofixable problem with a project."""
 
-    def __init__(self, text, fix_prompt=None, fix_function=None, no_fix_function=None, only_a_suggestion=False):
+    def __init__(self,
+                 text,
+                 filename=None,
+                 fix_prompt=None,
+                 fix_function=None,
+                 no_fix_function=None,
+                 only_a_suggestion=False,
+                 line_number=None,
+                 column_number=None):
         """Create a project problem."""
-        self.text = text
+        self.text_without_filename = text
+        if filename is None:
+            self.text = text
+        else:
+            self.text = "%s: %s" % (filename, text)
         self.fix_prompt = fix_prompt
         self.fix_function = fix_function
         self.no_fix_function = no_fix_function
         self.only_a_suggestion = only_a_suggestion
+        self.maybe_filename = filename
+        self.maybe_line_number = line_number
+        self.maybe_column_number = column_number
 
     @property
     def can_fix(self):
@@ -81,6 +96,10 @@ def _make_problems_into_objects(problems):
         else:
             new_problems.append(ProjectProblem(text=p))
     return new_problems
+
+
+def _file_problem(problems, yaml_file, text):
+    problems.append(ProjectProblem(text=text, filename=yaml_file.filename))
 
 
 class _ConfigCache(object):
@@ -117,11 +136,15 @@ class _ConfigCache(object):
             problems.append("Project directory '%s' does not exist." % self.directory_path)
 
         if project_file.corrupted:
-            problems.append("%s has a syntax error that needs to be fixed by hand: %s" %
-                            (project_file.filename, project_file.corrupted_error_message))
+            problems.append(ProjectProblem(text=("Syntax error: %s" % (project_file.corrupted_error_message)),
+                                           filename=project_file.filename,
+                                           line_number=project_file.corrupted_maybe_line,
+                                           column_number=project_file.corrupted_maybe_column))
         if conda_meta_file.corrupted:
-            problems.append("%s has a syntax error that needs to be fixed by hand: %s" %
-                            (conda_meta_file.filename, conda_meta_file.corrupted_error_message))
+            problems.append(ProjectProblem(text=("Syntax error: %s" % (conda_meta_file.corrupted_error_message)),
+                                           filename=conda_meta_file.filename,
+                                           line_number=project_file.corrupted_maybe_line,
+                                           column_number=project_file.corrupted_maybe_column))
 
         if project_exists and not (project_file.corrupted or conda_meta_file.corrupted):
             self._update_name(problems, project_file, conda_meta_file)
@@ -150,17 +173,17 @@ class _ConfigCache(object):
         name = project_file.get_value('name', None)
         if name is not None:
             if not is_string(name):
-                problems.append("%s: name: field should have a string value not %r" % (project_file.filename, name))
+                _file_problem(problems, project_file, "name: field should have a string value not %r" % name)
                 name = None
             elif len(name.strip()) == 0:
-                problems.append("%s: name: field is an empty or all-whitespace string." % (project_file.filename))
+                _file_problem(problems, project_file, "name: field is an empty or all-whitespace string.")
                 name = None
 
         if name is None:
             name = conda_meta_file.name
             if name is not None and not is_string(name):
-                problems.append("%s: package: name: field should have a string value not %r" %
-                                (conda_meta_file.filename, name))
+                _file_problem(problems, conda_meta_file,
+                              "package: name: field should have a string value not %r" % name)
                 name = None
 
         if name is None:
@@ -171,7 +194,7 @@ class _ConfigCache(object):
     def _update_description(self, problems, project_file):
         desc = project_file.get_value('description', None)
         if desc is not None and not is_string(desc):
-            problems.append("%s: description: field should have a string value not %r" % (project_file.filename, desc))
+            _file_problem(problems, project_file, "description: field should have a string value not %r" % desc)
             desc = None
 
         if desc is None:
@@ -182,14 +205,13 @@ class _ConfigCache(object):
     def _update_icon(self, problems, project_file, conda_meta_file):
         icon = project_file.get_value('icon', None)
         if icon is not None and not is_string(icon):
-            problems.append("%s: icon: field should have a string value not %r" % (project_file.filename, icon))
+            _file_problem(problems, project_file, "icon: field should have a string value not %r" % (icon))
             icon = None
 
         if icon is None:
             icon = conda_meta_file.icon
             if icon is not None and not is_string(icon):
-                problems.append("%s: app: icon: field should have a string value not %r" %
-                                (conda_meta_file.filename, icon))
+                _file_problem(problems, conda_meta_file, "app: icon: field should have a string value not %r" % icon)
                 icon = None
             if icon is not None:
                 # relative to conda.recipe
@@ -208,8 +230,8 @@ class _ConfigCache(object):
 
         def check_conda_reserved(key):
             if key in ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH', 'CONDA_PREFIX'):
-                problems.append(("Environment variable %s is reserved for Conda's use, " +
-                                 "so it can't appear in the variables section.") % key)
+                _file_problem(problems, project_file, ("Environment variable %s is reserved for Conda's use, " +
+                                                       "so it can't appear in the variables section.") % key)
                 return True
             else:
                 return False
@@ -224,7 +246,8 @@ class _ConfigCache(object):
                 if check_conda_reserved(key):
                     continue
                 if key.strip() == '':
-                    problems.append("Variable name cannot be empty string, found: '{}' as name".format(key))
+                    _file_problem(problems, project_file,
+                                  "Variable name cannot be empty string, found: '{}' as name".format(key))
                     continue
                 raw_options = variables[key]
 
@@ -244,18 +267,23 @@ class _ConfigCache(object):
             for item in variables:
                 if is_string(item):
                     if item.strip() == '':
-                        problems.append("Variable name cannot be empty string, found: '{}' as name".format(item))
+                        _file_problem(problems, project_file,
+                                      "Variable name cannot be empty string, found: '{}' as name".format(item))
                         continue
                     if check_conda_reserved(item):
                         continue
                     requirement = self.registry.find_requirement_by_env_var(item, options=dict())
                     requirements.append(requirement)
                 else:
-                    problems.append(
-                        "variables section should contain environment variable names, {item} is not a string".format(
-                            item=item))
+                    _file_problem(
+                        problems,
+                        project_file,
+                        ("variables section should contain environment variable names, {item} is not a string".format(
+                            item=item)))
         else:
-            problems.append(
+            _file_problem(
+                problems,
+                project_file,
                 "variables section contains wrong value type {value}, should be dict or list of requirements".format(
                     value=variables))
 
@@ -266,13 +294,14 @@ class _ConfigCache(object):
             return
 
         if not isinstance(downloads, dict):
-            problems.append("{}: 'downloads:' section should be a dictionary, found {}".format(project_file.filename,
-                                                                                               repr(downloads)))
+            _file_problem(problems, project_file,
+                          "'downloads:' section should be a dictionary, found {}".format(repr(downloads)))
             return
 
         for varname, item in downloads.items():
             if varname.strip() == '':
-                problems.append("Download name cannot be empty string, found: '{}' as name".format(varname))
+                _file_problem(problems, project_file,
+                              "Download name cannot be empty string, found: '{}' as name".format(varname))
                 continue
             DownloadRequirement._parse(self.registry, varname, item, problems, requirements)
 
@@ -283,13 +312,15 @@ class _ConfigCache(object):
             return
 
         if not isinstance(services, dict):
-            problems.append(("{}: 'services:' section should be a dictionary from environment variable to " +
-                             "service type, found {}").format(project_file.filename, repr(services)))
+            _file_problem(problems, project_file,
+                          ("'services:' section should be a dictionary from environment variable to " +
+                           "service type, found {}").format(repr(services)))
             return
 
         for varname, item in services.items():
             if varname.strip() == '':
-                problems.append("Service name cannot be empty string, found: '{}' as name".format(varname))
+                _file_problem(problems, project_file,
+                              "Service name cannot be empty string, found: '{}' as name".format(varname))
                 continue
             ServiceRequirement._parse(self.registry, varname, item, problems, requirements)
 
@@ -297,8 +328,8 @@ class _ConfigCache(object):
         def _parse_string_list_with_special(parent_dict, key, what, special_filter):
             items = parent_dict.get(key, [])
             if not isinstance(items, (list, tuple)):
-                problems.append("%s: %s: value should be a list of %ss, not '%r'" %
-                                (project_file.filename, key, what, items))
+                _file_problem(problems, project_file,
+                              "%s: value should be a list of %ss, not '%r'" % (key, what, items))
                 return ([], [])
             cleaned = []
             special = []
@@ -308,8 +339,8 @@ class _ConfigCache(object):
                 elif special_filter(item):
                     special.append(item)
                 else:
-                    problems.append("%s: %s: value should be a %s (as a string) not '%r'" %
-                                    (project_file.filename, key, what, item))
+                    _file_problem(problems, project_file,
+                                  ("%s: value should be a %s (as a string) not '%r'" % (key, what, item)))
             return (cleaned, special)
 
         def _parse_string_list(parent_dict, key, what):
@@ -324,7 +355,7 @@ class _ConfigCache(object):
             for dep in deps:
                 parsed = conda_api.parse_spec(dep)
                 if parsed is None:
-                    problems.append("%s: invalid package specification: %s" % (project_file.filename, dep))
+                    _file_problem(problems, project_file, "invalid package specification: %s" % (dep))
 
             # note that multiple "pip:" dicts are allowed
             pip_deps = []
@@ -335,7 +366,7 @@ class _ConfigCache(object):
             for dep in pip_deps:
                 parsed = pip_api.parse_spec(dep)
                 if parsed is None:
-                    problems.append("%s: invalid pip package specifier: %s" % (project_file.filename, dep))
+                    _file_problem(problems, project_file, "invalid pip package specifier: %s" % (dep))
 
             return (deps, pip_deps)
 
@@ -360,12 +391,13 @@ class _ConfigCache(object):
                 env_specs_is_empty_or_missing = True
             for (name, attrs) in env_specs.items():
                 if name.strip() == '':
-                    problems.append("Environment spec name cannot be empty string, found: '{}' as name".format(name))
+                    _file_problem(problems, project_file,
+                                  "Environment spec name cannot be empty string, found: '{}' as name".format(name))
                     continue
                 description = attrs.get('description', None)
                 if description is not None and not is_string(description):
-                    problems.append("{}: 'description' field of environment {} must be a string".format(
-                        project_file.filename, name))
+                    _file_problem(problems, project_file,
+                                  ("'description' field of environment {} must be a string".format(name)))
                     continue
 
                 problem_count = len(problems)
@@ -395,9 +427,9 @@ class _ConfigCache(object):
                 if first_env_spec_name is None:
                     first_env_spec_name = name
         else:
-            problems.append(
-                "%s: env_specs should be a dictionary from environment name to environment attributes, not %r" %
-                (project_file.filename, env_specs))
+            _file_problem(problems, project_file,
+                          "env_specs should be a dictionary from environment name to environment attributes, not %r" %
+                          (env_specs))
 
         self.env_specs = dict()
 
@@ -407,9 +439,9 @@ class _ConfigCache(object):
             if name not in self.env_specs:
                 was_cycle = False
                 if name in trail:
-                    problems.append(
-                        "{}: 'inherit_from' fields create circular inheritance among these env specs: {}".format(
-                            project_file.filename, ", ".join(sorted(trail))))
+                    _file_problem(problems, project_file,
+                                  ("'inherit_from' fields create circular inheritance among these env specs: {}".format(
+                                      ", ".join(sorted(trail)))))
                     was_cycle = True
                 trail.append(name)
 
@@ -419,9 +451,9 @@ class _ConfigCache(object):
                     inherit_from_names = attrs['inherit_from_names']
                     for parent in inherit_from_names:
                         if parent not in env_spec_attrs:
-                            problems.append(("{}: name '{}' in 'inherit_from' field of env spec {} does not match " +
-                                             "the name of another env spec").format(project_file.filename, parent,
-                                                                                    attrs['name']))
+                            _file_problem(problems, project_file,
+                                          ("name '{}' in 'inherit_from' field of env spec {} does not match " +
+                                           "the name of another env spec").format(parent, attrs['name']))
                         else:
                             inherit_from = make_env_spec(parent, trail)
                             attrs['inherit_from'] = attrs['inherit_from'] + (inherit_from, )
@@ -486,6 +518,8 @@ class _ConfigCache(object):
                 project.project_file.set_value(['skip_imports', 'environment'],
                                                importable_spec.channels_and_packages_hash)
 
+            # we don't set the filename here because it isn't really an error in the
+            # file, it ends up reading strangely.
             problems.append(ProjectProblem(text=text,
                                            fix_prompt=prompt,
                                            fix_function=overwrite_env_spec_from_importable,
@@ -501,7 +535,8 @@ class _ConfigCache(object):
                 default_spec = _anaconda_default_env_spec(self.global_base_env_spec)
                 project.project_file.set_value(['env_specs', default_spec.name], default_spec.to_json())
 
-            problems.append(ProjectProblem(text=("%s has an empty env_specs section." % project_file.filename),
+            problems.append(ProjectProblem(text="The env_specs section is empty.",
+                                           filename=project_file.filename,
                                            fix_prompt=("Add an environment spec to %s?" % os.path.basename(
                                                project_file.filename)),
                                            fix_function=add_default_env_spec))
@@ -527,43 +562,47 @@ class _ConfigCache(object):
         commands = dict()
         commands_section = project_file.get_value('commands', None)
         if commands_section is not None and not isinstance(commands_section, dict):
-            problems.append("%s: 'commands:' section should be a dictionary from command names to attributes, not %r" %
-                            (project_file.filename, commands_section))
+            _file_problem(problems, project_file,
+                          "'commands:' section should be a dictionary from command names to attributes, not %r" %
+                          (commands_section))
             failed = True
         elif commands_section is not None:
             for (name, attrs) in commands_section.items():
                 if name.strip() == '':
-                    problems.append("Command variable name cannot be empty string, found: '{}' as name".format(name))
+                    _file_problem(problems, project_file,
+                                  "Command variable name cannot be empty string, found: '{}' as name".format(name))
                     failed = True
                     continue
                 if first_command_name is None:
                     first_command_name = name
 
                 if not isinstance(attrs, dict):
-                    problems.append("%s: command name '%s' should be followed by a dictionary of attributes not %r" %
-                                    (project_file.filename, name, attrs))
+                    _file_problem(problems, project_file,
+                                  "command name '%s' should be followed by a dictionary of attributes not %r" %
+                                  (name, attrs))
                     failed = True
                     continue
 
                 if 'description' in attrs and not is_string(attrs['description']):
-                    problems.append("{}: 'description' field of command {} must be a string".format(
-                        project_file.filename, name))
+                    _file_problem(problems, project_file,
+                                  "'description' field of command {} must be a string".format(name))
                     failed = True
 
                 if 'supports_http_options' in attrs and not isinstance(attrs['supports_http_options'], bool):
-                    problems.append("{}: 'supports_http_options' field of command {} must be a boolean".format(
-                        project_file.filename, name))
+                    _file_problem(problems, project_file,
+                                  ("'supports_http_options' field of command {} must be a boolean".format(name)))
                     failed = True
 
                 if 'env_spec' in attrs:
                     if not is_string(attrs['env_spec']):
-                        problems.append(
-                            "{}: 'env_spec' field of command {} must be a string (an environment spec name)".format(
-                                project_file.filename, name))
+                        _file_problem(
+                            problems, project_file,
+                            "'env_spec' field of command {} must be a string (an environment spec name)".format(name))
                         failed = True
                     elif attrs['env_spec'] not in self.env_specs:
-                        problems.append("%s: env_spec '%s' for command '%s' does not appear in the env_specs section" %
-                                        (project_file.filename, attrs['env_spec'], name))
+                        _file_problem(problems, project_file,
+                                      "env_spec '%s' for command '%s' does not appear in the env_specs section" %
+                                      (attrs['env_spec'], name))
                         failed = True
 
                 copied_attrs = deepcopy(attrs)
@@ -582,13 +621,12 @@ class _ConfigCache(object):
                     command_types.append(attr)
 
                     if not is_string(copied_attrs[attr]):
-                        problems.append("%s: command '%s' attribute '%s' should be a string not '%r'" %
-                                        (project_file.filename, name, attr, copied_attrs[attr]))
+                        _file_problem(problems, project_file, "command '%s' attribute '%s' should be a string not '%r'"
+                                      % (name, attr, copied_attrs[attr]))
                         failed = True
 
                 if len(command_types) == 0:
-                    problems.append("%s: command '%s' does not have a command line in it" %
-                                    (project_file.filename, name))
+                    _file_problem(problems, project_file, "command '%s' does not have a command line in it" % (name))
                     failed = True
 
                 if ('notebook' in copied_attrs or 'bokeh_app' in copied_attrs) and (len(command_types) > 1):
@@ -596,8 +634,9 @@ class _ConfigCache(object):
                     others = copy(command_types)
                     others.remove(label)
                     others = [("'%s'" % other) for other in others]
-                    problems.append("%s: command '%s' has multiple commands in it, '%s' can't go with %s" %
-                                    (project_file.filename, name, label, ", ".join(others)))
+                    _file_problem(problems, project_file,
+                                  "command '%s' has multiple commands in it, '%s' can't go with %s" %
+                                  (name, label, ", ".join(others)))
                     failed = True
 
                 # note that once one command fails, we don't add any more
@@ -626,8 +665,9 @@ class _ConfigCache(object):
                 # skip ALL notebooks forever
                 return
             elif not isinstance(skipped_notebooks, list):
-                problems.append("{}: 'skip_imports: notebooks:' value should be a list, found {}".format(
-                    project_file.filename, repr(skipped_notebooks)))
+                _file_problem(
+                    problems, project_file,
+                    "'skip_imports: notebooks:' value should be a list, found {}".format(repr(skipped_notebooks)))
                 return
         else:
             skipped_notebooks = []
@@ -689,7 +729,8 @@ class _ConfigCache(object):
         if len(need_to_import) == 1:
             relative_name = need_to_import[0]
             problem = ProjectProblem(
-                text="%s: No command runs notebook %s" % (project_file.filename, relative_name),
+                text="No command runs notebook %s" % (relative_name),
+                filename=project_file.filename,
                 fix_prompt="Create a command in %s for %s?" % (os.path.basename(project_file.filename), relative_name),
                 fix_function=make_add_notebook_func(relative_name, self.default_env_spec_name),
                 no_fix_function=make_no_add_notebook_func(relative_name),
@@ -708,13 +749,13 @@ class _ConfigCache(object):
                 for f in no_add_funcs:
                     f(project)
 
-            problem = ProjectProblem(
-                text="%s: No commands run notebooks %s" % (project_file.filename, ", ".join(need_to_import)),
-                fix_prompt="Create commands in %s for all missing notebooks?" % (os.path.basename(project_file.filename)
-                                                                                 ),
-                fix_function=add_all,
-                no_fix_function=no_add_all,
-                only_a_suggestion=True)
+            problem = ProjectProblem(text="No commands run notebooks %s" % (", ".join(need_to_import)),
+                                     filename=project_file.filename,
+                                     fix_prompt="Create commands in %s for all missing notebooks?" % (os.path.basename(
+                                         project_file.filename)),
+                                     fix_function=add_all,
+                                     no_fix_function=no_add_all,
+                                     only_a_suggestion=True)
             problems.append(problem)
 
     def _verify_command_dependencies(self, problems, project_file):
@@ -734,13 +775,13 @@ class _ConfigCache(object):
                             packages.append(m)
                     project.project_file.set_value(['env_specs', env_spec.name, 'packages'], packages)
 
-                problem = ProjectProblem(
-                    text=("%s: Command %s uses env spec %s which does not have the packages: %s" % (
-                        project_file.filename, command.name, env_spec.name, ", ".join(missing))),
-                    fix_prompt=("Add %s to env spec %s in %s?" % (", ".join(missing), env_spec.name, os.path.basename(
-                        project_file.filename))),
-                    fix_function=add_packages_to_env_spec,
-                    only_a_suggestion=True)
+                problem = ProjectProblem(text=("Command %s uses env spec %s which does not have the packages: %s" % (
+                    command.name, env_spec.name, ", ".join(missing))),
+                                         filename=project_file.filename,
+                                         fix_prompt=("Add %s to env spec %s in %s?" % (", ".join(
+                                             missing), env_spec.name, os.path.basename(project_file.filename))),
+                                         fix_function=add_packages_to_env_spec,
+                                         only_a_suggestion=True)
                 problems.append(problem)
 
 
