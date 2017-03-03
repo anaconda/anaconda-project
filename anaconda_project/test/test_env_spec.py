@@ -250,6 +250,7 @@ def test_to_json():
                  inherit_from_names=(),
                  inherit_from=())
     spec = EnvSpec(name="foo",
+                   description="The Foo Spec",
                    conda_packages=['a', 'b'],
                    pip_packages=['c', 'd'],
                    channels=['x', 'y'],
@@ -257,7 +258,23 @@ def test_to_json():
                    inherit_from=(hi, ))
     json = spec.to_json()
 
-    assert {'channels': ['x', 'y'], 'inherit_from': 'hi', 'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
+    assert {'description': "The Foo Spec",
+            'channels': ['x', 'y'],
+            'inherit_from': 'hi',
+            'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
+
+
+def test_to_json_no_description_no_pip_no_inherit():
+    # should be able to jsonify a spec with no description
+    spec = EnvSpec(name="foo",
+                   conda_packages=['a', 'b'],
+                   pip_packages=[],
+                   channels=['x', 'y'],
+                   inherit_from_names=(),
+                   inherit_from=())
+    json = spec.to_json()
+
+    assert {'channels': ['x', 'y'], 'packages': ['a', 'b']} == json
 
 
 def test_to_json_multiple_inheritance():

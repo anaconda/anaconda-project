@@ -285,9 +285,13 @@ class EnvSpec(object):
         # have ordering... OrderedDict doesn't work because the
         # yaml saver saves them as some "!!omap" nonsense. Other
         # than ordering, the formatting isn't even preserved here.
-        template_json = ryaml.load("something:\n    packages: []\n" + "    channels: []\n",
+        template_json = ryaml.load("something:\n    description: null\n" + "    packages: []\n" + "    channels: []\n",
                                    Loader=ryaml.RoundTripLoader)
 
+        if self._description is not None:
+            template_json['something']['description'] = self._description
+        else:
+            del template_json['something']['description']
         template_json['something']['packages'] = packages
         template_json['something']['channels'] = channels
 
