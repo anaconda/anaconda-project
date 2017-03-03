@@ -84,6 +84,18 @@ def _save_file(yaml, filename):
     _atomic_replace(filename, contents)
 
 
+def _block_style_all_nodes(yaml):
+    if hasattr(yaml, 'fa'):
+        yaml.fa.set_block_style()
+
+    if isinstance(yaml, list):
+        for element in yaml:
+            _block_style_all_nodes(element)
+    elif isinstance(yaml, dict):
+        for value in yaml.values():
+            _block_style_all_nodes(value)
+
+
 class YamlFile(object):
     """Abstract YAML file, base class for ``ProjectFile`` and ``LocalStateFile``.
 
@@ -159,6 +171,8 @@ class YamlFile(object):
                 self._yaml = dict()
             else:
                 self._yaml = self._default_content()
+                # make it pretty
+                _block_style_all_nodes(self._yaml)
                 self._dirty = True
 
     def _default_comment(self):
