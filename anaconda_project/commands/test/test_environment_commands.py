@@ -285,6 +285,26 @@ def test_export_env_spec(capsys, monkeypatch):
         }, check)
 
 
+def test_export_env_spec_default_name(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+
+        exported = os.path.join(dirname, "exported.yml")
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'export-env-spec', exported])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert '' == err
+        assert ('Exported environment spec foo to %s.\n' % exported) == out
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
+            '  bar:\n    channels: []\n    packages:\n    - baz\n',
+            'envs/foo/bin/test': 'code here'
+        }, check)
+
+
 def test_export_env_spec_no_filename(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
