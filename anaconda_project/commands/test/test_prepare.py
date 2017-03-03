@@ -590,3 +590,31 @@ variables:
 env_specs: 42
 
 """}, check)
+
+
+def test_no_ask_conda_prefix_interactively(monkeypatch, capsys):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
+        def mock_console_input(prompt, encrypted):
+            raise Exception("should not have been called")
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
+
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname])
+        assert res == 1
+
+        out, err = capsys.readouterr()
+
+        assert err.endswith("Conda environment is missing packages: nonexistent_package_name\n")
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+packages:
+ - nonexistent_package_name
+"""}, check)
