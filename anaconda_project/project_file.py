@@ -156,4 +156,21 @@ class ProjectFile(YamlFile):
         for env_spec in default_env_specs:
             as_json['env_specs'][env_spec.name] = env_spec.to_json()
 
+        if len(default_env_specs) == 1:
+            # if there's only one env spec, keep it for name/description
+            # and put the packages and channels up in the global sections
+            spec_name = next(iter(as_json['env_specs']))
+            spec_json = as_json['env_specs'][spec_name]
+
+            def move_list_elements(src, dest):
+                # we want to preserve the dest list object with comments
+                del dest[:]
+                dest.extend(src)
+                del src[:]
+
+            if 'packages' in spec_json:
+                move_list_elements(spec_json['packages'], as_json['packages'])
+            if 'channels' in spec_json:
+                move_list_elements(spec_json['channels'], as_json['channels'])
+
         return as_json
