@@ -17,6 +17,7 @@ def load_project(dirname):
     project = Project(dirname)
 
     if console_utils.stdin_is_interactive():
+        had_fixable = len(project.fixable_problems) > 0
         for problem in project.fixable_problems:
             print(problem.text)
             should_fix = console_utils.console_ask_yes_or_no(problem.fix_prompt, default=False)
@@ -25,7 +26,9 @@ def load_project(dirname):
             else:
                 problem.no_fix(project)
 
-        # no-op if the fixes didn't do anything
-        project.project_file.save()
+        # both fix() and no_fix() can modify project_file, if no changes
+        # were made this is a no-op.
+        if had_fixable:
+            project.project_file.save()
 
     return project
