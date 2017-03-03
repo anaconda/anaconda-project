@@ -114,6 +114,15 @@ def test_read_missing_yaml_file_and_get_default_due_to_missing_section():
     with_directory_contents(dict(), check_missing)
 
 
+def test_read_empty_yaml_file_and_get_default_due_to_missing_section():
+    def check_missing(dirname):
+        yaml = YamlFile(os.path.join(dirname, "nope.yaml"))
+        value = yaml.get_value(["z", "b"], "default")
+        assert "default" == value
+
+    with_directory_contents({"nope.yaml": ""}, check_missing)
+
+
 def test_read_yaml_file_that_is_a_directory():
     def check_read_directory(dirname):
         filename = os.path.join(dirname, "dir.yaml")
@@ -198,6 +207,34 @@ a:
         assert 42 == value2
 
     with_directory_contents(dict(), set_abc)
+
+
+def test_read_empty_yaml_file_and_set_value():
+    def set_abc(dirname):
+        filename = os.path.join(dirname, "foo.yaml")
+        assert os.path.exists(filename)
+        yaml = YamlFile(filename)
+        value = yaml.get_value(["a", "b"])
+        assert value is None
+        yaml.set_value(["a", "b"], 42)
+        yaml.save()
+        assert os.path.exists(filename)
+
+        import codecs
+        with codecs.open(filename, 'r', 'utf-8') as file:
+            changed = file.read()
+            expected = """
+a:
+  b: 42
+""" [1:]
+
+            assert expected == changed
+
+        yaml2 = YamlFile(filename)
+        value2 = yaml2.get_value(["a", "b"])
+        assert 42 == value2
+
+    with_directory_contents({"foo.yaml": ""}, set_abc)
 
 
 def test_read_yaml_file_and_add_section():

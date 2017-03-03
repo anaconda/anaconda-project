@@ -53,10 +53,15 @@ def _atomic_replace(path, contents, encoding='utf-8'):
 
 
 def _load_string(contents):
-    # using RoundTripLoader incorporates safe_load
-    # (we don't load code)
-    assert issubclass(ryaml.RoundTripLoader, ryaml.constructor.SafeConstructor)
-    return ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+    if contents.strip() == '':
+        # ryaml.load below returns None for an empty file, we want
+        # to return an empty dict instead.
+        return {}
+    else:
+        # using RoundTripLoader incorporates safe_load
+        # (we don't load code)
+        assert issubclass(ryaml.RoundTripLoader, ryaml.constructor.SafeConstructor)
+        return ryaml.load(contents, Loader=ryaml.RoundTripLoader)
 
 
 def _save_file(yaml, filename):
@@ -148,8 +153,13 @@ class YamlFile(object):
             self._yaml = None
 
         if self._yaml is None:
-            self._yaml = self._default_content()
-            self._dirty = True
+            if self._corrupted:
+                # don't want to throw exceptions if people get_value()
+                # so stick an empty dict in here
+                self._yaml = dict()
+            else:
+                self._yaml = self._default_content()
+                self._dirty = True
 
     def _default_comment(self):
         return "yaml file"
