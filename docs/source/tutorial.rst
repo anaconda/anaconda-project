@@ -3,9 +3,9 @@
 Tutorial
 ========
 
-In this tutorial, you will create a project containing a Bokeh application, then package it up as a zip file and "send" it to an imaginary colleague. Your colleague will then be able to unpack it and run it with a single command. You do not need to know Bokeh to do this tutorial.
+In this tutorial, you will create a project containing a Bokeh application, then package it up as a zip file and "send" it to an imaginary colleague. Your colleague will then be able to unpack it and run it with a single command.
 
-**After completing this tutorial, you will be learn how to:**
+**In this tutorial you will learn how to:**
 
 * Create an empty project
 * Get some data to work with
@@ -19,10 +19,9 @@ In this tutorial, you will create a project containing a Bokeh application, then
 * Zip it up for a colleague
 * Run project
 
+This tutorial is for all platforms: Windows, macOS and Linux. You do not need any prior knowledge of Bokeh or experience with Bokeh for this tutorial.
 
-This tutorial is for all platforms: Windows, OS X and Linux. You do not need to know Bokeh to do this tutorial.
-
-If you have not yet installed and started Anaconda Project, follow the :doc:`Install instructions <install>`.
+If you have not yet installed and started Anaconda Project, do so following the :doc:`Install instructions <install>`.
 
 
 Create an empty project
@@ -89,10 +88,9 @@ It will ask you what kind of command it is; choose ``C`` for command line. The c
 
 Now try ``anaconda-project run hello``. There will be a short delay as the new dedicated project is created, and then it will print "hello".
 
-NOTE: Since you have only one command, plain ``anaconda-project run``
-would work too.
+NOTE: Since you have only one command, you could also just use the command ``anaconda-project run``.
 
-When you run the command the second time, it runs much faster because the dedicated project is already created.
+Run the command again. It will run much faster the second time because the dedicated project is already created.
 
 In your ``iris`` directory, you will now see an ``envs`` subdirectory. By default every project has its own packages in its own sandbox to ensure that projects do not interfere with one another.
 
@@ -111,7 +109,7 @@ You can also list all the commands in your project by typing
 Add required packages
 =====================
 
-In the next steps, we'll need to use some packages that aren't in our ``iris/envs/default`` environment yet: Bokeh and Pandas.
+In the next steps, we'll need to use some packages that aren't in our ``iris/envs/default`` environment yet: Bokeh and pandas.
 
 In your ``iris`` directory, type::
 
@@ -124,12 +122,12 @@ The command line session will look something like::
     Using Conda environment /home/alice/mystuff/iris/envs/default.
     Added packages to project file: bokeh=0.12, pandas.
 
-If you look at ``anaconda-project.yml`` now, you'll see bokeh and pandas listed under the ``packages:`` section. Since the packages have now been installed in your project's environment, you will also see files such as ``envs/YOUR-PATH-TO/bokeh``.
+If you look at ``anaconda-project.yml`` now, you'll see Bokeh and pandas listed under the ``packages:`` section. Since the packages have now been installed in your project's environment, you will also see files such as ``envs/YOUR-PATH-TO/bokeh``.
 
 Configure your project with environment variables
 =================================================
 
-You may have wondered about that string ``IRIS_CSV`` when you first looked in your ``anaconda-project.yml`` file. That's the environment variable that tells your program where ``iris.csv`` lives. There are also some other environment variables that ``anaconda-project`` sets automatically, such as ``PROJECT_DIR`` which locates your project directory.
+You may have wondered about that string ``IRIS_CSV`` when you first looked in your ``anaconda-project.yml`` file. That's the environment variable that tells your program the location of the file ``iris.csv``. There are also some other environment variables that ``anaconda-project`` sets automatically, such as ``PROJECT_DIR`` which locates your project directory.
 
 You can grab these variables from within your scripts with Python's ``os.getenv`` function.
 
@@ -159,7 +157,7 @@ Now run that new command at the command prompt::
 
     anaconda-project run showdata
 
-You will see the data print out, and then the sentence about "My project directory is... and my conda environment is...".
+You will see the data print out, and then the sentence saying "My project directory is... and my conda environment is...".
 
 Good work so far!
 
@@ -211,7 +209,7 @@ You can also set a default value for a variable in ``anaconda-project.yml``; if 
 
    anaconda-project add-variable --default=sepal_width COLUMN_TO_SHOW
 
-Now you should see the default in ``anaconda-project.yml``.
+Now you will see the default in ``anaconda-project.yml``.
 
 If you've set the variable in ``anaconda-project-local.yml``, the default will be ignored.  You can unset your local override with::
 
@@ -275,7 +273,7 @@ Inside your ``iris`` project directory, create a new directory ``iris_plot``, an
     curdoc().title = "Iris Example"
     curdoc().add_root(p)
 
-You should now have a file ``iris_plot/main.py`` inside the project.  The ``iris_plot`` directory is a simple Bokeh app. (If you aren't familiar with Bokeh you can learn more from the `Bokeh documentation <http://bokeh.pydata.org/en/latest/>`_.)
+You now have a file ``iris_plot/main.py`` inside the project.  The ``iris_plot`` directory is a simple Bokeh app. (If you aren't familiar with Bokeh you can learn more from the `Bokeh documentation <http://bokeh.pydata.org/en/latest/>`_.)
 
 To tell ``anaconda-project`` about the Bokeh app, be sure you are in the directory "iris" and type::
 
@@ -310,23 +308,23 @@ Type::
 
     anaconda-project clean
 
-``iris.csv`` and ``envs/default`` should now be gone.
+``iris.csv`` and ``envs/default`` are now gone.
 
 Run one of your commands again, and they'll come back. Type::
 
     anaconda-project run showdata
 
-You should have ``iris.csv`` and ``envs/default`` back as they were before.
+Now ``iris.csv`` and ``envs/default`` are back as they were before.
 
-You could also redo the setup steps without running a command. Clean again::
+You can also redo the setup steps without running a command. Clean again::
 
     anaconda-project clean
 
-``iris.csv`` and ``envs/default`` should be gone again. Then re-prepare the project::
+``iris.csv`` and ``envs/default`` are gone again. Then re-prepare the project::
 
     anaconda-project prepare
 
-You should have ``iris.csv`` and ``envs/default`` back again, but this time without running a command.
+Now ``iris.csv`` and ``envs/default`` are back again, this time without running a command.
 
 Zip it up for a colleague
 =========================
@@ -337,7 +335,7 @@ Type::
 
    anaconda-project archive iris.zip
 
-You will now have a file ``iris.zip``. If you list the files in the zip, you'll see that the automatically-generated ones aren't in there::
+You will now have a file ``iris.zip``. If you list the files in the zip, you'll see that the automatically-generated ones are not included::
 
     $ unzip -l iris.zip
     Archive:  iris.zip
@@ -351,7 +349,7 @@ You will now have a file ``iris.zip``. If you list the files in the zip, you'll 
     ---------                     -------
          6003                     5 files
 
-NOTE: There's a ``.projectignore`` file you can use to manually exclude anything you don't want in your archives.
+NOTE: You can also use a ``.projectignore`` file to manually exclude anything you don't want in your archives.
 
 NOTE: ``anaconda-project`` also supports creating ``.tar.gz`` and ``.tar.bz2`` archives. The archive format will match the filename you provide.
 
@@ -370,7 +368,7 @@ When your colleague unzips the archive, they can list the commands in it::
 Run project
 ===========
 
-Then your colleague can type ``anaconda-project run showdata`` (for example), and ``anaconda-project`` will download the data, install needed packages, and run the command.
+Then your colleague can run any of the commands. If the colleague types ``anaconda-project run showdata`` then ``anaconda-project`` will download the data, install needed packages, and run the command.
 
 
 Additional information
@@ -378,8 +376,7 @@ Additional information
 
 There's much more that ``anaconda-project`` can do.
 
- * It can automatically start processes that your commands depend on. Right now it only supports starting Redis, for demonstration purposes. Use the ``anaconda-project add-service redis`` command to play with this. More kinds of service will be supported soon! Let us know if there are particular ones you'd find useful.
- * You can have multiple conda environment specifications in your project, which is useful if some of your commands use a different version of Python or otherwise have distinct dependencies. ``anaconda-project add-env-spec`` adds these additional environment specs.
- * Commands can be ipython notebooks. If you create a notebook in your project directory add it with ``anaconda-project add-command mynotebook.ipynb``.
- * Read details on :doc:`the anaconda-project.yml format <reference>`.
-
+* It can automatically start processes that your commands depend on. Right now it only supports starting Redis, for demonstration purposes. Use the ``anaconda-project add-service redis`` command to play with this. More kinds of service will be supported soon! If there are particular services you would find useful, please let us know.
+* You can have multiple conda environment specifications in your project, which is useful if some of your commands use a different version of Python or otherwise have distinct dependencies. ``anaconda-project add-env-spec`` adds these additional environment specs.
+* Commands can be IPython notebooks. If you create a notebook in your project directory add it with ``anaconda-project add-command mynotebook.ipynb``.
+* Read details on :doc:`the anaconda-project.yml format <reference>`.

@@ -11,7 +11,7 @@ This getting started guide walks you through using Anaconda Project for the firs
 * Package and share the project
 * Run the project with a single command
 
-This guide is for all platforms: Windows, OS X and Linux.
+This guide is for all platforms: Windows, macOS and Linux.
 
 If you have not yet installed and started Anaconda Project, follow the :doc:`Install instructions <install>`.
 
@@ -26,9 +26,9 @@ We'll create a project directory called ``clustering_app``. At the command promp
     $ anaconda-project init
     Project configuration is in /User/Anaconda/My Anaconda Projects/clustering_app/anaconda-project.yml
 
-Inside your ``clustering_app`` project directory, create and save a new file named ``main.py`` with the `Bokeh clustering example <https://raw.githubusercontent.com/bokeh/bokeh/master/examples/app/clustering/main.py>`_. Learn more about `Bokeh <http://bokeh.pydata.org/en/latest/>`_.)
+Inside your ``clustering_app`` project directory, create and save a new file named ``main.py`` with the `Bokeh clustering example <https://raw.githubusercontent.com/bokeh/bokeh/master/examples/app/clustering/main.py>`_. (You may also wish to learn more about `Bokeh <http://bokeh.pydata.org/en/latest/>`_.)
 
-We need to add the packages that the Bokeh clustering demo depends on: Bokeh, pandas, scikit-learn and numpy. Open the ``anaconda-project.yml`` file and edit the packages section with:
+We need to add the packages that the Bokeh clustering demo depends on: Bokeh, pandas, scikit-learn and NumPy. Open the ``anaconda-project.yml`` file and edit the packages section with:
 
 .. code-block:: yaml
 
@@ -40,7 +40,7 @@ We need to add the packages that the Bokeh clustering demo depends on: Bokeh, pa
 
 To tell ``anaconda-project`` about the Bokeh app, be sure you are in the directory "clustering_app" and type::
 
-    $ anaconda-project add-command plot .
+    anaconda-project add-command plot .
 
 When prompted, type ``B`` for Bokeh app. The command line session looks like::
 
@@ -60,15 +60,15 @@ To share this project with a colleague, first we archive it by typing::
 
    anaconda-project archive clustering.zip
 
-and send them that file. 
+Send that file to the colleague.
 
-If your colleague has Anaconda Project too, they can unzip and type ``anaconda-project run`` (for example), and Anaconda Project will download the data, install needed packages, and run the command.
+If your colleague has Anaconda Project too, they can unzip the file and type ``anaconda-project run`` (for example), and Anaconda Project will download the data, install needed packages, and run the command.
 
 You can also share projects by uploading them to Anaconda Cloud, using the following command::
 
     anaconda-project upload
 
-NOTE: You need to have an Anaconda Cloud account to upload projects.
+NOTE: You need an Anaconda Cloud account to upload projects.
 
 Run your project
 ================
@@ -83,6 +83,6 @@ Next steps
 
 There's much more that Anaconda Project can do.
 
- * Learn more with the :doc:`Anaconda Project tutorial <tutorial>`, like downloading data with your project and configuring your project with environment variables.
+ * Learn more with the :doc:`Anaconda Project tutorial <tutorial>`, including how to download data with your project and how to configure your project with environment variables.
 
  * Read details on :doc:`the anaconda-project.yml format <reference>`.
