@@ -232,6 +232,11 @@ class YamlFile(object):
         """
         return self._change_count
 
+    @property
+    def has_unsaved_changes(self):
+        """Get whether changes are all saved."""
+        return self._dirty
+
     def use_changes_without_saving(self):
         """Apply any in-memory changes as if we'd saved, but don't actually save.
 

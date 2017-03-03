@@ -7,9 +7,11 @@
 from __future__ import absolute_import, print_function
 
 import os
+import zipfile
 
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
-from anaconda_project.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
+from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
+                                                          with_directory_contents_completing_project_file)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 
@@ -17,14 +19,16 @@ def test_archive_command_on_empty_project(capsys):
     def check(dirname):
         archivefile = os.path.join(dirname, "foo.zip")
         code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--directory', dirname, archivefile])
-        assert code == 0
+        assert code == 1
 
         out, err = capsys.readouterr()
-        assert ('  added %s\nCreated project archive %s\n' % (os.path.join(
-            os.path.basename(dirname), "anaconda-project.yml"), archivefile)) == out
-        assert '' == err
+        assert "anaconda-project.yml does not exist.\nCan't create an archive.\n" == err
+        assert '' == out
 
-    with_directory_contents_completing_project_file(dict(), check)
+        assert not os.path.exists(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+        assert not os.path.exists(archivefile)
+
+    with_directory_contents(dict(), check)
 
 
 def test_archive_command_on_simple_project(capsys):
@@ -35,8 +39,14 @@ def test_archive_command_on_simple_project(capsys):
 
         out, err = capsys.readouterr()
         assert ('  added %s\n  added %s\nCreated project archive %s\n' % (os.path.join(
-            os.path.basename(dirname), "anaconda-project.yml"), os.path.join(
+            os.path.basename(dirname), DEFAULT_PROJECT_FILENAME), os.path.join(
                 os.path.basename(dirname), "foo.py"), archivefile)) == out
+
+        with zipfile.ZipFile(archivefile, mode='r') as zf:
+            assert [os.path.basename(x) for x in sorted(zf.namelist())] == [DEFAULT_PROJECT_FILENAME, "foo.py"]
+
+        assert os.path.exists(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+
         assert '' == err
 
     with_directory_contents_completing_project_file({'foo.py': 'print("hello")\n'}, check)

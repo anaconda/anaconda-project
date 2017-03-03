@@ -78,7 +78,7 @@ def with_directory_contents(contents, func):
 def complete_project_file_content(content):
     yaml = _load_string(content)
     if yaml is None:
-        return content
+        raise AssertionError("Broken yaml: %r" % content)
     elif 'env_specs' not in yaml:
         modified = (content + "\n" + "env_specs:\n" + "  default:\n" + "    description: default\n" + "\n")
         try:
