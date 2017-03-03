@@ -19,6 +19,5 @@ Anaconda Project is supported and offered by Continuum Analytics and contributor
    getting-started
    reference
    tutorial
-   troubleshooting
    help
 
