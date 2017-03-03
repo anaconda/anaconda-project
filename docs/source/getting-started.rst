@@ -68,7 +68,7 @@ You can also share projects by uploading them to Anaconda Cloud, using the follo
 
     anaconda-project upload
 
-NOTE: You need an Anaconda Cloud account to upload projects.
+NOTE: You need a free Anaconda Cloud account to upload projects to Anaconda Cloud.
 
 Run your project
 ================
