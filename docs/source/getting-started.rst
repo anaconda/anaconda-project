@@ -21,8 +21,8 @@ NOTE: Windows users using Python 3.5.1 should upgrade to Python 3.5.2+ with the 
 Create a project containing a Bokeh app
 =======================================
 
-We'll create a project directory called ``clustering_app``. At the command prompt, switch to a directory ``clustering_app`` and initialize the project:
-    
+We'll create a project directory called ``clustering_app``. At the command prompt, switch to a directory ``clustering_app`` and initialize the project::
+
     $ mkdir clustering_app
     $ cd clustering_app
     $ anaconda-project init
@@ -32,22 +32,24 @@ Inside your ``clustering_app`` project directory, create and save a new file nam
 
 We need to add the packages that the Bokeh clustering demo depends on: Bokeh, pandas, scikit-learn and numpy. Open the ``anaconda-project.yml`` file and edit the packages section with:
 
+.. code-block:: yaml
+
     packages:
       - python=3.5
       - bokeh=0.12.4
       - numpy=1.12.0
       - scikit-learn=0.18.1
 
-To tell ``anaconda-project`` about the Bokeh app, be sure you are in the directory "clustering_app" and type:
+To tell ``anaconda-project`` about the Bokeh app, be sure you are in the directory "clustering_app" and type::
 
     $ anaconda-project add-command plot .
 
-When prompted, type ``B`` for Bokeh app. The command line session looks like:
+When prompted, type ``B`` for Bokeh app. The command line session looks like::
 
     Is `plot` a (B)okeh app, (N)otebook, or (C)ommand line? B
     Added a command 'plot' to the project. Run it with `anaconda-project run plot`.
 
-Now, you can run your project with:
+Now, you can run your project with::
 
     anaconda-project run
 
@@ -56,7 +58,7 @@ A browser window opens, displaying the clustering app.
 Share your project
 ==================
 
-To share this project with a colleague, first we archive it by typing:
+To share this project with a colleague, first we archive it by typing::
 
    anaconda-project archive clustering.zip
 
@@ -64,7 +66,7 @@ and send them that file.
 
 If your colleague has Anaconda Project too, they can unzip and type ``anaconda-project run`` (for example), and Anaconda Project will download the data, install needed packages, and run the command.
 
-You can also share projects by uploading them to Anaconda Cloud, using the following command:
+You can also share projects by uploading them to Anaconda Cloud, using the following command::
 
     anaconda-project upload
 
@@ -73,7 +75,7 @@ NOTE: You need to have an Anaconda Cloud account to upload projects.
 Run your project
 ================
 
-Anyone that downloads your project can now have it running locally with only one command, without having to worry about the setup:
+Anyone that downloads your project can now have it running locally with only one command, without having to worry about the setup::
 
     anaconda-project run
 
