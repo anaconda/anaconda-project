@@ -1,21 +1,17 @@
-:orphan:
 
-==============================
-Anaconda project configuration
-==============================
+=========
+Reference
+=========
 
-The ``anaconda-project`` command works with *project directories*,
-which can contain scripts, notebooks, data files... anything
-that is related to your project.
+The ``anaconda-project`` command works with *project directories*, which can contain scripts, notebooks, data files, and anything that is related to your project.
 
-Any directory can become a project; tell conda about your project
-with a configuration file named ``anaconda-project.yml``.
+Any directory can become a project with a configuration file named ``anaconda-project.yml``.
 
 ``.yml`` files are in the YAML format and follow the YAML syntax.
 
 TIP: Read more about YAML syntax at http://yaml.org/start.html
 
-TIP: You may want to go through :doc:`the anaconda-project tutorial</index>`
+TIP: You may want to go through :doc:`the anaconda-project tutorial <tutorial>`
 before digging into the details in this document.
 
 ``anaconda-project.yml`` and ``anaconda-project-local.yml``
