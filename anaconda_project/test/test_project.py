@@ -2777,3 +2777,11 @@ def test_unknown_field_in_env_spec():
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: "env_specs:\n  foo:\n    packages: [something]\n    somejunk: True\n"}, check)
+
+
+def test_empty_file_has_problems():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ['anaconda-project.yml: The env_specs section is empty.'] == project.problems
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
