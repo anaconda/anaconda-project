@@ -189,7 +189,7 @@ def test_create_with_invalid_environment_yml():
     def check_create(dirname):
         project = project_ops.create(dirname, make_directory=False)
         project_filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
-        assert ["%s: invalid package specification: b $ 1.0" % project_filename] == project.problems
+        assert ["%s: invalid package specification: b $ 1.0" % DEFAULT_PROJECT_FILENAME] == project.problems
         # we should NOT create the anaconda-project.yml if it would be broken
         assert not os.path.isfile(project_filename)
 
@@ -253,7 +253,7 @@ def test_set_properties_with_project_file_problems():
         status = project_ops.set_properties(project, name='foo')
         assert not status
         assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.filename] == status.errors
+                project.project_file.basename] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -271,8 +271,7 @@ def test_set_invalid_name():
         print(repr(result))
         assert not result
         assert 'Failed to set project properties.' == result.status_description
-        assert ["%s: name: field is an empty or all-whitespace string." %
-                (os.path.join(dirname, DEFAULT_PROJECT_FILENAME))] == result.errors
+        assert ["%s: name: field is an empty or all-whitespace string." % (DEFAULT_PROJECT_FILENAME)] == result.errors
 
         assert [] == project.problems
         assert project.name == os.path.basename(dirname)
@@ -699,7 +698,7 @@ def test_add_command_generates_env_spec_suggestion():
         assert re_loaded.get_value(['env_specs', 'bar', 'packages']) is None
 
         assert project.problems == []
-        assert project.suggestions == [('%s: Command ' % project.project_file.filename) +
+        assert project.suggestions == [('%s: Command ' % project.project_file.basename) +
                                        'bokeh_test uses env spec bar which does not have the packages: bokeh']
 
         project.fix_problems_and_suggestions()
@@ -810,7 +809,7 @@ def test_add_command_conflicting_type():
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project, 'default', 'bokeh_app', 'myapp.py')
         assert [("%s: command 'default' has multiple commands in it, 'bokeh_app' can't go with 'unix'" %
-                 project.project_file.filename)] == result.errors
+                 project.project_file.basename)] == result.errors
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
         command = re_loaded.get_value(['commands', 'default'])
@@ -830,7 +829,7 @@ def test_update_command_with_project_file_problems():
 
         assert not status
         assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.filename] == status.errors
+                project.project_file.basename] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -1031,7 +1030,7 @@ def test_update_command_to_non_string_value():
         result = project_ops.update_command(project, 'default', 'notebook', 42)
         assert not result
         assert [("%s: command 'default' attribute 'notebook' should be a string not '42'" %
-                 project.project_file.filename)] == result.errors
+                 project.project_file.basename)] == result.errors
 
         assert 'default' in project.commands
         command = project.commands['default']
@@ -1253,7 +1252,7 @@ def test_add_download_with_project_file_problems():
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert not status
         assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.filename] == status.errors
+                project.project_file.basename] == status.errors
 
         # be sure download was NOT added to the file
         project2 = project_no_dedicated_env(dirname)
@@ -1617,7 +1616,7 @@ def test_remove_packages_with_project_file_problems():
 
         assert not status
         assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.filename] == status.errors
+                project.project_file.basename] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -1768,7 +1767,7 @@ def test_add_service_with_project_file_problems():
 
         assert not status
         assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.filename] == status.errors
+                project.project_file.basename] == status.errors
 
         # be sure service was NOT added to the file
         project2 = Project(dirname)
@@ -3124,7 +3123,7 @@ def test_upload_with_project_file_problems():
         status = project_ops.upload(project)
         assert not status
         assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.filename] == status.errors
+                project.project_file.basename] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 

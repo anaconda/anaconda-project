@@ -578,7 +578,7 @@ def test_no_ask_variables_interactively_if_no_variables_missing_but_prepare_fail
 
         assert out == ""
         assert err == ("%s: env_specs should be a dictionary from environment name to environment attributes, not 42\n"
-                       "Unable to load the project.\n") % os.path.join(dirname, "anaconda-project.yml")
+                       "Unable to load the project.\n") % DEFAULT_PROJECT_FILENAME
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """

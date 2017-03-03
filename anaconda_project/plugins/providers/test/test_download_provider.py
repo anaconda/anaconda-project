@@ -263,8 +263,8 @@ def test_provide_wrong_form(monkeypatch):
     def provide_download(dirname):
         project = project_no_dedicated_env(dirname)
         prepare_without_interaction(project, environ=minimal_environ(PROJECT_DIR=dirname))
-        assert ("%s: 'downloads:' section should be a dictionary, found ['http://localhost/data.csv']" % os.path.join(
-            dirname, DEFAULT_PROJECT_FILENAME)) in project.problems
+        assert ("%s: 'downloads:' section should be a dictionary, found ['http://localhost/data.csv']" %
+                DEFAULT_PROJECT_FILENAME) in project.problems
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ERR_DATAFILE_CONTENT}, provide_download)
 

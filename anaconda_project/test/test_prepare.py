@@ -83,7 +83,7 @@ def test_unprepare_problem_project():
         assert not status
         assert status.status_description == 'Unable to load the project.'
         assert status.errors == [('%s: variables section contains wrong value type 42, ' +
-                                  'should be dict or list of requirements') % project.project_file.filename]
+                                  'should be dict or list of requirements') % project.project_file.basename]
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, unprepare_problems)
 
