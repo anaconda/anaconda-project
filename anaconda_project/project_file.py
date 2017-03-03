@@ -121,9 +121,8 @@ class ProjectFile(YamlFile):
         sections['packages'] = ("In the packages section, list any packages that must be installed\n" +
                                 "before your code runs.\n" + "Use `anaconda-project add-packages` to add packages.\n")
 
-        sections['channels'] = (
-            "In the channels section, list any Conda channel URLs to be searched\n" + "for packages.\n" + "\n" +
-            "For example,\n" + "\n" + "channels:\n" + "   - https://conda.anaconda.org/asmeurer\n")
+        sections['channels'] = ("In the channels section, list any Conda channel URLs to be searched\n" +
+                                "for packages.\n" + "\n" + "For example,\n" + "\n" + "channels:\n" + "   - mychannel\n")
 
         sections['env_specs'] = (
             "You can define multiple, named environment specs.\n" + "Each inherits any global packages or channels,\n" +

@@ -60,7 +60,7 @@ packages: []
 # For example,
 #
 # channels:
-#    - https://conda.anaconda.org/asmeurer
+#    - mychannel
 #
 channels: []
 #
