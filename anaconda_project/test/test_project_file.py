@@ -76,7 +76,10 @@ empty_default_env_specs = """#
 # but can have its own unique ones also.
 # Use `anaconda-project add-env-spec` to add environment specs.
 #
-env_specs: {default: {packages: [], channels: []}}
+env_specs:
+  default:
+    packages: []
+    channels: []
 """
 
 
@@ -137,21 +140,13 @@ def test_load_directory_without_project_file():
     with_directory_contents(dict(), read_missing_file)
 
 
-abc_xyz_populated_env_specs = """#
-# You can define multiple, named environment specs.
-# Each inherits any global packages or channels,
-# but can have its own unique ones also.
-# Use `anaconda-project add-env-spec` to add environment specs.
-#
-env_specs: {abc: {description: ABC, packages: [anaconda], channels: [mychannel]}}
-"""
-
 anaconda_global_packages = """#
 # In the packages section, list any packages that must be installed
 # before your code runs.
 # Use `anaconda-project add-packages` to add packages.
 #
-packages: [anaconda]
+packages:
+- anaconda
 """
 
 mychannel_global_channels = """#
@@ -163,7 +158,8 @@ mychannel_global_channels = """#
 # channels:
 #    - mychannel
 #
-channels: [mychannel]
+channels:
+- mychannel
 """
 
 abc_empty_env_spec = """#
@@ -172,7 +168,11 @@ abc_empty_env_spec = """#
 # but can have its own unique ones also.
 # Use `anaconda-project add-env-spec` to add environment specs.
 #
-env_specs: {abc: {description: ABC, packages: [], channels: []}}
+env_specs:
+  abc:
+    description: ABC
+    packages: []
+    channels: []
 """
 
 expected_one_env_spec_contents = _make_file_contents(packages=anaconda_global_packages,
@@ -211,8 +211,19 @@ abc_xyz_env_specs = """#
 # but can have its own unique ones also.
 # Use `anaconda-project add-env-spec` to add environment specs.
 #
-env_specs: {abc: {description: ABC, packages: [anaconda], channels: [mychannel]},
-  xyz: {description: XYZ, packages: [foo], channels: [bar]}}
+env_specs:
+  abc:
+    description: ABC
+    packages:
+    - anaconda
+    channels:
+    - mychannel
+  xyz:
+    description: XYZ
+    packages:
+    - foo
+    channels:
+    - bar
 """
 
 expected_two_env_spec_contents = _make_file_contents(packages=empty_global_packages,
