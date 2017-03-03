@@ -9,8 +9,9 @@ import os
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME, possible_project_file_names
+from anaconda_project.env_spec import EnvSpec
 
-expected_default_file = """# This is an Anaconda project file.
+expected_default_file_template = """# This is an Anaconda project file.
 #
 # Here you can describe your project and how to run it.
 # Use `anaconda-project run` to run the project.
@@ -47,23 +48,29 @@ services: {}
 # Use `anaconda-project add-download` to add downloads.
 #
 downloads: {}
-#
+%s%s%s"""
+
+empty_global_packages = """#
 # In the packages section, list any packages that must be installed
 # before your code runs.
 # Use `anaconda-project add-packages` to add packages.
 #
 packages: []
-#
+"""
+
+empty_global_channels = """#
 # In the channels section, list any Conda channel URLs to be searched
 # for packages.
 #
 # For example,
 #
 # channels:
-#    - https://conda.anaconda.org/asmeurer
+#    - mychannel
 #
 channels: []
-#
+"""
+
+empty_default_env_specs = """#
 # You can define multiple, named environment specs.
 # Each inherits any global packages or channels,
 # but can have its own unique ones also.
@@ -71,6 +78,15 @@ channels: []
 #
 env_specs: {default: {packages: [], channels: []}}
 """
+
+
+def _make_file_contents(packages, channels, env_specs):
+    return expected_default_file_template % (packages, channels, env_specs)
+
+
+expected_default_file = _make_file_contents(packages=empty_global_packages,
+                                            channels=empty_global_channels,
+                                            env_specs=empty_default_env_specs)
 
 
 def test_create_missing_project_file():
@@ -119,3 +135,117 @@ def test_load_directory_without_project_file():
         assert project_file.get_value(["a", "b"]) is None
 
     with_directory_contents(dict(), read_missing_file)
+
+
+abc_xyz_populated_env_specs = """#
+# You can define multiple, named environment specs.
+# Each inherits any global packages or channels,
+# but can have its own unique ones also.
+# Use `anaconda-project add-env-spec` to add environment specs.
+#
+env_specs: {abc: {description: ABC, packages: [anaconda], channels: [mychannel]}}
+"""
+
+anaconda_global_packages = """#
+# In the packages section, list any packages that must be installed
+# before your code runs.
+# Use `anaconda-project add-packages` to add packages.
+#
+packages: [anaconda]
+"""
+
+mychannel_global_channels = """#
+# In the channels section, list any Conda channel URLs to be searched
+# for packages.
+#
+# For example,
+#
+# channels:
+#    - mychannel
+#
+channels: [mychannel]
+"""
+
+abc_empty_env_spec = """#
+# You can define multiple, named environment specs.
+# Each inherits any global packages or channels,
+# but can have its own unique ones also.
+# Use `anaconda-project add-env-spec` to add environment specs.
+#
+env_specs: {abc: {description: ABC, packages: [], channels: []}}
+"""
+
+expected_one_env_spec_contents = _make_file_contents(packages=anaconda_global_packages,
+                                                     channels=mychannel_global_channels,
+                                                     env_specs=abc_empty_env_spec)
+
+
+def test_create_missing_project_file_one_default_env_spec():
+    def create_file(dirname):
+        def default_env_specs_func():
+            return [EnvSpec(name='abc',
+                            conda_packages=['anaconda'],
+                            pip_packages=[],
+                            channels=['mychannel'],
+                            description="ABC",
+                            inherit_from_names=(),
+                            inherit_from=())]
+
+        filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
+        assert not os.path.exists(filename)
+        project_file = ProjectFile.load_for_directory(dirname, default_env_specs_func=default_env_specs_func)
+        assert project_file is not None
+        assert not os.path.exists(filename)
+        project_file.save()
+        assert os.path.exists(filename)
+        with codecs.open(filename, 'r', 'utf-8') as file:
+            contents = file.read()
+            assert expected_one_env_spec_contents == contents
+
+    with_directory_contents(dict(), create_file)
+
+
+abc_xyz_env_specs = """#
+# You can define multiple, named environment specs.
+# Each inherits any global packages or channels,
+# but can have its own unique ones also.
+# Use `anaconda-project add-env-spec` to add environment specs.
+#
+env_specs: {abc: {description: ABC, packages: [anaconda], channels: [mychannel]},
+  xyz: {description: XYZ, packages: [foo], channels: [bar]}}
+"""
+
+expected_two_env_spec_contents = _make_file_contents(packages=empty_global_packages,
+                                                     channels=empty_global_channels,
+                                                     env_specs=abc_xyz_env_specs)
+
+
+def test_create_missing_project_file_two_default_env_specs():
+    def create_file(dirname):
+        def default_env_specs_func():
+            return [EnvSpec(name='abc',
+                            conda_packages=['anaconda'],
+                            pip_packages=[],
+                            channels=['mychannel'],
+                            description="ABC",
+                            inherit_from_names=(),
+                            inherit_from=()), EnvSpec(name='xyz',
+                                                      conda_packages=['foo'],
+                                                      pip_packages=[],
+                                                      channels=['bar'],
+                                                      description="XYZ",
+                                                      inherit_from_names=(),
+                                                      inherit_from=())]
+
+        filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
+        assert not os.path.exists(filename)
+        project_file = ProjectFile.load_for_directory(dirname, default_env_specs_func=default_env_specs_func)
+        assert project_file is not None
+        assert not os.path.exists(filename)
+        project_file.save()
+        assert os.path.exists(filename)
+        with codecs.open(filename, 'r', 'utf-8') as file:
+            contents = file.read()
+            assert expected_two_env_spec_contents == contents
+
+    with_directory_contents(dict(), create_file)

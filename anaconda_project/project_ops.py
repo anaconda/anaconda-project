@@ -446,17 +446,19 @@ def export_env_spec(project, name, filename):
 
     Args:
         project (Project): the project
-        name (str): environment spec name
+        name (str): environment spec name or None for default
         filename (str): file to export to
 
     Returns:
         ``Status`` instance
     """
-    assert name is not None
-
     failed = project.problems_status()
     if failed is not None:
         return failed
+
+    if name is None:
+        name = project.default_env_spec_name
+    assert name is not None
 
     if name not in project.env_specs:
         problem = "Environment spec {} doesn't exist.".format(name)
