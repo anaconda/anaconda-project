@@ -15,8 +15,6 @@ This guide is for all platforms: Windows, OS X and Linux.
 
 If you have not yet installed and started Anaconda Project, follow the :doc:`Install instructions <install>`.
 
-NOTE: Windows users using Python 3.5.1 should upgrade to Python 3.5.2+ with the command ``conda update python`` to avoid an issue with Windows and Python 3.5.1.
-
 
 Create a project containing a Bokeh app
 =======================================
