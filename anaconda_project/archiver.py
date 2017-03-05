@@ -297,6 +297,18 @@ def _archive_project(project, filename):
     if failed is not None:
         return failed
 
+    if not os.path.exists(project.project_file.filename):
+        return SimpleStatus(success=False,
+                            description="Can't create an archive.",
+                            errors=[("%s does not exist." % project.project_file.basename)])
+
+    # this would most likely happen in a GUI editor, if it reloaded
+    # the project from memory but hadn't saved yet.
+    if project.project_file.has_unsaved_changes:
+        return SimpleStatus(success=False,
+                            description="Can't create an archive.",
+                            errors=[("%s has been modified but not saved." % project.project_file.basename)])
+
     errors = []
     infos = _enumerate_archive_files(project.directory_path, errors, requirements=project.requirements)
     if infos is None:

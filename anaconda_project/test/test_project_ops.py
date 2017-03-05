@@ -2387,6 +2387,52 @@ name: archivedproj
     with_directory_contents_completing_project_file(dict(), archivetest)
 
 
+def test_archive_with_no_project_file(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
+
+        def check(dirname):
+            project = project_no_dedicated_env(dirname)
+            assert not os.path.exists(project.project_file.filename)
+
+            status = project_ops.archive(project, archivefile)
+
+            assert not status
+            assert not os.path.exists(archivefile)
+            assert status.status_description == "Can't create an archive."
+            assert status.errors == ["%s does not exist." % DEFAULT_PROJECT_FILENAME]
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_archive_with_unsaved_project(monkeypatch):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
+
+        def check(dirname):
+            project = project_no_dedicated_env(dirname)
+            assert os.path.exists(project.project_file.filename)
+            project.project_file.set_value(['name'], "hello")
+
+            status = project_ops.archive(project, archivefile)
+
+            assert not status
+            assert not os.path.exists(archivefile)
+            assert status.status_description == "Can't create an archive."
+            assert status.errors == ["%s has been modified but not saved." % DEFAULT_PROJECT_FILENAME]
+
+        with_directory_contents_completing_project_file(
+            {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+  default:
+    packages: []
+"""}, check)
+
+    with_directory_contents(dict(), archivetest)
+
+
 def test_archive_zip_with_downloaded_file():
     def archivetest(archive_dest_dir):
         archivefile = os.path.join(archive_dest_dir, "foo.zip")
