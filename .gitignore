@@ -99,3 +99,4 @@ htmlcov
 /record.txt
 # version.py is a generated file
 /anaconda_project/version.py
+/docs/build
