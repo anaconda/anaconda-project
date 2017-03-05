@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 from anaconda_project import prepare
 from anaconda_project import project_ops
 from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 
 from anaconda_project.provide import (PROVIDE_MODE_PRODUCTION, PROVIDE_MODE_DEVELOPMENT, PROVIDE_MODE_CHECK)
 
@@ -38,9 +39,13 @@ def _interactively_fix_missing_variables(project, result):
     if not console_utils.stdin_is_interactive():
         return False
 
+    # We don't ask the user to manually enter CONDA_PREFIX
+    # (CondaEnvRequirement) because it's a bizarre/confusing
+    # thing to ask.
     can_ask_about = [status
                      for status in result.statuses
-                     if (not status and isinstance(status.requirement, EnvVarRequirement))]
+                     if (not status and isinstance(status.requirement, EnvVarRequirement) and not isinstance(
+                         status.requirement, CondaEnvRequirement))]
 
     if can_ask_about:
         print("(Use Ctrl+C to quit.)")
