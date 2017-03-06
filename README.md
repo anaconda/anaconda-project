@@ -65,11 +65,9 @@ artifacts and doing any necessary setup prior to executing them).
 
 ## Learn more
 
-See http://conda.pydata.org/docs/kapsel/ for a simple
-getting-started walkthrough.
-
-See http://conda.pydata.org/docs/kapsel/config.html for more detail on
-the syntax of the `anaconda-project.yml` file.
+Check out the complete documentation, including a tutorial
+and reference guide, at:
+http://anaconda-project.readthedocs.io/en/latest/index.html
 
 ## If you've been using `conda env` and `environment.yml`
 
