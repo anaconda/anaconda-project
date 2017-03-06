@@ -77,10 +77,11 @@ def _parse_args_and_run_subcommand(argv):
                 action='store',
                 help="A command name from anaconda-project.yml (env spec for this command will be used)")
 
-    def add_env_spec_name_arg(preset):
+    def add_env_spec_name_arg(preset, required):
         preset.add_argument('-n',
                             '--name',
                             metavar='ENVIRONMENT_SPEC_NAME',
+                            required=required,
                             action='store',
                             help="Name of the environment spec from anaconda-project.yml")
 
@@ -217,12 +218,12 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser('add-env-spec', help="Add a new environment spec to the project")
     add_directory_arg(preset)
     add_package_args(preset)
-    add_env_spec_name_arg(preset)
+    add_env_spec_name_arg(preset, required=True)
     preset.set_defaults(main=environment_commands.main_add)
 
     preset = subparsers.add_parser('remove-env-spec', help="Remove an environment spec from the project")
     add_directory_arg(preset)
-    add_env_spec_name_arg(preset)
+    add_env_spec_name_arg(preset, required=True)
     preset.set_defaults(main=environment_commands.main_remove)
 
     preset = subparsers.add_parser('list-env-specs', help="List all environment specs for the project")
@@ -231,7 +232,7 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('export-env-spec', help="Save an environment spec as a conda environment file")
     add_directory_arg(preset)
-    add_env_spec_name_arg(preset)
+    add_env_spec_name_arg(preset, required=False)
     preset.add_argument('filename', metavar='ENVIRONMENT_FILE')
     preset.set_defaults(main=environment_commands.main_export)
 
