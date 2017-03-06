@@ -19,6 +19,7 @@ import pytest
 
 from anaconda_project.env_spec import _load_environment_yml
 from anaconda_project.conda_meta_file import DEFAULT_RELATIVE_META_PATH, META_DIRECTORY
+from anaconda_project.version import version
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
                                                           with_directory_contents_completing_project_file)
 from anaconda_project.internal import conda_api
@@ -2150,6 +2151,7 @@ def test_get_publication_info_from_empty_project():
             'name': os.path.basename(dirname),
             'url_friendly_name': os.path.basename(dirname),
             'description': '',
+            'anaconda_project_version': version,
             'commands': {},
             'env_specs': {
                 'default': {
@@ -2237,6 +2239,7 @@ def test_get_publication_info_from_complex_project():
             'name': 'foo bar',
             'url_friendly_name': 'foo-bar',
             'description': 'A very complicated project.',
+            'anaconda_project_version': version,
             'commands': {'bar': {'description': 'echo boo',
                                  'env_spec': 'lol',
                                  'supports_http_options': False},
