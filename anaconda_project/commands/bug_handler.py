@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 
+import anaconda_project.commands.console_utils as console_utils
 from anaconda_project.internal.slugify import slugify
 
 
@@ -45,6 +46,9 @@ def handle_bugs(main_func, program_name, details_dict):
             print("An unexpected error occurred, most likely a bug in %s." % program_name, file=sys.stderr)
             print("    (The error was: %s: %s)" % (exception_type.__name__, str(exception_value)), file=sys.stderr)
 
+            # so batch jobs have the details in their logs
+            output_to_console = not console_utils.stdin_is_interactive()
+
             when = datetime.date.today().isoformat()
             prefix = "bug_details_%s_%s_" % (slugified_program_name, when)
             with tempfile.NamedTemporaryFile(prefix=prefix, suffix=".txt", delete=False) as bugfile:
@@ -53,6 +57,8 @@ def handle_bugs(main_func, program_name, details_dict):
                 def output(s):
                     bugfile.write(s.encode('utf-8'))
                     bugfile.write("\n".encode('utf-8'))
+                    if output_to_console:
+                        print(s, file=sys.stderr)
 
                 output("Bug details for %s error on %s" % (program_name, when))
                 output("")
@@ -61,7 +67,11 @@ def handle_bugs(main_func, program_name, details_dict):
                 output(pprint.pformat(details_dict))
                 output("")
                 output("\n".join(traceback.format_exception(exception_type, exception_value, exception_trace)))
-            print("Details about the error were saved to %s" % report_name, file=sys.stderr)
+
+            if output_to_console:
+                print("Above details were also saved to %s" % report_name, file=sys.stderr)
+            else:
+                print("Details about the error were saved to %s" % report_name, file=sys.stderr)
         except Exception:
             # re-raise the original exception, which is probably more useful
             # than reporting whatever was broken about our bug handling code

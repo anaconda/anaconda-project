@@ -168,6 +168,11 @@ def test_main_calls_prepare(monkeypatch, capsys):
 def test_main_when_buggy(capsys, monkeypatch):
     from anaconda_project.commands.main import main
 
+    def mock_is_interactive():
+        return True
+
+    monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
     def mock_main():
         raise AssertionError("It did not work")
 
