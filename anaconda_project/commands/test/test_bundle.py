@@ -38,8 +38,8 @@ def test_archive_command_on_simple_project(capsys):
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert ('  added some_name/%s\n  added some_name/%s\nCreated project archive %s\n' %
-                (DEFAULT_PROJECT_FILENAME, "foo.py", archivefile)) == out
+        assert ('  added %s\n  added %s\nCreated project archive %s\n' % (os.path.join(
+            "some_name", DEFAULT_PROJECT_FILENAME), os.path.join("some_name", "foo.py"), archivefile)) == out
 
         with zipfile.ZipFile(archivefile, mode='r') as zf:
             assert [os.path.basename(x) for x in sorted(zf.namelist())] == [DEFAULT_PROJECT_FILENAME, "foo.py"]
