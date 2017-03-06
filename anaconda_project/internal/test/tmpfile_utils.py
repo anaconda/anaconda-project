@@ -79,8 +79,15 @@ def complete_project_file_content(content):
     yaml = _load_string(content)
     if yaml is None:
         raise AssertionError("Broken yaml: %r" % content)
-    elif 'env_specs' not in yaml:
-        modified = (content + "\n" + "env_specs:\n" + "  default:\n" + "    description: default\n" + "\n")
+
+    modified = content
+    if 'env_specs' not in yaml:
+        modified = (modified + "\n" + "env_specs:\n" + "  default:\n" + "    description: default\n" + "\n")
+
+    if 'name' not in yaml:
+        modified = (modified + "\n" + "name: some_name\n")
+
+    if modified is not content:
         try:
             # make sure we didn't mangle it
             _load_string(modified)

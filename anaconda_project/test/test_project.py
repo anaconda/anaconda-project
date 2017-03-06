@@ -297,7 +297,10 @@ def test_get_name_from_conda_meta_yaml():
         assert project.name == "foo"
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_RELATIVE_META_PATH: """
+        {DEFAULT_PROJECT_FILENAME: """
+name: null
+        """,
+         DEFAULT_RELATIVE_META_PATH: """
 package:
   name: foo
 """}, check_name_from_meta_file)
@@ -309,10 +312,15 @@ def test_broken_name_in_conda_meta_yaml():
         assert [(META_YAML_IN_ERRORS + ": package: name: field should have a string value not []")] == project.problems
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_RELATIVE_META_PATH: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
+name: null
+            """,
+            DEFAULT_RELATIVE_META_PATH: """
 package:
   name: []
-"""}, check_name_from_meta_file)
+"""
+        }, check_name_from_meta_file)
 
 
 def test_get_name_from_project_file():
@@ -352,7 +360,12 @@ def test_get_name_from_directory_name():
         project = project_no_dedicated_env(dirname)
         assert project.name == os.path.basename(dirname)
 
-    with_directory_contents_completing_project_file(dict(), check_name_from_directory_name)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+name: null
+"""
+        }, check_name_from_directory_name)
 
 
 def test_set_name_in_project_file():
@@ -2392,6 +2405,25 @@ def test_project_problem():
     assert fixable.fix(None) == 42
 
 
+def test_auto_fix_missing_name():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert len(project.problems) == 1
+        assert len(project.problem_objects) == 1
+        problem = project.problem_objects[0]
+        assert problem.text == ("%s: The 'name:' field is missing." % DEFAULT_PROJECT_FILENAME)
+        assert problem.can_fix
+
+        problem.fix(project)
+        project.project_file.save()
+
+        assert project.problems == []
+        assert project.name == os.path.basename(dirname)
+        assert 'name' in project.project_file.root
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "env_specs:\n  default: {}\n"}, check)
+
+
 def test_auto_fix_missing_env_specs_section():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -2782,6 +2814,7 @@ def test_unknown_field_in_env_spec():
 def test_empty_file_has_problems():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        assert ['anaconda-project.yml: The env_specs section is empty.'] == project.problems
+        assert ["anaconda-project.yml: The 'name:' field is missing.",
+                "anaconda-project.yml: The env_specs section is empty."] == project.problems
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
