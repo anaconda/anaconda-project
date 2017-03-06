@@ -21,6 +21,7 @@ from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.project_commands import ProjectCommand
 from anaconda_project.project_file import ProjectFile
 from anaconda_project.archiver import _list_relative_paths_for_unignored_project_files
+from anaconda_project.version import version
 
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.internal.simple_status import SimpleStatus
@@ -1130,6 +1131,7 @@ class Project(object):
         # manually provide it.
         json['url_friendly_name'] = self.url_friendly_name
         json['description'] = self.description
+        json['anaconda_project_version'] = version
         commands = dict()
         for key, command in self.commands.items():
             commands[key] = dict(description=command.description)
