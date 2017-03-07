@@ -27,6 +27,10 @@ name: <NAME>
 #
 icon:
 #
+# Set a one-sentence-or-so 'description' key with project details
+#
+description:
+#
 # In the commands section, list your runnable scripts, notebooks, and other code.
 # Use `anaconda-project add-command` to add commands.
 #
