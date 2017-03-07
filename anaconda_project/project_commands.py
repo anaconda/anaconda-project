@@ -37,9 +37,10 @@ def _is_windows():
 
 _ArgSpec = namedtuple('_ArgSpec', ['option', 'has_value'])
 
-_http_specs = (_ArgSpec('--anaconda-project-host', True), _ArgSpec('--anaconda-project-port', True),
-               _ArgSpec('--anaconda-project-url-prefix', True), _ArgSpec('--anaconda-project-no-browser', False),
-               _ArgSpec('--anaconda-project-iframe-hosts', True), _ArgSpec('--anaconda-project-use-xheaders', False))
+_http_specs = (_ArgSpec('--anaconda-project-host', True), _ArgSpec('--anaconda-project-address', True),
+               _ArgSpec('--anaconda-project-port', True), _ArgSpec('--anaconda-project-url-prefix', True),
+               _ArgSpec('--anaconda-project-no-browser', False), _ArgSpec('--anaconda-project-iframe-hosts', True),
+               _ArgSpec('--anaconda-project-use-xheaders', False))
 
 
 class _ArgsTransformer(object):
@@ -98,7 +99,7 @@ class _BokehArgsTransformer(_ArgsTransformer):
     def add_args(self, results, args):
         added = []
         for (option, values) in results:
-            if option in ('--anaconda-project-host', '--anaconda-project-port'):
+            if option in ('--anaconda-project-host', '--anaconda-project-port', '--anaconda-project-address'):
                 for v in values:
                     added.append(option.replace('anaconda-project-', ''))
                     added.append(v)
@@ -147,6 +148,10 @@ class _NotebookArgsTransformer(_ArgsTransformer):
             elif option == '--anaconda-project-port':
                 for v in values:
                     added.append(option.replace('anaconda-project-', ''))
+                    added.append(v)
+            elif option == '--anaconda-project-address':
+                for v in values:
+                    added.append('--ip')
                     added.append(v)
             elif option == '--anaconda-project-no-browser':
                 if values and values[0] is True:
