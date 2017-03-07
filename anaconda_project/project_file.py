@@ -106,6 +106,8 @@ class ProjectFile(YamlFile):
 
         sections['icon'] = ("Set the 'icon' key to give your project an icon\n")
 
+        sections['description'] = ("Set a one-sentence-or-so 'description' key with project details\n")
+
         sections['commands'] = ("In the commands section, list your runnable scripts, notebooks, and other code.\n" +
                                 "Use `anaconda-project add-command` to add commands.\n")
 
@@ -147,7 +149,7 @@ class ProjectFile(YamlFile):
             if section_name == 'name':
                 default_name = os.path.basename(os.path.dirname(self.filename))
                 section_body = " " + json.dumps(default_name)
-            elif section_name in ('icon', ):
+            elif section_name in ('icon', 'description'):
                 section_body = ""  # empty body means null, not empty string
             elif section_name in ('channels', 'packages'):
                 section_body = "  []"
