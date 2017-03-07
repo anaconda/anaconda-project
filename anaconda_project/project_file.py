@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 import os
 from collections import OrderedDict
+import json
 
 from anaconda_project.yaml_file import YamlFile
 from anaconda_project.env_spec import EnvSpec
@@ -143,8 +144,11 @@ class ProjectFile(YamlFile):
             # future: this is if/else is silly, we should be
             # assigning these bodies up above when we assign the
             # comments.
-            if section_name in ('name', 'icon'):
-                section_body = ""
+            if section_name == 'name':
+                default_name = os.path.basename(os.path.dirname(self.filename))
+                section_body = " " + json.dumps(default_name)
+            elif section_name in ('icon', ):
+                section_body = ""  # empty body means null, not empty string
             elif section_name in ('channels', 'packages'):
                 section_body = "  []"
             else:

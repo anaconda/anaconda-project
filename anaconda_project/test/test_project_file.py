@@ -21,7 +21,7 @@ expected_default_file_template = """# This is an Anaconda project file.
 #
 # Set the 'name' key to name your project
 #
-name:
+name: <NAME>
 #
 # Set the 'icon' key to give your project an icon
 #
@@ -103,7 +103,8 @@ def test_create_missing_project_file():
         assert os.path.exists(filename)
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
-            assert expected_default_file == contents
+            expected = expected_default_file.replace("<NAME>", os.path.basename(dirname))
+            assert expected == contents
 
     with_directory_contents(dict(), create_file)
 
@@ -200,7 +201,8 @@ def test_create_missing_project_file_one_default_env_spec():
         assert os.path.exists(filename)
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
-            assert expected_one_env_spec_contents == contents
+            expected = expected_one_env_spec_contents.replace("<NAME>", os.path.basename(dirname))
+            assert expected == contents
 
     with_directory_contents(dict(), create_file)
 
@@ -257,6 +259,7 @@ def test_create_missing_project_file_two_default_env_specs():
         assert os.path.exists(filename)
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
-            assert expected_two_env_spec_contents == contents
+            expected = expected_two_env_spec_contents.replace("<NAME>", os.path.basename(dirname))
+            assert expected == contents
 
     with_directory_contents(dict(), create_file)

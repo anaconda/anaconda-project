@@ -183,6 +183,23 @@ class _ConfigCache(object):
         self.problem_strings = list([p.text for p in self.problems if not p.only_a_suggestion])
 
     def _update_name(self, problems, project_file, conda_meta_file):
+        # For back-compat reasons, name=null means auto-name at runtime,
+        # while name field missing entirely is an error.
+        default_name = os.path.basename(self.directory_path)
+
+        if 'name' not in project_file.root:
+
+            def set_name_field(project):
+                project.project_file.set_value('name', default_name)
+
+            problems.append(ProjectProblem(text="The 'name:' field is missing.",
+                                           filename=project_file.filename,
+                                           fix_prompt=("Name the project '%s'?" % default_name),
+                                           fix_function=set_name_field))
+            # Note: we continue on here to set set the default name below,
+            # just to avoid dealing with `project.name is None` elsewhere
+            # in the code, but we don't save the name to the project_file.
+
         name = project_file.get_value('name', None)
         if name is not None:
             if not is_string(name):
@@ -200,7 +217,7 @@ class _ConfigCache(object):
                 name = None
 
         if name is None:
-            name = os.path.basename(self.directory_path)
+            name = default_name
 
         self.name = name
 
