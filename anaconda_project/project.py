@@ -12,7 +12,6 @@ import os
 
 from anaconda_project.env_spec import (EnvSpec, _anaconda_default_env_spec, _find_importable_spec,
                                        _find_out_of_sync_importable_spec)
-from anaconda_project.conda_meta_file import CondaMetaFile, META_DIRECTORY
 from anaconda_project.plugins.registry import PluginRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
@@ -124,18 +123,15 @@ class _ConfigCache(object):
         self.commands = dict()
         self.default_command_name = None
         self.project_file_count = 0
-        self.conda_meta_file_count = 0
         self.env_specs = dict()
         self.default_env_spec_name = None
         self.global_base_env_spec = None
 
-    def update(self, project_file, conda_meta_file):
-        if project_file.change_count == self.project_file_count and \
-           conda_meta_file.change_count == self.conda_meta_file_count:
+    def update(self, project_file):
+        if project_file.change_count == self.project_file_count:
             return
 
         self.project_file_count = project_file.change_count
-        self.conda_meta_file_count = conda_meta_file.change_count
 
         requirements = []
         problems = []
@@ -149,20 +145,15 @@ class _ConfigCache(object):
                                            filename=project_file.filename,
                                            line_number=project_file.corrupted_maybe_line,
                                            column_number=project_file.corrupted_maybe_column))
-        if conda_meta_file.corrupted:
-            problems.append(ProjectProblem(text=("Syntax error: %s" % (conda_meta_file.corrupted_error_message)),
-                                           filename=conda_meta_file.filename,
-                                           line_number=project_file.corrupted_maybe_line,
-                                           column_number=project_file.corrupted_maybe_column))
 
-        if project_exists and not (project_file.corrupted or conda_meta_file.corrupted):
+        if project_exists and not project_file.corrupted:
             _unknown_field_suggestions(project_file, problems, project_file.root,
                                        ('name', 'description', 'icon', 'variables', 'downloads', 'services',
                                         'env_specs', 'commands', 'packages', 'channels', 'skip_imports'))
 
-            self._update_name(problems, project_file, conda_meta_file)
+            self._update_name(problems, project_file)
             self._update_description(problems, project_file)
-            self._update_icon(problems, project_file, conda_meta_file)
+            self._update_icon(problems, project_file)
             # future: we could un-hardcode this so plugins can add stuff here
             self._update_variables(requirements, problems, project_file)
             self._update_downloads(requirements, problems, project_file)
@@ -174,7 +165,7 @@ class _ConfigCache(object):
             self._update_conda_env_requirements(requirements, problems, project_file)
 
             # this MUST be after we update env reqs so we have the valid env spec names
-            self._update_commands(problems, project_file, conda_meta_file, requirements)
+            self._update_commands(problems, project_file, requirements)
 
             self._verify_command_dependencies(problems, project_file)
 
@@ -182,7 +173,7 @@ class _ConfigCache(object):
         self.problems = _make_problems_into_objects(problems)
         self.problem_strings = list([p.text for p in self.problems if not p.only_a_suggestion])
 
-    def _update_name(self, problems, project_file, conda_meta_file):
+    def _update_name(self, problems, project_file):
         # For back-compat reasons, name=null means auto-name at runtime,
         # while name field missing entirely is an error.
         default_name = os.path.basename(self.directory_path)
@@ -210,13 +201,6 @@ class _ConfigCache(object):
                 name = None
 
         if name is None:
-            name = conda_meta_file.name
-            if name is not None and not is_string(name):
-                _file_problem(problems, conda_meta_file,
-                              "package: name: field should have a string value not %r" % name)
-                name = None
-
-        if name is None:
             name = default_name
 
         self.name = name
@@ -232,20 +216,11 @@ class _ConfigCache(object):
 
         self.description = desc
 
-    def _update_icon(self, problems, project_file, conda_meta_file):
+    def _update_icon(self, problems, project_file):
         icon = project_file.get_value('icon', None)
         if icon is not None and not is_string(icon):
             _file_problem(problems, project_file, "icon: field should have a string value not %r" % (icon))
             icon = None
-
-        if icon is None:
-            icon = conda_meta_file.icon
-            if icon is not None and not is_string(icon):
-                _file_problem(problems, conda_meta_file, "app: icon: field should have a string value not %r" % icon)
-                icon = None
-            if icon is not None:
-                # relative to conda.recipe
-                icon = os.path.join(META_DIRECTORY, icon)
 
         if icon is not None:
             icon = os.path.join(self.directory_path, icon)
@@ -588,7 +563,7 @@ class _ConfigCache(object):
         env_requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)
         requirements.append(env_requirement)
 
-    def _update_commands(self, problems, project_file, conda_meta_file, requirements):
+    def _update_commands(self, problems, project_file, requirements):
         failed = False
 
         first_command_name = None
@@ -847,12 +822,11 @@ class Project(object):
                 return [_anaconda_default_env_spec(shared_base_spec=None)]
 
         self._project_file = ProjectFile.load_for_directory(directory_path, default_env_specs_func=load_default_specs)
-        self._conda_meta_file = CondaMetaFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
         self._config_cache = _ConfigCache(self._directory_path, plugin_registry)
 
     def _updated_cache(self):
-        self._config_cache.update(self._project_file, self._conda_meta_file)
+        self._config_cache.update(self._project_file)
         return self._config_cache
 
     @property
@@ -869,11 +843,6 @@ class Project(object):
     def plugin_registry(self):
         """Get the ``PluginRegistry`` for this project."""
         return self._config_cache.registry
-
-    @property
-    def conda_meta_file(self):
-        """Get the ``CondaMetaFile`` for this project."""
-        return self._conda_meta_file
 
     @property
     def requirements(self):
