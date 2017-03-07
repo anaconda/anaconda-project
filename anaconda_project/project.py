@@ -1156,6 +1156,10 @@ class Project(object):
                 commands[key]['bokeh_app'] = command.bokeh_app
             if command.notebook is not None:
                 commands[key]['notebook'] = command.notebook
+            if command.windows_cmd_commandline is not None:
+                commands[key]['windows'] = command.windows_cmd_commandline
+            if command.unix_shell_commandline is not None:
+                commands[key]['unix'] = command.unix_shell_commandline
             if command is self.default_command:
                 commands[key]['default'] = True
             commands[key]['env_spec'] = command.default_env_spec_name
