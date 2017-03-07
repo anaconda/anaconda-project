@@ -8,11 +8,15 @@
 #
 # Set the 'name' key to name your project
 #
-name:
+name: Quote API
 #
 # Set the 'icon' key to give your project an icon
 #
 icon:
+#
+# Set the 'description' key to a one-liner summary
+#
+description: An example of a custom HTTP app, using the Falcon framework.
 #
 # In the commands section, list your runnable scripts, notebooks, and other code.
 # Use `anaconda-project add-command` to add commands.
