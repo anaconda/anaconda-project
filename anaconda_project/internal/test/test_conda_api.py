@@ -633,13 +633,22 @@ def test_resolve_dependencies_ignores_rmtree_failure(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
 
+    def mock_isdir(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr('os.path.isdir', mock_isdir)
+
+    called = dict()
+
     def mock_rmtree(*args, **kwargs):
+        called['yes'] = True
         raise Exception("did not rm the tree")
 
     monkeypatch.setattr('shutil.rmtree', mock_rmtree)
 
     result = conda_api.resolve_dependencies(['foo=1.0'])
 
+    assert 'yes' in called
     assert [('mkl', '2017.0.1', '0')] == result
 
 

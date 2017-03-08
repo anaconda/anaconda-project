@@ -178,8 +178,14 @@ def resolve_dependencies(pkgs, channels=()):
                         pkgs)
 
     # even with --dry-run, conda wants to create the prefix,
-    # so we ensure it's somewhere out of the way
+    # so we ensure it's somewhere out of the way.
     prefix = tempfile.mkdtemp(prefix="kapsel_resolve_")
+
+    # conda 4.1 (and possibly other versions) will complain
+    # if the directory already exists. An evil attacker
+    # on a multiuser system could replace this with a file
+    # after we remove it, and then conda's mkdir would fail.
+    os.rmdir(prefix)
 
     cmd_list = ['create', '--yes', '--quiet', '--json', '--dry-run', '--prefix', prefix]
 
@@ -191,7 +197,8 @@ def resolve_dependencies(pkgs, channels=()):
         parsed = _call_and_parse_json(cmd_list)
     finally:
         try:
-            shutil.rmtree(prefix)
+            if os.path.isdir(prefix):
+                shutil.rmtree(prefix)
         except Exception:
             pass
 
