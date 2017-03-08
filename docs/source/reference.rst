@@ -187,7 +187,9 @@ The options your command should handle before specifying
    times and indicates a permitted value for the HTTP Host
    header. The value may include a port as well. There will be one
    ``--anaconda-project-host`` option for each host that browsers
-   can connect to.
+   can connect to. This option specifies the application's public
+   hostname:port and does not affect the address or port the
+   application listens on.
  * ``--anaconda-project-port=PORT`` indicates the local port the
    application should listen on; unlike the port which may be
    included in the ``--anaconda-project-host`` option, this port
@@ -197,6 +199,10 @@ The options your command should handle before specifying
    and forwards traffic to the local port. In this scenario, the
    public port is part of ``--anaconda-project-host`` and the
    local port is provided as ``--anaconda-project-port``.
+ * ``--anaconda-project-address=IP`` indicates the IP address the
+   application should listen on. Unlike the host which may be
+   included in the ``--anaconda-project-host`` option, this
+   address may not be the one that browsers connect to.
  * ``--anaconda-project-url-prefix=PREFIX`` gives a path prefix that
    should be the first part of the paths to all
    routes in your application. For example,

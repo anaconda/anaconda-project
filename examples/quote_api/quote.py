@@ -1,3 +1,5 @@
+from __future__ import absolute_import, print_function
+
 from argparse import ArgumentParser
 import falcon
 import gunicorn.app.base
@@ -56,9 +58,10 @@ class HostFilter(object):
 
 # the gunicorn application
 class QuoteApplication(gunicorn.app.base.BaseApplication):
-    def __init__(self, port, prefix, hosts):
+    def __init__(self, port, address, prefix, hosts):
         assert prefix is not None
         assert port is not None
+        assert address is not None
         self.application = falcon.API(middleware=HostFilter(hosts))
         # add_route is pedantic about this
         if prefix != '' and not prefix.startswith("/"):
@@ -66,19 +69,16 @@ class QuoteApplication(gunicorn.app.base.BaseApplication):
         self.application.add_route(prefix + '/quote', QuoteResource())
         self.application.add_route(prefix + "/", IndexResource(prefix))
         self.port = port
+        self.address = address
+        self.prefix = prefix
         super(QuoteApplication, self).__init__()
 
         print("Only connections via these hosts are allowed: " + repr(hosts))
-        print("Starting API server. Try http://localhost:%s%s" % (self.port, prefix + '/quote'))
 
     def load_config(self):
-        # Note that --anaconda-project-host is NOT this address; it is NOT
-        # the address to listen on. --anaconda-project-host specifies the
-        # allowed values of the Host header in an http request,
-        # which is totally different. Another way to put it is
-        # that --anaconda-project-host is the public hostname:port browsers will
-        # be connecting to.
-        self.cfg.set('bind', '%s:%s' % ('0.0.0.0', self.port))
+        # Note: the bind address here is --anaconda-project-address
+        # plus --anaconda-project-port, NOT --anaconda-project-host.
+        self.cfg.set('bind', '%s:%s' % (self.address, self.port))
         self.cfg.set('workers', (multiprocessing.cpu_count() * 2) + 1)
 
     def load(self):
@@ -97,6 +97,7 @@ parser.add_argument('--anaconda-project-use-xheaders',
                     help='Trust X-headers from reverse proxy')
 parser.add_argument('--anaconda-project-url-prefix', action='store', default='', help='Prefix in front of urls')
 parser.add_argument('--anaconda-project-port', action='store', default='8080', help='Port to listen on')
+parser.add_argument('--anaconda-project-address', action='store', default='0.0.0.0', help='IP to listen on')
 parser.add_argument('--anaconda-project-iframe-hosts',
                     action='append',
                     help='Space-separated hosts which can embed us in an iframe per our Content-Security-Policy')
@@ -105,6 +106,14 @@ if __name__ == '__main__':
     # This app accepts but ignores --anaconda-project-no-browser because we never bother to open a browser,
     # and accepts but ignores --anaconda-project-iframe-hosts since iframing an API makes no sense.
     args = parser.parse_args(sys.argv[1:])
-    if not args.project_host:
-        args.project_host = ['localhost:' + args.project_port]
-    QuoteApplication(port=args.project_port, prefix=args.project_url_prefix, hosts=args.project_host).run()
+    if not args.anaconda_project_host:
+        args.anaconda_project_host = ['localhost:' + args.anaconda_project_port]
+    app = QuoteApplication(port=args.anaconda_project_port,
+                           address=args.anaconda_project_address,
+                           prefix=args.anaconda_project_url_prefix,
+                           hosts=args.anaconda_project_host)
+    print("Starting API server. Try http://localhost:%s%s" % (app.port, app.prefix + '/quote'))
+    try:
+        app.run()
+    finally:
+        print("Exiting.")
