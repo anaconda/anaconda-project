@@ -13,7 +13,9 @@ import json
 import os
 import platform
 import re
+import shutil
 import sys
+import tempfile
 
 from anaconda_project.internal import logged_subprocess
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
@@ -22,7 +24,9 @@ from anaconda_project.internal.directory_contains import subdirectory_relative_t
 class CondaError(Exception):
     """General Conda error."""
 
-    pass
+    def __init__(self, message, json=None):
+        super(CondaError, self).__init__(message)
+        self.json = json
 
 
 class CondaEnvExistsError(CondaError):
@@ -39,7 +43,7 @@ def _get_conda_command(extra_args):
     return cmd_list
 
 
-def _call_conda(extra_args):
+def _call_conda(extra_args, json_mode=False):
     cmd_list = _get_conda_command(extra_args)
 
     try:
@@ -49,7 +53,15 @@ def _call_conda(extra_args):
     (out, err) = p.communicate()
     errstr = err.decode().strip()
     if p.returncode != 0:
-        raise CondaError('%s: %s' % (" ".join(cmd_list), errstr))
+        message = errstr
+        if json_mode:
+            try:
+                parsed = json.loads(out.decode())
+                message = parsed.get('message', message)
+            except Exception:
+                pass
+
+        raise CondaError('%s: %s' % (" ".join(cmd_list), message))
     elif errstr != '':
         for line in errstr.split("\n"):
             print("%s %s: %s" % (cmd_list[0], cmd_list[1], line), file=sys.stderr)
@@ -57,7 +69,7 @@ def _call_conda(extra_args):
 
 
 def _call_and_parse_json(extra_args):
-    out = _call_conda(extra_args)
+    out = _call_conda(extra_args, json_mode=True)
     try:
         return json.loads(out.decode())
     except ValueError as e:
@@ -155,6 +167,50 @@ def installed(prefix):
         if len(pieces) == 3:
             result[pieces[0]] = tuple(pieces)
     return result
+
+
+def resolve_dependencies(pkgs, channels=()):
+    """Resolve packages into a full transitive list of (name, version, build) tuples."""
+    if not pkgs or not isinstance(pkgs, (list, tuple)):
+        raise TypeError('must specify a list of one or more packages to install into existing environment, not %r',
+                        pkgs)
+
+    # even with --dry-run, conda wants to create the prefix,
+    # so we ensure it's somewhere out of the way
+    prefix = tempfile.mkdtemp(prefix="kapsel_resolve_")
+
+    cmd_list = ['create', '--yes', '--quiet', '--json', '--dry-run', '--prefix', prefix]
+
+    for channel in channels:
+        cmd_list.extend(['--channel', channel])
+
+    cmd_list.extend(pkgs)
+    try:
+        parsed = _call_and_parse_json(cmd_list)
+    finally:
+        try:
+            shutil.rmtree(prefix)
+        except Exception:
+            pass
+
+    results = []
+    actions = parsed.get('actions', [])
+    for action in actions:
+        links = action.get('LINK', [])
+        for link in links:
+            name = link.get('name', None)
+            version = link.get('version', None)
+            build_string = link.get('build_string', None)
+            if name is not None and \
+               version is not None and \
+               build_string is not None:
+                results.append((name, version, build_string))
+
+    if len(results) == 0:
+        raise CondaError("Could not understand JSON from Conda, could be a problem with this Conda version.",
+                         json=parsed)
+
+    return results
 
 
 def _contains_conda_meta(path):

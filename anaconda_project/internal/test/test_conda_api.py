@@ -6,9 +6,12 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import json
 import os
 import platform
 import pytest
+
+from pprint import pprint
 
 import anaconda_project.internal.conda_api as conda_api
 
@@ -592,3 +595,100 @@ def test_environ_set_prefix_to_root():
     conda_api.environ_set_prefix(environ, prefix, varname='CONDA_PREFIX')
     assert environ['CONDA_PREFIX'] == prefix
     assert environ['CONDA_DEFAULT_ENV'] == 'root'
+
+
+def test_resolve_dependencies_with_actual_conda():
+    try:
+        result = conda_api.resolve_dependencies(['bokeh=0.12.4'])
+    except conda_api.CondaError as e:
+        pprint(e.json)
+        raise e
+
+    names = [pkg[0] for pkg in result]
+    assert 'bokeh' in names
+    names_and_versions = [(pkg[0], pkg[1]) for pkg in result]
+    assert ('bokeh', '0.12.4') in names_and_versions
+    assert len(result) > 1  # bokeh has some dependencies so should be >1
+
+
+def test_resolve_dependencies_for_bogus_package_with_actual_conda():
+    with pytest.raises(conda_api.CondaError) as excinfo:
+        conda_api.resolve_dependencies(['doesnotexistblahblah'])
+    assert 'Package not found' in str(excinfo.value)
+
+
+def test_resolve_dependencies_ignores_rmtree_failure(monkeypatch):
+    def mock_call_conda(extra_args, json_mode):
+        return json.dumps({'actions': [{'LINK': [{'base_url': None,
+                                                  'build_number': 0,
+                                                  'build_string': '0',
+                                                  'channel': 'defaults',
+                                                  'dist_name': 'mkl-2017.0.1-0',
+                                                  'name': 'mkl',
+                                                  'platform': None,
+                                                  'version': '2017.0.1',
+                                                  'with_features_depends': None}]}]}).encode()
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
+
+    def mock_rmtree(*args, **kwargs):
+        raise Exception("did not rm the tree")
+
+    monkeypatch.setattr('shutil.rmtree', mock_rmtree)
+
+    result = conda_api.resolve_dependencies(['foo=1.0'])
+
+    assert [('mkl', '2017.0.1', '0')] == result
+
+
+def test_resolve_dependencies_no_actions_field(monkeypatch):
+    def mock_call_conda(extra_args, json_mode):
+        return json.dumps({'foo': 'bar'}).encode()
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
+
+    with pytest.raises(conda_api.CondaError) as excinfo:
+        conda_api.resolve_dependencies(['foo=1.0'])
+    assert 'Could not understand JSON from Conda' in str(excinfo.value)
+
+
+def test_resolve_dependencies_no_link_op(monkeypatch):
+    def mock_call_conda(extra_args, json_mode):
+        return json.dumps({'actions': [{'SOMETHING': {}}]}).encode()
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
+
+    with pytest.raises(conda_api.CondaError) as excinfo:
+        conda_api.resolve_dependencies(['foo=1.0'])
+    assert 'Could not understand JSON from Conda' in str(excinfo.value)
+
+
+def test_resolve_dependencies_pass_through_channels(monkeypatch):
+    def mock_call_conda(extra_args, json_mode):
+        assert '--channel' in extra_args
+        assert 'abc' in extra_args
+        assert 'nbc' in extra_args
+        return json.dumps({'actions': [{'LINK': [{'base_url': None,
+                                                  'build_number': 0,
+                                                  'build_string': '0',
+                                                  'channel': 'defaults',
+                                                  'dist_name': 'mkl-2017.0.1-0',
+                                                  'name': 'mkl',
+                                                  'platform': None,
+                                                  'version': '2017.0.1',
+                                                  'with_features_depends': None}]}]}).encode()
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
+
+    result = conda_api.resolve_dependencies(['foo=1.0'], channels=['abc', 'nbc'])
+
+    assert [('mkl', '2017.0.1', '0')] == result
+
+
+def test_resolve_dependencies_no_packages():
+    def do_test(dirname):
+        with pytest.raises(TypeError) as excinfo:
+            conda_api.resolve_dependencies(pkgs=[])
+        assert 'must specify a list' in repr(excinfo.value)
+
+    with_directory_contents(dict(), do_test)
