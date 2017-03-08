@@ -60,7 +60,13 @@ def _call_conda(extra_args, json_mode=False):
             try:
                 parsed = json.loads(out.decode())
                 if parsed is not None and isinstance(parsed, dict):
-                    message = parsed.get('message', message)
+                    # some versions of conda do 'error' and others
+                    # both 'error' and 'message' and they appear to
+                    # be the same.
+                    for field in ('message', 'error'):
+                        if field in parsed:
+                            message = parsed[field]
+                            break
             except Exception:
                 pass
 
