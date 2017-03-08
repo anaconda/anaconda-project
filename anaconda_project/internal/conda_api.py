@@ -19,6 +19,7 @@ import tempfile
 
 from anaconda_project.internal import logged_subprocess
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
+from anaconda_project.internal.py2_compat import is_string
 
 
 class CondaError(Exception):
@@ -153,6 +154,16 @@ def remove(prefix, pkgs=None):
     return _call_conda(cmd_list)
 
 
+def _parse_dist(dist):
+    # the "dist" is the basename of a package inside
+    # conda-meta, like "numpy-1.10.4-py34_1"
+    pieces = dist.rsplit('-', 2)
+    if len(pieces) == 3:
+        return tuple(pieces)
+    else:
+        return None
+
+
 def installed(prefix):
     """Get a dict of package names to (name, version, build) tuples."""
     meta_dir = os.path.join(prefix, 'conda-meta')
@@ -165,9 +176,9 @@ def installed(prefix):
             raise CondaError(str(e))
     result = dict()
     for full_name in full_names:
-        pieces = full_name.rsplit('-', 2)
-        if len(pieces) == 3:
-            result[pieces[0]] = tuple(pieces)
+        pieces = _parse_dist(full_name)
+        if pieces is not None:
+            result[pieces[0]] = pieces
     return result
 
 
@@ -204,16 +215,35 @@ def resolve_dependencies(pkgs, channels=()):
 
     results = []
     actions = parsed.get('actions', [])
+    # old conda gives us one dict, newer a list of dicts
+    if isinstance(actions, dict):
+        actions = [actions]
+
     for action in actions:
-        links = action.get('LINK', [])
-        for link in links:
-            name = link.get('name', None)
-            version = link.get('version', None)
-            build_string = link.get('build_string', None)
-            if name is not None and \
-               version is not None and \
-               build_string is not None:
-                results.append((name, version, build_string))
+        if isinstance(action, dict):
+            links = action.get('LINK', [])
+            for link in links:
+                found = None
+                # 4.1 conda gives us a string like
+                # 'python-3.6.0-0 2' and 4.3 gives us a
+                # dict with the fields already decomposed.
+                if isinstance(link, dict):
+                    name = link.get('name', None)
+                    version = link.get('version', None)
+                    build_string = link.get('build_string', None)
+                    if name is not None and \
+                       version is not None and \
+                       build_string is not None:
+                        found = (name, version, build_string)
+                elif is_string(link):
+                    # we have a string like 'python-3.6.0-0 2'
+                    pieces = link.split()
+                    if len(pieces) > 0:
+                        # 'found' can be None if we didn't understand the string
+                        found = _parse_dist(pieces[0])
+
+                if found is not None:
+                    results.append(found)
 
     if len(results) == 0:
         raise CondaError("Could not understand JSON from Conda, could be a problem with this Conda version.",
