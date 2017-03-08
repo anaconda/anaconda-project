@@ -616,7 +616,8 @@ def test_resolve_dependencies_for_bogus_package_with_actual_conda():
         conda_api.resolve_dependencies(['doesnotexistblahblah'])
     if hasattr(excinfo.value, 'json'):
         pprint(excinfo.value.json)
-    assert 'Package not found' in str(excinfo.value)
+    exc_str = str(excinfo.value)
+    assert 'Package not found' in exc_str or 'Package missing' in exc_str
 
 
 def test_resolve_dependencies_ignores_rmtree_failure(monkeypatch):
