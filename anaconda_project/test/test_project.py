@@ -18,7 +18,6 @@ import time
 import pytest
 
 from anaconda_project.env_spec import _load_environment_yml
-from anaconda_project.conda_meta_file import DEFAULT_RELATIVE_META_PATH, META_DIRECTORY
 from anaconda_project.version import version
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
                                                           with_directory_contents_completing_project_file)
@@ -33,10 +32,6 @@ from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
 
-# someday we might like this to be "conda.recipe/meta.yaml" but
-# hasn't been important enough for now.
-META_YAML_IN_ERRORS = "meta.yaml"
-
 
 def test_properties():
     def check_properties(dirname):
@@ -44,7 +39,6 @@ def test_properties():
         assert project.problems == []
         assert dirname == project.directory_path
         assert dirname == os.path.dirname(project.project_file.filename)
-        assert dirname == os.path.dirname(os.path.dirname(project.conda_meta_file.filename))
         assert project.name == os.path.basename(dirname)
         assert project.url_friendly_name == os.path.basename(dirname)
         assert project.description == ''
@@ -58,7 +52,6 @@ def test_ignore_trailing_slash_on_dirname():
         assert project.problems == []
         assert dirname == project.directory_path
         assert dirname == os.path.dirname(project.project_file.filename)
-        assert dirname == os.path.dirname(os.path.dirname(project.conda_meta_file.filename))
         assert project.name == os.path.basename(dirname)
 
     with_directory_contents(dict(), check_properties)
@@ -292,53 +285,15 @@ variables:
 """}, check_override_plugin_registry)
 
 
-def test_get_name_from_conda_meta_yaml():
-    def check_name_from_meta_file(dirname):
-        project = project_no_dedicated_env(dirname)
-        assert project.name == "foo"
-
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
-name: null
-        """,
-         DEFAULT_RELATIVE_META_PATH: """
-package:
-  name: foo
-"""}, check_name_from_meta_file)
-
-
-def test_broken_name_in_conda_meta_yaml():
-    def check_name_from_meta_file(dirname):
-        project = project_no_dedicated_env(dirname)
-        assert [(META_YAML_IN_ERRORS + ": package: name: field should have a string value not []")] == project.problems
-
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
-name: null
-            """,
-            DEFAULT_RELATIVE_META_PATH: """
-package:
-  name: []
-"""
-        }, check_name_from_meta_file)
-
-
 def test_get_name_from_project_file():
     def check_name_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
         assert project.name == "foo"
 
-        assert project.conda_meta_file.name == "from_meta"
-
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 name: foo
-    """,
-         DEFAULT_RELATIVE_META_PATH: """
-package:
-  name: from_meta
-"""}, check_name_from_project_file)
+    """}, check_name_from_project_file)
 
 
 def test_broken_name_in_project_file():
@@ -349,11 +304,7 @@ def test_broken_name_in_project_file():
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 name: []
-    """,
-         DEFAULT_RELATIVE_META_PATH: """
-package:
-  name: from_meta
-"""}, check_name_from_project_file)
+    """}, check_name_from_project_file)
 
 
 def test_get_name_from_directory_name():
@@ -411,48 +362,16 @@ description: []
     """}, check_description_from_project_file)
 
 
-def test_get_icon_from_conda_meta_yaml():
-    def check_icon_from_meta_file(dirname):
-        project = project_no_dedicated_env(dirname)
-        assert project.icon == os.path.join(dirname, META_DIRECTORY, "foo.png")
-
-    with_directory_contents_completing_project_file(
-        {DEFAULT_RELATIVE_META_PATH: """
-app:
-  icon: foo.png
-""",
-         "conda.recipe/foo.png": ""}, check_icon_from_meta_file)
-
-
-def test_broken_icon_in_conda_meta_yaml():
-    def check_icon_from_meta_file(dirname):
-        project = project_no_dedicated_env(dirname)
-        assert [(META_YAML_IN_ERRORS + ": app: icon: field should have a string value not []")] == project.problems
-
-    with_directory_contents_completing_project_file(
-        {DEFAULT_RELATIVE_META_PATH: """
-app:
-  icon: []
-"""}, check_icon_from_meta_file)
-
-
 def test_get_icon_from_project_file():
     def check_icon_from_project_file(dirname):
         project = project_no_dedicated_env(dirname)
         assert project.icon == os.path.join(dirname, "foo.png")
 
-        assert project.conda_meta_file.icon == "from_meta.png"
-
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 icon: foo.png
-    """,
-         DEFAULT_RELATIVE_META_PATH: """
-app:
-  icon: from_meta.png
-""",
-         "foo.png": "",
-         "conda.recipe/from_meta.png": ""}, check_icon_from_project_file)
+        """,
+         "foo.png": ""}, check_icon_from_project_file)
 
 
 def test_broken_icon_in_project_file():
@@ -463,12 +382,7 @@ def test_broken_icon_in_project_file():
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 icon: []
-    """,
-         DEFAULT_RELATIVE_META_PATH: """
-app:
-  icon: from_meta.png
-         """,
-         "conda.recipe/from_meta.png": ""}, check_icon_from_project_file)
+    """}, check_icon_from_project_file)
 
 
 def test_nonexistent_icon_in_project_file():
@@ -1048,13 +962,12 @@ def test_variables_requirements_not_a_collection():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42\n"}, check_file)
 
 
-def test_corrupted_project_file_and_meta_file():
+def test_corrupted_project_file():
     def check_problem(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.requirements)
-        assert 2 == len(project.problems)
+        assert 1 == len(project.problems)
         assert 'anaconda-project.yml: Syntax error: ' in project.problems[0]
-        assert 'meta.yaml: Syntax error: ' in project.problems[1]
 
         problem1 = project.problem_objects[0]
         assert problem1.maybe_line_number == 2
@@ -1062,23 +975,10 @@ def test_corrupted_project_file_and_meta_file():
         assert problem1.maybe_filename == project.project_file.filename
         assert problem1.text_without_filename.startswith("Syntax error:")
 
-        problem2 = project.problem_objects[1]
-        assert problem2.maybe_line_number == 2
-        assert problem2.maybe_column_number == 9
-        assert problem2.maybe_filename == project.conda_meta_file.filename
-        assert problem2.text_without_filename.startswith("Syntax error:")
-
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 ^
 variables:
   FOO
-""",
-         DEFAULT_RELATIVE_META_PATH: """
-^
-package:
-  name: foo
-  version: 1.2.3
 """}, check_problem)
 
 
@@ -1929,26 +1829,6 @@ commands:
   foo:
     %s: foo
 """ % not_us}, check_exec_info)
-
-
-# we used to fill in empty commands from meta.yaml, but no more,
-def test_run_argv_from_meta_file_with_name_in_project_file():
-    def check_run_argv(dirname):
-        project = project_no_dedicated_env(dirname)
-        assert ["%s: command 'foo' does not have a command line in it" % project.project_file.basename
-                ] == project.problems
-
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
-commands:
-  foo: {}
-""",
-            DEFAULT_RELATIVE_META_PATH: """
-app:
-  entry: foo bar ${PREFIX}
-"""
-        }, check_run_argv)
 
 
 if platform.system() == 'Windows':

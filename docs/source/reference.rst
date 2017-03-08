@@ -589,19 +589,3 @@ To ask for a running Redis instance:
 .. code-block:: bash
 
   anaconda-project add-service redis
-
-
-Fallback to meta.yaml
-=====================
-
-If you package your project with conda, you may have some
-information already in ``conda.recipe/meta.yaml``;
-``anaconda-project`` uses some of this information too, so you
-do not need to duplicate this information in ``anaconda-project.yml``.
-
-``anaconda-project`` currently reads these fields in ``meta.yaml``:
-
- * `package: name:`
- * `app: icon:`
-
-For more about ``meta.yaml`` see https://conda.io/docs/building/meta-yaml.html
