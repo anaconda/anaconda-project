@@ -614,6 +614,8 @@ def test_resolve_dependencies_with_actual_conda():
 def test_resolve_dependencies_for_bogus_package_with_actual_conda():
     with pytest.raises(conda_api.CondaError) as excinfo:
         conda_api.resolve_dependencies(['doesnotexistblahblah'])
+    if hasattr(excinfo.value, 'json'):
+        pprint(excinfo.value.json)
     assert 'Package not found' in str(excinfo.value)
 
 

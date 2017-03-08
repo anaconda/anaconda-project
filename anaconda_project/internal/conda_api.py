@@ -53,15 +53,17 @@ def _call_conda(extra_args, json_mode=False):
     (out, err) = p.communicate()
     errstr = err.decode().strip()
     if p.returncode != 0:
+        parsed = None
         message = errstr
         if json_mode:
             try:
                 parsed = json.loads(out.decode())
-                message = parsed.get('message', message)
+                if parsed is not None and isinstance(parsed, dict):
+                    message = parsed.get('message', message)
             except Exception:
                 pass
 
-        raise CondaError('%s: %s' % (" ".join(cmd_list), message))
+        raise CondaError('%s: %s' % (" ".join(cmd_list), message), json=parsed)
     elif errstr != '':
         for line in errstr.split("\n"):
             print("%s %s: %s" % (cmd_list[0], cmd_list[1], line), file=sys.stderr)
