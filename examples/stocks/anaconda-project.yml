@@ -2,12 +2,12 @@ name: Stocks Example
 description: An example Bokeh app.
 commands:
   default:
-    bokeh_app: main.py
+    bokeh_app: .
 
 downloads:
   QUANTQUOTE: http://quantquote.com/files/quantquote_daily_sp500_83986.zip
 packages:
-- bokeh=0.11.1
+- bokeh=0.12.4
 - pandas
 env_specs:
   default:
