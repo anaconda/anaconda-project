@@ -60,7 +60,8 @@ install:
   - printenv | sort
   - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
   - if test x"$CONDA_CANARY" = xtrue ; then conda update -n root -c conda-canary conda; fi
-  - conda install -n root conda-build psutil
+  - if test x"$MINICONDA_VERSION" = x"4.1.11" ; then CONDA_BUILD_CONSTRAINT='=2.1.5'; else CONDA_BUILD_CONSTRAINT='' ; fi
+  - conda install -n root conda-build$CONDA_BUILD_CONSTRAINT psutil
   - conda info -a
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       OS_PACKAGES=libffi ;
