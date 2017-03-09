@@ -5,37 +5,63 @@ language: c
 # https://github.com/travis-ci/travis-ci/issues/6861
 sudo: required
 env:
-  - TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests
-  - TRAVIS_PYTHON_VERSION=3.4 TEST_TARGET=tests
-  - TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=tests
-  - TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests
-  - TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=packaging
+  # All supported python versions
+  - MINICONDA_VERSION=4.1.11 TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests CONDA_CANARY=false
+  - MINICONDA_VERSION=4.1.11 TRAVIS_PYTHON_VERSION=3.4 TEST_TARGET=tests CONDA_CANARY=false
+  - MINICONDA_VERSION=4.1.11 TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=tests CONDA_CANARY=false
+  - MINICONDA_VERSION=4.1.11 TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=false
+  # Can build the package
+  - MINICONDA_VERSION=4.1.11 TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=packaging CONDA_CANARY=false
+  # 4.2 miniconda
+  - MINICONDA_VERSION=4.2.12 TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=false
+  # 4.3 miniconda
+  - MINICONDA_VERSION=4.3.11 TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=false
+  # conda canary
+  - MINICONDA_VERSION=4.3.11 TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=true
 os:
   - linux
   - osx
 matrix:
+  # disable all but one job on OS X, we just want to smoke test OS X.
   exclude:
     - os: osx
-      env: TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=packaging
+      env: MINICONDA_VERSION=4.1.11 TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests CONDA_CANARY=false
+    - os: osx
+      env: MINICONDA_VERSION=4.1.11 TRAVIS_PYTHON_VERSION=3.4 TEST_TARGET=tests CONDA_CANARY=false
+    - os: osx
+      env: MINICONDA_VERSION=4.1.11 TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=tests CONDA_CANARY=false
+    - os: osx
+      env: MINICONDA_VERSION=4.1.11 TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=packaging CONDA_CANARY=false
+    - os: osx
+      env: MINICONDA_VERSION=4.2.12 TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=false
+    - os: osx
+      env: MINICONDA_VERSION=4.3.11 TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=false
+    - os: osx
+      env: MINICONDA_VERSION=4.3.11 TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=true
+  allow_failures:
+    # conda canary shouldn't block the build, just show us an FYI
+    - env: MINICONDA_VERSION=4.3.11 TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=true
 install:
   - printenv | sort
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      MINICONDA_VERSION=2 ;
+      MINICONDA_PYVERSION=2 ;
     else
-      MINICONDA_VERSION=3 ;
+      MINICONDA_PYVERSION=3 ;
     fi ;
     if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       MINICONDA_OS=Linux ;
     else
       MINICONDA_OS=MacOSX ;
     fi ;
-    echo "Fetching Python $MINICONDA_VERSION miniconda for $MINICONDA_OS" ;
-    wget https://repo.continuum.io/miniconda/Miniconda$MINICONDA_VERSION-4.1.11-$MINICONDA_OS-x86_64.sh -O miniconda.sh
+    echo "Fetching Python $MINICONDA_PYVERSION miniconda for $MINICONDA_OS" ;
+    wget https://repo.continuum.io/miniconda/Miniconda$MINICONDA_PYVERSION-$MINICONDA_VERSION-$MINICONDA_OS-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p "$HOME"/miniconda
   - source "$HOME"/miniconda/bin/activate root
   - printenv | sort
   - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
-  - conda install -n root conda-build psutil
+  - if test x"$CONDA_CANARY" = xtrue ; then conda update -n root -c conda-canary conda; fi
+  - if test x"$MINICONDA_VERSION" = x"4.1.11" ; then CONDA_BUILD_CONSTRAINT='=2.1.5'; else CONDA_BUILD_CONSTRAINT='' ; fi
+  - conda install -n root conda-build$CONDA_BUILD_CONSTRAINT psutil
   - conda info -a
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       OS_PACKAGES=libffi ;

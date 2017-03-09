@@ -99,16 +99,26 @@ def test_conda_create_no_packages():
     with_directory_contents(dict(), do_test)
 
 
+def _assert_packages_not_found(e):
+    # conda has changed this message several times
+    ok = False
+    for message in ('No packages found', 'Package missing in current', 'Package not found'):
+        if message in str(e):
+            ok = True
+    if not ok:
+        # pytest truncates the exception message sometimes?
+        print("Not the exception we wanted: %r" % e)
+        raise AssertionError("Expecting package not found error, got: %s" % repr(e))
+
+
 def test_conda_create_bad_package():
     def do_test(dirname):
         envdir = os.path.join(dirname, "myenv")
 
         with pytest.raises(conda_api.CondaError) as excinfo:
             conda_api.create(prefix=envdir, pkgs=['this_is_not_a_real_package'])
-        # print this because pytest truncates it
-        print("bad package excinfo.value: " + repr(excinfo.value))
-        # at some point conda changed this error message
-        assert ('No packages found' in repr(excinfo.value) or 'Package missing in current' in repr(excinfo.value))
+
+        _assert_packages_not_found(excinfo.value)
         assert 'this_is_not_a_real_package' in repr(excinfo.value)
 
     with_directory_contents(dict(), do_test)

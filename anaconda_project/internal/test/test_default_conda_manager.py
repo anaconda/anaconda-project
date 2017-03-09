@@ -116,7 +116,8 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         # test for error removing
         with pytest.raises(CondaManagerError) as excinfo:
             manager.remove_packages(prefix=envdir, packages=['ipython'])
-        assert 'no packages found to remove' in str(excinfo.value)
+        # different versions of conda word this differently
+        assert 'no packages found to remove' in str(excinfo.value) or 'Package not found' in str(excinfo.value)
         assert not manager._timestamp_file_up_to_date(envdir, spec)
 
         # test failure to exec pip
