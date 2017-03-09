@@ -59,7 +59,7 @@ install:
   - source "$HOME"/miniconda/bin/activate root
   - printenv | sort
   - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
-  - if "$CONDA_CANARY" ; then conda update -n root -c conda-canary conda; fi
+  - if test x"$CONDA_CANARY" = xtrue ; then conda update -n root -c conda-canary conda; fi
   - conda install -n root conda-build psutil
   - conda info -a
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
