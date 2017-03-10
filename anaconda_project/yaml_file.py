@@ -330,6 +330,7 @@ class YamlFile(object):
                 # It's important to use CommentedMap because it preserves
                 # order.
                 current[p] = CommentedMap()
+                _block_style_all_nodes(current[p])
                 self._dirty = True
 
             current = current[p]
