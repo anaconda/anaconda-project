@@ -111,6 +111,17 @@ def _unknown_field_suggestions(project_file, problems, yaml_dict, known_fields):
                                            only_a_suggestion=True))
 
 
+def _fatal_problem(problems):
+    for p in problems:
+        # strings are fatal problems
+        if not isinstance(p, ProjectProblem):
+            return True
+        # ProjectProblem instances may be fatal problems
+        if not p.only_a_suggestion:
+            return True
+    return False
+
+
 class _ConfigCache(object):
     def __init__(self, directory_path, registry):
         self.directory_path = directory_path
@@ -558,7 +569,7 @@ class _ConfigCache(object):
             self.default_env_spec_name = first_env_spec_name
 
     def _update_conda_env_requirements(self, requirements, problems, project_file):
-        if problems:
+        if _fatal_problem(problems):
             return
 
         env_requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)
