@@ -553,18 +553,19 @@ def test_invalid_specs():
 
 
 def test_conda_style_specs():
-    cases = [('foo', ('foo', None, None)), ('foo=1.0', ('foo', '=1.0', None)), ('foo=1.0*', ('foo', '=1.0*', None)),
-             ('foo=1.0|1.2', ('foo', '=1.0|1.2', None)), ('foo=1.0=2', ('foo', '=1.0=2', None))]
+    cases = [('foo', ('foo', None, None, None, None)), ('foo=1.0', ('foo', '=1.0', None, '1.0', None)),
+             ('foo=1.0*', ('foo', '=1.0*', None, None, None)), ('foo=1.0|1.2', ('foo', '=1.0|1.2', None, None, None)),
+             ('foo=1.0=2', ('foo', '=1.0=2', None, '1.0', '2'))]
     for case in cases:
         assert conda_api.parse_spec(case[0]) == case[1]
 
 
 def test_pip_style_specs():
-    cases = [('foo>=1.0', ('foo', None, '>=1.0')), ('foo >=1.0', ('foo', None, '>=1.0')), ('FOO-Bar >=1.0',
-                                                                                           ('foo-bar', None, '>=1.0')),
-             ('foo >= 1.0', ('foo', None, '>=1.0')), ('foo > 1.0', ('foo', None, '>1.0')),
-             ('foo != 1.0', ('foo', None, '!=1.0')), ('foo <1.0', ('foo', None, '<1.0')), ('foo >=1.0 , < 2.0',
-                                                                                           ('foo', None, '>=1.0,<2.0'))]
+    cases = [('foo>=1.0', ('foo', None, '>=1.0', None, None)), ('foo >=1.0', ('foo', None, '>=1.0', None, None)), (
+        'FOO-Bar >=1.0', ('foo-bar', None, '>=1.0', None, None)), ('foo >= 1.0', ('foo', None, '>=1.0', None, None)),
+             ('foo > 1.0', ('foo', None, '>1.0', None, None)), ('foo != 1.0', ('foo', None, '!=1.0', None, None)),
+             ('foo <1.0', ('foo', None, '<1.0', None, None)), ('foo >=1.0 , < 2.0',
+                                                               ('foo', None, '>=1.0,<2.0', None, None))]
     for case in cases:
         assert conda_api.parse_spec(case[0]) == case[1]
 
@@ -983,3 +984,13 @@ def test_resolve_dependencies_with_conda_41_json(monkeypatch):
     names_and_versions = [(pkg[0], pkg[1]) for pkg in result]
     assert ('bokeh', '0.12.4') in names_and_versions
     assert len(result) > 1  # bokeh has some dependencies so should be >1
+
+
+def test_current_platform_non_x86_linux(monkeypatch):
+    monkeypatch.setattr('platform.machine', lambda: 'armv7l')
+    assert conda_api.current_platform() == 'linux-armv7l'
+
+
+# this test assumes all dev and CI happens on popular platforms.
+def test_current_platform_is_popular():
+    assert conda_api.current_platform() in conda_api.popular_platforms

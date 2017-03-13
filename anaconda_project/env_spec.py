@@ -57,6 +57,10 @@ def _pip_combine_key(spec):
         return parsed.name
 
 
+def _combine_conda_package_lists(first, second):
+    return _combine_keeping_last_duplicate(first, second, key_func=_conda_combine_key)
+
+
 class EnvSpec(object):
     """Represents a set of required conda packages we could potentially instantiate as a Conda environment."""
 
@@ -67,7 +71,8 @@ class EnvSpec(object):
                  pip_packages=(),
                  description=None,
                  inherit_from_names=(),
-                 inherit_from=()):
+                 inherit_from=(),
+                 lock_set=None):
         """Construct a package set with the given name and packages.
 
         Args:
@@ -90,6 +95,7 @@ class EnvSpec(object):
         self._channels_and_packages_hash = None
         self._inherit_from_names = inherit_from_names
         self._inherit_from = inherit_from
+        self._lock_set = lock_set
 
         # inherit_from must be a subset of inherit_from_names
         # except that we can have an anonymous base env spec for
@@ -198,6 +204,23 @@ class EnvSpec(object):
     def pip_package_names_set(self):
         """Pip package names that we require, as a Python set."""
         return set(self._pip_specs_by_name.keys())
+
+    @property
+    def lock_set(self):
+        """Get ``CondaLockSet`` for this env spec."""
+        return self._lock_set
+
+    @property
+    def conda_packages_for_create(self):
+        """Get conda packages (preferring the lock set list if present)."""
+        if self._lock_set is not None:
+            locked = self._lock_set.package_specs_for_current_platform
+        else:
+            locked = []
+
+        packages = _combine_conda_package_lists(self.conda_packages, locked)
+
+        return packages
 
     def _specs_for_package_names(self, names, mapping):
         specs = []

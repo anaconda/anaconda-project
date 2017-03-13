@@ -27,7 +27,7 @@ def _monkeypatch_pwd(monkeypatch, dirname):
     monkeypatch.setattr('os.path.abspath', mock_abspath)
 
 
-def _monkeypatch_add_env_spec(monkeypatch, result):
+def _monkeypatch_record_args(monkeypatch, what, result):
     params = {}
 
     def mock_add_env_spec(*args, **kwargs):
@@ -35,35 +35,29 @@ def _monkeypatch_add_env_spec(monkeypatch, result):
         params['kwargs'] = kwargs
         return result
 
-    monkeypatch.setattr("anaconda_project.project_ops.add_env_spec", mock_add_env_spec)
+    monkeypatch.setattr(what, mock_add_env_spec)
 
     return params
+
+
+def _monkeypatch_add_env_spec(monkeypatch, result):
+    return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.add_env_spec", result)
 
 
 def _monkeypatch_add_packages(monkeypatch, result):
-    params = {}
-
-    def mock_add_packages(*args, **kwargs):
-        params['args'] = args
-        params['kwargs'] = kwargs
-        return result
-
-    monkeypatch.setattr("anaconda_project.project_ops.add_packages", mock_add_packages)
-
-    return params
+    return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.add_packages", result)
 
 
 def _monkeypatch_remove_packages(monkeypatch, result):
-    params = {}
+    return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.remove_packages", result)
 
-    def mock_remove_packages(*args, **kwargs):
-        params['args'] = args
-        params['kwargs'] = kwargs
-        return result
 
-    monkeypatch.setattr("anaconda_project.project_ops.remove_packages", mock_remove_packages)
+def _monkeypatch_lock(monkeypatch, result):
+    return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.lock", result)
 
-    return params
+
+def _monkeypatch_unlock(monkeypatch, result):
+    return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.unlock", result)
 
 
 def _test_environment_command_with_project_file_problems(capsys, monkeypatch, command, append_dirname=False):
@@ -528,3 +522,83 @@ def test_list_packages_with_project_file_problems(capsys, monkeypatch):
                                                          monkeypatch,
                                                          ['anaconda-project', 'list-packages', '--directory'],
                                                          append_dirname=True)
+
+
+def test_lock_all_environments(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_lock(monkeypatch, SimpleStatus(success=True, description='Locked.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'lock'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Locked.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name=None) == params['kwargs']
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_lock_specific_environment(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_lock(monkeypatch, SimpleStatus(success=True, description='Locked.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'lock', '-n', 'foo'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Locked.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name='foo') == params['kwargs']
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_unlock_all_environments(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_unlock(monkeypatch, SimpleStatus(success=True, description='Unlocked.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'unlock'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Unlocked.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name=None) == params['kwargs']
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_unlock_specific_environment(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_unlock(monkeypatch, SimpleStatus(success=True, description='Unlocked.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'unlock', '-n', 'foo'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Unlocked.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name='foo') == params['kwargs']
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_lock_with_project_file_problems(capsys, monkeypatch):
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'lock'])
+
+
+def test_unlock_with_project_file_problems(capsys, monkeypatch):
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'unlock'])

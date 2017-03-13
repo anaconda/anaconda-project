@@ -29,6 +29,7 @@ from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.project import (Project, ProjectProblem)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.project_lock_file import DEFAULT_PROJECT_LOCK_FILENAME
 from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
 
@@ -978,6 +979,27 @@ def test_corrupted_project_file():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 ^
 variables:
+  FOO
+"""}, check_problem)
+
+
+def test_corrupted_project_lock_file():
+    def check_problem(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 0 == len(project.requirements)
+        assert 1 == len(project.problems)
+        assert 'anaconda-project-lock.yml: Syntax error: ' in project.problems[0]
+
+        problem1 = project.problem_objects[0]
+        assert problem1.maybe_line_number == 2
+        assert problem1.maybe_column_number == 5
+        assert problem1.maybe_filename == project.lock_file.filename
+        assert problem1.text_without_filename.startswith("Syntax error:")
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+^
+stuff:
   FOO
 """}, check_problem)
 

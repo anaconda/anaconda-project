@@ -17,11 +17,13 @@ try:
     import ruamel_yaml as ryaml
     from ruamel_yaml.error import YAMLError
     from ruamel_yaml.comments import CommentedMap
+    from ruamel_yaml.comments import CommentedSeq
 except ImportError:  # pragma: no cover
     # this is the upstream version
     import ruamel.yaml as ryaml  # pragma: no cover
     from ruamel.yaml.error import YAMLError  # pragma: no cover
     from ruamel.yaml.comments import CommentedMap  # pragma: no cover
+    from ruamel.yaml.comments import CommentedSeq  # pragma: no cover
 
 import codecs
 import errno
@@ -35,6 +37,8 @@ from anaconda_project.internal.py2_compat import is_string
 
 # We use this in other files (to abstract over the imports above)
 _YAMLError = YAMLError
+_CommentedMap = CommentedMap
+_CommentedSeq = CommentedSeq
 
 
 def _atomic_replace(path, contents, encoding='utf-8'):

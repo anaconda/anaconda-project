@@ -12,7 +12,7 @@ import glob
 import json
 import os
 
-from anaconda_project.conda_manager import CondaManager, CondaEnvironmentDeviations, CondaManagerError
+from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaLockSet, CondaManagerError)
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
 import anaconda_project.internal.makedirs as makedirs
@@ -105,22 +105,46 @@ class DefaultCondaManager(CondaManager):
             # fail we will survive
             pass
 
-    def _find_conda_missing(self, prefix, spec):
+    def resolve_dependencies(self, package_specs):
+        by_platform = {}
+
+        # This has no reason to be a loop now, but it will
+        # soon when we do multi-platform resolve
+        for conda_platform in [conda_api.current_platform()]:
+            deps = conda_api.resolve_dependencies(pkgs=package_specs)
+            locked_specs = ["%s=%s=%s" % dep for dep in deps]
+            by_platform[conda_platform] = locked_specs
+
+        lock_set = CondaLockSet(package_specs_by_platform=by_platform)
+        return lock_set
+
+    def _find_conda_deviations(self, prefix, env_spec):
         try:
             installed = conda_api.installed(prefix)
         except conda_api.CondaError as e:
             raise CondaManagerError("Conda failed while listing installed packages in %s: %s" % (prefix, str(e)))
 
-        # TODO: we don't verify that the environment contains the right versions
-        # https://github.com/Anaconda-Server/anaconda-project/issues/77
-
         missing = set()
+        wrong_version = set()
 
-        for name in spec.conda_package_names_set:
+        for spec_string in env_spec.conda_packages_for_create:
+            spec = conda_api.parse_spec(spec_string)
+            name = spec.name
+
             if name not in installed:
                 missing.add(name)
+            else:
+                # The only constraint we are smart enough to understand is
+                # the one we put in the lock file, which is plain =.
+                # We can't do version comparisons, which is a bug.
+                # We won't notice if non-= constraints are unmet.
+                (_, installed_version, installed_build) = installed[name]
+                if spec.exact_version is not None and spec.exact_version != installed_version:
+                    wrong_version.add(name)
+                elif spec.exact_build_string is not None and spec.exact_build_string != installed_build:
+                    wrong_version.add(name)
 
-        return sorted(list(missing))
+        return (sorted(list(missing)), sorted(list(wrong_version)))
 
     def _find_pip_missing(self, prefix, spec):
         # this is an important optimization to avoid a slow "pip
@@ -156,22 +180,32 @@ class DefaultCondaManager(CondaManager):
 
         if self._timestamp_file_up_to_date(prefix, spec):
             conda_missing = []
+            conda_wrong_version = []
             pip_missing = []
             timestamp_ok = True
         else:
-            conda_missing = self._find_conda_missing(prefix, spec)
+
+            (conda_missing, conda_wrong_version) = self._find_conda_deviations(prefix, spec)
             pip_missing = self._find_pip_missing(prefix, spec)
             timestamp_ok = False
 
-        if len(conda_missing) > 0 or len(pip_missing) > 0:
-            summary = "Conda environment is missing packages: %s" % (", ".join(conda_missing + pip_missing))
+        all_missing_string = ", ".join(conda_missing + pip_missing)
+        all_wrong_version_string = ", ".join(conda_wrong_version)
+
+        if all_missing_string != "" and all_wrong_version_string != "":
+            summary = "Conda environment is missing packages: %s and has wrong versions of: %s" % (
+                all_missing_string, all_wrong_version_string)
+        elif all_missing_string != "":
+            summary = "Conda environment is missing packages: %s" % all_missing_string
+        elif all_wrong_version_string != "":
+            summary = "Conda environment has wrong versions of: %s" % all_wrong_version_string
         elif not timestamp_ok:
             summary = "Conda environment needs to be marked as up-to-date"
         else:
             summary = "OK"
         return CondaEnvironmentDeviations(summary=summary,
                                           missing_packages=conda_missing,
-                                          wrong_version_packages=(),
+                                          wrong_version_packages=conda_wrong_version,
                                           missing_pip_packages=pip_missing,
                                           wrong_version_pip_packages=(),
                                           broken=(not timestamp_ok))
@@ -180,23 +214,23 @@ class DefaultCondaManager(CondaManager):
         if deviations is None:
             deviations = self.find_environment_deviations(prefix, spec)
 
-        command_line_packages = set(spec.conda_packages)
-        # conda won't let us create a completely empty environment
-        if len(command_line_packages) == 0:
-            command_line_packages = set(['python'])
-
         if os.path.isdir(os.path.join(prefix, 'conda-meta')):
-            missing = deviations.missing_packages
-            if len(missing) > 0:
-                specs = spec.specs_for_conda_package_names(missing)
-                assert len(specs) == len(missing)
+            to_update = list(set(deviations.missing_packages + deviations.wrong_version_packages))
+            if len(to_update) > 0:
+                specs = spec.specs_for_conda_package_names(to_update)
+                assert len(specs) == len(to_update)
                 try:
                     conda_api.install(prefix=prefix, pkgs=specs, channels=spec.channels)
                 except conda_api.CondaError as e:
-                    raise CondaManagerError("Failed to install missing packages: {}: {}".format(", ".join(missing), str(
-                        e)))
+                    raise CondaManagerError("Failed to install packages: {}: {}".format(", ".join(specs), str(e)))
         elif create:
             # Create environment from scratch
+
+            command_line_packages = set(spec.conda_packages_for_create)
+            # conda won't let us create a completely empty environment
+            if len(command_line_packages) == 0:
+                command_line_packages = set(['python'])
+
             try:
                 conda_api.create(prefix=prefix, pkgs=list(command_line_packages), channels=spec.channels)
             except conda_api.CondaError as e:

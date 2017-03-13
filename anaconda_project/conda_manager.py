@@ -8,8 +8,12 @@
 from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
+from copy import deepcopy
 
+from anaconda_project.yaml_file import (_CommentedMap, _CommentedSeq, _block_style_all_nodes)
 from anaconda_project.internal.metaclass import with_metaclass
+from anaconda_project.internal import conda_api
+from anaconda_project.env_spec import _combine_conda_package_lists
 
 _conda_manager_classes = []
 
@@ -55,6 +59,27 @@ class CondaManager(with_metaclass(ABCMeta)):
     ``CondaManager`` instances.
 
     """
+
+    @abstractmethod
+    def resolve_dependencies(self, package_specs):
+        """Compute the full transitive graph to install to satisfy package_specs.
+
+        Raised exceptions that are user-interesting conda problems
+        should be subtypes of ``CondaManagerError``.
+
+        The passed-in package specs can be any constraints we want
+        to "hold constant" while computing the other deps.
+
+        The returned value is a ``CondaLockSet``.
+
+        Args:
+            package_specs (list of str): list of specs to hold constant
+
+        Returns:
+            a ``CondaLockSet`` instance
+
+        """
+        pass  # pragma: no cover
 
     @abstractmethod
     def find_environment_deviations(self, prefix, spec):
@@ -185,3 +210,45 @@ class CondaEnvironmentDeviations(object):
     def wrong_version_pip_packages(self):
         """Iterable collection of pip package names an unacceptable version installed."""
         return self._wrong_version_pip_packages
+
+
+class CondaLockSet(object):
+    """Represents a locked set of package versions."""
+
+    def __init__(self, package_specs_by_platform):
+        """Construct a ``CondaLockSet``.
+
+        The passed-in dict should be like:
+
+        {
+           "all" : [ "bokeh=0.12.4=1" ],
+           "linux-64" : [ "libffi=1.2=0" ]
+        }
+
+        Args:
+          packages_by_platform (dict): dict from platform to spec list
+        """
+        # we deepcopy this to avoid sharing issues
+        self._package_specs_by_platform = deepcopy(package_specs_by_platform)
+
+    def package_specs_for_platform(self, platform):
+        """Sequence of package spec strings for the requested platform."""
+        shared = self._package_specs_by_platform.get("all", [])
+        per_platform = self._package_specs_by_platform.get(platform, [])
+        return _combine_conda_package_lists(shared, per_platform)
+
+    @property
+    def package_specs_for_current_platform(self):
+        """Sequence of package spec strings for the current platform."""
+        return self.package_specs_for_platform(platform=conda_api.current_platform())
+
+    def to_json(self):
+        """JSON/YAML version of the lock set."""
+        yaml_dict = _CommentedMap()
+        for platform in self._package_specs_by_platform.keys():
+            packages = _CommentedSeq()
+            for package in self._package_specs_by_platform[platform]:
+                packages.append(package)
+            yaml_dict[platform] = packages
+        _block_style_all_nodes(yaml_dict)
+        return yaml_dict

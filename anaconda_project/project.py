@@ -19,6 +19,7 @@ from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.project_commands import ProjectCommand
 from anaconda_project.project_file import ProjectFile
+from anaconda_project.project_lock_file import ProjectLockFile
 from anaconda_project.archiver import _list_relative_paths_for_unignored_project_files
 from anaconda_project.version import version
 
@@ -112,6 +113,10 @@ def _unknown_field_suggestions(project_file, problems, yaml_dict, known_fields):
 
 def _fatal_problem(problems):
     for p in problems:
+        # strings are fatal problems
+        if not isinstance(p, ProjectProblem):
+            return True
+        # ProjectProblem instances may be fatal problems
         if not p.only_a_suggestion:
             return True
     return False
@@ -130,15 +135,18 @@ class _ConfigCache(object):
         self.commands = dict()
         self.default_command_name = None
         self.project_file_count = 0
+        self.lock_file_count = 0
         self.env_specs = dict()
         self.default_env_spec_name = None
         self.global_base_env_spec = None
 
-    def update(self, project_file):
-        if project_file.change_count == self.project_file_count:
+    def update(self, project_file, lock_file):
+        if project_file.change_count == self.project_file_count and \
+           lock_file.change_count == self.lock_file_count:
             return
 
         self.project_file_count = project_file.change_count
+        self.lock_file_count = lock_file.change_count
 
         requirements = []
         problems = []
@@ -153,10 +161,20 @@ class _ConfigCache(object):
                                            line_number=project_file.corrupted_maybe_line,
                                            column_number=project_file.corrupted_maybe_column))
 
-        if project_exists and not project_file.corrupted:
+        if lock_file.corrupted:
+            problems.append(ProjectProblem(text=("Syntax error: %s" % (lock_file.corrupted_error_message)),
+                                           filename=lock_file.filename,
+                                           line_number=lock_file.corrupted_maybe_line,
+                                           column_number=lock_file.corrupted_maybe_column))
+
+        if project_exists and not (project_file.corrupted or lock_file.corrupted):
             _unknown_field_suggestions(project_file, problems, project_file.root,
                                        ('name', 'description', 'icon', 'variables', 'downloads', 'services',
                                         'env_specs', 'commands', 'packages', 'channels', 'skip_imports'))
+
+            # TODO if this doesn't contain env_specs we get an assertion failure in prepare
+            # when we do lock()
+            _unknown_field_suggestions(lock_file, problems, lock_file.root, ('env_specs', 'locking_enabled'))
 
             self._update_name(problems, project_file)
             self._update_description(problems, project_file)
@@ -165,7 +183,7 @@ class _ConfigCache(object):
             self._update_variables(requirements, problems, project_file)
             self._update_downloads(requirements, problems, project_file)
             self._update_services(requirements, problems, project_file)
-            self._update_env_specs(problems, project_file)
+            self._update_env_specs(problems, project_file, lock_file)
             # this MUST be after we _update_variables since we may get CondaEnvRequirement
             # options in the variables section, and after _update_env_specs
             # since we use those
@@ -336,7 +354,7 @@ class _ConfigCache(object):
                 continue
             ServiceRequirement._parse(self.registry, varname, item, problems, requirements)
 
-    def _update_env_specs(self, problems, project_file):
+    def _update_env_specs(self, problems, project_file, lock_file):
         def _parse_string_list_with_special(parent_dict, key, what, special_filter):
             items = parent_dict.get(key, [])
             if not isinstance(items, (list, tuple)):
@@ -428,13 +446,17 @@ class _ConfigCache(object):
                 (deps, pip_deps) = _parse_packages(attrs)
                 channels = _parse_channels(attrs)
 
+                # TODO should create errors here about type errors etc. in lock file
+                lock_set = lock_file._get_lock_set(name)
+
                 env_spec_attrs[name] = dict(name=name,
                                             conda_packages=deps,
                                             pip_packages=pip_deps,
                                             channels=channels,
                                             description=description,
                                             inherit_from_names=tuple(inherit_from_names),
-                                            inherit_from=())
+                                            inherit_from=(),
+                                            lock_set=lock_set)
 
                 if first_env_spec_name is None:
                     first_env_spec_name = name
@@ -829,11 +851,12 @@ class Project(object):
                 return [_anaconda_default_env_spec(shared_base_spec=None)]
 
         self._project_file = ProjectFile.load_for_directory(directory_path, default_env_specs_func=load_default_specs)
+        self._lock_file = ProjectLockFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
         self._config_cache = _ConfigCache(self._directory_path, plugin_registry)
 
     def _updated_cache(self):
-        self._config_cache.update(self._project_file)
+        self._config_cache.update(self._project_file, self._lock_file)
         return self._config_cache
 
     @property
@@ -845,6 +868,11 @@ class Project(object):
     def project_file(self):
         """Get the ``ProjectFile`` for this project."""
         return self._project_file
+
+    @property
+    def lock_file(self):
+        """Get the ``ProjectLockFile`` for this project."""
+        return self._lock_file
 
     @property
     def plugin_registry(self):

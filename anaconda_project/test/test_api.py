@@ -390,6 +390,46 @@ def test_remove_packages(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_lock(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.lock, project_ops.lock)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_lock(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.lock', mock_lock)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, env_spec_name='foo')
+    result = p.lock(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
+def test_unlock(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.unlock, project_ops.unlock)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_unlock(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.unlock', mock_unlock)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, env_spec_name='foo')
+    result = p.unlock(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_add_command(monkeypatch):
     import anaconda_project.project_ops as project_ops
     _verify_args_match(api.AnacondaProject.add_command, project_ops.add_command)

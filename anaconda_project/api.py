@@ -511,6 +511,36 @@ class AnacondaProject(object):
         """
         return project_ops.remove_packages(project=project, env_spec_name=env_spec_name, packages=packages)
 
+    def lock(self, project, env_spec_name):
+        """Attempt to freeze dependency versions in anaconda-project-lock.yml.
+
+        If the env_spec_name is None rather than a name,
+        all env specs are frozen.
+
+        Args:
+            project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.lock(project=project, env_spec_name=env_spec_name)
+
+    def unlock(self, project, env_spec_name):
+        """Attempt to unfreeze dependency versions in anaconda-project-lock.yml.
+
+        If the env_spec_name is None rather than a name,
+        all env specs are unfrozen.
+
+        Args:
+            project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.unlock(project=project, env_spec_name=env_spec_name)
+
     def add_command(self, project, name, command_type, command, env_spec_name=None, supports_http_options=None):
         """Add a command to anaconda-project.yml.
 

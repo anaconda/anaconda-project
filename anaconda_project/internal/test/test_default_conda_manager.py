@@ -12,6 +12,7 @@ import os
 import platform
 import pytest
 import time
+from pprint import pprint
 
 from anaconda_project.env_spec import EnvSpec
 from anaconda_project.conda_manager import CondaManagerError
@@ -19,6 +20,7 @@ from anaconda_project.version import version
 
 from anaconda_project.internal.default_conda_manager import DefaultCondaManager
 import anaconda_project.internal.pip_api as pip_api
+import anaconda_project.internal.conda_api as conda_api
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
@@ -60,6 +62,21 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     assert spec_with_bad_url_pip_package.pip_packages == ('flake8', 'https://127.0.0.1:24729/nope#egg=phony')
     assert spec_with_bad_url_pip_package.pip_package_names_set == set(('flake8', 'phony'))
 
+    spec_with_old_ipython = EnvSpec(name='myenv',
+                                    conda_packages=['ipython=5.2.2'],
+                                    pip_packages=['flake8'],
+                                    channels=[])
+    assert spec_with_old_ipython.conda_packages == ('ipython=5.2.2', )
+
+    spec_with_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=['flake8'], channels=[])
+    assert spec_with_bokeh.conda_packages == ('bokeh', )
+
+    spec_with_bokeh_and_old_ipython = EnvSpec(name='myenv',
+                                              conda_packages=['bokeh', 'ipython=5.2.2'],
+                                              pip_packages=['flake8'],
+                                              channels=[])
+    assert spec_with_bokeh_and_old_ipython.conda_packages == ('bokeh', 'ipython=5.2.2', )
+
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
 
@@ -89,6 +106,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         deviations = manager.find_environment_deviations(envdir, spec_with_phony_pip_package)
 
         assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ()
         assert deviations.missing_pip_packages == ('nope_not_a_thing', )
 
         with pytest.raises(CondaManagerError) as excinfo:
@@ -100,6 +118,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         deviations = manager.find_environment_deviations(envdir, spec_with_bad_url_pip_package)
 
         assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ()
         assert deviations.missing_pip_packages == ('phony', )
 
         with pytest.raises(CondaManagerError) as excinfo:
@@ -107,8 +126,51 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         assert 'Failed to install missing pip packages' in str(excinfo.value)
         assert not manager._timestamp_file_up_to_date(envdir, spec_with_bad_url_pip_package)
 
+        # test we notice wrong ipython version AND missing bokeh
+        deviations = manager.find_environment_deviations(envdir, spec_with_bokeh_and_old_ipython)
+
+        assert deviations.missing_packages == ('bokeh', )
+        assert deviations.wrong_version_packages == ('ipython', )
+
+        # test we notice only missing bokeh
+        deviations = manager.find_environment_deviations(envdir, spec_with_bokeh)
+
+        assert deviations.missing_packages == ('bokeh', )
+        assert deviations.wrong_version_packages == ()
+
+        # test we notice wrong ipython version and can downgrade
+        deviations = manager.find_environment_deviations(envdir, spec_with_old_ipython)
+
+        assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ('ipython', )
+
+        manager.fix_environment_deviations(envdir, spec_with_old_ipython, deviations)
+
+        assert manager._timestamp_file_up_to_date(envdir, spec_with_old_ipython)
+
+        deviations = manager.find_environment_deviations(envdir, spec_with_old_ipython)
+        assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ()
+
+        # update timestamp; this doesn't re-upgrade because `spec` doesn't
+        # specify an ipython version
+        assert not manager._timestamp_file_up_to_date(envdir, spec)
+
+        deviations = manager.find_environment_deviations(envdir, spec)
+
+        assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ()
+
+        manager.fix_environment_deviations(envdir, spec, deviations)
+        assert manager._timestamp_file_up_to_date(envdir, spec)
+
+        deviations = manager.find_environment_deviations(envdir, spec)
+        assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ()
+
         # test that we can remove a package
         assert manager._timestamp_file_up_to_date(envdir, spec)
+        time.sleep(1)  # removal is fast enough to break our timestamp resolution
         manager.remove_packages(prefix=envdir, packages=['ipython'])
         assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
         assert not manager._timestamp_file_up_to_date(envdir, spec)
@@ -287,3 +349,71 @@ def test_timestamp_file_ignores_failed_write(monkeypatch):
             assert dict(anaconda_project_version=version) == content
 
     with_directory_contents(dict(), do_test)
+
+
+def test_resolve_dependencies_with_conda_api_mock(monkeypatch):
+    def mock_resolve_dependencies(pkgs):
+        return [('bokeh', '0.12.4', '0'), ('thing', '1.0', '1')]
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.resolve_dependencies', mock_resolve_dependencies)
+
+    manager = DefaultCondaManager()
+
+    lock_set = manager.resolve_dependencies(['bokeh'])
+    assert lock_set.package_specs_for_current_platform == ('bokeh=0.12.4=0', 'thing=1.0=1')
+
+
+def test_resolve_dependencies_with_actual_conda():
+    manager = DefaultCondaManager()
+
+    lock_set = manager.resolve_dependencies(['bokeh'])
+    specs = lock_set.package_specs_for_current_platform
+    pprint(specs)
+    names = [conda_api.parse_spec(spec).name for spec in specs]
+    assert 'bokeh' in names
+    assert len(specs) > 5  # 5 is an arbitrary number of deps that surely bokeh has
+
+
+def test_installed_version_comparison(monkeypatch):
+    def check(dirname):
+        prefix = os.path.join(dirname, "myenv")
+        os.makedirs(os.path.join(prefix, 'conda-meta'))
+
+        def mock_installed(prefix):
+            return {'bokeh': ('bokeh', '0.12.4', '1')}
+
+        monkeypatch.setattr('anaconda_project.internal.conda_api.installed', mock_installed)
+
+        spec_with_matching_bokeh = EnvSpec(name='myenv',
+                                           conda_packages=['bokeh=0.12.4=1'],
+                                           pip_packages=[],
+                                           channels=[])
+        spec_with_unspecified_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=[], channels=[])
+        spec_with_wrong_version_bokeh = EnvSpec(name='myenv',
+                                                conda_packages=['bokeh=0.12.3'],
+                                                pip_packages=[],
+                                                channels=[])
+        spec_with_wrong_build_bokeh = EnvSpec(name='myenv',
+                                              conda_packages=['bokeh=0.12.4=0'],
+                                              pip_packages=[],
+                                              channels=[])
+
+        manager = DefaultCondaManager()
+
+        deviations = manager.find_environment_deviations(prefix, spec_with_matching_bokeh)
+        assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ()
+
+        deviations = manager.find_environment_deviations(prefix, spec_with_unspecified_bokeh)
+        assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ()
+
+        deviations = manager.find_environment_deviations(prefix, spec_with_wrong_version_bokeh)
+        assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ('bokeh', )
+
+        deviations = manager.find_environment_deviations(prefix, spec_with_wrong_build_bokeh)
+        assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ('bokeh', )
+
+    with_directory_contents(dict(), check)

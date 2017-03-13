@@ -96,6 +96,24 @@ def list_packages(project_dir, environment):
     return 0
 
 
+def lock(project_dir, env_spec_name):
+    """Lock dependency versions."""
+    project = load_project(project_dir)
+    if console_utils.print_project_problems(project):
+        return 1
+    status = project_ops.lock(project, env_spec_name=env_spec_name)
+    return _handle_status(status)
+
+
+def unlock(project_dir, env_spec_name):
+    """Unlock dependency versions."""
+    project = load_project(project_dir)
+    if console_utils.print_project_problems(project):
+        return 1
+    status = project_ops.unlock(project, env_spec_name=env_spec_name)
+    return _handle_status(status)
+
+
 def main_add(args):
     """Start the add-environment command and return exit status code."""
     return add_env_spec(args.directory, args.name, args.packages, args.channel)
@@ -129,3 +147,13 @@ def main_list_env_specs(args):
 def main_list_packages(args):
     """Start the list packages command and return exit status code."""
     return list_packages(args.directory, args.env_spec)
+
+
+def main_lock(args):
+    """Lock dependency versions and return exit status code."""
+    return lock(args.directory, args.name)
+
+
+def main_unlock(args):
+    """Unlock dependency versions and return exit status code."""
+    return unlock(args.directory, args.name)

@@ -190,6 +190,31 @@ def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=Non
     return status
 
 
+def _commit_lock_file_if_it_works(project, env_spec_name):
+    project.lock_file.use_changes_without_saving()
+
+    result = prepare.prepare_without_interaction(project,
+                                                 provide_whitelist=(CondaEnvRequirement, ),
+                                                 env_spec_name=env_spec_name)
+
+    status = result.status_for(CondaEnvRequirement)
+    if status is None:
+        # I _think_ this is currently impossible, but if it were possible,
+        # we'd need to below code and it's hard to prove it's impossible.
+        status = project.problems_status()  # pragma: no cover # no way to cause right now?
+        # caller was supposed to expect env_var_or_class to still exist,
+        # unless project file got mangled
+        assert status is not None  # pragma: no cover
+
+    if not status:
+        # reload from disk, discarding our changes because they did not work
+        project.lock_file.load()
+    else:
+        # yay!
+        project.lock_file.save()
+    return status
+
+
 def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
     """Attempt to download the URL; if successful, add it as a download to the project.
 
@@ -610,6 +635,96 @@ def remove_packages(project, env_spec_name, packages):
         env_dict['packages'] = old_packages
 
     status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=env_spec_name)
+
+    return status
+
+
+def lock(project, env_spec_name):
+    """Attempt to freeze dependency versions in anaconda-project-lock.yml.
+
+    If the env_spec_name is None rather than a name,
+    all env specs are frozen.
+
+    Args:
+        project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
+
+    Returns:
+        ``Status`` instance
+    """
+    failed = project.problems_status()
+    if failed is not None:
+        return failed
+
+    if env_spec_name is None:
+        envs = project.env_specs.values()
+    else:
+        env = project.env_specs.get(env_spec_name, None)
+        if env is None:
+            problem = "Environment spec {} doesn't exist.".format(env_spec_name)
+            return SimpleStatus(success=False, description=problem)
+        else:
+            envs = [env]
+
+    all_env_names = [env_spec.name for env_spec in project.env_specs.values()]
+
+    conda = conda_manager.new_conda_manager()
+
+    logs = []
+
+    for env in envs:
+        if env.lock_set is None:
+            try:
+                lock_set = conda.resolve_dependencies(env.conda_packages)
+            except conda_manager.CondaManagerError as e:
+                return SimpleStatus(success=False,
+                                    description="Error resolving dependencies for %s: %s." % (env.name, str(e)),
+                                    logs=logs)
+
+            project.lock_file._set_lock_set(env.name, lock_set, all_env_names)
+
+            status = _commit_lock_file_if_it_works(project, env.name)
+
+            if status:
+                logs.append("Added locked dependencies for env spec %s to %s." % (env.name, project.lock_file.basename))
+            else:
+                # we throw out logs here, but when we
+                # switch to using a streaming progress interface
+                # that will be ok.
+                return status
+        else:
+            logs.append("Env spec %s is already locked" % env.name)
+
+    return SimpleStatus(success=True, description="Project dependencies are locked.", logs=logs)
+
+
+def unlock(project, env_spec_name):
+    """Attempt to unfreeze dependency versions in anaconda-project-lock.yml.
+
+    If the env_spec_name is None rather than a name,
+    all env specs are unfrozen.
+
+    Args:
+        project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
+
+    Returns:
+        ``Status`` instance
+    """
+    failed = project.problems_status()
+    if failed is not None:
+        return failed
+
+    if env_spec_name is not None:
+        env = project.env_specs.get(env_spec_name, None)
+        if env is None:
+            problem = "Environment spec {} doesn't exist.".format(env_spec_name)
+            return SimpleStatus(success=False, description=problem)
+
+    # if env_spec_name is None this disables locking for ALL env specs
+    project.lock_file._disable_locking(env_spec_name)
+
+    status = _commit_lock_file_if_it_works(project, env_spec_name)
 
     return status
 

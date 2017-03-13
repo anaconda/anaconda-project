@@ -15,7 +15,7 @@ import tarfile
 import zipfile
 
 from anaconda_project import project_ops
-from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaManagerError,
+from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaLockSet, CondaManagerError,
                                             push_conda_manager_class, pop_conda_manager_class)
 from anaconda_project.project import Project
 import anaconda_project.prepare as prepare
@@ -24,6 +24,7 @@ from anaconda_project.internal.test.tmpfile_utils import (with_directory_content
                                                           complete_project_file_content)
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
+from anaconda_project.project_lock_file import DEFAULT_PROJECT_LOCK_FILENAME, ProjectLockFile
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
 from anaconda_project.test.fake_server import fake_server
@@ -1285,16 +1286,23 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
-def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove_error):
+def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove_error, resolve_dependencies,
+                     resolve_dependencies_error):
     class TestCondaManager(CondaManager):
         def __init__(self):
             self.fix_works = fix_works
             self.fixed = False
-            self.deviations = CondaEnvironmentDeviations(summary="test",
+            self.deviations = CondaEnvironmentDeviations(summary="test deviation",
                                                          missing_packages=missing_packages,
                                                          wrong_version_packages=wrong_version_packages,
                                                          missing_pip_packages=(),
                                                          wrong_version_pip_packages=())
+
+        def resolve_dependencies(self, package_specs):
+            if resolve_dependencies_error is not None:
+                raise CondaManagerError(resolve_dependencies_error)
+            else:
+                return CondaLockSet(resolve_dependencies)
 
         def find_environment_deviations(self, prefix, spec):
             if self.fixed:
@@ -1321,9 +1329,18 @@ def _pop_conda_test():
     pop_conda_manager_class()
 
 
-def _with_conda_test(f, fix_works=True, missing_packages=(), wrong_version_packages=(), remove_error=None):
+def _with_conda_test(f,
+                     fix_works=True,
+                     missing_packages=(),
+                     wrong_version_packages=(),
+                     remove_error=None,
+                     resolve_dependencies=None,
+                     resolve_dependencies_error=None):
     try:
-        _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove_error)
+        if resolve_dependencies is None:
+            resolve_dependencies = {'all': []}
+        _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove_error, resolve_dependencies,
+                         resolve_dependencies_error)
         f()
     finally:
         _pop_conda_test()
@@ -1619,6 +1636,231 @@ def test_remove_packages_with_project_file_problems():
                 project.project_file.basename] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_lock_nonexistent_environment():
+    def check(dirname):
+        def attempt():
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.lock(project, env_spec_name="not_an_env")
+            assert not status
+            assert [] == status.errors
+            assert "Environment spec not_an_env doesn't exist." == status.status_description
+
+        _with_conda_test(attempt)
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_unlock_nonexistent_environment():
+    def check(dirname):
+        def attempt():
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.unlock(project, env_spec_name="not_an_env")
+            assert not status
+            assert [] == status.errors
+            assert "Environment spec not_an_env doesn't exist." == status.status_description
+
+        _with_conda_test(attempt)
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_lock_broken_project():
+    def check(dirname):
+        def attempt():
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.lock(project, env_spec_name=None)
+            assert not status
+            assert len(status.errors) > 0
+
+        _with_conda_test(attempt)
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
+
+
+def test_unlock_broken_project():
+    def check(dirname):
+        def attempt():
+            project = project_no_dedicated_env(dirname)
+            status = project_ops.unlock(project, env_spec_name=None)
+            assert not status
+            assert len(status.errors) > 0
+
+        _with_conda_test(attempt)
+
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
+
+
+def test_lock_and_unlock_all_envs():
+    def check(dirname):
+        def attempt():
+            filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
+            assert not os.path.isfile(filename)
+
+            project = Project(dirname)
+
+            # Lock
+            status = project_ops.lock(project, env_spec_name=None)
+            assert [] == status.errors
+            assert status
+
+            assert os.path.isfile(filename)
+
+            lock_file = ProjectLockFile.load_for_directory(dirname)
+            assert ('a=1.0=1', ) == lock_file._get_lock_set('foo').package_specs_for_current_platform
+            assert ('a=1.0=1', ) == lock_file._get_lock_set('bar').package_specs_for_current_platform
+
+            assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
+            # 'b' gets added here since it wasn't in the lock set
+            # TODO should this be an error?
+            assert ('b', 'a=1.0=1', ) == project.env_specs['bar'].conda_packages_for_create
+
+            # Lock again (idempotent)
+            status = project_ops.lock(project, env_spec_name=None)
+            assert [] == status.errors
+            assert status
+
+            # Unlock
+            status = project_ops.unlock(project, env_spec_name=None)
+            assert [] == status.errors
+            assert status
+
+            lock_file = ProjectLockFile.load_for_directory(dirname)
+            assert lock_file._get_lock_set('foo') is None
+            assert lock_file._get_lock_set('bar') is None
+
+            assert ('a', ) == project.env_specs['foo'].conda_packages_for_create
+            assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
+
+        _with_conda_test(attempt, resolve_dependencies={'all': ['a=1.0=1']})
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: locktest
+env_specs:
+  foo:
+    packages:
+      - a
+  bar:
+    packages:
+      - b
+"""}, check)
+
+
+def test_lock_and_unlock_single_env():
+    def check(dirname):
+        def attempt():
+            filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
+            assert not os.path.isfile(filename)
+
+            project = Project(dirname)
+
+            # Lock
+            status = project_ops.lock(project, env_spec_name='foo')
+            assert [] == status.errors
+            assert status
+
+            assert os.path.isfile(filename)
+
+            lock_file = ProjectLockFile.load_for_directory(dirname)
+            assert ('a=1.0=1', ) == lock_file._get_lock_set('foo').package_specs_for_current_platform
+            assert lock_file._get_lock_set('bar') is None
+
+            assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
+            assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
+
+            # Locking a second time is a no-op
+            status = project_ops.lock(project, env_spec_name='foo')
+            assert [] == status.errors
+            assert status
+
+            # Now unlock
+            status = project_ops.unlock(project, env_spec_name='foo')
+            assert [] == status.errors
+            assert status
+
+            lock_file = ProjectLockFile.load_for_directory(dirname)
+            assert lock_file._get_lock_set('foo') is None
+            assert lock_file._get_lock_set('bar') is None
+
+            assert ('a', ) == project.env_specs['foo'].conda_packages_for_create
+            assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
+
+        _with_conda_test(attempt, resolve_dependencies={'all': ['a=1.0=1']})
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: locktest
+env_specs:
+  foo:
+    packages:
+      - a
+  bar:
+    packages:
+      - b
+"""}, check)
+
+
+def test_lock_conda_error():
+    def check(dirname):
+        def attempt():
+            filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
+            assert not os.path.isfile(filename)
+
+            project = Project(dirname)
+            status = project_ops.lock(project, env_spec_name=None)
+            assert [] == status.errors
+            assert not status
+            assert "test deviation" == status.status_description
+
+            assert not os.path.isfile(filename)
+
+        _with_conda_test(attempt,
+                         missing_packages=('a', 'b'),
+                         resolve_dependencies={'all': ['a=1.0=1']},
+                         fix_works=False)
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: locktest
+env_specs:
+  foo:
+    packages:
+      - a
+  bar:
+    packages:
+      - b
+"""}, check)
+
+
+def test_lock_resolve_dependencies_error(monkeypatch):
+    def check(dirname):
+        def attempt():
+            filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
+            assert not os.path.isfile(filename)
+
+            project = Project(dirname)
+            status = project_ops.lock(project, env_spec_name=None)
+            assert [] == status.errors
+            assert not status
+            assert 'Nope on resolve' in status.status_description
+
+            assert not os.path.isfile(filename)
+
+        _with_conda_test(attempt, missing_packages=('a', 'b'), resolve_dependencies_error="Nope on resolve")
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: locktest
+env_specs:
+  foo:
+    packages:
+      - a
+  bar:
+    packages:
+      - b
+"""}, check)
 
 
 def test_export_env_spec():

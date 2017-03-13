@@ -14,6 +14,8 @@ from anaconda_project.internal.test.tmpfile_utils import (with_file_contents, wi
 from anaconda_project.env_spec import (EnvSpec, _load_environment_yml, _load_requirements_txt,
                                        _find_out_of_sync_importable_spec)
 
+from anaconda_project.conda_manager import CondaLockSet
+
 
 def test_load_environment_yml():
     def check(filename):
@@ -340,3 +342,14 @@ channels:
   - channel1
   - channel2
     """, check)
+
+
+def test_merge_in_lock_set():
+    lock_set = CondaLockSet({'all': ['a=1.0=1']})
+    spec = EnvSpec(name="foo",
+                   conda_packages=['a', 'b'],
+                   pip_packages=['c', 'd'],
+                   channels=['x', 'y'],
+                   lock_set=lock_set)
+
+    assert ('b', 'a=1.0=1') == spec.conda_packages_for_create

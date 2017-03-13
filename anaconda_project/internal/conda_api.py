@@ -196,7 +196,7 @@ def resolve_dependencies(pkgs, channels=()):
 
     # even with --dry-run, conda wants to create the prefix,
     # so we ensure it's somewhere out of the way.
-    prefix = tempfile.mkdtemp(prefix="kapsel_resolve_")
+    prefix = tempfile.mkdtemp(prefix="anaconda_project_resolve_")
 
     # conda 4.1 (and possibly other versions) will complain
     # if the directory already exists. An evil attacker
@@ -348,7 +348,8 @@ def set_conda_env_in_path(path, prefix):
         return _set_conda_env_in_path_unix(path, prefix)
 
 
-ParsedSpec = collections.namedtuple('ParsedSpec', ['name', 'conda_constraint', 'pip_constraint'])
+ParsedSpec = collections.namedtuple('ParsedSpec', ['name', 'conda_constraint', 'pip_constraint', 'exact_version',
+                                                   'exact_build_string'])
 
 # this is copied from conda
 _spec_pat = re.compile(r'''
@@ -362,6 +363,8 @@ _spec_pat = re.compile(r'''
 $                                  # end-of-line
 ''', re.VERBOSE)
 
+_conda_constraint_pat = re.compile('=(?P<version>[^=<>!]+)(?P<build>=[^=<>!]+)?', re.VERBOSE)
+
 
 def parse_spec(spec):
     """Parse a package name and version spec as conda would.
@@ -372,10 +375,34 @@ def parse_spec(spec):
     m = _spec_pat.match(spec)
     if m is None:
         return None
+    name = m.group('name').lower()
     pip_constraint = m.group('pc')
     if pip_constraint is not None:
         pip_constraint = pip_constraint.replace(' ', '')
-    return ParsedSpec(name=m.group('name').lower(), conda_constraint=m.group('cc'), pip_constraint=pip_constraint)
+
+    conda_constraint = m.group('cc')
+
+    exact_version = None
+    exact_build_string = None
+    if conda_constraint is not None:
+        m = _conda_constraint_pat.match(conda_constraint)
+        assert m is not None
+        exact_version = m.group('version')
+        for special in ('|', '*', ','):
+            if special in exact_version:
+                exact_version = None
+                break
+        if exact_version is not None:
+            exact_build_string = m.group('build')
+            if exact_build_string is not None:
+                assert exact_build_string[0] == '='
+                exact_build_string = exact_build_string[1:]
+
+    return ParsedSpec(name=name,
+                      conda_constraint=conda_constraint,
+                      pip_constraint=pip_constraint,
+                      exact_version=exact_version,
+                      exact_build_string=exact_build_string)
 
 # these are in order of preference. On pre-4.1.4 Windows,
 # CONDA_PREFIX and CONDA_ENV_PATH aren't set, so we get to
@@ -446,3 +473,19 @@ def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
                 if name != prefix:
                     break
         environ['CONDA_DEFAULT_ENV'] = name
+
+# This isn't all (e.g. leaves out arm, power).  it's sort of "all
+# that people typically publish for"
+popular_platforms = ('linux-64', 'linux-32', 'osx-64', 'win-32', 'win-64')
+
+_non_x86_linux_machines = {'armv6l', 'armv7l', 'ppc64le'}
+
+
+def current_platform():
+    m = platform.machine()
+    if m in _non_x86_linux_machines:
+        return 'linux-%s' % m
+    else:
+        _platform_map = {'linux2': 'linux', 'linux': 'linux', 'darwin': 'osx', 'win32': 'win', }
+        p = _platform_map.get(sys.platform, 'unknown')
+        return '%s-%d' % (p, (8 * tuple.__itemsize__))
