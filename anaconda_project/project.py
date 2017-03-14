@@ -593,7 +593,7 @@ class _ConfigCache(object):
 
                 _unknown_field_suggestions(project_file, problems, attrs,
                                            ('description', 'env_spec', 'supports_http_options', 'bokeh_app', 'notebook',
-                                            'unix', 'windows', 'conda_app_entry'))
+                                            'unix', 'windows', 'conda_app_entry', 'details'))
 
                 if 'description' in attrs and not is_string(attrs['description']):
                     _file_problem(problems, project_file,
@@ -617,10 +617,19 @@ class _ConfigCache(object):
                                       (attrs['env_spec'], name))
                         failed = True
 
+                if 'details' in attrs:
+                    if not isinstance(attrs['details'], dict):
+                        _file_problem(problems, project_file,
+                                      "'details' field of command {} must be a dictionary".format(name))
+                        failed = True
+
                 copied_attrs = deepcopy(attrs)
 
                 if 'env_spec' not in copied_attrs:
                     copied_attrs['env_spec'] = self.default_env_spec_name
+
+                if 'details' not in copied_attrs:
+                    copied_attrs['details'] = dict()
 
                 command_types = []
                 for attr in ALL_COMMAND_TYPES:
@@ -1131,6 +1140,8 @@ class Project(object):
                 commands[key]['unix'] = command.unix_shell_commandline
             if command is self.default_command:
                 commands[key]['default'] = True
+            if len(command.details) > 0:
+                commands[key]['details'] = command.details
             commands[key]['env_spec'] = command.default_env_spec_name
             commands[key]['supports_http_options'] = command.supports_http_options
         json['commands'] = commands

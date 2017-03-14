@@ -407,6 +407,11 @@ class ProjectCommand(object):
         assert description is not None
         return description
 
+    @property
+    def details(self):
+        """Dictionary of extra details."""
+        return self._attributes.get('details', {})
+
     def _choose_args_and_shell(self, environ, extra_args=None):
         assert extra_args is None or isinstance(extra_args, list)
 
