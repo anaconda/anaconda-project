@@ -147,6 +147,24 @@ Bokeh apps and notebooks have a shorthand syntax:
       notebook: bar.ipynb
       description: "Opens the notebook bar.ipynb"
 
+Command details
+===============
+
+Commands can have a ``details:`` section with extra details
+relevant to the special command type.
+
+An example is that notebooks can annotate that they
+contain a function registered with Anaconda Fusion:
+
+.. code-block:: yaml
+
+  commands:
+    bar:
+      notebook: bar.ipynb
+      description: "Notebook exporting an Anaconda Fusion function."
+      details:
+        registers_fusion_function: true
+
 
 HTTP Commands
 =============
