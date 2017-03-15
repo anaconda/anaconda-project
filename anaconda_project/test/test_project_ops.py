@@ -217,7 +217,7 @@ def test_create_imports_notebook():
 
         assert ['foo.ipynb'] == list(project.commands.keys())
 
-    with_directory_contents({'foo.ipynb': 'not a real notebook'}, check_create)
+    with_directory_contents({'foo.ipynb': '{}'}, check_create)
 
 
 def test_set_properties():

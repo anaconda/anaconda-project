@@ -25,6 +25,7 @@ from anaconda_project.version import version
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.slugify import slugify
+import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
 
@@ -725,7 +726,14 @@ class _ConfigCache(object):
 
         def make_add_notebook_func(relative_name, env_spec_name):
             def add_notebook(project):
-                command_dict = {'notebook': relative_name, 'env_spec': env_spec_name}
+                errors = []
+                details = notebook_analyzer.details(os.path.join(self.directory_path, relative_name), errors)
+                # TODO this is broken, need to refactor so fix functions can return
+                # errors and probably also log progress indication.
+                assert [] == errors
+                assert details is not None
+
+                command_dict = {'notebook': relative_name, 'env_spec': env_spec_name, 'details': details}
                 project.project_file.set_value(['commands', relative_name], command_dict)
 
             return add_notebook
