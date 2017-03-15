@@ -26,6 +26,7 @@ from anaconda_project.plugins.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
 from anaconda_project.internal.conda_api import parse_spec
+import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 
 _default_projectignore = """
 # project-local contains your personal configuration choices and state
@@ -847,6 +848,20 @@ def add_command(project, name, command_type, command, env_spec_name=None, suppor
     if supports_http_options is not None:
         assert isinstance(supports_http_options, bool)
         command_dict['supports_http_options'] = supports_http_options
+
+    if command_type == 'notebook':
+        notebook_file = os.path.join(project.directory_path, command)
+        errors = []
+        # TODO missing notebook should be an error caught before here
+        if os.path.isfile(notebook_file):
+            details = notebook_analyzer.details(notebook_file, errors)
+        else:
+            details = {}
+        if len(errors) > 0:
+            failed = SimpleStatus(success=False, description="Unable to add the command.", errors=errors)
+            return failed
+        if len(details) > 0:
+            command_dict['details'] = details
 
     project.project_file.use_changes_without_saving()
 

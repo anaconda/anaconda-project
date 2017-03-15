@@ -224,7 +224,7 @@ def test_add_command_guessing_notebook(monkeypatch, capsys):
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n',
-         'file.ipynb': ""}, check_guessing_notebook)
+         'file.ipynb': "{}"}, check_guessing_notebook)
 
 
 def test_add_command_with_env_spec(monkeypatch, capsys):

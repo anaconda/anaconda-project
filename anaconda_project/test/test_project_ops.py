@@ -794,6 +794,41 @@ def test_add_command_modifies_supports_http_options():
                                     '    bokeh_app: replaced.py\n')}, check_add_command)
 
 
+def test_add_command_notebook():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, 'notebook_test', 'notebook', 'foo.ipynb')
+        assert [] == result.errors
+        assert result
+
+        re_loaded = ProjectFile.load_for_directory(project.directory_path)
+        command = re_loaded.get_value(['commands', 'notebook_test'])
+        assert len(command.keys()) == 3
+        assert command['notebook'] == 'foo.ipynb'
+        assert command['env_spec'] == 'default'
+        assert command['details'] == {'registers_fusion_function': True}
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "",
+         'foo.ipynb': """
+{
+  "cells" : [ { "source" : [ "@fusion.register\\n", "def foo():\\n", "  pass\\n" ] } ]
+}
+                                                     """}, check_add_command)
+
+
+def test_add_command_broken_notebook():
+    def check_add_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        result = project_ops.add_command(project, 'default', 'notebook', 'foo.ipynb')
+        assert len(result.errors) > 0
+        assert not result
+        assert 'Failed to read or parse' in result.errors[0]
+        assert result.status_description == 'Unable to add the command.'
+
+    with_directory_contents_completing_project_file({"foo.ipynb": "not valid json"}, check_add_command)
+
+
 def test_add_command_invalid_type():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
