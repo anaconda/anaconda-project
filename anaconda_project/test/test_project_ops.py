@@ -806,7 +806,7 @@ def test_add_command_notebook():
         assert len(command.keys()) == 3
         assert command['notebook'] == 'foo.ipynb'
         assert command['env_spec'] == 'default'
-        assert command['details'] == {'registers_fusion_function': True}
+        assert command['registers_fusion_function'] is True
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: "",

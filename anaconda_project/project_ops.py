@@ -854,14 +854,13 @@ def add_command(project, name, command_type, command, env_spec_name=None, suppor
         errors = []
         # TODO missing notebook should be an error caught before here
         if os.path.isfile(notebook_file):
-            details = notebook_analyzer.details(notebook_file, errors)
+            extras = notebook_analyzer.extras(notebook_file, errors)
         else:
-            details = {}
+            extras = {}
         if len(errors) > 0:
             failed = SimpleStatus(success=False, description="Unable to add the command.", errors=errors)
             return failed
-        if len(details) > 0:
-            command_dict['details'] = details
+        command_dict.update(extras)
 
     project.project_file.use_changes_without_saving()
 

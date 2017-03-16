@@ -17,7 +17,7 @@ from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.plugins.requirements.download import DownloadRequirement
 from anaconda_project.plugins.requirements.service import ServiceRequirement
-from anaconda_project.project_commands import ProjectCommand
+from anaconda_project.project_commands import (ProjectCommand, all_known_command_attributes)
 from anaconda_project.project_file import ProjectFile
 from anaconda_project.archiver import _list_relative_paths_for_unignored_project_files
 from anaconda_project.version import version
@@ -592,9 +592,7 @@ class _ConfigCache(object):
                     failed = True
                     continue
 
-                _unknown_field_suggestions(project_file, problems, attrs,
-                                           ('description', 'env_spec', 'supports_http_options', 'bokeh_app', 'notebook',
-                                            'unix', 'windows', 'conda_app_entry', 'details'))
+                _unknown_field_suggestions(project_file, problems, attrs, all_known_command_attributes)
 
                 if 'description' in attrs and not is_string(attrs['description']):
                     _file_problem(problems, project_file,
@@ -618,19 +616,15 @@ class _ConfigCache(object):
                                       (attrs['env_spec'], name))
                         failed = True
 
-                if 'details' in attrs:
-                    if not isinstance(attrs['details'], dict):
-                        _file_problem(problems, project_file,
-                                      "'details' field of command {} must be a dictionary".format(name))
-                        failed = True
+                if 'registers_fusion_function' in attrs and not isinstance(attrs['registers_fusion_function'], bool):
+                    _file_problem(problems, project_file,
+                                  ("'registers_fusion_function' field of command {} must be a boolean".format(name)))
+                    failed = True
 
                 copied_attrs = deepcopy(attrs)
 
                 if 'env_spec' not in copied_attrs:
                     copied_attrs['env_spec'] = self.default_env_spec_name
-
-                if 'details' not in copied_attrs:
-                    copied_attrs['details'] = dict()
 
                 command_types = []
                 for attr in ALL_COMMAND_TYPES:
@@ -727,13 +721,14 @@ class _ConfigCache(object):
         def make_add_notebook_func(relative_name, env_spec_name):
             def add_notebook(project):
                 errors = []
-                details = notebook_analyzer.details(os.path.join(self.directory_path, relative_name), errors)
+                extras = notebook_analyzer.extras(os.path.join(self.directory_path, relative_name), errors)
                 # TODO this is broken, need to refactor so fix functions can return
                 # errors and probably also log progress indication.
                 assert [] == errors
-                assert details is not None
+                assert extras is not None
 
-                command_dict = {'notebook': relative_name, 'env_spec': env_spec_name, 'details': details}
+                command_dict = {'notebook': relative_name, 'env_spec': env_spec_name}
+                command_dict.update(extras)
                 project.project_file.set_value(['commands', relative_name], command_dict)
 
             return add_notebook
@@ -1148,10 +1143,9 @@ class Project(object):
                 commands[key]['unix'] = command.unix_shell_commandline
             if command is self.default_command:
                 commands[key]['default'] = True
-            if len(command.details) > 0:
-                commands[key]['details'] = command.details
             commands[key]['env_spec'] = command.default_env_spec_name
             commands[key]['supports_http_options'] = command.supports_http_options
+            commands[key].update(command.extras)
         json['commands'] = commands
         envs = dict()
         for key, env in self.env_specs.items():

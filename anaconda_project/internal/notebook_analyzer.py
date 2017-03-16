@@ -27,7 +27,7 @@ def _has_fusion_register(source):
     return re.match(_fusion_register_re, source) is not None
 
 
-def details(filename, errors):
+def extras(filename, errors):
     try:
         with codecs.open(filename, encoding='utf-8') as f:
             json_string = f.read()
@@ -36,7 +36,7 @@ def details(filename, errors):
         errors.append("Failed to read or parse %s: %s" % (filename, str(e)))
         return None
 
-    details = dict()
+    extras = dict()
     found_fusion = False
 
     if isinstance(parsed, dict) and \
@@ -50,6 +50,6 @@ def details(filename, errors):
                         found_fusion = True
 
     if found_fusion:
-        details['registers_fusion_function'] = True
+        extras['registers_fusion_function'] = True
 
-    return details
+    return extras

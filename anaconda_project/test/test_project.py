@@ -1065,29 +1065,31 @@ def test_command_with_non_boolean_supports_http_options():
         check)
 
 
-def test_command_with_non_dict_details():
+def test_command_with_non_boolean_registers_fusion_function():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        expected_error = "%s: 'details' field of command %s must be a dictionary" % (project.project_file.basename,
-                                                                                     'default')
+        expected_error = "%s: 'registers_fusion_function' field of command %s must be a boolean" % (
+            project.project_file.basename, 'default')
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     details: []\n"}, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     registers_fusion_function: 'blah'\n"},
+        check)
 
 
-def test_command_with_details():
+def test_command_with_extras():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
         assert 'default' in project.commands
         command = project.commands['default']
-        assert command.details == {"a": 42}
+        assert command.extras == {"registers_fusion_function": True}
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     details: { \"a\" : 42 }\n"}, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     registers_fusion_function: true\n"},
+        check)
 
 
 def test_command_with_custom_description():
@@ -2105,7 +2107,6 @@ commands:
     unix: echo hi
     description: "say hi"
     supports_http_options: true
-    details: { 'something' : [ 42 ] }
   bar:
     windows: echo boo
     env_spec: lol
@@ -2114,10 +2115,10 @@ commands:
   myapp:
     bokeh_app: main.py
     env_spec: woot
-    details: { 'hi' : 'stuff' }
   foo.ipynb:
     description: 'Notebook foo.ipynb'
     notebook: foo.ipynb
+    registers_fusion_function: true
 
 packages:
   - foo
@@ -2175,17 +2176,16 @@ def test_get_publication_info_from_complex_project():
                                  'default': True,
                                  'env_spec': 'default',
                                  'unix': 'echo hi',
-                                 'supports_http_options': True,
-                                 'details': {'something': [42]}},
+                                 'supports_http_options': True},
                          'myapp': {'description': 'Bokeh app main.py',
                                    'bokeh_app': 'main.py',
                                    'env_spec': 'woot',
-                                   'supports_http_options': True,
-                                   'details': {'hi': 'stuff'}},
+                                   'supports_http_options': True},
                          'foo.ipynb': {'description': 'Notebook foo.ipynb',
                                        'notebook': 'foo.ipynb',
                                        'env_spec': 'default',
-                                       'supports_http_options': True}},
+                                       'supports_http_options': True,
+                                       'registers_fusion_function': True}},
             'downloads': {'FOO': {'encrypted': False,
                                   'title': 'FOO',
                                   'description': 'A downloaded file which is referenced by FOO.',

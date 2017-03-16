@@ -34,12 +34,12 @@ def _with_code_in_notebook_file(source, f):
     with_directory_contents({"foo.ipynb": json_string}, check)
 
 
-def test_details_with_simple_has_fusion_register():
+def test_extras_with_simple_has_fusion_register():
     def check(filename):
         errors = []
-        details = notebook_analyzer.details(filename, errors)
+        extras = notebook_analyzer.extras(filename, errors)
         assert [] == errors
-        assert details == {'registers_fusion_function': True}
+        assert extras == {'registers_fusion_function': True}
 
     _with_code_in_notebook_file("""
 @fusion.register
@@ -48,12 +48,12 @@ def some_func():
     """, check)
 
 
-def test_details_without_has_fusion_register():
+def test_extras_without_has_fusion_register():
     def check(filename):
         errors = []
-        details = notebook_analyzer.details(filename, errors)
+        extras = notebook_analyzer.extras(filename, errors)
         assert [] == errors
-        assert details == {}
+        assert extras == {}
 
     _with_code_in_notebook_file("""
 def some_func():
@@ -82,13 +82,13 @@ def some_func():
 """)
 
 
-def test_details_with_io_error(monkeypatch):
+def test_extras_with_io_error(monkeypatch):
     def mock_codecs_open(*args, **kwargs):
         raise IOError("Nope")
 
     monkeypatch.setattr('codecs.open', mock_codecs_open)
     errors = []
-    details = notebook_analyzer.details("blah", errors)
+    extras = notebook_analyzer.extras("blah", errors)
     assert [] != errors
-    assert details is None
+    assert extras is None
     assert 'Failed to read or parse' in errors[0]

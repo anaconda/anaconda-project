@@ -28,6 +28,11 @@ try:
 except ImportError:  # pragma: no cover (py2 only)
     from urllib import quote as url_quote  # pragma: no cover (py2 only)
 
+standard_command_attributes = ('description', 'env_spec', 'supports_http_options', 'bokeh_app', 'notebook', 'unix',
+                               'windows', 'conda_app_entry')
+extra_command_attributes = ('registers_fusion_function', )
+all_known_command_attributes = standard_command_attributes + extra_command_attributes
+
 
 def _is_windows():
     # it's tempting to cache this but it hoses our test monkeypatching so don't.
@@ -408,9 +413,17 @@ class ProjectCommand(object):
         return description
 
     @property
-    def details(self):
-        """Dictionary of extra details."""
-        return self._attributes.get('details', {})
+    def extras(self):
+        """Dictionary of extra attributes not covered by other properties.
+
+        These are typically 'plugin specific' (only for notebook, only for bokeh,
+        etc.)
+        """
+        result = dict()
+        for k in self._attributes.keys():
+            if k in extra_command_attributes:
+                result[k] = self._attributes[k]
+        return result
 
     def _choose_args_and_shell(self, environ, extra_args=None):
         assert extra_args is None or isinstance(extra_args, list)
