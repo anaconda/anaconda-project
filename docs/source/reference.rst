@@ -147,6 +147,24 @@ Bokeh apps and notebooks have a shorthand syntax:
       notebook: bar.ipynb
       description: "Opens the notebook bar.ipynb"
 
+Notebook-specific options
+=========================
+
+Notebook commands can annotate that they contain a function
+registered with Anaconda Fusion:
+
+.. code-block:: yaml
+
+  commands:
+    bar:
+      notebook: bar.ipynb
+      description: "Notebook exporting an Anaconda Fusion function."
+      registers_fusion_function: true
+
+If your notebook contains ``@fusion.register`` when you
+``anaconda-project init`` or ``anaconda-project add-command``,
+``registers_fusion_function: true`` will be added automatically.
+
 
 HTTP Commands
 =============

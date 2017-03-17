@@ -1065,6 +1065,33 @@ def test_command_with_non_boolean_supports_http_options():
         check)
 
 
+def test_command_with_non_boolean_registers_fusion_function():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert 1 == len(project.problems)
+        expected_error = "%s: 'registers_fusion_function' field of command %s must be a boolean" % (
+            project.project_file.basename, 'default')
+        assert expected_error == project.problems[0]
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     registers_fusion_function: 'blah'\n"},
+        check)
+
+
+def test_command_with_extras():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        assert 'default' in project.commands
+        command = project.commands['default']
+        assert command.extras == {"registers_fusion_function": True}
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     registers_fusion_function: true\n"},
+        check)
+
+
 def test_command_with_custom_description():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1370,11 +1397,11 @@ def test_notebook_guess_command():
         {
             DEFAULT_PROJECT_FILENAME:
             "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
-            'test.ipynb': 'pretend there is notebook data here',
-            'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
-            'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
-            '.should_ignore_dotfile.ipynb': 'moar fake notebook',
-            '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
+            'test.ipynb': '{}',
+            'envs/should_ignore_this.ipynb': '{}',
+            'services/should_ignore_this.ipynb': '{}',
+            '.should_ignore_dotfile.ipynb': '{}',
+            '.should_ignore_dotdir/foo.ipynb': '{}'
         }, check_notebook_guess_command)
 
     # anaconda-project run data.ipynb
@@ -1402,12 +1429,12 @@ def test_notebook_guess_command_can_be_default():
             DEFAULT_PROJECT_FILENAME: "packages: ['notebook']\n",
             # we pick the first command alphabetically in this case
             # so the test looks for that
-            'a.ipynb': 'pretend there is notebook data here',
-            'b.ipynb': 'pretend there is notebook data here',
-            'c.ipynb': 'pretend there is notebook data here',
-            'd/d.ipynb': 'pretend there is notebook data here',
-            'e.ipynb': 'pretend there is notebook data here',
-            'f.ipynb': 'pretend there is notebook data here'
+            'a.ipynb': '{}',
+            'b.ipynb': '{}',
+            'c.ipynb': '{}',
+            'd/d.ipynb': '{}',
+            'e.ipynb': '{}',
+            'f.ipynb': '{}'
         },
         check_notebook_guess_command_can_be_default)
 
@@ -1437,8 +1464,8 @@ def test_multiple_notebooks_suggestion_rejected():
         {
             DEFAULT_PROJECT_FILENAME:
             "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
-            'test.ipynb': 'pretend there is notebook data here',
-            'foo/test2.ipynb': 'pretend there is notebook data here',
+            'test.ipynb': '{}',
+            'foo/test2.ipynb': '{}',
             'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
             'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
             '.should_ignore_dotfile.ipynb': 'moar fake notebook',
@@ -1463,7 +1490,7 @@ def test_skip_all_notebook_imports():
         {
             DEFAULT_PROJECT_FILENAME:
             "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
-            'test.ipynb': 'pretend there is notebook data here'
+            'test.ipynb': '{}'
         }, check)
 
 
@@ -1505,7 +1532,7 @@ def test_single_notebook_suggestion_rejected():
         {
             DEFAULT_PROJECT_FILENAME:
             "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
-            'test.ipynb': 'pretend there is notebook data here',
+            'test.ipynb': '{}',
             'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
             'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
             '.should_ignore_dotfile.ipynb': 'moar fake notebook',
@@ -2091,6 +2118,7 @@ commands:
   foo.ipynb:
     description: 'Notebook foo.ipynb'
     notebook: foo.ipynb
+    registers_fusion_function: true
 
 packages:
   - foo
@@ -2156,7 +2184,8 @@ def test_get_publication_info_from_complex_project():
                          'foo.ipynb': {'description': 'Notebook foo.ipynb',
                                        'notebook': 'foo.ipynb',
                                        'env_spec': 'default',
-                                       'supports_http_options': True}},
+                                       'supports_http_options': True,
+                                       'registers_fusion_function': True}},
             'downloads': {'FOO': {'encrypted': False,
                                   'title': 'FOO',
                                   'description': 'A downloaded file which is referenced by FOO.',
