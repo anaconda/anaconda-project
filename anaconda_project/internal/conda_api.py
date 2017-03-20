@@ -44,8 +44,68 @@ def _get_conda_command(extra_args):
     return cmd_list
 
 
-def _call_conda(extra_args, json_mode=False):
-    cmd_list = _get_conda_command(extra_args)
+# This is obviously ridiculous, we'll work to
+# find a better way (at least in newer versions
+# of conda).
+def _platform_hacked_conda_code(platform, bits):
+    return """import conda
+from conda.base.context import Context
+
+class KapselHackedContext(Context):
+    @property
+    def subdir(self):
+        return "{platform}"
+
+    @property
+    def bits(self):
+        return {bits}
+
+setattr(conda.base.context.context, "__class__", KapselHackedContext)
+
+import conda.cli
+import sys
+
+sys.argv[0] = "conda"
+sys.exit(conda.cli.main())
+""".format(platform=platform,
+           bits=bits).strip() + "\n"
+
+
+def _get_platform_hacked_conda_command(extra_args, platform):
+    if platform == current_platform() or platform is None:
+        return _get_conda_command(extra_args)
+    else:
+        bits = None
+        if platform.endswith("64"):
+            bits = "64"
+        else:
+            # the "popular platforms" we plan to pass in
+            # here all end in 64 or 32, but if that
+            # assumption breaks let's crash here.
+            assert platform.endswith("32")
+            bits = "32"
+
+        conda_code = _platform_hacked_conda_code(platform, bits)
+
+        # this has to run with the python from the root env,
+        # so the conda modules will be found.
+        root_prefix = _get_root_prefix()
+        root_python = None
+        for location in (('bin', 'python'), ('python.exe', ), ('Scripts', 'python.exe'),
+                         ('Library', 'bin', 'python.exe')):
+            candidate = os.path.join(root_prefix, *location)
+            if os.path.isfile(candidate):
+                root_python = candidate
+                break
+        assert root_python is not None
+
+        cmd_list = [root_python, '-c', conda_code]
+        cmd_list.extend(extra_args)
+        return cmd_list
+
+
+def _call_conda(extra_args, json_mode=False, platform=None):
+    cmd_list = _get_platform_hacked_conda_command(extra_args, platform=platform)
 
     try:
         p = logged_subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -77,8 +137,8 @@ def _call_conda(extra_args, json_mode=False):
     return out
 
 
-def _call_and_parse_json(extra_args):
-    out = _call_conda(extra_args, json_mode=True)
+def _call_and_parse_json(extra_args, platform=None):
+    out = _call_conda(extra_args, json_mode=True, platform=platform)
     try:
         return json.loads(out.decode())
     except ValueError as e:
@@ -113,6 +173,17 @@ def resolve_env_to_prefix(name_or_prefix):
         if os.path.basename(prefix) == name_or_prefix:
             return prefix
     return None
+
+
+_cached_root_prefix = None
+
+
+def _get_root_prefix():
+    global _cached_root_prefix
+
+    if _cached_root_prefix is None:
+        _cached_root_prefix = resolve_env_to_prefix('root')
+    return _cached_root_prefix
 
 
 def create(prefix, pkgs=None, channels=()):
@@ -188,7 +259,7 @@ def installed(prefix):
     return result
 
 
-def resolve_dependencies(pkgs, channels=()):
+def resolve_dependencies(pkgs, channels=(), platform=None):
     """Resolve packages into a full transitive list of (name, version, build) tuples."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to install into existing environment, not %r',
@@ -211,7 +282,7 @@ def resolve_dependencies(pkgs, channels=()):
 
     cmd_list.extend(pkgs)
     try:
-        parsed = _call_and_parse_json(cmd_list)
+        parsed = _call_and_parse_json(cmd_list, platform=platform)
     finally:
         try:
             if os.path.isdir(prefix):
