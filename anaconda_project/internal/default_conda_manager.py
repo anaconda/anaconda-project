@@ -20,6 +20,63 @@ import anaconda_project.internal.makedirs as makedirs
 from anaconda_project.version import version
 
 
+def _extract_common(by_platform):
+    """Create a new dict with entries combining common specs."""
+    # We want to "promote" specs the minimum amount, to avoid
+    # saying a package works more generally than we've shown that
+    # it does. So if something is common to linux-64 and linux-32, we
+    # promote it to "linux" not to "all"; if we only have "osx-64"
+    # we don't promote that to "osx"; for something to be in "all"
+    # it has to work on two different platform names.
+
+    # Compute for example 'linux' from 'linux-64' and 'linux-32'
+    promoted_by_platform_name = {}
+    platform_names = set([conda_api.parse_platform(platform)[0] for platform in by_platform.keys()])
+    for name in platform_names:
+        platforms_with_name = [platform for platform in by_platform.keys() if platform.startswith("%s-" % name)]
+        if len(platforms_with_name) > 1:
+            to_promote = set.intersection(*[set(by_platform[platform]) for platform in platforms_with_name])
+        else:
+            to_promote = set()
+        promoted_by_platform_name[name] = to_promote
+
+    # Now compute 'all' for specs common to all platform names
+    promoted_to_all = set()
+    if len(promoted_by_platform_name) > 1:
+        # this has to go back and intersect by_platform because osx-64 for example
+        # won't have become osx, so we can't intersect promoted_by_platform_name
+        # since not everything common to a fully-qualified name has been promoted
+        # to a bits-less name.
+        promoted_to_all = set.intersection(*[set(specs) for specs in by_platform.values()])
+
+    # Remove the 'all' from the per-platform
+    for (name, specs) in promoted_by_platform_name.items():
+        promoted_by_platform_name[name] = specs - promoted_to_all
+
+    # Now build the final result, removing promoted stuff from
+    # the full platform names
+    replacements = {}
+    for (platform, specs) in by_platform.items():
+        (platform_name, _) = conda_api.parse_platform(platform)
+        promoted_to_name = promoted_by_platform_name.get(platform_name, set())
+        # we leave these in original order rather than sorting (should we?)
+        new_specs = []
+        for spec in specs:
+            if not (spec in promoted_to_all or spec in promoted_to_name):
+                new_specs.append(spec)
+        if len(new_specs) > 0:
+            replacements[platform] = new_specs
+
+    for (name, specs) in promoted_by_platform_name.items():
+        if len(specs) > 0:
+            replacements[name] = sorted(list(specs))
+
+    if len(promoted_to_all) > 0:
+        replacements['all'] = sorted(list(promoted_to_all))
+
+    return replacements
+
+
 class DefaultCondaManager(CondaManager):
     def _timestamp_file(self, prefix, spec):
         return os.path.join(prefix, "var", "cache", "anaconda-project", "env-specs", spec.channels_and_packages_hash)
@@ -110,10 +167,14 @@ class DefaultCondaManager(CondaManager):
 
         # This has no reason to be a loop now, but it will
         # soon when we do multi-platform resolve
-        for conda_platform in [conda_api.current_platform()]:
-            deps = conda_api.resolve_dependencies(pkgs=package_specs)
+        current = conda_api.current_platform()
+        resolve_for_platforms = set((current, ) + conda_api.popular_platforms)
+        for conda_platform in resolve_for_platforms:
+            deps = conda_api.resolve_dependencies(pkgs=package_specs, platform=conda_platform)
             locked_specs = ["%s=%s=%s" % dep for dep in deps]
             by_platform[conda_platform] = locked_specs
+
+        by_platform = _extract_common(by_platform)
 
         lock_set = CondaLockSet(package_specs_by_platform=by_platform)
         return lock_set

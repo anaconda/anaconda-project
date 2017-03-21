@@ -18,7 +18,7 @@ from anaconda_project.env_spec import EnvSpec
 from anaconda_project.conda_manager import CondaManagerError
 from anaconda_project.version import version
 
-from anaconda_project.internal.default_conda_manager import DefaultCondaManager
+from anaconda_project.internal.default_conda_manager import (DefaultCondaManager, _extract_common)
 import anaconda_project.internal.pip_api as pip_api
 import anaconda_project.internal.conda_api as conda_api
 
@@ -352,7 +352,7 @@ def test_timestamp_file_ignores_failed_write(monkeypatch):
 
 
 def test_resolve_dependencies_with_conda_api_mock(monkeypatch):
-    def mock_resolve_dependencies(pkgs):
+    def mock_resolve_dependencies(pkgs, platform):
         return [('bokeh', '0.12.4', '0'), ('thing', '1.0', '1')]
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.resolve_dependencies', mock_resolve_dependencies)
@@ -417,3 +417,42 @@ def test_installed_version_comparison(monkeypatch):
         assert deviations.wrong_version_packages == ('bokeh', )
 
     with_directory_contents(dict(), check)
+
+
+def test_extract_common():
+    resolve_results = {'linux-32': ['linux-32-only', 'linux-only', 'common'],
+                       'linux-64': ['linux-64-only', 'linux-only', 'common'],
+                       'win-32': ['win-32-only', 'win-only', 'common'],
+                       'win-64': ['win-64-only', 'win-only', 'common'],
+                       'osx-64': ['osx-64-only', 'osx-only', 'common']}
+    factored = _extract_common(resolve_results)
+
+    assert {'all': ['common'],
+            'linux': ['linux-only'],
+            'win': ['win-only'],
+            'osx-64': ['osx-64-only', 'osx-only'],
+            'linux-32': ['linux-32-only'],
+            'linux-64': ['linux-64-only'],
+            'win-32': ['win-32-only'],
+            'win-64': ['win-64-only']} == factored
+
+
+def test_extract_common_empty_deps():
+    resolve_results = {}
+    factored = _extract_common(resolve_results)
+
+    assert {} == factored
+
+
+def test_extract_common_just_one_platform():
+    resolve_results = {'linux-64': ['a', 'b']}
+    factored = _extract_common(resolve_results)
+
+    assert {'linux-64': ['a', 'b']} == factored
+
+
+def test_extract_common_only_bits_differ():
+    resolve_results = {'linux-64': ['a', 'b'], 'linux-32': ['a', 'b', 'c']}
+    factored = _extract_common(resolve_results)
+
+    assert {'linux': ['a', 'b'], 'linux-32': ['c']} == factored

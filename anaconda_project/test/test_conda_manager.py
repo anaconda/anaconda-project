@@ -43,10 +43,12 @@ def test_use_non_default_conda_manager():
 def test_lock_set_properties(monkeypatch):
     lock_set = CondaLockSet({'all': ["something=0.5=2", "bokeh=0.12.4=1"],
                              'linux-64': ["linux-thing=1.0=0"],
+                             'win': ["windows-cross-bit-thing=3.2"],
                              'win-32': ["windows-thing=2.0=3", "bokeh=2.3=7"]})
     # it is part of the API definition that we need to APPEND the
     # per-platform stuff, so it overrides.
-    assert lock_set.package_specs_for_platform('win-32') == ("something=0.5=2", "windows-thing=2.0=3", "bokeh=2.3=7")
+    assert lock_set.package_specs_for_platform('win-32') == ("something=0.5=2", "windows-cross-bit-thing=3.2",
+                                                             "windows-thing=2.0=3", "bokeh=2.3=7")
 
     # on Linux-64, test that it works without monkeypatch
     if conda_api.current_platform() != 'linux-64':

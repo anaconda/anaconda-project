@@ -233,9 +233,13 @@ class CondaLockSet(object):
 
     def package_specs_for_platform(self, platform):
         """Sequence of package spec strings for the requested platform."""
+        # we merge "all", "linux", then "linux-64" for example
         shared = self._package_specs_by_platform.get("all", [])
+        platform_name = conda_api.parse_platform(platform)[0]
+        shared_across_bits = self._package_specs_by_platform.get(platform_name, [])
         per_platform = self._package_specs_by_platform.get(platform, [])
-        return _combine_conda_package_lists(shared, per_platform)
+        all_shared = _combine_conda_package_lists(shared, shared_across_bits)
+        return _combine_conda_package_lists(all_shared, per_platform)
 
     @property
     def package_specs_for_current_platform(self):

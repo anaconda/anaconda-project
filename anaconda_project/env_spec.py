@@ -83,6 +83,7 @@ class EnvSpec(object):
             description (str or None): one-sentence-ish summary of what this env is
             inherit_from_name (str or None): name of what we inherit from
             inherit_from (EnvSpec or None): pull in packages and channels from
+            lock_set (CondaLockSet): locked packages or None
         """
         assert inherit_from_names is not None
         assert inherit_from is not None
