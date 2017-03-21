@@ -35,7 +35,8 @@ def _extract_common(by_platform):
     for name in platform_names:
         platforms_with_name = [platform for platform in by_platform.keys() if platform.startswith("%s-" % name)]
         if len(platforms_with_name) > 1:
-            to_promote = set.intersection(*[set(by_platform[platform]) for platform in platforms_with_name])
+            specs_with_name = [set(by_platform[platform]) for platform in platforms_with_name]
+            to_promote = set.intersection(*specs_with_name)
         else:
             to_promote = set()
         promoted_by_platform_name[name] = to_promote
@@ -47,7 +48,8 @@ def _extract_common(by_platform):
         # won't have become osx, so we can't intersect promoted_by_platform_name
         # since not everything common to a fully-qualified name has been promoted
         # to a bits-less name.
-        promoted_to_all = set.intersection(*[set(specs) for specs in by_platform.values()])
+        all_specs = [set(specs) for specs in by_platform.values()]
+        promoted_to_all = set.intersection(*all_specs)
 
     # Remove the 'all' from the per-platform
     for (name, specs) in promoted_by_platform_name.items():
