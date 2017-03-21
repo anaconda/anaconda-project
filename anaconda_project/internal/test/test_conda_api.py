@@ -570,6 +570,13 @@ def test_pip_style_specs():
         assert conda_api.parse_spec(case[0]) == case[1]
 
 
+def test_parse_platform():
+    for p in conda_api.popular_platforms:
+        (name, bits) = conda_api.parse_platform(p)
+        assert bits in ('32', '64')
+        assert name in conda_api.popular_platform_names
+
+
 def test_conda_variable_when_not_in_conda(monkeypatch):
     monkeypatch.setattr('os.environ', dict())
     assert conda_api.conda_prefix_variable() == 'CONDA_PREFIX'
@@ -1015,3 +1022,27 @@ def test_current_platform_non_x86_linux(monkeypatch):
 # this test assumes all dev and CI happens on popular platforms.
 def test_current_platform_is_popular():
     assert conda_api.current_platform() in conda_api.popular_platforms
+
+
+def test_msys_for_all_platforms():
+    for p in conda_api.popular_platforms:
+        (name, bits) = conda_api.parse_platform(p)
+        info = conda_api.info(platform=p)
+        print("*** info() for %s" % p)
+        pprint(info)
+        assert 'channels' in info
+
+        # conda 4.1 has a slash on the channels and 4.3 does not
+        def no_slash(url):
+            if url.endswith("/"):
+                return url[:-1]
+            else:
+                return url
+
+        channels = [no_slash(channel) for channel in info['channels']]
+        if name == 'win':
+            assert ('https://repo.continuum.io/pkgs/msys2/%s' % p) in channels
+            assert ('https://repo.continuum.io/pkgs/msys2/noarch') in channels
+        else:
+            for c in channels:
+                assert 'msys' not in c

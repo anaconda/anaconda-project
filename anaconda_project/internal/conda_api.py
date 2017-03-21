@@ -51,6 +51,17 @@ def _platform_hacked_conda_code(platform, bits):
     return """import conda
 try:
     # this is conda 4.2 and 4.3
+
+    # fix whether default channels have msys
+    import conda.base.constants
+    from conda.base.constants import DEFAULT_CHANNELS_UNIX, DEFAULT_CHANNELS_WIN
+    if "{platform}" == 'win':
+        corrected_channels = DEFAULT_CHANNELS_WIN
+    else:
+        corrected_channels = DEFAULT_CHANNELS_UNIX
+
+    setattr(conda.base.constants, 'DEFAULT_CHANNELS', corrected_channels)
+
     from conda.base.context import Context
 
     class KapselHackedContext(Context):
@@ -70,6 +81,16 @@ except ImportError:
     setattr(conda.config, "platform", "{platform}")
     setattr(conda.config, "bits", "{bits}")
     setattr(conda.config, "subdir", "{platform}-{bits}")
+
+    # fix up the default urls
+    msys_url = 'https://repo.continuum.io/pkgs/msys2'
+    if "{platform}" == "win":
+        if msys_url not in conda.config.defaults_:
+            conda.config.defaults_.append(msys_url)
+    else:
+        if msys_url in conda.config.defaults_:
+            conda.config.defaults_.remove(msys_url)
+
 
 import conda.cli
 import sys
@@ -146,13 +167,13 @@ def _call_and_parse_json(extra_args, platform=None):
         raise CondaError('Invalid JSON from conda: %s' % str(e))
 
 
-def info():
+def info(platform=None):
     """Return a dictionary with configuration information.
 
     No guarantee is made about which keys exist.  Therefore this function
     should only be used for testing and debugging.
     """
-    return _call_and_parse_json(['info', '--json'])
+    return _call_and_parse_json(['info', '--json'], platform=platform)
 
 
 def resolve_env_to_prefix(name_or_prefix):
@@ -550,6 +571,8 @@ def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
 # that people typically publish for"
 popular_platforms = ('linux-64', 'linux-32', 'osx-64', 'win-32', 'win-64')
 
+popular_platform_names = ('linux', 'osx', 'win')
+
 _non_x86_linux_machines = {'armv6l', 'armv7l', 'ppc64le'}
 
 
@@ -561,3 +584,8 @@ def current_platform():
         _platform_map = {'linux2': 'linux', 'linux': 'linux', 'darwin': 'osx', 'win32': 'win', }
         p = _platform_map.get(sys.platform, 'unknown')
         return '%s-%d' % (p, (8 * tuple.__itemsize__))
+
+
+def parse_platform(platform):
+    assert '-' in platform
+    return tuple(platform.split("-"))
