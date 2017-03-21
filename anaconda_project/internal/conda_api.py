@@ -49,18 +49,27 @@ def _get_conda_command(extra_args):
 # of conda).
 def _platform_hacked_conda_code(platform, bits):
     return """import conda
-from conda.base.context import Context
+try:
+    # this is conda 4.2 and 4.3
+    from conda.base.context import Context
 
-class KapselHackedContext(Context):
-    @property
-    def subdir(self):
-        return "{platform}"
+    class KapselHackedContext(Context):
+        @property
+        def subdir(self):
+            return "{platform}-{bits}"
 
-    @property
-    def bits(self):
-        return {bits}
+        @property
+        def bits(self):
+            return {bits}
 
-setattr(conda.base.context.context, "__class__", KapselHackedContext)
+    setattr(conda.base.context.context, "__class__", KapselHackedContext)
+except ImportError:
+    # this is conda 4.1
+    import conda.config
+
+    setattr(conda.config, "platform", "{platform}")
+    setattr(conda.config, "bits", "{bits}")
+    setattr(conda.config, "subdir", "{platform}-{bits}")
 
 import conda.cli
 import sys
@@ -75,17 +84,9 @@ def _get_platform_hacked_conda_command(extra_args, platform):
     if platform == current_platform() or platform is None:
         return _get_conda_command(extra_args)
     else:
-        bits = None
-        if platform.endswith("64"):
-            bits = "64"
-        else:
-            # the "popular platforms" we plan to pass in
-            # here all end in 64 or 32, but if that
-            # assumption breaks let's crash here.
-            assert platform.endswith("32")
-            bits = "32"
+        (platform_name, bits) = platform.split("-")
 
-        conda_code = _platform_hacked_conda_code(platform, bits)
+        conda_code = _platform_hacked_conda_code(platform_name, bits)
 
         # this has to run with the python from the root env,
         # so the conda modules will be found.
