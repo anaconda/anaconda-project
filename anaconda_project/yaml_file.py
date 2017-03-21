@@ -68,8 +68,12 @@ def _load_string(contents):
         return ryaml.load(contents, Loader=ryaml.RoundTripLoader)
 
 
+def _dump_string(yaml):
+    return ryaml.dump(yaml, Dumper=ryaml.RoundTripDumper)
+
+
 def _save_file(yaml, filename):
-    contents = ryaml.dump(yaml, Dumper=ryaml.RoundTripDumper)
+    contents = _dump_string(yaml)
 
     try:
         # This is to ensure we don't corrupt the file, even if ruamel.yaml is broken

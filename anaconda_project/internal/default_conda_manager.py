@@ -174,7 +174,7 @@ class DefaultCondaManager(CondaManager):
         for conda_platform in resolve_for_platforms:
             deps = conda_api.resolve_dependencies(pkgs=package_specs, platform=conda_platform)
             locked_specs = ["%s=%s=%s" % dep for dep in deps]
-            by_platform[conda_platform] = locked_specs
+            by_platform[conda_platform] = sorted(locked_specs)
 
         by_platform = _extract_common(by_platform)
 

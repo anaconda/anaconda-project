@@ -569,7 +569,7 @@ def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
 
 # This isn't all (e.g. leaves out arm, power).  it's sort of "all
 # that people typically publish for"
-popular_platforms = ('linux-64', 'linux-32', 'osx-64', 'win-32', 'win-64')
+popular_platforms = ('linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64')
 
 popular_platform_names = ('linux', 'osx', 'win')
 
