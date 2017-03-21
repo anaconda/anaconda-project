@@ -149,6 +149,12 @@ def _update_version_file():
         atomic_replace(VERSION_PY, content, 'utf-8')
 
 
+def _sort_by_mtime(filenames):
+    with_mtime = [(name, os.path.getmtime(name)) for name in filenames]
+    reordered = sorted(with_mtime, key=lambda x: x[1])
+    return [name for (name, mtime) in reordered]
+
+
 class AllTestsCommand(TestCommand):
     # `py.test --durations=5` == `python setup.py test -a "--durations=5"`
     user_options = [('pytest-args=', 'a', "Arguments to pass to py.test"),
@@ -198,7 +204,7 @@ class AllTestsCommand(TestCommand):
                 for f in files:
                     if f.endswith(".py"):
                         pyfiles.append(os.path.join(root, f))
-            self.pyfiles = pyfiles
+            self.pyfiles = _sort_by_mtime(pyfiles)
         return self.pyfiles
 
     def _git_staged_py_files(self):
@@ -319,10 +325,8 @@ class AllTestsCommand(TestCommand):
             # per-process setup time
             some_files = take_n(all_files, 3)
             processes.append(self._start_format_files(some_files))
-            # don't run too many at once, this is a goofy algorithm
-            if len(processes) > (CPU_COUNT * 3):
-                while len(processes) > CPU_COUNT:
-                    await_one_process()
+            while len(processes) > CPU_COUNT:
+                await_one_process()
         assert [] == all_files
         await_all_processes()
         assert [] == processes
