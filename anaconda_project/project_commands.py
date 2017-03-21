@@ -9,7 +9,7 @@ from __future__ import absolute_import
 
 from copy import copy
 from collections import namedtuple
-from distutils.spawn import find_executable
+import distutils.spawn as spawn
 
 import os
 import platform
@@ -486,11 +486,11 @@ class ProjectCommand(object):
         # line and not a single program name, and the shell will
         # search the path for us.
         if not shell:
-            executable = find_executable(args[0], path)
+            executable = spawn.find_executable(args[0], path)
             # if we didn't find args[0] on the path, we leave it as-is
             # and wait for it to fail when we later try to run it.
             if executable is not None:
-                # if the executable is in cwd, for some reason find_executable does not
+                # if the executable is in cwd, for some reason spawn.find_executable does not
                 # return the full path to it, just a relative path.
                 args[0] = os.path.abspath(executable)
 

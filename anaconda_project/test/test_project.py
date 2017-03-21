@@ -34,6 +34,14 @@ from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
 
 
+def _assert_find_executable(name, path):
+    found = find_executable(name, path)
+    if found is None:
+        print("Did not find %s on path %r, running the tests requires it" % (name, path))
+    assert found is not None
+    return found
+
+
 def test_properties():
     def check_properties(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1210,7 +1218,7 @@ def test_notebook_command():
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        jupyter_notebook = find_executable('jupyter-notebook', path)
+        jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'),
                                  '--NotebookApp.default_url=/notebooks/test.ipynb']
         assert cmd_exec.shell is False
@@ -1231,7 +1239,7 @@ def test_notebook_command_extra_args():
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ, extra_args=['foo', 'bar'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        jupyter_notebook = find_executable('jupyter-notebook', path)
+        jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'),
                                  '--NotebookApp.default_url=/notebooks/test.ipynb', 'foo', 'bar']
         assert cmd_exec.shell is False
@@ -1260,7 +1268,7 @@ def test_notebook_command_with_project_http_args():
                         '--anaconda-project-iframe-hosts=foo1.com *.foo2.com', '--anaconda-project-use-xheaders',
                         '--anaconda-project-address', '1.2.3.4'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        jupyter_notebook = find_executable('jupyter-notebook', path)
+        jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [
             jupyter_notebook, os.path.join(dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb',
             '--ip', '1.2.3.4', '--NotebookApp.tornado_settings=' +
@@ -1292,7 +1300,7 @@ def test_notebook_command_disabled_project_http_args():
                         '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
                         '--anaconda-project-use-xheaders', '--anaconda-project-address', '1.2.3.4'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        jupyter_notebook = find_executable('jupyter-notebook', path)
+        jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(
             dirname, 'test.ipynb'), 'foo', 'bar', '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port',
                                  '1234', '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
@@ -1322,7 +1330,7 @@ def test_notebook_command_project_http_args_after_double_hyphen():
                         '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
                         '--anaconda-project-use-xheaders'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        jupyter_notebook = find_executable('jupyter-notebook', path)
+        jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(
             dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb', '--', 'foo', 'bar',
                                  '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port', '1234',
@@ -1350,7 +1358,7 @@ def test_notebook_command_with_project_http_args_separated_by_equals():
                         '--anaconda-project-host=example.com', '--anaconda-project-no-browser',
                         '--anaconda-project-address=1.2.3.4'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        jupyter_notebook = find_executable('jupyter-notebook', path)
+        jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(
             dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb', '--ip', '1.2.3.4',
                                  '--no-browser', '--port', '1234', '--NotebookApp.base_url=blah', 'foo', 'bar']
@@ -1384,7 +1392,7 @@ def test_notebook_guess_command():
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        jupyter_notebook = find_executable('jupyter-notebook', path)
+        jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, expected_nb_path, '--NotebookApp.default_url=/notebooks/test.ipynb']
         assert cmd_exec.shell is False
 
@@ -1432,6 +1440,28 @@ def test_notebook_guess_command_can_be_default():
             'f.ipynb': 'pretend there is notebook data here'
         },
         check_notebook_guess_command_can_be_default)
+
+
+def test_notebook_command_jupyter_not_on_path(monkeypatch):
+    def check_notebook_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.notebook == 'test.ipynb'
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+
+        def mock_find_executable(*args, **kwargs):
+            return None
+
+        monkeypatch.setattr('distutils.spawn.find_executable', mock_find_executable)
+
+        cmd_exec = command.exec_info_for_environment(environ)
+        assert cmd_exec.args == ['jupyter-notebook', os.path.join(dirname, 'test.ipynb'),
+                                 '--NotebookApp.default_url=/notebooks/test.ipynb']
+        assert cmd_exec.shell is False
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check_notebook_command)
 
 
 def test_multiple_notebooks_suggestion_rejected():
@@ -1574,7 +1604,7 @@ def test_bokeh_command():
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ)
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        bokeh = find_executable('bokeh', path)
+        bokeh = _assert_find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--show']
         assert cmd_exec.shell is False
 
@@ -1595,7 +1625,7 @@ def test_bokeh_command_with_extra_args():
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ, extra_args=['--foo'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        bokeh = find_executable('bokeh', path)
+        bokeh = _assert_find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--show', '--foo']
         assert cmd_exec.shell is False
 
@@ -1622,7 +1652,7 @@ def test_bokeh_command_with_project_http_args():
                         '--anaconda-project-iframe-hosts=foo1.com *.foo2.com', '--anaconda-project-use-xheaders',
                         '--anaconda-project-address', '1.2.3.4'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        bokeh = find_executable('bokeh', path)
+        bokeh = _assert_find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--address', '1.2.3.4', '--host',
                                  'example.com', '--port', '1234', '--prefix', 'blah', '--use-xheaders', '--foo']
         assert cmd_exec.shell is False
@@ -1647,7 +1677,7 @@ def test_bokeh_command_with_multiple_host_args():
             environ,
             extra_args=['--anaconda-project-host', 'example.com', '--anaconda-project-host', 'example2.com'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        bokeh = find_executable('bokeh', path)
+        bokeh = _assert_find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--host', 'example.com', '--host',
                                  'example2.com', '--show']
         assert cmd_exec.shell is False
@@ -1673,7 +1703,7 @@ def test_bokeh_command_with_multiple_iframe_hosts_args():
             extra_args=['--anaconda-project-iframe-hosts', 'example.com', '--anaconda-project-iframe-hosts',
                         'foo1.com *.foo2.com'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        jupyter = find_executable('jupyter-notebook', path)
+        jupyter = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [
             jupyter, os.path.join(dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb',
             '--NotebookApp.tornado_settings=' +
@@ -1702,7 +1732,7 @@ def test_bokeh_command_with_value_missing_for_project_http_args():
             extra_args=['--foo', '--anaconda-project-url-prefix', '--anaconda-project-port', '--anaconda-project-host',
                         '--anaconda-project-address'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        bokeh = find_executable('bokeh', path)
+        bokeh = _assert_find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--address', '', '--host', '',
                                  '--show', '--port', '', '--prefix', '', '--foo']
         assert cmd_exec.shell is False
@@ -1729,7 +1759,7 @@ def test_bokeh_command_with_disabled_project_http_args():
                         '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
                         '--anaconda-project-use-xheaders'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
-        bokeh = find_executable('bokeh', path)
+        bokeh = _assert_find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(
             dirname, 'test.py'), '--foo', '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port', '1234',
                                  '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
