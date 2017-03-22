@@ -102,8 +102,10 @@ sys.exit(conda.cli.main())
 
 
 def _get_platform_hacked_conda_command(extra_args, platform):
+    """Get conda command and a string representing it in error messages."""
     if platform == current_platform() or platform is None:
-        return _get_conda_command(extra_args)
+        cmd_list = _get_conda_command(extra_args)
+        return (cmd_list, " ".join(cmd_list))
     else:
         (platform_name, bits) = platform.split("-")
 
@@ -123,16 +125,18 @@ def _get_platform_hacked_conda_command(extra_args, platform):
 
         cmd_list = [root_python, '-c', conda_code]
         cmd_list.extend(extra_args)
-        return cmd_list
+        return (cmd_list, " ".join(["conda"] + cmd_list[3:]))
 
 
 def _call_conda(extra_args, json_mode=False, platform=None):
-    cmd_list = _get_platform_hacked_conda_command(extra_args, platform=platform)
+    assert len(extra_args) > 0  # we deref extra_args[0] below
+
+    (cmd_list, command_in_errors) = _get_platform_hacked_conda_command(extra_args, platform=platform)
 
     try:
         p = logged_subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError as e:
-        raise CondaError("failed to run: %r: %r" % (" ".join(cmd_list), repr(e)))
+        raise CondaError("failed to run: %r: %r" % (command_in_errors, repr(e)))
     (out, err) = p.communicate()
     errstr = err.decode().strip()
     if p.returncode != 0:
@@ -152,10 +156,10 @@ def _call_conda(extra_args, json_mode=False, platform=None):
             except Exception:
                 pass
 
-        raise CondaError('%s: %s' % (" ".join(cmd_list), message), json=parsed)
+        raise CondaError('%s: %s' % (command_in_errors, message), json=parsed)
     elif errstr != '':
         for line in errstr.split("\n"):
-            print("%s %s: %s" % (cmd_list[0], cmd_list[1], line), file=sys.stderr)
+            print("%s %s: %s" % ("conda", extra_args[0], line), file=sys.stderr)
     return out
 
 

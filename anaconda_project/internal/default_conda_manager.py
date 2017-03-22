@@ -172,7 +172,10 @@ class DefaultCondaManager(CondaManager):
         current = conda_api.current_platform()
         resolve_for_platforms = set((current, ) + conda_api.popular_platforms)
         for conda_platform in resolve_for_platforms:
-            deps = conda_api.resolve_dependencies(pkgs=package_specs, platform=conda_platform)
+            try:
+                deps = conda_api.resolve_dependencies(pkgs=package_specs, platform=conda_platform)
+            except conda_api.CondaError as e:
+                raise CondaManagerError("Error resolving for {}: {}".format(conda_platform, str(e)))
             locked_specs = ["%s=%s=%s" % dep for dep in deps]
             by_platform[conda_platform] = sorted(locked_specs)
 

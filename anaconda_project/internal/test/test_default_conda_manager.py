@@ -374,6 +374,20 @@ def test_resolve_dependencies_with_actual_conda():
     assert len(specs) > 5  # 5 is an arbitrary number of deps that surely bokeh has
 
 
+def test_resolve_dependencies_with_conda_api_mock_raises_error(monkeypatch):
+    def mock_resolve_dependencies(pkgs, platform):
+        raise conda_api.CondaError("nope")
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.resolve_dependencies', mock_resolve_dependencies)
+
+    manager = DefaultCondaManager()
+
+    with pytest.raises(CondaManagerError) as excinfo:
+        manager.resolve_dependencies(['bokeh'])
+
+    assert 'Error resolving for' in str(excinfo.value)
+
+
 def test_installed_version_comparison(monkeypatch):
     def check(dirname):
         prefix = os.path.join(dirname, "myenv")
