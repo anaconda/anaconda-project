@@ -1965,7 +1965,7 @@ def test_update_unlocked_envs():
             assert [] == status.errors
             assert status
             assert status.status_description == "Update complete."
-            assert status.logs == ['Updated installed dependencies for foo.', 'Updated installed dependencies for bar.']
+            assert status.logs == ['Updated installed dependencies for bar.', 'Updated installed dependencies for foo.']
 
             # no project lock file created
             assert not os.path.isfile(filename)

@@ -667,7 +667,7 @@ def _update_and_lock(project, env_spec_name, update):
         return failed
 
     if env_spec_name is None:
-        envs = project.env_specs.values()
+        envs = sorted(project.env_specs.values(), key=lambda env: env.name)
     else:
         env = project.env_specs.get(env_spec_name, None)
         if env is None:
