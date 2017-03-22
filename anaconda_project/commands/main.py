@@ -236,15 +236,20 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('filename', metavar='ENVIRONMENT_FILE')
     preset.set_defaults(main=environment_commands.main_export)
 
-    preset = subparsers.add_parser('lock', help="Lock all dependencies at their current versions")
+    preset = subparsers.add_parser('lock', help="Lock all packages at their current versions")
     add_directory_arg(preset)
     add_env_spec_name_arg(preset, required=False)
     preset.set_defaults(main=environment_commands.main_lock)
 
-    preset = subparsers.add_parser('unlock', help="Remove locked dependencies")
+    preset = subparsers.add_parser('unlock', help="Remove locked package versions")
     add_directory_arg(preset)
     add_env_spec_name_arg(preset, required=False)
     preset.set_defaults(main=environment_commands.main_unlock)
+
+    preset = subparsers.add_parser('update', help="Update all packages to their latest versions")
+    add_directory_arg(preset)
+    add_env_spec_name_arg(preset, required=False)
+    preset.set_defaults(main=environment_commands.main_update)
 
     preset = subparsers.add_parser('add-packages', help="Add packages to one or all project environments")
     add_directory_arg(preset)

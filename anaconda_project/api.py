@@ -526,6 +526,25 @@ class AnacondaProject(object):
         """
         return project_ops.lock(project=project, env_spec_name=env_spec_name)
 
+    def update(self, project, env_spec_name):
+        """Attempt to update frozen dependency versions in anaconda-project-lock.yml.
+
+        If the env_spec_name is None rather than a name,
+        all env specs are updated.
+
+        If an env is not locked, this updates the installed dependencies but
+        doesn't change anything about project configuration (does not save
+        the lock file).
+
+        Args:
+            project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.update(project=project, env_spec_name=env_spec_name)
+
     def unlock(self, project, env_spec_name):
         """Attempt to unfreeze dependency versions in anaconda-project-lock.yml.
 

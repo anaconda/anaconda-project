@@ -1692,8 +1692,10 @@ def test_unlock_broken_project():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
 
 
-def test_lock_and_unlock_all_envs():
+def test_lock_and_update_and_unlock_all_envs():
     def check(dirname):
+        resolve_results = {'all': ['a=1.0=1']}
+
         def attempt():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
             assert not os.path.isfile(filename)
@@ -1721,10 +1723,28 @@ def test_lock_and_unlock_all_envs():
             assert [] == status.errors
             assert status
 
+            # Update (does nothing in this case)
+            status = project_ops.update(project, env_spec_name=None)
+            assert [] == status.errors
+            assert status
+            assert status.status_description == "Locked dependencies are already up to date."
+
+            # Update (does something after tweaking resolve results)
+            resolve_results['all'] = ['a=2.0=0']
+            status = project_ops.update(project, env_spec_name=None)
+            assert [] == status.errors
+            assert status
+            assert status.status_description == "Update complete."
+            assert ('a=2.0=0', ) == project.env_specs['foo'].conda_packages_for_create
+
+            assert '-    a=1.0=1' in status.logs
+            assert '+    a=2.0=0' in status.logs
+
             # Unlock
             status = project_ops.unlock(project, env_spec_name=None)
             assert [] == status.errors
             assert status
+            assert 'Dependency locking is now disabled.' == status.status_description
 
             lock_file = ProjectLockFile.load_for_directory(dirname)
             assert lock_file._get_lock_set('foo') is None
@@ -1733,7 +1753,7 @@ def test_lock_and_unlock_all_envs():
             assert ('a', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
 
-        _with_conda_test(attempt, resolve_dependencies={'all': ['a=1.0=1']})
+        _with_conda_test(attempt, resolve_dependencies=resolve_results)
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
@@ -1760,6 +1780,9 @@ def test_lock_and_unlock_single_env():
             status = project_ops.lock(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
+            assert ['Changes to locked dependencies for foo:', '+ all:', '+    a=1.0=1',
+                    'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'] == status.logs
+            assert 'Project dependencies are locked.' == status.status_description
 
             assert os.path.isfile(filename)
 
@@ -1774,11 +1797,22 @@ def test_lock_and_unlock_single_env():
             status = project_ops.lock(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
+            assert ['Env spec foo is already locked.'] == status.logs
+            assert 'Project dependencies are locked.' == status.status_description
+
+            # Update (does nothing in this case)
+            status = project_ops.update(project, env_spec_name='foo')
+            assert [] == status.errors
+            assert status
+            assert [] == status.logs
+            assert 'Locked dependencies are already up to date.' == status.status_description
 
             # Now unlock
             status = project_ops.unlock(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
+            assert [] == status.logs
+            assert 'Dependency locking is now disabled for env spec foo.' == status.status_description
 
             lock_file = ProjectLockFile.load_for_directory(dirname)
             assert lock_file._get_lock_set('foo') is None
@@ -1849,6 +1883,94 @@ def test_lock_resolve_dependencies_error(monkeypatch):
             assert not os.path.isfile(filename)
 
         _with_conda_test(attempt, missing_packages=('a', 'b'), resolve_dependencies_error="Nope on resolve")
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: locktest
+env_specs:
+  foo:
+    packages:
+      - a
+  bar:
+    packages:
+      - b
+"""}, check)
+
+
+def test_unlock_conda_error():
+    def check(dirname):
+        def attempt():
+            filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
+            assert os.path.isfile(filename)
+
+            project = Project(dirname)
+
+            assert project.env_specs['foo'].lock_set is not None
+            assert project.env_specs['bar'].lock_set is not None
+
+            status = project_ops.unlock(project, env_spec_name=None)
+            assert [] == status.errors
+            assert not status
+            assert "test deviation" == status.status_description
+
+            assert os.path.isfile(filename)
+
+            assert project.env_specs['foo'].lock_set is not None
+            assert project.env_specs['bar'].lock_set is not None
+
+        _with_conda_test(attempt,
+                         missing_packages=('a', 'b'),
+                         resolve_dependencies={'all': ['a=1.0=1']},
+                         fix_works=False)
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: locktest
+env_specs:
+  foo:
+    packages:
+      - a
+  bar:
+    packages:
+      - b
+""",
+         DEFAULT_PROJECT_LOCK_FILENAME: """
+locking_enabled: true
+env_specs:
+  foo:
+    locked: true
+    packages:
+       all:
+         - c
+  bar:
+    locked: true
+    packages:
+       all:
+         - d
+"""}, check)
+
+
+def test_update_unlocked_envs():
+    def check(dirname):
+        resolve_results = {'all': ['a=1.0=1']}
+
+        def attempt():
+            filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
+            assert not os.path.isfile(filename)
+
+            project = Project(dirname)
+
+            # Update (should install packages but not make a lock file)
+            status = project_ops.update(project, env_spec_name=None)
+            assert [] == status.errors
+            assert status
+            assert status.status_description == "Update complete."
+            assert status.logs == ['Updated installed dependencies for foo.', 'Updated installed dependencies for bar.']
+
+            # no project lock file created
+            assert not os.path.isfile(filename)
+
+        _with_conda_test(attempt, resolve_dependencies=resolve_results)
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """

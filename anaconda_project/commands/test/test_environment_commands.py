@@ -60,6 +60,10 @@ def _monkeypatch_unlock(monkeypatch, result):
     return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.unlock", result)
 
 
+def _monkeypatch_update(monkeypatch, result):
+    return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.update", result)
+
+
 def _test_environment_command_with_project_file_problems(capsys, monkeypatch, command, append_dirname=False):
     def check(dirname):
         if append_dirname:
@@ -596,9 +600,52 @@ def test_unlock_specific_environment(capsys, monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
+def test_update_all_environments(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_update(monkeypatch,
+                                     SimpleStatus(success=True,
+                                                  logs=['Stuff happened'],
+                                                  description='Updated.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'update'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Stuff happened\nUpdated.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name=None) == params['kwargs']
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_update_specific_environment(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_update(monkeypatch, SimpleStatus(success=True, description='Updated.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'update', '-n', 'foo'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Updated.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name='foo') == params['kwargs']
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
 def test_lock_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'lock'])
 
 
 def test_unlock_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'unlock'])
+
+
+def test_update_with_project_file_problems(capsys, monkeypatch):
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'update'])

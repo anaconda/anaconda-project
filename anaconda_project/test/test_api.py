@@ -410,6 +410,26 @@ def test_lock(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_update(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.update, project_ops.update)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_update(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.update', mock_update)
+
+    p = api.AnacondaProject()
+    kwargs = dict(project=43, env_spec_name='foo')
+    result = p.update(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_unlock(monkeypatch):
     import anaconda_project.project_ops as project_ops
     _verify_args_match(api.AnacondaProject.unlock, project_ops.unlock)

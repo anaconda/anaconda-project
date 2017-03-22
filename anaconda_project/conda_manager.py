@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
 from copy import deepcopy
+import difflib
 
 from anaconda_project.yaml_file import (_CommentedMap, _CommentedSeq, _block_style_all_nodes)
 from anaconda_project.internal.metaclass import with_metaclass
@@ -246,6 +247,69 @@ class CondaLockSet(object):
         """
         # we deepcopy this to avoid sharing issues
         self._package_specs_by_platform = deepcopy(package_specs_by_platform)
+
+    def equivalent_to(self, other):
+        """Determine if this lock set the same as another one."""
+        return self._package_specs_by_platform == other._package_specs_by_platform
+
+    def diff_from(self, old):
+        """A string showing the comparison between this lock set and another one.
+
+        "old" can be None to mean diff vs. nothing.
+        """
+        keys = list(self._package_specs_by_platform.keys())
+        if old is not None:
+            keys = keys + list(old._package_specs_by_platform.keys())
+            # de-dup
+            keys = list(set(keys))
+
+        # sort nicely
+        keys = _pretty_platform_sort(keys)
+
+        combined_diff = []
+        for key in keys:
+            if old is None:
+                old_list = []
+            else:
+                old_list = old._package_specs_by_platform.get(key, [])
+
+            new_list = self._package_specs_by_platform.get(key, [])
+
+            diff = list(difflib.ndiff(old_list, new_list))
+
+            # the diff has - lines, + lines, and ? lines
+            # the ? lines have the ^ pointing to changed character,
+            # which is just noise for these short version strings.
+            # the diff also has lines with just whitespace at the
+            # front, which are context.
+
+            # remove context lines
+            diff = filter(lambda x: x[0] != ' ', diff)
+            # remove ? lines
+            diff = filter(lambda x: x[0] != '?', diff)
+
+            def indent_more(s):
+                if s.startswith("+ "):
+                    return "+    " + s[2:]
+                elif s.startswith("- "):
+                    return "-    " + s[2:]
+                else:
+                    return s  # pragma: no cover # should not be any other kind of lines
+
+            diff = map(indent_more, diff)
+
+            diff = list(diff)
+
+            if diff:
+                if old is None or key not in old._package_specs_by_platform:
+                    combined_diff.append("+ %s:" % key)
+                elif key not in self._package_specs_by_platform:
+                    combined_diff.append("- %s:" % key)
+                else:
+                    combined_diff.append("  %s:" % key)
+                combined_diff.extend(map(lambda x: x, diff))
+
+        return "\n".join(combined_diff)
 
     def package_specs_for_platform(self, platform):
         """Sequence of package spec strings for the requested platform."""

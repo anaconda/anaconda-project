@@ -99,3 +99,45 @@ linux-64:
 osx-64:
 - s
 """
+
+
+def test_lock_set_diff_and_equivalent():
+    old_lock_set = CondaLockSet({'all': ['a', 'b'],
+                                 'linux': ['x'],
+                                 'win': ['y'],
+                                 'linux-64': ['z', 'q'],
+                                 'osx-64': ['s']})
+    new_lock_set = CondaLockSet({'all': ['a', 'b', 'c'],
+                                 'linux': ['x', 'h'],
+                                 'win': ['y'],
+                                 'linux-64': ['q', 'w'],
+                                 'osx-64': ['s'],
+                                 'win-64': ['j']})
+
+    assert """  all:
++    c
+  linux:
++    h
+  linux-64:
+-    z
++    w
++ win-64:
++    j""" == new_lock_set.diff_from(old_lock_set)
+
+    assert """  all:
+-    c
+  linux:
+-    h
+  linux-64:
++    z
+-    w
+- win-64:
+-    j""" == old_lock_set.diff_from(new_lock_set)
+
+    assert "" == new_lock_set.diff_from(new_lock_set)
+    assert "" == old_lock_set.diff_from(old_lock_set)
+
+    assert old_lock_set.equivalent_to(old_lock_set)
+    assert new_lock_set.equivalent_to(new_lock_set)
+    assert not old_lock_set.equivalent_to(new_lock_set)
+    assert not new_lock_set.equivalent_to(old_lock_set)

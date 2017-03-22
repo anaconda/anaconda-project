@@ -16,6 +16,8 @@ from anaconda_project.commands import console_utils
 
 def _handle_status(status, success_message=None):
     if status:
+        for line in status.logs:
+            print(line)
         print(status.status_description)
         if success_message is not None:
             print(success_message)
@@ -105,6 +107,15 @@ def lock(project_dir, env_spec_name):
     return _handle_status(status)
 
 
+def update(project_dir, env_spec_name):
+    """Update dependency versions."""
+    project = load_project(project_dir)
+    if console_utils.print_project_problems(project):
+        return 1
+    status = project_ops.update(project, env_spec_name=env_spec_name)
+    return _handle_status(status)
+
+
 def unlock(project_dir, env_spec_name):
     """Unlock dependency versions."""
     project = load_project(project_dir)
@@ -152,6 +163,11 @@ def main_list_packages(args):
 def main_lock(args):
     """Lock dependency versions and return exit status code."""
     return lock(args.directory, args.name)
+
+
+def main_update(args):
+    """Update dependency versions and return exit status code."""
+    return update(args.directory, args.name)
 
 
 def main_unlock(args):

@@ -215,6 +215,28 @@ def _commit_lock_file_if_it_works(project, env_spec_name):
     return status
 
 
+def _apply_lock_file_then_revert(project, env_spec_name):
+    project.lock_file.use_changes_without_saving()
+
+    result = prepare.prepare_without_interaction(project,
+                                                 provide_whitelist=(CondaEnvRequirement, ),
+                                                 env_spec_name=env_spec_name)
+
+    status = result.status_for(CondaEnvRequirement)
+    if status is None:
+        # I _think_ this is currently impossible, but if it were possible,
+        # we'd need to below code and it's hard to prove it's impossible.
+        status = project.problems_status()  # pragma: no cover # no way to cause right now?
+        # caller was supposed to expect env_var_or_class to still exist,
+        # unless project file got mangled
+        assert status is not None  # pragma: no cover
+
+    # reload from disk, discarding our changes
+    project.lock_file.load()
+
+    return status
+
+
 def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
     """Attempt to download the URL; if successful, add it as a download to the project.
 
@@ -639,19 +661,7 @@ def remove_packages(project, env_spec_name, packages):
     return status
 
 
-def lock(project, env_spec_name):
-    """Attempt to freeze dependency versions in anaconda-project-lock.yml.
-
-    If the env_spec_name is None rather than a name,
-    all env specs are frozen.
-
-    Args:
-        project (Project): the project
-        env_spec_name (str): environment spec name or None for all environment specs
-
-    Returns:
-        ``Status`` instance
-    """
+def _update_and_lock(project, env_spec_name, update):
     failed = project.problems_status()
     if failed is not None:
         return failed
@@ -673,7 +683,7 @@ def lock(project, env_spec_name):
     logs = []
 
     for env in envs:
-        if env.lock_set is None:
+        if update or env.lock_set is None:
             try:
                 lock_set = conda.resolve_dependencies(env.conda_packages)
             except conda_manager.CondaManagerError as e:
@@ -681,21 +691,91 @@ def lock(project, env_spec_name):
                                     description="Error resolving dependencies for %s: %s." % (env.name, str(e)),
                                     logs=logs)
 
+            changes_needed = env.lock_set is None or not env.lock_set.equivalent_to(lock_set)
+
+            if update and not changes_needed:
+                return SimpleStatus(success=True, description="Locked dependencies are already up to date.", logs=logs)
+
             project.lock_file._set_lock_set(env.name, lock_set, all_env_names)
 
-            status = _commit_lock_file_if_it_works(project, env.name)
-
-            if status:
-                logs.append("Added locked dependencies for env spec %s to %s." % (env.name, project.lock_file.basename))
+            if update and env.lock_set is None:
+                # If we are doing an update and locking is not
+                # already in use, we should install the new lock
+                # set, but not save it in the lock file.
+                status = _apply_lock_file_then_revert(project, env.name)
+                if status:
+                    logs.append("Updated installed dependencies for %s." % (env.name))
+                # we should not have created a lock when there was none
+                assert project.env_specs[env.name].lock_set is None
             else:
+                # a lock, or an update when we already have locking enabled,
+                # DOES save in the lock file
+                if changes_needed:
+                    logs.append("Changes to locked dependencies for %s:" % env.name)
+                    diff_string = lock_set.diff_from(env.lock_set)
+                    for line in diff_string.split("\n"):
+                        logs.append(line)
+
+                status = _commit_lock_file_if_it_works(project, env.name)
+                if status:
+                    logs.extend(status.logs)
+                    if update:
+                        logs.append("Updated locked dependencies for env spec %s in %s." %
+                                    (env.name, project.lock_file.basename))
+                    else:
+                        logs.append("Added locked dependencies for env spec %s to %s." %
+                                    (env.name, project.lock_file.basename))
+
+            if not status:
                 # we throw out logs here, but when we
                 # switch to using a streaming progress interface
                 # that will be ok.
                 return status
         else:
-            logs.append("Env spec %s is already locked" % env.name)
+            assert not update
+            logs.append("Env spec %s is already locked." % env.name)
 
-    return SimpleStatus(success=True, description="Project dependencies are locked.", logs=logs)
+    if update:
+        description = "Update complete."
+    else:
+        description = "Project dependencies are locked."
+    return SimpleStatus(success=True, description=description, logs=logs)
+
+
+def lock(project, env_spec_name):
+    """Attempt to freeze dependency versions in anaconda-project-lock.yml.
+
+    If the env_spec_name is None rather than a name,
+    all env specs are frozen.
+
+    Args:
+        project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
+
+    Returns:
+        ``Status`` instance
+    """
+    return _update_and_lock(project, env_spec_name, update=False)
+
+
+def update(project, env_spec_name):
+    """Attempt to update frozen dependency versions in anaconda-project-lock.yml.
+
+    If the env_spec_name is None rather than a name,
+    all env specs are updated.
+
+    If an env is not locked, this updates the installed dependencies but
+    doesn't change anything about project configuration (does not save
+    the lock file).
+
+    Args:
+        project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
+
+    Returns:
+        ``Status`` instance
+    """
+    return _update_and_lock(project, env_spec_name, update=True)
 
 
 def unlock(project, env_spec_name):
@@ -726,7 +806,14 @@ def unlock(project, env_spec_name):
 
     status = _commit_lock_file_if_it_works(project, env_spec_name)
 
-    return status
+    if status:
+        if env_spec_name is None:
+            description = "Dependency locking is now disabled."
+        else:
+            description = "Dependency locking is now disabled for env spec %s." % env_spec_name
+        return SimpleStatus(success=True, logs=status.logs, description=description)
+    else:
+        return status
 
 
 def _prepare_env_prefix(project, env_spec_name):
