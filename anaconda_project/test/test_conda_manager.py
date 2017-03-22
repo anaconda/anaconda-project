@@ -18,7 +18,7 @@ def test_use_non_default_conda_manager():
     called = dict()
 
     class MyCondaManager(CondaManager):
-        def resolve_dependencies(self, package_specs):
+        def resolve_dependencies(self, package_specs, channels):
             return CondaLockSet({})
 
         def find_environment_deviations(self, *args):

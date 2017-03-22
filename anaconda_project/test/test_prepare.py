@@ -299,7 +299,7 @@ def test_prepare_bad_command_name():
 
 def _push_fake_env_creator():
     class HappyCondaManager(CondaManager):
-        def resolve_dependencies(self, package_specs):
+        def resolve_dependencies(self, package_specs, channels):
             return CondaLockSet({})
 
         def find_environment_deviations(self, prefix, spec):

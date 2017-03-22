@@ -685,7 +685,7 @@ def _update_and_lock(project, env_spec_name, update):
     for env in envs:
         if update or env.lock_set is None:
             try:
-                lock_set = conda.resolve_dependencies(env.conda_packages)
+                lock_set = conda.resolve_dependencies(env.conda_packages, env.channels)
             except conda_manager.CondaManagerError as e:
                 return SimpleStatus(success=False,
                                     description="Error resolving dependencies for %s: %s." % (env.name, str(e)),

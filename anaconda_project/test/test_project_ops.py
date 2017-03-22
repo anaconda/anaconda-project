@@ -1298,7 +1298,7 @@ def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove
                                                          missing_pip_packages=(),
                                                          wrong_version_pip_packages=())
 
-        def resolve_dependencies(self, package_specs):
+        def resolve_dependencies(self, package_specs, channels):
             if resolve_dependencies_error is not None:
                 raise CondaManagerError(resolve_dependencies_error)
             else:

@@ -352,21 +352,21 @@ def test_timestamp_file_ignores_failed_write(monkeypatch):
 
 
 def test_resolve_dependencies_with_conda_api_mock(monkeypatch):
-    def mock_resolve_dependencies(pkgs, platform):
+    def mock_resolve_dependencies(pkgs, platform, channels):
         return [('bokeh', '0.12.4', '0'), ('thing', '1.0', '1')]
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.resolve_dependencies', mock_resolve_dependencies)
 
     manager = DefaultCondaManager()
 
-    lock_set = manager.resolve_dependencies(['bokeh'])
+    lock_set = manager.resolve_dependencies(['bokeh'], channels=())
     assert lock_set.package_specs_for_current_platform == ('bokeh=0.12.4=0', 'thing=1.0=1')
 
 
 def test_resolve_dependencies_with_actual_conda():
     manager = DefaultCondaManager()
 
-    lock_set = manager.resolve_dependencies(['bokeh'])
+    lock_set = manager.resolve_dependencies(['bokeh'], channels=())
     specs = lock_set.package_specs_for_current_platform
     pprint(specs)
     names = [conda_api.parse_spec(spec).name for spec in specs]
@@ -375,7 +375,7 @@ def test_resolve_dependencies_with_actual_conda():
 
 
 def test_resolve_dependencies_with_conda_api_mock_raises_error(monkeypatch):
-    def mock_resolve_dependencies(pkgs, platform):
+    def mock_resolve_dependencies(pkgs, platform, channels):
         raise conda_api.CondaError("nope")
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.resolve_dependencies', mock_resolve_dependencies)
@@ -383,7 +383,7 @@ def test_resolve_dependencies_with_conda_api_mock_raises_error(monkeypatch):
     manager = DefaultCondaManager()
 
     with pytest.raises(CondaManagerError) as excinfo:
-        manager.resolve_dependencies(['bokeh'])
+        manager.resolve_dependencies(['bokeh'], channels=())
 
     assert 'Error resolving for' in str(excinfo.value)
 

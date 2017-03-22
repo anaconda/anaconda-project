@@ -164,7 +164,7 @@ class DefaultCondaManager(CondaManager):
             # fail we will survive
             pass
 
-    def resolve_dependencies(self, package_specs):
+    def resolve_dependencies(self, package_specs, channels):
         by_platform = {}
 
         # This has no reason to be a loop now, but it will
@@ -179,7 +179,7 @@ class DefaultCondaManager(CondaManager):
         resolve_for_platforms = [current] + resolve_for_platforms
         for conda_platform in resolve_for_platforms:
             try:
-                deps = conda_api.resolve_dependencies(pkgs=package_specs, platform=conda_platform)
+                deps = conda_api.resolve_dependencies(pkgs=package_specs, platform=conda_platform, channels=channels)
             except conda_api.CondaError as e:
                 raise CondaManagerError("Error resolving for {}: {}".format(conda_platform, str(e)))
             locked_specs = ["%s=%s=%s" % dep for dep in deps]
