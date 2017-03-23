@@ -517,7 +517,7 @@ class _ConfigCache(object):
 
         if importable_spec is not None:
             skip_spec_import = project_file.get_value(['skip_imports', 'environment'])
-            if skip_spec_import == importable_spec.channels_and_packages_hash:
+            if skip_spec_import == importable_spec.logical_hash:
                 importable_spec = None
 
         if importable_spec is not None:
@@ -552,8 +552,7 @@ class _ConfigCache(object):
                 project.project_file.set_value(['env_specs', importable_spec.name], importable_spec.to_json())
 
             def remember_no_import_importable(project):
-                project.project_file.set_value(['skip_imports', 'environment'],
-                                               importable_spec.channels_and_packages_hash)
+                project.project_file.set_value(['skip_imports', 'environment'], importable_spec.logical_hash)
 
             # we don't set the filename here because it isn't really an error in the
             # file, it ends up reading strangely.

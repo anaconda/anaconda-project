@@ -93,7 +93,8 @@ class EnvSpec(object):
         self._channels = tuple(channels)
         self._pip_packages = tuple(pip_packages)
         self._description = description
-        self._channels_and_packages_hash = None
+        self._logical_hash = None
+        self._locked_hash = None
         self._inherit_from_names = inherit_from_names
         self._inherit_from = inherit_from
         self._lock_set = lock_set
@@ -142,24 +143,40 @@ class EnvSpec(object):
         else:
             return self._description
 
-    @property
-    def channels_and_packages_hash(self):
-        """Get a hash of our channels and packages.
+    def _compute_hash(self, conda_packages):
+        import hashlib
+        m = hashlib.sha1()
+        for p in conda_packages:
+            m.update(p.encode("utf-8"))
+        for p in self.pip_packages:
+            m.update(p.encode("utf-8"))
+        for c in self.channels:
+            m.update(c.encode("utf-8"))
+        result = m.hexdigest()
+        return result
 
-        This is used to see if they have changed. Order matters
-        (change in order will count as a change).
+    @property
+    def logical_hash(self):
+        """Get a hash of our "logical" requirements.
+
+        This is used for e.g. environment.yml comparison.  Order
+        matters (change in order will count as a change).
         """
-        if self._channels_and_packages_hash is None:
-            import hashlib
-            m = hashlib.sha1()
-            for p in self.conda_packages:
-                m.update(p.encode("utf-8"))
-            for p in self.pip_packages:
-                m.update(p.encode("utf-8"))
-            for c in self.channels:
-                m.update(c.encode("utf-8"))
-            self._channels_and_packages_hash = m.hexdigest()
-        return self._channels_and_packages_hash
+        if self._logical_hash is None:
+            self._logical_hash = self._compute_hash(self.conda_packages)
+        return self._logical_hash
+
+    @property
+    def locked_hash(self):
+        """Get a hash of our locked packages (what we'd pass to conda create).
+
+        This is used to see if we need to reprepare
+        environments. Order matters (change in order will count as
+        a change).
+        """
+        if self._locked_hash is None:
+            self._locked_hash = self._compute_hash(self.conda_packages_for_create)
+        return self._locked_hash
 
     def _get_inherited(self, public_attr, key_func=None):
         def _linearized_ancestors(specs, accumulator):
@@ -472,7 +489,7 @@ def _find_out_of_sync_importable_spec(project_specs, directory_path):
 
     for existing in project_specs:
         if existing.name == spec.name and \
-           existing.channels_and_packages_hash == spec.channels_and_packages_hash:
+           existing.logical_hash == spec.logical_hash:
             return (None, None)
 
     return (spec, filename)

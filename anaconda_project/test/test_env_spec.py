@@ -27,7 +27,7 @@ def test_load_environment_yml():
         assert spec.pip_packages == ('pippy', 'poppy==2.0')
         assert spec.channels == ('channel1', 'channel2')
 
-        assert spec.channels_and_packages_hash == 'e91a2263df510c9b188b132b801ba53aa99cc407'
+        assert spec.logical_hash == 'e91a2263df510c9b188b132b801ba53aa99cc407'
 
     with_file_contents("""
 name: foo
@@ -53,7 +53,7 @@ def test_load_environment_yml_with_prefix():
         assert spec.pip_packages == ('pippy', 'poppy==2.0')
         assert spec.channels == ('channel1', 'channel2')
 
-        assert spec.channels_and_packages_hash == 'e91a2263df510c9b188b132b801ba53aa99cc407'
+        assert spec.logical_hash == 'e91a2263df510c9b188b132b801ba53aa99cc407'
 
     with_file_contents("""
 prefix: /opt/foo
@@ -79,7 +79,7 @@ def test_load_environment_yml_no_name():
         assert spec.pip_packages == ('pippy', 'poppy==2.0')
         assert spec.channels == ('channel1', 'channel2')
 
-        assert spec.channels_and_packages_hash == 'e91a2263df510c9b188b132b801ba53aa99cc407'
+        assert spec.logical_hash == 'e91a2263df510c9b188b132b801ba53aa99cc407'
 
     with_file_contents("""
 dependencies:
@@ -141,7 +141,7 @@ def test_load_requirements_txt():
                                      'svn+http://myrepo/svn/MyThing#egg=MyThing')
         assert spec.pip_package_names_set == set(('MyApp', 'Framework', 'Library', 'MyThing'))
 
-        assert spec.channels_and_packages_hash == '784ba385d4cd468756e3cbc57f33e97afdc38059'
+        assert spec.logical_hash == '784ba385d4cd468756e3cbc57f33e97afdc38059'
 
     with_file_contents("""
 MyApp
@@ -215,7 +215,7 @@ def test_find_out_of_sync_environment_yml():
 
         (desynced, name) = _find_out_of_sync_importable_spec([changed], os.path.dirname(filename))
         assert desynced is not None
-        assert desynced.channels_and_packages_hash == spec.channels_and_packages_hash
+        assert desynced.logical_hash == spec.logical_hash
         assert name == os.path.basename(filename)
 
     with_named_file_contents("environment.yaml", """
@@ -313,7 +313,7 @@ def test_save_environment_yml():
         assert spec2.pip_packages == ('pippy', 'poppy==2.0')
         assert spec2.channels == ('channel1', 'channel2')
 
-        assert spec2.channels_and_packages_hash == 'ee1be9dc875857a69ccabb96cb45b5b828a6dff9'
+        assert spec2.logical_hash == 'ee1be9dc875857a69ccabb96cb45b5b828a6dff9'
 
     def check(filename):
         spec = _load_environment_yml(filename)
@@ -324,7 +324,7 @@ def test_save_environment_yml():
         assert spec.pip_packages == ('pippy', 'poppy==2.0')
         assert spec.channels == ('channel1', 'channel2')
 
-        assert spec.channels_and_packages_hash == 'ee1be9dc875857a69ccabb96cb45b5b828a6dff9'
+        assert spec.logical_hash == 'ee1be9dc875857a69ccabb96cb45b5b828a6dff9'
 
         with_directory_contents({}, lambda dirname: check_save(spec, dirname))
 
@@ -353,3 +353,24 @@ def test_merge_in_lock_set():
                    lock_set=lock_set)
 
     assert ('b', 'a=1.0=1') == spec.conda_packages_for_create
+
+
+def test_lock_set_affects_hash():
+    lock_set = CondaLockSet({'all': ['a=1.0=1']})
+    with_lock_spec = EnvSpec(name="foo",
+                             conda_packages=['a', 'b'],
+                             pip_packages=['c', 'd'],
+                             channels=['x', 'y'],
+                             lock_set=lock_set)
+    without_lock_spec = EnvSpec(name=with_lock_spec.name,
+                                conda_packages=with_lock_spec.conda_packages,
+                                pip_packages=with_lock_spec.pip_packages,
+                                channels=with_lock_spec.channels,
+                                lock_set=None)
+
+    assert with_lock_spec.conda_packages != with_lock_spec.conda_packages_for_create
+    assert without_lock_spec.conda_packages == without_lock_spec.conda_packages_for_create
+
+    assert without_lock_spec.logical_hash == without_lock_spec.locked_hash
+    assert with_lock_spec.logical_hash != with_lock_spec.locked_hash
+    assert with_lock_spec.logical_hash == without_lock_spec.logical_hash

@@ -81,7 +81,7 @@ def _extract_common(by_platform):
 
 class DefaultCondaManager(CondaManager):
     def _timestamp_file(self, prefix, spec):
-        return os.path.join(prefix, "var", "cache", "anaconda-project", "env-specs", spec.channels_and_packages_hash)
+        return os.path.join(prefix, "var", "cache", "anaconda-project", "env-specs", spec.locked_hash)
 
     def _timestamp_comparison_directories(self, prefix):
         # this is a little bit heuristic; we are trying to detect
