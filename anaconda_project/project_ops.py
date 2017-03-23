@@ -164,12 +164,13 @@ def set_properties(project, name=None, icon=None, description=None):
 
 
 def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=None):
-    project.project_file.use_changes_without_saving()
+    project.use_changes_without_saving()
 
-    # See if we can perform the download
+    provide_whitelist = (CondaEnvRequirement, )
+    if env_var_or_class not in provide_whitelist:
+        provide_whitelist = provide_whitelist + (env_var_or_class, )
     result = prepare.prepare_without_interaction(project,
-                                                 provide_whitelist=(CondaEnvRequirement,
-                                                                    env_var_or_class, ),
+                                                 provide_whitelist=provide_whitelist,
                                                  env_spec_name=env_spec_name)
 
     status = result.status_for(env_var_or_class)
@@ -183,35 +184,10 @@ def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=Non
 
     if not status:
         # reload from disk, discarding our changes because they did not work
-        project.project_file.load()
+        project.load()
     else:
         # yay!
-        project.project_file.save()
-    return status
-
-
-def _commit_lock_file_if_it_works(project, env_spec_name):
-    project.lock_file.use_changes_without_saving()
-
-    result = prepare.prepare_without_interaction(project,
-                                                 provide_whitelist=(CondaEnvRequirement, ),
-                                                 env_spec_name=env_spec_name)
-
-    status = result.status_for(CondaEnvRequirement)
-    if status is None:
-        # I _think_ this is currently impossible, but if it were possible,
-        # we'd need to below code and it's hard to prove it's impossible.
-        status = project.problems_status()  # pragma: no cover # no way to cause right now?
-        # caller was supposed to expect env_var_or_class to still exist,
-        # unless project file got mangled
-        assert status is not None  # pragma: no cover
-
-    if not status:
-        # reload from disk, discarding our changes because they did not work
-        project.lock_file.load()
-    else:
-        # yay!
-        project.lock_file.save()
+        project.save()
     return status
 
 
@@ -716,7 +692,7 @@ def _update_and_lock(project, env_spec_name, update):
                     for line in diff_string.split("\n"):
                         logs.append(line)
 
-                status = _commit_lock_file_if_it_works(project, env.name)
+                status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env.name)
                 if status:
                     logs.extend(status.logs)
                     if update:
@@ -804,7 +780,7 @@ def unlock(project, env_spec_name):
     # if env_spec_name is None this disables locking for ALL env specs
     project.lock_file._disable_locking(env_spec_name)
 
-    status = _commit_lock_file_if_it_works(project, env_spec_name)
+    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name)
 
     if status:
         if env_spec_name is None:

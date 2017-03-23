@@ -1194,3 +1194,32 @@ class Project(object):
         json['services'] = services
 
         return json
+
+    def load(self):
+        """Revert the project configuration by reloading config from disk.
+
+        Discards all unsaved changes.
+
+        This isn't needed when creating a Project, just if you want to
+        revert to disk. We automatically load on Project creation.
+        """
+        self.project_file.load()
+        self.lock_file.load()
+
+    def save(self):
+        """Save any modified project configuration.
+
+        Does nothing for config files that are not dirty.
+        """
+        self.project_file.save()
+        self.lock_file.save()
+
+    def use_changes_without_saving(self):
+        """Rebuild project state from in-memory changes.
+
+        This causes the Project instance to reload from
+        the in-memory (but possibly unsaved) state of
+        the project file and lock file.
+        """
+        self.project_file.use_changes_without_saving()
+        self.lock_file.use_changes_without_saving()

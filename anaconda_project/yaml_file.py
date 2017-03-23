@@ -266,6 +266,12 @@ class YamlFile(object):
         to undo our changes.
         """
         self._change_count = self._change_count + 1
+        # Ideally, what we'd do here is NOT set dirty=True, but instead
+        # increment change_count iff dirty is already True. The reason
+        # we don't do that is that we've overloaded use_changes_without_saving
+        # to also mean "some of self._yaml was modified behind our back".
+        # We could for example wrap self._yaml in proxies that set dirty=True
+        # when mutated, and then we could do this properly.
         self._dirty = True
 
     def save(self):
