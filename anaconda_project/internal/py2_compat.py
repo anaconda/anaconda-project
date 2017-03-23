@@ -6,6 +6,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import collections
 import platform
 import sys
 
@@ -24,6 +25,14 @@ def is_string(s):
         return isinstance(s, basestring)  # pragma: no cover (py2/py3) # noqa
     else:  # pragma: no cover (py2/py3)
         return isinstance(s, str)  # pragma: no cover (py2/py3)
+
+
+def is_list(v):
+    return isinstance(v, collections.Sequence) and not is_string(v)
+
+
+def is_dict(v):
+    return isinstance(v, collections.Mapping)
 
 
 def env_without_unicode(environ):

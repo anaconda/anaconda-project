@@ -23,7 +23,7 @@ from anaconda_project.project_lock_file import ProjectLockFile
 from anaconda_project.archiver import _list_relative_paths_for_unignored_project_files
 from anaconda_project.version import version
 
-from anaconda_project.internal.py2_compat import is_string
+from anaconda_project.internal.py2_compat import is_string, is_list, is_dict
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.slugify import slugify
 import anaconda_project.internal.conda_api as conda_api
@@ -271,7 +271,7 @@ class _ConfigCache(object):
         # entirely which is the same as empty.
         if variables is None:
             pass
-        elif isinstance(variables, dict):
+        elif is_dict(variables):
             for key in variables.keys():
                 if check_conda_reserved(key):
                     continue
@@ -283,7 +283,7 @@ class _ConfigCache(object):
 
                 if raw_options is None:
                     options = {}
-                elif isinstance(raw_options, dict):
+                elif is_dict(raw_options):
                     options = deepcopy(raw_options)  # so we can modify it below
                 else:
                     options = dict(default=raw_options)
@@ -293,7 +293,7 @@ class _ConfigCache(object):
                 if EnvVarRequirement._parse_default(options, key, problems):
                     requirement = self.registry.find_requirement_by_env_var(key, options)
                     requirements.append(requirement)
-        elif isinstance(variables, list):
+        elif is_list(variables):
             for item in variables:
                 if is_string(item):
                     if item.strip() == '':
@@ -323,7 +323,7 @@ class _ConfigCache(object):
         if downloads is None:
             return
 
-        if not isinstance(downloads, dict):
+        if not is_dict(downloads):
             _file_problem(problems, project_file,
                           "'downloads:' section should be a dictionary, found {}".format(repr(downloads)))
             return
@@ -341,7 +341,7 @@ class _ConfigCache(object):
         if services is None:
             return
 
-        if not isinstance(services, dict):
+        if not is_dict(services):
             _file_problem(problems, project_file,
                           ("'services:' section should be a dictionary from environment variable to " +
                            "service type, found {}").format(repr(services)))
@@ -357,7 +357,7 @@ class _ConfigCache(object):
     def _update_env_specs(self, problems, project_file, lock_file):
         def _parse_string_list_with_special(parent_dict, key, what, special_filter):
             items = parent_dict.get(key, [])
-            if not isinstance(items, (list, tuple)):
+            if not is_list(items):
                 _file_problem(problems, project_file,
                               "%s: value should be a list of %ss, not '%r'" % (key, what, items))
                 return ([], [])
@@ -381,7 +381,7 @@ class _ConfigCache(object):
 
         def _parse_packages(parent_dict):
             (deps, pip_dicts) = _parse_string_list_with_special(parent_dict, 'packages', 'package name',
-                                                                lambda x: isinstance(x, dict) and ('pip' in x))
+                                                                lambda x: is_dict(x) and ('pip' in x))
             for dep in deps:
                 parsed = conda_api.parse_spec(dep)
                 if parsed is None:
@@ -416,7 +416,7 @@ class _ConfigCache(object):
                                             inherit_from=())
 
         env_spec_attrs = dict()
-        if isinstance(env_specs, dict):
+        if is_dict(env_specs):
             if len(env_specs) == 0:
                 env_specs_is_empty_or_missing = True
             for (name, attrs) in env_specs.items():
@@ -597,7 +597,7 @@ class _ConfigCache(object):
         first_command_name = None
         commands = dict()
         commands_section = project_file.get_value('commands', None)
-        if commands_section is not None and not isinstance(commands_section, dict):
+        if commands_section is not None and not is_dict(commands_section):
             _file_problem(problems, project_file,
                           "'commands:' section should be a dictionary from command names to attributes, not %r" %
                           (commands_section))
@@ -612,7 +612,7 @@ class _ConfigCache(object):
                 if first_command_name is None:
                     first_command_name = name
 
-                if not isinstance(attrs, dict):
+                if not is_dict(attrs):
                     _file_problem(problems, project_file,
                                   "command name '%s' should be followed by a dictionary of attributes not %r" %
                                   (name, attrs))
@@ -704,7 +704,7 @@ class _ConfigCache(object):
             if skipped_notebooks is True:
                 # skip ALL notebooks forever
                 return
-            elif not isinstance(skipped_notebooks, list):
+            elif not is_list(skipped_notebooks):
                 _file_problem(
                     problems, project_file,
                     "'skip_imports: notebooks:' value should be a list, found {}".format(repr(skipped_notebooks)))
