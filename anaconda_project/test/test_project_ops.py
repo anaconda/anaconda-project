@@ -1277,6 +1277,11 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             print(repr(status.errors))
         assert status
 
+        assert 'foo' in project.env_specs
+        env = project.env_specs['foo']
+        assert env.lock_set is not None
+        assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME))
+
         # be sure it was really done
         project2 = Project(dirname)
         env_commented_map = project2.project_file.get_value(['env_specs', 'foo'])
@@ -1362,6 +1367,8 @@ def test_add_env_spec():
         project2 = Project(dirname)
         assert dict(packages=[], channels=[]) == dict(project2.project_file.get_value(['env_specs', 'foo']))
         assert dict(packages=[], channels=[]) == dict(project2.project_file.get_value(['env_specs', 'bar']))
+        assert dict(locked=True, packages=dict(all=[])) == dict(project2.lock_file.get_value(['env_specs', 'foo']))
+        assert dict(locked=True, packages=dict(all=[])) == dict(project2.lock_file.get_value(['env_specs', 'bar']))
 
     with_directory_contents_completing_project_file(dict(), check)
 
@@ -1382,6 +1389,11 @@ def test_add_env_spec_with_packages_and_channels():
         project2 = Project(dirname)
         assert dict(packages=['a', 'b', 'c'],
                     channels=['c1', 'c2', 'c3']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
+
+        env_spec = project2.env_specs['foo']
+        assert env_spec.name == 'foo'
+        assert env_spec.lock_set is not None
+        assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}))
 
     with_directory_contents_completing_project_file(dict(), check)
 
@@ -1438,6 +1450,150 @@ env_specs:
 """}, check)
 
 
+def test_add_env_spec_cannot_resolve_deps():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_env_spec(project, name='foo', packages=[], channels=[])
+            assert status.status_description == "Error resolving dependencies for foo: NOPE."
+            assert status.errors == []
+            assert status.logs == []
+            assert not status
+
+        _with_conda_test(attempt, resolve_dependencies_error="NOPE")
+
+        # be sure we didn't make the config changes
+        project2 = Project(dirname)
+        assert project2.project_file.get_value(['env_specs', 'foo']) is None
+        assert project2.lock_file.get_value(['env_specs', 'foo']) is None
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_remove_env_spec():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            assert project.lock_file.get_value(['env_specs', 'hello'], None) is not None
+            assert 'hello' in project.env_specs
+            env = project.env_specs['hello']
+            assert env.lock_set is not None
+            assert env.lock_set.package_specs_for_current_platform == ('a=1.0=1', )
+
+            status = project_ops.remove_env_spec(project, name='hello')
+            assert [] == status.errors
+            assert status.status_description == "Nothing to clean up for environment 'hello'."
+            assert status
+
+            assert 'hello' not in project.env_specs
+
+        _with_conda_test(attempt)
+
+        # we should have cleaned up the lock file too
+        project2 = Project(dirname)
+        assert project2.lock_file.get_value(['env_specs', 'hello'], None) is None
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+name: foo
+env_specs:
+  hello:
+   packages:
+     - a
+  another:
+   packages:
+     - b
+    """,
+         DEFAULT_PROJECT_LOCK_FILENAME: """
+locking_enabled: true
+env_specs:
+  hello:
+    packages:
+      all:
+      - a=1.0=1
+"""}, check)
+
+
+def test_remove_only_env_spec():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            assert 'hello' in project.env_specs
+
+            status = project_ops.remove_env_spec(project, name='hello')
+            assert [] == status.errors
+            assert status.status_description == (
+                "At least one environment spec is required; " + "'hello' is the only one left.")
+            assert not status
+
+            assert 'hello' in project.env_specs
+
+        _with_conda_test(attempt)
+
+        # we should have cleaned up the lock file too
+        project2 = Project(dirname)
+        assert project2.lock_file.get_value(['env_specs', 'hello'], None) is None
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+name: foo
+env_specs:
+  hello:
+   packages:
+     - a
+    """}, check)
+
+
+def test_remove_env_spec_causes_problem():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            assert project.lock_file.get_value(['env_specs', 'hello'], None) is not None
+            assert 'hello' in project.env_specs
+            env = project.env_specs['hello']
+            assert env.lock_set is not None
+            assert env.lock_set.package_specs_for_current_platform == ('a=1.0=1', )
+
+            status = project_ops.remove_env_spec(project, name='hello')
+            assert [("anaconda-project.yml: env_spec 'hello' for command 'default'" +
+                     " does not appear in the env_specs section")] == status.errors
+            assert status.status_description == "Unable to load the project."
+            assert not status
+
+            assert 'hello' in project.env_specs
+
+        _with_conda_test(attempt)
+
+        # we should not have made changes
+        project2 = Project(dirname)
+        assert project2.lock_file.get_value(['env_specs', 'hello'], None) is not None
+        assert project2.project_file.get_value(['env_specs', 'hello'], None) is not None
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+name: foo
+commands:
+  default:
+    unix: echo hi
+    env_spec: hello
+env_specs:
+  hello:
+   packages:
+     - a
+  another:
+   packages:
+     - b
+    """,
+         DEFAULT_PROJECT_LOCK_FILENAME: """
+locking_enabled: true
+env_specs:
+  hello:
+    packages:
+      all:
+      - a=1.0=1
+"""}, check)
+
+
 def test_add_packages_to_all_environments():
     def check(dirname):
         def attempt():
@@ -1455,6 +1611,36 @@ def test_add_packages_to_all_environments():
         project2 = Project(dirname)
         assert ['foo', 'bar'] == list(project2.project_file.get_value('packages'))
         assert ['hello', 'world'] == list(project2.project_file.get_value('channels'))
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set is not None
+            assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}))
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_add_packages_cannot_resolve_deps():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_packages(project,
+                                              env_spec_name=None,
+                                              packages=['foo', 'bar'],
+                                              channels=['hello', 'world'])
+            assert status.status_description == "Error resolving dependencies for default: NOPE."
+            assert status.errors == []
+            assert status.logs == []
+            assert not status
+
+        _with_conda_test(attempt, resolve_dependencies_error="NOPE")
+
+        # be sure we didn't make the config changes
+        project2 = Project(dirname)
+        assert project2.project_file.get_value('packages', None) is None
+        assert project2.project_file.get_value('channels', None) is None
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set is None
 
     with_directory_contents_completing_project_file(dict(), check)
 
@@ -1494,6 +1680,9 @@ def test_remove_packages_from_all_environments():
         def attempt():
             os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
             project = Project(dirname)
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set is None
+
             assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('packages'))
             assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
             status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo', 'bar'])
@@ -1506,6 +1695,10 @@ def test_remove_packages_from_all_environments():
         project2 = Project(dirname)
         assert ['baz'] == list(project2.project_file.get_value('packages'))
         assert ['woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set is not None
+            assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}))
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -1525,6 +1718,10 @@ def test_remove_packages_from_one_environment():
     def check(dirname):
         def attempt():
             project = Project(dirname)
+
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set is None
+
             assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('packages'))
             assert ['foo'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
             status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'])
@@ -1544,6 +1741,13 @@ def test_remove_packages_from_one_environment():
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
         assert '# this is a pre comment' in content
         assert '# this is a post comment' in content
+
+        for env_spec in project2.env_specs.values():
+            if env_spec.name == 'hello':
+                assert env_spec.lock_set is not None
+                assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}))
+            else:
+                assert env_spec.lock_set is None
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -1599,6 +1803,46 @@ env_specs:
     packages:
      # this is a pre comment
      - baz # this is a post comment
+"""}, check)
+
+
+def test_remove_packages_cannot_resolve_deps():
+    def check(dirname):
+        def attempt():
+            os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
+            project = Project(dirname)
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set is None
+
+            assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('packages'))
+            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo', 'bar'])
+            assert status.status_description == "Error resolving dependencies for hello: NOPE."
+            assert status.errors == []
+            assert status.logs == []
+            assert not status
+
+        _with_conda_test(attempt, resolve_dependencies_error="NOPE")
+
+        # be sure we didn't make the config changes
+        project2 = Project(dirname)
+        assert ['foo', 'bar', 'baz'] == list(project2.project_file.get_value('packages'))
+        assert ['foo', 'woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set is None
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+packages:
+  - foo
+  - bar
+  - baz
+env_specs:
+  hello:
+    packages:
+     - foo
+     - woot
 """}, check)
 
 

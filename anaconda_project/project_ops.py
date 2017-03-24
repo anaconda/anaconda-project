@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import codecs
+import contextlib
 import os
 import shutil
 import tempfile
@@ -309,6 +310,72 @@ def _map_inplace(f, items):
         i += 1
 
 
+class _StatusHolder(object):
+    def __init__(self):
+        self.status = None
+
+
+@contextlib.contextmanager
+def _updating_project_lock_file(project):
+    assert project.problems == []
+
+    old_logical_hashes = dict()
+    for env in project.env_specs.values():
+        old_logical_hashes[env.name] = env.logical_hash
+
+    status_holder = _StatusHolder()
+    yield status_holder
+
+    project.project_file.use_changes_without_saving()
+
+    failed = project.problems_status()
+    if failed is not None:
+        status_holder.status = failed
+        return
+
+    changed_or_added_envs = []
+    for env in project.env_specs.values():
+        if old_logical_hashes.get(env.name, None) != env.logical_hash:
+            changed_or_added_envs.append(env)
+
+    removed_env_names = []
+    for name in old_logical_hashes.keys():
+        if name not in project.env_specs:
+            removed_env_names.append(name)
+
+    all_env_names = [env_spec.name for env_spec in project.env_specs.values()]
+    conda = conda_manager.new_conda_manager()
+    for env in changed_or_added_envs:
+        # Update now-obsolete lock set or previously-nonexistent lock set.
+        # (Newly-added environments won't have a lock set yet.)
+        # An unfortunate side effect is that we update everything to latest
+        # versions... ideally we would try to hold constant packages
+        # that are unaffected by whatever changes we are making here.
+        # But that's sort of involved so let's leave it aside for the time
+        # being.
+        if project.lock_file._get_locking_enabled(env.name):
+            try:
+                lock_set = conda.resolve_dependencies(env.conda_packages, env.channels)
+            except conda_manager.CondaManagerError as e:
+                status_holder.status = SimpleStatus(
+                    success=False,
+                    description="Error resolving dependencies for %s: %s." % (env.name, str(e)))
+                return
+
+            project.lock_file._set_lock_set(env.name, lock_set, all_env_names)
+
+    for name in removed_env_names:
+        project.lock_file.unset_value(['env_specs', name])
+
+    project.project_file.use_changes_without_saving()
+
+    failed = project.problems_status()
+    if failed is not None:
+        # this can only happen if the lockset-updating code above is broken,
+        # I think.
+        status_holder.status = failed  # pragma: no cover # should not happen
+
+
 def _update_env_spec(project, name, packages, channels, create):
     failed = project.problems_status()
     if failed is not None:
@@ -324,65 +391,71 @@ def _update_env_spec(project, name, packages, channels, create):
             problem = "Environment spec {} doesn't exist.".format(name)
             return SimpleStatus(success=False, description=problem)
 
-    if name is None:
-        env_dict = project.project_file.root
-    else:
-        env_dict = project.project_file.get_value(['env_specs', name])
-        if env_dict is None:
-            env_dict = dict()
-            project.project_file.set_value(['env_specs', name], env_dict)
+    with _updating_project_lock_file(project) as status_holder:
 
-    # packages may be a "CommentedSeq" and we don't want to lose the comments,
-    # so don't convert this thing to a regular list.
-    old_packages = env_dict.get('packages', [])
-    old_packages_set = set(parse_spec(dep).name for dep in old_packages)
-    bad_specs = []
-    updated_specs = []
-    new_specs = []
-    for dep in packages:
-        if dep in old_packages:
-            # no-op adding the EXACT same thing (don't move it around)
-            continue
-        parsed = parse_spec(dep)
-        if parsed is None:
-            bad_specs.append(dep)
+        if name is None:
+            env_dict = project.project_file.root
         else:
-            if parsed.name in old_packages_set:
-                updated_specs.append((parsed.name, dep))
+            env_dict = project.project_file.get_value(['env_specs', name])
+            if env_dict is None:
+                env_dict = dict()
+                project.project_file.set_value(['env_specs', name], env_dict)
+
+        # packages may be a "CommentedSeq" and we don't want to lose the comments,
+        # so don't convert this thing to a regular list.
+        old_packages = env_dict.get('packages', [])
+        old_packages_set = set(parse_spec(dep).name for dep in old_packages)
+        bad_specs = []
+        updated_specs = []
+        new_specs = []
+        for dep in packages:
+            if dep in old_packages:
+                # no-op adding the EXACT same thing (don't move it around)
+                continue
+            parsed = parse_spec(dep)
+            if parsed is None:
+                bad_specs.append(dep)
             else:
-                new_specs.append(dep)
+                if parsed.name in old_packages_set:
+                    updated_specs.append((parsed.name, dep))
+                else:
+                    new_specs.append(dep)
 
-    if len(bad_specs) > 0:
-        bad_specs_string = ", ".join(bad_specs)
-        return SimpleStatus(success=False,
-                            description="Could not add packages.",
-                            errors=[("Bad package specifications: %s." % bad_specs_string)])
+        if len(bad_specs) > 0:
+            bad_specs_string = ", ".join(bad_specs)
+            return SimpleStatus(success=False,
+                                description="Could not add packages.",
+                                errors=[("Bad package specifications: %s." % bad_specs_string)])
 
-    # remove everything that we are changing the spec for
-    def replace_spec(old):
-        name = parse_spec(old).name
-        for (replaced_name, new_spec) in updated_specs:
-            if replaced_name == name:
-                return new_spec
-        return old
+        # remove everything that we are changing the spec for
+        def replace_spec(old):
+            name = parse_spec(old).name
+            for (replaced_name, new_spec) in updated_specs:
+                if replaced_name == name:
+                    return new_spec
+            return old
 
-    _map_inplace(replace_spec, old_packages)
-    # add all the new ones
-    for added in new_specs:
-        old_packages.append(added)
+        _map_inplace(replace_spec, old_packages)
+        # add all the new ones
+        for added in new_specs:
+            old_packages.append(added)
 
-    env_dict['packages'] = old_packages
+        env_dict['packages'] = old_packages
 
-    # channels may be a "CommentedSeq" and we don't want to lose the comments,
-    # so don't convert this thing to a regular list.
-    new_channels = env_dict.get('channels', [])
-    old_channels_set = set(new_channels)
-    for channel in channels:
-        if channel not in old_channels_set:
-            new_channels.append(channel)
-    env_dict['channels'] = new_channels
+        # channels may be a "CommentedSeq" and we don't want to lose the comments,
+        # so don't convert this thing to a regular list.
+        new_channels = env_dict.get('channels', [])
+        old_channels_set = set(new_channels)
+        for channel in channels:
+            if channel not in old_channels_set:
+                new_channels.append(channel)
+        env_dict['channels'] = new_channels
 
-    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=name)
+    if status_holder.status is None:
+        status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=name)
+    else:
+        project.load()  # revert
+        status = status_holder.status
 
     return status
 
@@ -448,14 +521,15 @@ def remove_env_spec(project, name):
     # machinery.
     status = _remove_env_path(env_path)
     if status:
-        project.project_file.unset_value(['env_specs', name])
-        project.project_file.use_changes_without_saving()
-        if project.problems_status() is None:
-            project.project_file.save()
+        with _updating_project_lock_file(project) as status_holder:
+            project.project_file.unset_value(['env_specs', name])
+
+        if status_holder.status is None:
+            assert project.problems == []
+            project.save()
         else:
-            # revert and return the problems
-            status = project.problems_status()
-            project.project_file.load()
+            project.load()  # revert
+            status = status_holder.status
 
     return status
 
@@ -596,41 +670,47 @@ def remove_packages(project, env_spec_name, packages):
         except conda_manager.CondaManagerError:
             pass  # ignore errors; not all the envs will exist or have the package installed perhaps
 
-    def envs_to_their_dicts(envs):
-        env_dicts = []
-        for env in envs:
-            env_dict = project.project_file.get_value(['env_specs', env.name])
-            if env_dict is not None:  # it can be None for the default environment (which doesn't have to be listed)
-                env_dicts.append(env_dict)
-        return env_dicts
+    with _updating_project_lock_file(project) as status_holder:
 
-    env_dicts = envs_to_their_dicts(envs)
-    env_dicts.append(project.project_file.root)
+        def envs_to_their_dicts(envs):
+            env_dicts = []
+            for env in envs:
+                env_dict = project.project_file.get_value(['env_specs', env.name])
+                if env_dict is not None:  # it can be None for the default environment (which doesn't have to be listed)
+                    env_dicts.append(env_dict)
+            return env_dicts
 
-    unaffected_env_dicts = envs_to_their_dicts(unaffected_envs)
+        env_dicts = envs_to_their_dicts(envs)
+        env_dicts.append(project.project_file.root)
 
-    assert len(env_dicts) > 0
+        unaffected_env_dicts = envs_to_their_dicts(unaffected_envs)
 
-    previous_global_deps = set(project.project_file.root.get('packages', []))
+        assert len(env_dicts) > 0
 
-    for env_dict in env_dicts:
-        # packages may be a "CommentedSeq" and we don't want to lose the comments,
-        # so don't convert this thing to a regular list.
-        old_packages = env_dict.get('packages', [])
-        removed_set = set(packages)
-        _filter_inplace(lambda dep: dep not in removed_set, old_packages)
-        env_dict['packages'] = old_packages
+        previous_global_deps = set(project.project_file.root.get('packages', []))
 
-    # if we removed any deps from global, add them to the
-    # individual envs that were not supposed to be affected.
-    new_global_deps = set(project.project_file.root.get('packages', []))
-    removed_from_global = (previous_global_deps - new_global_deps)
-    for env_dict in unaffected_env_dicts:
-        # old_packages may be a "CommentedSeq" and we don't want to lose the comments,
-        # so don't convert this thing to a regular list.
-        old_packages = env_dict.get('packages', [])
-        old_packages.extend(list(removed_from_global))
-        env_dict['packages'] = old_packages
+        for env_dict in env_dicts:
+            # packages may be a "CommentedSeq" and we don't want to lose the comments,
+            # so don't convert this thing to a regular list.
+            old_packages = env_dict.get('packages', [])
+            removed_set = set(packages)
+            _filter_inplace(lambda dep: dep not in removed_set, old_packages)
+            env_dict['packages'] = old_packages
+
+        # if we removed any deps from global, add them to the
+        # individual envs that were not supposed to be affected.
+        new_global_deps = set(project.project_file.root.get('packages', []))
+        removed_from_global = (previous_global_deps - new_global_deps)
+        for env_dict in unaffected_env_dicts:
+            # old_packages may be a "CommentedSeq" and we don't want to lose the comments,
+            # so don't convert this thing to a regular list.
+            old_packages = env_dict.get('packages', [])
+            old_packages.extend(list(removed_from_global))
+            env_dict['packages'] = old_packages
+
+    if status_holder.status is not None:
+        project.load()  # revert
+        return status_holder.status
 
     status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=env_spec_name)
 
