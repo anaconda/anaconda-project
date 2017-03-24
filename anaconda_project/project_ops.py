@@ -747,46 +747,47 @@ def _update_and_lock(project, env_spec_name, update):
                                     description="Error resolving dependencies for %s: %s." % (env.name, str(e)),
                                     logs=logs)
 
-            changes_needed = env.lock_set is None or not env.lock_set.equivalent_to(lock_set)
+            lock_set_changed = env.lock_set is None or not env.lock_set.equivalent_to(lock_set)
 
-            if update and not changes_needed:
-                return SimpleStatus(success=True, description="Locked dependencies are already up to date.", logs=logs)
+            # if lock_set_changed is False, we may still be enabling locking
+            if lock_set_changed or not update:
+                project.lock_file._set_lock_set(env.name, lock_set, all_env_names)
 
-            project.lock_file._set_lock_set(env.name, lock_set, all_env_names)
+                if update and env.lock_set is None:
+                    # If we are doing an update and locking is not
+                    # already in use, we should install the new lock
+                    # set, but not save it in the lock file.
+                    status = _apply_lock_file_then_revert(project, env.name)
+                    if status:
+                        logs.append("Updated installed dependencies for %s." % (env.name))
+                    # we should not have created a lock when there was none
+                    assert project.env_specs[env.name].lock_set is None
+                else:
+                    # a lock, or an update when we already have locking enabled,
+                    # DOES save in the lock file
+                    if lock_set_changed:
+                        logs.append("Changes to locked dependencies for %s:" % env.name)
+                        diff_string = lock_set.diff_from(env.lock_set)
+                        for line in diff_string.split("\n"):
+                            logs.append(line)
 
-            if update and env.lock_set is None:
-                # If we are doing an update and locking is not
-                # already in use, we should install the new lock
-                # set, but not save it in the lock file.
-                status = _apply_lock_file_then_revert(project, env.name)
-                if status:
-                    logs.append("Updated installed dependencies for %s." % (env.name))
-                # we should not have created a lock when there was none
-                assert project.env_specs[env.name].lock_set is None
+                    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env.name)
+                    if status:
+                        logs.extend(status.logs)
+                        if update:
+                            logs.append("Updated locked dependencies for env spec %s in %s." %
+                                        (env.name, project.lock_file.basename))
+                        else:
+                            logs.append("Added locked dependencies for env spec %s to %s." %
+                                        (env.name, project.lock_file.basename))
+
+                if not status:
+                    # we throw out logs here, but when we
+                    # switch to using a streaming progress interface
+                    # that will be ok.
+                    return status
             else:
-                # a lock, or an update when we already have locking enabled,
-                # DOES save in the lock file
-                if changes_needed:
-                    logs.append("Changes to locked dependencies for %s:" % env.name)
-                    diff_string = lock_set.diff_from(env.lock_set)
-                    for line in diff_string.split("\n"):
-                        logs.append(line)
-
-                status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env.name)
-                if status:
-                    logs.extend(status.logs)
-                    if update:
-                        logs.append("Updated locked dependencies for env spec %s in %s." %
-                                    (env.name, project.lock_file.basename))
-                    else:
-                        logs.append("Added locked dependencies for env spec %s to %s." %
-                                    (env.name, project.lock_file.basename))
-
-            if not status:
-                # we throw out logs here, but when we
-                # switch to using a streaming progress interface
-                # that will be ok.
-                return status
+                logs.append("Locked dependencies for env spec %s are already up to date." % env.name)
         else:
             assert not update
             logs.append("Env spec %s is already locked." % env.name)

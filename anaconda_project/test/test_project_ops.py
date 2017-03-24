@@ -1974,7 +1974,9 @@ def test_lock_and_update_and_unlock_all_envs():
             status = project_ops.update(project, env_spec_name=None)
             assert [] == status.errors
             assert status
-            assert status.status_description == "Locked dependencies are already up to date."
+            assert ["Locked dependencies for env spec bar are already up to date.",
+                    "Locked dependencies for env spec foo are already up to date."] == status.logs
+            assert status.status_description == "Update complete."
 
             # Update (does something after tweaking resolve results)
             resolve_results['all'] = ['a=2.0=0']
@@ -2051,8 +2053,8 @@ def test_lock_and_unlock_single_env():
             status = project_ops.update(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
-            assert [] == status.logs
-            assert 'Locked dependencies are already up to date.' == status.status_description
+            assert ["Locked dependencies for env spec foo are already up to date."] == status.logs
+            assert 'Update complete.' == status.status_description
 
             # Now unlock
             status = project_ops.unlock(project, env_spec_name='foo')
