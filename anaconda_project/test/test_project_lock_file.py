@@ -21,6 +21,12 @@ expected_default_file = """# This is an Anaconda project lock file.
 #
 
 #
+# Set to false to ignore locked versions.
+locking_enabled: false
+
+
+
+#
 # A key goes in here for each env spec.
 #
 env_specs: {}
@@ -36,7 +42,7 @@ def test_create_missing_lock_file():
         assert not os.path.exists(filename)
 
         assert lock_file._get_lock_set('foo') is None
-        assert lock_file._get_locking_enabled('foo')
+        assert not lock_file._get_locking_enabled('foo')
 
         lock_file.save()
         assert os.path.exists(filename)

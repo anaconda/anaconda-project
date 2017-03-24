@@ -84,6 +84,7 @@ class ProjectLockFile(YamlFile):
             "The file is in YAML format, please see http://www.yaml.org/start.html for more.\n")
         sections = OrderedDict()
 
+        sections['locking_enabled'] = ("Set to false to ignore locked versions.")
         sections['env_specs'] = ("A key goes in here for each env spec.\n")
 
         # we make a big string and then parse it because I can't figure out the
@@ -98,6 +99,8 @@ class ProjectLockFile(YamlFile):
             # comments.
             if section_name in ('env_specs', ):
                 section_body = "  {}"
+            elif section_name in ('locking_enabled', ):
+                section_body = " false"
             to_parse = to_parse + "\n#\n" + comment_out(comment) + section_name + ":\n" + section_body + "\n\n\n"
 
         as_json = ryaml.load(to_parse, Loader=ryaml.RoundTripLoader)

@@ -1288,7 +1288,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
         assert dict(packages=['numpy'], channels=[]) == dict(env_commented_map)
         assert os.path.isdir(os.path.join(dirname, 'envs', 'foo', 'conda-meta'))
 
-    with_directory_contents_completing_project_file(dict(), check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove_error, resolve_dependencies,
@@ -1370,7 +1370,7 @@ def test_add_env_spec():
         assert dict(locked=True, packages=dict(all=[])) == dict(project2.lock_file.get_value(['env_specs', 'foo']))
         assert dict(locked=True, packages=dict(all=[])) == dict(project2.lock_file.get_value(['env_specs', 'bar']))
 
-    with_directory_contents_completing_project_file(dict(), check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def test_add_env_spec_with_packages_and_channels():
@@ -1395,7 +1395,7 @@ def test_add_env_spec_with_packages_and_channels():
         assert env_spec.lock_set is not None
         assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}))
 
-    with_directory_contents_completing_project_file(dict(), check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def test_add_env_spec_extending_existing_lists():
@@ -1467,7 +1467,7 @@ def test_add_env_spec_cannot_resolve_deps():
         assert project2.project_file.get_value(['env_specs', 'foo']) is None
         assert project2.lock_file.get_value(['env_specs', 'foo']) is None
 
-    with_directory_contents_completing_project_file(dict(), check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def test_remove_env_spec():
@@ -1616,7 +1616,7 @@ def test_add_packages_to_all_environments():
             assert env_spec.lock_set is not None
             assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}))
 
-    with_directory_contents_completing_project_file(dict(), check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def test_add_packages_cannot_resolve_deps():
@@ -1642,7 +1642,7 @@ def test_add_packages_cannot_resolve_deps():
         for env_spec in project2.env_specs.values():
             assert env_spec.lock_set is None
 
-    with_directory_contents_completing_project_file(dict(), check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def test_add_packages_nonexistent_environment():
@@ -1711,7 +1711,8 @@ env_specs:
     packages:
      - foo
      - woot
-"""}, check)
+        """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def test_remove_packages_from_one_environment():
@@ -1760,7 +1761,8 @@ env_specs:
   hello:
     packages:
      - foo
-"""}, check)
+        """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def test_remove_packages_from_one_environment_leaving_others_unaffected():
@@ -1843,7 +1845,8 @@ env_specs:
     packages:
      - foo
      - woot
-"""}, check)
+        """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def test_remove_packages_from_nonexistent_environment():
