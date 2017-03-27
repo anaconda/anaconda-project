@@ -522,24 +522,28 @@ class _ConfigCache(object):
             assert name in self.env_specs
 
         missing_platforms = []
+        locked_specs_count = 0
         for env_spec in self.env_specs.values():
-            if len(env_spec.platforms) == 0:
+            enabled = lock_file._get_locking_enabled(env_spec.name)
+            if enabled:
+                locked_specs_count += 1
+            if enabled and len(env_spec.platforms) == 0:
                 missing_platforms.append(env_spec.name)
 
-        # If none of the env specs have platforms, assume we want to
-        # add platforms: to the toplevel (spanning entire file).
-        # Otherwise, suggest fixing them one-by-one.
-        env_spec_count = len(self.env_specs)
-        missing_platform_count = len(missing_platforms)
-        if (env_spec_count == 0 and len(shared_platforms) == 0) or \
-           (env_spec_count > 0 and missing_platform_count == env_spec_count):
-            # TODO add an autofix
-            _file_problem(problems, project_file, "The 'platforms:' field should list platforms the project supports.")
-        else:
-            # TODO add an autofix
-            for missing in missing_platforms:
+        if locked_specs_count > 0:
+            # If none of the env specs have platforms, assume we want to
+            # add platforms: to the toplevel (spanning entire file).
+            # Otherwise, suggest fixing them one-by-one.
+            missing_platform_count = len(missing_platforms)
+            if missing_platform_count == locked_specs_count:
+                # TODO add an autofix
                 _file_problem(problems, project_file,
-                              "Env spec %s does not have anything in its 'platforms:' field." % missing)
+                              "The 'platforms:' field should list platforms the project supports.")
+            else:
+                # TODO add an autofix
+                for missing in missing_platforms:
+                    _file_problem(problems, project_file,
+                                  "Env spec %s does not have anything in its 'platforms:' field." % missing)
 
         # it's important to create all the env specs when possible
         # even if they are broken (e.g. bad inherit_from), so they

@@ -2756,10 +2756,46 @@ def test_empty_file_has_problems():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert ["anaconda-project.yml: The 'name:' field is missing.",
-                "anaconda-project.yml: The 'platforms:' field should list platforms the project supports.",
                 "anaconda-project.yml: The env_specs section is empty."] == project.problems
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
+
+
+def test_with_one_locked_env_spec_has_problems():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["anaconda-project.yml: The 'name:' field is missing.",
+                "anaconda-project.yml: The 'platforms:' field should list platforms the project supports."
+                ] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+  foo:
+     packages: []
+""",
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+
+
+def test_with_locking_enabled_no_env_specs_has_problems():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert ["anaconda-project.yml: The 'name:' field is missing.",
+                "anaconda-project.yml: The env_specs section is empty."] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "",
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+
+
+def test_with_locking_disabled_no_platforms_required():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs:\n  default:\n    packages: []\n",
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: false\n"}, check)
 
 
 def test_load_weird_platform():
@@ -2782,7 +2818,25 @@ env_specs:
 """}, check)
 
 
-def test_only_some_env_specs_have_platforms():
+def test_only_some_env_specs_have_platforms_locking_disabled():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: foo
+
+env_specs:
+  default:
+    platforms: [linux-64]
+    packages: [foo]
+  no_platforms:
+    packages: [bar]
+"""}, check)
+
+
+def test_only_some_env_specs_have_platforms_locking_enabled():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [("anaconda-project.yml: Env spec no_platforms does not have anything in its " + "'platforms:' field.")
@@ -2798,4 +2852,5 @@ env_specs:
     packages: [foo]
   no_platforms:
     packages: [bar]
-"""}, check)
+        """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
