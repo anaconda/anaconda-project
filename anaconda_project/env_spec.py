@@ -112,7 +112,7 @@ class EnvSpec(object):
             assert name is None or name in self._inherit_from_names
 
         conda_specs_by_name = dict()
-        for spec in self.conda_packages:
+        for spec in self.conda_packages_for_create:
             # we quietly skip invalid specs here and let them fail
             # somewhere we can more easily report an error message.
             parsed = conda_api.parse_spec(spec)
