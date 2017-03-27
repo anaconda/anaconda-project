@@ -87,6 +87,9 @@ def complete_project_file_content(content):
     if 'name' not in yaml:
         modified = (modified + "\n" + "name: some_name\n")
 
+    if 'platforms' not in yaml:
+        modified = (modified + "\n" + "platforms: [all]\n")
+
     if modified is not content:
         try:
             # make sure we didn't mangle it

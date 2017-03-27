@@ -343,8 +343,10 @@ def test_prepare_choose_environment():
         finally:
             _pop_fake_env_creator()
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
 name: blah
+platforms: [all]
 env_specs:
     foo: {}
     bar: {}
@@ -371,6 +373,7 @@ def test_prepare_use_command_specified_env_spec():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: blah
+platforms: [all]
 env_specs:
     default: {}
     foo: {}

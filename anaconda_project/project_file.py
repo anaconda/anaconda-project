@@ -127,6 +127,10 @@ class ProjectFile(YamlFile):
         sections['channels'] = ("In the channels section, list any Conda channel URLs to be searched\n" +
                                 "for packages.\n" + "\n" + "For example,\n" + "\n" + "channels:\n" + "   - mychannel\n")
 
+        sections['platforms'] = ("In the platforms section, list platforms the project should work on\n" +
+                                 "Examples: \"all\", \"unix\", \"osx\", \"win-64\"\n" +
+                                 "Use `anaconda-project add-platforms` to add platforms.\n")
+
         sections['env_specs'] = (
             "You can define multiple, named environment specs.\n" + "Each inherits any global packages or channels,\n" +
             "but can have its own unique ones also.\n" +
@@ -153,6 +157,8 @@ class ProjectFile(YamlFile):
                 section_body = ""  # empty body means null, not empty string
             elif section_name in ('channels', 'packages'):
                 section_body = "  []"
+            elif section_name == 'platforms':
+                section_body = "  [all]"
             else:
                 section_body = "  {}"
             to_parse = to_parse + "\n#\n" + comment_out(comment) + section_name + ":\n" + section_body + "\n\n\n"
@@ -178,5 +184,7 @@ class ProjectFile(YamlFile):
                 move_list_elements(spec_json['packages'], as_json['packages'])
             if 'channels' in spec_json:
                 move_list_elements(spec_json['channels'], as_json['channels'])
+            if 'platforms' in spec_json:
+                move_list_elements(spec_json['platforms'], as_json['platforms'])
 
         return as_json

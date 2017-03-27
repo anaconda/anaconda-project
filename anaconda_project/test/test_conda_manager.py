@@ -6,10 +6,8 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import
 
-import random
-
 from anaconda_project.conda_manager import (push_conda_manager_class, pop_conda_manager_class, new_conda_manager,
-                                            CondaManager, CondaLockSet, _pretty_platform_sort)
+                                            CondaManager, CondaLockSet)
 import anaconda_project.internal.conda_api as conda_api
 from anaconda_project.yaml_file import _dump_string
 
@@ -67,17 +65,6 @@ def test_lock_set_to_json(monkeypatch):
     assert {'all': ['something=0.5=2', 'bokeh=0.12.4=1'],
             'linux-64': ['linux-thing=1.0=0'],
             'win-32': ['windows-thing=2.0=3', 'bokeh=2.3=7']} == lock_set.to_json()
-
-
-def test_pretty_platform_sort():
-    everything_sorted = ('all', 'linux', 'osx', 'win') + conda_api.popular_platforms
-    backward = list(reversed(everything_sorted))
-    shuffled = list(everything_sorted)
-    random.shuffle(shuffled)
-
-    assert everything_sorted == tuple(_pretty_platform_sort(backward))
-    assert everything_sorted == tuple(_pretty_platform_sort(shuffled))
-    assert [] == _pretty_platform_sort([])
 
 
 def test_lock_set_to_yaml(monkeypatch):

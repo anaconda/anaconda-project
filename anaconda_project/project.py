@@ -170,7 +170,7 @@ class _ConfigCache(object):
         if project_exists and not (project_file.corrupted or lock_file.corrupted):
             _unknown_field_suggestions(project_file, problems, project_file.root,
                                        ('name', 'description', 'icon', 'variables', 'downloads', 'services',
-                                        'env_specs', 'commands', 'packages', 'channels', 'skip_imports'))
+                                        'env_specs', 'commands', 'packages', 'channels', 'platforms', 'skip_imports'))
 
             # TODO if this doesn't contain env_specs we get an assertion failure in prepare
             # when we do lock()
@@ -379,6 +379,15 @@ class _ConfigCache(object):
         def _parse_channels(parent_dict):
             return _parse_string_list(parent_dict, 'channels', 'channel name')
 
+        def _parse_platforms(parent_dict):
+            platforms = _parse_string_list(parent_dict, 'platforms', 'platform name')
+            (platforms, unknown) = conda_api.expand_platform_list(platforms)
+            for u in unknown:
+                problems.append(ProjectProblem(text=("Unusual platform name '%s' may be a typo" % u),
+                                               filename=project_file.filename,
+                                               only_a_suggestion=True))
+            return platforms
+
         def _parse_packages(parent_dict):
             (deps, pip_dicts) = _parse_string_list_with_special(parent_dict, 'packages', 'package name',
                                                                 lambda x: is_dict(x) and ('pip' in x))
@@ -402,6 +411,7 @@ class _ConfigCache(object):
 
         (shared_deps, shared_pip_deps) = _parse_packages(project_file.root)
         shared_channels = _parse_channels(project_file.root)
+        shared_platforms = _parse_platforms(project_file.root)
         env_specs = project_file.get_value('env_specs', default={})
         first_env_spec_name = None
         env_specs_is_empty_or_missing = False  # this should be iff it's an empty dict or absent entirely
@@ -411,6 +421,7 @@ class _ConfigCache(object):
                                             conda_packages=shared_deps,
                                             pip_packages=shared_pip_deps,
                                             channels=shared_channels,
+                                            platforms=shared_platforms,
                                             description="Global packages and channels",
                                             inherit_from_names=(),
                                             inherit_from=())
@@ -445,6 +456,7 @@ class _ConfigCache(object):
 
                 (deps, pip_deps) = _parse_packages(attrs)
                 channels = _parse_channels(attrs)
+                platforms = _parse_platforms(attrs)
 
                 # TODO should create errors here about type errors etc. in lock file
                 lock_set = lock_file._get_lock_set(name)
@@ -453,6 +465,7 @@ class _ConfigCache(object):
                                             conda_packages=deps,
                                             pip_packages=pip_deps,
                                             channels=channels,
+                                            platforms=platforms,
                                             description=description,
                                             inherit_from_names=tuple(inherit_from_names),
                                             inherit_from=(),
@@ -461,8 +474,8 @@ class _ConfigCache(object):
                 if first_env_spec_name is None:
                     first_env_spec_name = name
 
-                _unknown_field_suggestions(project_file, problems, attrs, ('packages', 'channels', 'description',
-                                                                           'inherit_from'))
+                _unknown_field_suggestions(project_file, problems, attrs, ('packages', 'channels', 'platforms',
+                                                                           'description', 'inherit_from'))
         else:
             _file_problem(problems, project_file,
                           "env_specs should be a dictionary from environment name to environment attributes, not %r" %
@@ -508,13 +521,32 @@ class _ConfigCache(object):
             make_env_spec(name, [])
             assert name in self.env_specs
 
+        missing_platforms = []
+        for env_spec in self.env_specs.values():
+            if len(env_spec.platforms) == 0:
+                missing_platforms.append(env_spec.name)
+
+        # If none of the env specs have platforms, assume we want to
+        # add platforms: to the toplevel (spanning entire file).
+        # Otherwise, suggest fixing them one-by-one.
+        env_spec_count = len(self.env_specs)
+        missing_platform_count = len(missing_platforms)
+        if (env_spec_count == 0 and len(shared_platforms) == 0) or \
+           (env_spec_count > 0 and missing_platform_count == env_spec_count):
+            # TODO add an autofix
+            _file_problem(problems, project_file, "The 'platforms:' field should list platforms the project supports.")
+        else:
+            # TODO add an autofix
+            for missing in missing_platforms:
+                _file_problem(problems, project_file,
+                              "Env spec %s does not have anything in its 'platforms:' field." % missing)
+
         # it's important to create all the env specs when possible
         # even if they are broken (e.g. bad inherit_from), so they
         # can be edited in order to fix them
 
         (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
                                                                                    self.directory_path)
-
         if importable_spec is not None:
             skip_spec_import = project_file.get_value(['skip_imports', 'environment'])
             if skip_spec_import == importable_spec.logical_hash:
@@ -1026,7 +1058,7 @@ class Project(object):
 
     @property
     def global_base_env_spec(self):
-        """Get the env spec representing global packages and channels sections.
+        """Get the env spec representing global packages, channels, and platforms sections.
 
         This env spec has no name (its name is None) and can't be used directly
         to create environments, but every other env spec inherits from it.

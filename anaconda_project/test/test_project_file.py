@@ -52,7 +52,7 @@ services: {}
 # Use `anaconda-project add-download` to add downloads.
 #
 downloads: {}
-%s%s%s"""
+%s%s%s%s"""
 
 empty_global_packages = """#
 # In the packages section, list any packages that must be installed
@@ -74,6 +74,15 @@ empty_global_channels = """#
 channels: []
 """
 
+default_global_platforms = """#
+# In the platforms section, list platforms the project should work on
+# Examples: "all", "unix", "osx", "win-64"
+# Use `anaconda-project add-platforms` to add platforms.
+#
+platforms:
+- all
+"""
+
 empty_default_env_specs = """#
 # You can define multiple, named environment specs.
 # Each inherits any global packages or channels,
@@ -87,12 +96,13 @@ env_specs:
 """
 
 
-def _make_file_contents(packages, channels, env_specs):
-    return expected_default_file_template % (packages, channels, env_specs)
+def _make_file_contents(packages, channels, platforms, env_specs):
+    return expected_default_file_template % (packages, channels, platforms, env_specs)
 
 
 expected_default_file = _make_file_contents(packages=empty_global_packages,
                                             channels=empty_global_channels,
+                                            platforms=default_global_platforms,
                                             env_specs=empty_default_env_specs)
 
 
@@ -182,6 +192,7 @@ env_specs:
 
 expected_one_env_spec_contents = _make_file_contents(packages=anaconda_global_packages,
                                                      channels=mychannel_global_channels,
+                                                     platforms=default_global_platforms,
                                                      env_specs=abc_empty_env_spec)
 
 
@@ -234,6 +245,7 @@ env_specs:
 
 expected_two_env_spec_contents = _make_file_contents(packages=empty_global_packages,
                                                      channels=empty_global_channels,
+                                                     platforms=default_global_platforms,
                                                      env_specs=abc_xyz_env_specs)
 
 

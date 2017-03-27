@@ -146,6 +146,7 @@ def test_create_imports_environment_yml_when_project_yml_exists_and_fix_problems
         {'something.png': 'not a real png',
          "anaconda-project.yml": """
 name: foo
+platforms: [all]
 """,
          "environment.yml": """
 name: stuff
@@ -173,6 +174,7 @@ def test_create_no_import_environment_yml_when_not_fix_problems():
         {'something.png': 'not a real png',
          "anaconda-project.yml": """
 name: foo
+platforms: [all]
 """,
          "environment.yml": """
 name: stuff
@@ -2007,6 +2009,7 @@ def test_lock_and_update_and_unlock_all_envs():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: locktest
+platforms: [all]
 env_specs:
   foo:
     packages:
@@ -2075,6 +2078,7 @@ def test_lock_and_unlock_single_env():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: locktest
+platforms: [all]
 env_specs:
   foo:
     packages:
@@ -2107,6 +2111,7 @@ def test_lock_conda_error():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: locktest
+platforms: [all]
 env_specs:
   foo:
     packages:
@@ -2136,6 +2141,7 @@ def test_lock_resolve_dependencies_error(monkeypatch):
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: locktest
+platforms: [all]
 env_specs:
   foo:
     packages:
@@ -2175,6 +2181,7 @@ def test_unlock_conda_error():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: locktest
+platforms: [all]
 env_specs:
   foo:
     packages:
@@ -2224,6 +2231,7 @@ def test_update_unlocked_envs():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: locktest
+platforms: [all]
 env_specs:
   foo:
     packages:

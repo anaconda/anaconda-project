@@ -2362,7 +2362,7 @@ def test_auto_fix_missing_name():
         assert project.name == os.path.basename(dirname)
         assert 'name' in project.project_file.root
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "env_specs:\n  default: {}\n"}, check)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "env_specs:\n  default: {}\nplatforms: [all]\n"}, check)
 
 
 def test_auto_fix_missing_env_specs_section():
@@ -2380,7 +2380,7 @@ def test_auto_fix_missing_env_specs_section():
         assert project.problems == []
         assert list(project.env_specs.keys()) == ['default']
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\n"}, check)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\nplatforms: [all]\n"}, check)
 
 
 def test_auto_fix_empty_env_specs_section():
@@ -2399,7 +2399,7 @@ def test_auto_fix_empty_env_specs_section():
         assert project.problems == []
         assert list(project.env_specs.keys()) == ['default']
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\n"}, check)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\nplatforms: [all]\n"}, check)
 
 
 def test_auto_fix_env_spec_import():
@@ -2423,7 +2423,7 @@ def test_auto_fix_env_spec_import():
         assert spec.channels == ('bar', )
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\n",
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\nplatforms: [all]\n",
          "environment.yml": """
 name: stuff
 dependencies:
@@ -2457,7 +2457,7 @@ def test_auto_fix_requirements_txt_import():
         assert spec.channels == ()
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\n",
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\nplatforms: [all]\n",
          "requirements.txt": """
 # these are some pip packages.
 abc
@@ -2487,7 +2487,7 @@ def test_auto_fix_env_spec_out_of_sync():
         assert spec.channels == ('bar', )
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\n",
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [all]\n",
          "environment.yml": """
 name: stuff
 dependencies:
@@ -2521,7 +2521,7 @@ def test_auto_fix_env_spec_import_saying_no():
         assert skip_importing_hash != ''
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {'default':{'packages':[]}}\n",
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {'default':{'packages':[]}}\nplatforms: [all]\n",
          "environment.yml": """
 name: stuff
 dependencies:
@@ -2615,7 +2615,7 @@ def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
         assert spec.pip_packages == ('foo', 'someother')
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\n",
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [all]\n",
          "environment.yml": """
 name: stuff
 dependencies:
@@ -2756,6 +2756,46 @@ def test_empty_file_has_problems():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert ["anaconda-project.yml: The 'name:' field is missing.",
+                "anaconda-project.yml: The 'platforms:' field should list platforms the project supports.",
                 "anaconda-project.yml: The env_specs section is empty."] == project.problems
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
+
+
+def test_load_weird_platform():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        spec = project.env_specs['default']
+        assert spec.platforms == ('linux-64', 'weird')
+
+        assert ["anaconda-project.yml: Unusual platform name 'weird' may be a typo"] == project.suggestions
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: foo
+platforms: [linux-64, weird]
+env_specs:
+  default:
+    packages: [foo]
+"""}, check)
+
+
+def test_only_some_env_specs_have_platforms():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [("anaconda-project.yml: Env spec no_platforms does not have anything in its " + "'platforms:' field.")
+                ] == project.problems
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: foo
+
+env_specs:
+  default:
+    platforms: [linux-64]
+    packages: [foo]
+  no_platforms:
+    packages: [bar]
+"""}, check)

@@ -72,6 +72,7 @@ class EnvSpec(object):
                  description=None,
                  inherit_from_names=(),
                  inherit_from=(),
+                 platforms=(),
                  lock_set=None):
         """Construct a package set with the given name and packages.
 
@@ -95,9 +96,11 @@ class EnvSpec(object):
         self._description = description
         self._logical_hash = None
         self._locked_hash = None
+        self._import_hash = None
         self._inherit_from_names = inherit_from_names
         self._inherit_from = inherit_from
         self._lock_set = lock_set
+        self._platforms = platforms
 
         # inherit_from must be a subset of inherit_from_names
         # except that we can have an anonymous base env spec for
@@ -143,7 +146,7 @@ class EnvSpec(object):
         else:
             return self._description
 
-    def _compute_hash(self, conda_packages):
+    def _compute_hash(self, conda_packages, platforms):
         import hashlib
         m = hashlib.sha1()
         for p in conda_packages:
@@ -152,6 +155,8 @@ class EnvSpec(object):
             m.update(p.encode("utf-8"))
         for c in self.channels:
             m.update(c.encode("utf-8"))
+        for p in platforms:
+            m.update(p.encode("utf-8"))
         result = m.hexdigest()
         return result
 
@@ -159,11 +164,14 @@ class EnvSpec(object):
     def logical_hash(self):
         """Get a hash of our "logical" requirements.
 
-        This is used for e.g. environment.yml comparison.  Order
-        matters (change in order will count as a change).
+        (Changing logical requirements could change the lock set
+        if we recreate it.)
+
+        Order matters (change in order will count as a change).
+
         """
         if self._logical_hash is None:
-            self._logical_hash = self._compute_hash(self.conda_packages)
+            self._logical_hash = self._compute_hash(self.conda_packages, self.platforms)
         return self._logical_hash
 
     @property
@@ -175,8 +183,19 @@ class EnvSpec(object):
         a change).
         """
         if self._locked_hash is None:
-            self._locked_hash = self._compute_hash(self.conda_packages_for_create)
+            self._locked_hash = self._compute_hash(self.conda_packages_for_create, platforms=())
         return self._locked_hash
+
+    @property
+    def import_hash(self):
+        """Get a hash of parts of the env spec that can appear in environment.yml.
+
+        This is used to see if we need to re-import the environment.yml, requirements.txt
+        or whatever. Those files don't have platform information.
+        """
+        if self._import_hash is None:
+            self._import_hash = self._compute_hash(self.conda_packages, platforms=())
+        return self._import_hash
 
     def _get_inherited(self, public_attr, key_func=None):
         def _linearized_ancestors(specs, accumulator):
@@ -207,6 +226,11 @@ class EnvSpec(object):
     def channels(self):
         """Get the channels to install conda packages from."""
         return self._get_inherited('channels')
+
+    @property
+    def platforms(self):
+        """Get the platforms the environment can be on."""
+        return self._get_inherited('platforms')
 
     @property
     def pip_packages(self):
@@ -321,6 +345,7 @@ class EnvSpec(object):
         if pip_packages:
             packages.append(dict(pip=pip_packages))
         channels = list(self._channels)
+        platforms = conda_api.condense_platform_list(self._platforms)
 
         # this is a gross, roundabout hack to get ryaml dicts that
         # have ordering... OrderedDict doesn't work because the
@@ -335,6 +360,11 @@ class EnvSpec(object):
             del template_json['something']['description']
         template_json['something']['packages'] = packages
         template_json['something']['channels'] = channels
+
+        # usually "platforms" will be global so don't clutter
+        # every env spec by default
+        if len(platforms) > 0:
+            template_json['something']['platforms'] = platforms
 
         if len(self.inherit_from_names) > 0:
             if len(self.inherit_from_names) == 1:
@@ -414,7 +444,7 @@ def _load_environment_yml(filename):
         if is_string(channel):
             channels.append(channel)
 
-    return EnvSpec(name=name, conda_packages=conda_packages, channels=channels, pip_packages=pip_packages)
+    return EnvSpec(name=name, conda_packages=conda_packages, channels=channels, pip_packages=pip_packages, platforms=())
 
 
 _requirement_option_re = re.compile('^-([-a-zA-Z0-9]+)\s(.*)')
@@ -489,7 +519,7 @@ def _find_out_of_sync_importable_spec(project_specs, directory_path):
 
     for existing in project_specs:
         if existing.name == spec.name and \
-           existing.logical_hash == spec.logical_hash:
+           existing.import_hash == spec.import_hash:
             return (None, None)
 
     return (spec, filename)
@@ -503,6 +533,7 @@ def _anaconda_default_env_spec(shared_base_spec):
     return EnvSpec(name="default",
                    conda_packages=["anaconda"],
                    channels=[],
+                   platforms=conda_api.popular_platforms,
                    description="Default environment spec for running commands",
                    inherit_from_names=(),
                    inherit_from=inherit_from)

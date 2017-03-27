@@ -10,6 +10,7 @@ import json
 import os
 import platform
 import pytest
+import random
 
 from pprint import pprint
 
@@ -1046,3 +1047,17 @@ def test_msys_for_all_platforms():
         else:
             for c in channels:
                 assert 'msys' not in c
+
+
+def test_sort_platform_list():
+    everything_sorted = ('all', 'linux', 'osx', 'win') + conda_api.popular_platforms
+    backward = list(reversed(everything_sorted))
+    shuffled = list(everything_sorted)
+    random.shuffle(shuffled)
+
+    assert everything_sorted == tuple(conda_api.sort_platform_list(backward))
+    assert everything_sorted == tuple(conda_api.sort_platform_list(shuffled))
+    assert everything_sorted == tuple(conda_api.sort_platform_list(tuple(backward)))
+    assert everything_sorted == tuple(conda_api.sort_platform_list(tuple(shuffled)))
+    assert [] == conda_api.sort_platform_list([])
+    assert [] == conda_api.sort_platform_list(())

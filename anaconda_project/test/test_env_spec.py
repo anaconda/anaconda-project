@@ -374,3 +374,25 @@ def test_lock_set_affects_hash():
     assert without_lock_spec.logical_hash == without_lock_spec.locked_hash
     assert with_lock_spec.logical_hash != with_lock_spec.locked_hash
     assert with_lock_spec.logical_hash == without_lock_spec.logical_hash
+
+    assert without_lock_spec.locked_hash == without_lock_spec.import_hash
+    assert with_lock_spec.locked_hash != with_lock_spec.import_hash
+
+
+def test_platforms_affect_hash():
+    with_platforms_spec = EnvSpec(name="foo",
+                                  conda_packages=['a', 'b'],
+                                  pip_packages=['c', 'd'],
+                                  channels=['x', 'y'],
+                                  platforms=('linux-64', ))
+    without_platforms_spec = EnvSpec(name=with_platforms_spec.name,
+                                     conda_packages=with_platforms_spec.conda_packages,
+                                     pip_packages=with_platforms_spec.pip_packages,
+                                     channels=with_platforms_spec.channels,
+                                     platforms=())
+
+    assert with_platforms_spec.logical_hash != with_platforms_spec.locked_hash
+    assert with_platforms_spec.logical_hash != with_platforms_spec.import_hash
+
+    assert without_platforms_spec.logical_hash == without_platforms_spec.locked_hash
+    assert without_platforms_spec.logical_hash == without_platforms_spec.import_hash

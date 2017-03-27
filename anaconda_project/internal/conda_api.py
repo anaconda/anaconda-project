@@ -574,8 +574,26 @@ def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
 # This isn't all (e.g. leaves out arm, power).  it's sort of "all
 # that people typically publish for"
 popular_platforms = ('linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64')
+assert tuple(sorted(popular_platforms)) == popular_platforms
 
 popular_platform_names = ('linux', 'osx', 'win')
+assert tuple(sorted(popular_platform_names)) == popular_platform_names
+
+_popular_platform_groups = dict()
+for name in popular_platform_names:
+    result = []
+    for p in popular_platforms:
+        if p.startswith(name):
+            result.append(p)
+    _popular_platform_groups[name] = tuple(result)
+
+_popular_platform_groups['all'] = popular_platforms
+_popular_platform_groups['unix'] = _popular_platform_groups['linux'] + _popular_platform_groups['osx']
+
+# this isn't just _popular_platform_groups.keys() because we want to be
+# in order from most to least general
+_popular_platform_groups_keys = ('all', 'unix') + popular_platform_names
+assert set(_popular_platform_groups_keys) == set(_popular_platform_groups.keys())
 
 _non_x86_linux_machines = {'armv6l', 'armv7l', 'ppc64le'}
 
@@ -593,3 +611,71 @@ def current_platform():
 def parse_platform(platform):
     assert '-' in platform
     return tuple(platform.split("-"))
+
+
+def expand_platform_list(platforms):
+    """Expand platform list with support for group names.
+
+    all = all popular platforms
+    unix = all linux or osx
+    linux, osx, win = all bit-variants of these
+
+    We return a tuple, the second list in the tuple
+    is a subset of the first, and indicates platforms
+    we don't know about. These may create a warning.
+
+    Returns:
+       Tuple of expanded platforms and unknown platforms.
+    """
+    result = set()
+    unknown = set()
+    for p in platforms:
+        if p in _popular_platform_groups:
+            for popular in _popular_platform_groups[p]:
+                result.add(popular)
+        else:
+            result.add(p)
+            if p not in popular_platforms:
+                unknown.add(p)
+
+    # unknown platforms aren't necessarily an error, we just
+    # don't do anything smart with them.
+    return (sorted(list(result)), sorted(list(unknown)))
+
+
+def condense_platform_list(platforms):
+    """Combine platform names when possible.
+
+    Returns:
+       New list of platform names.
+    """
+    result = list(platforms)
+
+    # _popular_platform_groups_keys is supposed to be in order
+    # from more to less general
+    for p in _popular_platform_groups_keys:
+        have_all = True
+        expanded = _popular_platform_groups[p]
+        for p in expanded:
+            if p not in platforms:
+                have_all = False
+        if have_all:
+            # replace the specific ones with the group name
+            result = list(filter(lambda x: x not in expanded, result))
+            result.append(p)
+
+    return result
+
+
+def sort_platform_list(platforms):
+    """Sort platform list (including "grouping" names) from more to less general."""
+    remaining = set(platforms)
+    result = []
+    for known in (_popular_platform_groups_keys + popular_platforms):
+        if known in remaining:
+            result.append(known)
+            remaining.remove(known)
+
+    result = result + sorted(list(remaining))
+
+    return result

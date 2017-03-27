@@ -79,4 +79,4 @@ def test_interactively_no_fix_project(monkeypatch, capsys):
                        DEFAULT_PROJECT_FILENAME)
         assert err == ""
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo"}, check)
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\nplatforms: [all]\n"}, check)

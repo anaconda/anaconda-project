@@ -213,22 +213,6 @@ class CondaEnvironmentDeviations(object):
         return self._wrong_version_pip_packages
 
 
-# in the YAML file we want to save platforms in order
-# from most to least general, and alphabetical within
-# a generality.
-def _pretty_platform_sort(platforms):
-    remaining = set(platforms)
-    result = []
-    for known in (('all', ) + conda_api.popular_platform_names + conda_api.popular_platforms):
-        if known in remaining:
-            result.append(known)
-            remaining.remove(known)
-
-    result = result + sorted(list(remaining))
-
-    return result
-
-
 class CondaLockSet(object):
     """Represents a locked set of package versions."""
 
@@ -264,7 +248,7 @@ class CondaLockSet(object):
             keys = list(set(keys))
 
         # sort nicely
-        keys = _pretty_platform_sort(keys)
+        keys = conda_api.sort_platform_list(keys)
 
         combined_diff = []
         for key in keys:
@@ -329,7 +313,7 @@ class CondaLockSet(object):
     def to_json(self):
         """JSON/YAML version of the lock set."""
         yaml_dict = _CommentedMap()
-        for platform in _pretty_platform_sort(self._package_specs_by_platform.keys()):
+        for platform in conda_api.sort_platform_list(self._package_specs_by_platform.keys()):
             packages = _CommentedSeq()
             for package in self._package_specs_by_platform[platform]:
                 packages.append(package)
