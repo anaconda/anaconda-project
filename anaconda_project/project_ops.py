@@ -164,7 +164,7 @@ def set_properties(project, name=None, icon=None, description=None):
         return status
 
 
-def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=None):
+def _try_requirement_without_commit(project, env_var_or_class, env_spec_name=None):
     project.use_changes_without_saving()
 
     provide_whitelist = (CondaEnvRequirement, )
@@ -182,6 +182,12 @@ def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=Non
         # caller was supposed to expect env_var_or_class to still exist,
         # unless project file got mangled
         assert status is not None  # pragma: no cover
+
+    return status
+
+
+def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=None):
+    status = _try_requirement_without_commit(project, env_var_or_class, env_spec_name)
 
     if not status:
         # reload from disk, discarding our changes because they did not work
@@ -738,6 +744,10 @@ def _update_and_lock(project, env_spec_name, update):
 
     logs = []
 
+    # note that "envs" are frozen from the original project state,
+    # and won't update as we go through them
+    need_save = False
+
     for env in envs:
         if update or env.lock_set is None:
             try:
@@ -771,8 +781,9 @@ def _update_and_lock(project, env_spec_name, update):
                         for line in diff_string.split("\n"):
                             logs.append(line)
 
-                    status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env.name)
+                    status = _try_requirement_without_commit(project, CondaEnvRequirement, env.name)
                     if status:
+                        need_save = True
                         logs.extend(status.logs)
                         if update:
                             logs.append("Updated locked dependencies for env spec %s in %s." %
@@ -782,6 +793,8 @@ def _update_and_lock(project, env_spec_name, update):
                                         (env.name, project.lock_file.basename))
 
                 if not status:
+                    # revert our changes
+                    project.load()
                     # we throw out logs here, but when we
                     # switch to using a streaming progress interface
                     # that will be ok.
@@ -791,6 +804,10 @@ def _update_and_lock(project, env_spec_name, update):
         else:
             assert not update
             logs.append("Env spec %s is already locked." % env.name)
+
+    # everything successful; save the project
+    if need_save:
+        project.save()
 
     if update:
         description = "Update complete."
