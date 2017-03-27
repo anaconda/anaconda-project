@@ -471,3 +471,17 @@ def test_extract_common_only_bits_differ():
     factored = _extract_common(resolve_results)
 
     assert {'linux': ['a', 'b'], 'linux-32': ['c']} == factored
+
+
+def test_extract_common_only_unix():
+    resolve_results = {'linux-64': ['a', 'b'], 'linux-32': ['a', 'b', 'c'], 'osx-64': ['a', 'b']}
+    factored = _extract_common(resolve_results)
+
+    assert {'unix': ['a', 'b'], 'linux-32': ['c']} == factored
+
+
+def test_extract_common_unpopular_unix():
+    resolve_results = {'linux-64': ['a', 'b'], 'linux-32': ['a', 'b', 'c'], 'osx-32': ['a', 'b']}
+    factored = _extract_common(resolve_results)
+
+    assert {'unix': ['a', 'b'], 'linux-32': ['c']} == factored

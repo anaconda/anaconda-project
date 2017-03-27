@@ -20,89 +20,78 @@ import anaconda_project.internal.makedirs as makedirs
 from anaconda_project.version import version
 
 
-def _extract_common(by_platform):
-    """Create a new dict with entries combining common specs."""
-    # We want to "promote" specs the minimum amount, to avoid
-    # saying a package works more generally than we've shown that
-    # it does. So if something is common to linux-64 and linux-32, we
-    # promote it to "linux" not to "all"; if we only have "osx-64"
-    # we don't promote that to "osx"; for something to be in "all"
-    # it has to work on two different platform names.
+def _refactor_common_packages(existing_sets, include_predicate, factored_name):
+    # For items in existing_sets included by include_predicate,
+    # try to factor out common items into factored_name.
+    # include_predicate takes keys from existing_sets as param.
+    factorable_names = [name for name in existing_sets.keys() if include_predicate(name)]
+    unfactorable_names = [name for name in existing_sets.keys() if not include_predicate(name)]
 
-    # Compute for example 'linux' from 'linux-64' and 'linux-32'
-    promoted_by_platform_name = {}
+    if len(factorable_names) < 2:
+        # need at least two things to have a DRY problem; we want to
+        # keep things specific unless there's a reason to refactor.
+        return existing_sets
+
+    specs = [existing_sets[name] for name in factorable_names]
+    factored = set.intersection(*specs)
+
+    if len(factored) == 0:
+        # nothing in common amongst relevant things
+        return existing_sets
+
+    result = dict()
+    for name in factorable_names:
+        remaining = existing_sets[name] - factored
+        if len(remaining) > 0:
+            result[name] = remaining
+
+    for name in unfactorable_names:
+        result[name] = existing_sets[name]
+
+    result[factored_name] = factored
+
+    return result
+
+
+def _extract_common(by_platform):
+    # convert from dict of platform-to-lists to platform-to-sets
+    result = {name: set(values) for (name, values) in by_platform.items()}
+
+    # linux-64,linux-32 => linux, etc.
     platform_names = set([conda_api.parse_platform(platform)[0] for platform in by_platform.keys()])
     for name in platform_names:
-        platforms_with_name = [platform for platform in by_platform.keys() if platform.startswith("%s-" % name)]
-        if len(platforms_with_name) > 1:
-            specs_with_name = [set(by_platform[platform]) for platform in platforms_with_name]
-            to_promote = set.intersection(*specs_with_name)
-        else:
-            to_promote = set()
-        promoted_by_platform_name[name] = to_promote
+        result = _refactor_common_packages(result, lambda p: p.startswith("%s-" % name), name)
 
+    # is it a candidate for the "unix" grouping
     def is_unix(platform_or_platform_name):
         for unix_name in conda_api.unix_platform_names:
             if platform_or_platform_name.startswith(unix_name):
                 return True
         return False
 
-    # Now compute 'unix' for specs common to unix platform names
-    promoted_to_unix = set()
-    # this has to go back and intersect by_platform because osx-64 for example
-    # won't have become osx, so we can't intersect promoted_by_platform_name
-    # since not everything common to a fully-qualified name has been promoted
-    # to a bits-less name.
-    unix_specs = [set(specs) for (name, specs) in by_platform.items() if is_unix(name)]
-    # we need at least two unix platforms before we will promote
-    if len(unix_specs) > 1:
-        promoted_to_unix = set.intersection(*unix_specs)
+    # if we have "linux","linux-64","osx-64", we should consider "linux","osx-64"
+    # and leave out "linux-64".
+    def is_most_general(platform_or_platform_name):
+        if '-' in platform_or_platform_name:
+            platform_name = conda_api.parse_platform(platform_or_platform_name)[0]
+            if platform_name in result:
+                return False
 
-    # Remove the 'unix' from the per-platform
-    for (name, specs) in promoted_by_platform_name.items():
-        if is_unix(name):
-            promoted_by_platform_name[name] = specs - promoted_to_unix
+        if 'unix' in result and is_unix(platform_or_platform_name) and platform_or_platform_name != 'unix':
+            return False
 
-    # Now compute 'all' for specs common to all platform names, iff
-    # we have at least two platforms
-    promoted_to_all = set()
-    if len(promoted_by_platform_name) > 1:
-        # this has to go back and intersect by_platform for the same reason
-        # noted above when promoting to "unix"
-        all_specs = [set(specs) for specs in by_platform.values()]
-        promoted_to_all = set.intersection(*all_specs)
+        # we don't call this after adding 'all'
+        assert platform_or_platform_name != 'all'
 
-    # Remove the 'all' from the per-platform and the unix
-    promoted_to_unix = promoted_to_unix - promoted_to_all
-    for (name, specs) in promoted_by_platform_name.items():
-        promoted_by_platform_name[name] = specs - promoted_to_all
+        return True
 
-    # Now build the final result, removing promoted stuff from
-    # the full platform names
-    replacements = {}
-    for (platform, specs) in by_platform.items():
-        (platform_name, _) = conda_api.parse_platform(platform)
-        promoted_to_name = promoted_by_platform_name.get(platform_name, set())
-        # we leave these in original order rather than sorting (should we?)
-        new_specs = []
-        for spec in specs:
-            if not (spec in promoted_to_all or spec in promoted_to_name or
-                    (is_unix(platform) and spec in promoted_to_unix)):
-                new_specs.append(spec)
-        if len(new_specs) > 0:
-            replacements[platform] = new_specs
+    # linux*, osx* => unix
+    result = _refactor_common_packages(result, lambda p: is_unix(p) and is_most_general(p), "unix")
 
-    for (name, specs) in promoted_by_platform_name.items():
-        if len(specs) > 0:
-            replacements[name] = sorted(list(specs))
+    # everything => all
+    result = _refactor_common_packages(result, lambda p: is_most_general(p), "all")
 
-    if len(promoted_to_unix) > 0:
-        replacements['unix'] = sorted(list(promoted_to_unix))
-
-    if len(promoted_to_all) > 0:
-        replacements['all'] = sorted(list(promoted_to_all))
-
-    return replacements
+    return {name: sorted(list(value)) for (name, value) in result.items()}
 
 
 class DefaultCondaManager(CondaManager):
