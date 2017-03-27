@@ -1061,3 +1061,30 @@ def test_sort_platform_list():
     assert everything_sorted == tuple(conda_api.sort_platform_list(tuple(shuffled)))
     assert [] == conda_api.sort_platform_list([])
     assert [] == conda_api.sort_platform_list(())
+
+
+def test_condense_platform_list():
+    pairs = [(('all', ), conda_api.popular_platforms), (('unix', ), ('linux-64', 'linux-32', 'osx-64')),
+             (('unix', 'osx-32'),
+              ('linux-64', 'linux-32', 'osx-64', 'osx-32')), (('unix', 'osx-32'),
+                                                              ('linux-64', 'linux-32', 'osx-64', 'osx-32')),
+             (('win', 'linux-64'), ('linux-64', 'win-64', 'win-32')), (('linux-64', ), ('linux-64', )), ((), ())]
+
+    for (expected, original) in pairs:
+        assert expected == tuple(conda_api.condense_platform_list(original))
+
+
+def test_expand_platform_list():
+    pairs = [(conda_api.popular_platforms, ('all', )), (('linux-32', 'linux-64', 'osx-64'), ('unix', )),
+             (('linux-64', 'win-32', 'win-64'), ('win', 'linux-64')), (('linux-64', ), ('linux-64', )), ((), ())]
+
+    for (expected, original) in pairs:
+        (expanded, unknown) = conda_api.expand_platform_list(original)
+        assert expected == tuple(expanded)
+        assert [] == unknown
+
+
+def test_expand_platform_list_handles_unknown():
+    (expanded, unknown) = conda_api.expand_platform_list(['linux-64', 'wtf', 'something'])
+    assert ['linux-64', 'something', 'wtf'] == expanded
+    assert ['something', 'wtf'] == unknown

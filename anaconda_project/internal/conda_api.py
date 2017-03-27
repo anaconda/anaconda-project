@@ -579,16 +579,36 @@ assert tuple(sorted(popular_platforms)) == popular_platforms
 popular_platform_names = ('linux', 'osx', 'win')
 assert tuple(sorted(popular_platform_names)) == popular_platform_names
 
+unix_platform_names = ('linux', 'osx')
+assert tuple(sorted(unix_platform_names)) == unix_platform_names
+
 _popular_platform_groups = dict()
+
+# Fill in the 'linux', 'osx', 'win' groups
 for name in popular_platform_names:
     result = []
     for p in popular_platforms:
         if p.startswith(name):
             result.append(p)
     _popular_platform_groups[name] = tuple(result)
+    assert tuple(sorted(_popular_platform_groups[name])) == _popular_platform_groups[name]
 
+
+# fill in the 'unix' group
+def _popular_unix_platforms():
+    result = []
+    for unix_name in unix_platform_names:
+        for p in popular_platforms:
+            if p.startswith(unix_name):
+                result.append(p)
+    return tuple(result)
+
+
+_popular_platform_groups['unix'] = _popular_unix_platforms()
+assert tuple(sorted(_popular_platform_groups['unix'])) == _popular_platform_groups['unix']
+
+# fill in the 'all' group
 _popular_platform_groups['all'] = popular_platforms
-_popular_platform_groups['unix'] = _popular_platform_groups['linux'] + _popular_platform_groups['osx']
 
 # this isn't just _popular_platform_groups.keys() because we want to be
 # in order from most to least general
@@ -640,7 +660,7 @@ def expand_platform_list(platforms):
 
     # unknown platforms aren't necessarily an error, we just
     # don't do anything smart with them.
-    return (sorted(list(result)), sorted(list(unknown)))
+    return (sort_platform_list(result), sort_platform_list(unknown))
 
 
 def condense_platform_list(platforms):
@@ -653,18 +673,18 @@ def condense_platform_list(platforms):
 
     # _popular_platform_groups_keys is supposed to be in order
     # from more to less general
-    for p in _popular_platform_groups_keys:
+    for group_name in _popular_platform_groups_keys:
         have_all = True
-        expanded = _popular_platform_groups[p]
+        expanded = _popular_platform_groups[group_name]
         for p in expanded:
-            if p not in platforms:
+            if p not in result:
                 have_all = False
         if have_all:
             # replace the specific ones with the group name
             result = list(filter(lambda x: x not in expanded, result))
-            result.append(p)
+            result.append(group_name)
 
-    return result
+    return sort_platform_list(result)
 
 
 def sort_platform_list(platforms):
