@@ -62,7 +62,7 @@ class CondaManager(with_metaclass(ABCMeta)):
     """
 
     @abstractmethod
-    def resolve_dependencies(self, package_specs, channels):
+    def resolve_dependencies(self, package_specs, channels, platforms):
         """Compute the full transitive graph to install to satisfy package_specs.
 
         Raised exceptions that are user-interesting conda problems
@@ -75,6 +75,8 @@ class CondaManager(with_metaclass(ABCMeta)):
 
         Args:
             package_specs (list of str): list of specs to hold constant
+            channels (list of str): list of channels to resolve against
+            platforms (list of str): list of platforms to resolve for
 
         Returns:
             a ``CondaLockSet`` instance

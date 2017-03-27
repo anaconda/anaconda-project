@@ -359,14 +359,14 @@ def test_resolve_dependencies_with_conda_api_mock(monkeypatch):
 
     manager = DefaultCondaManager()
 
-    lock_set = manager.resolve_dependencies(['bokeh'], channels=())
+    lock_set = manager.resolve_dependencies(['bokeh'], channels=(), platforms=(conda_api.current_platform(), ))
     assert lock_set.package_specs_for_current_platform == ('bokeh=0.12.4=0', 'thing=1.0=1')
 
 
 def test_resolve_dependencies_with_actual_conda():
     manager = DefaultCondaManager()
 
-    lock_set = manager.resolve_dependencies(['bokeh'], channels=())
+    lock_set = manager.resolve_dependencies(['bokeh'], channels=(), platforms=(conda_api.current_platform(), ))
     specs = lock_set.package_specs_for_current_platform
     pprint(specs)
     names = [conda_api.parse_spec(spec).name for spec in specs]
@@ -383,7 +383,7 @@ def test_resolve_dependencies_with_conda_api_mock_raises_error(monkeypatch):
     manager = DefaultCondaManager()
 
     with pytest.raises(CondaManagerError) as excinfo:
-        manager.resolve_dependencies(['bokeh'], channels=())
+        manager.resolve_dependencies(['bokeh'], channels=(), platforms=(conda_api.current_platform(), ))
 
     assert 'Error resolving for' in str(excinfo.value)
 

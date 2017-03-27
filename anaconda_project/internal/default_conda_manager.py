@@ -164,19 +164,19 @@ class DefaultCondaManager(CondaManager):
             # fail we will survive
             pass
 
-    def resolve_dependencies(self, package_specs, channels):
+    def resolve_dependencies(self, package_specs, channels, platforms):
         by_platform = {}
 
         # This has no reason to be a loop now, but it will
         # soon when we do multi-platform resolve
         current = conda_api.current_platform()
-        resolve_for_platforms = list(conda_api.popular_platforms)
+        resolve_for_platforms = list(platforms)
         # always resolve "current" first because it's confusing if
         # an error says resolution failed on another platform when
         # the real issue is that resolution will fail on all platforms.
         if current in resolve_for_platforms:
             resolve_for_platforms.remove(current)
-        resolve_for_platforms = [current] + resolve_for_platforms
+            resolve_for_platforms = [current] + resolve_for_platforms
         for conda_platform in resolve_for_platforms:
             try:
                 deps = conda_api.resolve_dependencies(pkgs=package_specs, platform=conda_platform, channels=channels)

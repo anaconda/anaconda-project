@@ -355,7 +355,7 @@ def _updating_project_lock_file(project):
         # being.
         if project.lock_file._get_locking_enabled(env.name):
             try:
-                lock_set = conda.resolve_dependencies(env.conda_packages, env.channels)
+                lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)
             except conda_manager.CondaManagerError as e:
                 status_holder.status = SimpleStatus(
                     success=False,
@@ -741,7 +741,7 @@ def _update_and_lock(project, env_spec_name, update):
     for env in envs:
         if update or env.lock_set is None:
             try:
-                lock_set = conda.resolve_dependencies(env.conda_packages, env.channels)
+                lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)
             except conda_manager.CondaManagerError as e:
                 return SimpleStatus(success=False,
                                     description="Error resolving dependencies for %s: %s." % (env.name, str(e)),
