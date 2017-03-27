@@ -44,6 +44,7 @@ def test_use_non_default_conda_manager():
 def test_lock_set_properties(monkeypatch):
     lock_set = CondaLockSet({'all': ["something=0.5=2", "bokeh=0.12.4=1"],
                              'linux-64': ["linux-thing=1.0=0"],
+                             'unix': ["unix-thing=5=1"],
                              'win': ["windows-cross-bit-thing=3.2"],
                              'win-32': ["windows-thing=2.0=3", "bokeh=2.3=7"]})
     # it is part of the API definition that we need to APPEND the
@@ -55,7 +56,8 @@ def test_lock_set_properties(monkeypatch):
     if conda_api.current_platform() != 'linux-64':
         monkeypatch.setattr('anaconda_project.internal.conda_api.current_platform', lambda: 'linux-64')
 
-    assert lock_set.package_specs_for_current_platform == ("something=0.5=2", "bokeh=0.12.4=1", "linux-thing=1.0=0")
+    assert lock_set.package_specs_for_current_platform == ("something=0.5=2", "bokeh=0.12.4=1", "unix-thing=5=1",
+                                                           "linux-thing=1.0=0")
 
 
 def test_lock_set_to_json(monkeypatch):
