@@ -41,17 +41,39 @@ def _extract_common(by_platform):
             to_promote = set()
         promoted_by_platform_name[name] = to_promote
 
-    # Now compute 'all' for specs common to all platform names
+    def is_unix(platform_or_platform_name):
+        for unix_name in conda_api.unix_platform_names:
+            if platform_or_platform_name.startswith(unix_name):
+                return True
+        return False
+
+    # Now compute 'unix' for specs common to unix platform names
+    promoted_to_unix = set()
+    # this has to go back and intersect by_platform because osx-64 for example
+    # won't have become osx, so we can't intersect promoted_by_platform_name
+    # since not everything common to a fully-qualified name has been promoted
+    # to a bits-less name.
+    unix_specs = [set(specs) for (name, specs) in by_platform.items() if is_unix(name)]
+    # we need at least two unix platforms before we will promote
+    if len(unix_specs) > 1:
+        promoted_to_unix = set.intersection(*unix_specs)
+
+    # Remove the 'unix' from the per-platform
+    for (name, specs) in promoted_by_platform_name.items():
+        if is_unix(name):
+            promoted_by_platform_name[name] = specs - promoted_to_unix
+
+    # Now compute 'all' for specs common to all platform names, iff
+    # we have at least two platforms
     promoted_to_all = set()
     if len(promoted_by_platform_name) > 1:
-        # this has to go back and intersect by_platform because osx-64 for example
-        # won't have become osx, so we can't intersect promoted_by_platform_name
-        # since not everything common to a fully-qualified name has been promoted
-        # to a bits-less name.
+        # this has to go back and intersect by_platform for the same reason
+        # noted above when promoting to "unix"
         all_specs = [set(specs) for specs in by_platform.values()]
         promoted_to_all = set.intersection(*all_specs)
 
-    # Remove the 'all' from the per-platform
+    # Remove the 'all' from the per-platform and the unix
+    promoted_to_unix = promoted_to_unix - promoted_to_all
     for (name, specs) in promoted_by_platform_name.items():
         promoted_by_platform_name[name] = specs - promoted_to_all
 
@@ -64,7 +86,8 @@ def _extract_common(by_platform):
         # we leave these in original order rather than sorting (should we?)
         new_specs = []
         for spec in specs:
-            if not (spec in promoted_to_all or spec in promoted_to_name):
+            if not (spec in promoted_to_all or spec in promoted_to_name or
+                    (is_unix(platform) and spec in promoted_to_unix)):
                 new_specs.append(spec)
         if len(new_specs) > 0:
             replacements[platform] = new_specs
@@ -72,6 +95,9 @@ def _extract_common(by_platform):
     for (name, specs) in promoted_by_platform_name.items():
         if len(specs) > 0:
             replacements[name] = sorted(list(specs))
+
+    if len(promoted_to_unix) > 0:
+        replacements['unix'] = sorted(list(promoted_to_unix))
 
     if len(promoted_to_all) > 0:
         replacements['all'] = sorted(list(promoted_to_all))

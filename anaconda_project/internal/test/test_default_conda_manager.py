@@ -434,15 +434,16 @@ def test_installed_version_comparison(monkeypatch):
 
 
 def test_extract_common():
-    resolve_results = {'linux-32': ['linux-32-only', 'linux-only', 'common'],
-                       'linux-64': ['linux-64-only', 'linux-only', 'common'],
+    resolve_results = {'linux-32': ['linux-32-only', 'linux-only', 'unix-only', 'common'],
+                       'linux-64': ['linux-64-only', 'linux-only', 'unix-only', 'common'],
                        'win-32': ['win-32-only', 'win-only', 'common'],
                        'win-64': ['win-64-only', 'win-only', 'common'],
-                       'osx-64': ['osx-64-only', 'osx-only', 'common']}
+                       'osx-64': ['osx-64-only', 'osx-only', 'unix-only', 'common']}
     factored = _extract_common(resolve_results)
 
     assert {'all': ['common'],
             'linux': ['linux-only'],
+            'unix': ['unix-only'],
             'win': ['win-only'],
             'osx-64': ['osx-64-only', 'osx-only'],
             'linux-32': ['linux-32-only'],
