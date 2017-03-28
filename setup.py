@@ -78,7 +78,7 @@ coding_utf8_header = u"# -*- coding: utf-8 -*-\n"
 
 copyright_header = u"""
 # ----------------------------------------------------------------------------
-# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+# Copyright © 2017, Continuum Analytics, Inc. All rights reserved.
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------

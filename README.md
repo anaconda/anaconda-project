@@ -5,9 +5,9 @@
 Take any directory full of stuff that you're working on; web apps,
 scripts, Jupyter notebooks, data files, whatever it may be.
 
-By adding an `anaconda-project.yml` to this project directory, you
-can tell the Anaconda platform how to run it. The simplest way to
-run it, using command line tools, is `anaconda-project run`.
+By adding an `anaconda-project.yml` to this project directory,
+a single `anaconda-project run`command will be able to set
+up all dependencies and then launch the project.
 
 Anaconda projects should run in the same way on your machine, on a
 colleague's machine, or when deployed to a server.
@@ -63,7 +63,7 @@ artifacts and doing any necessary setup prior to executing them).
    run your project, so there's no special setup needed when
    you move from your local machine to the web.
 
-## Learn more
+## Learn more from the complete docs
 
 Check out the complete documentation, including a tutorial
 and reference guide, at:
@@ -111,9 +111,6 @@ stability.
 Please report issues right here on GitHub.
 
 # Contributing
-
-Please join our chat room at https://gitter.im/conda/kapsel if you
-have questions, feedback, or just want to say hi.
 
 Here's how to work on the code:
 
