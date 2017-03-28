@@ -753,7 +753,7 @@ def _update_and_lock(project, env_spec_name, update):
     need_save = False
 
     for env in envs:
-        if update or env.lock_set is None:
+        if update or env.lock_set.disabled:
             try:
                 lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)
             except conda_manager.CondaManagerError as e:
@@ -761,13 +761,13 @@ def _update_and_lock(project, env_spec_name, update):
                                     description="Error resolving dependencies for %s: %s." % (env.name, str(e)),
                                     logs=logs)
 
-            lock_set_changed = env.lock_set is None or not env.lock_set.equivalent_to(lock_set)
+            lock_set_changed = env.lock_set.disabled or not env.lock_set.equivalent_to(lock_set)
 
             # if lock_set_changed is False, we may still be enabling locking
             if lock_set_changed or not update:
                 project.lock_file._set_lock_set(env.name, lock_set, all_env_names)
 
-                if update and env.lock_set is None:
+                if update and env.lock_set.disabled:
                     # If we are doing an update and locking is not
                     # already in use, we should install the new lock
                     # set, but not save it in the lock file.
@@ -775,7 +775,7 @@ def _update_and_lock(project, env_spec_name, update):
                     if status:
                         logs.append("Updated installed dependencies for %s." % (env.name))
                     # we should not have created a lock when there was none
-                    assert project.env_specs[env.name].lock_set is None
+                    assert project.env_specs[env.name].lock_set.disabled
                 else:
                     # a lock, or an update when we already have locking enabled,
                     # DOES save in the lock file

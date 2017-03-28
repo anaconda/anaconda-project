@@ -41,7 +41,7 @@ def test_create_missing_lock_file():
         assert lock_file is not None
         assert not os.path.exists(filename)
 
-        assert lock_file._get_lock_set('foo') is None
+        assert lock_file._get_lock_set('foo').disabled
         assert not lock_file._get_locking_enabled('foo')
 
         lock_file.save()
@@ -95,9 +95,10 @@ def test_get_lock_set():
         assert os.path.exists(filename)
         lock_file = ProjectLockFile.load_for_directory(dirname)
         foo_lock_set = lock_file._get_lock_set('foo')
+        assert foo_lock_set.enabled
         assert ('foo=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
         bar_lock_set = lock_file._get_lock_set('bar')
-        assert bar_lock_set is None  # because it isn't enabled
+        assert bar_lock_set.disabled
 
     with_directory_contents(
         {DEFAULT_PROJECT_LOCK_FILENAME: """
@@ -129,7 +130,7 @@ def test_disable_single_spec_locking():
         lock_file._disable_locking('foo')
 
         foo_lock_set = lock_file._get_lock_set('foo')
-        assert foo_lock_set is None
+        assert foo_lock_set.disabled
         assert lock_file._get_locking_enabled('foo') is False
 
     with_directory_contents(
@@ -161,9 +162,9 @@ def test_set_lock_set():
         # env spec settings override that; foo has no setting.
         foo_lock_set = lock_file._get_lock_set('foo')
         assert lock_file.get_value(['env_specs', 'foo', 'locked'], None) is None
-        assert foo_lock_set is None
+        assert foo_lock_set.disabled
         bar_lock_set = lock_file._get_lock_set('bar')
-        assert bar_lock_set is None
+        assert bar_lock_set.disabled
 
         all_names = ['foo', 'bar']
 
@@ -175,16 +176,16 @@ def test_set_lock_set():
         # enable the global flag in order to enable "bar"
         foo_lock_set = lock_file._get_lock_set('foo')
         assert lock_file.get_value(['env_specs', 'foo', 'locked']) is False
-        assert foo_lock_set is None
+        assert foo_lock_set.disabled
 
         bar_lock_set = lock_file._get_lock_set('bar')
-        assert bar_lock_set is not None
+        assert bar_lock_set.enabled
         assert ('something=3.0=0', ) == bar_lock_set.package_specs_for_current_platform
 
         # and now we should enable "foo" when we set it to something
         lock_file._set_lock_set('foo', lock_set, all_names=all_names)
         foo_lock_set = lock_file._get_lock_set('foo')
-        assert foo_lock_set is not None
+        assert foo_lock_set.enabled
         assert ('something=3.0=0', ) == foo_lock_set.package_specs_for_current_platform
 
         # be sure we can save
@@ -232,10 +233,10 @@ def test_set_lock_set_has_to_create_env_specs_to_disable():
         # enable the global flag in order to enable "bar"
         foo_lock_set = lock_file._get_lock_set('foo')
         assert lock_file.get_value(['env_specs', 'foo', 'locked']) is False
-        assert foo_lock_set is None
+        assert foo_lock_set.disabled
 
         bar_lock_set = lock_file._get_lock_set('bar')
-        assert bar_lock_set is not None
+        assert bar_lock_set.enabled
         assert ('something=3.0=0', ) == bar_lock_set.package_specs_for_current_platform
 
         # be sure we can save
@@ -244,24 +245,25 @@ def test_set_lock_set_has_to_create_env_specs_to_disable():
         reloaded = ProjectLockFile.load_for_directory(dirname)
 
         assert ('something=3.0=0', ) == reloaded._get_lock_set('bar').package_specs_for_current_platform
-        assert reloaded._get_lock_set('foo') is None
+        assert reloaded._get_lock_set('foo').disabled
 
     with_directory_contents({DEFAULT_PROJECT_LOCK_FILENAME: """
 locking_enabled: false
 """}, check_file)
 
 
-def test_get_lock_set_bad_packages_value():
+def test_empty_file_enables_locking():
     def check_file(dirname):
         lock_file = ProjectLockFile.load_for_directory(dirname)
+        assert lock_file._get_locking_enabled('foo')
 
-        foo_lock_set = lock_file._get_lock_set('foo')
-        assert foo_lock_set is None
-
-    with_directory_contents(
-        {DEFAULT_PROJECT_LOCK_FILENAME: """
-env_specs:
-  foo:
-    platforms: [all]
-    packages: 42
+    with_directory_contents({DEFAULT_PROJECT_LOCK_FILENAME: """
 """}, check_file)
+
+
+def test_default_file_disables_locking():
+    def check_file(dirname):
+        lock_file = ProjectLockFile.load_for_directory(dirname)
+        assert not lock_file._get_locking_enabled('foo')
+
+    with_directory_contents(dict(), check_file)

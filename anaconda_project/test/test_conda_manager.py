@@ -162,3 +162,24 @@ def test_lock_set_diff_and_equivalent():
     assert new_lock_set.equivalent_to(new_lock_set)
     assert not old_lock_set.equivalent_to(new_lock_set)
     assert not new_lock_set.equivalent_to(old_lock_set)
+
+    assert """  platforms:
++   linux-64
++   win-64
+  packages:
++   all:
++     a
++     b
++     c
++   linux:
++     x
++     h
++   win:
++     y
++   linux-64:
++     q
++     w
++   osx-64:
++     s
++   win-64:
++     j""" == new_lock_set.diff_from(None)

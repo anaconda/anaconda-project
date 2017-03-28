@@ -255,7 +255,7 @@ class EnvSpec(object):
     @property
     def conda_packages_for_create(self):
         """Get conda packages (preferring the lock set list if present)."""
-        if self._lock_set is not None:
+        if self._lock_set is not None and self._lock_set.enabled and self._lock_set.supports_current_platform:
             locked = self._lock_set.package_specs_for_current_platform
         else:
             locked = []

@@ -144,15 +144,12 @@ class ProjectLockFile(YamlFile):
 
     def _get_lock_set(self, env_spec_name):
         """Library-internal method."""
-        if not self._get_locking_enabled(env_spec_name):
-            return None
-
-        packages = self.get_value(['env_specs', env_spec_name, 'packages'])
-        platforms = self.get_value(['env_specs', env_spec_name, 'platforms'])
-        if isinstance(packages, dict) and isinstance(platforms, list):
-            return CondaLockSet(packages, platforms)
-        else:
-            return None
+        # TODO no validation here, we'll do that by moving this
+        # into project.py soon
+        enabled = self._get_locking_enabled(env_spec_name)
+        packages = self.get_value(['env_specs', env_spec_name, 'packages'], {})
+        platforms = self.get_value(['env_specs', env_spec_name, 'platforms'], [])
+        return CondaLockSet(packages, platforms, enabled=enabled)
 
     def _disable_locking(self, env_spec_name):
         """Library-internal method."""

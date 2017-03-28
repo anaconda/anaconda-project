@@ -29,6 +29,7 @@ from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
 from anaconda_project.test.fake_server import fake_server
 import anaconda_project.internal.keyring as keyring
+import anaconda_project.internal.conda_api as conda_api
 
 
 def test_create(monkeypatch):
@@ -1281,7 +1282,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
 
         assert 'foo' in project.env_specs
         env = project.env_specs['foo']
-        assert env.lock_set is not None
+        assert env.lock_set.enabled
         assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME))
 
         # be sure it was really done
@@ -1430,7 +1431,7 @@ def test_add_env_spec_with_packages_and_channels():
 
         env_spec = project2.env_specs['foo']
         assert env_spec.name == 'foo'
-        assert env_spec.lock_set is not None
+        assert env_spec.lock_set.enabled
         assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}, platforms=['all']))
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
@@ -1515,7 +1516,7 @@ def test_remove_env_spec():
             assert project.lock_file.get_value(['env_specs', 'hello'], None) is not None
             assert 'hello' in project.env_specs
             env = project.env_specs['hello']
-            assert env.lock_set is not None
+            assert env.lock_set.enabled
             assert env.lock_set.package_specs_for_current_platform == ('a=1.0=1', )
 
             status = project_ops.remove_env_spec(project, name='hello')
@@ -1590,7 +1591,7 @@ def test_remove_env_spec_causes_problem():
             assert project.lock_file.get_value(['env_specs', 'hello'], None) is not None
             assert 'hello' in project.env_specs
             env = project.env_specs['hello']
-            assert env.lock_set is not None
+            assert env.lock_set.enabled
             assert env.lock_set.package_specs_for_current_platform == ('a=1.0=1', )
 
             status = project_ops.remove_env_spec(project, name='hello')
@@ -1653,7 +1654,7 @@ def test_add_packages_to_all_environments():
         assert ['hello', 'world'] == list(project2.project_file.get_value('channels'))
 
         for env_spec in project2.env_specs.values():
-            assert env_spec.lock_set is not None
+            assert env_spec.lock_set.enabled
             assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}, platforms=['all']))
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
@@ -1680,7 +1681,8 @@ def test_add_packages_cannot_resolve_deps():
         assert project2.project_file.get_value('channels', None) is None
 
         for env_spec in project2.env_specs.values():
-            assert env_spec.lock_set is None
+            assert env_spec.lock_set.enabled
+            assert env_spec.lock_set.platforms == ()
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
@@ -1721,7 +1723,8 @@ def test_remove_packages_from_all_environments():
             os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
             project = Project(dirname)
             for env_spec in project.env_specs.values():
-                assert env_spec.lock_set is None
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
 
             assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('packages'))
             assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
@@ -1737,7 +1740,7 @@ def test_remove_packages_from_all_environments():
         assert ['woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
 
         for env_spec in project2.env_specs.values():
-            assert env_spec.lock_set is not None
+            assert env_spec.lock_set.enabled
             assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}, platforms=['all']))
 
     with_directory_contents_completing_project_file(
@@ -1751,6 +1754,10 @@ env_specs:
     packages:
      - foo
      - woot
+  hello2:
+    packages:
+     - foo
+     - bar
         """,
          DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
@@ -1761,7 +1768,8 @@ def test_remove_packages_from_one_environment():
             project = Project(dirname)
 
             for env_spec in project.env_specs.values():
-                assert env_spec.lock_set is None
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
 
             assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('packages'))
             assert ['foo'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
@@ -1785,10 +1793,10 @@ def test_remove_packages_from_one_environment():
 
         for env_spec in project2.env_specs.values():
             if env_spec.name == 'hello':
-                assert env_spec.lock_set is not None
+                assert env_spec.lock_set.enabled
                 assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}, platforms=['all']))
             else:
-                assert env_spec.lock_set is None
+                assert env_spec.lock_set.enabled
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -1854,7 +1862,8 @@ def test_remove_packages_cannot_resolve_deps():
             os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
             project = Project(dirname)
             for env_spec in project.env_specs.values():
-                assert env_spec.lock_set is None
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
 
             assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('packages'))
             assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
@@ -1872,7 +1881,8 @@ def test_remove_packages_cannot_resolve_deps():
         assert ['foo', 'woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
 
         for env_spec in project2.env_specs.values():
-            assert env_spec.lock_set is None
+            assert env_spec.lock_set.enabled
+            assert env_spec.lock_set.platforms == ()
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -2036,8 +2046,8 @@ def test_lock_and_update_and_unlock_all_envs():
             assert 'Dependency locking is now disabled.' == status.status_description
 
             lock_file = ProjectLockFile.load_for_directory(dirname)
-            assert lock_file._get_lock_set('foo') is None
-            assert lock_file._get_lock_set('bar') is None
+            assert lock_file._get_lock_set('foo').disabled
+            assert lock_file._get_lock_set('bar').disabled
 
             assert ('a', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
@@ -2091,7 +2101,7 @@ def test_lock_and_unlock_single_env():
 
             lock_file = ProjectLockFile.load_for_directory(dirname)
             assert ('a=1.0=1', ) == lock_file._get_lock_set('foo').package_specs_for_current_platform
-            assert lock_file._get_lock_set('bar') is None
+            assert lock_file._get_lock_set('bar').disabled
 
             assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
@@ -2118,8 +2128,8 @@ def test_lock_and_unlock_single_env():
             assert 'Dependency locking is now disabled for env spec foo.' == status.status_description
 
             lock_file = ProjectLockFile.load_for_directory(dirname)
-            assert lock_file._get_lock_set('foo') is None
-            assert lock_file._get_lock_set('bar') is None
+            assert lock_file._get_lock_set('foo').disabled
+            assert lock_file._get_lock_set('bar').disabled
 
             assert ('a', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
@@ -2211,8 +2221,8 @@ def test_unlock_conda_error():
 
             project = Project(dirname)
 
-            assert project.env_specs['foo'].lock_set is not None
-            assert project.env_specs['bar'].lock_set is not None
+            assert project.env_specs['foo'].lock_set.enabled
+            assert project.env_specs['bar'].lock_set.enabled
 
             status = project_ops.unlock(project, env_spec_name=None)
             assert [] == status.errors
@@ -2221,8 +2231,8 @@ def test_unlock_conda_error():
 
             assert os.path.isfile(filename)
 
-            assert project.env_specs['foo'].lock_set is not None
-            assert project.env_specs['bar'].lock_set is not None
+            assert project.env_specs['foo'].lock_set.enabled
+            assert project.env_specs['bar'].lock_set.enabled
 
         _with_conda_test(attempt,
                          missing_packages=('a', 'b'),
@@ -2269,6 +2279,10 @@ def test_update_unlocked_envs():
 
             project = Project(dirname)
 
+            # all lock sets disabled
+            for env in project.env_specs.values():
+                assert env.lock_set.disabled
+
             # Update (should install packages but not make a lock file)
             status = project_ops.update(project, env_spec_name=None)
             assert [] == status.errors
@@ -2278,6 +2292,10 @@ def test_update_unlocked_envs():
 
             # no project lock file created
             assert not os.path.isfile(filename)
+
+            # all lock sets still disabled
+            for env in project.env_specs.values():
+                assert env.lock_set.disabled
 
         _with_conda_test(attempt, resolve_dependencies=resolve_results)
 
@@ -2293,6 +2311,73 @@ env_specs:
     packages:
       - b
 """}, check)
+
+
+def test_update_empty_lock_sets():
+    def check(dirname):
+        resolve_results = {'all': ['a=1.0=1']}
+
+        def attempt():
+            project = Project(dirname)
+
+            # all lock sets enabled but empty
+            for env in project.env_specs.values():
+                assert env.lock_set.enabled
+                assert env.lock_set.platforms == ()
+                assert not env.lock_set.supports_current_platform
+
+            # Update
+            status = project_ops.update(project, env_spec_name=None)
+            assert [] == status.errors
+            assert status
+            assert status.status_description == "Update complete."
+            # yapf: disable
+            assert status.logs == [
+                'Changes to locked dependencies for bar:',
+                '  platforms:',
+                '+   linux-32',
+                '+   linux-64',
+                '+   osx-64',
+                '+   win-32',
+                '+   win-64',
+                '  packages:',
+                '+   all:',
+                '+     a=1.0=1',
+                'Updated locked dependencies for env spec bar in anaconda-project-lock.yml.',
+                'Changes to locked dependencies for foo:',
+                '  platforms:',
+                '+   linux-32',
+                '+   linux-64',
+                '+   osx-64',
+                '+   win-32',
+                '+   win-64',
+                '  packages:',
+                '+   all:',
+                '+     a=1.0=1',
+                'Updated locked dependencies for env spec foo in anaconda-project-lock.yml.'
+            ]
+            # yapf: enable
+            for env in project.env_specs.values():
+                assert env.lock_set.enabled
+                assert env.lock_set.supports_current_platform
+                assert env.lock_set.platforms == conda_api.popular_platforms
+                assert env.lock_set.package_specs_for_current_platform == ('a=1.0=1', )
+
+        _with_conda_test(attempt, resolve_dependencies=resolve_results)
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: locktest
+platforms: [all]
+env_specs:
+  foo:
+    packages:
+      - a
+  bar:
+    packages:
+      - b
+        """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def test_export_env_spec():

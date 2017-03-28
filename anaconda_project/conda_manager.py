@@ -245,7 +245,7 @@ def _pretty_diff(old_list, new_list, indent):
 class CondaLockSet(object):
     """Represents a locked set of package versions."""
 
-    def __init__(self, package_specs_by_platform, platforms):
+    def __init__(self, package_specs_by_platform, platforms, enabled=True):
         """Construct a ``CondaLockSet``.
 
         The passed-in dict should be like:
@@ -265,16 +265,31 @@ class CondaLockSet(object):
         self._package_specs_by_platform = deepcopy(package_specs_by_platform)
         (expanded, _) = conda_api.expand_platform_list(platforms)
         self._platforms = tuple(conda_api.sort_platform_list(expanded))
+        self._enabled = enabled
 
     @property
     def platforms(self):
         """Platform list the lock set was resolved for."""
         return self._platforms
 
+    @property
+    def enabled(self):
+        """Whether locking is enabled for this environment."""
+        return self._enabled
+
+    @property
+    def disabled(self):
+        """Whether locking is disabled for this environment.
+
+        (yes, this is just "not enabled" but this can be more readable sometimes)
+        """
+        return not self._enabled
+
     def equivalent_to(self, other):
         """Determine if this lock set the same as another one."""
         return self._package_specs_by_platform == other._package_specs_by_platform and \
-            self._platforms == other._platforms
+            self._platforms == other._platforms and \
+            self._enabled is other._enabled
 
     def diff_from(self, old):
         """A string showing the comparison between this lock set and another one.
@@ -326,6 +341,7 @@ class CondaLockSet(object):
     def package_specs_for_platform(self, platform):
         """Sequence of package spec strings for the requested platform."""
         assert platform in self.platforms
+        assert self.enabled
 
         # we merge "all", "unix", "linux", then "linux-64" for example
         shared = self._package_specs_by_platform.get("all", [])
@@ -351,13 +367,13 @@ class CondaLockSet(object):
     @property
     def supports_current_platform(self):
         """Whether we have locked deps for the current platform."""
-        return conda_api.current_platform() in self.platforms
+        return self.enabled and conda_api.current_platform() in self.platforms
 
     def to_json(self):
         """JSON/YAML version of the lock set."""
         yaml_dict = _CommentedMap()
 
-        yaml_dict['locked'] = True
+        yaml_dict['locked'] = self.enabled
 
         platforms_list = _CommentedSeq()
         for platform in conda_api.condense_platform_list(self.platforms):
