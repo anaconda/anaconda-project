@@ -1061,22 +1061,43 @@ def test_sort_platform_list():
     assert everything_sorted == tuple(conda_api.sort_platform_list(tuple(shuffled)))
     assert [] == conda_api.sort_platform_list([])
     assert [] == conda_api.sort_platform_list(())
+    assert ['linux-64', 'osx-64', 'win-64'] == conda_api.sort_platform_list(['win-64', 'osx-64', 'linux-64'])
 
 
 def test_condense_platform_list():
-    pairs = [(('all', ), conda_api.popular_platforms), (('unix', ), ('linux-64', 'linux-32', 'osx-64')),
-             (('unix', 'osx-32'),
-              ('linux-64', 'linux-32', 'osx-64', 'osx-32')), (('unix', 'osx-32'),
-                                                              ('linux-64', 'linux-32', 'osx-64', 'osx-32')),
-             (('win', 'linux-64'), ('linux-64', 'win-64', 'win-32')), (('linux-64', ), ('linux-64', )), ((), ())]
+    # yapf: disable
+    pairs = [
+        (('all', ), conda_api.popular_platforms),
+        (('unix', ), ('linux-64', 'linux-32', 'osx-64')),
+        (('unix', 'osx-32'),
+         ('linux-64', 'linux-32', 'osx-64', 'osx-32')),
+        (('unix', 'osx-32'),
+         ('linux-64', 'linux-32', 'osx-64', 'osx-32')),
+        (('win', 'linux-64'),
+         ('linux-64', 'win-64', 'win-32')),
+        (('linux-64', ), ('linux-64', )),
+        ((), ()),
+        (('osx-64',), ('osx-64',)),  # don't condense osx-64 => osx
+        (('all',), ('all', 'linux', 'linux-64'))  # remove redundant
+    ]
+    # yapf: enable
 
     for (expected, original) in pairs:
         assert expected == tuple(conda_api.condense_platform_list(original))
 
 
 def test_expand_platform_list():
-    pairs = [(conda_api.popular_platforms, ('all', )), (('linux-32', 'linux-64', 'osx-64'), ('unix', )),
-             (('linux-64', 'win-32', 'win-64'), ('win', 'linux-64')), (('linux-64', ), ('linux-64', )), ((), ())]
+    # yapf: disable
+    pairs = [
+        (conda_api.popular_platforms, ('all', )),
+        (('linux-32', 'linux-64', 'osx-64'), ('unix', )),
+        (('linux-64', 'win-32', 'win-64'), ('win', 'linux-64')),
+        (('linux-64', ), ('linux-64', )),
+        (('linux-32', 'linux-64', 'win-32', 'win-64'), ('linux-64', 'linux', 'win', 'win-32', 'win-32', 'linux-64')),
+        ((), ()),
+        (('osx-64',), ('osx',))
+    ]
+    # yapf: enable
 
     for (expected, original) in pairs:
         (expanded, unknown) = conda_api.expand_platform_list(original)

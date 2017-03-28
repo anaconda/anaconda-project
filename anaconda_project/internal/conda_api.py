@@ -636,6 +636,9 @@ def parse_platform(platform):
 def expand_platform_list(platforms):
     """Expand platform list with support for group names.
 
+    Normalizes a platform list into specific platform names,
+    in deterministic sort order.
+
     all = all popular platforms
     unix = all linux or osx
     linux, osx, win = all bit-variants of these
@@ -666,23 +669,32 @@ def expand_platform_list(platforms):
 def condense_platform_list(platforms):
     """Combine platform names when possible.
 
+    Normalizes a platform list into the shortest form,
+    in deterministic sort order.
+
     Returns:
        New list of platform names.
     """
-    result = list(platforms)
+    # First break down any group names we already have,
+    # this means if we have [all,linux,linux-64] we
+    # change it to just the expansion of 'all',
+    # for example.
+    (result, _) = expand_platform_list(platforms)
 
     # _popular_platform_groups_keys is supposed to be in order
-    # from more to less general
+    # from more to less general.
     for group_name in _popular_platform_groups_keys:
         have_all = True
         expanded = _popular_platform_groups[group_name]
-        for p in expanded:
-            if p not in result:
-                have_all = False
-        if have_all:
-            # replace the specific ones with the group name
-            result = list(filter(lambda x: x not in expanded, result))
-            result.append(group_name)
+        # don't bother to condense when the group is just a synonym (1 to 1)
+        if len(expanded) > 1:
+            for p in expanded:
+                if p not in result:
+                    have_all = False
+            if have_all:
+                # replace the specific ones with the group name
+                result = list(filter(lambda x: x not in expanded, result))
+                result.append(group_name)
 
     return sort_platform_list(result)
 
