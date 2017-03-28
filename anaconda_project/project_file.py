@@ -158,6 +158,7 @@ class ProjectFile(YamlFile):
             elif section_name in ('channels', 'packages'):
                 section_body = "  []"
             elif section_name == 'platforms':
+                # TODO always include the current platform in this
                 section_body = "  [all]"
             else:
                 section_body = "  {}"

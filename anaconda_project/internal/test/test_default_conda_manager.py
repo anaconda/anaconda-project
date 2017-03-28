@@ -466,6 +466,13 @@ def test_extract_common_just_one_platform():
     assert {'linux-64': ['a', 'b']} == factored
 
 
+def test_extract_common_nothing_in_common():
+    resolve_results = {'linux-64': ['a', 'b'], 'linux-32': ['c', 'd']}
+    factored = _extract_common(resolve_results)
+
+    assert {'linux-64': ['a', 'b'], 'linux-32': ['c', 'd']} == factored
+
+
 def test_extract_common_only_bits_differ():
     resolve_results = {'linux-64': ['a', 'b'], 'linux-32': ['a', 'b', 'c']}
     factored = _extract_common(resolve_results)

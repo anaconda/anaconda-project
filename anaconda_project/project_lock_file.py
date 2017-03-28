@@ -139,18 +139,18 @@ class ProjectLockFile(YamlFile):
                 single_env['locked'] = False
 
         # now set up the one env
-        self.set_value(['env_specs', env_spec_name, 'locked'], True)
         as_json = lock_set.to_json()
-        self.set_value(['env_specs', env_spec_name, 'packages'], as_json)
+        self.set_value(['env_specs', env_spec_name], as_json)
 
     def _get_lock_set(self, env_spec_name):
         """Library-internal method."""
         if not self._get_locking_enabled(env_spec_name):
             return None
 
-        lock_set = self.get_value(['env_specs', env_spec_name, 'packages'])
-        if isinstance(lock_set, dict):
-            return CondaLockSet(lock_set)
+        packages = self.get_value(['env_specs', env_spec_name, 'packages'])
+        platforms = self.get_value(['env_specs', env_spec_name, 'platforms'])
+        if isinstance(packages, dict) and isinstance(platforms, list):
+            return CondaLockSet(packages, platforms)
         else:
             return None
 
@@ -162,6 +162,7 @@ class ProjectLockFile(YamlFile):
         else:
             self.set_value(['env_specs', env_spec_name, 'locked'], False)
             self.unset_value(['env_specs', env_spec_name, 'packages'])
+            self.unset_value(['env_specs', env_spec_name, 'platforms'])
 
     def _get_locking_enabled(self, env_spec_name):
         """Library-internal method."""

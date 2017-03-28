@@ -345,7 +345,7 @@ channels:
 
 
 def test_merge_in_lock_set():
-    lock_set = CondaLockSet({'all': ['a=1.0=1']})
+    lock_set = CondaLockSet({'all': ['a=1.0=1']}, platforms=['all'])
     spec = EnvSpec(name="foo",
                    conda_packages=['a', 'b'],
                    pip_packages=['c', 'd'],
@@ -356,7 +356,7 @@ def test_merge_in_lock_set():
 
 
 def test_lock_set_affects_hash():
-    lock_set = CondaLockSet({'all': ['a=1.0=1']})
+    lock_set = CondaLockSet({'all': ['a=1.0=1']}, platforms=['all'])
     with_lock_spec = EnvSpec(name="foo",
                              conda_packages=['a', 'b'],
                              pip_packages=['c', 'd'],

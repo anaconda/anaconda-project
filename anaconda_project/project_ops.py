@@ -26,7 +26,7 @@ from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.plugins.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
-from anaconda_project.internal.conda_api import parse_spec
+from anaconda_project.internal.conda_api import (parse_spec, condense_platform_list, current_platform)
 
 _default_projectignore = """
 # project-local contains your personal configuration choices and state
@@ -405,6 +405,10 @@ def _update_env_spec(project, name, packages, channels, create):
             env_dict = project.project_file.get_value(['env_specs', name])
             if env_dict is None:
                 env_dict = dict()
+                # if there's no global platforms list, be sure the new env
+                # spec has one.
+                if len(project.project_file.get_value(['platforms'], [])) == 0:
+                    env_dict['platforms'] = condense_platform_list(['all', current_platform()])
                 project.project_file.set_value(['env_specs', name], env_dict)
 
         # packages may be a "CommentedSeq" and we don't want to lose the comments,

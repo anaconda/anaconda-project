@@ -67,11 +67,13 @@ locking_enabled: true
 env_specs:
   foo:
     locked: true
+    platforms: [all]
     packages:
       all:
         - foo=1.0=1
   bar:
     locked: false
+    platforms: [all]
     packages:
       all:
         - bar=2.0=2
@@ -103,11 +105,13 @@ locking_enabled: true
 env_specs:
   foo:
     locked: true
+    platforms: [all]
     packages:
       all:
         - foo=1.0=1
   bar:
     locked: false
+    platforms: [all]
     packages:
       all:
         - bar=2.0=2
@@ -134,11 +138,13 @@ locking_enabled: true
 env_specs:
   foo:
     locked: true
+    platforms: [all]
     packages:
       all:
         - foo=1.0=1
   bar:
     locked: false
+    platforms: [all]
     packages:
       all:
         - bar=2.0=2
@@ -161,7 +167,7 @@ def test_set_lock_set():
 
         all_names = ['foo', 'bar']
 
-        lock_set = CondaLockSet({'all': ['something=3.0=0']})
+        lock_set = CondaLockSet({'all': ['something=3.0=0']}, platforms=['all'])
 
         lock_file._set_lock_set('bar', lock_set, all_names=all_names)
 
@@ -194,11 +200,13 @@ def test_set_lock_set():
 locking_enabled: false
 env_specs:
   foo:
+    platforms: [all]
     packages:
       all:
         - foo=1.0=1
   bar:
     locked: false
+    platforms: [all]
     packages:
       all:
         - bar=2.0=2
@@ -213,7 +221,7 @@ def test_set_lock_set_has_to_create_env_specs_to_disable():
 
         all_names = ['foo', 'bar']
 
-        lock_set = CondaLockSet({'all': ['something=3.0=0']})
+        lock_set = CondaLockSet({'all': ['something=3.0=0']}, platforms=['all'])
 
         # so the point of this test is that we need to create env_specs
         # dict and the 'foo' entry as a side effect of setting 'bar',
@@ -250,8 +258,10 @@ def test_get_lock_set_bad_packages_value():
         foo_lock_set = lock_file._get_lock_set('foo')
         assert foo_lock_set is None
 
-    with_directory_contents({DEFAULT_PROJECT_LOCK_FILENAME: """
+    with_directory_contents(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   foo:
+    platforms: [all]
     packages: 42
 """}, check_file)

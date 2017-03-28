@@ -202,7 +202,7 @@ class DefaultCondaManager(CondaManager):
 
         by_platform = _extract_common(by_platform)
 
-        lock_set = CondaLockSet(package_specs_by_platform=by_platform)
+        lock_set = CondaLockSet(package_specs_by_platform=by_platform, platforms=resolve_for_platforms)
         return lock_set
 
     def _find_conda_deviations(self, prefix, env_spec):

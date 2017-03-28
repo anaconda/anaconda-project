@@ -215,10 +215,37 @@ class CondaEnvironmentDeviations(object):
         return self._wrong_version_pip_packages
 
 
+def _pretty_diff(old_list, new_list, indent):
+    diff = list(difflib.ndiff(old_list, new_list))
+
+    # the diff has - lines, + lines, and ? lines
+    # the ? lines have the ^ pointing to changed character,
+    # which is just noise for these short version strings.
+    # the diff also has lines with just whitespace at the
+    # front, which are context.
+
+    # remove context lines
+    diff = filter(lambda x: x[0] != ' ', diff)
+    # remove ? lines
+    diff = filter(lambda x: x[0] != '?', diff)
+
+    def indent_more(s):
+        if s.startswith("+ "):
+            return "+ " + indent + s[2:]
+        elif s.startswith("- "):
+            return "- " + indent + s[2:]
+        else:
+            return s  # pragma: no cover # should not be any other kind of lines
+
+    diff = map(indent_more, diff)
+
+    return list(diff)
+
+
 class CondaLockSet(object):
     """Represents a locked set of package versions."""
 
-    def __init__(self, package_specs_by_platform):
+    def __init__(self, package_specs_by_platform, platforms):
         """Construct a ``CondaLockSet``.
 
         The passed-in dict should be like:
@@ -230,13 +257,24 @@ class CondaLockSet(object):
 
         Args:
           packages_by_platform (dict): dict from platform to spec list
+          platforms (list of str): platform list
         """
+        assert package_specs_by_platform is not None
+        assert platforms is not None
         # we deepcopy this to avoid sharing issues
         self._package_specs_by_platform = deepcopy(package_specs_by_platform)
+        (expanded, _) = conda_api.expand_platform_list(platforms)
+        self._platforms = tuple(conda_api.sort_platform_list(expanded))
+
+    @property
+    def platforms(self):
+        """Platform list the lock set was resolved for."""
+        return self._platforms
 
     def equivalent_to(self, other):
         """Determine if this lock set the same as another one."""
-        return self._package_specs_by_platform == other._package_specs_by_platform
+        return self._package_specs_by_platform == other._package_specs_by_platform and \
+            self._platforms == other._platforms
 
     def diff_from(self, old):
         """A string showing the comparison between this lock set and another one.
@@ -252,7 +290,7 @@ class CondaLockSet(object):
         # sort nicely
         keys = conda_api.sort_platform_list(keys)
 
-        combined_diff = []
+        packages_diff = []
         for key in keys:
             if old is None:
                 old_list = []
@@ -261,44 +299,34 @@ class CondaLockSet(object):
 
             new_list = self._package_specs_by_platform.get(key, [])
 
-            diff = list(difflib.ndiff(old_list, new_list))
-
-            # the diff has - lines, + lines, and ? lines
-            # the ? lines have the ^ pointing to changed character,
-            # which is just noise for these short version strings.
-            # the diff also has lines with just whitespace at the
-            # front, which are context.
-
-            # remove context lines
-            diff = filter(lambda x: x[0] != ' ', diff)
-            # remove ? lines
-            diff = filter(lambda x: x[0] != '?', diff)
-
-            def indent_more(s):
-                if s.startswith("+ "):
-                    return "+    " + s[2:]
-                elif s.startswith("- "):
-                    return "-    " + s[2:]
-                else:
-                    return s  # pragma: no cover # should not be any other kind of lines
-
-            diff = map(indent_more, diff)
-
-            diff = list(diff)
+            diff = _pretty_diff(old_list, new_list, indent="    ")
 
             if diff:
                 if old is None or key not in old._package_specs_by_platform:
-                    combined_diff.append("+ %s:" % key)
+                    packages_diff.append("+   %s:" % key)
                 elif key not in self._package_specs_by_platform:
-                    combined_diff.append("- %s:" % key)
+                    packages_diff.append("-   %s:" % key)
                 else:
-                    combined_diff.append("  %s:" % key)
-                combined_diff.extend(map(lambda x: x, diff))
+                    packages_diff.append("    %s:" % key)
+                packages_diff.extend(map(lambda x: x, diff))
 
-        return "\n".join(combined_diff)
+        if packages_diff:
+            packages_diff = ['  packages:'] + packages_diff
+
+        if old is None:
+            old_platforms = []
+        else:
+            old_platforms = old.platforms
+        platforms_diff = _pretty_diff(old_platforms, self.platforms, indent="  ")
+        if platforms_diff:
+            platforms_diff = ['  platforms:'] + platforms_diff
+
+        return "\n".join(platforms_diff + packages_diff)
 
     def package_specs_for_platform(self, platform):
         """Sequence of package spec strings for the requested platform."""
+        assert platform in self.platforms
+
         # we merge "all", "unix", "linux", then "linux-64" for example
         shared = self._package_specs_by_platform.get("all", [])
 
@@ -317,15 +345,32 @@ class CondaLockSet(object):
     @property
     def package_specs_for_current_platform(self):
         """Sequence of package spec strings for the current platform."""
+        assert self.supports_current_platform
         return self.package_specs_for_platform(platform=conda_api.current_platform())
+
+    @property
+    def supports_current_platform(self):
+        """Whether we have locked deps for the current platform."""
+        return conda_api.current_platform() in self.platforms
 
     def to_json(self):
         """JSON/YAML version of the lock set."""
         yaml_dict = _CommentedMap()
+
+        yaml_dict['locked'] = True
+
+        platforms_list = _CommentedSeq()
+        for platform in conda_api.condense_platform_list(self.platforms):
+            platforms_list.append(platform)
+        yaml_dict['platforms'] = platforms_list
+
+        packages_dict = _CommentedMap()
         for platform in conda_api.sort_platform_list(self._package_specs_by_platform.keys()):
             packages = _CommentedSeq()
             for package in self._package_specs_by_platform[platform]:
                 packages.append(package)
-            yaml_dict[platform] = packages
+            packages_dict[platform] = packages
+        yaml_dict['packages'] = packages_dict
+
         _block_style_all_nodes(yaml_dict)
         return yaml_dict
