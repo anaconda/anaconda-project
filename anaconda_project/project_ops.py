@@ -360,7 +360,7 @@ def _updating_project_lock_file(project):
         # that are unaffected by whatever changes we are making here.
         # But that's sort of involved so let's leave it aside for the time
         # being.
-        if project.lock_file._get_locking_enabled(env.name):
+        if env.lock_set.enabled:
             try:
                 lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)
             except conda_manager.CondaManagerError as e:

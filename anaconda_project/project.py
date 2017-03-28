@@ -22,6 +22,7 @@ from anaconda_project.project_file import ProjectFile
 from anaconda_project.project_lock_file import ProjectLockFile
 from anaconda_project.archiver import _list_relative_paths_for_unignored_project_files
 from anaconda_project.version import version
+from anaconda_project.conda_manager import CondaLockSet
 
 from anaconda_project.internal.py2_compat import is_string, is_list, is_dict
 from anaconda_project.internal.simple_status import SimpleStatus
@@ -138,6 +139,8 @@ class _ConfigCache(object):
         self.project_file_count = 0
         self.lock_file_count = 0
         self.env_specs = dict()
+        self.lock_sets = dict()
+        self.locking_globally_enabled = False
         self.default_env_spec_name = None
         self.global_base_env_spec = None
 
@@ -184,6 +187,7 @@ class _ConfigCache(object):
             self._update_variables(requirements, problems, project_file)
             self._update_downloads(requirements, problems, project_file)
             self._update_services(requirements, problems, project_file)
+            self._update_lock_sets(problems, lock_file)
             self._update_env_specs(problems, project_file, lock_file)
             # this MUST be after we _update_variables since we may get CondaEnvRequirement
             # options in the variables section, and after _update_env_specs
@@ -355,60 +359,138 @@ class _ConfigCache(object):
                 continue
             ServiceRequirement._parse(self.registry, varname, item, problems, requirements)
 
-    def _update_env_specs(self, problems, project_file, lock_file):
-        def _parse_string_list_with_special(parent_dict, key, what, special_filter):
-            items = parent_dict.get(key, [])
-            if not is_list(items):
-                _file_problem(problems, project_file,
-                              "%s: value should be a list of %ss, not '%r'" % (key, what, items))
-                return ([], [])
-            cleaned = []
-            special = []
-            for item in items:
-                if is_string(item):
-                    cleaned.append(item.strip())
-                elif special_filter(item):
-                    special.append(item)
-                else:
-                    _file_problem(problems, project_file,
-                                  ("%s: value should be a %s (as a string) not '%r'" % (key, what, item)))
-            return (cleaned, special)
+    def _parse_string_list_with_special(self, problems, yaml_file, parent_dict, key, what, special_filter):
+        items = parent_dict.get(key, [])
+        if not is_list(items):
+            _file_problem(problems, yaml_file, "%s: value should be a list of %ss, not '%r'" % (key, what, items))
+            return ([], [])
+        cleaned = []
+        special = []
+        for item in items:
+            if is_string(item):
+                cleaned.append(item.strip())
+            elif special_filter(item):
+                special.append(item)
+            else:
+                _file_problem(problems, yaml_file,
+                              ("%s: value should be a %s (as a string) not '%r'" % (key, what, item)))
+        return (cleaned, special)
 
+    def _parse_string_list(self, problems, yaml_file, parent_dict, key, what):
+        return self._parse_string_list_with_special(problems,
+                                                    yaml_file,
+                                                    parent_dict,
+                                                    key,
+                                                    what,
+                                                    special_filter=lambda x: False)[0]
+
+    def _parse_platforms(self, problems, yaml_file, parent_dict):
+        platforms = self._parse_string_list(problems, yaml_file, parent_dict, 'platforms', 'platform name')
+        (platforms, unknown) = conda_api.expand_platform_list(platforms)
+        for u in unknown:
+            problems.append(ProjectProblem(text=("Unusual platform name '%s' may be a typo" % u),
+                                           filename=yaml_file.filename,
+                                           only_a_suggestion=True))
+        return platforms
+
+    def _parse_packages(self, problems, yaml_file, key, parent_dict):
+        (deps, pip_dicts) = self._parse_string_list_with_special(problems, yaml_file, parent_dict, key, 'package name',
+                                                                 lambda x: is_dict(x) and ('pip' in x))
+        for dep in deps:
+            parsed = conda_api.parse_spec(dep)
+            if parsed is None:
+                _file_problem(problems, yaml_file, "invalid package specification: %s" % (dep))
+
+        # note that multiple "pip:" dicts are allowed
+        pip_deps = []
+        for pip_dict in pip_dicts:
+            pip_list = self._parse_string_list(problems, yaml_file, pip_dict, 'pip', 'pip package name')
+            pip_deps.extend(pip_list)
+
+        for dep in pip_deps:
+            parsed = pip_api.parse_spec(dep)
+            if parsed is None:
+                _file_problem(problems, yaml_file, "invalid pip package specifier: %s" % (dep))
+
+        return (deps, pip_deps)
+
+    def _update_lock_sets(self, problems, lock_file):
+        self.lock_sets = dict()
+        self.locking_globally_enabled = False
+
+        enabled = lock_file.get_value(['locking_enabled'], True)
+        if not isinstance(enabled, bool):
+            _file_problem(problems, lock_file, "Value for locking_enabled should be true or false, found %r" % enabled)
+        else:
+            self.locking_globally_enabled = enabled
+
+        lock_sets = lock_file.get_value(['env_specs'], {})
+        if not is_dict(lock_sets):
+            _file_problem(problems, lock_file, ("'env_specs:' section in lock file should be a dictionary from " +
+                                                "env spec names to lock information, found {}").format(repr(lock_sets)))
+            return
+
+        for (name, lock_set) in lock_sets.items():
+            if not is_dict(lock_set):
+                _file_problem(problems, lock_file,
+                              "Field '%s' in env_specs in lock file should be a dictionary, found %r" %
+                              (name, lock_set))
+                continue
+
+            _unknown_field_suggestions(lock_file, problems, lock_set, ('packages', 'platforms', 'locked'))
+
+            enabled = lock_set.get('locked', self.locking_globally_enabled)
+            if not isinstance(enabled, bool):
+                _file_problem(problems, lock_file,
+                              "Value for locked for env spec '%s' should be true or false, found %r" % (name, enabled))
+                continue
+
+            platforms = self._parse_platforms(problems, lock_file, lock_set)
+
+            conda_packages_by_platform = dict()
+            packages_by_platform = lock_set.get('packages', {})
+            if not is_dict(packages_by_platform):
+                _file_problem(problems, lock_file,
+                              "'packages:' section in env spec '%s' in lock file should be a dictionary, found %r" %
+                              (name, packages_by_platform))
+                continue
+
+            for platform in packages_by_platform.keys():
+                previous_problem_count = len(problems)
+                # this may set problems due to invalid package specs
+                (deps, pip_deps) = self._parse_packages(problems, lock_file, platform, packages_by_platform)
+
+                if len(problems) > previous_problem_count:
+                    continue
+
+                if len(pip_deps) > 0:
+                    # we warn but don't fail on this, so if we add pip support in the future
+                    # older versions of anaconda-project won't puke on it.
+                    problems.append(ProjectProblem(
+                        text="env spec '%s': pip dependencies are currently ignored in the lock file" % name,
+                        filename=lock_file.filename,
+                        only_a_suggestion=True))
+
+                conda_packages_by_platform[platform] = deps
+
+            lock_set_object = CondaLockSet(package_specs_by_platform=conda_packages_by_platform,
+                                           platforms=platforms,
+                                           enabled=enabled)
+
+            self.lock_sets[name] = lock_set_object
+
+    def _update_env_specs(self, problems, project_file, lock_file):
         def _parse_string_list(parent_dict, key, what):
-            return _parse_string_list_with_special(parent_dict, key, what, special_filter=lambda x: False)[0]
+            return self._parse_string_list(problems, project_file, parent_dict, key, what)
 
         def _parse_channels(parent_dict):
             return _parse_string_list(parent_dict, 'channels', 'channel name')
 
         def _parse_platforms(parent_dict):
-            platforms = _parse_string_list(parent_dict, 'platforms', 'platform name')
-            (platforms, unknown) = conda_api.expand_platform_list(platforms)
-            for u in unknown:
-                problems.append(ProjectProblem(text=("Unusual platform name '%s' may be a typo" % u),
-                                               filename=project_file.filename,
-                                               only_a_suggestion=True))
-            return platforms
+            return self._parse_platforms(problems, project_file, parent_dict)
 
         def _parse_packages(parent_dict):
-            (deps, pip_dicts) = _parse_string_list_with_special(parent_dict, 'packages', 'package name',
-                                                                lambda x: is_dict(x) and ('pip' in x))
-            for dep in deps:
-                parsed = conda_api.parse_spec(dep)
-                if parsed is None:
-                    _file_problem(problems, project_file, "invalid package specification: %s" % (dep))
-
-            # note that multiple "pip:" dicts are allowed
-            pip_deps = []
-            for pip_dict in pip_dicts:
-                pip_list = _parse_string_list(pip_dict, 'pip', 'pip package name')
-                pip_deps.extend(pip_list)
-
-            for dep in pip_deps:
-                parsed = pip_api.parse_spec(dep)
-                if parsed is None:
-                    _file_problem(problems, project_file, "invalid pip package specifier: %s" % (dep))
-
-            return (deps, pip_deps)
+            return self._parse_packages(problems, project_file, 'packages', parent_dict)
 
         (shared_deps, shared_pip_deps) = _parse_packages(project_file.root)
         shared_channels = _parse_channels(project_file.root)
@@ -459,8 +541,11 @@ class _ConfigCache(object):
                 channels = _parse_channels(attrs)
                 platforms = _parse_platforms(attrs)
 
-                # TODO should create errors here about type errors etc. in lock file
-                lock_set = lock_file._get_lock_set(name)
+                lock_set = self.lock_sets.get(name, None)
+                if lock_set is None:
+                    lock_set = CondaLockSet(package_specs_by_platform=dict(),
+                                            platforms=[],
+                                            enabled=self.locking_globally_enabled)
 
                 env_spec_attrs[name] = dict(name=name,
                                             conda_packages=deps,
@@ -525,10 +610,9 @@ class _ConfigCache(object):
         missing_platforms = []
         locked_specs_count = 0
         for env_spec in self.env_specs.values():
-            enabled = lock_file._get_locking_enabled(env_spec.name)
-            if enabled:
+            if env_spec.lock_set.enabled:
                 locked_specs_count += 1
-            if enabled and len(env_spec.platforms) == 0:
+            if env_spec.lock_set.enabled and len(env_spec.platforms) == 0:
                 missing_platforms.append(env_spec.name)
 
         if locked_specs_count > 0:
@@ -1071,6 +1155,11 @@ class Project(object):
     def env_specs(self):
         """Get a dictionary of environment names to CondaEnvironment instances."""
         return self._updated_cache().env_specs
+
+    @property
+    def locking_globally_enabled(self):
+        """Get whether locking is enabled by default for lock sets that don't specify."""
+        return self._updated_cache().locking_globally_enabled
 
     @property
     def global_base_env_spec(self):

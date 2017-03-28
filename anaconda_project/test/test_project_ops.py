@@ -24,7 +24,7 @@ from anaconda_project.internal.test.tmpfile_utils import (with_directory_content
                                                           complete_project_file_content)
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
-from anaconda_project.project_lock_file import DEFAULT_PROJECT_LOCK_FILENAME, ProjectLockFile
+from anaconda_project.project_lock_file import DEFAULT_PROJECT_LOCK_FILENAME
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
 from anaconda_project.test.fake_server import fake_server
@@ -2041,9 +2041,8 @@ def test_lock_and_update_and_unlock_all_envs():
 
             assert os.path.isfile(filename)
 
-            lock_file = ProjectLockFile.load_for_directory(dirname)
-            assert ('a=1.0=1', ) == lock_file._get_lock_set('foo').package_specs_for_current_platform
-            assert ('a=1.0=1', ) == lock_file._get_lock_set('bar').package_specs_for_current_platform
+            assert ('a=1.0=1', ) == project.env_specs['foo'].lock_set.package_specs_for_current_platform
+            assert ('a=1.0=1', ) == project.env_specs['bar'].lock_set.package_specs_for_current_platform
 
             assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
             # 'b' gets added here since it wasn't in the lock set
@@ -2080,9 +2079,8 @@ def test_lock_and_update_and_unlock_all_envs():
             assert status
             assert 'Dependency locking is now disabled.' == status.status_description
 
-            lock_file = ProjectLockFile.load_for_directory(dirname)
-            assert lock_file._get_lock_set('foo').disabled
-            assert lock_file._get_lock_set('bar').disabled
+            assert project.env_specs['foo'].lock_set.disabled
+            assert project.env_specs['bar'].lock_set.disabled
 
             assert ('a', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
@@ -2134,9 +2132,8 @@ def test_lock_and_unlock_single_env():
 
             assert os.path.isfile(filename)
 
-            lock_file = ProjectLockFile.load_for_directory(dirname)
-            assert ('a=1.0=1', ) == lock_file._get_lock_set('foo').package_specs_for_current_platform
-            assert lock_file._get_lock_set('bar').disabled
+            assert ('a=1.0=1', ) == project.env_specs['foo'].lock_set.package_specs_for_current_platform
+            assert project.env_specs['bar'].lock_set.disabled
 
             assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
@@ -2162,9 +2159,8 @@ def test_lock_and_unlock_single_env():
             assert [] == status.logs
             assert 'Dependency locking is now disabled for env spec foo.' == status.status_description
 
-            lock_file = ProjectLockFile.load_for_directory(dirname)
-            assert lock_file._get_lock_set('foo').disabled
-            assert lock_file._get_lock_set('bar').disabled
+            assert project.env_specs['foo'].lock_set.disabled
+            assert project.env_specs['bar'].lock_set.disabled
 
             assert ('a', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create

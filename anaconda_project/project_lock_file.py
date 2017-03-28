@@ -19,7 +19,6 @@ except ImportError:  # pragma: no cover
     import ruamel.yaml as ryaml  # pragma: no cover
 
 from anaconda_project.yaml_file import YamlFile, _CommentedMap, _block_style_all_nodes
-from anaconda_project.conda_manager import CondaLockSet
 
 # these are in the order we'll use them if multiple are present
 possible_project_lock_file_names = ("anaconda-project-lock.yml", "anaconda-project-lock.yaml")
@@ -142,15 +141,6 @@ class ProjectLockFile(YamlFile):
         as_json = lock_set.to_json()
         self.set_value(['env_specs', env_spec_name], as_json)
 
-    def _get_lock_set(self, env_spec_name):
-        """Library-internal method."""
-        # TODO no validation here, we'll do that by moving this
-        # into project.py soon
-        enabled = self._get_locking_enabled(env_spec_name)
-        packages = self.get_value(['env_specs', env_spec_name, 'packages'], {})
-        platforms = self.get_value(['env_specs', env_spec_name, 'platforms'], [])
-        return CondaLockSet(packages, platforms, enabled=enabled)
-
     def _disable_locking(self, env_spec_name):
         """Library-internal method."""
         if env_spec_name is None:
@@ -160,15 +150,3 @@ class ProjectLockFile(YamlFile):
             self.set_value(['env_specs', env_spec_name, 'locked'], False)
             self.unset_value(['env_specs', env_spec_name, 'packages'])
             self.unset_value(['env_specs', env_spec_name, 'platforms'])
-
-    def _get_locking_enabled(self, env_spec_name):
-        """Library-internal method."""
-        enabled = self.get_value(['env_specs', env_spec_name, 'locked'], None)
-        if enabled is not None:
-            return enabled
-
-        enabled = self.get_value(['locking_enabled'])
-        if enabled is not None:
-            return enabled
-
-        return True

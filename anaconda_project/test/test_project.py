@@ -2781,6 +2781,31 @@ def test_unknown_field_in_env_spec():
         {DEFAULT_PROJECT_FILENAME: "env_specs:\n  foo:\n    packages: [something]\n    somejunk: True\n"}, check)
 
 
+def test_unknown_field_in_root_of_lock_file():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.lock_file.basename)
+        assert [expected_suggestion] == project.suggestions
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "somejunk: False\n"}, check)
+
+
+def test_unknown_field_in_lock_set_of_lock_file():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.lock_file.basename)
+        assert [expected_suggestion] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+     somejunk: True
+    """}, check)
+
+
 def test_empty_file_has_problems():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -2883,3 +2908,126 @@ env_specs:
     packages: [bar]
         """,
          DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+
+
+def test_empty_lock_file_enables_locking():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert project.locking_globally_enabled
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: """
+"""}, check)
+
+
+def test_default_lock_file_disables_locking():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert not project.locking_globally_enabled
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_lock_file_non_bool_locking_enabled():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        expected_error = "%s: Value for locking_enabled should be true or false, found %r" % (
+            project.lock_file.basename, 42)
+        assert [expected_error] == project.problems
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled:  42\n"}, check)
+
+
+def test_lock_file_non_dict_env_specs():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        expected_error = ("%s: 'env_specs:' section in lock file should be a dictionary " +
+                          "from env spec names to lock information, found %r") % (project.lock_file.basename, 42)
+        assert [expected_error] == project.problems
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "env_specs:  42\n"}, check)
+
+
+def test_lock_file_non_dict_lock_set():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        expected_error = ("%s: Field 'default' in env_specs in lock file should be a dictionary, " + "found %r") % (
+            project.lock_file.basename, 42)
+        assert [expected_error] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default: 42
+"""}, check)
+
+
+def test_lock_file_non_bool_lock_set_locked():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        expected_error = ("%s: Value for locked for env spec 'default' should be true or false, " + "found %r") % (
+            project.lock_file.basename, 42)
+        assert [expected_error] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+    locked: 42
+"""}, check)
+
+
+def test_lock_file_non_dict_lock_set_packages():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        expected_error = (
+            "%s: 'packages:' section in env spec 'default' in lock file should be a dictionary, " + "found %r") % (
+                project.lock_file.basename, 42)
+        assert [expected_error] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+    packages: 42
+"""}, check)
+
+
+def test_lock_file_has_pip_packages():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        expected_warning = ("%s: env spec 'default': pip dependencies are currently ignored in the lock file") % (
+            project.lock_file.basename, )
+        assert [expected_warning] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+    packages:
+      all:
+        - pip:
+          - foobar
+"""}, check)
+
+
+def test_lock_file_has_invalid_packages():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        filename = project.lock_file.basename
+        assert ["%s: invalid package specification: =" % filename, "%s: invalid package specification: foo bar" %
+                filename, "%s: invalid pip package specifier: %%" % filename] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+    packages:
+      all:
+        - "="
+        - foo bar
+        - pip:
+          - "%"
+"""}, check)
