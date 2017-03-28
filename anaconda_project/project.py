@@ -603,6 +603,10 @@ class _ConfigCache(object):
 
             return self.env_specs[name]
 
+        # it's important to create all the env specs when possible
+        # even if they are broken (e.g. bad inherit_from), so they
+        # can be edited in order to fix them
+
         for name in env_spec_attrs.keys():
             make_env_spec(name, [])
             assert name in self.env_specs
@@ -629,10 +633,6 @@ class _ConfigCache(object):
                 for missing in missing_platforms:
                     _file_problem(problems, project_file,
                                   "Env spec %s does not have anything in its 'platforms:' field." % missing)
-
-        # it's important to create all the env specs when possible
-        # even if they are broken (e.g. bad inherit_from), so they
-        # can be edited in order to fix them
 
         (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
                                                                                    self.directory_path)
