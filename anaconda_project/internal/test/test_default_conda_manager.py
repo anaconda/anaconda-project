@@ -53,7 +53,8 @@ def test_current_platform_unsupported_by_env_spec(monkeypatch):
 
         deviations = manager.find_environment_deviations(envdir, spec)
 
-        error = "Env spec 'myenv' does not support current platform linux-64 (it supports: commodore-64, apple-2)"
+        error = "Env spec 'myenv' does not support current platform %s (it supports: commodore-64, apple-2)" % \
+                conda_api.current_platform()
         assert error == deviations.summary
 
         with pytest.raises(CondaManagerError) as excinfo:
@@ -79,7 +80,7 @@ def test_current_platform_unsupported_by_lock_set(monkeypatch):
 
         deviations = manager.find_environment_deviations(envdir, spec)
 
-        error = "Env spec 'myenv' does not have the current platform linux-64 in the lock file"
+        error = "Env spec 'myenv' does not have the current platform %s in the lock file" % conda_api.current_platform()
         assert error == deviations.summary
 
         with pytest.raises(CondaManagerError) as excinfo:
