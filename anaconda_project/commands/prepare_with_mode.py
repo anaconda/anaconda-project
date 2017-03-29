@@ -125,6 +125,16 @@ def prepare_with_ui_mode_printing_errors(project,
 
         assert ui_mode != UI_MODE_TEXT_ASK_QUESTIONS  # Not implemented yet
 
+        # TODO: this could let you fix the suggestions if they are fixable.
+        # (Note that we fix fatal problems in project_load.py, but we only
+        #  display suggestions when we do a manual prepare, run, etc.)
+        suggestions = project.suggestions
+        if len(suggestions) > 0:
+            print("Potential issues with this project:")
+            for suggestion in project.suggestions:
+                print("  * " + suggestion)
+            print("")
+
         environ = None
         while True:
             result = prepare.prepare_without_interaction(project,

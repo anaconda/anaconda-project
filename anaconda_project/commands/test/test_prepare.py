@@ -618,3 +618,37 @@ def test_no_ask_conda_prefix_interactively(monkeypatch, capsys):
 packages:
  - nonexistent_package_name
 """}, check)
+
+
+def test_display_suggestions(monkeypatch, capsys):
+    def check(dirname):
+        project_dir_disable_dedicated_env(dirname)
+
+        def mock_is_interactive():
+            return True
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.stdin_is_interactive', mock_is_interactive)
+
+        def mock_console_input(prompt, encrypted):
+            raise Exception("should not have been called")
+
+        monkeypatch.setattr('anaconda_project.commands.console_utils.console_input', mock_console_input)
+
+        res = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname])
+        assert res == 0
+
+        out, err = capsys.readouterr()
+
+        assert """Potential issues with this project:
+  * anaconda-project.yml: Unknown field name 'weird_field'
+
+The project is ready to run commands.
+Use `anaconda-project list-commands` to see what's available.
+""" == out
+        assert '' == err
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+packages: []
+weird_field: 42
+"""}, check)
