@@ -106,6 +106,10 @@ class ProjectLockFile(YamlFile):
 
         return as_json
 
+    def _set_lock_set_hash(self, env_spec_name, env_spec_hash):
+        """Library-internal method."""
+        self.set_value(['env_specs', env_spec_name, 'env_spec_hash'], env_spec_hash)
+
     def _set_lock_set(self, env_spec_name, lock_set, all_names):
         """Library-internal method."""
         assert env_spec_name is not None

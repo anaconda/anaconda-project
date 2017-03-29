@@ -437,12 +437,23 @@ class _ConfigCache(object):
                               (name, lock_set))
                 continue
 
-            _unknown_field_suggestions(lock_file, problems, lock_set, ('packages', 'platforms', 'locked'))
+            _unknown_field_suggestions(lock_file, problems, lock_set,
+                                       ('packages', 'platforms', 'locked', 'env_spec_hash'))
 
             enabled = lock_set.get('locked', self.locking_globally_enabled)
             if not isinstance(enabled, bool):
                 _file_problem(problems, lock_file,
                               "Value for locked for env spec '%s' should be true or false, found %r" % (name, enabled))
+                continue
+
+            env_spec_hash = lock_set.get('env_spec_hash', None)
+            # we deliberately don't check the hash length or format, because we might
+            # want to evolve those someday, and if someone sets the hash by hand to
+            # "foobar" that's fine, won't hurt anything.
+            if env_spec_hash is not None and not is_string(env_spec_hash):
+                _file_problem(problems, lock_file,
+                              "Value for env_spec_hash for env spec '%s' should be a string, found %r" %
+                              (name, env_spec_hash))
                 continue
 
             platforms = self._parse_platforms(problems, lock_file, lock_set)
@@ -476,6 +487,7 @@ class _ConfigCache(object):
             lock_set_object = CondaLockSet(package_specs_by_platform=conda_packages_by_platform,
                                            platforms=platforms,
                                            enabled=enabled)
+            lock_set_object.env_spec_hash = env_spec_hash
 
             self.lock_sets[name] = lock_set_object
 
@@ -641,6 +653,13 @@ class _ConfigCache(object):
         for env_spec in self.env_specs.values():
             if env_spec.lock_set.disabled:
                 continue
+
+            locked_hash = env_spec.lock_set.env_spec_hash
+            if locked_hash is not None and locked_hash != env_spec.logical_hash:
+                text = (
+                    "Env spec '%s' has changed since the lock file was last updated "
+                    "(env spec hash has changed from %s to %s)") % (env_spec.name, locked_hash, env_spec.logical_hash)
+                problems.append(ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
 
             if env_spec.platforms != env_spec.lock_set.platforms:
                 if len(env_spec.lock_set.platforms) == 0:

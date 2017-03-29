@@ -53,7 +53,10 @@ def _get_lock_set(lock_file, env_spec_name):
     enabled = _get_locking_enabled(lock_file, env_spec_name)
     packages = lock_file.get_value(['env_specs', env_spec_name, 'packages'], {})
     platforms = lock_file.get_value(['env_specs', env_spec_name, 'platforms'], [])
-    return CondaLockSet(packages, platforms, enabled=enabled)
+    env_spec_hash = lock_file.get_value(['env_specs', env_spec_name, 'env_spec_hash'], None)
+    lock_set = CondaLockSet(packages, platforms, enabled=enabled)
+    lock_set.env_spec_hash = env_spec_hash
+    return lock_set
 
 
 def test_create_missing_lock_file():
@@ -192,6 +195,7 @@ def test_set_lock_set():
         all_names = ['foo', 'bar']
 
         lock_set = CondaLockSet({'all': ['something=3.0=0']}, platforms=['all'])
+        lock_set.env_spec_hash = "hash-hash-hash"
 
         lock_file._set_lock_set('bar', lock_set, all_names=all_names)
 
@@ -200,10 +204,12 @@ def test_set_lock_set():
         foo_lock_set = _get_lock_set(lock_file, 'foo')
         assert lock_file.get_value(['env_specs', 'foo', 'locked']) is False
         assert foo_lock_set.disabled
+        assert foo_lock_set.env_spec_hash is None
 
         bar_lock_set = _get_lock_set(lock_file, 'bar')
         assert bar_lock_set.enabled
         assert ('something=3.0=0', ) == bar_lock_set.package_specs_for_current_platform
+        assert "hash-hash-hash" == bar_lock_set.env_spec_hash
 
         # and now we should enable "foo" when we set it to something
         lock_file._set_lock_set('foo', lock_set, all_names=all_names)
@@ -218,6 +224,14 @@ def test_set_lock_set():
 
         assert ('something=3.0=0', ) == _get_lock_set(reloaded, 'bar').package_specs_for_current_platform
         assert ('something=3.0=0', ) == _get_lock_set(reloaded, 'foo').package_specs_for_current_platform
+
+        # Check _set_lock_set_hash
+        lock_file._set_lock_set_hash('bar', 'hash2.0')
+        lock_file.save()
+
+        reloaded = ProjectLockFile.load_for_directory(dirname)
+        bar_lock_set = _get_lock_set(reloaded, 'bar')
+        assert bar_lock_set.env_spec_hash == 'hash2.0'
 
     with_directory_contents(
         {DEFAULT_PROJECT_LOCK_FILENAME: """

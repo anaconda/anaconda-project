@@ -245,7 +245,7 @@ def _pretty_diff(old_list, new_list, indent):
 class CondaLockSet(object):
     """Represents a locked set of package versions."""
 
-    def __init__(self, package_specs_by_platform, platforms, enabled=True):
+    def __init__(self, package_specs_by_platform, platforms, enabled=True, env_spec_hash=None):
         """Construct a ``CondaLockSet``.
 
         The passed-in dict should be like:
@@ -266,6 +266,7 @@ class CondaLockSet(object):
         (expanded, _) = conda_api.expand_platform_list(platforms)
         self._platforms = tuple(conda_api.sort_platform_list(expanded))
         self._enabled = enabled
+        self._env_spec_hash = env_spec_hash
 
     @property
     def platforms(self):
@@ -285,8 +286,22 @@ class CondaLockSet(object):
         """
         return not self._enabled
 
+    @property
+    def env_spec_hash(self):
+        """Hash of the env spec we created this lock set for."""
+        return self._env_spec_hash
+
+    @env_spec_hash.setter
+    def env_spec_hash(self, value):
+        # can only be set once
+        assert self._env_spec_hash is None
+        self._env_spec_hash = value
+
     def equivalent_to(self, other):
         """Determine if this lock set the same as another one."""
+        # do NOT consider env_spec_hash in here, because we
+        # use this to test whether the lock set for an old env
+        # spec is the same as the one for a new env spec.
         return self._package_specs_by_platform == other._package_specs_by_platform and \
             self._platforms == other._platforms and \
             self._enabled is other._enabled
@@ -374,6 +389,9 @@ class CondaLockSet(object):
         yaml_dict = _CommentedMap()
 
         yaml_dict['locked'] = self.enabled
+
+        if self.env_spec_hash is not None:
+            yaml_dict['env_spec_hash'] = self.env_spec_hash
 
         platforms_list = _CommentedSeq()
         for platform in conda_api.condense_platform_list(self.platforms):

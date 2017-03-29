@@ -363,6 +363,7 @@ def _updating_project_lock_file(project):
         if env.lock_set.enabled:
             try:
                 lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)
+                lock_set.env_spec_hash = env.logical_hash
             except conda_manager.CondaManagerError as e:
                 status_holder.status = SimpleStatus(
                     success=False,
@@ -757,12 +758,15 @@ def _update_and_lock(project, env_spec_name, update):
         if update or env.lock_set.disabled:
             try:
                 lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)
+                lock_set.env_spec_hash = env.logical_hash
             except conda_manager.CondaManagerError as e:
                 return SimpleStatus(success=False,
                                     description="Error resolving dependencies for %s: %s." % (env.name, str(e)),
                                     logs=logs)
 
             lock_set_changed = env.lock_set.disabled or not env.lock_set.equivalent_to(lock_set)
+            hash_changed = env.lock_set.env_spec_hash is not None and \
+                env.lock_set.env_spec_hash != lock_set.env_spec_hash
 
             # if lock_set_changed is False, we may still be enabling locking
             if lock_set_changed or not update:
@@ -804,6 +808,12 @@ def _update_and_lock(project, env_spec_name, update):
                     # switch to using a streaming progress interface
                     # that will be ok.
                     return status
+            elif hash_changed:
+                assert lock_set.env_spec_hash is not None
+                project.lock_file._set_lock_set_hash(env.name, lock_set.env_spec_hash)
+                logs.append("Updated hash for env spec %s to %s in %s." %
+                            (env.name, lock_set.env_spec_hash, project.lock_file.basename))
+                need_save = True
             else:
                 logs.append("Locked dependencies for env spec %s are already up to date." % env.name)
         else:

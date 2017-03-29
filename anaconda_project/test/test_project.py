@@ -2978,6 +2978,21 @@ env_specs:
 """}, check)
 
 
+def test_lock_file_non_string_lock_set_hash():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        expected_error = ("%s: Value for env_spec_hash for env spec 'default' should be a string, " + "found %r") % (
+            project.lock_file.basename, 42)
+        assert [expected_error] == project.problems
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+    env_spec_hash: 42
+"""}, check)
+
+
 def test_lock_file_non_dict_lock_set_packages():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -3069,6 +3084,26 @@ def test_lock_file_has_zero_platforms():
 env_specs:
   default:
     platforms: []
+    packages:
+      all: [foo]
+"""}, check)
+
+
+def test_lock_file_has_wrong_hash():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert [] == project.problems
+        assert ["anaconda-project-lock.yml: Env spec 'default' has changed since the lock "
+                'file was last updated (env spec hash has changed from wrong to '
+                'cdccbbbbcd51a6a8aea4b90e65dda8a1e2fc92d0)'] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+    env_spec_hash: wrong
+    platforms: [all]
     packages:
       all: [foo]
 """}, check)

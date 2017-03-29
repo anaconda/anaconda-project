@@ -1406,9 +1406,11 @@ def test_add_env_spec():
         assert dict(packages=[], channels=[]) == dict(project2.project_file.get_value(['env_specs', 'foo']))
         assert dict(packages=[], channels=[]) == dict(project2.project_file.get_value(['env_specs', 'bar']))
         assert dict(locked=True,
+                    env_spec_hash='cdccbbbbcd51a6a8aea4b90e65dda8a1e2fc92d0',
                     packages=dict(all=[]),
                     platforms=['all']) == dict(project2.lock_file.get_value(['env_specs', 'foo']))
         assert dict(locked=True,
+                    env_spec_hash='cdccbbbbcd51a6a8aea4b90e65dda8a1e2fc92d0',
                     packages=dict(all=[]),
                     platforms=['all']) == dict(project2.lock_file.get_value(['env_specs', 'bar']))
 
@@ -1441,6 +1443,7 @@ def test_add_env_spec_no_global_platforms():
                     platforms=['all']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
 
         assert dict(locked=True,
+                    env_spec_hash='cdccbbbbcd51a6a8aea4b90e65dda8a1e2fc92d0',
                     packages=dict(all=[]),
                     platforms=['all']) == dict(project2.lock_file.get_value(['env_specs', 'foo']))
 
@@ -2132,7 +2135,9 @@ def test_lock_and_unlock_single_env():
 
             assert os.path.isfile(filename)
 
-            assert ('a=1.0=1', ) == project.env_specs['foo'].lock_set.package_specs_for_current_platform
+            foo_lock_set = project.env_specs['foo'].lock_set
+            assert ('a=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
+            assert foo_lock_set.env_spec_hash == '9990ec43408f9593030a3a136c916022189f04b3'
             assert project.env_specs['bar'].lock_set.disabled
 
             assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
@@ -2152,6 +2157,17 @@ def test_lock_and_unlock_single_env():
             assert ["Locked dependencies for env spec foo are already up to date."] == status.logs
             assert 'Update complete.' == status.status_description
 
+            # Now add a package (should change the hash)
+            status = project_ops.add_packages(project, 'foo', packages='q', channels=[])
+            assert [] == status.errors
+            assert status
+            assert [] == status.logs
+            assert status.status_description.startswith("Using Conda environment")
+
+            foo_lock_set = project.env_specs['foo'].lock_set
+            assert ('a=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
+            assert foo_lock_set.env_spec_hash == '3d584419ba73294863eb8f41a5337d9d0bf71209'
+
             # Now unlock
             status = project_ops.unlock(project, env_spec_name='foo')
             assert [] == status.errors
@@ -2162,7 +2178,7 @@ def test_lock_and_unlock_single_env():
             assert project.env_specs['foo'].lock_set.disabled
             assert project.env_specs['bar'].lock_set.disabled
 
-            assert ('a', ) == project.env_specs['foo'].conda_packages_for_create
+            assert ('a', 'q') == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
 
         _with_conda_test(attempt, resolve_dependencies={'all': ['a=1.0=1']})
@@ -2178,6 +2194,51 @@ env_specs:
   bar:
     packages:
       - b
+"""}, check)
+
+
+def test_update_changes_only_the_hash():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+
+            foo_lock_set = project.env_specs['foo'].lock_set
+            assert ('a=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
+            assert foo_lock_set.env_spec_hash == 'old'
+
+            assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
+
+            # Update
+            status = project_ops.update(project, env_spec_name='foo')
+            assert [] == status.errors
+            assert status
+            assert ['Updated hash for env spec foo to 9990ec43408f9593030a3a136c916022189f04b3 in '
+                    'anaconda-project-lock.yml.'] == status.logs
+            assert 'Update complete.' == status.status_description
+
+            foo_lock_set = project.env_specs['foo'].lock_set
+            assert ('a=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
+            assert foo_lock_set.env_spec_hash == '9990ec43408f9593030a3a136c916022189f04b3'
+
+        _with_conda_test(attempt, resolve_dependencies={'all': ['a=1.0=1']})
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: locktest
+platforms: [all]
+env_specs:
+  foo:
+    packages:
+      - a
+""",
+         DEFAULT_PROJECT_LOCK_FILENAME: """
+locking_enabled: true
+env_specs:
+  foo:
+    platforms: [all]
+    env_spec_hash: old
+    packages:
+      all: ['a=1.0=1']
 """}, check)
 
 
