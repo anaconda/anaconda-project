@@ -26,7 +26,8 @@ from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.plugins.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
-from anaconda_project.internal.conda_api import (parse_spec, condense_platform_list, current_platform)
+from anaconda_project.internal.conda_api import (parse_spec, condense_platform_list, current_platform,
+                                                 expand_platform_list)
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 
 _default_projectignore = """
@@ -746,14 +747,48 @@ def _update_and_lock(project, env_spec_name, update):
 
     all_env_names = [env_spec.name for env_spec in project.env_specs.values()]
 
-    conda = conda_manager.new_conda_manager()
+    need_save = False
 
     logs = []
 
+    # Set platforms if it hasn't been
+    if not update:
+        fixed_platforms = False
+        no_platforms_specs = [env_spec for env_spec in project.env_specs.values() if len(env_spec.platforms) == 0]
+
+        def all_platforms_string():
+            return ", ".join(expand_platform_list(['all'])[0])
+
+        if len(no_platforms_specs) == len(project.env_specs):
+            # if ALL env specs are missing platforms, set global list
+            project.project_file.set_value('platforms', ['all'])
+            fixed_platforms = True
+            logs.append("Set project platforms list to %s" % all_platforms_string())
+        else:
+            # if only some env specs are missing, only modify the ones that are messed up
+            # AND that we are planning to update/lock.
+            for env in envs:
+                if len(env.platforms) == 0:
+                    project.project_file.set_value(['env_specs', env.name, 'platforms'], ['all'])
+                    fixed_platforms = True
+                    logs.append("Set platforms for %s to %s" % (env.name, all_platforms_string()))
+
+        if fixed_platforms:
+            project.use_changes_without_saving()
+            # we can't break the file by setting the platforms key, right?
+            # at least not unless something is buggy...
+            assert not project.problems
+
+            # reload environments
+            envs = list(map(lambda spec: project.env_specs[spec.name], envs))
+
+            # we'll save later after doing all the other stuff too
+            need_save = True
+
+    conda = conda_manager.new_conda_manager()
+
     # note that "envs" are frozen from the original project state,
     # and won't update as we go through them
-    need_save = False
-
     for env in envs:
         if update or env.lock_set.disabled:
             try:

@@ -2037,10 +2037,41 @@ def test_lock_and_update_and_unlock_all_envs():
 
             project = Project(dirname)
 
+            assert project.env_specs['foo'].platforms == ()
+            assert project.env_specs['bar'].platforms == ()
+
             # Lock
             status = project_ops.lock(project, env_spec_name=None)
             assert [] == status.errors
             assert status
+
+            # yapf: disable
+            assert [
+                'Set project platforms list to linux-32, linux-64, osx-64, win-32, win-64',
+                'Changes to locked dependencies for bar:',
+                '  platforms:',
+                '+   linux-32',
+                '+   linux-64',
+                '+   osx-64',
+                '+   win-32',
+                '+   win-64',
+                '  packages:',
+                '+   all:',
+                '+     a=1.0=1',
+                'Added locked dependencies for env spec bar to anaconda-project-lock.yml.',
+                'Changes to locked dependencies for foo:',
+                '  platforms:',
+                '+   linux-32',
+                '+   linux-64',
+                '+   osx-64',
+                '+   win-32',
+                '+   win-64',
+                '  packages:',
+                '+   all:',
+                '+     a=1.0=1',
+                'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'
+            ] == status.logs
+            # yapf: enable
 
             assert os.path.isfile(filename)
 
@@ -2051,6 +2082,14 @@ def test_lock_and_update_and_unlock_all_envs():
             # 'b' gets added here since it wasn't in the lock set
             # TODO should this be an error?
             assert ('b', 'a=1.0=1', ) == project.env_specs['bar'].conda_packages_for_create
+
+            assert project.env_specs['foo'].platforms == conda_api.popular_platforms
+            assert project.env_specs['bar'].platforms == conda_api.popular_platforms
+
+            # we should have set the global platforms, not in each env spec
+            assert ['all'] == project.project_file.get_value('platforms')
+            assert project.project_file.get_value(['env_specs', 'foo', 'platforms'], None) is None
+            assert project.project_file.get_value(['env_specs', 'bar', 'platforms'], None) is None
 
             # Lock again (idempotent)
             status = project_ops.lock(project, env_spec_name=None)
@@ -2093,7 +2132,6 @@ def test_lock_and_update_and_unlock_all_envs():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: locktest
-platforms: [all]
 env_specs:
   foo:
     packages:
@@ -2112,13 +2150,17 @@ def test_lock_and_unlock_single_env():
 
             project = Project(dirname)
 
+            assert project.env_specs['foo'].platforms == ()
+            assert project.env_specs['bar'].platforms == ('osx-64', )
+
             # Lock
             status = project_ops.lock(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
 
             # yapf: disable
-            assert ['Changes to locked dependencies for foo:',
+            assert ['Set platforms for foo to linux-32, linux-64, osx-64, win-32, win-64',
+                    'Changes to locked dependencies for foo:',
                     '  platforms:',
                     '+   linux-32',
                     '+   linux-64',
@@ -2142,6 +2184,14 @@ def test_lock_and_unlock_single_env():
 
             assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
+
+            assert project.env_specs['foo'].platforms == conda_api.popular_platforms
+            assert project.env_specs['bar'].platforms == ('osx-64', )
+
+            # we should NOT have set the global platforms
+            assert project.project_file.get_value('platforms', None) is None
+            assert ['all'] == project.project_file.get_value(['env_specs', 'foo', 'platforms'], None)
+            assert ['osx-64', ] == project.project_file.get_value(['env_specs', 'bar', 'platforms'], None)
 
             # Locking a second time is a no-op
             status = project_ops.lock(project, env_spec_name='foo')
@@ -2186,12 +2236,12 @@ def test_lock_and_unlock_single_env():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: locktest
-platforms: [all]
 env_specs:
   foo:
     packages:
       - a
   bar:
+    platforms: [osx-64]
     packages:
       - b
 """}, check)
