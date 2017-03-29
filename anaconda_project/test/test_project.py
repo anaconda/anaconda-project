@@ -3103,3 +3103,32 @@ env_specs:
       linux-32: [baz]
 """
         }, check)
+
+
+def test_lock_file_has_orphan_env_spec():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert [] == project.problems
+        assert ["anaconda-project-lock.yml: Lock file lists env spec 'orphan' which is not in anaconda-project.yml"
+                ] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   default:
+      packages:
+         - hello
+""",
+            DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+    platforms: [all]
+    packages:
+      all: [hello]
+  orphan:
+    platforms: [all]
+    packages: {}
+"""
+        }, check)

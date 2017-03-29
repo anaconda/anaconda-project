@@ -660,6 +660,14 @@ class _ConfigCache(object):
                                                                                                    platform)
                         problems.append(ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
 
+        # Look for lock sets that don't go with an env spec
+        for name in self.lock_sets.keys():
+            if name not in self.env_specs:
+                text = ("Lock file lists env spec '%s' which is not in %s") % (name, project_file.basename)
+                problems.append(ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
+
+        # Look for environment.yml, requirements.txt that are out of sync
+
         (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
                                                                                    self.directory_path)
         if importable_spec is not None:
