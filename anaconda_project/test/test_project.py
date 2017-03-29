@@ -2788,7 +2788,8 @@ def test_unknown_field_in_root_of_lock_file():
         expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.lock_file.basename)
         assert [expected_suggestion] == project.suggestions
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "somejunk: False\n"}, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: false\nsomejunk: False\n"}, check)
 
 
 def test_unknown_field_in_lock_set_of_lock_file():
@@ -2802,6 +2803,7 @@ def test_unknown_field_in_lock_set_of_lock_file():
         {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
+     platforms: [all]
      somejunk: True
     """}, check)
 
@@ -3005,6 +3007,7 @@ def test_lock_file_has_pip_packages():
         {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
+    platforms: [all]
     packages:
       all:
         - pip:
@@ -3031,3 +3034,72 @@ env_specs:
         - pip:
           - "%"
 """}, check)
+
+
+def test_lock_file_has_wrong_platforms():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert [] == project.problems
+        assert ["anaconda-project-lock.yml: Env spec 'default' specifies platforms "
+                "'linux-32,linux-64,osx-64,win-32,win-64' but the lock file only has locked "
+                "versions for platforms 'win-32'"] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+    platforms: ["win-32"]
+    packages:
+      all: [foo]
+"""}, check)
+
+
+def test_lock_file_has_zero_platforms():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert [] == project.problems
+        assert ["anaconda-project-lock.yml: Env spec 'default' specifies platforms "
+                "'linux-32,linux-64,osx-64,win-32,win-64' but the lock file lists no platforms for it"
+                ] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+    platforms: []
+    packages:
+      all: [foo]
+"""}, check)
+
+
+def test_lock_file_has_empty_package_lists():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert [] == project.problems
+        assert ['anaconda-project-lock.yml: Lock file lists no packages for env spec '
+                "'default' on platform linux-64", 'anaconda-project-lock.yml: Lock file lists no packages for env spec '
+                "'default' on platform win-64"] == project.suggestions
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   default:
+      packages:
+         - hello
+""",
+            DEFAULT_PROJECT_LOCK_FILENAME: """
+env_specs:
+  default:
+    platforms: [all]
+    packages:
+      linux-64: []
+      win-64: []
+      win-32: [foo]
+      osx-64: [bar]
+      linux-32: [baz]
+"""
+        }, check)

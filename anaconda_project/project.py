@@ -611,6 +611,8 @@ class _ConfigCache(object):
             make_env_spec(name, [])
             assert name in self.env_specs
 
+        # Find issues with missing platforms: lists in the project file
+
         missing_platforms = []
         locked_specs_count = 0
         for env_spec in self.env_specs.values():
@@ -633,6 +635,30 @@ class _ConfigCache(object):
                 for missing in missing_platforms:
                     _file_problem(problems, project_file,
                                   "Env spec %s does not have anything in its 'platforms:' field." % missing)
+
+        # Find lock-set-out-of-sync-with-env-spec issues
+
+        for env_spec in self.env_specs.values():
+            if env_spec.lock_set.disabled:
+                continue
+
+            if env_spec.platforms != env_spec.lock_set.platforms:
+                if len(env_spec.lock_set.platforms) == 0:
+                    text = "Env spec '%s' specifies platforms '%s' but the lock file lists no platforms for it" % (
+                        env_spec.name, ",".join(env_spec.platforms))
+                else:
+                    text = ("Env spec '%s' specifies platforms '%s' but the lock file only has " +
+                            "locked versions for platforms '%s'") % (env_spec.name, ",".join(env_spec.platforms),
+                                                                     ",".join(env_spec.lock_set.platforms))
+                problems.append(ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
+
+            if len(env_spec.conda_packages) > 0:
+                for platform in env_spec.lock_set.platforms:
+                    conda_packages = env_spec.lock_set.package_specs_for_platform(platform)
+                    if len(conda_packages) == 0:
+                        text = ("Lock file lists no packages for env spec '%s' on platform %s") % (env_spec.name,
+                                                                                                   platform)
+                        problems.append(ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
 
         (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
                                                                                    self.directory_path)
