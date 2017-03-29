@@ -355,6 +355,20 @@ def test_merge_in_lock_set():
     assert ('b', 'a=1.0=1') == spec.conda_packages_for_create
 
 
+def test_lock_set_affects_name_sets():
+    lock_set = CondaLockSet({'all': ['a=1.0=1', 'q=2.0=2']}, platforms=['all'])
+    spec = EnvSpec(name="foo",
+                   conda_packages=['a', 'b'],
+                   pip_packages=['c', 'd'],
+                   channels=['x', 'y'],
+                   lock_set=lock_set)
+
+    assert ('a', 'b') == spec.conda_packages
+    assert ('b', 'a=1.0=1', 'q=2.0=2') == spec.conda_packages_for_create
+    assert set(['a', 'b']) == spec.conda_package_names_set
+    assert set(['b', 'a', 'q']) == spec.conda_package_names_for_create_set
+
+
 def test_lock_set_affects_hash():
     lock_set = CondaLockSet({'all': ['a=1.0=1']}, platforms=['all'])
     with_lock_spec = EnvSpec(name="foo",

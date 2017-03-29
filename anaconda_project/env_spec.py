@@ -118,7 +118,14 @@ class EnvSpec(object):
             parsed = conda_api.parse_spec(spec)
             if parsed is not None:
                 conda_specs_by_name[parsed.name] = spec
-        self._conda_specs_by_name = conda_specs_by_name
+        self._conda_specs_for_create_by_name = conda_specs_by_name
+
+        name_set = set()
+        for spec in self.conda_packages:
+            parsed = conda_api.parse_spec(spec)
+            if parsed is not None:
+                name_set.add(parsed.name)
+        self._conda_logical_specs_name_set = name_set
 
         pip_specs_by_name = dict()
         for spec in self.pip_packages:
@@ -240,7 +247,12 @@ class EnvSpec(object):
     @property
     def conda_package_names_set(self):
         """Conda package names that we require, as a Python set."""
-        return set(self._conda_specs_by_name.keys())
+        return self._conda_logical_specs_name_set
+
+    @property
+    def conda_package_names_for_create_set(self):
+        """Conda package names that we require, as a Python set."""
+        return set(self._conda_specs_for_create_by_name.keys())
 
     @property
     def pip_package_names_set(self):
@@ -274,7 +286,7 @@ class EnvSpec(object):
 
     def specs_for_conda_package_names(self, names):
         """Get the full install specs given an iterable of package names."""
-        return self._specs_for_package_names(names, self._conda_specs_by_name)
+        return self._specs_for_package_names(names, self._conda_specs_for_create_by_name)
 
     def specs_for_pip_package_names(self, names):
         """Get the full install specs given an iterable of package names."""

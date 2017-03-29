@@ -259,7 +259,7 @@ class DefaultCondaManager(CondaManager):
         if not os.path.isdir(os.path.join(prefix, 'conda-meta')):
             return CondaEnvironmentDeviations(
                 summary="'%s' doesn't look like it contains a Conda environment yet." % (prefix),
-                missing_packages=tuple(spec.conda_package_names_set),
+                missing_packages=tuple(spec.conda_package_names_for_create_set),
                 wrong_version_packages=(),
                 missing_pip_packages=tuple(spec.pip_package_names_set),
                 wrong_version_pip_packages=(),
