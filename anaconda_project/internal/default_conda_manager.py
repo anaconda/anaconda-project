@@ -255,7 +255,31 @@ class DefaultCondaManager(CondaManager):
 
         return sorted(list(missing))
 
+    def _broken_lock_set_error(self, spec):
+        error = None
+        if spec.lock_set is not None and spec.lock_set.enabled:
+            # We have to check this first, because getting our package list
+            # is not valid if we don't have platform support.
+            current_platform = conda_api.current_platform()
+            if current_platform not in spec.platforms:
+                error = "Env spec '%s' does not support current platform %s (it supports: %s)" % \
+                        (spec.name, current_platform, ", ".join(spec.platforms))
+            elif not spec.lock_set.supports_current_platform:
+                error = "Env spec '%s' does not have the current platform %s in the lock file" % \
+                        (spec.name, current_platform)
+        return error
+
     def find_environment_deviations(self, prefix, spec):
+        broken_lock_set = self._broken_lock_set_error(spec)
+        if broken_lock_set is not None:
+            return CondaEnvironmentDeviations(summary=broken_lock_set,
+                                              missing_packages=(),
+                                              wrong_version_packages=(),
+                                              missing_pip_packages=(),
+                                              wrong_version_pip_packages=(),
+                                              broken=True,
+                                              unfixable=True)
+
         if not os.path.isdir(os.path.join(prefix, 'conda-meta')):
             return CondaEnvironmentDeviations(
                 summary="'%s' doesn't look like it contains a Conda environment yet." % (prefix),
@@ -300,6 +324,9 @@ class DefaultCondaManager(CondaManager):
     def fix_environment_deviations(self, prefix, spec, deviations=None, create=True):
         if deviations is None:
             deviations = self.find_environment_deviations(prefix, spec)
+
+        if deviations.unfixable:
+            raise CondaManagerError("Unable to update environment at %s" % prefix)
 
         if os.path.isdir(os.path.join(prefix, 'conda-meta')):
             to_update = list(set(deviations.missing_packages + deviations.wrong_version_packages))

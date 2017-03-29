@@ -157,7 +157,8 @@ class CondaEnvironmentDeviations(object):
                  wrong_version_packages,
                  missing_pip_packages,
                  wrong_version_pip_packages,
-                 broken=False):
+                 broken=False,
+                 unfixable=False):
         """Construct a ``CondaEnvironmentDeviations``.
 
         Args:
@@ -165,13 +166,18 @@ class CondaEnvironmentDeviations(object):
           missing_packages (iterable of str): packages that aren't in the env
           wrong_version_packages (iterable of str): packages that are the wrong version
           broken (bool): True if it's broken for some other reason besides wrong packages
+          unfixable (bool): True if fix_environment_deviations won't be able to solve it
         """
         self._summary = summary
         self._broken = broken
+        self._unfixable = unfixable
         self._missing_packages = tuple(missing_packages)
         self._wrong_version_packages = tuple(wrong_version_packages)
         self._missing_pip_packages = tuple(missing_pip_packages)
         self._wrong_version_pip_packages = tuple(wrong_version_pip_packages)
+
+        # not allowed to say unfixable=True unless you also give a broken reason
+        assert (self.unfixable and not self.ok) or not self.unfixable
 
     @property
     def ok(self):
@@ -188,6 +194,11 @@ class CondaEnvironmentDeviations(object):
             len(self.missing_pip_packages) == 0 and \
             len(self.wrong_version_pip_packages) == 0 and \
             not self._broken
+
+    @property
+    def unfixable(self):
+        """True if fix_environment_deviations can't resolve this."""
+        return self._unfixable
 
     @property
     def summary(self):

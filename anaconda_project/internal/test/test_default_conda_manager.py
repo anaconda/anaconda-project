@@ -15,7 +15,7 @@ import time
 from pprint import pprint
 
 from anaconda_project.env_spec import EnvSpec
-from anaconda_project.conda_manager import CondaManagerError
+from anaconda_project.conda_manager import (CondaManagerError, CondaLockSet)
 from anaconda_project.version import version
 
 from anaconda_project.internal.default_conda_manager import (DefaultCondaManager, _extract_common)
@@ -35,6 +35,58 @@ else:
     FLAKE8_BINARY = "bin/flake8"
 
 test_spec = EnvSpec(name='myenv', conda_packages=['ipython'], pip_packages=['flake8'], channels=[])
+
+
+def test_current_platform_unsupported_by_env_spec(monkeypatch):
+    lock_set = CondaLockSet(package_specs_by_platform={'all': []}, platforms=conda_api.popular_platforms)
+    spec = EnvSpec(name='myenv',
+                   conda_packages=['ipython'],
+                   pip_packages=['flake8'],
+                   channels=[],
+                   platforms=['commodore-64', 'apple-2'],
+                   lock_set=lock_set)
+
+    def do_test(dirname):
+        envdir = os.path.join(dirname, spec.name)
+
+        manager = DefaultCondaManager()
+
+        deviations = manager.find_environment_deviations(envdir, spec)
+
+        error = "Env spec 'myenv' does not support current platform linux-64 (it supports: commodore-64, apple-2)"
+        assert error == deviations.summary
+
+        with pytest.raises(CondaManagerError) as excinfo:
+            manager.fix_environment_deviations(envdir, spec, deviations=deviations)
+        assert str(excinfo.value).startswith("Unable to update environment at ")
+
+    with_directory_contents(dict(), do_test)
+
+
+def test_current_platform_unsupported_by_lock_set(monkeypatch):
+    lock_set = CondaLockSet(package_specs_by_platform={'all': []}, platforms=[])
+    spec = EnvSpec(name='myenv',
+                   conda_packages=['ipython'],
+                   pip_packages=['flake8'],
+                   channels=[],
+                   platforms=conda_api.popular_platforms,
+                   lock_set=lock_set)
+
+    def do_test(dirname):
+        envdir = os.path.join(dirname, spec.name)
+
+        manager = DefaultCondaManager()
+
+        deviations = manager.find_environment_deviations(envdir, spec)
+
+        error = "Env spec 'myenv' does not have the current platform linux-64 in the lock file"
+        assert error == deviations.summary
+
+        with pytest.raises(CondaManagerError) as excinfo:
+            manager.fix_environment_deviations(envdir, spec, deviations=deviations)
+        assert str(excinfo.value).startswith("Unable to update environment at ")
+
+    with_directory_contents(dict(), do_test)
 
 
 def test_conda_create_and_install_and_remove(monkeypatch):
