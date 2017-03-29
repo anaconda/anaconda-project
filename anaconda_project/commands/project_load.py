@@ -29,6 +29,6 @@ def load_project(dirname):
         # both fix() and no_fix() can modify project_file, if no changes
         # were made this is a no-op.
         if had_fixable:
-            project.project_file.save()
+            project.save()
 
     return project

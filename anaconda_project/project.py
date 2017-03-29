@@ -1188,7 +1188,7 @@ class Project(object):
                     problem.fix(self)
                     fixed_a_thing = True
             if fixed_a_thing:
-                self.project_file.use_changes_without_saving()
+                self.use_changes_without_saving()
             iterations -= 1
 
     @property
