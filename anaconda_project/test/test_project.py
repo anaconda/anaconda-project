@@ -3074,14 +3074,25 @@ env_specs:
 """}, check)
 
 
-def test_lock_file_has_empty_package_lists():
+def test_lock_file_has_empty_and_wrong_package_lists():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
         assert [] == project.problems
-        assert ['anaconda-project-lock.yml: Lock file lists no packages for env spec '
-                "'default' on platform linux-64", 'anaconda-project-lock.yml: Lock file lists no packages for env spec '
-                "'default' on platform win-64"] == project.suggestions
+        # yapf: disable
+        assert [
+            'anaconda-project-lock.yml: Lock file is missing 1 packages for env spec '
+            'default on linux-32 (hello)',
+            'anaconda-project-lock.yml: Lock file lists no packages for env spec '
+            "'default' on platform linux-64",
+            'anaconda-project-lock.yml: Lock file is missing 1 packages for env spec '
+            'default on osx-64 (hello)',
+            'anaconda-project-lock.yml: Lock file is missing 1 packages for env spec '
+            'default on win-32 (hello)',
+            'anaconda-project-lock.yml: Lock file lists no packages for env spec '
+            "'default' on platform win-64"
+        ] == project.suggestions
+        # yapf: enable
 
     with_directory_contents_completing_project_file(
         {

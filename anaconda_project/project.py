@@ -659,6 +659,21 @@ class _ConfigCache(object):
                         text = ("Lock file lists no packages for env spec '%s' on platform %s") % (env_spec.name,
                                                                                                    platform)
                         problems.append(ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
+                    else:
+                        # If conda ever had RPM-like "Obsoletes" then this situation _may_ happen
+                        # in correct scenarios.
+                        lock_set_names = set()
+                        for package in conda_packages:
+                            parsed = conda_api.parse_spec(package)
+                            if parsed is not None:
+                                lock_set_names.add(parsed.name)
+                        unlocked_names = env_spec.conda_package_names_set - lock_set_names
+                        if len(unlocked_names) > 0:
+                            text = "Lock file is missing %s packages for env spec %s on %s (%s)" % (
+                                len(unlocked_names), env_spec.name, platform, ",".join(sorted(list(unlocked_names))))
+                            problems.append(ProjectProblem(text=text,
+                                                           filename=lock_file.filename,
+                                                           only_a_suggestion=True))
 
         # Look for lock sets that don't go with an env spec
         for name in self.lock_sets.keys():
