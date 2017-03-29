@@ -13,11 +13,12 @@ TIP: Read more about YAML syntax at http://yaml.org/start.html
 TIP: You may want to go through :doc:`the anaconda-project tutorial <tutorial>`
 before digging into the details in this document.
 
-``anaconda-project.yml`` and ``anaconda-project-local.yml``
-===========================================================
+``anaconda-project.yml``, ``anaconda-project-local.yml``, ``anaconda-project-lock.yml``
+=======================================================================================
 
-Anaconda projects are affected by two configuration files,
-``anaconda-project.yml`` and ``anaconda-project-local.yml``.
+Anaconda projects are affected by three configuration files,
+``anaconda-project.yml``, ``anaconda-project-local.yml``, and
+``anaconda-project-lock.yml``.
 
 The file ``anaconda-project.yml`` contains information about a project that
 is intended to be shared across users and machines. If you use
@@ -28,6 +29,11 @@ The file ``anaconda-project-local.yml``, on the other hand, goes in
 ``.gitignore`` (or ``.svnignore`` or equivalent), because it
 contains your local configuration state that you do not
 want to share with others.
+
+The file ``anaconda-project-lock.yml`` is optional and contains
+information needed to lock your package dependencies at specific
+versions. This "lock file" should go in source control along with
+``anaconda-project.yml``.
 
 These files can be manipulated with ``anaconda-project`` commands,
 or with Anaconda Navigator, or you can edit them with any text
@@ -354,6 +360,156 @@ section with a list of pip requirement specifiers.
        - pip:
          - pippackage1
          - pippackage2
+
+Locking package versions
+========================
+
+Any env spec can be "locked", which means it specifies exact
+versions of all packages to be installed, kept in
+``anaconda-project-lock.yml``.
+
+Hand-creating ``anaconda-project-lock.yml`` isn't
+recommended. Instead, create it with the ``anaconda-project lock``
+command, and update the versions in there with
+``anaconda-project-update``.
+
+Locked versions are distinct from the "logical" versions in
+``anaconda-project.yml``. For example, in your
+``anaconda-project.yml`` you might list that you require
+``bokeh=0.12``. The ``anaconda-project lock`` command will expand
+that to an *exact* version of Bokeh, such as
+``bokeh=0.12.4=py27_0``. It will also list exact versions of all
+Bokeh's dependencies, transitively; so you'll have a pretty long
+list of packages in ``anaconda-project-lock.yml``, it could look
+like this for example:
+
+.. code-block:: yaml
+
+    locking_enabled: true
+
+    env_specs:
+      default:
+        locked: true
+        env_spec_hash: eb23ad7bd050fb6383fcb71958ff03db074b0525
+        platforms:
+        - all
+        packages:
+          all:
+          - backports=1.0=py27_0
+          - backports_abc=0.5=py27_0
+          - bokeh=0.12.4=py27_0
+          - futures=3.0.5=py27_0
+          - jinja2=2.9.5=py27_0
+          - markupsafe=0.23=py27_2
+          - mkl=2017.0.1=0
+          - numpy=1.12.1=py27_0
+          - pandas=0.19.2=np112py27_1
+          - pip=9.0.1=py27_1
+          - python-dateutil=2.6.0=py27_0
+          - python=2.7.13=0
+          - pytz=2016.10=py27_0
+          - pyyaml=3.12=py27_0
+          - requests=2.13.0=py27_0
+          - singledispatch=3.4.0.3=py27_0
+          - six=1.10.0=py27_0
+          - ssl_match_hostname=3.4.0.2=py27_1
+          - tornado=4.4.2=py27_0
+          - wheel=0.29.0=py27_0
+          unix:
+          - openssl=1.0.2k=1
+          - readline=6.2=2
+          - setuptools=27.2.0=py27_0
+          - sqlite=3.13.0=0
+          - tk=8.5.18=0
+          - yaml=0.1.6=0
+          - zlib=1.2.8=3
+          win:
+          - setuptools=27.2.0=py27_1
+          - vs2008_runtime=9.00.30729.5054=0
+
+By locking your versions, you can make your project more portable;
+when you share it with someone else or deploy it on a server or
+try to use it yourself in a few months, you'll get the same
+package versions you've already used for testing. If you don't
+lock your versions, you may find that your project stops working
+due to changes in its dependencies.
+
+When you're ready to test the latest versions of your
+dependencies, run ``anaconda-project update`` to update the
+versions in ``anaconda-project-lock.yml`` to the latest available.
+
+If you check ``anaconda-project-lock.yml`` into revision control
+(such as git), when you check out old versions of your project
+you'll also get the dependencies those versions were tested with.
+And you'll be able to see changes in your dependencies over time
+in your revision control history.
+
+Specifying supported platforms
+==============================
+
+Whenever you lock or update a project, dependencies are resolved
+for all platforms a project supports. This allows you to do your
+work on Windows and deploy to Linux, for example.
+
+``anaconda-project lock`` by default will add a ``platforms:
+[all]`` line to ``anaconda-project.yml``. If you don't care about
+some of the platforms included in ``all``, you might want to
+change this line. Updates will be faster if you support fewer
+platforms. Also, some projects only work on certain platforms.
+
+The ``platforms:`` line does nothing when a project is unlocked.
+
+Useful values in ``platforms:`` include:
+
+ * ``all``: all "popular" platforms, currently ``linux-64``,
+   ``linux-32``, ``win-64``, ``win-32``, ``osx-64``
+ * ``unix``: everything in ``all`` except Windows
+ * ``win``: ``win-32`` and ``win-64``
+ * ``linux``: ``linux-32`` and ``linux-64``
+ * ``osx``: ``osx-64``
+ * any specific platform as used in Conda channels, such as ``linux-64``,
+   ``linux-32``, ``win-64``, ``win-32``, ``osx-64``, ``osx-32``,
+   ``linux-armv6l``, ``linux-armv7l``, ``linux-ppc64le``, etc.
+
+In ``anaconda-project.yml`` a ``platforms:`` list at the root of
+the file will be inherited by all env specs, and then each env
+spec can add (but not subtract) additional platforms. It works the
+same way as the ``channels:`` list in this
+respect. ``inherit_from:`` will also cause platforms to be
+inherited.
+
+Enabling and disabling locked versions
+======================================
+
+If you delete ``anaconda-project-lock.yml``, the project will
+become "unlocked."
+
+If you have an ``anaconda-project-lock.yml``, the
+``locking_enabled:`` field indicates whether env specs are locked
+by default. Individual env spec sections in
+``anaconda-project-lock.yml`` can then specify ``locked: true`` or
+``locked: false`` to override the default on a per-env-spec basis.
+
+To turn off locking for all env specs, type ``anaconda-project
+unlock`` and to re-enable it for all of them type
+``anaconda-project lock``.
+
+
+Updating locked versions after editing an env spec
+==================================================
+
+If you use commands such as ``anaconda-project add-packages`` or
+``anaconda-project add-env-spec`` to edit your
+``anaconda-project.yml``, then ``anaconda-project-lock.yml`` will
+automatically be kept updated.
+
+However, if you edit ``anaconda-project.yml`` by hand, changing an
+env spec, you'll need to run ``anaconda-project update`` to fix up
+``anaconda-project-lock.yml`` to match.
+
+If locking isn't enabled for the project or for the env spec,
+there's no need to ``anaconda-project update`` after editing your
+env spec, of course.
 
 
 Requiring environment variables to be set
