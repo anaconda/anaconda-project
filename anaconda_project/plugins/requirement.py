@@ -290,6 +290,17 @@ class EnvVarRequirement(Requirement):
         else:
             return any(self.env_var.endswith(suffix) for suffix in _secret_suffixes)
 
+    @property
+    def default_as_string(self):
+        """Get the default, forced to string or None."""
+        value = self.options.get('default', None)
+        if value is None:
+            return None
+        else:
+            # see _parse_default above, it can be a string already,
+            # or an integer
+            return str(value)
+
     def _get_value_of_env_var(self, environ):
         """A "protected" method for subtypes to use."""
         value = environ.get(self.env_var, None)

@@ -1170,15 +1170,23 @@ class Project(object):
         for req in self.requirements:
             if isinstance(req, CondaEnvRequirement):
                 continue
-            elif isinstance(req, DownloadRequirement):
-                downloads[req.env_var] = dict(title=req.title,
-                                              description=req.description,
-                                              encrypted=req.encrypted,
-                                              url=req.url)
-            elif isinstance(req, ServiceRequirement):
-                services[req.env_var] = dict(title=req.title, description=req.description, type=req.service_type)
-            elif isinstance(req, EnvVarRequirement):
-                variables[req.env_var] = dict(title=req.title, description=req.description, encrypted=req.encrypted)
+
+            if isinstance(req, EnvVarRequirement):
+                data = dict(title=req.title, description=req.description, encrypted=req.encrypted)
+
+                default = req.default_as_string
+                if default is not None:
+                    data['default'] = default
+
+                if isinstance(req, DownloadRequirement):
+                    data['url'] = req.url
+                    downloads[req.env_var] = data
+                elif isinstance(req, ServiceRequirement):
+                    data['type'] = req.service_type
+                    services[req.env_var] = data
+                elif isinstance(req, EnvVarRequirement):
+                    variables[req.env_var] = data
+
         json['downloads'] = downloads
         json['variables'] = variables
         json['services'] = services

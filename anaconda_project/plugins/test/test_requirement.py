@@ -67,3 +67,61 @@ def test_requirement_status_repr():
     status = requirement.check_status(dict(FOO=''), tmp_local_state_file(), 'default', UserConfigOverrides())
     assert "RequirementStatus(False,'Environment variable FOO is not set.',EnvVarRequirement(env_var='FOO'))" == repr(
         status)
+
+
+def test_requirement_parse_default():
+    null_default = dict(default=None)
+    string_default = dict(default="foo")
+    int_default = dict(default=42)
+    float_default = dict(default=3.14)
+
+    # invalid defaults
+    bool_default = dict(default=True)
+    list_default = dict(default=[])
+
+    def type_error(value):
+        return "default value for variable FOO must be null, a string, or a number, not {value}.".format(value=value)
+
+    problems = []
+
+    EnvVarRequirement._parse_default(null_default, "FOO", problems)
+    assert null_default == dict()
+    assert problems == []
+
+    EnvVarRequirement._parse_default(string_default, "FOO", problems)
+    assert string_default == dict(default="foo")
+    assert problems == []
+
+    EnvVarRequirement._parse_default(int_default, "FOO", problems)
+    assert int_default == dict(default=42)
+    assert problems == []
+
+    EnvVarRequirement._parse_default(float_default, "FOO", problems)
+    assert float_default == dict(default=3.14)
+    assert problems == []
+
+    EnvVarRequirement._parse_default(bool_default, "FOO", problems)
+    assert problems == [type_error(True)]
+
+    problems = []
+    EnvVarRequirement._parse_default(list_default, "FOO", problems)
+    assert problems == [type_error([])]
+
+
+def test_requirement_default_as_string():
+    no_default = dict()
+    string_default = dict(default="foo")
+    int_default = dict(default=42)
+    float_default = dict(default=3.14)
+
+    req = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO', options=no_default)
+    assert req.default_as_string is None
+
+    req = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO', options=string_default)
+    assert req.default_as_string == "foo"
+
+    req = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO', options=int_default)
+    assert req.default_as_string == "42"
+
+    req = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO', options=float_default)
+    assert req.default_as_string == "3.14"

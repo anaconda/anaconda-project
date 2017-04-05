@@ -2151,8 +2151,8 @@ services:
 
 variables:
   SOMETHING: {}
-  SOMETHING_ELSE: {}
-
+  SOMETHING_ELSE:
+     default: 42
 """
 
 
@@ -2207,11 +2207,13 @@ def test_get_publication_info_from_complex_project():
                                         'description': 'SOMETHING environment variable must be set.'},
                           'SOMETHING_ELSE': {'encrypted': False,
                                              'title': 'SOMETHING_ELSE',
-                                             'description': 'SOMETHING_ELSE environment variable must be set.'}},
+                                             'description': 'SOMETHING_ELSE environment variable must be set.',
+                                             'default': "42"}},
             'services': {'REDIS_URL':
                          {'title': 'REDIS_URL',
                           'description': 'A running Redis server, located by a redis: URL set as REDIS_URL.',
-                          'type': 'redis'}}
+                          'type': 'redis',
+                          'encrypted': False}}
         }
 
         assert expected == project.publication_info()
