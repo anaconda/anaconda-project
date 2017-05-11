@@ -552,6 +552,10 @@ def test_invalid_specs():
     for invalid in invalids:
         assert conda_api.parse_spec(invalid) is None
 
+    with pytest.raises(TypeError) as excinfo:
+        conda_api.parse_spec(42)
+    assert 'Expected a string' in str(excinfo.value)
+
 
 def test_conda_style_specs():
     cases = [('foo', ('foo', None, None, None, None)), ('foo=1.0', ('foo', '=1.0', None, '1.0', None)),

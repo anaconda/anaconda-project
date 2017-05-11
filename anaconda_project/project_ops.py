@@ -29,6 +29,7 @@ import anaconda_project.conda_manager as conda_manager
 from anaconda_project.internal.conda_api import (parse_spec, condense_platform_list, current_platform,
                                                  expand_platform_list)
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
+from anaconda_project.internal.py2_compat import is_string
 
 _default_projectignore = """
 # project-local contains your personal configuration choices and state
@@ -417,7 +418,7 @@ def _update_env_spec(project, name, packages, channels, create):
         # packages may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
         old_packages = env_dict.get('packages', [])
-        old_packages_set = set(parse_spec(dep).name for dep in old_packages)
+        old_packages_set = set(parse_spec(dep).name for dep in old_packages if is_string(dep))
         bad_specs = []
         updated_specs = []
         new_specs = []
@@ -442,6 +443,9 @@ def _update_env_spec(project, name, packages, channels, create):
 
         # remove everything that we are changing the spec for
         def replace_spec(old):
+            if not is_string(old):
+                return old
+
             name = parse_spec(old).name
             for (replaced_name, new_spec) in updated_specs:
                 if replaced_name == name:
@@ -707,7 +711,7 @@ def remove_packages(project, env_spec_name, packages):
             # so don't convert this thing to a regular list.
             old_packages = env_dict.get('packages', [])
             removed_set = set(packages)
-            _filter_inplace(lambda dep: dep not in removed_set, old_packages)
+            _filter_inplace(lambda dep: not (is_string(dep) and dep in removed_set), old_packages)
             env_dict['packages'] = old_packages
 
         # if we removed any deps from global, add them to the

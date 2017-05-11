@@ -469,6 +469,9 @@ def parse_spec(spec):
     Returns:
        ``ParsedSpec`` or None on failure
     """
+    if not is_string(spec):
+        raise TypeError("Expected a string not %r" % spec)
+
     m = _spec_pat.match(spec)
     if m is None:
         return None

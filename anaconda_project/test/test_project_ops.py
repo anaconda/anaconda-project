@@ -1688,14 +1688,19 @@ def test_add_packages_to_all_environments():
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert ['foo', 'bar'] == list(project2.project_file.get_value('packages'))
+        assert [dict(pip=[]), 'foo', 'bar'] == list(project2.project_file.get_value('packages'))
         assert ['hello', 'world'] == list(project2.project_file.get_value('channels'))
 
         for env_spec in project2.env_specs.values():
             assert env_spec.lock_set.enabled
             assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}, platforms=['all']))
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+packages:
+ - pip: [] # be sure we don't break with this in the list
+                """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
 def test_add_packages_cannot_resolve_deps():
@@ -1767,8 +1772,8 @@ def test_remove_packages_from_all_environments():
             assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('packages'))
             assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
             status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo', 'bar'])
-            assert status
             assert [] == status.errors
+            assert status
 
         _with_conda_test(attempt, remove_error="Removal fail")
 
@@ -1796,6 +1801,7 @@ env_specs:
     packages:
      - foo
      - bar
+     - pip: [] # make sure we don't choke on non-string items in list
         """,
          DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
