@@ -221,14 +221,22 @@ class DefaultCondaManager(CondaManager):
             if name not in installed:
                 missing.add(name)
             else:
+
+                def version_match(wanted, installed):
+                    if wanted == installed:
+                        return True
+                    else:
+                        return installed.startswith(wanted + ".")
+
                 # The only constraint we are smart enough to understand is
                 # the one we put in the lock file, which is plain =.
                 # We can't do version comparisons, which is a bug.
                 # We won't notice if non-= constraints are unmet.
                 (_, installed_version, installed_build) = installed[name]
-                if spec.exact_version is not None and spec.exact_version != installed_version:
+                if spec.exact_version is not None and not version_match(spec.exact_version, installed_version):
                     wrong_version.add(name)
-                elif spec.exact_build_string is not None and spec.exact_build_string != installed_build:
+                elif spec.exact_build_string is not None and not version_match(spec.exact_build_string,
+                                                                               installed_build):
                     wrong_version.add(name)
 
         return (sorted(list(missing)), sorted(list(wrong_version)))

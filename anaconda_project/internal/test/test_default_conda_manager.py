@@ -455,6 +455,7 @@ def test_installed_version_comparison(monkeypatch):
                                            conda_packages=['bokeh=0.12.4=1'],
                                            pip_packages=[],
                                            channels=[])
+        spec_with_more_vague_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh=0.12'], pip_packages=[], channels=[])
         spec_with_unspecified_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=[], channels=[])
         spec_with_wrong_version_bokeh = EnvSpec(name='myenv',
                                                 conda_packages=['bokeh=0.12.3'],
@@ -468,6 +469,10 @@ def test_installed_version_comparison(monkeypatch):
         manager = DefaultCondaManager()
 
         deviations = manager.find_environment_deviations(prefix, spec_with_matching_bokeh)
+        assert deviations.missing_packages == ()
+        assert deviations.wrong_version_packages == ()
+
+        deviations = manager.find_environment_deviations(prefix, spec_with_more_vague_bokeh)
         assert deviations.missing_packages == ()
         assert deviations.wrong_version_packages == ()
 
