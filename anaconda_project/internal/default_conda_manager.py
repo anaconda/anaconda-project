@@ -182,8 +182,6 @@ class DefaultCondaManager(CondaManager):
     def resolve_dependencies(self, package_specs, channels, platforms):
         by_platform = {}
 
-        # This has no reason to be a loop now, but it will
-        # soon when we do multi-platform resolve
         current = conda_api.current_platform()
         resolve_for_platforms = list(platforms)
         # always resolve "current" first because it's confusing if
