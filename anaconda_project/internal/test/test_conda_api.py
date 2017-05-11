@@ -1113,3 +1113,10 @@ def test_expand_platform_list_handles_unknown():
     (expanded, unknown) = conda_api.expand_platform_list(['linux-64', 'wtf', 'something'])
     assert ['linux-64', 'something', 'wtf'] == expanded
     assert ['something', 'wtf'] == unknown
+
+
+def test_validate_platform_list():
+    (platforms, unknown, invalid) = conda_api.validate_platform_list(['linux-64', 'wtf', 'something', 'foo-64'])
+    assert ['linux-64', 'foo-64'] == platforms
+    assert ['foo-64'] == unknown
+    assert ['something', 'wtf'] == invalid

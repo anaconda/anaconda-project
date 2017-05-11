@@ -346,7 +346,7 @@ def test_prepare_choose_environment():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: blah
-platforms: [all]
+platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
     foo: {}
     bar: {}
@@ -373,7 +373,7 @@ def test_prepare_use_command_specified_env_spec():
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: blah
-platforms: [all]
+platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
     default: {}
     foo: {}

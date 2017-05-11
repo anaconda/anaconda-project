@@ -2865,17 +2865,23 @@ def test_with_locking_disabled_no_platforms_required():
 def test_load_weird_platform():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [] == project.problems
+
+        assert [
+            "anaconda-project.yml: Unusual platform name 'weird-valid' may be a typo "
+            "(more usual examples: linux-64, osx-64, win-64)"
+        ] == project.suggestions
+        assert [
+            "anaconda-project.yml: Platform name 'weirdinvalid' is invalid "
+            "(valid examples: linux-64, osx-64, win-64)"
+        ] == project.problems
 
         spec = project.env_specs['default']
-        assert spec.platforms == ('linux-64', 'weird')
-
-        assert ["anaconda-project.yml: Unusual platform name 'weird' may be a typo"] == project.suggestions
+        assert spec.platforms == ('linux-64', 'weird-valid')
 
     with_directory_contents(
         {DEFAULT_PROJECT_FILENAME: """
 name: foo
-platforms: [linux-64, weird]
+platforms: [linux-64, weird-valid, weirdinvalid]
 env_specs:
   default:
     packages: [foo]

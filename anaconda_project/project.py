@@ -386,11 +386,15 @@ class _ConfigCache(object):
 
     def _parse_platforms(self, problems, yaml_file, parent_dict):
         platforms = self._parse_string_list(problems, yaml_file, parent_dict, 'platforms', 'platform name')
-        (platforms, unknown) = conda_api.validate_platform_list(platforms)
+        (platforms, unknown, invalid) = conda_api.validate_platform_list(platforms)
         for u in unknown:
-            problems.append(ProjectProblem(text=("Unusual platform name '%s' may be a typo" % u),
+            problems.append(ProjectProblem(text=(
+                "Unusual platform name '%s' may be a typo (more usual examples: linux-64, osx-64, win-64)" % u),
                                            filename=yaml_file.filename,
                                            only_a_suggestion=True))
+        for i in invalid:
+            _file_problem(problems, yaml_file,
+                          "Platform name '%s' is invalid (valid examples: linux-64, osx-64, win-64)" % i)
         return platforms
 
     def _parse_packages(self, problems, yaml_file, key, parent_dict):

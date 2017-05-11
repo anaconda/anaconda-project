@@ -641,35 +641,36 @@ def popular_platforms_with_current():
 def parse_platform(platform):
     assert '-' in platform
     return tuple(platform.split("-"))
-    # TODO in project.py use the below version to validate
-    # if '-' in platform:
-    #     return tuple(platform.split("-"))
-    # else:
-    #     return (platform, None)
 
 
 def validate_platform_list(platforms):
-    """Split platform list into known and unknown platforms.
+    """Split platform list into known, unknown, and invalid platforms.
 
     Also, sort the list into canonical order.
 
     We return a tuple, the second list in the tuple
     is a subset of the first, and indicates platforms
     we don't know about. These may create a warning.
+    The third list is not in the other two and indicates
+    unusably-invalid platform names.
 
     Returns:
        Tuple of known platforms and unknown platforms.
     """
     result = set()
     unknown = set()
+    invalid = set()
     for p in platforms:
-        result.add(p)
-        if p not in popular_platforms:
-            unknown.add(p)
+        if '-' not in p:
+            invalid.add(p)
+        else:
+            result.add(p)
+            if p not in popular_platforms:
+                unknown.add(p)
 
     # unknown platforms aren't necessarily an error, we just
     # don't do anything smart with them.
-    return (sort_platform_list(result), sort_platform_list(unknown))
+    return (sort_platform_list(result), sort_platform_list(unknown), sort_platform_list(invalid))
 
 
 def expand_platform_list(platforms):
