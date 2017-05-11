@@ -100,7 +100,7 @@ class EnvSpec(object):
         self._inherit_from_names = inherit_from_names
         self._inherit_from = inherit_from
         self._lock_set = lock_set
-        self._platforms = platforms
+        self._platforms = tuple(conda_api.sort_platform_list(platforms))
 
         # inherit_from must be a subset of inherit_from_names
         # except that we can have an anonymous base env spec for
@@ -357,7 +357,7 @@ class EnvSpec(object):
         if pip_packages:
             packages.append(dict(pip=pip_packages))
         channels = list(self._channels)
-        platforms = conda_api.condense_platform_list(self._platforms)
+        platforms = list(self._platforms)
 
         # this is a gross, roundabout hack to get ryaml dicts that
         # have ordering... OrderedDict doesn't work because the
@@ -545,7 +545,7 @@ def _anaconda_default_env_spec(shared_base_spec):
     return EnvSpec(name="default",
                    conda_packages=["anaconda"],
                    channels=[],
-                   platforms=conda_api.popular_platforms,
+                   platforms=conda_api.popular_platforms_with_current(),
                    description="Default environment spec for running commands",
                    inherit_from_names=(),
                    inherit_from=inherit_from)

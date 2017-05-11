@@ -345,7 +345,7 @@ channels:
 
 
 def test_merge_in_lock_set():
-    lock_set = CondaLockSet({'all': ['a=1.0=1']}, platforms=['all'])
+    lock_set = CondaLockSet({'all': ['a=1.0=1']}, platforms=['linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64'])
     spec = EnvSpec(name="foo",
                    conda_packages=['a', 'b'],
                    pip_packages=['c', 'd'],
@@ -356,7 +356,8 @@ def test_merge_in_lock_set():
 
 
 def test_lock_set_affects_name_sets():
-    lock_set = CondaLockSet({'all': ['a=1.0=1', 'q=2.0=2']}, platforms=['all'])
+    lock_set = CondaLockSet({'all': ['a=1.0=1', 'q=2.0=2']},
+                            platforms=['linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64'])
     spec = EnvSpec(name="foo",
                    conda_packages=['a', 'b'],
                    pip_packages=['c', 'd'],
@@ -370,7 +371,7 @@ def test_lock_set_affects_name_sets():
 
 
 def test_lock_set_affects_hash():
-    lock_set = CondaLockSet({'all': ['a=1.0=1']}, platforms=['all'])
+    lock_set = CondaLockSet({'all': ['a=1.0=1']}, platforms=['linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64'])
     with_lock_spec = EnvSpec(name="foo",
                              conda_packages=['a', 'b'],
                              pip_packages=['c', 'd'],

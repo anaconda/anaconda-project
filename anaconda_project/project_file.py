@@ -13,6 +13,7 @@ import json
 
 from anaconda_project.yaml_file import YamlFile
 from anaconda_project.env_spec import EnvSpec
+import anaconda_project.internal.conda_api as conda_api
 
 try:
     # this is the conda-packaged version of ruamel.yaml which has the
@@ -128,7 +129,7 @@ class ProjectFile(YamlFile):
                                 "for packages.\n" + "\n" + "For example,\n" + "\n" + "channels:\n" + "   - mychannel\n")
 
         sections['platforms'] = ("In the platforms section, list platforms the project should work on\n" +
-                                 "Examples: \"all\", \"unix\", \"osx\", \"win-64\"\n" +
+                                 "Examples: \"linux-64\", \"osx-64\", \"win-64\"\n" +
                                  "Use `anaconda-project add-platforms` to add platforms.\n")
 
         sections['env_specs'] = (
@@ -158,8 +159,8 @@ class ProjectFile(YamlFile):
             elif section_name in ('channels', 'packages'):
                 section_body = "  []"
             elif section_name == 'platforms':
-                # TODO always include the current platform in this
-                section_body = "  [all]"
+                platforms = conda_api.popular_platforms_with_current()
+                section_body = "  [" + ", ".join(platforms) + "]"
             else:
                 section_body = "  {}"
             to_parse = to_parse + "\n#\n" + comment_out(comment) + section_name + ":\n" + section_body + "\n\n\n"

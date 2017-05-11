@@ -2391,7 +2391,9 @@ def test_auto_fix_missing_name():
         assert project.name == os.path.basename(dirname)
         assert 'name' in project.project_file.root
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "env_specs:\n  default: {}\nplatforms: [all]\n"}, check)
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME:
+         "env_specs:\n  default: {}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n"}, check)
 
 
 def test_auto_fix_missing_env_specs_section():
@@ -2409,7 +2411,8 @@ def test_auto_fix_missing_env_specs_section():
         assert project.problems == []
         assert list(project.env_specs.keys()) == ['default']
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\nplatforms: [all]\n"}, check)
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n"}, check)
 
 
 def test_auto_fix_empty_env_specs_section():
@@ -2428,7 +2431,9 @@ def test_auto_fix_empty_env_specs_section():
         assert project.problems == []
         assert list(project.env_specs.keys()) == ['default']
 
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\nplatforms: [all]\n"}, check)
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME:
+         "name: foo\nenv_specs: {}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n"}, check)
 
 
 def test_auto_fix_env_spec_import():
@@ -2452,7 +2457,7 @@ def test_auto_fix_env_spec_import():
         assert spec.channels == ('bar', )
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\nplatforms: [all]\n",
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
          "environment.yml": """
 name: stuff
 dependencies:
@@ -2486,7 +2491,7 @@ def test_auto_fix_requirements_txt_import():
         assert spec.channels == ()
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\nplatforms: [all]\n",
+        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
          "requirements.txt": """
 # these are some pip packages.
 abc
@@ -2516,7 +2521,8 @@ def test_auto_fix_env_spec_out_of_sync():
         assert spec.channels == ('bar', )
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [all]\n",
+        {DEFAULT_PROJECT_FILENAME:
+         "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
          "environment.yml": """
 name: stuff
 dependencies:
@@ -2550,7 +2556,8 @@ def test_auto_fix_env_spec_import_saying_no():
         assert skip_importing_hash != ''
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {'default':{'packages':[]}}\nplatforms: [all]\n",
+        {DEFAULT_PROJECT_FILENAME:
+         "name: foo\nenv_specs: {'default':{'packages':[]}}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
          "environment.yml": """
 name: stuff
 dependencies:
@@ -2644,7 +2651,8 @@ def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
         assert spec.pip_packages == ('foo', 'someother')
 
     with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [all]\n",
+        {DEFAULT_PROJECT_FILENAME:
+         "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
          "environment.yml": """
 name: stuff
 dependencies:
@@ -2803,7 +2811,7 @@ def test_unknown_field_in_lock_set_of_lock_file():
         {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
-     platforms: [all]
+     platforms: [linux-32,linux-64,osx-64,win-32,win-64]
      somejunk: True
     """}, check)
 
@@ -3022,7 +3030,7 @@ def test_lock_file_has_pip_packages():
         {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all:
         - pip:
@@ -3103,7 +3111,7 @@ def test_lock_file_has_wrong_hash():
 env_specs:
   default:
     env_spec_hash: wrong
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all: [foo]
 """}, check)
@@ -3140,7 +3148,7 @@ env_specs:
             DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       linux-64: []
       win-64: []
@@ -3170,11 +3178,11 @@ env_specs:
             DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all: [hello]
   orphan:
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages: {}
 """
         }, check)

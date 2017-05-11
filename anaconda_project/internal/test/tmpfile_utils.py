@@ -88,7 +88,7 @@ def complete_project_file_content(content):
         modified = (modified + "\n" + "name: some_name\n")
 
     if 'platforms' not in yaml:
-        modified = (modified + "\n" + "platforms: [all]\n")
+        modified = (modified + "\n" + "platforms: [linux-32, linux-64, osx-64, win-32, win-64]\n")
 
     if modified is not content:
         try:

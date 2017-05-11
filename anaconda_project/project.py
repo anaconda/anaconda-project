@@ -386,7 +386,7 @@ class _ConfigCache(object):
 
     def _parse_platforms(self, problems, yaml_file, parent_dict):
         platforms = self._parse_string_list(problems, yaml_file, parent_dict, 'platforms', 'platform name')
-        (platforms, unknown) = conda_api.expand_platform_list(platforms)
+        (platforms, unknown) = conda_api.validate_platform_list(platforms)
         for u in unknown:
             problems.append(ProjectProblem(text=("Unusual platform name '%s' may be a typo" % u),
                                            filename=yaml_file.filename,

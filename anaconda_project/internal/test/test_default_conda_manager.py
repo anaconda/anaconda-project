@@ -53,7 +53,7 @@ def test_current_platform_unsupported_by_env_spec(monkeypatch):
 
         deviations = manager.find_environment_deviations(envdir, spec)
 
-        error = "Env spec 'myenv' does not support current platform %s (it supports: commodore-64, apple-2)" % \
+        error = "Env spec 'myenv' does not support current platform %s (it supports: apple-2, commodore-64)" % \
                 conda_api.current_platform()
         assert error == deviations.summary
 

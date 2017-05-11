@@ -76,11 +76,15 @@ channels: []
 
 default_global_platforms = """#
 # In the platforms section, list platforms the project should work on
-# Examples: "all", "unix", "osx", "win-64"
+# Examples: "linux-64", "osx-64", "win-64"
 # Use `anaconda-project add-platforms` to add platforms.
 #
 platforms:
-- all
+- linux-32
+- linux-64
+- osx-64
+- win-32
+- win-64
 """
 
 empty_default_env_specs = """#

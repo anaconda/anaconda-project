@@ -93,13 +93,13 @@ locking_enabled: true
 env_specs:
   foo:
     locked: true
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all:
         - foo=1.0=1
   bar:
     locked: false
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all:
         - bar=2.0=2
@@ -132,13 +132,13 @@ locking_enabled: true
 env_specs:
   foo:
     locked: true
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all:
         - foo=1.0=1
   bar:
     locked: false
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all:
         - bar=2.0=2
@@ -165,13 +165,13 @@ locking_enabled: true
 env_specs:
   foo:
     locked: true
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all:
         - foo=1.0=1
   bar:
     locked: false
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all:
         - bar=2.0=2
@@ -194,7 +194,8 @@ def test_set_lock_set():
 
         all_names = ['foo', 'bar']
 
-        lock_set = CondaLockSet({'all': ['something=3.0=0']}, platforms=['all'])
+        lock_set = CondaLockSet({'all': ['something=3.0=0']},
+                                platforms=['linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64'])
         lock_set.env_spec_hash = "hash-hash-hash"
 
         lock_file._set_lock_set('bar', lock_set, all_names=all_names)
@@ -238,13 +239,13 @@ def test_set_lock_set():
 locking_enabled: false
 env_specs:
   foo:
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all:
         - foo=1.0=1
   bar:
     locked: false
-    platforms: [all]
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all:
         - bar=2.0=2
@@ -259,7 +260,8 @@ def test_set_lock_set_has_to_create_env_specs_to_disable():
 
         all_names = ['foo', 'bar']
 
-        lock_set = CondaLockSet({'all': ['something=3.0=0']}, platforms=['all'])
+        lock_set = CondaLockSet({'all': ['something=3.0=0']},
+                                platforms=['linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64'])
 
         # so the point of this test is that we need to create env_specs
         # dict and the 'foo' entry as a side effect of setting 'bar',

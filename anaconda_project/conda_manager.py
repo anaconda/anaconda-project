@@ -274,8 +274,7 @@ class CondaLockSet(object):
         assert platforms is not None
         # we deepcopy this to avoid sharing issues
         self._package_specs_by_platform = deepcopy(package_specs_by_platform)
-        (expanded, _) = conda_api.expand_platform_list(platforms)
-        self._platforms = tuple(conda_api.sort_platform_list(expanded))
+        self._platforms = tuple(conda_api.sort_platform_list(platforms))
         self._enabled = enabled
         self._env_spec_hash = env_spec_hash
 
@@ -405,7 +404,7 @@ class CondaLockSet(object):
             yaml_dict['env_spec_hash'] = self.env_spec_hash
 
         platforms_list = _CommentedSeq()
-        for platform in conda_api.condense_platform_list(self.platforms):
+        for platform in self.platforms:
             platforms_list.append(platform)
         yaml_dict['platforms'] = platforms_list
 
