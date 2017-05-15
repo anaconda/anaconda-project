@@ -581,6 +581,8 @@ def test_parse_platform():
         assert bits in ('32', '64')
         assert name in conda_api.popular_platform_names
 
+    assert ('linux-cos5', '64') == conda_api.parse_platform('linux-cos5-64')
+
 
 def test_conda_variable_when_not_in_conda(monkeypatch):
     monkeypatch.setattr('os.environ', dict())

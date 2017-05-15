@@ -639,8 +639,13 @@ def popular_platforms_with_current():
 
 
 def parse_platform(platform):
+    """Split platform into OS name and architecture."""
     assert '-' in platform
-    return tuple(platform.split("-"))
+    # platforms can have multiple hyphens e.g. linux-cos5-64 Our
+    # goal here is to separate the general name from the
+    # bit-width.
+    pieces = platform.rsplit("-", 1)
+    return (pieces[0], pieces[1])
 
 
 def validate_platform_list(platforms):
