@@ -670,7 +670,7 @@ class _ConfigCache(object):
                     text = "Env spec '%s' specifies platforms '%s' but the lock file lists no platforms for it" % (
                         env_spec.name, ",".join(env_spec.platforms))
                 else:
-                    text = ("Env spec '%s' specifies platforms '%s' but the lock file only has " +
+                    text = ("Env spec '%s' specifies platforms '%s' but the lock file has " +
                             "locked versions for platforms '%s'") % (env_spec.name, ",".join(env_spec.platforms),
                                                                      ",".join(env_spec.lock_set.platforms))
                 problems.append(ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))

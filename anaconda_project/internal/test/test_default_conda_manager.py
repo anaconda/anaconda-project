@@ -38,7 +38,7 @@ test_spec = EnvSpec(name='myenv', conda_packages=['ipython'], pip_packages=['fla
 
 
 def test_current_platform_unsupported_by_env_spec(monkeypatch):
-    lock_set = CondaLockSet(package_specs_by_platform={'all': []}, platforms=conda_api.popular_platforms)
+    lock_set = CondaLockSet(package_specs_by_platform={'all': []}, platforms=conda_api.default_platforms)
     spec = EnvSpec(name='myenv',
                    conda_packages=['ipython'],
                    pip_packages=['flake8'],
@@ -70,7 +70,7 @@ def test_current_platform_unsupported_by_lock_set(monkeypatch):
                    conda_packages=['ipython'],
                    pip_packages=['flake8'],
                    channels=[],
-                   platforms=conda_api.popular_platforms,
+                   platforms=conda_api.default_platforms,
                    lock_set=lock_set)
 
     def do_test(dirname):

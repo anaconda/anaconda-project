@@ -80,10 +80,8 @@ default_global_platforms = """#
 # Use `anaconda-project add-platforms` to add platforms.
 #
 platforms:
-- linux-32
 - linux-64
 - osx-64
-- win-32
 - win-64
 """
 

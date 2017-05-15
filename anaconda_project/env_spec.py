@@ -545,7 +545,7 @@ def _anaconda_default_env_spec(shared_base_spec):
     return EnvSpec(name="default",
                    conda_packages=["anaconda"],
                    channels=[],
-                   platforms=conda_api.popular_platforms_with_current(),
+                   platforms=conda_api.default_platforms_with_current(),
                    description="Default environment spec for running commands",
                    inherit_from_names=(),
                    inherit_from=inherit_from)

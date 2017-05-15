@@ -576,10 +576,10 @@ def test_pip_style_specs():
 
 
 def test_parse_platform():
-    for p in conda_api.popular_platforms:
+    for p in conda_api.default_platforms_plus_32_bit:
         (name, bits) = conda_api.parse_platform(p)
         assert bits in ('32', '64')
-        assert name in conda_api.popular_platform_names
+        assert name in conda_api.known_platform_names
 
     assert ('linux-cos5', '64') == conda_api.parse_platform('linux-cos5-64')
 
@@ -627,7 +627,7 @@ def test_resolve_dependencies_with_actual_conda_current_platform():
 
 
 def test_resolve_dependencies_with_actual_conda_other_platforms():
-    for p in conda_api.popular_platforms:
+    for p in conda_api.default_platforms_plus_32_bit:
         if p == conda_api.current_platform():
             print("Skipping dependency resolution test on current platform %s" % p)
             continue
@@ -1027,12 +1027,12 @@ def test_current_platform_non_x86_linux(monkeypatch):
 
 
 # this test assumes all dev and CI happens on popular platforms.
-def test_current_platform_is_popular():
-    assert conda_api.current_platform() in conda_api.popular_platforms
+def test_current_platform_is_in_default():
+    assert conda_api.current_platform() in conda_api.default_platforms
 
 
 def test_msys_for_all_platforms():
-    for p in conda_api.popular_platforms:
+    for p in conda_api.default_platforms_plus_32_bit:
         (name, bits) = conda_api.parse_platform(p)
         info = conda_api.info(platform=p)
         print("*** info() for %s" % p)
@@ -1056,7 +1056,7 @@ def test_msys_for_all_platforms():
 
 
 def test_sort_platform_list():
-    everything_sorted = ('all', 'linux', 'osx', 'win') + conda_api.popular_platforms
+    everything_sorted = ('all', 'linux', 'osx', 'win') + conda_api.default_platforms_plus_32_bit
     backward = list(reversed(everything_sorted))
     shuffled = list(everything_sorted)
     random.shuffle(shuffled)
@@ -1068,53 +1068,6 @@ def test_sort_platform_list():
     assert [] == conda_api.sort_platform_list([])
     assert [] == conda_api.sort_platform_list(())
     assert ['linux-64', 'osx-64', 'win-64'] == conda_api.sort_platform_list(['win-64', 'osx-64', 'linux-64'])
-
-
-def test_condense_platform_list():
-    # yapf: disable
-    pairs = [
-        (('all', ), conda_api.popular_platforms),
-        (('unix', ), ('linux-64', 'linux-32', 'osx-64')),
-        (('unix', 'osx-32'),
-         ('linux-64', 'linux-32', 'osx-64', 'osx-32')),
-        (('unix', 'osx-32'),
-         ('linux-64', 'linux-32', 'osx-64', 'osx-32')),
-        (('win', 'linux-64'),
-         ('linux-64', 'win-64', 'win-32')),
-        (('linux-64', ), ('linux-64', )),
-        ((), ()),
-        (('osx-64',), ('osx-64',)),  # don't condense osx-64 => osx
-        (('all',), ('all', 'linux', 'linux-64'))  # remove redundant
-    ]
-    # yapf: enable
-
-    for (expected, original) in pairs:
-        assert expected == tuple(conda_api.condense_platform_list(original))
-
-
-def test_expand_platform_list():
-    # yapf: disable
-    pairs = [
-        (conda_api.popular_platforms, ('all', )),
-        (('linux-32', 'linux-64', 'osx-64'), ('unix', )),
-        (('linux-64', 'win-32', 'win-64'), ('win', 'linux-64')),
-        (('linux-64', ), ('linux-64', )),
-        (('linux-32', 'linux-64', 'win-32', 'win-64'), ('linux-64', 'linux', 'win', 'win-32', 'win-32', 'linux-64')),
-        ((), ()),
-        (('osx-64',), ('osx',))
-    ]
-    # yapf: enable
-
-    for (expected, original) in pairs:
-        (expanded, unknown) = conda_api.expand_platform_list(original)
-        assert expected == tuple(expanded)
-        assert [] == unknown
-
-
-def test_expand_platform_list_handles_unknown():
-    (expanded, unknown) = conda_api.expand_platform_list(['linux-64', 'wtf', 'something'])
-    assert ['linux-64', 'something', 'wtf'] == expanded
-    assert ['something', 'wtf'] == unknown
 
 
 def test_validate_platform_list():

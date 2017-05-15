@@ -576,49 +576,57 @@ def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
 
 # This isn't all (e.g. leaves out arm, power).  it's sort of "all
 # that people typically publish for"
-popular_platforms = ('linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64')
-assert tuple(sorted(popular_platforms)) == popular_platforms
+default_platforms = ('linux-64', 'osx-64', 'win-64')
+assert tuple(sorted(default_platforms)) == default_platforms
 
-popular_platform_names = ('linux', 'osx', 'win')
-assert tuple(sorted(popular_platform_names)) == popular_platform_names
+# osx-32 isn't in here since it isn't much used
+default_platforms_plus_32_bit = ('linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64')
+assert tuple(sorted(default_platforms_plus_32_bit)) == default_platforms_plus_32_bit
+
+_non_x86_linux_machines = {'armv6l', 'armv7l', 'ppc64le'}
+
+# this list will get outdated, unfortunately.
+_known_platforms = tuple(sorted(list(default_platforms_plus_32_bit) + ['osx-32'] + [("linux-%s" % m)
+                                                                                    for m in _non_x86_linux_machines]))
+
+known_platform_names = ('linux', 'osx', 'win')
+assert tuple(sorted(known_platform_names)) == known_platform_names
 
 unix_platform_names = ('linux', 'osx')
 assert tuple(sorted(unix_platform_names)) == unix_platform_names
 
-_popular_platform_groups = dict()
+_known_platform_groups = dict()
 
 # Fill in the 'linux', 'osx', 'win' groups
-for name in popular_platform_names:
+for name in known_platform_names:
     result = []
-    for p in popular_platforms:
+    for p in default_platforms_plus_32_bit:
         if p.startswith(name):
             result.append(p)
-    _popular_platform_groups[name] = tuple(result)
-    assert tuple(sorted(_popular_platform_groups[name])) == _popular_platform_groups[name]
+    _known_platform_groups[name] = tuple(result)
+    assert tuple(sorted(_known_platform_groups[name])) == _known_platform_groups[name]
 
 
 # fill in the 'unix' group
-def _popular_unix_platforms():
+def _known_unix_platforms():
     result = []
     for unix_name in unix_platform_names:
-        for p in popular_platforms:
+        for p in default_platforms_plus_32_bit:
             if p.startswith(unix_name):
                 result.append(p)
     return tuple(result)
 
 
-_popular_platform_groups['unix'] = _popular_unix_platforms()
-assert tuple(sorted(_popular_platform_groups['unix'])) == _popular_platform_groups['unix']
+_known_platform_groups['unix'] = _known_unix_platforms()
+assert tuple(sorted(_known_platform_groups['unix'])) == _known_platform_groups['unix']
 
 # fill in the 'all' group
-_popular_platform_groups['all'] = popular_platforms
+_known_platform_groups['all'] = default_platforms_plus_32_bit
 
-# this isn't just _popular_platform_groups.keys() because we want to be
+# this isn't just _known_platform_groups.keys() because we want to be
 # in order from most to least general
-_popular_platform_groups_keys = ('all', 'unix') + popular_platform_names
-assert set(_popular_platform_groups_keys) == set(_popular_platform_groups.keys())
-
-_non_x86_linux_machines = {'armv6l', 'armv7l', 'ppc64le'}
+_known_platform_groups_keys = ('all', 'unix') + known_platform_names
+assert set(_known_platform_groups_keys) == set(_known_platform_groups.keys())
 
 
 def current_platform():
@@ -631,11 +639,11 @@ def current_platform():
         return '%s-%d' % (p, (8 * tuple.__itemsize__))
 
 
-_popular_platforms_with_current = tuple(sorted(list(set(popular_platforms + (current_platform(), )))))
+_default_platforms_with_current = tuple(sorted(list(set(default_platforms + (current_platform(), )))))
 
 
-def popular_platforms_with_current():
-    return _popular_platforms_with_current
+def default_platforms_with_current():
+    return _default_platforms_with_current
 
 
 def parse_platform(platform):
@@ -670,7 +678,7 @@ def validate_platform_list(platforms):
             invalid.add(p)
         else:
             result.add(p)
-            if p not in popular_platforms:
+            if p not in _known_platforms:
                 unknown.add(p)
 
     # unknown platforms aren't necessarily an error, we just
@@ -678,77 +686,11 @@ def validate_platform_list(platforms):
     return (sort_platform_list(result), sort_platform_list(unknown), sort_platform_list(invalid))
 
 
-def expand_platform_list(platforms):
-    """Expand platform list with support for group names.
-
-    Normalizes a platform list into specific platform names,
-    in deterministic sort order.
-
-    all = all popular platforms
-    unix = all linux or osx
-    linux, osx, win = all bit-variants of these
-
-    We return a tuple, the second list in the tuple
-    is a subset of the first, and indicates platforms
-    we don't know about. These may create a warning.
-
-    Returns:
-       Tuple of expanded platforms and unknown platforms.
-    """
-    result = set()
-    unknown = set()
-    for p in platforms:
-        if p in _popular_platform_groups:
-            for popular in _popular_platform_groups[p]:
-                result.add(popular)
-        else:
-            result.add(p)
-            if p not in popular_platforms:
-                unknown.add(p)
-
-    # unknown platforms aren't necessarily an error, we just
-    # don't do anything smart with them.
-    return (sort_platform_list(result), sort_platform_list(unknown))
-
-
-def condense_platform_list(platforms):
-    """Combine platform names when possible.
-
-    Normalizes a platform list into the shortest form,
-    in deterministic sort order.
-
-    Returns:
-       New list of platform names.
-    """
-    # First break down any group names we already have,
-    # this means if we have [all,linux,linux-64] we
-    # change it to just the expansion of 'all',
-    # for example.
-    (result, _) = expand_platform_list(platforms)
-
-    # _popular_platform_groups_keys is supposed to be in order
-    # from more to less general.
-    for group_name in _popular_platform_groups_keys:
-        have_all = True
-        expanded = _popular_platform_groups[group_name]
-        # don't bother to condense when the group is just a synonym (1 to 1)
-        if len(expanded) > 1:
-            for p in expanded:
-                if p not in result:
-                    have_all = False
-            if have_all:
-                # replace the specific ones with the group name
-                result = list(filter(lambda x: x not in expanded, result))
-                result.append(group_name)
-
-    return sort_platform_list(result)
-
-
 def sort_platform_list(platforms):
     """Sort platform list (including "grouping" names) from more to less general."""
     remaining = set(platforms)
     result = []
-    for known in (_popular_platform_groups_keys + popular_platforms):
+    for known in (_known_platform_groups_keys + _known_platforms):
         if known in remaining:
             result.append(known)
             remaining.remove(known)

@@ -26,7 +26,7 @@ from anaconda_project.plugins.requirements.service import ServiceRequirement
 from anaconda_project.plugins.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
-from anaconda_project.internal.conda_api import (parse_spec, popular_platforms_with_current)
+from anaconda_project.internal.conda_api import (parse_spec, default_platforms_with_current)
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 from anaconda_project.internal.py2_compat import is_string
 
@@ -411,7 +411,7 @@ def _update_env_spec(project, name, packages, channels, create):
                 # if there's no global platforms list, be sure the new env
                 # spec has one.
                 if len(project.project_file.get_value(['platforms'], [])) == 0:
-                    env_dict['platforms'] = popular_platforms_with_current()
+                    env_dict['platforms'] = default_platforms_with_current()
                 project.project_file.set_value(['env_specs', name], env_dict)
 
         # packages may be a "CommentedSeq" and we don't want to lose the comments,
@@ -760,11 +760,11 @@ def _update_and_lock(project, env_spec_name, update):
         no_platforms_specs = [env_spec for env_spec in project.env_specs.values() if len(env_spec.platforms) == 0]
 
         def all_platforms_string():
-            return ", ".join(popular_platforms_with_current())
+            return ", ".join(default_platforms_with_current())
 
         if len(no_platforms_specs) == len(project.env_specs):
             # if ALL env specs are missing platforms, set global list
-            project.project_file.set_value('platforms', popular_platforms_with_current())
+            project.project_file.set_value('platforms', default_platforms_with_current())
             fixed_platforms = True
             logs.append("Set project platforms list to %s" % all_platforms_string())
         else:
@@ -773,7 +773,7 @@ def _update_and_lock(project, env_spec_name, update):
             for env in envs:
                 if len(env.platforms) == 0:
                     project.project_file.set_value(['env_specs', env.name, 'platforms'],
-                                                   popular_platforms_with_current())
+                                                   default_platforms_with_current())
                     fixed_platforms = True
                     logs.append("Set platforms for %s to %s" % (env.name, all_platforms_string()))
 

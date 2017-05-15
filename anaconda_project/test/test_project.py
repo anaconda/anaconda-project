@@ -2811,7 +2811,7 @@ def test_unknown_field_in_lock_set_of_lock_file():
         {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
-     platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+     platforms: [linux-64,osx-64,win-64]
      somejunk: True
     """}, check)
 
@@ -3036,7 +3036,7 @@ def test_lock_file_has_pip_packages():
         {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
-    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    platforms: [linux-64,osx-64,win-64]
     packages:
       all:
         - pip:
@@ -3071,14 +3071,14 @@ def test_lock_file_has_wrong_platforms():
 
         assert [] == project.problems
         assert ["anaconda-project-lock.yml: Env spec 'default' specifies platforms "
-                "'linux-32,linux-64,osx-64,win-32,win-64' but the lock file only has locked "
-                "versions for platforms 'win-32'"] == project.suggestions
+                "'linux-64,osx-64,win-64' but the lock file has locked "
+                "versions for platforms 'win-64'"] == project.suggestions
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
-    platforms: ["win-32"]
+    platforms: ["win-64"]
     packages:
       all: [foo]
 """}, check)
@@ -3090,8 +3090,7 @@ def test_lock_file_has_zero_platforms():
 
         assert [] == project.problems
         assert ["anaconda-project-lock.yml: Env spec 'default' specifies platforms "
-                "'linux-32,linux-64,osx-64,win-32,win-64' but the lock file lists no platforms for it"
-                ] == project.suggestions
+                "'linux-64,osx-64,win-64' but the lock file lists no platforms for it"] == project.suggestions
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_LOCK_FILENAME: """
@@ -3110,14 +3109,14 @@ def test_lock_file_has_wrong_hash():
         assert [] == project.problems
         assert ["anaconda-project-lock.yml: Env spec 'default' has changed since the lock "
                 'file was last updated (env spec hash has changed from wrong to '
-                'cdccbbbbcd51a6a8aea4b90e65dda8a1e2fc92d0)'] == project.suggestions
+                'a30f02c961ef4f3fe07ceb09e0906394c3885a79)'] == project.suggestions
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
     env_spec_hash: wrong
-    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    platforms: [linux-64,osx-64,win-64]
     packages:
       all: [foo]
 """}, check)
@@ -3130,14 +3129,10 @@ def test_lock_file_has_empty_and_wrong_package_lists():
         assert [] == project.problems
         # yapf: disable
         assert [
-            'anaconda-project-lock.yml: Lock file is missing 1 packages for env spec '
-            'default on linux-32 (hello)',
             'anaconda-project-lock.yml: Lock file lists no packages for env spec '
             "'default' on platform linux-64",
             'anaconda-project-lock.yml: Lock file is missing 1 packages for env spec '
             'default on osx-64 (hello)',
-            'anaconda-project-lock.yml: Lock file is missing 1 packages for env spec '
-            'default on win-32 (hello)',
             'anaconda-project-lock.yml: Lock file lists no packages for env spec '
             "'default' on platform win-64"
         ] == project.suggestions
@@ -3154,7 +3149,7 @@ env_specs:
             DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
-    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    platforms: [linux-64,osx-64,win-64]
     packages:
       linux-64: []
       win-64: []
@@ -3184,11 +3179,11 @@ env_specs:
             DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
-    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    platforms: [linux-64,osx-64,win-64]
     packages:
       all: [hello]
   orphan:
-    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    platforms: [linux-64,osx-64,win-64]
     packages: {}
 """
         }, check)

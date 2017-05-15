@@ -159,7 +159,7 @@ class ProjectFile(YamlFile):
             elif section_name in ('channels', 'packages'):
                 section_body = "  []"
             elif section_name == 'platforms':
-                platforms = conda_api.popular_platforms_with_current()
+                platforms = conda_api.default_platforms_with_current()
                 section_body = "  [" + ", ".join(platforms) + "]"
             else:
                 section_body = "  {}"
