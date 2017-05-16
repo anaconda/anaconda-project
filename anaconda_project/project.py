@@ -101,8 +101,11 @@ def _make_problems_into_objects(problems):
     return new_problems
 
 
-def _file_problem(problems, yaml_file, text):
-    problems.append(ProjectProblem(text=text, filename=yaml_file.filename))
+def _file_problem(problems, yaml_file, text, fix_prompt=None, fix_function=None):
+    problems.append(ProjectProblem(text=text,
+                                   filename=yaml_file.filename,
+                                   fix_prompt=fix_prompt,
+                                   fix_function=fix_function))
 
 
 def _unknown_field_suggestions(project_file, problems, yaml_dict, known_fields):
@@ -636,19 +639,36 @@ class _ConfigCache(object):
                 missing_platforms.append(env_spec.name)
 
         if locked_specs_count > 0:
+            default_platforms = conda_api.default_platforms_with_current()
+
             # If none of the env specs have platforms, assume we want to
             # add platforms: to the toplevel (spanning entire file).
             # Otherwise, suggest fixing them one-by-one.
             missing_platform_count = len(missing_platforms)
             if missing_platform_count == locked_specs_count:
-                # TODO add an autofix
-                _file_problem(problems, project_file,
-                              "The 'platforms:' field should list platforms the project supports.")
+
+                def set_global_default_platforms(project):
+                    project.project_file.set_value(['platforms'], default_platforms)
+
+                _file_problem(problems,
+                              project_file,
+                              "The 'platforms:' field should list platforms the project supports.",
+                              fix_prompt=("Set platforms to '%s'?" % ", ".join(default_platforms)),
+                              fix_function=set_global_default_platforms)
             else:
-                # TODO add an autofix
-                for missing in missing_platforms:
-                    _file_problem(problems, project_file,
-                                  "Env spec %s does not have anything in its 'platforms:' field." % missing)
+                for missing in sorted(missing_platforms):
+
+                    def make_fix(missing):
+                        def set_env_spec_platforms(project):
+                            project.project_file.set_value(['env_specs', missing, 'platforms'], default_platforms)
+
+                        return set_env_spec_platforms
+
+                    _file_problem(problems,
+                                  project_file,
+                                  "Env spec %s does not have anything in its 'platforms:' field." % missing,
+                                  fix_prompt=("Set platforms to '%s'?" % ", ".join(default_platforms)),
+                                  fix_function=make_fix(missing))
 
         # Find lock-set-out-of-sync-with-env-spec issues
 

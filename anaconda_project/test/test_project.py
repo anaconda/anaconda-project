@@ -3197,3 +3197,77 @@ env_specs:
     packages: {}
 """
         }, check)
+
+
+def test_fix_project_file_with_no_platforms():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["anaconda-project.yml: The 'platforms:' field should list platforms the project supports."
+                ] == project.problems
+
+        assert () == project.env_specs['default'].platforms
+
+        project.fix_problems_and_suggestions()
+
+        assert [] == project.problems
+
+        assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['default'].platforms
+
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+name: foo
+env_specs:
+   default:
+      packages:
+         - hello
+""",
+            DEFAULT_PROJECT_LOCK_FILENAME: """
+locking_enabled: true
+"""
+        }, check)
+
+
+def test_fix_env_spec_with_no_platforms():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        assert ["anaconda-project.yml: Env spec bar does not have anything in its 'platforms:' field.",
+                "anaconda-project.yml: Env spec foo does not have anything in its 'platforms:' field."
+                ] == project.problems
+
+        assert ('linux-64', ) == project.env_specs['default'].platforms
+        assert () == project.env_specs['foo'].platforms
+        assert () == project.env_specs['bar'].platforms
+
+        project.fix_problems_and_suggestions()
+
+        assert [] == project.problems
+
+        assert ('linux-64', ) == project.env_specs['default'].platforms
+        assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['foo'].platforms
+        assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['bar'].platforms
+
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+name: foo
+env_specs:
+   default:
+      platforms: ['linux-64']
+      packages:
+         - hello
+   foo:
+      platforms: []
+      packages:
+         - apackage
+   bar:
+      platforms: []
+      packages:
+         - package2
+""",
+            DEFAULT_PROJECT_LOCK_FILENAME: """
+locking_enabled: true
+"""
+        }, check)
