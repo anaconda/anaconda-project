@@ -10,6 +10,7 @@ import os
 import sys
 
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.project_lock_file import DEFAULT_PROJECT_LOCK_FILENAME
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
@@ -42,6 +43,7 @@ def test_init_in_pwd(capsys, monkeypatch):
         assert code == 0
 
         assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+        assert not os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME))
 
         out, err = capsys.readouterr()
         assert ("Project configuration is in %s\n" % (os.path.join(dirname, DEFAULT_PROJECT_FILENAME))) == out
@@ -66,6 +68,7 @@ def test_init_create_directory(capsys, monkeypatch):
         assert code == 0
 
         assert os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))
+        assert not os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME))
 
         out, err = capsys.readouterr()
 
@@ -140,6 +143,7 @@ def test_init_create_directory_not_interactive_with_yes(capsys, monkeypatch):
         assert code == 0
 
         assert os.path.isfile(os.path.join(subdir, DEFAULT_PROJECT_FILENAME))
+        assert not os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME))
         assert os.path.isdir(subdir)
 
         out, err = capsys.readouterr()

@@ -106,6 +106,10 @@ class ProjectLockFile(YamlFile):
 
         return as_json
 
+    def _save_default_content(self):
+        # We don't want to save empty lock files.
+        return False
+
     def _set_lock_set_hash(self, env_spec_name, env_spec_hash):
         """Library-internal method."""
         self.set_value(['env_specs', env_spec_name, 'env_spec_hash'], env_spec_hash)

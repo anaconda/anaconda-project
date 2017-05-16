@@ -267,79 +267,6 @@ a:
     with_file_contents(original_content, add_section)
 
 
-def test_transform_yaml():
-    def transform_test(dirname):
-        filename = os.path.join(dirname, "foo.yaml")
-        assert not os.path.exists(filename)
-        yaml = YamlFile(filename)
-        assert yaml.change_count == 1
-        # save so we aren't dirty due to nonexistent file
-        yaml.save()
-        assert os.path.exists(filename)
-        assert yaml.change_count == 2
-
-        def transformer(tree):
-            tree['foo'] = dict()
-            tree['foo']['bar'] = 42
-
-        assert not yaml._dirty
-        yaml.transform_yaml(transformer)
-        assert yaml._dirty
-        yaml.save()
-        assert yaml.change_count == 3
-
-        import codecs
-        with codecs.open(filename, 'r', 'utf-8') as file:
-            changed = file.read()
-            expected = """
-# yaml file
-foo:
-  bar: 42
-""" [1:]
-
-            assert expected == changed
-
-        yaml2 = YamlFile(filename)
-        value2 = yaml2.get_value(["foo", "bar"])
-        assert 42 == value2
-
-    with_directory_contents(dict(), transform_test)
-
-
-def test_transform_yaml_does_nothing():
-    def transform_test(dirname):
-        filename = os.path.join(dirname, "foo.yaml")
-        assert not os.path.exists(filename)
-        yaml = YamlFile(filename)
-        assert yaml.change_count == 1
-        # save so we aren't dirty due to nonexistent file
-        yaml.save()
-        assert yaml.change_count == 2
-        assert os.path.exists(filename)
-
-        def transformer(tree):
-            # return True means don't make changes after all
-            return True
-
-        assert not yaml._dirty
-        yaml.transform_yaml(transformer)
-        assert not yaml._dirty
-        yaml.save()
-        assert yaml.change_count == 2
-
-        import codecs
-        with codecs.open(filename, 'r', 'utf-8') as file:
-            changed = file.read()
-            expected = """
-# yaml file
-{}
-""" [1:]
-
-            assert expected == changed
-
-    with_directory_contents(dict(), transform_test)
-
-
 def test_multiple_saves_ignored_if_not_dirty():
     def check_dirty_handling(dirname):
         filename = os.path.join(dirname, "foo.yaml")
@@ -424,14 +351,6 @@ def test_read_corrupted_yaml_file():
             yaml.save()
         assert "Cannot modify corrupted" in repr(excinfo.value)
 
-        with pytest.raises(ValueError) as excinfo:
-
-            def make_changes(yaml):
-                return False
-
-            yaml.transform_yaml(make_changes)
-        assert "Cannot modify corrupted" in repr(excinfo.value)
-
         # the file should appear empty if you try to get anything,
         # but it shouldn't throw
         assert yaml._yaml is not None
@@ -480,7 +399,7 @@ e:
 
     def check_roundtrip(filename):
         yaml = YamlFile(filename)
-        yaml._dirty = True
+        yaml._previous_content = "not the actual previous content"
         yaml.save()
         new_content = open(filename, 'r').read()
         print("the re-saved version of the file was:")
@@ -539,10 +458,10 @@ q: 4
 
         def check_unset(path):
             assert yaml.change_count == scope['last_change']
-            assert not yaml._dirty
+            assert not yaml.has_unsaved_changes
             yaml.unset_value(path)
             assert yaml.get_value(path, None) is None
-            assert yaml._dirty
+            assert yaml.has_unsaved_changes
             yaml.save()
             assert yaml.change_count == (scope['last_change'] + 1)
             scope['last_change'] += 1
@@ -553,9 +472,9 @@ q: 4
         check_unset(["x", "z"])
         check_unset("q")
 
-        assert not yaml._dirty
+        assert not yaml.has_unsaved_changes
         yaml.unset_value("not_in_there")
-        assert not yaml._dirty
+        assert not yaml.has_unsaved_changes
 
     with_file_contents(original_content, unset_values)
 

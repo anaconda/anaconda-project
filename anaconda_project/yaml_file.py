@@ -72,8 +72,9 @@ def _dump_string(yaml):
     return ryaml.dump(yaml, Dumper=ryaml.RoundTripDumper)
 
 
-def _save_file(yaml, filename):
-    contents = _dump_string(yaml)
+def _save_file(yaml, filename, contents=None):
+    if contents is None:
+        contents = _dump_string(yaml)
 
     try:
         # This is to ensure we don't corrupt the file, even if ruamel.yaml is broken
@@ -127,7 +128,7 @@ class YamlFile(object):
 
         """
         self.filename = filename
-        self._dirty = False
+        self._previous_content = ""
         self._change_count = 0
         self.load()
 
@@ -152,7 +153,13 @@ class YamlFile(object):
             with codecs.open(self.filename, 'r', 'utf-8') as file:
                 contents = file.read()
             self._yaml = _load_string(contents)
-            self._dirty = False
+
+            # we re-dump instead of using "contents" because
+            # when loading a hand-edited file, we may reformat
+            # in trivial ways because our round-tripping isn't perfect,
+            # and we don't want to count those trivial reformats as
+            # a reason to save.
+            self._previous_content = _dump_string(self._yaml)
         except IOError as e:
             if e.errno == errno.ENOENT:
                 self._yaml = None
@@ -181,7 +188,9 @@ class YamlFile(object):
                 self._yaml = self._default_content()
                 # make it pretty
                 _block_style_all_nodes(self._yaml)
-                self._dirty = True
+                if not self._save_default_content():
+                    # pretend we already saved
+                    self._previous_content = _dump_string(self._yaml)
 
     def _default_comment(self):
         return "yaml file"
@@ -192,6 +201,10 @@ class YamlFile(object):
         root = CommentedMap()
         root.yaml_set_start_comment(self._default_comment())
         return root
+
+    def _save_default_content(self):
+        """Override to change whether we consider a default, unmodified file dirty."""
+        return True
 
     def _throw_if_corrupted(self):
         if self._corrupted:
@@ -257,7 +270,8 @@ class YamlFile(object):
     @property
     def has_unsaved_changes(self):
         """Get whether changes are all saved."""
-        return self._dirty
+        # this is a fairly expensive check
+        return self._previous_content != _dump_string(self._yaml)
 
     def use_changes_without_saving(self):
         """Apply any in-memory changes as if we'd saved, but don't actually save.
@@ -266,13 +280,6 @@ class YamlFile(object):
         to undo our changes.
         """
         self._change_count = self._change_count + 1
-        # Ideally, what we'd do here is NOT set dirty=True, but instead
-        # increment change_count iff dirty is already True. The reason
-        # we don't do that is that we've overloaded use_changes_without_saving
-        # to also mean "some of self._yaml was modified behind our back".
-        # We could for example wrap self._yaml in proxies that set dirty=True
-        # when mutated, and then we could do this properly.
-        self._dirty = True
 
     def save(self):
         """Write the file to disk, only if any changes have been made.
@@ -284,37 +291,11 @@ class YamlFile(object):
         """
         self._throw_if_corrupted()
 
-        if not self._dirty:
-            return
-
-        _save_file(self._yaml, self.filename)
-
-        self._change_count = self._change_count + 1
-        self._dirty = False
-
-    def transform_yaml(self, transformer):
-        """Modify the YAML parse tree.
-
-        This allows you to modify the YAML parse tree directly;
-        the transformer function receives the parse tree. It
-        should return True to block marking the ``YamlFile``
-        dirty, that is, return True if the transformer didn't make
-        any changes after all. Return False or None if changes
-        were made.
-
-        This method does not save the file, call ``save()`` to do that.
-
-        Args:
-            transformer (function): takes 1 parameter (the yaml tree) and returns True if it was NOT modified
-        Returns:
-            None
-
-        """
-        self._throw_if_corrupted()
-
-        result = transformer(self._yaml)
-        if result is not True:
-            self._dirty = True
+        contents = _dump_string(self._yaml)
+        if contents != self._previous_content:
+            _save_file(self._yaml, self.filename, contents)
+            self._change_count = self._change_count + 1
+            self._previous_content = contents
 
     @classmethod
     def _path(cls, path):
@@ -345,7 +326,6 @@ class YamlFile(object):
                 # order.
                 current[p] = CommentedMap()
                 _block_style_all_nodes(current[p])
-                self._dirty = True
 
             current = current[p]
         return current
@@ -366,7 +346,6 @@ class YamlFile(object):
         path = self._path(path)
         existing = self._ensure_dicts_at_path(path[:-1])
         existing[path[-1]] = value
-        self._dirty = True
 
     def unset_value(self, path):
         """Remove a single value at the given path.
@@ -384,7 +363,6 @@ class YamlFile(object):
         key = path[-1]
         if existing is not None and key in existing:
             del existing[key]
-            self._dirty = True
 
     def get_value(self, path, default=None):
         """Get a single value from the YAML file.

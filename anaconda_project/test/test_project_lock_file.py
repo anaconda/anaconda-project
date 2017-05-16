@@ -59,7 +59,7 @@ def _get_lock_set(lock_file, env_spec_name):
     return lock_set
 
 
-def test_create_missing_lock_file():
+def test_create_missing_lock_file_only_when_not_default():
     def create_file(dirname):
         filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
         assert not os.path.exists(filename)
@@ -71,10 +71,18 @@ def test_create_missing_lock_file():
         assert not _get_locking_enabled(lock_file, 'foo')
 
         lock_file.save()
+        # should not have saved an unmodified (default) file)
+        assert not os.path.exists(filename)
+
+        # make a change, which should cause us to save
+        lock_file.set_value(['something'], 42)
+
+        lock_file.save()
         assert os.path.exists(filename)
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
-            assert expected_default_file == contents
+            expected = expected_default_file + "something: 42\n"
+            assert expected == contents
 
     with_directory_contents(dict(), create_file)
 
