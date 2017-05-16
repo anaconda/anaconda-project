@@ -37,9 +37,14 @@ def test_archive_command_on_simple_project(capsys):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'archive', '--directory', dirname, archivefile])
         assert code == 0
 
+        unlocked_warning = ("Warning: env specs are not locked, which means they may not work "
+                            "consistently for others or when deployed.\n"
+                            "  Consider using the 'anaconda-project lock' command to lock the project.")
+
         out, err = capsys.readouterr()
-        assert ('  added %s\n  added %s\nCreated project archive %s\n' % (os.path.join(
-            "some_name", DEFAULT_PROJECT_FILENAME), os.path.join("some_name", "foo.py"), archivefile)) == out
+        assert ('  added %s\n  added %s\n%s\nCreated project archive %s\n' %
+                (os.path.join("some_name", DEFAULT_PROJECT_FILENAME), os.path.join("some_name", "foo.py"),
+                 unlocked_warning, archivefile)) == out
 
         with zipfile.ZipFile(archivefile, mode='r') as zf:
             assert [os.path.basename(x) for x in sorted(zf.namelist())] == [DEFAULT_PROJECT_FILENAME, "foo.py"]

@@ -2928,6 +2928,56 @@ services:
     with_directory_contents_completing_project_file(dict(), archivetest)
 
 
+def test_archive_unlocked_warning():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
+
+        def check(dirname):
+            project = project_no_dedicated_env(dirname)
+            assert [] == project.problems
+            assert project.env_specs['foo'].lock_set.enabled
+            assert project.env_specs['bar'].lock_set.disabled
+            status = project_ops.archive(project, archivefile)
+
+            assert status
+            assert os.path.exists(archivefile)
+
+            # yapf: disable
+            assert [
+                '  added ' + os.path.join("archivedproj", "anaconda-project-local.yml"),
+                '  added ' + os.path.join("archivedproj", "anaconda-project-lock.yml"),
+                '  added ' + os.path.join("archivedproj", "anaconda-project.yml"),
+                '  added ' + os.path.join("archivedproj", "foo.py"),
+                'Warning: env specs are not locked, which means they may not work '
+                'consistently for others or when deployed.',
+                "  Consider using the 'anaconda-project lock' command to lock the project.",
+                '  Unlocked env specs are: bar'
+            ] == status.logs
+            # yapf: enable
+
+        with_directory_contents_completing_project_file(
+            {DEFAULT_PROJECT_FILENAME: """
+name: archivedproj
+env_specs:
+  foo:
+    packages: []
+  bar:
+    packages: []
+    """,
+             DEFAULT_PROJECT_LOCK_FILENAME: """
+locking_enabled: false
+env_specs:
+  foo:
+    locked: true
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    packages:
+      all: []
+             """,
+             "foo.py": "print('hello')\n"}, check)
+
+    with_directory_contents_completing_project_file(dict(), archivetest)
+
+
 def test_archive_tar():
     def archivetest(archive_dest_dir):
         archivefile = os.path.join(archive_dest_dir, "foo.tar")

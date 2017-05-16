@@ -346,6 +346,18 @@ def _archive_project(project, filename):
         except (IOError, OSError):
             pass
 
+    unlocked = []
+    for env_spec in project.env_specs.values():
+        if env_spec.lock_set.disabled:
+            unlocked.append(env_spec.name)
+
+    if len(unlocked) > 0:
+        logs.append("Warning: env specs are not locked, which means they may not "
+                    "work consistently for others or when deployed.")
+        logs.append("  Consider using the 'anaconda-project lock' command to lock the project.")
+        if len(unlocked) != len(project.env_specs):
+            logs.append("  Unlocked env specs are: " + (", ".join(sorted(unlocked))))
+
     return SimpleStatus(success=True, description=("Created project archive %s" % filename), logs=logs)
 
 
