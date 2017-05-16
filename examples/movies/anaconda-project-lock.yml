@@ -1,0 +1,59 @@
+# This is an Anaconda project lock file.
+# The lock file locks down exact versions of all your dependencies.
+#
+# In most cases, this file is automatically maintained by the `anaconda-project` command or GUI tools.
+# It's best to keep this file in revision control (such as git or svn).
+# The file is in YAML format, please see http://www.yaml.org/start.html for more.
+#
+
+#
+# Set to false to ignore locked versions.
+locking_enabled: true
+
+
+
+#
+# A key goes in here for each env spec.
+#
+env_specs:
+  default:
+    locked: true
+    env_spec_hash: 178dcfcd12f7c66f112781d961d6d7f6396ee8dd
+    platforms:
+    - linux-64
+    - osx-64
+    - win-64
+    packages:
+      all:
+      - backports=1.0=py27_0
+      - backports_abc=0.5=py27_0
+      - bokeh=0.11.1=py27_0
+      - futures=3.0.5=py27_0
+      - jinja2=2.9.6=py27_0
+      - markupsafe=0.23=py27_2
+      - mkl=2017.0.1=0
+      - numpy=1.12.1=py27_0
+      - pandas=0.20.1=np112py27_0
+      - pip=9.0.1=py27_1
+      - python-dateutil=2.6.0=py27_0
+      - pytz=2017.2=py27_0
+      - pyyaml=3.12=py27_0
+      - requests=2.14.2=py27_0
+      - singledispatch=3.4.0.3=py27_0
+      - six=1.10.0=py27_0
+      - ssl_match_hostname=3.4.0.2=py27_1
+      - tornado=4.4.2=py27_0
+      - wheel=0.29.0=py27_0
+      unix:
+      - openssl=1.0.2k=2
+      - python=2.7.13=0
+      - readline=6.2=2
+      - setuptools=27.2.0=py27_0
+      - sqlite=3.13.0=0
+      - tk=8.5.18=0
+      - yaml=0.1.6=0
+      - zlib=1.2.8=3
+      win-64:
+      - python=2.7.13=1
+      - setuptools=27.2.0=py27_1
+      - vs2008_runtime=9.00.30729.5054=0
