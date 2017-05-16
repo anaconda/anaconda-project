@@ -803,7 +803,7 @@ def _update_and_lock(project, env_spec_name, update):
                                     description="Error resolving dependencies for %s: %s." % (env.name, str(e)),
                                     logs=logs)
 
-            lock_set_changed = env.lock_set.disabled or not env.lock_set.equivalent_to(lock_set)
+            lock_set_changed = not env.lock_set.equivalent_to(lock_set)
             hash_changed = env.lock_set.env_spec_hash is not None and \
                 env.lock_set.env_spec_hash != lock_set.env_spec_hash
 
