@@ -176,8 +176,6 @@ class _ConfigCache(object):
                                        ('name', 'description', 'icon', 'variables', 'downloads', 'services',
                                         'env_specs', 'commands', 'packages', 'channels', 'platforms', 'skip_imports'))
 
-            # TODO if this doesn't contain env_specs we get an assertion failure in prepare
-            # when we do lock()
             _unknown_field_suggestions(lock_file, problems, lock_file.root, ('env_specs', 'locking_enabled'))
 
             self._update_name(problems, project_file)
