@@ -6,10 +6,16 @@ commands:
 
 # packages that apply to all env specs
 packages:
-- ipython-notebook
-- bokeh
+- notebook=4
+- bokeh=0.12
+- tornado=4.4
+- pandas
 
 env_specs:
   default:
     channels: []
     packages: []
+platforms:
+- linux-64
+- osx-64
+- win-64

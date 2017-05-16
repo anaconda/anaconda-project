@@ -7,9 +7,14 @@ commands:
 downloads:
   QUANTQUOTE: http://quantquote.com/files/quantquote_daily_sp500_83986.zip
 packages:
-- bokeh=0.12.4
+- bokeh=0.12
 - pandas
+- tornado=4.4
 env_specs:
   default:
     channels: []
     packages: []
+platforms:
+- linux-64
+- osx-64
+- win-64

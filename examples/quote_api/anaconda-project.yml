@@ -75,3 +75,6 @@ env_specs:
   default:
     packages: []
     channels: []
+platforms:
+ - linux-64
+ - osx-64

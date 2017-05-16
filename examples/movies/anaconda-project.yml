@@ -7,9 +7,14 @@ commands:
 downloads:
   MOVIE_DATA: https://s3.amazonaws.com/bokeh_data/movies.db.zip
 packages:
-- bokeh
+- bokeh=0.11
 - pandas
+- tornado=4.4
 env_specs:
   default:
     channels: []
     packages: []
+platforms:
+- linux-64
+- osx-64
+- win-64
