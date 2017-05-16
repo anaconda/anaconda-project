@@ -2091,9 +2091,8 @@ def test_lock_and_update_and_unlock_all_envs():
             assert ('a=1.0=1', ) == project.env_specs['bar'].lock_set.package_specs_for_current_platform
 
             assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
-            # 'b' gets added here since it wasn't in the lock set
-            # TODO should this be an error?
-            assert ('b', 'a=1.0=1', ) == project.env_specs['bar'].conda_packages_for_create
+            # 'b' gets dropped here since it wasn't in the lock set
+            assert ('a=1.0=1', ) == project.env_specs['bar'].conda_packages_for_create
 
             assert project.env_specs['foo'].platforms == conda_api.default_platforms
             assert project.env_specs['bar'].platforms == conda_api.default_platforms
