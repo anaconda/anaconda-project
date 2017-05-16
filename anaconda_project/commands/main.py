@@ -268,6 +268,26 @@ def _parse_args_and_run_subcommand(argv):
     add_env_spec_arg(preset)
     preset.set_defaults(main=environment_commands.main_list_packages)
 
+    def add_platforms_list(preset):
+        preset.add_argument('platforms', metavar='PLATFORM_NAME', default=None, nargs='+')
+
+    preset = subparsers.add_parser('add-platforms', help="Add platforms to one or all project environments")
+    add_directory_arg(preset)
+    add_env_spec_arg(preset)
+    add_platforms_list(preset)
+    preset.set_defaults(main=environment_commands.main_add_platforms)
+
+    preset = subparsers.add_parser('remove-platforms', help="Remove platforms from one or all project environments")
+    add_directory_arg(preset)
+    add_env_spec_arg(preset)
+    add_platforms_list(preset)
+    preset.set_defaults(main=environment_commands.main_remove_platforms)
+
+    preset = subparsers.add_parser('list-platforms', help="List platforms for an environment on the project")
+    add_directory_arg(preset)
+    add_env_spec_arg(preset)
+    preset.set_defaults(main=environment_commands.main_list_platforms)
+
     def add_command_name_arg(preset):
         preset.add_argument('name', metavar="NAME", help="Command name used to invoke it")
 

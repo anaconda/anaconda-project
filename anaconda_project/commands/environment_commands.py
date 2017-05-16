@@ -72,6 +72,30 @@ def remove_packages(project, environment, packages):
     return _handle_status(status, success_message)
 
 
+def add_platforms(project, environment, platforms):
+    """Add platforms to the project."""
+    project = load_project(project)
+    status = project_ops.add_platforms(project, env_spec_name=environment, platforms=platforms)
+    package_list = ", ".join(platforms)
+    if environment is None:
+        success_message = "Added platforms to project file: %s." % (package_list)
+    else:
+        success_message = "Added platforms to environment %s in project file: %s." % (environment, package_list)
+    return _handle_status(status, success_message)
+
+
+def remove_platforms(project, environment, platforms):
+    """Remove platforms from the project."""
+    project = load_project(project)
+    status = project_ops.remove_platforms(project, env_spec_name=environment, platforms=platforms)
+    package_list = ", ".join(platforms)
+    if environment is None:
+        success_message = "Removed platforms from project file: %s." % (package_list)
+    else:
+        success_message = "Removed platforms from environment %s in project file: %s." % (environment, package_list)
+    return _handle_status(status, success_message)
+
+
 def list_env_specs(project_dir):
     """List environments in the project."""
     project = load_project(project_dir)
@@ -95,6 +119,22 @@ def list_packages(project_dir, environment):
         return 1
     print("Packages for environment '{}':\n".format(env.name))
     print("\n".join(sorted(env.conda_packages)), end='\n\n')
+    return 0
+
+
+def list_platforms(project_dir, environment):
+    """List the platforms for an environment in the project."""
+    project = load_project(project_dir)
+    if console_utils.print_project_problems(project):
+        return 1
+    if environment is None:
+        environment = project.default_env_spec_name
+    env = project.env_specs.get(environment, None)
+    if env is None:
+        print("Project doesn't have an environment called '{}'".format(environment), file=sys.stderr)
+        return 1
+    print("Platforms for environment '{}':\n".format(env.name))
+    print("\n".join(sorted(env.platforms)), end='\n\n')
     return 0
 
 
@@ -150,6 +190,16 @@ def main_remove_packages(args):
     return remove_packages(args.directory, args.env_spec, args.packages)
 
 
+def main_add_platforms(args):
+    """Start the add-platforms command and return exit status code."""
+    return add_platforms(args.directory, args.env_spec, args.platforms)
+
+
+def main_remove_platforms(args):
+    """Start the remove-platforms command and return exit status code."""
+    return remove_platforms(args.directory, args.env_spec, args.platforms)
+
+
 def main_list_env_specs(args):
     """Start the list environments command and return exit status code."""
     return list_env_specs(args.directory)
@@ -158,6 +208,11 @@ def main_list_env_specs(args):
 def main_list_packages(args):
     """Start the list packages command and return exit status code."""
     return list_packages(args.directory, args.env_spec)
+
+
+def main_list_platforms(args):
+    """Start the list platforms command and return exit status code."""
+    return list_platforms(args.directory, args.env_spec)
 
 
 def main_lock(args):

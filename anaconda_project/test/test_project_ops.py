@@ -1989,6 +1989,255 @@ def test_remove_packages_with_project_file_problems():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
 
+def test_add_platforms_to_all_environments():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_platforms(project, env_spec_name=None, platforms=['linux-64', 'win-64'])
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert ['osx-32', 'linux-64', 'win-64'] == list(project2.project_file.get_value('platforms'))
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set.enabled
+            assert env_spec.lock_set.equivalent_to(
+                CondaLockSet({'all': []},
+                             platforms=['linux-64', 'osx-32', 'win-64']))
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+platforms: [osx-32]
+                """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+
+
+def test_add_platforms_already_exists():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_platforms(project, env_spec_name=None, platforms=['osx-32'])
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        project2 = Project(dirname)
+        assert ['osx-32', 'win-64'] == list(project2.project_file.get_value('platforms'))
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+platforms: [osx-32, win-64]
+                """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+
+
+def test_add_platforms_cannot_resolve_deps():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            assert project.project_file.get_value('platforms', None) == ['linux-64', 'osx-64', 'win-64']
+            status = project_ops.add_platforms(project, env_spec_name=None, platforms=['osx-32', 'win-32'])
+            assert status.status_description == "Error resolving dependencies for default: NOPE."
+            assert status.errors == []
+            assert status.logs == []
+            assert not status
+
+        _with_conda_test(attempt, resolve_dependencies_error="NOPE")
+
+        # be sure we didn't make the config changes
+        project2 = Project(dirname)
+        assert project2.project_file.get_value('platforms', None) == ['linux-64', 'osx-64', 'win-64']
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set.enabled
+            assert env_spec.lock_set.platforms == ()
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+
+
+def test_add_platforms_nonexistent_environment():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_platforms(project, env_spec_name="not_an_env", platforms=['foo', 'bar'])
+            assert not status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_add_platforms_invalid_platform():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_platforms(project, env_spec_name=None, platforms=['invalid_platform'])
+            assert not status
+            assert 'Unable to load the project.' == status.status_description
+            assert ["anaconda-project.yml: Platform name 'invalid_platform' is invalid (valid "
+                    "examples: linux-64, osx-64, win-64)"] == status.errors
+
+        _with_conda_test(attempt)
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_remove_platforms_from_all_environments():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
+
+            assert ['linux-64', 'osx-32'] == list(project.project_file.get_value('platforms'))
+            status = project_ops.remove_platforms(project, env_spec_name=None, platforms=['linux-64'])
+            assert [] == status.errors
+            assert status
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert ['osx-32'] == list(project2.project_file.get_value('platforms'))
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+platforms:
+  - linux-64
+  - osx-32
+env_specs:
+  hello: {}
+        """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+
+
+def test_remove_platforms_from_one_environment():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
+
+            assert ['linux-64', 'osx-32'] == list(project.project_file.get_value('platforms'))
+            assert ['linux-32', 'osx-32'] == list(project.project_file.get_value(
+                ['env_specs', 'hello', 'platforms'], []))
+            status = project_ops.remove_platforms(project, env_spec_name='hello', platforms=['osx-32'])
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        # remove_platforms is too simple to take this osx-32 out, but really it should,
+        # similar to how remove_packages does it.
+        assert ['linux-64', 'osx-32'] == list(project2.project_file.get_value('platforms'))
+        # note that hello will still inherit the deps from the global platforms,
+        # and that's fine
+        assert ['linux-32'] == list(project2.project_file.get_value(['env_specs', 'hello', 'platforms'], []))
+
+        # be sure we didn't delete comments from global platforms section
+        content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
+        assert '# this is a pre comment' in content
+        assert '# this is a post comment' in content
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+platforms:
+  # this is a pre comment
+  - linux-64 # this is a post comment
+  - osx-32
+env_specs:
+  hello:
+    platforms:
+     - linux-32
+     - osx-32
+        """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+
+
+def test_remove_platforms_cannot_resolve_deps():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
+
+            assert ['linux-64', 'osx-32'] == list(project.project_file.get_value('platforms'))
+            assert ['linux-32', 'osx-32'] == list(project.project_file.get_value(
+                ['env_specs', 'hello', 'platforms'], []))
+
+            status = project_ops.remove_platforms(project, env_spec_name='hello', platforms=['linux-32'])
+            assert status.errors == []
+            assert status.logs == []
+            assert status.status_description == "Error resolving dependencies for hello: NOPE."
+            assert not status
+
+        _with_conda_test(attempt, resolve_dependencies_error="NOPE")
+
+        # be sure we didn't make the config changes
+        project2 = Project(dirname)
+        assert ['linux-64', 'osx-32'] == list(project2.project_file.get_value('platforms'))
+        assert ['linux-32', 'osx-32'] == list(project2.project_file.get_value(['env_specs', 'hello', 'platforms'], []))
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+platforms:
+  - linux-64
+  - osx-32
+env_specs:
+  hello:
+    platforms:
+     - linux-32
+     - osx-32
+        """,
+         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+
+
+def test_remove_platforms_from_nonexistent_environment():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            assert ['linux-64'] == list(project.project_file.get_value('platforms'))
+            status = project_ops.remove_platforms(project, env_spec_name='not_an_environment', platforms=['linux-64'])
+            assert not status
+            assert [] == status.errors
+            assert "Environment spec not_an_environment doesn't exist." == status.status_description
+
+        _with_conda_test(attempt)
+
+        # be sure we didn't make the config changes
+        project2 = Project(dirname)
+        assert ['linux-64'] == list(project2.project_file.get_value('platforms'))
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
+platforms:
+  - linux-64
+"""}, check)
+
+
+def test_remove_platforms_with_project_file_problems():
+    def check(dirname):
+        project = Project(dirname)
+        status = project_ops.remove_platforms(project, env_spec_name=None, platforms=['foo'])
+
+        assert not status
+        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+                project.project_file.basename] == status.errors
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
 def test_lock_nonexistent_environment():
     def check(dirname):
         def attempt():

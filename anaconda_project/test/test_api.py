@@ -450,6 +450,48 @@ def test_unlock(monkeypatch):
     assert kwargs == params['kwargs']
 
 
+def test_add_platforms(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.add_platforms, project_ops.add_platforms)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_add_platforms(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.add_platforms', mock_add_platforms)
+
+    p = api.AnacondaProject()
+
+    kwargs = dict(project=43, env_spec_name='name', platforms=[47])
+    result = p.add_platforms(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
+def test_remove_platforms(monkeypatch):
+    import anaconda_project.project_ops as project_ops
+    _verify_args_match(api.AnacondaProject.remove_platforms, project_ops.remove_platforms)
+
+    params = dict(args=(), kwargs=dict())
+
+    def mock_remove_platforms(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return 42
+
+    monkeypatch.setattr('anaconda_project.project_ops.remove_platforms', mock_remove_platforms)
+
+    p = api.AnacondaProject()
+
+    kwargs = dict(project=43, env_spec_name='name', platforms=[47])
+    result = p.remove_platforms(**kwargs)
+    assert 42 == result
+    assert kwargs == params['kwargs']
+
+
 def test_add_command(monkeypatch):
     import anaconda_project.project_ops as project_ops
     _verify_args_match(api.AnacondaProject.add_command, project_ops.add_command)

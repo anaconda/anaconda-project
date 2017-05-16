@@ -52,6 +52,14 @@ def _monkeypatch_remove_packages(monkeypatch, result):
     return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.remove_packages", result)
 
 
+def _monkeypatch_add_platforms(monkeypatch, result):
+    return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.add_platforms", result)
+
+
+def _monkeypatch_remove_platforms(monkeypatch, result):
+    return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.remove_platforms", result)
+
+
 def _monkeypatch_lock(monkeypatch, result):
     return _monkeypatch_record_args(monkeypatch, "anaconda_project.project_ops.lock", result)
 
@@ -412,6 +420,94 @@ def test_remove_packages_from_specific_environment(capsys, monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
+def test_add_platforms_with_project_file_problems(capsys, monkeypatch):
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'add-platforms',
+                                                                               'foo'])
+
+
+def test_remove_platforms_with_project_file_problems(capsys, monkeypatch):
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch,
+                                                         ['anaconda-project', 'remove-platforms', 'foo'])
+
+
+def test_add_platforms_to_all_environments(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_add_platforms(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-platforms', 'a', 'b'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Installed ok.\n' + 'Added platforms to project file: a, b.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name=None, platforms=['a', 'b']) == params['kwargs']
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_add_platforms_to_specific_environment(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_add_platforms(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-platforms', '--env-spec', 'foo', 'a', 'b'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Installed ok.\n' + 'Added platforms to environment foo in project file: a, b.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name='foo', platforms=['a', 'b']) == params['kwargs']
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+  foo:
+   packages:
+     - bar
+"""}, check)
+
+
+def test_remove_platforms_from_all_environments(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_remove_platforms(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-platforms', 'bar'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Installed ok.\n' + 'Removed platforms from project file: bar.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name=None, platforms=['bar']) == params['kwargs']
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_remove_platforms_from_specific_environment(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_remove_platforms(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
+
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-platforms', '--env-spec', 'foo', 'bar'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Installed ok.\n' + 'Removed platforms from environment foo in project file: bar.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name='foo', platforms=['bar']) == params['kwargs']
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
 def test_list_environments(capsys, monkeypatch):
     def check_list_not_empty(dirname):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'list-env-specs', '--directory', dirname])
@@ -525,6 +621,70 @@ def test_list_packages_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys,
                                                          monkeypatch,
                                                          ['anaconda-project', 'list-packages', '--directory'],
+                                                         append_dirname=True)
+
+
+def test_list_platforms_wrong_env(capsys):
+    def check_missing_env(dirname):
+        env_name = 'not-there'
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-platforms', '--directory', dirname,
+                                               '--env-spec', env_name])
+
+        assert code == 1
+
+        expected_err = "Project doesn't have an environment called '{}'\n".format(env_name)
+
+        out, err = capsys.readouterr()
+        assert out == ""
+        assert err == expected_err
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_missing_env)
+
+
+def _test_list_platforms(capsys, env, expected_deps):
+    def check_list_not_empty(dirname):
+        params = ['anaconda-project', 'list-platforms', '--directory', dirname]
+        if env is not None:
+            params.extend(['--env-spec', env])
+
+        code = _parse_args_and_run_subcommand(params)
+
+        assert code == 0
+        out, err = capsys.readouterr()
+
+        project = Project(dirname)
+        assert project.default_env_spec_name == 'foo'
+        expected_out = "Platforms for environment '{}':\n{}".format(env or project.default_env_spec_name, expected_deps)
+        assert out == expected_out
+
+    project_contents = ('env_specs:\n'
+                        '  foo:\n'
+                        '    platforms:\n'
+                        '      - linux-64\n'
+                        '      - osx-32\n'
+                        '  bar:\n'
+                        '    platforms:\n'
+                        '      - win-32\n'
+                        '      - win-64\n\n'
+                        'platforms:\n'
+                        ' - osx-64\n')
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: project_contents}, check_list_not_empty)
+
+
+def test_list_platforms_from_env(capsys):
+    _test_list_platforms(capsys, 'bar', '\nosx-64\nwin-32\nwin-64\n\n')
+    _test_list_platforms(capsys, 'foo', '\nlinux-64\nosx-32\nosx-64\n\n')
+
+
+def test_list_platforms_from_env_default(capsys):
+    _test_list_platforms(capsys, None, '\nlinux-64\nosx-32\nosx-64\n\n')
+
+
+def test_list_platforms_with_project_file_problems(capsys, monkeypatch):
+    _test_environment_command_with_project_file_problems(capsys,
+                                                         monkeypatch,
+                                                         ['anaconda-project', 'list-platforms', '--directory'],
                                                          append_dirname=True)
 
 

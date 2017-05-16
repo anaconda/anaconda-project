@@ -944,6 +944,109 @@ def unlock(project, env_spec_name):
         return status
 
 
+def _modify_platforms(project, name, additions, removals):
+    # TODO this is not even as clever as remove_packages, in that
+    # it simply removes from either the global or single-env-spec
+    # list of platforms, and doesn't try to remove from the global
+    # list if you remove from a single env spec that is inheriting
+    # the platform from the global. See remove_packages for how
+    # it could be smarter, but even remove_packages should be updated
+    # to handle inheritance generally, instead of just the global
+    # vs. specific lists.
+
+    failed = project.problems_status()
+    if failed is not None:
+        return failed
+
+    if name is not None and name not in project.env_specs:
+        problem = "Environment spec {} doesn't exist.".format(name)
+        return SimpleStatus(success=False, description=problem)
+
+    # platform names will be validated when we try out the new
+    # project file, we won't save if the platforms are invalid.
+
+    with _updating_project_lock_file(project) as status_holder:
+
+        if name is None:
+            env_dict = project.project_file.root
+        else:
+            env_dict = project.project_file.get_value(['env_specs', name])
+            assert env_dict is not None
+
+        # packages may be a "CommentedSeq" and we don't want to lose the comments,
+        # so don't convert this thing to a regular list.
+        old_platforms = env_dict.get('platforms', [])
+        for platform in additions:
+            if platform in old_platforms:
+                # no-op adding the same thing (don't move it around)
+                continue
+            else:
+                old_platforms.append(platform)
+
+        def should_keep(p):
+            return not (is_string(p) and p in removals)
+
+        _filter_inplace(should_keep, old_platforms)
+
+        env_dict['platforms'] = old_platforms
+
+    if status_holder.status is None:
+        status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=name)
+    else:
+        project.load()  # revert
+        status = status_holder.status
+
+    return status
+
+
+def add_platforms(project, env_spec_name, platforms):
+    """Attempt to add platforms the project supports.
+
+    If the env_spec_name is None rather than an env name,
+    packages are added in the global platforms section (to
+    all environment specs).
+
+    The returned ``Status`` should be a ``RequirementStatus`` for
+    the environment requirement if it evaluates to True (on success),
+    but may be another subtype of ``Status`` on failure. A False
+    status will have an ``errors`` property with a list of error
+    strings.
+
+    Args:
+        project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
+        platforms (list of str): platforms to add
+
+    Returns:
+        ``Status`` instance
+    """
+    return _modify_platforms(project, env_spec_name, additions=platforms, removals=[])
+
+
+def remove_platforms(project, env_spec_name, platforms):
+    """Attempt to remove platforms the project supports.
+
+    If the env_spec_name is None rather than an env name,
+    packages are added in the global platforms section (to
+    all environment specs).
+
+    The returned ``Status`` should be a ``RequirementStatus`` for
+    the environment requirement if it evaluates to True (on success),
+    but may be another subtype of ``Status`` on failure. A False
+    status will have an ``errors`` property with a list of error
+    strings.
+
+    Args:
+        project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
+        platforms (list of str): platforms to remove
+
+    Returns:
+        ``Status`` instance
+    """
+    return _modify_platforms(project, env_spec_name, additions=[], removals=platforms)
+
+
 def _prepare_env_prefix(project, env_spec_name):
     failed = project.problems_status()
     if failed is not None:

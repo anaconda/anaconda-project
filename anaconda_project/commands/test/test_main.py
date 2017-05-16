@@ -16,7 +16,8 @@ all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'un
                    'remove-variable', 'list-variables', 'set-variable', 'unset-variable', 'add-download',
                    'remove-download', 'list-downloads', 'add-service', 'remove-service', 'list-services',
                    'add-env-spec', 'remove-env-spec', 'list-env-specs', 'export-env-spec', 'lock', 'unlock', 'update',
-                   'add-packages', 'remove-packages', 'list-packages', 'add-command', 'remove-command', 'list-commands')
+                   'add-packages', 'remove-packages', 'list-packages', 'add-platforms', 'remove-platforms',
+                   'list-platforms', 'add-command', 'remove-command', 'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -96,6 +97,9 @@ expected_usage_msg_format = \
         '    add-packages        Add packages to one or all project environments\n' \
         '    remove-packages     Remove packages from one or all project environments\n' \
         '    list-packages       List packages for an environment on the project\n' \
+        '    add-platforms       Add platforms to one or all project environments\n' \
+        '    remove-platforms    Remove platforms from one or all project environments\n' \
+        '    list-platforms      List platforms for an environment on the project\n' \
         '    add-command         Add a new command to the project\n' \
         '    remove-command      Remove a command from the project\n' \
         '    list-commands       List the commands on the project\n' \

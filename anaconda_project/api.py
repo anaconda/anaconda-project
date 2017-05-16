@@ -560,6 +560,52 @@ class AnacondaProject(object):
         """
         return project_ops.unlock(project=project, env_spec_name=env_spec_name)
 
+    def add_platforms(self, project, env_spec_name, platforms):
+        """Attempt to add platforms the project supports.
+
+        If the env_spec_name is None rather than an env name,
+        packages are added in the global platforms section (to
+        all environment specs).
+
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the environment requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
+            platforms (list of str): platforms to add
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.add_platforms(project=project, env_spec_name=env_spec_name, platforms=platforms)
+
+    def remove_platforms(self, project, env_spec_name, platforms):
+        """Attempt to remove platforms the project supports.
+
+        If the env_spec_name is None rather than an env name,
+        packages are added in the global platforms section (to
+        all environment specs).
+
+        The returned ``Status`` should be a ``RequirementStatus`` for
+        the environment requirement if it evaluates to True (on success),
+        but may be another subtype of ``Status`` on failure. A False
+        status will have an ``errors`` property with a list of error
+        strings.
+
+        Args:
+            project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
+            platforms (list of str): platforms to remove
+
+        Returns:
+            ``Status`` instance
+        """
+        return project_ops.remove_platforms(project=project, env_spec_name=env_spec_name, platforms=platforms)
+
     def add_command(self, project, name, command_type, command, env_spec_name=None, supports_http_options=None):
         """Add a command to anaconda-project.yml.
 
