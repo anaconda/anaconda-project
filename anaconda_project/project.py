@@ -1382,7 +1382,9 @@ class Project(object):
         for key, env in self.env_specs.items():
             envs[key] = dict(packages=list(env.conda_packages),
                              channels=list(env.channels),
-                             description=env.description)
+                             description=env.description,
+                             locked=env.lock_set.enabled,
+                             platforms=list(env.platforms))
         json['env_specs'] = envs
         variables = dict()
         downloads = dict()
