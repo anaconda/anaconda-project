@@ -4,17 +4,19 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-"""The ``main`` function chooses and runs a subcommand."""
 from __future__ import absolute_import, print_function
 
-# the point of this file is to make the internal main() into a public
-# entry point.
-import anaconda_project.internal.cli.main as cli_main
+import anaconda_project.cli as cli
 
 
-def main():
-    """anaconda-project command line tool Conda-style entry point.
+def test_main(monkeypatch):
+    result = {}
 
-    Conda expects us to take no args and return an exit code.
-    """
-    return cli_main.main()
+    def mock_main(*args, **kwargs):
+        result['args'] = args
+        result['kwargs'] = kwargs
+
+    monkeypatch.setattr('anaconda_project.internal.cli.main.main', mock_main)
+    cli.main()
+
+    assert dict(args=(), kwargs={}) == result
