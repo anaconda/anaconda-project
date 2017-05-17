@@ -9,6 +9,7 @@
 from __future__ import print_function
 
 import codecs
+import copy
 import errno
 import os
 import platform
@@ -382,7 +383,7 @@ class AllTestsCommand(TestCommand):
         import pytest
         from pytest_cov.plugin import CoverageError
 
-        pytest_args = self.pytest_args.copy()
+        pytest_args = copy.copy(self.pytest_args)
         if self.skip_slow_tests:
             pytest_args.append("-k-slow")
             print("Skipping slow tests")
