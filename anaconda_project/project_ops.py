@@ -944,7 +944,7 @@ def unlock(project, env_spec_name):
         return status
 
 
-def _modify_platforms(project, name, additions, removals):
+def _modify_inherited_field(project, name, field, additions, removals):
     # TODO this is not even as clever as remove_packages, in that
     # it simply removes from either the global or single-env-spec
     # list of platforms, and doesn't try to remove from the global
@@ -962,8 +962,8 @@ def _modify_platforms(project, name, additions, removals):
         problem = "Environment spec {} doesn't exist.".format(name)
         return SimpleStatus(success=False, description=problem)
 
-    # platform names will be validated when we try out the new
-    # project file, we won't save if the platforms are invalid.
+    # field values will be validated when we try out the new
+    # project file, we won't save if the result is invalid.
 
     with _updating_project_lock_file(project) as status_holder:
 
@@ -975,20 +975,20 @@ def _modify_platforms(project, name, additions, removals):
 
         # packages may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
-        old_platforms = env_dict.get('platforms', [])
-        for platform in additions:
-            if platform in old_platforms:
+        old_values = env_dict.get(field, [])
+        for value in additions:
+            if value in old_values:
                 # no-op adding the same thing (don't move it around)
                 continue
             else:
-                old_platforms.append(platform)
+                old_values.append(value)
 
         def should_keep(p):
             return not (is_string(p) and p in removals)
 
-        _filter_inplace(should_keep, old_platforms)
+        _filter_inplace(should_keep, old_values)
 
-        env_dict['platforms'] = old_platforms
+        env_dict[field] = old_values
 
     if status_holder.status is None:
         status = _commit_requirement_if_it_works(project, CondaEnvRequirement, env_spec_name=name)
@@ -997,6 +997,10 @@ def _modify_platforms(project, name, additions, removals):
         status = status_holder.status
 
     return status
+
+
+def _modify_platforms(project, name, additions, removals):
+    return _modify_inherited_field(project, name, 'platforms', additions, removals)
 
 
 def add_platforms(project, env_spec_name, platforms):
