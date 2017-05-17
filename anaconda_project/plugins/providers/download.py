@@ -60,28 +60,6 @@ class DownloadProvider(EnvVarProvider):
             # sequence, separately from the current running environ?
             environ.pop(requirement.env_var, None)
 
-    def _extra_source_options_html(self, requirement, environ, local_state_file, status):
-        analysis = status.analysis
-
-        if analysis.existing_filename is not None:
-            if environ.get(requirement.env_var, None) == analysis.existing_filename:
-                # avoid redundant choice
-                extra_html = ""
-            else:
-                extra_html = """
-            <div>
-              <label><input type="radio" name="source" value="download"/>Use already-downloaded file {}</label>
-            </div>
-            """.format(analysis.existing_filename)
-        else:
-            extra_html = """
-            <div>
-              <label><input type="radio" name="source" value="download"/>Download {} to {}</label>
-            </div>
-            """.format(requirement.url, requirement.filename)
-
-        return extra_html
-
     def analyze(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to store additional fields in the analysis."""
         analysis = super(DownloadProvider, self).analyze(requirement, environ, local_state_file, default_env_spec_name,

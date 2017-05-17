@@ -18,7 +18,6 @@ import anaconda_project.internal.cli.console_utils as console_utils
 
 # these UI_MODE_ strings are used as values for command line options, so they are user-visible
 
-UI_MODE_BROWSER = "browser"
 # ASK_QUESTIONS mode is supposed to ask about default actions too,
 # like whether to start servers.  It isn't implemented yet.
 UI_MODE_TEXT_ASK_QUESTIONS = "ask"
@@ -27,7 +26,7 @@ UI_MODE_TEXT_ASSUME_YES_PRODUCTION = "production_defaults"
 UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT = "development_defaults"
 UI_MODE_TEXT_ASSUME_NO = "check"
 
-_all_ui_modes = (UI_MODE_BROWSER, UI_MODE_TEXT_ASK_QUESTIONS, UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK,
+_all_ui_modes = (UI_MODE_TEXT_ASK_QUESTIONS, UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK,
                  UI_MODE_TEXT_ASSUME_YES_PRODUCTION, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, UI_MODE_TEXT_ASSUME_NO)
 
 
@@ -90,7 +89,7 @@ def prepare_with_ui_mode_printing_errors(project,
     Args:
         project (Project): the project
         environ (dict): the environment to prepare (None to use os.environ)
-        ui_mode (str): one of ``UI_MODE_BROWSER``, ``UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT``,
+        ui_mode (str): one of ``UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT``,
                        ``UI_MODE_TEXT_ASSUME_YES_PRODUCTION``, ``UI_MODE_TEXT_ASSUME_NO``
         env_spec_name (str): the environment spec name to require, or None for default
         command_name (str): command name to use or None for default
@@ -103,54 +102,51 @@ def prepare_with_ui_mode_printing_errors(project,
     """
     assert ui_mode in _all_ui_modes  # the arg parser should have guaranteed this
 
-    if ui_mode == UI_MODE_BROWSER:
-        result = prepare.prepare_with_browser_ui(project,
-                                                 environ,
-                                                 env_spec_name=env_spec_name,
-                                                 command_name=command_name,
-                                                 command=command,
-                                                 extra_command_args=extra_command_args,
-                                                 keep_going_until_success=True)
-    else:
-        ask = False
-        if ui_mode == UI_MODE_TEXT_ASSUME_YES_PRODUCTION:
-            provide_mode = PROVIDE_MODE_PRODUCTION
-        elif ui_mode == UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT:
-            provide_mode = PROVIDE_MODE_DEVELOPMENT
-        elif ui_mode == UI_MODE_TEXT_ASSUME_NO:
-            provide_mode = PROVIDE_MODE_CHECK
-        elif ui_mode == UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK:
-            provide_mode = PROVIDE_MODE_DEVELOPMENT
-            ask = True
+    ask = False
+    if ui_mode == UI_MODE_TEXT_ASSUME_YES_PRODUCTION:
+        provide_mode = PROVIDE_MODE_PRODUCTION
+    elif ui_mode == UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT:
+        provide_mode = PROVIDE_MODE_DEVELOPMENT
+    elif ui_mode == UI_MODE_TEXT_ASSUME_NO:
+        provide_mode = PROVIDE_MODE_CHECK
+    elif ui_mode == UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK:
+        provide_mode = PROVIDE_MODE_DEVELOPMENT
+        ask = True
 
-        assert ui_mode != UI_MODE_TEXT_ASK_QUESTIONS  # Not implemented yet
+    # We might implement this by using
+    # Provider.read_config/Provider.set_config_values_as_strings
+    # or some new version of those; dig the old ui_server.py out
+    # of git history to see how we used those methods to implement
+    # an interactive HTML UI. read_config/set_config_values still
+    # exist on Provider in case they are useful to implement this.
+    assert ui_mode != UI_MODE_TEXT_ASK_QUESTIONS  # Not implemented yet
 
-        # TODO: this could let you fix the suggestions if they are fixable.
-        # (Note that we fix fatal problems in project_load.py, but we only
-        #  display suggestions when we do a manual prepare, run, etc.)
-        suggestions = project.suggestions
-        if len(suggestions) > 0:
-            print("Potential issues with this project:")
-            for suggestion in project.suggestions:
-                print("  * " + suggestion)
-            print("")
+    # TODO: this could let you fix the suggestions if they are fixable.
+    # (Note that we fix fatal problems in project_load.py, but we only
+    #  display suggestions when we do a manual prepare, run, etc.)
+    suggestions = project.suggestions
+    if len(suggestions) > 0:
+        print("Potential issues with this project:")
+        for suggestion in project.suggestions:
+            print("  * " + suggestion)
+        print("")
 
-        environ = None
-        while True:
-            result = prepare.prepare_without_interaction(project,
-                                                         environ,
-                                                         mode=provide_mode,
-                                                         env_spec_name=env_spec_name,
-                                                         command_name=command_name,
-                                                         command=command,
-                                                         extra_command_args=extra_command_args)
+    environ = None
+    while True:
+        result = prepare.prepare_without_interaction(project,
+                                                     environ,
+                                                     mode=provide_mode,
+                                                     env_spec_name=env_spec_name,
+                                                     command_name=command_name,
+                                                     command=command,
+                                                     extra_command_args=extra_command_args)
 
-            if result.failed:
-                if ask and _interactively_fix_missing_variables(project, result):
-                    environ = result.environ
-                    continue  # re-prepare, building on our previous environ
+        if result.failed:
+            if ask and _interactively_fix_missing_variables(project, result):
+                environ = result.environ
+                continue  # re-prepare, building on our previous environ
 
-            # if we didn't continue, quit.
-            break
+        # if we didn't continue, quit.
+        break
 
     return result

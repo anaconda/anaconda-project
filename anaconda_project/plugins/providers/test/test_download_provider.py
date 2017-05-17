@@ -15,15 +15,12 @@ from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
                                                           with_directory_contents_completing_project_file,
                                                           with_tmp_zipfile, complete_project_file_content)
-from anaconda_project.test.environ_utils import minimal_environ, strip_environ
-from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
+from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.plugins.registry import PluginRegistry
-from anaconda_project.plugins.requirement import UserConfigOverrides
-from anaconda_project.plugins.providers.download import DownloadProvider
 from anaconda_project.plugins.requirements.download import DownloadRequirement
-from anaconda_project.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare)
+from anaconda_project.prepare import (prepare_without_interaction, unprepare, prepare_in_stages)
 from anaconda_project import provide
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
@@ -501,368 +498,74 @@ def test_prepare_download_of_broken_zip_file(monkeypatch):
     with_directory_contents(dict(), provide_download_of_zip)
 
 
-def test_config_html(monkeypatch):
-    def config_html(dirname):
-        FILENAME = os.path.join(dirname, 'data.csv')
-        local_state_file = LocalStateFile.load_for_directory(dirname)
-        requirement = _download_requirement()
-        environ = minimal_environ(PROJECT_DIR=dirname)
-        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        provider = DownloadProvider()
-        html = provider.config_html(requirement, environ, local_state_file, UserConfigOverrides(), status)
-        assert 'Download {} to {}'.format(requirement.url, requirement.filename) in html
-
-        with open(FILENAME, 'w') as f:
-            f.write('boo')
-
-        env = minimal_environ(PROJECT_DIR=dirname)
-        status = requirement.check_status(env, local_state_file, 'default', UserConfigOverrides())
-        html = provider.config_html(requirement, env, local_state_file, UserConfigOverrides(), status)
-        expected_choice = 'Use already-downloaded file {}'.format(FILENAME)
-        assert expected_choice in html
-
-    with_directory_contents_completing_project_file({DEFAULT_LOCAL_STATE_FILENAME: DATAFILE_CONTENT}, config_html)
+def _download_status(prepare_context):
+    for status in prepare_context.statuses:
+        if isinstance(status.requirement, DownloadRequirement):
+            return status
+    return None
 
 
-def _run_browser_ui_test(monkeypatch, directory_contents, initial_environ, http_actions, final_result_check):
-    @gen.coroutine
-    def mock_downloader_run(self, loop):
-        class Res:
-            pass
-
-        res = Res()
-        if self._url.endswith("?error=true"):
-            res.code = 400
-        else:
-            with open(self._filename, 'w') as f:
-                f.write("boo")
-
-            res.code = 200
-        raise gen.Return(res)
-
-    monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
-
-    replaced = dict()
-    for key, value in directory_contents.items():
-        replaced[key] = value.format(url="http://example.com/bar", error_url="http://example.com/bar?error=true")
-    directory_contents = replaced
-
-    from tornado.ioloop import IOLoop
-    io_loop = IOLoop(make_current=False)
-
-    http_done = dict()
-
-    def mock_open_new_tab(url):
+def test_configure(monkeypatch):
+    def check(dirname):
         @gen.coroutine
-        def do_http():
-            try:
-                for action in http_actions:
-                    yield action(url)
-            except Exception as e:
-                http_done['exception'] = e
+        def mock_downloader_run(self, loop):
+            class Res:
+                pass
 
-            http_done['done'] = True
+            res = Res()
+            res.code = 200
+            with open(os.path.join(dirname, 'data.csv'), 'w') as out:
+                out.write('data')
+            self._hash = '12345abcdef'
+            raise gen.Return(res)
 
-            io_loop.stop()
-            io_loop.close()
+        monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
 
-        io_loop.add_callback(do_http)
-
-    monkeypatch.setattr('webbrowser.open_new_tab', mock_open_new_tab)
-
-    def do_browser_ui_test(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [] == project.problems
-        if not isinstance(initial_environ, dict):
-            environ = initial_environ(dirname)
-        else:
-            environ = initial_environ
-        result = prepare_with_browser_ui(project, environ=environ, io_loop=io_loop, keep_going_until_success=True)
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        stage = prepare_in_stages(project, environ=environ)
+        status = None
+        while status is None and stage is not None:
+            prepare_context = stage.configure()
+            status = _download_status(prepare_context)
+            if status is None:
+                stage = stage.execute()
 
-        # finish up the last http action if prepare_ui.py stopped the loop before we did
-        while 'done' not in http_done:
-            io_loop.call_later(0.01, lambda: io_loop.stop())
-            io_loop.start()
+        assert status is not None
 
-        if 'exception' in http_done:
-            raise http_done['exception']
+        req = status.requirement
+        provider = status.provider
 
-        final_result_check(dirname, result)
+        # check initial config
 
-    with_directory_contents_completing_project_file(directory_contents, do_browser_ui_test)
+        config = provider.read_config(req, prepare_context.environ, prepare_context.local_state_file,
+                                      prepare_context.default_env_spec_name, prepare_context.overrides)
 
+        assert dict(source='download') == config
 
-def _extract_radio_items(response, provider='DownloadProvider'):
-    from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
-    from bs4 import BeautifulSoup
+        config['source'] = 'environ'
+        config['value'] = 'abc.txt'
 
-    if response.code != 200:
-        raise Exception("got a bad http response " + repr(response))
+        provider.set_config_values_as_strings(req, prepare_context.environ, prepare_context.local_state_file,
+                                              prepare_context.default_env_spec_name, prepare_context.overrides, config)
 
-    soup = BeautifulSoup(response.body, _BEAUTIFUL_SOUP_BACKEND)
-    radios = soup.find_all("input", attrs={'type': 'radio'})
-    return [r for r in radios if (provider in r['name'])]
+        config = provider.read_config(req, prepare_context.environ, prepare_context.local_state_file,
+                                      prepare_context.default_env_spec_name, prepare_context.overrides)
 
+        assert dict(source='download', value='abc.txt') == config
 
-def _form_names(response, provider='DownloadProvider'):
-    from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
-    from bs4 import BeautifulSoup
+        config['source'] = 'variables'
+        config['value'] = 'qrs.txt'
+        provider.set_config_values_as_strings(req, prepare_context.environ, prepare_context.local_state_file,
+                                              prepare_context.default_env_spec_name, prepare_context.overrides, config)
 
-    if response.code != 200:
-        raise Exception("got a bad http response " + repr(response))
+        config = provider.read_config(req, prepare_context.environ, prepare_context.local_state_file,
+                                      prepare_context.default_env_spec_name, prepare_context.overrides)
 
-    soup = BeautifulSoup(response.body, _BEAUTIFUL_SOUP_BACKEND)
-    named_elements = soup.find_all(attrs={'name': True})
-    names = set()
-    for element in named_elements:
-        if provider in element['name']:
-            names.add(element['name'])
-    return names
+        assert dict(source='variables', value='qrs.txt') == config
 
-
-def _prefix_form(form_names, form):
-    prefixed = dict()
-    for (key, value) in form.items():
-        found = False
-        for name in form_names:
-            if name.endswith("." + key):
-                prefixed[name] = value
-                found = True
-                break
-        if not found:
-            raise RuntimeError("Form field %s in %r could not be prefixed from %r" % (key, form, form_names))
-    return prefixed
-
-
-def _verify_choices(response, expected):
-    name = None
-    radios = _extract_radio_items(response)
-    actual = []
-    for r in radios:
-        actual.append((r['value'], 'checked' in r.attrs))
-    assert expected == tuple(actual)
-    return name
-
-
-@gen.coroutine
-def post_choose_inherited_env(url):
-    response = yield http_get_async(url)
-    assert response.code == 200
-    body = response.body.decode('utf-8')
-    assert 'activated environment' in body
-    form_names = _form_names(response, provider='CondaEnvProvider')
-    form = _prefix_form(form_names, {'source': 'inherited'})
-    response = yield http_post_async(url, form=form)
-    assert response.code == 200
-
-
-def test_browser_ui_with_no_env_var_set(monkeypatch):
-    directory_contents = {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 downloads:
-  MYDOWNLOAD:
-    url: {url}
-    """}
-    initial_environ = minimal_environ()
-
-    @gen.coroutine
-    def get_initial(url):
-        response = yield http_get_async(url)
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        assert "Download {} to {}".format('http://example.com/bar', 'bar') in body
-        _verify_choices(response,
-                        (
-                            # by default, perform the download
-                            ('download', True),
-                            # allow typing in a manual value
-                            ('variables', False)))
-
-    @gen.coroutine
-    def post_empty_form(url):
-        response = yield http_post_async(url, body='')
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        assert "Done!" in body
-        assert "File downloaded to " in body
-        _verify_choices(response, ())
-
-    def final_result_check(dirname, result):
-        assert result
-        expected = dict(MYDOWNLOAD=os.path.join(dirname, 'bar'), PROJECT_DIR=dirname)
-        assert expected == strip_environ(result.environ)
-
-    _run_browser_ui_test(monkeypatch=monkeypatch,
-                         directory_contents=directory_contents,
-                         initial_environ=initial_environ,
-                         http_actions=[post_choose_inherited_env, get_initial, post_empty_form],
-                         final_result_check=final_result_check)
-
-
-def test_browser_ui_with_env_var_already_set(monkeypatch):
-    directory_contents = {DEFAULT_PROJECT_FILENAME: """
-downloads:
-  MYDOWNLOAD:
-    url: {url}
-    """,
-                          'existing_data': 'boo'}
-
-    def initial_environ(dirname):
-        return minimal_environ(MYDOWNLOAD=os.path.join(dirname, 'existing_data'))
-
-    @gen.coroutine
-    def get_initial(url):
-        response = yield http_get_async(url)
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        assert "Download {} to {}".format('http://example.com/bar', 'bar') in body
-        _verify_choices(response,
-                        (
-                            # by default, do not perform the download
-                            ('download', False),
-                            # by default, keep existing value
-                            ('environ', True),
-                            # allow typing in a manual value
-                            ('variables', False)))
-
-    @gen.coroutine
-    def post_empty_form(url):
-        response = yield http_post_async(url, body='')
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        assert "Done!" in body
-        assert "File downloaded to " in body
-        _verify_choices(response, ())
-
-    def final_result_check(dirname, result):
-        assert result
-        expected = dict(MYDOWNLOAD=os.path.join(dirname, 'existing_data'), PROJECT_DIR=dirname)
-        assert expected == strip_environ(result.environ)
-
-    _run_browser_ui_test(monkeypatch=monkeypatch,
-                         directory_contents=directory_contents,
-                         initial_environ=initial_environ,
-                         http_actions=[post_choose_inherited_env, get_initial, post_empty_form],
-                         final_result_check=final_result_check)
-
-
-def test_browser_ui_shows_download_error(monkeypatch):
-    directory_contents = {DEFAULT_PROJECT_FILENAME: """
-downloads:
-  MYDOWNLOAD:
-    url: {error_url}
-    """}
-    initial_environ = minimal_environ()
-
-    @gen.coroutine
-    def get_initial(url):
-        response = yield http_get_async(url)
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        assert "Download {} to {}".format('http://example.com/bar?error=true', 'bar') in body
-        _verify_choices(response,
-                        (
-                            # by default, perform the download
-                            ('download', True),
-                            # allow typing in a manual value
-                            ('variables', False)))
-
-    @gen.coroutine
-    def post_empty_form(url):
-        response = yield http_post_async(url, body='')
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        # TODO: we are not currently showing the error, but the fix is over in UIServer
-        # and not related to DownloadProvider per se, so for now this test checks for
-        # what happens (you just see the option to try again) instead of what should happen
-        # (it should also display the error message)
-        assert "Download {} to {}".format('http://example.com/bar?error=true', 'bar') in body
-        _verify_choices(response,
-                        (
-                            # by default, perform the download
-                            ('download', True),
-                            # allow typing in a manual value
-                            ('variables', False)))
-
-    def final_result_check(dirname, result):
-        assert not result
-
-    _run_browser_ui_test(monkeypatch=monkeypatch,
-                         directory_contents=directory_contents,
-                         initial_environ=initial_environ,
-                         http_actions=[post_choose_inherited_env, get_initial, post_empty_form],
-                         final_result_check=final_result_check)
-
-
-def test_browser_ui_choose_download_then_manual_override(monkeypatch):
-    directory_contents = {DEFAULT_PROJECT_FILENAME: """
-variables:
-  # this keeps the prepare from ever ending
-  - FOO
-
-downloads:
-  MYDOWNLOAD:
-    url: {url}
-    """,
-                          'existing_data': 'boo'}
-    capture_dirname = dict()
-
-    def initial_environ(dirname):
-        capture_dirname['value'] = dirname
-        return minimal_environ(MYDOWNLOAD=os.path.join(dirname, 'existing_data'))
-
-    stuff = dict()
-
-    @gen.coroutine
-    def get_initial(url):
-        response = yield http_get_async(url)
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        stuff['form_names'] = _form_names(response)
-        assert "Download {} to {}".format('http://example.com/bar', 'bar') in body
-        _verify_choices(response,
-                        (
-                            # offer to perform the download but by default use the preset env var
-                            ('download', False),
-                            # by default, keep env var
-                            ('environ', True),
-                            # allow typing in a manual value
-                            ('variables', False)))
-
-    @gen.coroutine
-    def post_do_download(url):
-        form = _prefix_form(stuff['form_names'], {'source': 'download'})
-        response = yield http_post_async(url, form=form)
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        assert 'Keep value' in body
-        stuff['form_names'] = _form_names(response)
-        _verify_choices(response,
-                        (
-                            # the download caused env var to be set, offer to keep it
-                            ('environ', True),
-                            # allow typing in a manual value
-                            ('variables', False)))
-
-    @gen.coroutine
-    def post_use_env(url):
-        dirname = capture_dirname['value']
-        form = _prefix_form(stuff['form_names'], {'source': 'variables',
-                                                  'value': os.path.join(dirname, 'existing_data')})
-        response = yield http_post_async(url, form=form)
-        assert response.code == 200
-        body = response.body.decode('utf-8')
-        assert 'Use this' in body
-        _verify_choices(response,
-                        (('download', False),
-                         ('environ', False),
-                         # we've switched to the override value
-                         ('variables', True)))
-
-    def final_result_check(dirname, result):
-        assert not result  # because 'FOO' isn't set
-
-    _run_browser_ui_test(monkeypatch=monkeypatch,
-                         directory_contents=directory_contents,
-                         initial_environ=initial_environ,
-                         http_actions=[post_choose_inherited_env, get_initial, post_do_download, post_use_env],
-                         final_result_check=final_result_check)
+  FOO: http://example.com/data.csv
+    """}, check)

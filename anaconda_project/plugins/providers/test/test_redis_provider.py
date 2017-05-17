@@ -367,8 +367,6 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         # be sure we generate the config html that would use the old one
         requirement = _redis_requirement()
         status = requirement.check_status(result.environ, local_state_file, 'default', UserConfigOverrides())
-        html = RedisProvider().config_html(requirement, result.environ, local_state_file, UserConfigOverrides(), status)
-        assert 'Use the redis-server we started earlier' in html
 
         # now try again, and we should re-use the exact same server
         pidfile_mtime = os.path.getmtime(pidfile)

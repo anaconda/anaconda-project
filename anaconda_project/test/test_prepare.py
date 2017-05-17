@@ -18,17 +18,14 @@ from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
                                                           with_directory_contents_completing_project_file)
 from anaconda_project.internal import conda_api
-from anaconda_project.prepare import (prepare_without_interaction, prepare_with_browser_ui, unprepare,
-                                      prepare_in_stages, PrepareSuccess, PrepareFailure, _after_stage_success,
-                                      _FunctionPrepareStage)
+from anaconda_project.prepare import (prepare_without_interaction, unprepare, prepare_in_stages, PrepareSuccess,
+                                      PrepareFailure, _after_stage_success, _FunctionPrepareStage)
 from anaconda_project.project import Project
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project_commands import ProjectCommand
-from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.plugins.requirement import (EnvVarRequirement, UserConfigOverrides)
+from anaconda_project.plugins.requirement import UserConfigOverrides
 from anaconda_project.conda_manager import (push_conda_manager_class, pop_conda_manager_class, CondaManager,
                                             CondaEnvironmentDeviations, CondaLockSet)
-import anaconda_project.internal.keyring as keyring
 
 
 @pytest.mark.slow
@@ -177,11 +174,16 @@ def test_prepare_some_env_var_not_set_keep_going():
         project = project_no_dedicated_env(dirname)
         environ = minimal_environ(BAR='bar')
         stage = prepare_in_stages(project, environ=environ, keep_going_until_success=True)
+        assert "Set up project." == stage.description_of_action
+        assert ['FOO', 'CONDA_PREFIX'] == [status.requirement.env_var for status in stage.statuses_before_execute]
 
         # there's an initial stage to set the conda env
         next_stage = stage.execute()
+        assert ['FOO', 'CONDA_PREFIX'] == [status.requirement.env_var for status in stage.statuses_after_execute]
         assert not stage.failed
         assert stage.environ['PROJECT_DIR'] == dirname
+        assert "Set up project." == next_stage.description_of_action
+        assert ['FOO', 'CONDA_PREFIX'] == [status.requirement.env_var for status in next_stage.statuses_before_execute]
         stage = next_stage
 
         for i in range(1, 10):
@@ -521,9 +523,20 @@ def test_run_after_success_function_when_second_stage_succeeds():
         state['state'] = 'after'
 
     stage = _after_stage_success(first_stage, after)
+
     assert stage.overrides is first_stage.overrides
+    assert stage.description_of_action == first_stage.description_of_action
+    assert stage.environ == first_stage.environ
+    assert stage.statuses_before_execute is first_stage.statuses_before_execute
+    stage.configure()  # checking it doesn't raise
+
     while stage is not None:
         next_stage = stage.execute()
+
+        if hasattr(stage, '_stage'):
+            assert stage.statuses_after_execute is stage._stage.statuses_after_execute
+            assert stage.failed is stage._stage.failed
+
         result = stage.result
         if result.failed:
             assert stage.failed
@@ -533,223 +546,6 @@ def test_run_after_success_function_when_second_stage_succeeds():
         stage = next_stage
     assert not result.failed
     assert state['state'] == 'after'
-
-
-def _form_names(response, provider):
-    from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
-    from bs4 import BeautifulSoup
-
-    if response.code != 200:
-        raise Exception("got a bad http response " + repr(response))
-
-    soup = BeautifulSoup(response.body, _BEAUTIFUL_SOUP_BACKEND)
-    named_elements = soup.find_all(attrs={'name': True})
-    names = set()
-    for element in named_elements:
-        if provider in element['name']:
-            names.add(element['name'])
-    return names
-
-
-def _prefix_form(form_names, form):
-    prefixed = dict()
-    for (key, value) in form.items():
-        found = False
-        for name in form_names:
-            if name.endswith("." + key):
-                prefixed[name] = value
-                found = True
-                break
-        if not found:
-            raise RuntimeError("Form field %s in %r could not be prefixed from %r" % (key, form, form_names))
-    return prefixed
-
-
-def test_prepare_with_browser(monkeypatch):
-    from tornado.ioloop import IOLoop
-    io_loop = IOLoop()
-
-    http_results = {}
-
-    def mock_open_new_tab(url):
-        from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
-        from tornado import gen
-
-        @gen.coroutine
-        def do_http():
-            http_results['get'] = yield http_get_async(url)
-
-            # pick our environment (using inherited one)
-            form_names = _form_names(http_results['get'], provider='CondaEnvProvider')
-            form = _prefix_form(form_names, {'source': 'inherited'})
-            response = yield http_post_async(url, form=form)
-            assert response.code == 200
-
-            # now do the next round of stuff (the FOO variable)
-            http_results['post'] = yield http_post_async(url, body="")
-
-        io_loop.add_callback(do_http)
-
-    monkeypatch.setattr('webbrowser.open_new_tab', mock_open_new_tab)
-
-    def prepare_with_browser(dirname):
-        project = project_no_dedicated_env(dirname)
-        environ = minimal_environ(BAR='bar')
-        result = prepare_with_browser_ui(project, environ=environ, keep_going_until_success=False, io_loop=io_loop)
-        assert not result
-        assert dict(BAR='bar') == strip_environ(environ)
-
-        # wait for the results of the POST to come back,
-        # awesome hack-tacular
-        while 'post' not in http_results:
-            io_loop.call_later(0.01, lambda: io_loop.stop())
-            io_loop.start()
-
-        assert 'get' in http_results
-        assert 'post' in http_results
-
-        assert 200 == http_results['get'].code
-        assert 200 == http_results['post'].code
-
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
-variables:
-  FOO: {}
-"""}, prepare_with_browser)
-
-
-def test_prepare_asking_for_password_with_browser(monkeypatch):
-    keyring.reset_keyring_module()
-
-    # In this scenario, we store a password in the keyring.
-    from tornado.ioloop import IOLoop
-    io_loop = IOLoop()
-
-    http_results = {}
-
-    def click_submit(url):
-        from anaconda_project.internal.test.http_utils import http_get_async, http_post_async
-        from tornado import gen
-
-        @gen.coroutine
-        def do_http():
-            http_results['get_click_submit'] = get_response = yield http_get_async(url)
-
-            if get_response.code != 200:
-                raise Exception("got a bad http response " + repr(get_response))
-
-            http_results['post_click_submit'] = post_response = yield http_post_async(url, body="")
-
-            assert 200 == post_response.code
-            assert '</form>' in str(post_response.body)
-            assert 'FOO_PASSWORD' in str(post_response.body)
-
-            fill_in_password(url, post_response)
-
-        io_loop.add_callback(do_http)
-
-    def fill_in_password(url, first_response):
-        from anaconda_project.internal.test.http_utils import http_post_async
-        from anaconda_project.internal.plugin_html import _BEAUTIFUL_SOUP_BACKEND
-        from tornado import gen
-        from bs4 import BeautifulSoup
-
-        if first_response.code != 200:
-            raise Exception("got a bad http response " + repr(first_response))
-
-        # set the FOO_PASSWORD field
-        soup = BeautifulSoup(first_response.body, _BEAUTIFUL_SOUP_BACKEND)
-        password_fields = soup.find_all("input", attrs={'type': 'password'})
-        if len(password_fields) == 0:
-            print("No password fields in " + repr(soup))
-            raise Exception("password field not found")
-        else:
-            field = password_fields[0]
-
-        assert 'name' in field.attrs
-
-        @gen.coroutine
-        def do_http():
-            http_results['post_fill_in_password'] = yield http_post_async(url, form={field['name']: 'bloop'})
-
-        io_loop.add_callback(do_http)
-
-    def mock_open_new_tab(url):
-        return click_submit(url)
-
-    monkeypatch.setattr('webbrowser.open_new_tab', mock_open_new_tab)
-
-    def prepare_with_browser(dirname):
-        project = project_no_dedicated_env(dirname)
-        environ = minimal_environ()
-        result = prepare_with_browser_ui(project, environ=environ, keep_going_until_success=False, io_loop=io_loop)
-        assert result.errors == []
-        assert result
-        assert dict(FOO_PASSWORD='bloop', PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
-        assert dict() == strip_environ(environ)
-
-        # wait for the results of the POST to come back,
-        # awesome hack-tacular
-        while 'post_fill_in_password' not in http_results:
-            io_loop.call_later(0.01, lambda: io_loop.stop())
-            io_loop.start()
-
-        assert 'get_click_submit' in http_results
-        assert 'post_click_submit' in http_results
-        assert 'post_fill_in_password' in http_results
-
-        assert 200 == http_results['get_click_submit'].code
-        assert 200 == http_results['post_click_submit'].code
-        assert 200 == http_results['post_fill_in_password'].code
-
-        final_done_html = str(http_results['post_fill_in_password'].body)
-        assert "Done!" in final_done_html
-        assert "Environment variable FOO_PASSWORD is set." in final_done_html
-
-        local_state_file = LocalStateFile.load_for_directory(project.directory_path)
-        assert local_state_file.get_value(['variables', 'FOO_PASSWORD']) is None
-
-        # now a no-browser prepare() should read password from the
-        # keyring
-
-    keyring.enable_fallback_keyring()
-    try:
-        with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
-variables:
-  FOO_PASSWORD: {}
-"""}, prepare_with_browser)
-    finally:
-        keyring.disable_fallback_keyring()
-
-
-def test_prepare_problem_project_with_browser(monkeypatch):
-    def check(dirname):
-        project = project_no_dedicated_env(dirname)
-        environ = minimal_environ(BAR='bar')
-        result = prepare_with_browser_ui(project, environ=environ, keep_going_until_success=False)
-        assert not result
-        assert dict(BAR='bar') == strip_environ(environ)
-
-        assert [('Icon file %s does not exist.' % os.path.join(dirname, 'foo.png')), 'Unable to load the project.'
-                ] == result.errors
-
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
-icon: foo.png
-"""}, check)
-
-
-def test_prepare_success_properties():
-    result = PrepareSuccess(statuses=(),
-                            command_exec_info=None,
-                            environ=dict(),
-                            overrides=UserConfigOverrides(),
-                            env_spec_name='foo')
-    assert result.statuses == ()
-    assert result.status_for('FOO') is None
-    assert result.status_for(EnvVarRequirement) is None
-    assert result.overrides is not None
-    assert result.env_spec_name == 'foo'
 
 
 def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA', checksum=None):

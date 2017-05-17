@@ -218,46 +218,6 @@ class AnacondaProject(object):
                                                    command=command,
                                                    extra_command_args=extra_command_args)
 
-    def prepare_project_browser(self,
-                                project,
-                                environ,
-                                env_spec_name=None,
-                                command_name=None,
-                                command=None,
-                                extra_command_args=None,
-                                io_loop=None,
-                                show_url=None):
-        """Prepare a project to run one of its commands.
-
-        This version uses a browser-based UI to allow the user to
-        see and choose how to meet project requirements.
-
-        See ``prepare_project_locally()`` for additional details
-        that also apply to this method.
-
-        Args:
-            project (Project): from the ``load_project`` method
-            environ (dict): os.environ or the previously-prepared environ; not modified in-place
-            env_spec_name (str): the package set name to require, or None for default
-            command_name (str): which named command to choose from the project, None for default
-            command (ProjectCommand): a command object (alternative to command_name)
-            extra_command_args (list): extra args to include in the returned command argv
-            io_loop (IOLoop): tornado IOLoop to use, None for default
-            show_url (function): function that's passed the URL to open it for the user
-
-        Returns:
-            a ``PrepareResult`` instance, which has a ``failed`` flag
-
-        """
-        return prepare.prepare_with_browser_ui(project=project,
-                                               environ=environ,
-                                               env_spec_name=env_spec_name,
-                                               command_name=command_name,
-                                               command=command,
-                                               extra_command_args=extra_command_args,
-                                               io_loop=io_loop,
-                                               show_url=show_url)
-
     def unprepare(self, project, prepare_result, whitelist=None):
         """Attempt to clean up project-scoped resources allocated by prepare().
 
