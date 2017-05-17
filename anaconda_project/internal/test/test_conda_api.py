@@ -62,6 +62,7 @@ def test_conda_info():
     assert 'envs' in json
 
 
+@pytest.mark.slow
 def test_conda_create_and_install_and_remove(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
@@ -115,6 +116,7 @@ def _assert_packages_not_found(e):
         raise AssertionError("Expecting package not found error, got: %s" % repr(e))
 
 
+@pytest.mark.slow
 def test_conda_create_bad_package():
     def do_test(dirname):
         envdir = os.path.join(dirname, "myenv")
@@ -128,6 +130,7 @@ def test_conda_create_bad_package():
     with_directory_contents(dict(), do_test)
 
 
+@pytest.mark.slow
 def test_conda_install_no_packages(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
@@ -143,6 +146,7 @@ def test_conda_install_no_packages(monkeypatch):
     with_directory_contents(dict(), do_test)
 
 
+@pytest.mark.slow
 def test_conda_remove_no_packages(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
@@ -612,6 +616,7 @@ def test_environ_set_prefix_to_root():
     assert environ['CONDA_DEFAULT_ENV'] == 'root'
 
 
+@pytest.mark.slow
 def test_resolve_dependencies_with_actual_conda_current_platform():
     try:
         result = conda_api.resolve_dependencies(['bokeh=0.12.4'], platform=None)
@@ -626,6 +631,7 @@ def test_resolve_dependencies_with_actual_conda_current_platform():
     assert len(result) > 1  # bokeh has some dependencies so should be >1
 
 
+@pytest.mark.slow
 def test_resolve_dependencies_with_actual_conda_other_platforms():
     for p in conda_api.default_platforms_plus_32_bit:
         if p == conda_api.current_platform():
@@ -647,6 +653,7 @@ def test_resolve_dependencies_with_actual_conda_other_platforms():
         print("Dependency resolution test OK on %s" % p)
 
 
+@pytest.mark.slow
 def test_resolve_dependencies_for_bogus_package_with_actual_conda():
     with pytest.raises(conda_api.CondaError) as excinfo:
         conda_api.resolve_dependencies(['doesnotexistblahblah'])
@@ -1031,6 +1038,7 @@ def test_current_platform_is_in_default():
     assert conda_api.current_platform() in conda_api.default_platforms
 
 
+@pytest.mark.slow
 def test_msys_for_all_platforms():
     for p in conda_api.default_platforms_plus_32_bit:
         (name, bits) = conda_api.parse_platform(p)

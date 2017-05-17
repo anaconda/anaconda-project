@@ -1304,6 +1304,7 @@ def test_add_download_with_project_file_problems():
 
 # the other add_env_spec tests use a mock CondaManager, but we want to have
 # one test that does the real thing to be sure it works.
+@pytest.mark.slow
 def test_add_env_spec_with_real_conda_manager(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 

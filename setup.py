@@ -9,6 +9,7 @@
 from __future__ import print_function
 
 import codecs
+import copy
 import errno
 import os
 import platform
@@ -160,6 +161,7 @@ class AllTestsCommand(TestCommand):
     user_options = [('pytest-args=', 'a', "Arguments to pass to py.test"),
                     ('format-only', None, "Only run the linters and formatters not the actual tests"),
                     ('git-staged-only', None, "Only run the linters and formatters on files added to the commit"),
+                    ('skip-slow-tests', None, "Skip tests marked slow"),
                     ('profile-formatting', None, "Profile the linter and formatter steps")]
 
     def initialize_options(self):
@@ -192,6 +194,7 @@ class AllTestsCommand(TestCommand):
         self.format_only = False
         self.git_staged_only = False
         self.profile_formatting = False
+        self.skip_slow_tests = False
 
     def _py_files(self):
         if self.pyfiles is None:
@@ -379,8 +382,14 @@ class AllTestsCommand(TestCommand):
     def _pytest(self):
         import pytest
         from pytest_cov.plugin import CoverageError
+
+        pytest_args = copy.copy(self.pytest_args)
+        if self.skip_slow_tests:
+            pytest_args.append("-k-slow")
+            print("Skipping slow tests")
+
         try:
-            errno = pytest.main(self.pytest_args)
+            errno = pytest.main(pytest_args)
             if errno != 0:
                 print("pytest failed, code {errno}".format(errno=errno))
                 self.failed.append('pytest')

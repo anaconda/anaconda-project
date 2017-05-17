@@ -90,6 +90,7 @@ def test_current_platform_unsupported_by_lock_set(monkeypatch):
     with_directory_contents(dict(), do_test)
 
 
+@pytest.mark.slow
 def test_conda_create_and_install_and_remove(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
@@ -250,6 +251,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     with_directory_contents(dict(), do_test)
 
 
+@pytest.mark.slow
 def test_timestamp_file_works(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
@@ -418,6 +420,7 @@ def test_resolve_dependencies_with_conda_api_mock(monkeypatch):
     assert lock_set.package_specs_for_current_platform == ('bokeh=0.12.4=0', 'thing=1.0=1')
 
 
+@pytest.mark.slow
 def test_resolve_dependencies_with_actual_conda():
     manager = DefaultCondaManager()
 

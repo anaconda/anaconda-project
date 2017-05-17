@@ -31,6 +31,7 @@ from anaconda_project.conda_manager import (push_conda_manager_class, pop_conda_
 import anaconda_project.internal.keyring as keyring
 
 
+@pytest.mark.slow
 def test_prepare_empty_directory():
     def prepare_empty(dirname):
         project = Project(dirname)
@@ -56,6 +57,7 @@ def test_prepare_bad_provide_mode():
     with_directory_contents(dict(), prepare_bad_provide_mode)
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(platform.system() == 'Windows' and
                     not (sys.version_info.major == 3 and sys.version_info.minor == 4),
                     reason="on Windows, can't delete env dir except on python 3.4, don't know why")
@@ -88,6 +90,7 @@ def test_unprepare_problem_project():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, unprepare_problems)
 
 
+@pytest.mark.slow
 def test_unprepare_nothing_to_do():
     def unprepare_nothing(dirname):
         project = Project(dirname)

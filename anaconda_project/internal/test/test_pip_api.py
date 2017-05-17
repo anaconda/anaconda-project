@@ -24,6 +24,7 @@ else:
 
 # lots is in this one big test so we don't have to create
 # tons of environments
+@pytest.mark.slow
 def test_conda_create_and_install_and_remove_pip_stuff(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
@@ -60,6 +61,7 @@ def test_conda_create_and_install_and_remove_pip_stuff(monkeypatch):
 
 # lots is in this one big test so we don't have to create
 # tons of environments
+@pytest.mark.slow
 def test_pip_errors(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 

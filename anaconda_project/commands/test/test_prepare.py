@@ -7,6 +7,7 @@
 from __future__ import absolute_import, print_function
 
 import os
+import pytest
 
 from anaconda_project.commands.main import _parse_args_and_run_subcommand
 from anaconda_project.commands.prepare import prepare_command, main
@@ -318,6 +319,7 @@ env_specs:
 """}, check_prepare_choose_environment_does_not_exist)
 
 
+@pytest.mark.slow
 def test_prepare_command_choose_command_chooses_env_spec(capsys):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)
@@ -592,6 +594,7 @@ env_specs: 42
 """}, check)
 
 
+@pytest.mark.slow
 def test_no_ask_conda_prefix_interactively(monkeypatch, capsys):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)

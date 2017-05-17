@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 import os
 import platform
+import pytest
 
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
@@ -40,6 +41,7 @@ def test_find_by_class_name_conda_env():
     assert isinstance(found, CondaEnvProvider)
 
 
+@pytest.mark.slow
 def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
@@ -173,6 +175,7 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
     with_directory_contents_completing_project_file(dict(), prepare_project_scoped_env_not_attempted)
 
 
+@pytest.mark.slow
 def test_prepare_project_scoped_env_with_packages(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
