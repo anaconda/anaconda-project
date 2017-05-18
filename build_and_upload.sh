@@ -10,4 +10,4 @@ test -d anaconda_project || exit 1
 python setup.py test
 python setup.py conda_package
 
-anaconda upload -u conda-kapsel --label dev build/packages/**/**/*.tar.bz2
+anaconda upload -u anaconda-platform --label dev build/packages/**/**/*.tar.bz2
