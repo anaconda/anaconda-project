@@ -26,7 +26,7 @@ def _service_directory(local_state_file, relative_name):
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""
 
-    def __init__(self, environ, local_state_file, default_env_spec_name, status, mode):
+    def __init__(self, environ, local_state_file, default_env_spec_name, status, mode, frontend):
         """Create a ProvideContext.
 
         Args:
@@ -40,6 +40,7 @@ class ProvideContext(object):
         self._default_env_spec_name = default_env_spec_name
         self._status = status
         self._mode = mode
+        self._frontend = frontend
 
     def ensure_service_directory(self, relative_name):
         """Create a directory in PROJECT_DIR/services with the given name.
@@ -98,6 +99,11 @@ class ProvideContext(object):
         Value should be ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_PRODUCTION``, or ``PROVIDE_MODE_CHECK``.
         """
         return self._mode
+
+    @property
+    def frontend(self):
+        """Get the current ``Frontend``."""
+        return self._frontend
 
 
 def shutdown_service_run_state(local_state_file, service_name):

@@ -471,7 +471,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 continue
             else:
                 did_any_providing = True
-                context = ProvideContext(environ, local_state, default_env_spec_name, status, mode)
+                context = ProvideContext(environ, local_state, default_env_spec_name, status, mode, project.frontend)
                 result = status.provider.provide(status.requirement, context)
                 logs.extend(result.logs)
                 errors.extend(result.errors)
