@@ -352,7 +352,7 @@ def _updating_project_lock_file(project):
             removed_env_names.append(name)
 
     all_env_names = [env_spec.name for env_spec in project.env_specs.values()]
-    conda = conda_manager.new_conda_manager()
+    conda = conda_manager.new_conda_manager(frontend=project.frontend)
     for env in changed_or_added_envs:
         # Update now-obsolete lock set or previously-nonexistent lock set.
         # (Newly-added environments won't have a lock set yet.)
@@ -676,7 +676,7 @@ def remove_packages(project, env_spec_name, packages):
 
     assert len(envs) > 0
 
-    conda = conda_manager.new_conda_manager()
+    conda = conda_manager.new_conda_manager(frontend=project.frontend)
 
     for env in envs:
         prefix = env.path(project.directory_path)
@@ -789,13 +789,14 @@ def _update_and_lock(project, env_spec_name, update):
             # we'll save later after doing all the other stuff too
             need_save = True
 
-    conda = conda_manager.new_conda_manager()
+    conda = conda_manager.new_conda_manager(frontend=project.frontend)
 
     # note that "envs" are frozen from the original project state,
     # and won't update as we go through them
     for env in envs:
         if update or env.lock_set.disabled:
             try:
+                project.frontend.info("Updating env spec %s" % env.name)
                 lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)
                 lock_set.env_spec_hash = env.logical_hash
             except conda_manager.CondaManagerError as e:

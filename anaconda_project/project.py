@@ -23,6 +23,7 @@ from anaconda_project.project_lock_file import ProjectLockFile
 from anaconda_project.archiver import _list_relative_paths_for_unignored_project_files
 from anaconda_project.version import version
 from anaconda_project.conda_manager import CondaLockSet
+from anaconda_project.frontend import NullFrontend
 
 from anaconda_project.internal.py2_compat import is_string, is_list, is_dict
 from anaconda_project.internal.simple_status import SimpleStatus
@@ -1055,12 +1056,13 @@ class Project(object):
     the project directory or global user configuration.
     """
 
-    def __init__(self, directory_path, plugin_registry=None):
+    def __init__(self, directory_path, plugin_registry=None, frontend=None):
         """Construct a Project with the given directory and plugin registry.
 
         Args:
             directory_path (str): path to the project directory
             plugin_registry (PluginRegistry): where to look up Requirement and Provider instances, None for default
+            frontend (Frontend): the UX using this Project instance
         """
         self._directory_path = os.path.realpath(directory_path)
 
@@ -1075,6 +1077,9 @@ class Project(object):
         self._lock_file = ProjectLockFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
         self._config_cache = _ConfigCache(self._directory_path, plugin_registry)
+        self._frontend = frontend
+        if self._frontend is None:
+            self._frontend = NullFrontend()
 
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._lock_file)
@@ -1084,6 +1089,11 @@ class Project(object):
     def directory_path(self):
         """Get path to the project directory."""
         return self._directory_path
+
+    @property
+    def frontend(self):
+        """Return the current UX frontend."""
+        return self._frontend
 
     @property
     def project_file(self):

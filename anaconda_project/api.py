@@ -30,7 +30,7 @@ class AnacondaProject(object):
         """Construct an API instance."""
         pass
 
-    def load_project(self, directory_path):
+    def load_project(self, directory_path, frontend):
         """Load a project from the given directory.
 
         If there's a problem, the returned Project instance will
@@ -42,12 +42,13 @@ class AnacondaProject(object):
 
         Args:
             directory_path (str): path to the project directory
+            frontend (Frontend): UX abstraction
 
         Returns:
             a Project instance
 
         """
-        return project.Project(directory_path=directory_path)
+        return project.Project(directory_path=directory_path, frontend=frontend)
 
     def create_project(self, directory_path, make_directory=False, name=None, icon=None, description=None):
         """Create a project skeleton in the given directory.

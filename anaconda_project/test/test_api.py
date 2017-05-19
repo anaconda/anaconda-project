@@ -52,7 +52,7 @@ def test_load_project(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.project.Project', MockProject)
     p = api.AnacondaProject()
-    kwargs = dict(directory_path='foo')
+    kwargs = dict(directory_path='foo', frontend=37)
     project = p.load_project(**kwargs)
     assert kwargs == project.kwargs
 
