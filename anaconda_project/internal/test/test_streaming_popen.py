@@ -98,3 +98,24 @@ sys.exit(0)
 
     assert expected_out == stdout_from_callback
     assert expected_err == stderr_from_callback
+
+
+def test_callbacks_are_none():
+    print_stuff = tmp_script_commandline("""from __future__ import print_function
+import sys
+
+print("a")
+print("b", file=sys.stderr)
+
+sys.exit(0)
+""")
+
+    (p, out_lines, err_lines) = streaming_popen.popen(print_stuff, None, None)
+
+    assert p.returncode is 0
+
+    expected_out = ['a\n']
+    expected_err = ['b\n']
+
+    assert expected_out == out_lines
+    assert expected_err == err_lines

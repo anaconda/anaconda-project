@@ -33,7 +33,7 @@ def pop_conda_manager_class():
     _conda_manager_classes.pop()
 
 
-def new_conda_manager():
+def new_conda_manager(frontend=None):
     """Create a new concrete ``CondaManager``."""
     global _conda_manager_classes
     if len(_conda_manager_classes) == 0:
@@ -41,7 +41,7 @@ def new_conda_manager():
         klass = DefaultCondaManager
     else:
         klass = _conda_manager_classes[-1]
-    return klass()
+    return klass(frontend=frontend)
 
 
 class CondaManagerError(Exception):

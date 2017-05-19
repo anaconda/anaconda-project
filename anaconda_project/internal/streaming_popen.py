@@ -40,7 +40,14 @@ def reader_thread(pipe, queue):
 
 
 def popen(args, stdout_callback, stderr_callback, **kwargs):
-    """Run a command, invoking callbacks for lines of output."""
+    def ignore_line(line):
+        pass
+
+    if stdout_callback is None:
+        stdout_callback = ignore_line
+    if stderr_callback is None:
+        stderr_callback = ignore_line
+
     p = logged_subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     queue = Queue()

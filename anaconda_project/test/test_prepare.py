@@ -302,6 +302,9 @@ def test_prepare_bad_command_name():
 
 def _push_fake_env_creator():
     class HappyCondaManager(CondaManager):
+        def __init__(self, frontend):
+            pass
+
         def resolve_dependencies(self, package_specs, channels, platforms):
             return CondaLockSet({})
 

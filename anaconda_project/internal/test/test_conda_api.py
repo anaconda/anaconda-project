@@ -229,16 +229,16 @@ sys.exit(0)
 
 
 def test_conda_create_gets_channels(monkeypatch):
-    def mock_call_conda(extra_args, json_mode=False, platform=None):
-        assert ['create', '--yes', '--quiet', '--prefix', '/prefix', '--channel', 'foo', 'python'] == extra_args
+    def mock_call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None, stderr_callback=None):
+        assert ['create', '--yes', '--prefix', '/prefix', '--channel', 'foo', 'python'] == extra_args
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
     conda_api.create(prefix='/prefix', pkgs=['python'], channels=['foo'])
 
 
 def test_conda_install_gets_channels(monkeypatch):
-    def mock_call_conda(extra_args, json_mode=False, platform=None):
-        assert ['install', '--yes', '--quiet', '--prefix', '/prefix', '--channel', 'foo', 'python'] == extra_args
+    def mock_call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None, stderr_callback=None):
+        assert ['install', '--yes', '--prefix', '/prefix', '--channel', 'foo', 'python'] == extra_args
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
     conda_api.install(prefix='/prefix', pkgs=['python'], channels=['foo'])
@@ -664,7 +664,7 @@ def test_resolve_dependencies_for_bogus_package_with_actual_conda():
 
 
 def test_resolve_dependencies_ignores_rmtree_failure(monkeypatch):
-    def mock_call_conda(extra_args, json_mode, platform):
+    def mock_call_conda(extra_args, json_mode, platform, stdout_callback=None, stderr_callback=None):
         return json.dumps({'actions': [{'LINK': [{'base_url': None,
                                                   'build_number': 0,
                                                   'build_string': '0',
@@ -673,7 +673,7 @@ def test_resolve_dependencies_ignores_rmtree_failure(monkeypatch):
                                                   'name': 'mkl',
                                                   'platform': None,
                                                   'version': '2017.0.1',
-                                                  'with_features_depends': None}]}]}).encode()
+                                                  'with_features_depends': None}]}]})
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
 
@@ -697,8 +697,8 @@ def test_resolve_dependencies_ignores_rmtree_failure(monkeypatch):
 
 
 def test_resolve_dependencies_no_actions_field(monkeypatch):
-    def mock_call_conda(extra_args, json_mode, platform=None):
-        return json.dumps({'foo': 'bar'}).encode()
+    def mock_call_conda(extra_args, json_mode, platform=None, stdout_callback=None, stderr_callback=None):
+        return json.dumps({'foo': 'bar'})
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
 
@@ -708,8 +708,8 @@ def test_resolve_dependencies_no_actions_field(monkeypatch):
 
 
 def test_resolve_dependencies_no_link_op(monkeypatch):
-    def mock_call_conda(extra_args, json_mode, platform=None):
-        return json.dumps({'actions': [{'SOMETHING': {}}]}).encode()
+    def mock_call_conda(extra_args, json_mode, platform=None, stdout_callback=None, stderr_callback=None):
+        return json.dumps({'actions': [{'SOMETHING': {}}]})
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
 
@@ -719,7 +719,7 @@ def test_resolve_dependencies_no_link_op(monkeypatch):
 
 
 def test_resolve_dependencies_pass_through_channels(monkeypatch):
-    def mock_call_conda(extra_args, json_mode, platform=None):
+    def mock_call_conda(extra_args, json_mode, platform=None, stdout_callback=None, stderr_callback=None):
         assert '--channel' in extra_args
         assert 'abc' in extra_args
         assert 'nbc' in extra_args
@@ -731,7 +731,7 @@ def test_resolve_dependencies_pass_through_channels(monkeypatch):
                                                   'name': 'mkl',
                                                   'platform': None,
                                                   'version': '2017.0.1',
-                                                  'with_features_depends': None}]}]}).encode()
+                                                  'with_features_depends': None}]}]})
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
 
@@ -750,7 +750,7 @@ def test_resolve_dependencies_no_packages():
 
 
 def test_resolve_dependencies_with_conda_43_json(monkeypatch):
-    def mock_call_conda(extra_args, json_mode, platform=None):
+    def mock_call_conda(extra_args, json_mode, platform=None, stdout_callback=None, stderr_callback=None):
         old_json = {'actions': [
             {'LINK':
              [{'base_url': None,
@@ -969,7 +969,7 @@ def test_resolve_dependencies_with_conda_43_json(monkeypatch):
         ],
                     'dry_run': True,
                     'success': True}
-        return json.dumps(old_json).encode()
+        return json.dumps(old_json)
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
 
@@ -987,7 +987,7 @@ def test_resolve_dependencies_with_conda_43_json(monkeypatch):
 
 
 def test_resolve_dependencies_with_conda_41_json(monkeypatch):
-    def mock_call_conda(extra_args, json_mode, platform=None):
+    def mock_call_conda(extra_args, json_mode, platform=None, stdout_callback=None, stderr_callback=None):
         old_json = {'actions': {'EXTRACT': ['mkl-2017.0.1-0', 'openssl-1.0.2k-1', 'xz-5.2.2-1', 'python-3.6.0-0',
                                             'markupsafe-0.23-py36_2', 'numpy-1.12.0-py36_0', 'pyyaml-3.12-py36_0',
                                             'requests-2.13.0-py36_0', 'setuptools-27.2.0-py36_0', 'six-1.10.0-py36_0',
@@ -1011,7 +1011,7 @@ def test_resolve_dependencies_with_conda_41_json(monkeypatch):
                                              'SYMLINK_CONDA']},
                     'dry_run': True,
                     'success': True}
-        return json.dumps(old_json).encode()
+        return json.dumps(old_json)
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
 

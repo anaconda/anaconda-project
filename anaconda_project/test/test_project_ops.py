@@ -436,7 +436,7 @@ def test_set_variables_nonexistent():
 
 
 def test_set_variables_cannot_create_environment(monkeypatch):
-    def mock_create(prefix, pkgs, channels):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         from anaconda_project.internal import conda_api
         raise conda_api.CondaError("error_from_conda_create")
 
@@ -1333,7 +1333,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
 def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove_error, resolve_dependencies,
                      resolve_dependencies_error):
     class TestCondaManager(CondaManager):
-        def __init__(self):
+        def __init__(self, frontend):
             self.fix_works = fix_works
             self.fixed = False
             self.deviations = CondaEnvironmentDeviations(summary="test deviation",
@@ -3007,7 +3007,7 @@ def test_add_service_bad_service_type(monkeypatch):
 
 
 def test_clean(monkeypatch):
-    def mock_create(prefix, pkgs, channels):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         os.makedirs(os.path.join(prefix, "conda-meta"))
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
@@ -3052,7 +3052,7 @@ env_specs:
 
 
 def test_clean_failed_delete(monkeypatch):
-    def mock_create(prefix, pkgs, channels):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         os.makedirs(os.path.join(prefix, "conda-meta"))
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)

@@ -92,7 +92,7 @@ def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
 
 
 def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
-    def mock_create(prefix, pkgs, channels):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         raise conda_api.CondaError("error_from_conda_create")
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
@@ -116,7 +116,7 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
 
 
 def test_unprepare_gets_error_on_delete(monkeypatch):
-    def mock_create(prefix, pkgs, channels):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         os.makedirs(os.path.join(prefix, "conda-meta"))
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
@@ -149,7 +149,7 @@ def test_unprepare_gets_error_on_delete(monkeypatch):
 
 
 def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
-    def mock_create(prefix, pkgs, channels):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         raise Exception("Should not have attempted to create env")
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
@@ -238,7 +238,7 @@ def _run_browser_ui_test(monkeypatch,
     from tornado.ioloop import IOLoop
     io_loop = IOLoop()
 
-    def mock_conda_create(prefix, pkgs, channels):
+    def mock_conda_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         from anaconda_project.internal.makedirs import makedirs_ok_if_exists
         metadir = os.path.join(prefix, "conda-meta")
         makedirs_ok_if_exists(metadir)
