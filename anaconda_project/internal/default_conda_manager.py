@@ -107,10 +107,10 @@ class DefaultCondaManager(CondaManager):
             self._frontend.error(line)
 
     def _on_stdout(self, line):
-        self._log_info(line)
+        self._log_info(line[:-1])
 
     def _on_stderr(self, line):
-        self._log_error(line)
+        self._log_error(line[:-1])
 
     def _timestamp_file(self, prefix, spec):
         return os.path.join(prefix, "var", "cache", "anaconda-project", "env-specs", spec.locked_hash)
