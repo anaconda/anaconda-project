@@ -371,7 +371,7 @@ versions of all packages to be installed, kept in
 Hand-creating ``anaconda-project-lock.yml`` isn't
 recommended. Instead, create it with the ``anaconda-project lock``
 command, and update the versions in the configuration file with
-``anaconda-project-update``.
+``anaconda-project update``.
 
 Locked versions are distinct from the "logical" versions in
 ``anaconda-project.yml``. For example, your
@@ -391,7 +391,8 @@ list of packages in ``anaconda-project-lock.yml``. For example:
         locked: true
         env_spec_hash: eb23ad7bd050fb6383fcb71958ff03db074b0525
         platforms:
-        - all
+        - linux-64
+        - win-64
         packages:
           all:
           - backports=1.0=py27_0
@@ -451,24 +452,18 @@ for all platforms that the project supports. This allows you to do your
 work on Windows and deploy to Linux, for example.
 
 ``anaconda-project lock`` by default adds a ``platforms:
-[all]`` line to ``anaconda-project.yml``. If you don't need to support
-all the platforms included in ``all`` you can
-change this line. Updates will be faster if you support fewer
-platforms. Also, some projects only work on certain platforms.
+[linux-64,osx-64,win-64]`` line to ``anaconda-project.yml``. If
+you don't need to support these three platforms, or want different
+ones, change this line. Updates will be faster if you support
+fewer platforms. Also, some projects only work on certain
+platforms.
 
 The ``platforms:`` line does nothing when a project is unlocked.
 
-Useful values in ``platforms:`` include:
-
-* ``all``: all "popular" platforms, currently ``linux-64``,
-  ``linux-32``, ``win-64``, ``win-32``, ``osx-64``
-* ``unix``: ``linux-64``, ``linux-32``, ``osx-64``
-* ``win``: ``win-32`` and ``win-64``
-* ``linux``: ``linux-32`` and ``linux-64``
-* ``osx``: ``osx-64``
-* any specific platform as used in Conda channels, such as ``linux-64``,
-  ``linux-32``, ``win-64``, ``win-32``, ``osx-64``, ``osx-32``,
-  ``linux-armv6l``, ``linux-armv7l``, ``linux-ppc64le``, and so on.
+Platform names are the same ones used by ``conda``. Possible
+values in ``platforms:`` include ``linux-64``, ``linux-32``,
+``win-64``, ``win-32``, ``osx-64``, ``osx-32``, ``linux-armv6l``,
+``linux-armv7l``, ``linux-ppc64le``, and so on.
 
 In ``anaconda-project.yml`` a ``platforms:`` list at the root of
 the file will be inherited by all env specs, and then each env
