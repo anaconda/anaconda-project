@@ -6,10 +6,15 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import os
 import pytest
 
 import anaconda_project.internal.streaming_popen as streaming_popen
 from anaconda_project.internal.test.tmpfile_utils import tmp_script_commandline
+
+
+def add_lineseps(lines):
+    return list(map(lambda l: l + os.linesep, lines))
 
 
 def test_streaming():
@@ -54,8 +59,8 @@ sys.exit(2)
 
     assert p.returncode is 2
 
-    expected_out = ['a\n', 'b\n', 'c\n', 'd\n']
-    expected_err = ['x\n', 'y\n', 'z\n']
+    expected_out = add_lineseps(['a', 'b', 'c', 'd'])
+    expected_err = add_lineseps(['x', 'y', 'z'])
 
     assert expected_out == out_lines
     assert expected_out == stdout_from_callback
@@ -93,7 +98,7 @@ sys.exit(0)
     with pytest.raises(UnicodeDecodeError):
         streaming_popen.popen(print_bad, on_stdout, on_stderr)
 
-    expected_out = ['hello\n']
+    expected_out = add_lineseps(['hello'])
     expected_err = []
 
     assert expected_out == stdout_from_callback
@@ -114,8 +119,8 @@ sys.exit(0)
 
     assert p.returncode is 0
 
-    expected_out = ['a\n']
-    expected_err = ['b\n']
+    expected_out = add_lineseps(['a'])
+    expected_err = add_lineseps(['b'])
 
     assert expected_out == out_lines
     assert expected_err == err_lines
