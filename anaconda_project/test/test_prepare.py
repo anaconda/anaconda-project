@@ -440,8 +440,7 @@ def test_skip_after_success_function_when_second_stage_fails():
         assert state['state'] == 'start'
         state['state'] = 'first'
         stage.set_result(
-            PrepareSuccess(logs=[],
-                           statuses=(),
+            PrepareSuccess(statuses=(),
                            command_exec_info=None,
                            environ=dict(),
                            overrides=UserConfigOverrides()),
@@ -451,8 +450,7 @@ def test_skip_after_success_function_when_second_stage_fails():
             assert state['state'] == 'first'
             state['state'] = 'second'
             stage.set_result(
-                PrepareFailure(logs=[],
-                               statuses=(),
+                PrepareFailure(statuses=(),
                                errors=[],
                                environ=dict(),
                                overrides=UserConfigOverrides()),
@@ -489,8 +487,7 @@ def test_run_after_success_function_when_second_stage_succeeds():
         assert state['state'] == 'start'
         state['state'] = 'first'
         stage.set_result(
-            PrepareSuccess(logs=[],
-                           statuses=(),
+            PrepareSuccess(statuses=(),
                            command_exec_info=None,
                            environ=dict(),
                            overrides=UserConfigOverrides()),
@@ -500,8 +497,7 @@ def test_run_after_success_function_when_second_stage_succeeds():
             assert state['state'] == 'first'
             state['state'] = 'second'
             stage.set_result(
-                PrepareSuccess(logs=[],
-                               statuses=(),
+                PrepareSuccess(statuses=(),
                                command_exec_info=None,
                                environ=dict(),
                                overrides=UserConfigOverrides()),
@@ -736,11 +732,7 @@ icon: foo.png
 
 
 def test_prepare_success_properties():
-    result = PrepareSuccess(logs=["a"],
-                            statuses=(),
-                            command_exec_info=None,
-                            environ=dict(),
-                            overrides=UserConfigOverrides())
+    result = PrepareSuccess(statuses=(), command_exec_info=None, environ=dict(), overrides=UserConfigOverrides())
     assert result.statuses == ()
     assert result.status_for('FOO') is None
     assert result.status_for(EnvVarRequirement) is None

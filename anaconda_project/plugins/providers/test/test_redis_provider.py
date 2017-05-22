@@ -4,11 +4,12 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import codecs
 import os
 import platform
+import sys
 
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
@@ -25,13 +26,17 @@ from anaconda_project import provide
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 
 
-# this is sort of an awkward shim because
-# prepare_without_interaction equivalent used to print errors,
-# this shim avoids rewriting the tests in here
+# This is kind of an awkward way to do it for historical reasons,
+# we print out the logs/errors captured by FakeFrontend, instead
+# of rewriting the tests in here to have a frontend that prints.
 def _prepare_printing_errors(project, environ=None, mode=provide.PROVIDE_MODE_DEVELOPMENT):
     result = prepare_without_interaction(project, environ=environ, mode=mode)
-    if result.failed:
-        result.print_output()
+    for message in project.frontend.logs:
+        print(message)
+    for error in project.frontend.errors:
+        print(error, file=sys.stderr)
+    if not result:
+        assert result.errors == project.frontend.errors
     return result
 
 

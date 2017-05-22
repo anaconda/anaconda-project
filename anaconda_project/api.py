@@ -736,7 +736,7 @@ class AnacondaProject(object):
         """
         return project_ops.archive(project=project, filename=filename)
 
-    def unarchive(self, filename, project_dir, parent_dir=None):
+    def unarchive(self, filename, project_dir, parent_dir=None, frontend=None):
         """Unpack an archive of the project.
 
         The archive can be untrusted (we will safely defeat attempts
@@ -754,12 +754,16 @@ class AnacondaProject(object):
             filename (str): name of a zip, tar.gz, or tar.bz2 archive file
             project_dir (str): the directory to place the project inside
             parent_dir (str): directory to place project_dir within
+            frontend (Frontend): frontend instance representing current UX
 
         Returns:
             a ``Status``, if failed has ``errors``, on success has ``project_dir`` property.
 
         """
-        return project_ops.unarchive(filename=filename, project_dir=project_dir, parent_dir=parent_dir)
+        return project_ops.unarchive(filename=filename,
+                                     project_dir=project_dir,
+                                     parent_dir=parent_dir,
+                                     frontend=frontend)
 
     def upload(self, project, site=None, username=None, token=None, log_level=None):
         """Upload the project to the Anaconda server.

@@ -146,8 +146,6 @@ def prepare_with_ui_mode_printing_errors(project,
                                                          extra_command_args=extra_command_args)
 
             if result.failed:
-                result.print_output()
-
                 if ask and _interactively_fix_missing_variables(project, result):
                     environ = result.environ
                     continue  # re-prepare, building on our previous environ

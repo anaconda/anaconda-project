@@ -22,7 +22,12 @@ class Frontend(with_metaclass(ABCMeta)):
 
     @abstractmethod
     def error(self, message):
-        """Log an error-level message."""
+        """Log an error-level message.
+
+        A rule of thumb is that if a function also returns a
+        ``Status``, this message should also be appended to the
+        ``errors`` field on that status.
+        """
         pass  # pragma: no cover
 
     # @abstractmethod
@@ -41,3 +46,37 @@ class NullFrontend(Frontend):
     def error(self, message):
         """Log an error-level message."""
         pass
+
+
+_singleton_null_frontend = None
+
+
+def _null_frontend():
+    global _singleton_null_frontend
+    if _singleton_null_frontend is None:
+        _singleton_null_frontend = NullFrontend()
+    return _singleton_null_frontend
+
+
+class _ErrorRecordingFrontendProxy(Frontend):
+    def __init__(self, underlying):
+        self._errors = []
+        self.underlying = underlying
+
+    def info(self, message):
+        """Log an info-level message."""
+        self.underlying.info(message)
+
+    def error(self, message):
+        """Log an error-level message."""
+        self._errors.append(message)
+        self.underlying.error(message)
+
+    def pop_errors(self):
+        result = self._errors
+        self._errors = []
+        return result
+
+
+def _new_error_recorder(frontend):
+    return _ErrorRecordingFrontendProxy(frontend)

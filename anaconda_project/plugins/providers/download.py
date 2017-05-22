@@ -17,6 +17,7 @@ from anaconda_project.internal.ziputils import unpack_zip
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.plugins.provider import EnvVarProvider, ProviderAnalysis
 from anaconda_project.provide import PROVIDE_MODE_CHECK
+from anaconda_project.frontend import _new_error_recorder
 
 
 class _DownloadProviderAnalysis(ProviderAnalysis):
@@ -95,10 +96,10 @@ class DownloadProvider(EnvVarProvider):
                                          analysis.missing_env_vars_to_provide,
                                          existing_filename=existing_filename)
 
-    def _provide_download(self, requirement, context, errors, logs):
+    def _provide_download(self, requirement, context, frontend):
         filename = context.status.analysis.existing_filename
         if filename is not None:
-            logs.append("Previously downloaded file located at {}".format(filename))
+            frontend.info("Previously downloaded file located at {}".format(filename))
             return filename
 
         filename = os.path.abspath(os.path.join(context.environ['PROJECT_DIR'], requirement.filename))
@@ -115,25 +116,28 @@ class DownloadProvider(EnvVarProvider):
             response = _ioloop.run_sync(lambda: download.run(_ioloop))
             if response is None:
                 for error in download.errors:
-                    errors.append(error)
+                    frontend.error(error)
                 return None
             elif response.code == 200:
                 if requirement.hash_value is not None and requirement.hash_value != download.hash:
-                    errors.append("Error downloading {}: mismatched hashes. Expected: {}, calculated: {}".format(
+                    frontend.error("Error downloading {}: mismatched hashes. Expected: {}, calculated: {}".format(
                         requirement.url, requirement.hash_value, download.hash))
                     return None
                 if requirement.unzip:
-                    if unpack_zip(download_filename, filename, errors):
+                    unzip_errors = []
+                    if unpack_zip(download_filename, filename, unzip_errors):
                         os.remove(download_filename)
                         return filename
                     else:
+                        for error in unzip_errors:
+                            frontend.error(error)
                         return None
                 return filename
             else:
-                errors.append("Error downloading {}: response code {}".format(requirement.url, response.code))
+                frontend.error("Error downloading {}: response code {}".format(requirement.url, response.code))
                 return None
         except Exception as e:
-            errors.append("Error downloading {}: {}".format(requirement.url, str(e)))
+            frontend.error("Error downloading {}: {}".format(requirement.url, str(e)))
             return None
         finally:
             _ioloop.close()
@@ -151,14 +155,13 @@ class DownloadProvider(EnvVarProvider):
             return super_result
         # we do the download in both prod and dev mode
 
-        errors = []
-        logs = []
+        frontend = _new_error_recorder(context.frontend)
         if requirement.env_var not in context.environ or context.status.analysis.config['source'] == 'download':
-            filename = self._provide_download(requirement, context, errors, logs)
+            filename = self._provide_download(requirement, context, frontend)
             if filename is not None:
                 context.environ[requirement.env_var] = filename
 
-        return super_result.copy_with_additions(errors=errors, logs=logs)
+        return super_result.copy_with_additions(errors=frontend.pop_errors())
 
     def unprovide(self, requirement, environ, local_state_file, overrides, requirement_status=None):
         """Override superclass to delete the downloaded file."""

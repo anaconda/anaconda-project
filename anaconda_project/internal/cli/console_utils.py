@@ -25,12 +25,10 @@ def print_project_problems(project):
 
 
 def print_status_errors(status):
-    """Print errors from the status."""
+    """Print out status description to stderr."""
     assert status is not None
-    for log in status.logs:
-        print(log, file=sys.stderr)
-    for error in status.errors:
-        print(error, file=sys.stderr)
+    # don't print status.errors because we will have done that
+    # already in streaming fashion from our Frontend.
     print(status.status_description, file=sys.stderr)
 
 

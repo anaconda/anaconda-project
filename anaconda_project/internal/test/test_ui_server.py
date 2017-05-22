@@ -23,8 +23,7 @@ from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOv
 def _no_op_prepare(config_context):
     def _do_nothing(stage):
         stage.set_result(
-            PrepareSuccess(logs=[],
-                           statuses=(),
+            PrepareSuccess(statuses=(),
                            command_exec_info=None,
                            environ=dict(),
                            overrides=UserConfigOverrides()),

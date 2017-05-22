@@ -18,6 +18,7 @@ from anaconda_project import prepare
 from anaconda_project import archiver
 from anaconda_project import client
 from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.frontend import _null_frontend
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.plugins.requirements.download import DownloadRequirement
@@ -120,6 +121,14 @@ def create(directory_path, make_directory=False, name=None, icon=None, descripti
     return project
 
 
+def _check_problems(project, description=None):
+    failed = project.problems_status(description=description)
+    if failed is not None:
+        for error in failed.errors:
+            project.frontend.error(error)
+    return failed
+
+
 def set_properties(project, name=None, icon=None, description=None):
     """Set simple properties on a project.
 
@@ -138,7 +147,7 @@ def set_properties(project, name=None, icon=None, description=None):
     Returns:
         a ``Status`` instance indicating success or failure
     """
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -180,7 +189,7 @@ def _try_requirement_without_commit(project, env_var_or_class, env_spec_name=Non
     if status is None:
         # I _think_ this is currently impossible, but if it were possible,
         # we'd need to below code and it's hard to prove it's impossible.
-        status = project.problems_status()  # pragma: no cover # no way to cause right now?
+        status = _check_problems(project)  # pragma: no cover # no way to cause right now?
         # caller was supposed to expect env_var_or_class to still exist,
         # unless project file got mangled
         assert status is not None  # pragma: no cover
@@ -211,7 +220,7 @@ def _apply_lock_file_then_revert(project, env_spec_name):
     if status is None:
         # I _think_ this is currently impossible, but if it were possible,
         # we'd need to below code and it's hard to prove it's impossible.
-        status = project.problems_status()  # pragma: no cover # no way to cause right now?
+        status = _check_problems(project)  # pragma: no cover # no way to cause right now?
         # caller was supposed to expect env_var_or_class to still exist,
         # unless project file got mangled
         assert status is not None  # pragma: no cover
@@ -244,7 +253,7 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
         ``Status`` instance
     """
     assert ((hash_algorithm and hash_value) or (hash_algorithm is None and hash_value is None))
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
     requirement = project.project_file.get_value(['downloads', env_var])
@@ -279,7 +288,7 @@ def remove_download(project, prepare_result, env_var):
     Returns:
         ``Status`` instance
     """
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
     # Modify the project file _in memory only_, do not save
@@ -336,7 +345,7 @@ def _updating_project_lock_file(project):
 
     project.project_file.use_changes_without_saving()
 
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         status_holder.status = failed
         return
@@ -378,7 +387,7 @@ def _updating_project_lock_file(project):
 
     project.project_file.use_changes_without_saving()
 
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         # this can only happen if the lockset-updating code above is broken,
         # I think.
@@ -386,7 +395,7 @@ def _updating_project_lock_file(project):
 
 
 def _update_env_spec(project, name, packages, channels, create):
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -515,7 +524,7 @@ def remove_env_spec(project, name):
     """
     assert name is not None
 
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -565,7 +574,7 @@ def export_env_spec(project, name, filename):
     Returns:
         ``Status`` instance
     """
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -653,7 +662,7 @@ def remove_packages(project, env_spec_name, packages):
     # be nicer to rewrite this whole thing when we add version pinning
     # anyway.
 
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -734,7 +743,7 @@ def remove_packages(project, env_spec_name, packages):
 
 
 def _update_and_lock(project, env_spec_name, update):
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -752,8 +761,6 @@ def _update_and_lock(project, env_spec_name, update):
 
     need_save = False
 
-    logs = []
-
     # Set platforms if it hasn't been
     if not update:
         fixed_platforms = False
@@ -766,7 +773,7 @@ def _update_and_lock(project, env_spec_name, update):
             # if ALL env specs are missing platforms, set global list
             project.project_file.set_value('platforms', default_platforms_with_current())
             fixed_platforms = True
-            logs.append("Set project platforms list to %s" % all_platforms_string())
+            project.frontend.info("Set project platforms list to %s" % all_platforms_string())
         else:
             # if only some env specs are missing, only modify the ones that are messed up
             # AND that we are planning to update/lock.
@@ -775,7 +782,7 @@ def _update_and_lock(project, env_spec_name, update):
                     project.project_file.set_value(['env_specs', env.name, 'platforms'],
                                                    default_platforms_with_current())
                     fixed_platforms = True
-                    logs.append("Set platforms for %s to %s" % (env.name, all_platforms_string()))
+                    project.frontend.info("Set platforms for %s to %s" % (env.name, all_platforms_string()))
 
         if fixed_platforms:
             project.use_changes_without_saving()
@@ -796,13 +803,12 @@ def _update_and_lock(project, env_spec_name, update):
     for env in envs:
         if update or env.lock_set.disabled:
             try:
-                project.frontend.info("Updating env spec %s" % env.name)
+                project.frontend.info("Updating locked dependencies for env spec %s..." % env.name)
                 lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)
                 lock_set.env_spec_hash = env.logical_hash
             except conda_manager.CondaManagerError as e:
                 return SimpleStatus(success=False,
-                                    description="Error resolving dependencies for %s: %s." % (env.name, str(e)),
-                                    logs=logs)
+                                    description="Error resolving dependencies for %s: %s." % (env.name, str(e)))
 
             lock_set_changed = not env.lock_set.equivalent_to(lock_set)
             hash_changed = env.lock_set.env_spec_hash is not None and \
@@ -818,47 +824,43 @@ def _update_and_lock(project, env_spec_name, update):
                     # set, but not save it in the lock file.
                     status = _apply_lock_file_then_revert(project, env.name)
                     if status:
-                        logs.append("Updated installed dependencies for %s." % (env.name))
+                        project.frontend.info("Updated installed dependencies for %s." % (env.name))
                     # we should not have created a lock when there was none
                     assert project.env_specs[env.name].lock_set.disabled
                 else:
                     # a lock, or an update when we already have locking enabled,
                     # DOES save in the lock file
                     if lock_set_changed:
-                        logs.append("Changes to locked dependencies for %s:" % env.name)
+                        project.frontend.info("Changes to locked dependencies for %s:" % env.name)
                         diff_string = lock_set.diff_from(env.lock_set)
                         for line in diff_string.split("\n"):
-                            logs.append(line)
+                            project.frontend.info(line)
 
                     status = _try_requirement_without_commit(project, CondaEnvRequirement, env.name)
                     if status:
                         need_save = True
-                        logs.extend(status.logs)
                         if update:
-                            logs.append("Updated locked dependencies for env spec %s in %s." %
-                                        (env.name, project.lock_file.basename))
+                            project.frontend.info("Updated locked dependencies for env spec %s in %s." %
+                                                  (env.name, project.lock_file.basename))
                         else:
-                            logs.append("Added locked dependencies for env spec %s to %s." %
-                                        (env.name, project.lock_file.basename))
+                            project.frontend.info("Added locked dependencies for env spec %s to %s." %
+                                                  (env.name, project.lock_file.basename))
 
                 if not status:
                     # revert our changes
                     project.load()
-                    # we throw out logs here, but when we
-                    # switch to using a streaming progress interface
-                    # that will be ok.
                     return status
             elif hash_changed:
                 assert lock_set.env_spec_hash is not None
                 project.lock_file._set_lock_set_hash(env.name, lock_set.env_spec_hash)
-                logs.append("Updated hash for env spec %s to %s in %s." %
-                            (env.name, lock_set.env_spec_hash, project.lock_file.basename))
+                project.frontend.info("Updated hash for env spec %s to %s in %s." %
+                                      (env.name, lock_set.env_spec_hash, project.lock_file.basename))
                 need_save = True
             else:
-                logs.append("Locked dependencies for env spec %s are already up to date." % env.name)
+                project.frontend.info("Locked dependencies for env spec %s are already up to date." % env.name)
         else:
             assert not update
-            logs.append("Env spec %s is already locked." % env.name)
+            project.frontend.info("Env spec %s is already locked." % env.name)
 
     # everything successful; save the project
     if need_save:
@@ -868,7 +870,7 @@ def _update_and_lock(project, env_spec_name, update):
         description = "Update complete."
     else:
         description = "Project dependencies are locked."
-    return SimpleStatus(success=True, description=description, logs=logs)
+    return SimpleStatus(success=True, description=description)
 
 
 def lock(project, env_spec_name):
@@ -920,7 +922,7 @@ def unlock(project, env_spec_name):
     Returns:
         ``Status`` instance
     """
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -940,7 +942,7 @@ def unlock(project, env_spec_name):
             description = "Dependency locking is now disabled."
         else:
             description = "Dependency locking is now disabled for env spec %s." % env_spec_name
-        return SimpleStatus(success=True, logs=status.logs, description=description)
+        return SimpleStatus(success=True, description=description)
     else:
         return status
 
@@ -955,7 +957,7 @@ def _modify_inherited_field(project, name, field, additions, removals):
     # to handle inheritance generally, instead of just the global
     # vs. specific lists.
 
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -1053,7 +1055,7 @@ def remove_platforms(project, env_spec_name, platforms):
 
 
 def _prepare_env_prefix(project, env_spec_name):
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return (None, failed)
 
@@ -1084,7 +1086,7 @@ def add_variables(project, vars_to_add, defaults=None):
     Returns:
         ``Status`` instance
     """
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -1261,7 +1263,7 @@ def add_command(project, name, command_type, command, env_spec_name=None, suppor
 
     name = name.strip()
 
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -1301,7 +1303,7 @@ def add_command(project, name, command_type, command, env_spec_name=None, suppor
 
     project.project_file.use_changes_without_saving()
 
-    failed = project.problems_status(description="Unable to add the command.")
+    failed = _check_problems(project, description="Unable to add the command.")
     if failed is not None:
         # reset, maybe someone added conflicting command line types or something
         project.project_file.load()
@@ -1340,7 +1342,7 @@ def update_command(project, name, command_type=None, command=None, new_name=None
     if command is None and command_type is not None:
         raise ValueError("If specifying the command_type, must also specify the command")
 
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -1372,7 +1374,7 @@ def update_command(project, name, command_type=None, command=None, new_name=None
 
     project.project_file.use_changes_without_saving()
 
-    failed = project.problems_status(description="Unable to add the command.")
+    failed = _check_problems(project, description="Unable to add the command.")
     if failed is not None:
         # reset, maybe someone added a nonexistent bokeh app or something
         project.project_file.load()
@@ -1396,7 +1398,7 @@ def remove_command(project, name):
     Returns:
        a ``Status`` instance
     """
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -1440,7 +1442,7 @@ def add_service(project, service_type, variable_name=None):
     Returns:
         ``Status`` instance
     """
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -1505,7 +1507,7 @@ def remove_service(project, prepare_result, variable_name):
     Returns:
         ``Status`` instance
     """
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 
@@ -1555,18 +1557,20 @@ def clean(project, prepare_result):
 
     """
     status = prepare.unprepare(project, prepare_result)
-    logs = status.logs
-    errors = status.errors
+
+    errors = list(status.errors)
+
     if status:
-        logs = logs + [status.status_description]
+        project.frontend.info(status.status_description)
     else:
-        errors = errors + [status.status_description]
+        errors.extend([status.status_description])
+        project.frontend.error(status.status_description)
 
     # we also nuke any "debris" from non-current choices, like old
     # environments or services
     def cleanup_dir(dirname):
         if os.path.isdir(dirname):
-            logs.append("Removing %s." % dirname)
+            project.frontend.info("Removing %s." % dirname)
             try:
                 shutil.rmtree(dirname)
             except Exception as e:
@@ -1576,9 +1580,9 @@ def clean(project, prepare_result):
     cleanup_dir(os.path.join(project.directory_path, "envs"))
 
     if status and len(errors) == 0:
-        return SimpleStatus(success=True, description="Cleaned.", logs=logs, errors=errors)
+        return SimpleStatus(success=True, description="Cleaned.", errors=errors)
     else:
-        return SimpleStatus(success=False, description="Failed to clean everything up.", logs=logs, errors=errors)
+        return SimpleStatus(success=False, description="Failed to clean everything up.", errors=errors)
 
 
 def archive(project, filename):
@@ -1594,7 +1598,7 @@ def archive(project, filename):
     return archiver._archive_project(project, filename)
 
 
-def unarchive(filename, project_dir, parent_dir=None):
+def unarchive(filename, project_dir, parent_dir=None, frontend=None):
     """Unpack an archive of the project.
 
     The archive can be untrusted (we will safely defeat attempts
@@ -1617,7 +1621,9 @@ def unarchive(filename, project_dir, parent_dir=None):
         a ``Status``, if failed has ``errors``, on success has ``project_dir`` property.
 
     """
-    return archiver._unarchive_project(filename, project_dir=project_dir, parent_dir=parent_dir)
+    if frontend is None:
+        frontend = _null_frontend()
+    return archiver._unarchive_project(filename, project_dir=project_dir, parent_dir=parent_dir, frontend=frontend)
 
 
 def upload(project, site=None, username=None, token=None, log_level=None):
@@ -1635,7 +1641,7 @@ def upload(project, site=None, username=None, token=None, log_level=None):
     Returns:
         a ``Status``, if failed has ``errors``
     """
-    failed = project.problems_status()
+    failed = _check_problems(project)
     if failed is not None:
         return failed
 

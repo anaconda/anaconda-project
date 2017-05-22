@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function
 
 from anaconda_project.project import Project
 from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.internal.test.fake_frontend import FakeFrontend
 
 
 def project_dir_disable_dedicated_env(dirname):
@@ -27,6 +28,9 @@ def project_no_dedicated_env(*args, **kwargs):
         raise RuntimeError("no directory_path for Project")
 
     project_dir_disable_dedicated_env(dirname)
+
+    if 'frontend' not in kwargs:
+        kwargs['frontend'] = FakeFrontend()
 
     project = Project(*args, **kwargs)
 

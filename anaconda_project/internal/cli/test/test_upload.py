@@ -18,7 +18,8 @@ def _monkeypatch_upload(monkeypatch):
     def mock_upload(*args, **kwargs):
         params['args'] = args
         params['kwargs'] = kwargs
-        return SimpleStatus(success=True, description="Yay", logs=['Hello'])
+        args[0].frontend.info('Hello')
+        return SimpleStatus(success=True, description="Yay")
 
     monkeypatch.setattr('anaconda_project.project_ops.upload', mock_upload)
     return params

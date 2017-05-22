@@ -16,8 +16,6 @@ from anaconda_project.internal.cli import console_utils
 
 def _handle_status(status, success_message=None):
     if status:
-        for line in status.logs:
-            print(line)
         print(status.status_description)
         if success_message is not None:
             print(success_message)

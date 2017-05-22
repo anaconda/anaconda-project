@@ -81,9 +81,10 @@ def test_prepare_and_unprepare_download(monkeypatch):
         filename = os.path.join(dirname, 'data.csv')
         assert os.path.exists(filename)
 
+        project.frontend.reset()
         status = unprepare(project, result)
-        assert status.logs == ["Removed downloaded file %s." % filename,
-                               ("Current environment is not in %s, no need to delete it." % dirname)]
+        assert project.frontend.logs == ["Removed downloaded file %s." % filename,
+                                         ("Current environment is not in %s, no need to delete it." % dirname)]
         assert status.status_description == 'Success.'
         assert status
         assert not os.path.exists(filename)
@@ -129,10 +130,11 @@ def test_prepare_download_exception(monkeypatch):
         assert ('missing requirement to run this project: A downloaded file which is referenced by DATAFILE.'
                 ) in result.errors
 
+        project.frontend.reset()
         status = unprepare(project, result)
         filename = os.path.join(dirname, 'data.csv')
-        assert status.logs == ["No need to remove %s which wasn't downloaded." % filename,
-                               ("Current environment is not in %s, no need to delete it." % dirname)]
+        assert project.frontend.logs == ["No need to remove %s which wasn't downloaded." % filename,
+                                         ("Current environment is not in %s, no need to delete it." % dirname)]
         assert status.status_description == 'Success.'
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
@@ -165,8 +167,9 @@ def test_unprepare_download_fails(monkeypatch):
 
         monkeypatch.setattr("os.remove", mock_remove)
 
+        project.frontend.reset()
         status = unprepare(project, result)
-        assert status.logs == []
+        assert project.frontend.logs == []
         assert status.status_description == ('Failed to remove %s: Not gonna remove this.' % filename)
         assert status.errors == []
         assert not status
@@ -392,10 +395,11 @@ def test_prepare_download_of_zip_file_checksum(monkeypatch):
         assert os.path.isfile(os.path.join(dirname, 'data', 'foo'))
         assert codecs.open(os.path.join(dirname, 'data', 'foo')).read() == 'hello\n'
 
+        project.frontend.reset()
         status = unprepare(project, result)
         filename = os.path.join(dirname, 'data')
-        assert status.logs == ["Removed downloaded file %s." % filename,
-                               ("Current environment is not in %s, no need to delete it." % dirname)]
+        assert project.frontend.logs == ["Removed downloaded file %s." % filename,
+                                         ("Current environment is not in %s, no need to delete it." % dirname)]
         assert status.status_description == "Success."
 
     with_tmp_zipfile(dict(foo='hello\n'), provide_download_of_zip)

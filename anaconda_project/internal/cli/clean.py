@@ -21,7 +21,10 @@ def clean_command(project_dir):
         exit code
     """
     project = load_project(project_dir)
-    result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
+    # we don't want to print errors during this prepare, clean
+    # can proceed even though the prepare fails.
+    with project.null_frontend():
+        result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
     status = project_ops.clean(project, result)
     if status:
         print(status.status_description)
