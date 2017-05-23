@@ -41,32 +41,43 @@ print("z", file=sys.stderr)
 flush()
 print("d")
 flush()
+# print partial lines with multiple syscalls
+for i in [1,2,3,4,5,6]:
+  sys.stdout.write("%d" % i)
+sys.stdout.write("\\n")
+# print unicode stuff
+print("💯 🌟")
+flush()
+# print many lines at once, and end on non-newline
+sys.stdout.write("1\\n2\\n3\\n4\\n5\\n6")
+flush()
 
 sys.exit(2)
 """)
 
     stdout_from_callback = []
 
-    def on_stdout(line):
-        stdout_from_callback.append(line)
+    def on_stdout(data):
+        stdout_from_callback.append(data)
 
     stderr_from_callback = []
 
-    def on_stderr(line):
-        stderr_from_callback.append(line)
+    def on_stderr(data):
+        stderr_from_callback.append(data)
 
     (p, out_lines, err_lines) = streaming_popen.popen(print_stuff, on_stdout, on_stderr)
 
     assert p.returncode is 2
 
-    expected_out = add_lineseps(['a', 'b', 'c', 'd'])
+    expected_out = add_lineseps(['a', 'b', 'c', 'd', '123456', '💯 🌟', '1', '2', '3', '4', '5'])
+    expected_out.append('6')  # no newline after this one
     expected_err = add_lineseps(['x', 'y', 'z'])
 
     assert expected_out == out_lines
-    assert expected_out == stdout_from_callback
+    assert "".join(expected_out) == "".join(stdout_from_callback)
 
     assert expected_err == err_lines
-    assert expected_err == stderr_from_callback
+    assert "".join(expected_err) == "".join(stderr_from_callback)
 
 
 def test_bad_utf8():
@@ -87,22 +98,24 @@ sys.exit(0)
 
     stdout_from_callback = []
 
-    def on_stdout(line):
-        stdout_from_callback.append(line)
+    def on_stdout(data):
+        stdout_from_callback.append(data)
 
     stderr_from_callback = []
 
-    def on_stderr(line):
-        stderr_from_callback.append(line)
+    def on_stderr(data):
+        stderr_from_callback.append(data)
 
-    with pytest.raises(UnicodeDecodeError):
-        streaming_popen.popen(print_bad, on_stdout, on_stderr)
+    (p, out_lines, err_lines) = streaming_popen.popen(print_bad, on_stdout, on_stderr)
 
-    expected_out = add_lineseps(['hello'])
+    expected_out = add_lineseps(['hello', 'B��\x00\x01�goodbye'])
     expected_err = []
 
-    assert expected_out == stdout_from_callback
-    assert expected_err == stderr_from_callback
+    assert expected_out == out_lines
+    assert expected_err == err_lines
+
+    assert "".join(expected_out) == "".join(stdout_from_callback)
+    assert "".join(expected_err) == "".join(stderr_from_callback)
 
 
 def test_callbacks_are_none():
@@ -124,3 +137,35 @@ sys.exit(0)
 
     assert expected_out == out_lines
     assert expected_err == err_lines
+
+
+def test_io_error(monkeypatch):
+    print_hello = tmp_script_commandline("""from __future__ import print_function
+import os
+import sys
+
+print("hello")
+sys.stdout.flush()
+
+sys.exit(0)
+""")
+
+    stdout_from_callback = []
+
+    def on_stdout(data):
+        stdout_from_callback.append(data)
+
+    stderr_from_callback = []
+
+    def on_stderr(data):
+        stderr_from_callback.append(data)
+
+    def mock_read(*args, **kwargs):
+        raise IOError("Nope")
+
+    monkeypatch.setattr("anaconda_project.internal.streaming_popen._read_from_stream", mock_read)
+
+    with pytest.raises(IOError) as excinfo:
+        streaming_popen.popen(print_hello, on_stdout, on_stderr)
+
+    assert "Nope" in str(excinfo.value)

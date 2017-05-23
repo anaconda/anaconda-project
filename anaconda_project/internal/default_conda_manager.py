@@ -102,15 +102,18 @@ class DefaultCondaManager(CondaManager):
         if self._frontend is not None:
             self._frontend.info(line)
 
-    def _log_error(self, line):
+    # uncomment this if you want to use it, not used for now.
+    # def _log_error(self, line):
+    #     if self._frontend is not None:
+    #         self._frontend.error(line)
+
+    def _on_stdout(self, data):
         if self._frontend is not None:
-            self._frontend.error(line)
+            self._frontend.partial_info(data)
 
-    def _on_stdout(self, line):
-        self._log_info(line[:-1])
-
-    def _on_stderr(self, line):
-        self._log_error(line[:-1])
+    def _on_stderr(self, data):
+        if self._frontend is not None:
+            self._frontend.partial_error(data)
 
     def _timestamp_file(self, prefix, spec):
         return os.path.join(prefix, "var", "cache", "anaconda-project", "env-specs", spec.locked_hash)

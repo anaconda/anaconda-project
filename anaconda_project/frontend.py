@@ -15,6 +15,48 @@ from anaconda_project.internal.metaclass import with_metaclass
 class Frontend(with_metaclass(ABCMeta)):
     """A UX (CLI, GUI, etc.) for project operations."""
 
+    def __init__(self):
+        """Construct a Frontend."""
+        self._info_buf = ''
+        self._error_buf = ''
+
+    def _partial(self, data, buf, line_handler):
+        buf = buf + data
+        (start, sep, end) = buf.partition('\n')
+        while sep != '':
+            # we do this instead of using os.linesep in case
+            # something on windows outputs unix-style line
+            # endings, we don't want to go haywire.  On unix when
+            # we actually want \r to carriage return, we'll be
+            # overriding this "partial" handler and not using this
+            # buffering implementation.
+            if start.endswith('\r'):
+                start = start[:-1]
+            line_handler(start)
+            buf = end
+            (start, sep, end) = buf.partition('\n')
+        return buf
+
+    def partial_info(self, data):
+        """Log only part of an info-level line.
+
+        The default implementation buffers this until a line separator
+        and then passes the entire line to info().
+        Subtypes can override this if they want to print output
+        immediately as it arrives.
+        """
+        self._info_buf = self._partial(data, self._info_buf, self.info)
+
+    def partial_error(self, data):
+        """Log only part of an error-level line.
+
+        The default implementation buffers this until a line separator
+        and then passes the entire line to error().
+        Subtypes can override this if they want to print output
+        immediately as it arrives.
+        """
+        self._error_buf = self._partial(data, self._error_buf, self.error)
+
     @abstractmethod
     def info(self, message):
         """Log an info-level message."""
@@ -39,6 +81,18 @@ class Frontend(with_metaclass(ABCMeta)):
 class NullFrontend(Frontend):
     """A frontend that doesn't do anything."""
 
+    def __init__(self):
+        """Construct a null frontend."""
+        super(NullFrontend, self).__init__()
+
+    def partial_info(self, data):
+        """Part of a log message."""
+        pass
+
+    def partial_error(self, data):
+        """Part of an error message."""
+        pass
+
     def info(self, message):
         """Log an info-level message."""
         pass
@@ -60,6 +114,7 @@ def _null_frontend():
 
 class _ErrorRecordingFrontendProxy(Frontend):
     def __init__(self, underlying):
+        super(_ErrorRecordingFrontendProxy, self).__init__()
         self._errors = []
         self.underlying = underlying
 

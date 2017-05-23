@@ -16,11 +16,22 @@ import anaconda_project.internal.cli.console_utils as console_utils
 
 
 class CliFrontend(Frontend):
+    def __init__(self):
+        super(CliFrontend, self).__init__()
+
     def info(self, message):
         print(message)
 
     def error(self, message):
         print(message, file=sys.stderr)
+
+    def partial_info(self, data):
+        sys.stdout.write(data)
+        sys.stdout.flush()
+
+    def partial_error(self, data):
+        sys.stderr.write(data)
+        sys.stderr.flush()
 
 
 def load_project(dirname):

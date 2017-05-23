@@ -17,6 +17,7 @@ from pprint import pprint
 from anaconda_project.env_spec import EnvSpec
 from anaconda_project.conda_manager import (CondaManagerError, CondaLockSet)
 from anaconda_project.version import version
+from anaconda_project.frontend import NullFrontend
 
 from anaconda_project.internal.default_conda_manager import (DefaultCondaManager, _extract_common)
 import anaconda_project.internal.pip_api as pip_api
@@ -37,14 +38,6 @@ else:
 test_spec = EnvSpec(name='myenv', conda_packages=['ipython'], pip_packages=['flake8'], channels=[])
 
 
-class FakeFrontend(object):
-    def info(self, line):
-        pass
-
-    def error(self, line):
-        pass
-
-
 def test_current_platform_unsupported_by_env_spec(monkeypatch):
     lock_set = CondaLockSet(package_specs_by_platform={'all': []}, platforms=conda_api.default_platforms)
     spec = EnvSpec(name='myenv',
@@ -57,7 +50,7 @@ def test_current_platform_unsupported_by_env_spec(monkeypatch):
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
 
-        manager = DefaultCondaManager(frontend=FakeFrontend())
+        manager = DefaultCondaManager(frontend=NullFrontend())
 
         deviations = manager.find_environment_deviations(envdir, spec)
 
@@ -84,7 +77,7 @@ def test_current_platform_unsupported_by_lock_set(monkeypatch):
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
 
-        manager = DefaultCondaManager(frontend=FakeFrontend())
+        manager = DefaultCondaManager(frontend=NullFrontend())
 
         deviations = manager.find_environment_deviations(envdir, spec)
 
@@ -142,7 +135,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
 
-        manager = DefaultCondaManager(frontend=FakeFrontend())
+        manager = DefaultCondaManager(frontend=NullFrontend())
 
         assert not os.path.isdir(envdir)
         assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
@@ -268,7 +261,7 @@ def test_timestamp_file_works(monkeypatch):
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
 
-        manager = DefaultCondaManager(frontend=FakeFrontend())
+        manager = DefaultCondaManager(frontend=NullFrontend())
 
         def print_timestamps(when):
             newest_in_prefix = 0
@@ -383,7 +376,7 @@ def test_timestamp_file_ignores_failed_write(monkeypatch):
 
         envdir = os.path.join(dirname, spec.name)
 
-        manager = DefaultCondaManager(frontend=FakeFrontend())
+        manager = DefaultCondaManager(frontend=NullFrontend())
 
         counts = dict(calls=0)
 
@@ -422,7 +415,7 @@ def test_resolve_dependencies_with_conda_api_mock(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.resolve_dependencies', mock_resolve_dependencies)
 
-    manager = DefaultCondaManager(frontend=FakeFrontend())
+    manager = DefaultCondaManager(frontend=NullFrontend())
 
     lock_set = manager.resolve_dependencies(['bokeh'], channels=(), platforms=(conda_api.current_platform(), ))
     assert lock_set.package_specs_for_current_platform == ('bokeh=0.12.4=0', 'thing=1.0=1')
@@ -430,7 +423,7 @@ def test_resolve_dependencies_with_conda_api_mock(monkeypatch):
 
 @pytest.mark.slow
 def test_resolve_dependencies_with_actual_conda():
-    manager = DefaultCondaManager(frontend=FakeFrontend())
+    manager = DefaultCondaManager(frontend=NullFrontend())
 
     lock_set = manager.resolve_dependencies(['bokeh'], channels=(), platforms=(conda_api.current_platform(), ))
     specs = lock_set.package_specs_for_current_platform
@@ -446,7 +439,7 @@ def test_resolve_dependencies_with_conda_api_mock_raises_error(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.resolve_dependencies', mock_resolve_dependencies)
 
-    manager = DefaultCondaManager(frontend=FakeFrontend())
+    manager = DefaultCondaManager(frontend=NullFrontend())
 
     with pytest.raises(CondaManagerError) as excinfo:
         manager.resolve_dependencies(['bokeh'], channels=(), platforms=(conda_api.current_platform(), ))
@@ -479,7 +472,7 @@ def test_installed_version_comparison(monkeypatch):
                                               pip_packages=[],
                                               channels=[])
 
-        manager = DefaultCondaManager(frontend=FakeFrontend())
+        manager = DefaultCondaManager(frontend=NullFrontend())
 
         deviations = manager.find_environment_deviations(prefix, spec_with_matching_bokeh)
         assert deviations.missing_packages == ()
