@@ -6,7 +6,7 @@
 # ----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-import io
+import codecs
 import subprocess
 from threading import Thread
 
@@ -83,65 +83,65 @@ def popen(args, stdout_callback, stderr_callback, **kwargs):
 
     queue = Queue()
 
-    # Create/destroy TextIOWrapper outside of the threads, since
-    # there have been threading bugs in their destructor.  See for
-    # example https://bugs.python.org/issue28387 Note that
-    # TextIOWrapper is NOT thread-safe, so we only use it from one
-    # thread at a time, even though all creation/deletion is in
-    # this main thread, reading is always in the child threads.
+    # Create/destroy reader outside of the threads, since there
+    # have been threading bugs in related destructors such as TextIOWrapper
+    # https://bugs.python.org/issue28387
+    #
+    # In case the reader isn't thread-safe (likely) we only use it
+    # from one thread at a time, even though all creation/deletion
+    # is in this main thread, reading is always in the child
+    # threads.
     #
     # we use errors=replace primarily because with strict
     # errors, TextIOWrapper can raise an exception
     # "prematurely" (before returning all valid bytes).
     # Arguably replace is nicer anyway for our purposes.
-    stdout_wrapper = io.TextIOWrapper(p.stdout, encoding='utf-8', errors='replace')
-    stderr_wrapper = io.TextIOWrapper(p.stderr, encoding='utf-8', errors='replace')
-    try:
+    #
+    # We don't close these readers, because it seems to result
+    # in a double-close on the underlying file.
+    stdout_wrapper = codecs.getreader('utf-8')(p.stdout, errors='replace')
+    stderr_wrapper = codecs.getreader('utf-8')(p.stderr, errors='replace')
 
-        stdout_thread = _reader_thread(stdout_wrapper, queue)
-        stderr_thread = _reader_thread(stderr_wrapper, queue)
+    stdout_thread = _reader_thread(stdout_wrapper, queue)
+    stderr_thread = _reader_thread(stderr_wrapper, queue)
 
-        stdout_buffer = []
-        stderr_buffer = []
+    stdout_buffer = []
+    stderr_buffer = []
 
-        first_error = None
-        stdout_joined = False
-        stderr_joined = False
-        while not (queue.empty() and (stdout_joined and stderr_joined)):
-            (which, data, error) = queue.get()
-            if error is not None and first_error is None:
-                first_error = error
-            if data is None:
-                if which is stdout_wrapper:
-                    stdout_thread.join()
-                    stdout_joined = True
-                    assert not stdout_thread.is_alive()
-                else:
-                    assert which is stderr_wrapper
-                    stderr_thread.join()
-                    stderr_joined = True
-                    assert not stderr_thread.is_alive()
+    first_error = None
+    stdout_joined = False
+    stderr_joined = False
+    while not (queue.empty() and (stdout_joined and stderr_joined)):
+        (which, data, error) = queue.get()
+        if error is not None and first_error is None:
+            first_error = error
+        if data is None:
+            if which is stdout_wrapper:
+                stdout_thread.join()
+                stdout_joined = True
+                assert not stdout_thread.is_alive()
             else:
-                if which is stdout_wrapper:
-                    stdout_callback(data)
-                    stdout_buffer.append(data)
-                else:
-                    assert which is stderr_wrapper
-                    stderr_callback(data)
-                    stderr_buffer.append(data)
+                assert which is stderr_wrapper
+                stderr_thread.join()
+                stderr_joined = True
+                assert not stderr_thread.is_alive()
+        else:
+            if which is stdout_wrapper:
+                stdout_callback(data)
+                stdout_buffer.append(data)
+            else:
+                assert which is stderr_wrapper
+                stderr_callback(data)
+                stderr_buffer.append(data)
 
-        p.wait()
+    p.wait()
 
-        assert queue.empty()
+    assert queue.empty()
 
-        stdout_buffer = _combine_lines(stdout_buffer)
-        stderr_buffer = _combine_lines(stderr_buffer)
+    stdout_buffer = _combine_lines(stdout_buffer)
+    stderr_buffer = _combine_lines(stderr_buffer)
 
-        if first_error is not None:
-            raise first_error
-
-    finally:
-        stdout_wrapper.close()
-        stderr_wrapper.close()
+    if first_error is not None:
+        raise first_error
 
     return (p, stdout_buffer, stderr_buffer)

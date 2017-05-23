@@ -18,7 +18,8 @@ def add_lineseps(lines):
 
 
 def test_streaming():
-    print_stuff = tmp_script_commandline("""from __future__ import print_function
+    print_stuff = tmp_script_commandline(u"""# -*- coding: utf-8 -*-
+from __future__ import print_function
 import sys
 import time
 
@@ -69,9 +70,9 @@ sys.exit(2)
 
     assert p.returncode is 2
 
-    expected_out = add_lineseps(['a', 'b', 'c', 'd', '123456', '💯 🌟', '1', '2', '3', '4', '5'])
+    expected_out = add_lineseps([u'a', u'b', u'c', u'd', u'123456', u'💯 🌟', u'1', u'2', u'3', u'4', u'5'])
     expected_out.append('6')  # no newline after this one
-    expected_err = add_lineseps(['x', 'y', 'z'])
+    expected_err = add_lineseps([u'x', u'y', u'z'])
 
     assert expected_out == out_lines
     assert "".join(expected_out) == "".join(stdout_from_callback)
@@ -81,7 +82,8 @@ sys.exit(2)
 
 
 def test_bad_utf8():
-    print_bad = tmp_script_commandline("""from __future__ import print_function
+    print_bad = tmp_script_commandline(u"""# -*- coding: utf-8 -*-
+from __future__ import print_function
 import os
 import sys
 
@@ -108,7 +110,7 @@ sys.exit(0)
 
     (p, out_lines, err_lines) = streaming_popen.popen(print_bad, on_stdout, on_stderr)
 
-    expected_out = add_lineseps(['hello', 'B��\x00\x01�goodbye'])
+    expected_out = add_lineseps([u'hello', u'B��\x00\x01�goodbye'])
     expected_err = []
 
     assert expected_out == out_lines
@@ -119,7 +121,8 @@ sys.exit(0)
 
 
 def test_callbacks_are_none():
-    print_stuff = tmp_script_commandline("""from __future__ import print_function
+    print_stuff = tmp_script_commandline(u"""# -*- coding: utf-8 -*-
+from __future__ import print_function
 import sys
 
 print("a")
