@@ -260,19 +260,30 @@ class RedisProvider(EnvVarProvider):
 
             url = None
             if popen.returncode == 0:
-                # now we need to wait for Redis to be ready
-                redis_is_ready = False
+                # now we need to wait for Redis to be ready; we
+                # are not sure whether it will create the port or
+                # pidfile first, so wait for both.
+                port_is_ready = False
+                pidfile_is_ready = False
                 MAX_WAIT_TIME = 10
                 so_far = 0
                 while so_far < MAX_WAIT_TIME:
                     increment = MAX_WAIT_TIME / 500.0
                     time.sleep(increment)
                     so_far += increment
-                    if network_util.can_connect_to_socket(host='localhost', port=port):
-                        redis_is_ready = True
+                    if not port_is_ready:
+                        if network_util.can_connect_to_socket(host='localhost', port=port):
+                            port_is_ready = True
+
+                    if not pidfile_is_ready:
+                        if os.path.exists(pidfile):
+                            pidfile_is_ready = True
+
+                    if port_is_ready and pidfile_is_ready:
                         break
 
-                if redis_is_ready:
+                # if we time out with no pidfile we forge ahead at this point
+                if port_is_ready:
                     run_state['port'] = port
                     url = "redis://localhost:{port}".format(port=port)
 
