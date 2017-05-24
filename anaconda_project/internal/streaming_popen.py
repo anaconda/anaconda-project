@@ -134,9 +134,12 @@ def popen(args, stdout_callback, stderr_callback, **kwargs):
                 stderr_callback(data)
                 stderr_buffer.append(data)
 
-    p.wait()
-
     assert queue.empty()
+
+    p.stdout.close()
+    p.stderr.close()
+
+    p.wait()
 
     stdout_buffer = _combine_lines(stdout_buffer)
     stderr_buffer = _combine_lines(stderr_buffer)
