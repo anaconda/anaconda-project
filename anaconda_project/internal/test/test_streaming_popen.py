@@ -7,6 +7,7 @@
 from __future__ import absolute_import, print_function
 
 import os
+import platform
 import pytest
 
 import anaconda_project.internal.streaming_popen as streaming_popen
@@ -69,6 +70,10 @@ sys.exit(2)
     (p, out_lines, err_lines) = streaming_popen.popen(print_stuff, on_stdout, on_stderr)
 
     expected_out = add_lineseps([u'a', u'b', u'c', u'd', u'123456', u'💯 🌟', u'1', u'2', u'3', u'4', u'5'])
+    if platform.system() == 'Windows':
+        # Windows can't output unicode
+        expected_out[5] = u"\\U0001f4af \\U0001f31f"
+
     expected_out.append('6')  # no newline after this one
     expected_err = add_lineseps([u'x', u'y', u'z'])
 
