@@ -11,6 +11,7 @@ import platform
 import pytest
 
 import anaconda_project.internal.streaming_popen as streaming_popen
+from anaconda_project.internal.py2_compat import _PY2
 from anaconda_project.internal.test.tmpfile_utils import tmp_script_commandline
 
 
@@ -47,9 +48,12 @@ flush()
 for i in [1,2,3,4,5,6]:
   sys.stdout.write("%d" % i)
 sys.stdout.write("\\n")
-# print unicode stuff
-print("💯 🌟")
-flush()
+# print unicode stuff, throws exception on Windows
+try:
+    print("💯 🌟")
+    flush()
+except Exception:
+    print("Windows")
 # print many lines at once, and end on non-newline
 sys.stdout.write("1\\n2\\n3\\n4\\n5\\n6")
 flush()
@@ -72,9 +76,12 @@ sys.exit(2)
     expected_out = add_lineseps([u'a', u'b', u'c', u'd', u'123456', u'💯 🌟', u'1', u'2', u'3', u'4', u'5'])
     if platform.system() == 'Windows':
         # Windows can't output unicode
-        expected_out[5] = u"\\U0001f4af \\U0001f31f"
+        if _PY2:
+            expected_out[5] = u'\U0001f4af \U0001f31f\r\n'
+        else:
+            expected_out[5] = u"Windows\r\n"
 
-    expected_out.append('6')  # no newline after this one
+    expected_out.append(u'6')  # no newline after this one
     expected_err = add_lineseps([u'x', u'y', u'z'])
 
     assert expected_out == out_lines
