@@ -68,8 +68,6 @@ sys.exit(2)
 
     (p, out_lines, err_lines) = streaming_popen.popen(print_stuff, on_stdout, on_stderr)
 
-    assert p.returncode is 2
-
     expected_out = add_lineseps([u'a', u'b', u'c', u'd', u'123456', u'💯 🌟', u'1', u'2', u'3', u'4', u'5'])
     expected_out.append('6')  # no newline after this one
     expected_err = add_lineseps([u'x', u'y', u'z'])
@@ -79,6 +77,8 @@ sys.exit(2)
 
     assert expected_err == err_lines
     assert "".join(expected_err) == "".join(stderr_from_callback)
+
+    assert p.returncode is 2
 
 
 def test_bad_utf8():
@@ -133,13 +133,13 @@ sys.exit(0)
 
     (p, out_lines, err_lines) = streaming_popen.popen(print_stuff, None, None)
 
-    assert p.returncode is 0
-
     expected_out = add_lineseps(['a'])
     expected_err = add_lineseps(['b'])
 
     assert expected_out == out_lines
     assert expected_err == err_lines
+
+    assert p.returncode is 0
 
 
 def test_io_error(monkeypatch):
