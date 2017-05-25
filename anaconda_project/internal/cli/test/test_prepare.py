@@ -137,7 +137,7 @@ def test_main(monkeypatch, capsys):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
     _monkeypatch_open_new_tab(monkeypatch)
 
-    def mock_conda_create(prefix, pkgs, channels):
+    def mock_conda_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         raise RuntimeError("this test should not create an environment in %s with pkgs %r" % (prefix, pkgs))
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_conda_create)
@@ -254,7 +254,7 @@ services:
 
 
 def test_prepare_command_choose_environment(capsys, monkeypatch):
-    def mock_conda_create(prefix, pkgs, channels):
+    def mock_conda_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         from anaconda_project.internal.makedirs import makedirs_ok_if_exists
         metadir = os.path.join(prefix, "conda-meta")
         makedirs_ok_if_exists(metadir)
@@ -328,7 +328,7 @@ def test_prepare_command_choose_command_chooses_env_spec(capsys):
         assert result == 1
 
         out, err = capsys.readouterr()
-        assert out == ""
+        assert 'Fetching package' in out
         assert 'nonexistent_bar' in err
         assert 'nonexistent_foo' not in err
 
@@ -337,7 +337,7 @@ def test_prepare_command_choose_command_chooses_env_spec(capsys):
         assert result == 1
 
         out, err = capsys.readouterr()
-        assert out == ""
+        assert 'Fetching package' in out
         assert 'nonexistent_foo' in err
         assert 'nonexistent_bar' not in err
 

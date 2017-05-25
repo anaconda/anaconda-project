@@ -21,6 +21,7 @@ from anaconda_project.project import Project
 from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.prepare import (prepare_without_interaction, unprepare)
+from anaconda_project.frontend import NullFrontend
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.internal import (keyring, conda_api)
@@ -95,7 +96,8 @@ def test_env_var_provider_with_no_value():
                                  local_state_file=local_state_file,
                                  default_env_spec_name='default',
                                  status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
 
         provider.provide(requirement, context=context)
         assert 'FOO' not in context.environ
@@ -118,7 +120,8 @@ def test_env_var_provider_with_default_value_in_project_file():
                                  local_state_file=local_state_file,
                                  default_env_spec_name='default',
                                  status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         result = provider.provide(requirement, context=context)
         assert [] == result.errors
         assert 'FOO' in context.environ
@@ -148,7 +151,8 @@ def test_env_var_provider_with_unencrypted_default_value_in_project_file_for_enc
                                  local_state_file=local_state_file,
                                  default_env_spec_name='default',
                                  status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         result = provider.provide(requirement, context=context)
         assert [] == result.errors
         assert 'FOO_SECRET' in context.environ
@@ -174,7 +178,8 @@ def test_env_var_provider_with_value_set_in_environment():
                                  local_state_file=local_state_file,
                                  default_env_spec_name='default',
                                  status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         result = provider.provide(requirement, context=context)
         assert [] == result.errors
         assert 'FOO' in context.environ
@@ -202,7 +207,8 @@ def test_env_var_provider_with_value_set_in_local_state():
                                  local_state_file=local_state_file,
                                  default_env_spec_name='default',
                                  status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         result = provider.provide(requirement, context=context)
         assert [] == result.errors
         assert 'FOO' in context.environ
@@ -234,7 +240,8 @@ def test_env_var_provider_with_encrypted_value_set_in_local_state():
                                  local_state_file=local_state_file,
                                  default_env_spec_name='default',
                                  status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         result = provider.provide(requirement, context=context)
         assert [] == result.errors
         assert 'FOO_PASSWORD' in context.environ
@@ -432,8 +439,8 @@ def test_env_var_provider_prepare_unprepare():
         status = unprepare(project, result)
         assert status
         assert status.status_description == 'Success.'
-        assert status.logs == ["Nothing to clean up for FOO.",
-                               ("Current environment is not in %s, no need to delete it." % dirname)]
+        assert project.frontend.logs == ["Nothing to clean up for FOO.",
+                                         ("Current environment is not in %s, no need to delete it." % dirname)]
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -452,7 +459,8 @@ def test_provide_context_properties():
                                  local_state_file=local_state_file,
                                  default_env_spec_name='default',
                                  status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         assert dict(foo='bar') == context.environ
         assert context.status is status
 
@@ -462,23 +470,18 @@ def test_provide_context_properties():
 def test_provide_result_properties():
     empty = ProvideResult.empty()
     assert [] == empty.errors
-    assert [] == empty.logs
 
-    full = ProvideResult(['a', 'b'], ['c', 'd'])
-    assert ['a', 'b'] == full.errors
-    assert ['c', 'd'] == full.logs
+    full = ProvideResult(['c', 'd'])
+    assert ['c', 'd'] == full.errors
 
     unchanged = full.copy_with_additions()
-    assert ['a', 'b'] == unchanged.errors
-    assert ['c', 'd'] == unchanged.logs
+    assert ['c', 'd'] == unchanged.errors
 
-    unchanged2 = full.copy_with_additions([], [])
-    assert ['a', 'b'] == unchanged2.errors
-    assert ['c', 'd'] == unchanged2.logs
+    unchanged2 = full.copy_with_additions([])
+    assert ['c', 'd'] == unchanged2.errors
 
-    extended = full.copy_with_additions(['y'], ['z'])
-    assert ['a', 'b', 'y'] == extended.errors
-    assert ['c', 'd', 'z'] == extended.logs
+    extended = full.copy_with_additions(['z'])
+    assert ['c', 'd', 'z'] == extended.errors
 
 
 def test_provide_context_ensure_service_directory():
@@ -491,7 +494,8 @@ def test_provide_context_ensure_service_directory():
                                  local_state_file=local_state_file,
                                  default_env_spec_name='default',
                                  status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         workpath = context.ensure_service_directory("foo")
         assert os.path.isdir(workpath)
         assert workpath.endswith("foo")
@@ -523,7 +527,8 @@ def test_provide_context_ensure_service_directory_cannot_create(monkeypatch):
                                  local_state_file=local_state_file,
                                  default_env_spec_name='default',
                                  status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         with pytest.raises(IOError) as excinfo:
             context.ensure_service_directory("foo")
         assert "this is not EEXIST" in repr(excinfo.value)
@@ -542,7 +547,8 @@ def test_provide_context_transform_service_run_state():
                                  local_state_file=local_state_file,
                                  default_env_spec_name='default',
                                  status=status,
-                                 mode=PROVIDE_MODE_DEVELOPMENT)
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
 
         def transform_it(state):
             assert 42 == state['port']

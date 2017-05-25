@@ -192,6 +192,19 @@ def test_remove_service_running_redis(monkeypatch):
 
         pidfile = os.path.join(dirname, "services/REDIS_URL/redis.pid")
         logfile = os.path.join(dirname, "services/REDIS_URL/redis.log")
+
+        try:
+            print("listing of services")
+            print(repr(os.listdir(os.path.dirname(os.path.dirname(pidfile)))))
+        except Exception as e:
+            print("failed to list services: " + str(e))
+
+        try:
+            print("listing of REDIS_URL")
+            print(repr(os.listdir(os.path.dirname(pidfile))))
+        except Exception as e:
+            print("failed to list REDIS_URL: " + str(e))
+
         assert os.path.exists(pidfile)
         assert os.path.exists(logfile)
 

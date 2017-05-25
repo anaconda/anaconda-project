@@ -10,11 +10,19 @@ import inspect
 
 from anaconda_project import api
 from anaconda_project import provide
+from anaconda_project.internal.py2_compat import _PY2
+
+if _PY2:
+    getargspec = inspect.getargspec
+else:
+    # py3 has getargspec also, but it causes a deprecation
+    # warning, so use getfullargspec.
+    getargspec = inspect.getfullargspec
 
 
 def _verify_args_match(function1, function2, ignored=('self', )):
-    f1spec = inspect.getargspec(function1)
-    f2spec = inspect.getargspec(function2)
+    f1spec = getargspec(function1)
+    f2spec = getargspec(function2)
     args1 = list(f1spec.args)
     args2 = list(f2spec.args)
     for param in ignored:
@@ -52,7 +60,7 @@ def test_load_project(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.project.Project', MockProject)
     p = api.AnacondaProject()
-    kwargs = dict(directory_path='foo')
+    kwargs = dict(directory_path='foo', frontend=37)
     project = p.load_project(**kwargs)
     assert kwargs == project.kwargs
 
@@ -654,7 +662,7 @@ def test_unarchive(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.unarchive', mock_unarchive)
 
     p = api.AnacondaProject()
-    kwargs = dict(filename=43, project_dir=123, parent_dir=456)
+    kwargs = dict(filename=43, project_dir=123, parent_dir=456, frontend=789)
     result = p.unarchive(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

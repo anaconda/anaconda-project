@@ -21,8 +21,6 @@ def archive_command(project_dir, archive_filename):
     project = load_project(project_dir)
     status = project_ops.archive(project, archive_filename)
     if status:
-        for line in status.logs:
-            print(line)
         print(status.status_description)
         return 0
     else:

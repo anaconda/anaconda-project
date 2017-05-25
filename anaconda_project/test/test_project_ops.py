@@ -26,6 +26,7 @@ from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
 from anaconda_project.project_lock_file import DEFAULT_PROJECT_LOCK_FILENAME
 from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.internal.test.fake_frontend import FakeFrontend
 from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_to_use_links
 from anaconda_project.test.fake_server import fake_server
 import anaconda_project.internal.keyring as keyring
@@ -436,7 +437,7 @@ def test_set_variables_nonexistent():
 
 
 def test_set_variables_cannot_create_environment(monkeypatch):
-    def mock_create(prefix, pkgs, channels):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         from anaconda_project.internal import conda_api
         raise conda_api.CondaError("error_from_conda_create")
 
@@ -1129,7 +1130,6 @@ def test_add_download(monkeypatch):
 
         assert os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert status
-        assert isinstance(status.logs, list)
         assert [] == status.errors
 
         # be sure download was added to the file and saved
@@ -1149,7 +1149,6 @@ def test_add_download_with_filename(monkeypatch):
 
         assert os.path.isfile(os.path.join(dirname, FILENAME))
         assert status
-        assert isinstance(status.logs, list)
         assert [] == status.errors
 
         # be sure download was added to the file and saved
@@ -1174,7 +1173,6 @@ def test_add_download_with_checksum(monkeypatch):
                                           hash_value='DIGEST')
         assert os.path.isfile(os.path.join(dirname, FILENAME))
         assert status
-        assert isinstance(status.logs, list)
         assert [] == status.errors
 
         # be sure download was added to the file and saved
@@ -1200,7 +1198,6 @@ def test_add_download_which_already_exists(monkeypatch):
 
         assert os.path.isfile(os.path.join(dirname, "foobar"))
         assert status
-        assert isinstance(status.logs, list)
         assert [] == status.errors
 
         # be sure download was added to the file and saved, and
@@ -1228,7 +1225,6 @@ def test_add_download_which_already_exists_with_fname(monkeypatch):
 
         assert os.path.isfile(os.path.join(dirname, "bazqux"))
         assert status
-        assert isinstance(status.logs, list)
         assert [] == status.errors
 
         # be sure download was added to the file and saved, and
@@ -1251,7 +1247,6 @@ def test_add_download_fails(monkeypatch):
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert not status
-        assert isinstance(status.logs, list)
         assert ['Error downloading http://localhost:123456: response code 404'] == status.errors
 
         # be sure download was NOT added to the file
@@ -1333,7 +1328,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
 def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove_error, resolve_dependencies,
                      resolve_dependencies_error):
     class TestCondaManager(CondaManager):
-        def __init__(self):
+        def __init__(self, frontend):
             self.fix_works = fix_works
             self.fixed = False
             self.deviations = CondaEnvironmentDeviations(summary="test deviation",
@@ -1535,11 +1530,11 @@ env_specs:
 def test_add_env_spec_cannot_resolve_deps():
     def check(dirname):
         def attempt():
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
             status = project_ops.add_env_spec(project, name='foo', packages=[], channels=[])
             assert status.status_description == "Error resolving dependencies for foo: NOPE."
             assert status.errors == []
-            assert status.logs == []
+            assert project.frontend.logs == []
             assert not status
 
         _with_conda_test(attempt, resolve_dependencies_error="NOPE")
@@ -1713,14 +1708,14 @@ packages:
 def test_add_packages_cannot_resolve_deps():
     def check(dirname):
         def attempt():
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
             status = project_ops.add_packages(project,
                                               env_spec_name=None,
                                               packages=['foo', 'bar'],
                                               channels=['hello', 'world'])
             assert status.status_description == "Error resolving dependencies for default: NOPE."
             assert status.errors == []
-            assert status.logs == []
+            assert project.frontend.logs == []
             assert not status
 
         _with_conda_test(attempt, resolve_dependencies_error="NOPE")
@@ -1915,7 +1910,7 @@ def test_remove_packages_cannot_resolve_deps():
     def check(dirname):
         def attempt():
             os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
             for env_spec in project.env_specs.values():
                 assert env_spec.lock_set.enabled
                 assert env_spec.lock_set.platforms == ()
@@ -1925,7 +1920,7 @@ def test_remove_packages_cannot_resolve_deps():
             status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo', 'bar'])
             assert status.status_description == "Error resolving dependencies for hello: NOPE."
             assert status.errors == []
-            assert status.logs == []
+            assert project.frontend.logs == []
             assert not status
 
         _with_conda_test(attempt, resolve_dependencies_error="NOPE")
@@ -2040,12 +2035,12 @@ platforms: [osx-32, win-64]
 def test_add_platforms_cannot_resolve_deps():
     def check(dirname):
         def attempt():
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
             assert project.project_file.get_value('platforms', None) == ['linux-64', 'osx-64', 'win-64']
             status = project_ops.add_platforms(project, env_spec_name=None, platforms=['osx-32', 'win-32'])
             assert status.status_description == "Error resolving dependencies for default: NOPE."
             assert status.errors == []
-            assert status.logs == []
+            assert project.frontend.logs == []
             assert not status
 
         _with_conda_test(attempt, resolve_dependencies_error="NOPE")
@@ -2169,7 +2164,7 @@ env_specs:
 def test_remove_platforms_cannot_resolve_deps():
     def check(dirname):
         def attempt():
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
             for env_spec in project.env_specs.values():
                 assert env_spec.lock_set.enabled
                 assert env_spec.lock_set.platforms == ()
@@ -2180,7 +2175,7 @@ def test_remove_platforms_cannot_resolve_deps():
 
             status = project_ops.remove_platforms(project, env_spec_name='hello', platforms=['linux-32'])
             assert status.errors == []
-            assert status.logs == []
+            assert project.frontend.logs == []
             assert status.status_description == "Error resolving dependencies for hello: NOPE."
             assert not status
 
@@ -2301,7 +2296,7 @@ def test_lock_and_update_and_unlock_all_envs():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
             assert not os.path.isfile(filename)
 
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
 
             assert project.env_specs['foo'].platforms == ()
             assert project.env_specs['bar'].platforms == ()
@@ -2314,6 +2309,7 @@ def test_lock_and_update_and_unlock_all_envs():
             # yapf: disable
             assert [
                 'Set project platforms list to linux-64, osx-64, win-64',
+                'Updating locked dependencies for env spec bar...',
                 'Changes to locked dependencies for bar:',
                 '  platforms:',
                 '+   linux-64',
@@ -2323,6 +2319,7 @@ def test_lock_and_update_and_unlock_all_envs():
                 '+   all:',
                 '+     a=1.0=1',
                 'Added locked dependencies for env spec bar to anaconda-project-lock.yml.',
+                'Updating locked dependencies for env spec foo...',
                 'Changes to locked dependencies for foo:',
                 '  platforms:',
                 '+   linux-64',
@@ -2332,7 +2329,7 @@ def test_lock_and_update_and_unlock_all_envs():
                 '+   all:',
                 '+     a=1.0=1',
                 'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'
-            ] == status.logs
+            ] == project.frontend.logs
             # yapf: enable
 
             assert os.path.isfile(filename)
@@ -2353,19 +2350,24 @@ def test_lock_and_update_and_unlock_all_envs():
             assert project.project_file.get_value(['env_specs', 'bar', 'platforms'], None) is None
 
             # Lock again (idempotent)
+            project.frontend.reset()
             status = project_ops.lock(project, env_spec_name=None)
             assert [] == status.errors
             assert status
 
             # Update (does nothing in this case)
+            project.frontend.reset()
             status = project_ops.update(project, env_spec_name=None)
             assert [] == status.errors
             assert status
-            assert ["Locked dependencies for env spec bar are already up to date.",
-                    "Locked dependencies for env spec foo are already up to date."] == status.logs
+            assert ["Updating locked dependencies for env spec bar...",
+                    "Locked dependencies for env spec bar are already up to date.",
+                    "Updating locked dependencies for env spec foo...",
+                    "Locked dependencies for env spec foo are already up to date."] == project.frontend.logs
             assert status.status_description == "Update complete."
 
             # Update (does something after tweaking resolve results)
+            project.frontend.reset()
             resolve_results['all'] = ['a=2.0=0']
             status = project_ops.update(project, env_spec_name=None)
             assert [] == status.errors
@@ -2373,10 +2375,11 @@ def test_lock_and_update_and_unlock_all_envs():
             assert status.status_description == "Update complete."
             assert ('a=2.0=0', ) == project.env_specs['foo'].conda_packages_for_create
 
-            assert '-     a=1.0=1' in status.logs
-            assert '+     a=2.0=0' in status.logs
+            assert '-     a=1.0=1' in project.frontend.logs
+            assert '+     a=2.0=0' in project.frontend.logs
 
             # Unlock
+            project.frontend.reset()
             status = project_ops.unlock(project, env_spec_name=None)
             assert [] == status.errors
             assert status
@@ -2409,7 +2412,7 @@ def test_lock_and_unlock_single_env():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
             assert not os.path.isfile(filename)
 
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
 
             assert project.env_specs['foo'].platforms == ()
             assert project.env_specs['bar'].platforms == ('osx-64', )
@@ -2421,6 +2424,7 @@ def test_lock_and_unlock_single_env():
 
             # yapf: disable
             assert ['Set platforms for foo to linux-64, osx-64, win-64',
+                    'Updating locked dependencies for env spec foo...',
                     'Changes to locked dependencies for foo:',
                     '  platforms:',
                     '+   linux-64',
@@ -2429,7 +2433,7 @@ def test_lock_and_unlock_single_env():
                     '  packages:',
                     '+   all:',
                     '+     a=1.0=1',
-                    'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'] == status.logs
+                    'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'] == project.frontend.logs
             # yapf: enable
 
             assert 'Project dependencies are locked.' == status.status_description
@@ -2454,24 +2458,28 @@ def test_lock_and_unlock_single_env():
             assert ['osx-64', ] == project.project_file.get_value(['env_specs', 'bar', 'platforms'], None)
 
             # Locking a second time is a no-op
+            project.frontend.reset()
             status = project_ops.lock(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
-            assert ['Env spec foo is already locked.'] == status.logs
+            assert ['Env spec foo is already locked.'] == project.frontend.logs
             assert 'Project dependencies are locked.' == status.status_description
 
             # Update (does nothing in this case)
+            project.frontend.reset()
             status = project_ops.update(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
-            assert ["Locked dependencies for env spec foo are already up to date."] == status.logs
+            assert ["Updating locked dependencies for env spec foo...",
+                    "Locked dependencies for env spec foo are already up to date."] == project.frontend.logs
             assert 'Update complete.' == status.status_description
 
             # Now add a package (should change the hash)
+            project.frontend.reset()
             status = project_ops.add_packages(project, 'foo', packages='q', channels=[])
             assert [] == status.errors
             assert status
-            assert [] == status.logs
+            assert [] == project.frontend.logs
             assert status.status_description.startswith("Using Conda environment")
 
             foo_lock_set = project.env_specs['foo'].lock_set
@@ -2479,10 +2487,11 @@ def test_lock_and_unlock_single_env():
             assert foo_lock_set.env_spec_hash == 'fb71df6e984eb3330f442f1e9a7726aaa698ca59'
 
             # Now unlock
+            project.frontend.reset()
             status = project_ops.unlock(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
-            assert [] == status.logs
+            assert [] == project.frontend.logs
             assert 'Dependency locking is now disabled for env spec foo.' == status.status_description
 
             assert project.env_specs['foo'].lock_set.disabled
@@ -2510,7 +2519,7 @@ env_specs:
 def test_update_changes_only_the_hash():
     def check(dirname):
         def attempt():
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
 
             foo_lock_set = project.env_specs['foo'].lock_set
             assert ('a=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
@@ -2522,8 +2531,9 @@ def test_update_changes_only_the_hash():
             status = project_ops.update(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
-            assert ['Updated hash for env spec foo to 9990ec43408f9593030a3a136c916022189f04b3 in '
-                    'anaconda-project-lock.yml.'] == status.logs
+            assert ['Updating locked dependencies for env spec foo...',
+                    'Updated hash for env spec foo to 9990ec43408f9593030a3a136c916022189f04b3 in '
+                    'anaconda-project-lock.yml.'] == project.frontend.logs
             assert 'Update complete.' == status.status_description
 
             foo_lock_set = project.env_specs['foo'].lock_set
@@ -2558,7 +2568,7 @@ def test_lock_conda_error():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
             assert not os.path.isfile(filename)
 
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
             status = project_ops.lock(project, env_spec_name=None)
             assert [] == status.errors
             assert not status
@@ -2591,7 +2601,7 @@ def test_lock_resolve_dependencies_error(monkeypatch):
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
             assert not os.path.isfile(filename)
 
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
             status = project_ops.lock(project, env_spec_name=None)
             assert [] == status.errors
             assert not status
@@ -2621,7 +2631,7 @@ def test_unlock_conda_error():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
             assert os.path.isfile(filename)
 
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
 
             assert project.env_specs['foo'].lock_set.enabled
             assert project.env_specs['bar'].lock_set.enabled
@@ -2679,7 +2689,7 @@ def test_update_unlocked_envs():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
             assert not os.path.isfile(filename)
 
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
 
             # all lock sets disabled
             for env in project.env_specs.values():
@@ -2690,7 +2700,10 @@ def test_update_unlocked_envs():
             assert [] == status.errors
             assert status
             assert status.status_description == "Update complete."
-            assert status.logs == ['Updated installed dependencies for bar.', 'Updated installed dependencies for foo.']
+            assert project.frontend.logs == [
+                'Updating locked dependencies for env spec bar...', 'Updated installed dependencies for bar.',
+                'Updating locked dependencies for env spec foo...', 'Updated installed dependencies for foo.'
+            ]
 
             # no project lock file created
             assert not os.path.isfile(filename)
@@ -2720,7 +2733,7 @@ def test_update_empty_lock_sets():
         resolve_results = {'all': ['a=1.0=1']}
 
         def attempt():
-            project = Project(dirname)
+            project = Project(dirname, frontend=FakeFrontend())
 
             # all lock sets enabled but empty
             for env in project.env_specs.values():
@@ -2734,7 +2747,8 @@ def test_update_empty_lock_sets():
             assert status
             assert status.status_description == "Update complete."
             # yapf: disable
-            assert status.logs == [
+            assert project.frontend.logs == [
+                'Updating locked dependencies for env spec bar...',
                 'Changes to locked dependencies for bar:',
                 '  platforms:',
                 '+   linux-64',
@@ -2744,6 +2758,7 @@ def test_update_empty_lock_sets():
                 '+   all:',
                 '+     a=1.0=1',
                 'Updated locked dependencies for env spec bar in anaconda-project-lock.yml.',
+                'Updating locked dependencies for env spec foo...',
                 'Changes to locked dependencies for foo:',
                 '  platforms:',
                 '+   linux-64',
@@ -2889,7 +2904,7 @@ def test_add_service(monkeypatch):
         status = project_ops.add_service(project, service_type='redis')
 
         assert status
-        assert isinstance(status.logs, list)
+        assert isinstance(project.frontend.logs, list)
         assert [] == status.errors
 
         # be sure service was added to the file and saved
@@ -2907,7 +2922,7 @@ def test_add_service_nondefault_variable_name(monkeypatch):
         status = project_ops.add_service(project, service_type='redis', variable_name='MY_SPECIAL_REDIS')
 
         assert status
-        assert isinstance(status.logs, list)
+        assert isinstance(project.frontend.logs, list)
         assert [] == status.errors
 
         # be sure service was added to the file and saved
@@ -2919,7 +2934,7 @@ def test_add_service_nondefault_variable_name(monkeypatch):
 
 def test_add_service_with_project_file_problems():
     def check(dirname):
-        project = Project(dirname)
+        project = Project(dirname, frontend=FakeFrontend())
         status = project_ops.add_service(project, service_type='redis')
 
         assert not status
@@ -2927,7 +2942,7 @@ def test_add_service_with_project_file_problems():
                 project.project_file.basename] == status.errors
 
         # be sure service was NOT added to the file
-        project2 = Project(dirname)
+        project2 = Project(dirname, frontend=FakeFrontend())
         assert project2.project_file.get_value(['services', 'REDIS_URL']) is None
         # should have been dropped from the original project object also
         assert project.project_file.get_value(['services', 'REDIS_URL']) is None
@@ -2943,11 +2958,11 @@ def test_add_service_already_exists(monkeypatch):
         status = project_ops.add_service(project, service_type='redis')
 
         assert status
-        assert isinstance(status.logs, list)
+        assert isinstance(project.frontend.logs, list)
         assert [] == status.errors
 
         # be sure service was added to the file and saved
-        project2 = Project(dirname)
+        project2 = Project(dirname, frontend=FakeFrontend())
         assert 'redis' == project2.project_file.get_value(['services', 'REDIS_URL'])
 
     with_directory_contents_completing_project_file(
@@ -2961,7 +2976,7 @@ def test_add_service_already_exists_with_different_type(monkeypatch):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
-        project = Project(dirname)
+        project = Project(dirname, frontend=FakeFrontend())
         status = project_ops.add_service(project, service_type='redis')
 
         assert not status
@@ -2980,7 +2995,7 @@ def test_add_service_already_exists_as_non_service(monkeypatch):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
-        project = Project(dirname)
+        project = Project(dirname, frontend=FakeFrontend())
         status = project_ops.add_service(project, service_type='redis')
 
         assert not status
@@ -2997,7 +3012,7 @@ def test_add_service_bad_service_type(monkeypatch):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
-        project = Project(dirname)
+        project = Project(dirname, frontend=FakeFrontend())
         status = project_ops.add_service(project, service_type='not_a_service')
 
         assert not status
@@ -3007,13 +3022,13 @@ def test_add_service_bad_service_type(monkeypatch):
 
 
 def test_clean(monkeypatch):
-    def mock_create(prefix, pkgs, channels):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         os.makedirs(os.path.join(prefix, "conda-meta"))
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
     def check(dirname):
-        project = Project(dirname)
+        project = Project(dirname, frontend=FakeFrontend())
 
         result = prepare.prepare_without_interaction(project, env_spec_name='foo')
 
@@ -3036,8 +3051,8 @@ def test_clean(monkeypatch):
         status = project_ops.clean(project, result)
         assert status
         assert status.status_description == "Cleaned."
-        assert status.logs == [("Deleted environment files in %s." % bar_dir), ("Removing %s." % services_dir),
-                               ("Removing %s." % envs_dir)]
+        assert project.frontend.logs == [("Deleted environment files in %s." % bar_dir),
+                                         ("Removing %s." % services_dir), ("Removing %s." % envs_dir)]
         assert status.errors == []
 
         assert not os.path.isdir(os.path.join(dirname, "envs"))
@@ -3052,13 +3067,13 @@ env_specs:
 
 
 def test_clean_failed_delete(monkeypatch):
-    def mock_create(prefix, pkgs, channels):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         os.makedirs(os.path.join(prefix, "conda-meta"))
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
     def check(dirname):
-        project = Project(dirname)
+        project = Project(dirname, frontend=FakeFrontend())
 
         result = prepare.prepare_without_interaction(project, env_spec_name='foo')
 
@@ -3067,6 +3082,7 @@ def test_clean_failed_delete(monkeypatch):
         assert os.path.isdir(os.path.join(envs_dir, "foo"))
 
         # prepare again with 'bar' this time
+        project.frontend.reset()
         result = prepare.prepare_without_interaction(project, env_spec_name='bar')
         assert result
         bar_dir = os.path.join(dirname, "envs", "bar")
@@ -3078,15 +3094,16 @@ def test_clean_failed_delete(monkeypatch):
         services_dir = os.path.join(dirname, "services")
         os.makedirs(os.path.join(services_dir, "leftover-debris"))
 
-        def mock_rmtree(path):
+        def mock_rmtree(path, onerror=None):
             raise IOError("No rmtree here")
 
         monkeypatch.setattr('shutil.rmtree', mock_rmtree)
 
+        project.frontend.reset()
         status = project_ops.clean(project, result)
         assert not status
         assert status.status_description == "Failed to clean everything up."
-        assert status.logs == [("Removing %s." % services_dir), ("Removing %s." % envs_dir)]
+        assert project.frontend.logs == [("Removing %s." % services_dir), ("Removing %s." % envs_dir)]
         assert status.errors == [("Failed to remove environment files in %s: No rmtree here." % bar_dir),
                                  ("Error removing %s: No rmtree here." % services_dir),
                                  ("Error removing %s: No rmtree here." % envs_dir)]
@@ -3201,7 +3218,7 @@ def test_archive_unlocked_warning():
                 'consistently for others or when deployed.',
                 "  Consider using the 'anaconda-project lock' command to lock the project.",
                 '  Unlocked env specs are: bar'
-            ] == status.logs
+            ] == project.frontend.logs
             # yapf: enable
 
         with_directory_contents_completing_project_file(
@@ -4372,7 +4389,7 @@ def test_upload(monkeypatch):
 
 def test_upload_with_project_file_problems():
     def check(dirname):
-        project = Project(dirname)
+        project = Project(dirname, frontend=FakeFrontend())
         status = project_ops.upload(project)
         assert not status
         assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %

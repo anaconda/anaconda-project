@@ -8,7 +8,6 @@ from __future__ import absolute_import, print_function, division, unicode_litera
 
 import collections
 import errno
-import subprocess
 import json
 import os
 import platform
@@ -17,7 +16,7 @@ import shutil
 import sys
 import tempfile
 
-from anaconda_project.internal import logged_subprocess
+from anaconda_project.internal import streaming_popen
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
 from anaconda_project.internal.py2_compat import is_string
 
@@ -128,23 +127,25 @@ def _get_platform_hacked_conda_command(extra_args, platform):
         return (cmd_list, " ".join(["conda"] + cmd_list[3:]))
 
 
-def _call_conda(extra_args, json_mode=False, platform=None):
+def _call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None, stderr_callback=None):
     assert len(extra_args) > 0  # we deref extra_args[0] below
 
     (cmd_list, command_in_errors) = _get_platform_hacked_conda_command(extra_args, platform=platform)
 
     try:
-        p = logged_subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (p, stdout_lines, stderr_lines) = streaming_popen.popen(cmd_list,
+                                                                stdout_callback=stdout_callback,
+                                                                stderr_callback=stderr_callback)
     except OSError as e:
         raise CondaError("failed to run: %r: %r" % (command_in_errors, repr(e)))
-    (out, err) = p.communicate()
-    errstr = err.decode().strip()
+    errstr = "".join(stderr_lines)
     if p.returncode != 0:
         parsed = None
         message = errstr
         if json_mode:
             try:
-                parsed = json.loads(out.decode())
+                out = "".join(stdout_lines)
+                parsed = json.loads(out)
                 if parsed is not None and isinstance(parsed, dict):
                     # some versions of conda do 'error' and others
                     # both 'error' and 'message' and they appear to
@@ -157,16 +158,19 @@ def _call_conda(extra_args, json_mode=False, platform=None):
                 pass
 
         raise CondaError('%s: %s' % (command_in_errors, message), json=parsed)
-    elif errstr != '':
-        for line in errstr.split("\n"):
-            print("%s %s: %s" % ("conda", extra_args[0], line), file=sys.stderr)
-    return out
+    elif errstr != '' and stderr_callback is None:
+        # this is a sort of fallback because not all of our code
+        # passes in a callback yet.
+        for line in stderr_lines:
+            print("%s %s: %s" % ("conda", extra_args[0], line.strip()), file=sys.stderr)
+
+    return "".join(stdout_lines)
 
 
 def _call_and_parse_json(extra_args, platform=None):
     out = _call_conda(extra_args, json_mode=True, platform=platform)
     try:
-        return json.loads(out.decode())
+        return json.loads(out)
     except ValueError as e:
         raise CondaError('Invalid JSON from conda: %s' % str(e))
 
@@ -212,7 +216,7 @@ def _get_root_prefix():
     return _cached_root_prefix
 
 
-def create(prefix, pkgs=None, channels=()):
+def create(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback=None):
     """Create an environment either by name or path with a specified set of packages."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to install into new environment')
@@ -220,41 +224,41 @@ def create(prefix, pkgs=None, channels=()):
     if os.path.exists(prefix):
         raise CondaEnvExistsError('Conda environment [%s] already exists' % prefix)
 
-    cmd_list = ['create', '--yes', '--quiet', '--prefix', prefix]
+    cmd_list = ['create', '--yes', '--prefix', prefix]
 
     for channel in channels:
         cmd_list.extend(['--channel', channel])
 
     cmd_list.extend(pkgs)
-    return _call_conda(cmd_list)
+    _call_conda(cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
 
 
-def install(prefix, pkgs=None, channels=()):
+def install(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback=None):
     """Install packages into an environment either by name or path with a specified set of packages."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to install into existing environment, not %r',
                         pkgs)
 
-    cmd_list = ['install', '--yes', '--quiet']
+    cmd_list = ['install', '--yes']
     cmd_list.extend(['--prefix', prefix])
 
     for channel in channels:
         cmd_list.extend(['--channel', channel])
 
     cmd_list.extend(pkgs)
-    return _call_conda(cmd_list)
+    _call_conda(cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
 
 
-def remove(prefix, pkgs=None):
+def remove(prefix, pkgs=None, stdout_callback=None, stderr_callback=None):
     """Remove packages from an environment either by name or path."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to remove from existing environment')
 
-    cmd_list = ['remove', '--yes', '--quiet']
+    cmd_list = ['remove', '--yes']
     cmd_list.extend(['--prefix', prefix])
 
     cmd_list.extend(pkgs)
-    return _call_conda(cmd_list)
+    _call_conda(cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
 
 
 def _parse_dist(dist):

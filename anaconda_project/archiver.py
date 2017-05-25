@@ -19,6 +19,7 @@ import tempfile
 import uuid
 import zipfile
 
+from anaconda_project.frontend import _new_error_recorder
 from anaconda_project.internal import logged_subprocess
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
@@ -38,7 +39,7 @@ class _FileInfo(object):
         self.is_directory = is_directory
 
 
-def _list_project(project_directory, ignore_filter, errors):
+def _list_project(project_directory, ignore_filter, frontend):
     try:
         file_infos = []
         for root, dirs, files in os.walk(project_directory):
@@ -64,7 +65,7 @@ def _list_project(project_directory, ignore_filter, errors):
 
         return file_infos
     except OSError as e:
-        errors.append("Could not list files in %s: %s." % (project_directory, str(e)))
+        frontend.error("Could not list files in %s: %s." % (project_directory, str(e)))
         return None
 
 
@@ -109,7 +110,7 @@ class _FilePattern(object):
             return match(match_against, pattern)
 
 
-def _parse_ignore_file(filename, errors):
+def _parse_ignore_file(filename, frontend):
     patterns = []
     try:
         with codecs.open(filename, 'r', 'utf-8') as f:
@@ -135,16 +136,16 @@ def _parse_ignore_file(filename, errors):
             # return default patterns anyway
             return patterns
         else:
-            errors.append("Failed to read %s: %s" % (filename, str(e)))
+            frontend.error("Failed to read %s: %s" % (filename, str(e)))
             return None
 
 
-def _load_ignore_file(project_directory, errors):
+def _load_ignore_file(project_directory, frontend):
     ignore_file = os.path.join(project_directory, ".projectignore")
-    return _parse_ignore_file(ignore_file, errors)
+    return _parse_ignore_file(ignore_file, frontend)
 
 
-def _git_ignored_files(project_directory, errors):
+def _git_ignored_files(project_directory, frontend):
     if not os.path.exists(os.path.join(project_directory, ".git")):
         return []
 
@@ -167,17 +168,16 @@ def _git_ignored_files(project_directory, errors):
         return [".git"] + output.decode('utf-8').splitlines()
     except subprocess.CalledProcessError as e:
         message = e.output.decode('utf-8').replace("\n", " ")
-        errors.append("'git ls-files' failed to list ignored files: %s." % (message))
+        frontend.error("'git ls-files' failed to list ignored files: %s." % (message))
         return None
     except OSError as e:
-        errors.append("Failed to run 'git ls-files'; %s" % str(e))
+        frontend.error("Failed to run 'git ls-files'; %s" % str(e))
         return None
 
 
-def _git_filter(project_directory, errors):
-    git_ignored = _git_ignored_files(project_directory, errors)
+def _git_filter(project_directory, frontend):
+    git_ignored = _git_ignored_files(project_directory, frontend)
     if git_ignored is None:
-        assert errors
         return None
 
     git_ignored = set(git_ignored)
@@ -195,10 +195,9 @@ def _git_filter(project_directory, errors):
     return is_git_ignored
 
 
-def _ignore_file_filter(project_directory, errors):
-    patterns = _load_ignore_file(project_directory, errors)
+def _ignore_file_filter(project_directory, frontend):
+    patterns = _load_ignore_file(project_directory, frontend)
     if patterns is None:
-        assert errors
         return None
 
     def matches_some_pattern(info):
@@ -210,11 +209,10 @@ def _ignore_file_filter(project_directory, errors):
     return matches_some_pattern
 
 
-def _enumerate_archive_files(project_directory, errors, requirements):
-    git_filter = _git_filter(project_directory, errors)
-    ignore_file_filter = _ignore_file_filter(project_directory, errors)
+def _enumerate_archive_files(project_directory, frontend, requirements):
+    git_filter = _git_filter(project_directory, frontend)
+    ignore_file_filter = _ignore_file_filter(project_directory, frontend)
     if git_filter is None or ignore_file_filter is None:
-        assert errors
         return None
 
     plugin_patterns = set()
@@ -231,9 +229,8 @@ def _enumerate_archive_files(project_directory, errors, requirements):
     def all_filters(info):
         return git_filter(info) or ignore_file_filter(info) or is_plugin_generated(info)
 
-    infos = _list_project(project_directory, all_filters, errors)
+    infos = _list_project(project_directory, all_filters, frontend)
     if infos is None:
-        assert errors
         return None
 
     return infos
@@ -254,7 +251,7 @@ def _leaf_infos(infos):
     return sorted(all_by_name.values(), key=lambda x: x.relative_path)
 
 
-def _write_tar(archive_root_name, infos, filename, compression, logs):
+def _write_tar(archive_root_name, infos, filename, compression, frontend):
     if compression is None:
         compression = ""
     else:
@@ -262,21 +259,21 @@ def _write_tar(archive_root_name, infos, filename, compression, logs):
     with tarfile.open(filename, ('w%s' % compression)) as tf:
         for info in _leaf_infos(infos):
             arcname = os.path.join(archive_root_name, info.relative_path)
-            logs.append("  added %s" % arcname)
+            frontend.info("  added %s" % arcname)
             tf.add(info.full_path, arcname=arcname)
 
 
-def _write_zip(archive_root_name, infos, filename, logs):
+def _write_zip(archive_root_name, infos, filename, frontend):
     with zipfile.ZipFile(filename, 'w') as zf:
         for info in _leaf_infos(infos):
             arcname = os.path.join(archive_root_name, info.relative_path)
-            logs.append("  added %s" % arcname)
+            frontend.info("  added %s" % arcname)
             zf.write(info.full_path, arcname=arcname)
 
 
 # function exported for project.py
-def _list_relative_paths_for_unignored_project_files(project_directory, errors, requirements):
-    infos = _enumerate_archive_files(project_directory, errors, requirements=requirements)
+def _list_relative_paths_for_unignored_project_files(project_directory, frontend, requirements):
+    infos = _enumerate_archive_files(project_directory, frontend, requirements=requirements)
     if infos is None:
         return None
     return [info.relative_path for info in infos]
@@ -295,24 +292,27 @@ def _archive_project(project, filename):
     """
     failed = project.problems_status()
     if failed is not None:
+        for error in failed.errors:
+            project.frontend.error(error)
         return failed
 
+    frontend = _new_error_recorder(project.frontend)
+
     if not os.path.exists(project.project_file.filename):
-        return SimpleStatus(success=False,
-                            description="Can't create an archive.",
-                            errors=[("%s does not exist." % project.project_file.basename)])
+        frontend.error("%s does not exist." % project.project_file.basename)
+        return SimpleStatus(success=False, description="Can't create an archive.", errors=frontend.pop_errors())
 
     # this would most likely happen in a GUI editor, if it reloaded
     # the project from memory but hadn't saved yet.
     if project.project_file.has_unsaved_changes:
-        return SimpleStatus(success=False,
-                            description="Can't create an archive.",
-                            errors=[("%s has been modified but not saved." % project.project_file.basename)])
+        frontend.error("%s has been modified but not saved." % project.project_file.basename)
+        return SimpleStatus(success=False, description="Can't create an archive.", errors=frontend.pop_errors())
 
-    errors = []
-    infos = _enumerate_archive_files(project.directory_path, errors, requirements=project.requirements)
+    infos = _enumerate_archive_files(project.directory_path, frontend, requirements=project.requirements)
     if infos is None:
-        return SimpleStatus(success=False, description="Failed to list files in the project.", errors=errors)
+        return SimpleStatus(success=False,
+                            description="Failed to list files in the project.",
+                            errors=frontend.pop_errors())
 
     # don't put the destination zip into itself, since it's fairly natural to
     # create a archive right in the project directory
@@ -320,26 +320,27 @@ def _archive_project(project, filename):
     if not os.path.isabs(relative_dest_file):
         infos = [info for info in infos if info.relative_path != relative_dest_file]
 
-    logs = []
     tmp_filename = filename + ".tmp-" + str(uuid.uuid4())
     try:
         if filename.lower().endswith(".zip"):
-            _write_zip(project.name, infos, tmp_filename, logs)
+            _write_zip(project.name, infos, tmp_filename, frontend)
         elif filename.lower().endswith(".tar.gz"):
-            _write_tar(project.name, infos, tmp_filename, compression="gz", logs=logs)
+            _write_tar(project.name, infos, tmp_filename, compression="gz", frontend=frontend)
         elif filename.lower().endswith(".tar.bz2"):
-            _write_tar(project.name, infos, tmp_filename, compression="bz2", logs=logs)
+            _write_tar(project.name, infos, tmp_filename, compression="bz2", frontend=frontend)
         elif filename.lower().endswith(".tar"):
-            _write_tar(project.name, infos, tmp_filename, compression=None, logs=logs)
+            _write_tar(project.name, infos, tmp_filename, compression=None, frontend=frontend)
         else:
+            frontend.error("Unsupported archive filename %s." % (filename))
             return SimpleStatus(success=False,
                                 description="Project archive filename must be a .zip, .tar.gz, or .tar.bz2.",
-                                errors=["Unsupported archive filename %s." % (filename)])
+                                errors=frontend.pop_errors())
         rename_over_existing(tmp_filename, filename)
     except IOError as e:
+        frontend.error(str(e))
         return SimpleStatus(success=False,
                             description=("Failed to write project archive %s." % (filename)),
-                            errors=[str(e)])
+                            errors=frontend.pop_errors())
     finally:
         try:
             os.remove(tmp_filename)
@@ -352,13 +353,13 @@ def _archive_project(project, filename):
             unlocked.append(env_spec.name)
 
     if len(unlocked) > 0:
-        logs.append("Warning: env specs are not locked, which means they may not "
-                    "work consistently for others or when deployed.")
-        logs.append("  Consider using the 'anaconda-project lock' command to lock the project.")
+        frontend.info("Warning: env specs are not locked, which means they may not "
+                      "work consistently for others or when deployed.")
+        frontend.info("  Consider using the 'anaconda-project lock' command to lock the project.")
         if len(unlocked) != len(project.env_specs):
-            logs.append("  Unlocked env specs are: " + (", ".join(sorted(unlocked))))
+            frontend.info("  Unlocked env specs are: " + (", ".join(sorted(unlocked))))
 
-    return SimpleStatus(success=True, description=("Created project archive %s" % filename), logs=logs)
+    return SimpleStatus(success=True, description=("Created project archive %s" % filename))
 
 
 def _list_files_zip(zip_path):
@@ -372,7 +373,7 @@ def _list_files_tar(tar_path):
         return sorted([member.name for member in tf.getmembers() if member.isreg() or member.isdir()])
 
 
-def _extract_files_zip(zip_path, src_and_dest, logs):
+def _extract_files_zip(zip_path, src_and_dest, frontend):
     # the zipfile API has no way to extract to a filename of
     # our choice, so we have to unpack to a temporary location,
     # then copy those files over.
@@ -381,7 +382,7 @@ def _extract_files_zip(zip_path, src_and_dest, logs):
         with zipfile.ZipFile(zip_path, mode='r') as zf:
             zf.extractall(tmpdir)
             for (src, dest) in src_and_dest:
-                logs.append("Unpacking %s to %s" % (src, dest))
+                frontend.info("Unpacking %s to %s" % (src, dest))
                 src_path = os.path.join(tmpdir, src)
                 if os.path.isdir(src_path):
                     makedirs_ok_if_exists(dest)
@@ -396,10 +397,10 @@ def _extract_files_zip(zip_path, src_and_dest, logs):
             pass
 
 
-def _extract_files_tar(tar_path, src_and_dest, logs):
+def _extract_files_tar(tar_path, src_and_dest, frontend):
     with tarfile.open(tar_path, mode='r') as tf:
         for (src, dest) in src_and_dest:
-            logs.append("Unpacking %s to %s" % (src, dest))
+            frontend.info("Unpacking %s to %s" % (src, dest))
             member = tf.getmember(src)
             # we could also use tf._extract_member here, but the
             # solution below with only the public API isn't that
@@ -438,16 +439,17 @@ def _split_after_first(path):
     return _helper(path, None)
 
 
-def _get_source_and_dest_files(archive_path, list_files, project_dir, parent_dir, errors):
+def _get_source_and_dest_files(archive_path, list_files, project_dir, parent_dir, frontend):
+
     names = list_files(archive_path)
     if len(names) == 0:
-        errors.append("A valid project archive must contain at least one file.")
+        frontend.error("A valid project archive must contain at least one file.")
         return None
     items = [(name, prefix, remainder)
              for (name, (prefix, remainder)) in zip(names, [_split_after_first(name) for name in names])]
     candidate_prefix = items[0][1]
     if candidate_prefix == "..":
-        errors.append("Archive contains relative path '%s' which is not allowed." % (items[0][0]))
+        frontend.error("Archive contains relative path '%s' which is not allowed." % (items[0][0]))
         return None
 
     if project_dir is None:
@@ -471,14 +473,14 @@ def _get_source_and_dest_files(archive_path, list_files, project_dir, parent_dir
     if os.path.exists(canonical_project_dir):
         # This is an error to ensure we always do a "fresh" unpack
         # without worrying about overwriting stuff.
-        errors.append("Directory '%s' already exists." % canonical_project_dir)
+        frontend.error("Directory '%s' already exists." % canonical_project_dir)
         return None
 
     src_and_dest = []
     for (name, prefix, remainder) in items:
         if prefix != candidate_prefix:
-            errors.append(("A valid project archive contains only one project directory " +
-                           "with all files inside that directory. '%s' is outside '%s'.") % (name, candidate_prefix))
+            frontend.error(("A valid project archive contains only one project directory " +
+                            "with all files inside that directory. '%s' is outside '%s'.") % (name, candidate_prefix))
             return None
         if remainder is None:
             # this is an entry that's either the prefix dir itself,
@@ -487,8 +489,8 @@ def _get_source_and_dest_files(archive_path, list_files, project_dir, parent_dir
         dest = os.path.realpath(os.path.abspath(os.path.join(canonical_project_dir, remainder)))
         # this check deals with ".." in the name for example
         if not dest.startswith(canonical_project_dir):
-            errors.append("Archive entry '%s' would end up at '%s' which is outside '%s'." %
-                          (name, dest, canonical_project_dir))
+            frontend.error("Archive entry '%s' would end up at '%s' which is outside '%s'." %
+                           (name, dest, canonical_project_dir))
             return None
         src_and_dest.append((name, dest))
 
@@ -496,13 +498,13 @@ def _get_source_and_dest_files(archive_path, list_files, project_dir, parent_dir
 
 
 class _UnarchiveStatus(SimpleStatus):
-    def __init__(self, success, description, logs, project_dir):
-        super(_UnarchiveStatus, self).__init__(success=success, description=description, logs=logs)
+    def __init__(self, success, description, project_dir):
+        super(_UnarchiveStatus, self).__init__(success=success, description=description)
         self.project_dir = project_dir
 
 
 # function exported for project_ops.py
-def _unarchive_project(archive_filename, project_dir, parent_dir=None):
+def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None):
     """Unpack an archive of files in the project.
 
     This takes care of several details, for example it deals with
@@ -527,6 +529,8 @@ def _unarchive_project(archive_filename, project_dir, parent_dir=None):
     if project_dir is not None and os.path.isabs(project_dir) and parent_dir is not None:
         raise ValueError("If supplying parent_dir to unarchive, project_dir must be relative or None")
 
+    frontend = _new_error_recorder(frontend)
+
     list_files = None
     extract_files = None
     if archive_filename.endswith(".zip"):
@@ -536,31 +540,30 @@ def _unarchive_project(archive_filename, project_dir, parent_dir=None):
         list_files = _list_files_tar
         extract_files = _extract_files_tar
     else:
-        return SimpleStatus(
-            success=False,
-            description=("Could not unpack archive %s" % archive_filename),
-            errors=["Unsupported archive filename %s, must be a .zip, .tar.gz, or .tar.bz2" % (archive_filename)])
+        frontend.error("Unsupported archive filename %s, must be a .zip, .tar.gz, or .tar.bz2" % (archive_filename))
+        return SimpleStatus(success=False,
+                            description=("Could not unpack archive %s" % archive_filename),
+                            errors=frontend.pop_errors())
 
-    logs = []
-    errors = []
     try:
-        result = _get_source_and_dest_files(archive_filename, list_files, project_dir, parent_dir, errors)
+        result = _get_source_and_dest_files(archive_filename, list_files, project_dir, parent_dir, frontend)
         if result is None:
             return SimpleStatus(success=False,
                                 description=("Could not unpack archive %s" % archive_filename),
-                                errors=errors)
+                                errors=frontend.pop_errors())
         (canonical_project_dir, src_and_dest) = result
 
         if len(src_and_dest) == 0:
+            frontend.error("Archive does not contain a project directory or is empty.")
             return SimpleStatus(success=False,
                                 description=("Could not unpack archive %s" % archive_filename),
-                                errors=["Archive does not contain a project directory or is empty."])
+                                errors=frontend.pop_errors())
 
         assert not os.path.exists(canonical_project_dir)
         os.makedirs(canonical_project_dir)
 
         try:
-            extract_files(archive_filename, src_and_dest, logs)
+            extract_files(archive_filename, src_and_dest, frontend)
         except Exception as e:
             try:
                 shutil.rmtree(canonical_project_dir)
@@ -570,7 +573,7 @@ def _unarchive_project(archive_filename, project_dir, parent_dir=None):
 
         return _UnarchiveStatus(success=True,
                                 description=("Project archive unpacked to %s." % canonical_project_dir),
-                                logs=logs,
                                 project_dir=canonical_project_dir)
     except (IOError, OSError, zipfile.error, tarfile.TarError) as e:
-        return SimpleStatus(success=False, description="Failed to read project archive.", errors=[str(e)], logs=logs)
+        frontend.error(str(e))
+        return SimpleStatus(success=False, description="Failed to read project archive.", errors=frontend.pop_errors())

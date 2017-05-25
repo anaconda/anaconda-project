@@ -7,14 +7,36 @@
 """Command-line-specific project load utilities."""
 from __future__ import absolute_import, print_function
 
+import sys
+
 from anaconda_project.project import Project
+from anaconda_project.frontend import Frontend
 
 import anaconda_project.internal.cli.console_utils as console_utils
 
 
+class CliFrontend(Frontend):
+    def __init__(self):
+        super(CliFrontend, self).__init__()
+
+    def info(self, message):
+        print(message)
+
+    def error(self, message):
+        print(message, file=sys.stderr)
+
+    def partial_info(self, data):
+        sys.stdout.write(data)
+        sys.stdout.flush()
+
+    def partial_error(self, data):
+        sys.stderr.write(data)
+        sys.stderr.flush()
+
+
 def load_project(dirname):
     """Load a Project, fixing it if needed and possible."""
-    project = Project(dirname)
+    project = Project(dirname, frontend=CliFrontend())
 
     if console_utils.stdin_is_interactive():
         had_fixable = len(project.fixable_problems) > 0

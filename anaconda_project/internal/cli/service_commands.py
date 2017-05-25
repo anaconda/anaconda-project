@@ -31,7 +31,10 @@ def add_service(project_dir, service_type, variable_name):
 def remove_service(project_dir, variable_name):
     """Remove an item from the services section."""
     project = load_project(project_dir)
-    result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
+    # we don't want to print errors during this prepare, remove
+    # service can proceed even though the prepare fails.
+    with project.null_frontend():
+        result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
     status = project_ops.remove_service(project, result, variable_name=variable_name)
     if status:
         print(status.status_description)

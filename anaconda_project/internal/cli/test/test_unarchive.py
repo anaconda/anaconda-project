@@ -11,8 +11,11 @@ from anaconda_project.internal.simple_status import SimpleStatus
 
 
 def test_unarchive_command(capsys, monkeypatch):
-    def mock_unarchive(filename, project_dir, parent_dir=None):
-        return SimpleStatus(success=True, description="DESC", logs=['a', 'b'])
+    def mock_unarchive(filename, project_dir, parent_dir=None, frontend=None):
+        assert frontend is not None
+        frontend.info("a")
+        frontend.info("b")
+        return SimpleStatus(success=True, description="DESC")
 
     monkeypatch.setattr('anaconda_project.project_ops.unarchive', mock_unarchive)
     code = _parse_args_and_run_subcommand(['anaconda-project', 'unarchive', 'foo.tar.gz', 'bar'])
@@ -24,13 +27,18 @@ def test_unarchive_command(capsys, monkeypatch):
 
 
 def test_unarchive_command_error(capsys, monkeypatch):
-    def mock_unarchive(filename, project_dir, parent_dir=None):
-        return SimpleStatus(success=False, description="DESC", logs=['a', 'b'], errors=['c', 'd'])
+    def mock_unarchive(filename, project_dir, parent_dir=None, frontend=None):
+        assert frontend is not None
+        frontend.info("a")
+        frontend.info("b")
+        frontend.error("c")
+        frontend.error("d")
+        return SimpleStatus(success=False, description="DESC", errors=['c', 'd'])
 
     monkeypatch.setattr('anaconda_project.project_ops.unarchive', mock_unarchive)
     code = _parse_args_and_run_subcommand(['anaconda-project', 'unarchive', 'foo.tar.gz', 'bar'])
     assert code == 1
 
     out, err = capsys.readouterr()
-    assert '' == out
-    assert 'a\nb\nc\nd\nDESC\n' == err
+    assert 'a\nb\n' == out
+    assert 'c\nd\nDESC\n' == err

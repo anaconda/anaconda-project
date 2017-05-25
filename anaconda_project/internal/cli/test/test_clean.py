@@ -17,7 +17,7 @@ def test_clean_command_on_empty_project(capsys):
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert 'Cleaned.\n' == out
+        assert "Nothing to clean up for environment 'default'.\nCleaned.\n" == out
         assert '' == err
 
     with_directory_contents_completing_project_file(dict(), check)

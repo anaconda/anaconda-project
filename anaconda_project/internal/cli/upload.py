@@ -21,8 +21,6 @@ def upload_command(project_dir, site, username, token):
     project = load_project(project_dir)
     status = project_ops.upload(project, site=site, username=username, token=token)
     if status:
-        for line in status.logs:
-            print(line)
         print(status.status_description)
         return 0
     else:

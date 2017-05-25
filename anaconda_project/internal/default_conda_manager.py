@@ -95,6 +95,26 @@ def _extract_common(by_platform):
 
 
 class DefaultCondaManager(CondaManager):
+    def __init__(self, frontend):
+        self._frontend = frontend
+
+    def _log_info(self, line):
+        if self._frontend is not None:
+            self._frontend.info(line)
+
+    # uncomment this if you want to use it, not used for now.
+    # def _log_error(self, line):
+    #     if self._frontend is not None:
+    #         self._frontend.error(line)
+
+    def _on_stdout(self, data):
+        if self._frontend is not None:
+            self._frontend.partial_info(data)
+
+    def _on_stderr(self, data):
+        if self._frontend is not None:
+            self._frontend.partial_error(data)
+
     def _timestamp_file(self, prefix, spec):
         return os.path.join(prefix, "var", "cache", "anaconda-project", "env-specs", spec.locked_hash)
 
@@ -192,6 +212,7 @@ class DefaultCondaManager(CondaManager):
             resolve_for_platforms = [current] + resolve_for_platforms
         for conda_platform in resolve_for_platforms:
             try:
+                self._log_info("Resolving conda packages for %s" % conda_platform)
                 deps = conda_api.resolve_dependencies(pkgs=package_specs, platform=conda_platform, channels=channels)
             except conda_api.CondaError as e:
                 raise CondaManagerError("Error resolving for {}: {}".format(conda_platform, str(e)))
@@ -340,7 +361,11 @@ class DefaultCondaManager(CondaManager):
                 specs = spec.specs_for_conda_package_names(to_update)
                 assert len(specs) == len(to_update)
                 try:
-                    conda_api.install(prefix=prefix, pkgs=specs, channels=spec.channels)
+                    conda_api.install(prefix=prefix,
+                                      pkgs=specs,
+                                      channels=spec.channels,
+                                      stdout_callback=self._on_stdout,
+                                      stderr_callback=self._on_stderr)
                 except conda_api.CondaError as e:
                     raise CondaManagerError("Failed to install packages: {}: {}".format(", ".join(specs), str(e)))
         elif create:
@@ -352,7 +377,11 @@ class DefaultCondaManager(CondaManager):
                 command_line_packages = set(['python'])
 
             try:
-                conda_api.create(prefix=prefix, pkgs=list(command_line_packages), channels=spec.channels)
+                conda_api.create(prefix=prefix,
+                                 pkgs=list(command_line_packages),
+                                 channels=spec.channels,
+                                 stdout_callback=self._on_stdout,
+                                 stderr_callback=self._on_stderr)
             except conda_api.CondaError as e:
                 raise CondaManagerError("Failed to create environment at %s: %s" % (prefix, str(e)))
         else:
@@ -374,6 +403,6 @@ class DefaultCondaManager(CondaManager):
 
     def remove_packages(self, prefix, packages):
         try:
-            conda_api.remove(prefix, packages)
+            conda_api.remove(prefix, packages, stdout_callback=self._on_stdout, stderr_callback=self._on_stderr)
         except conda_api.CondaError as e:
             raise CondaManagerError("Failed to remove packages from %s: %s" % (prefix, str(e)))

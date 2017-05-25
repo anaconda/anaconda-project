@@ -8,6 +8,7 @@
 from __future__ import absolute_import, print_function
 
 from anaconda_project.internal.cli import console_utils
+from anaconda_project.internal.cli.project_load import CliFrontend
 import anaconda_project.project_ops as project_ops
 
 
@@ -17,10 +18,8 @@ def unarchive_command(archive_filename, project_dir):
     Returns:
         exit code
     """
-    status = project_ops.unarchive(archive_filename, project_dir)
+    status = project_ops.unarchive(archive_filename, project_dir, frontend=CliFrontend())
     if status:
-        for line in status.logs:
-            print(line)
         print(status.status_description)
         return 0
     else:

@@ -40,7 +40,10 @@ def add_download(project_dir, filename_variable, download_url, filename, hash_al
 def remove_download(project_dir, filename_variable):
     """Remove a download requirement from project and from file system."""
     project = load_project(project_dir)
-    result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
+    # we can remove a download even if prepare fails, so disable
+    # printing errors in the frontend.
+    with project.null_frontend():
+        result = prepare_without_interaction(project, mode=PROVIDE_MODE_CHECK)
     status = project_ops.remove_download(project, result, env_var=filename_variable)
     if status:
         print(status.status_description)

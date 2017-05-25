@@ -26,7 +26,7 @@ def _service_directory(local_state_file, relative_name):
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""
 
-    def __init__(self, environ, local_state_file, default_env_spec_name, status, mode):
+    def __init__(self, environ, local_state_file, default_env_spec_name, status, mode, frontend):
         """Create a ProvideContext.
 
         Args:
@@ -40,6 +40,7 @@ class ProvideContext(object):
         self._default_env_spec_name = default_env_spec_name
         self._status = status
         self._mode = mode
+        self._frontend = frontend
 
     def ensure_service_directory(self, relative_name):
         """Create a directory in PROJECT_DIR/services with the given name.
@@ -98,6 +99,11 @@ class ProvideContext(object):
         Value should be ``PROVIDE_MODE_DEVELOPMENT``, ``PROVIDE_MODE_PRODUCTION``, or ``PROVIDE_MODE_CHECK``.
         """
         return self._mode
+
+    @property
+    def frontend(self):
+        """Get the current ``Frontend``."""
+        return self._frontend
 
 
 def shutdown_service_run_state(local_state_file, service_name):
@@ -200,44 +206,34 @@ class ProvideResult(object):
     Instances of this class are immutable, and are returned from ``provide()``.
     """
 
-    def __init__(self, errors=None, logs=None):
+    def __init__(self, errors=None):
         """Create a ProvideResult."""
         if errors is None:
             errors = []
-        if logs is None:
-            logs = []
         self._errors = errors
-        self._logs = logs
 
-    def copy_with_additions(self, errors=None, logs=None):
-        """Copy this result, appending additional errors and logs."""
+    def copy_with_additions(self, errors=None):
+        """Copy this result, appending additional errors."""
         if errors is None:
             errors = []
-        if logs is None:
-            logs = []
-        if len(errors) == 0 and len(logs) == 0:
+        if len(errors) == 0:
             # we don't have to actually copy since we are immutable
             return self
         else:
-            return ProvideResult(errors=(self._errors + errors), logs=(self._logs + logs))
+            return ProvideResult(errors=(self._errors + errors))
 
     @property
     def errors(self):
         """Get any fatal errors that occurred during provide() preventing success."""
         return self._errors
 
-    @property
-    def logs(self):
-        """Get any debug logs that occurred during provide()."""
-        return self._logs
-
     @classmethod
     def empty(cls):
         """Get an empty ProvideResult (currently a singleton since these are immutable)."""
-        return _emptyProvideResult
+        return _empty_provide_result
 
 # get this via ProvideResult.empty()
-_emptyProvideResult = ProvideResult()
+_empty_provide_result = ProvideResult()
 
 
 class Provider(with_metaclass(ABCMeta)):
@@ -564,9 +560,6 @@ class EnvVarProvider(Provider):
 
     def provide(self, requirement, context):
         """Override superclass to use configured env var (or already-set env var)."""
-        errors = []
-        logs = []
-
         # We prefer the values in this order:
         #  - value set in project-local state overrides everything
         #    (otherwise the UI for configuring the value would end
@@ -612,7 +605,7 @@ class EnvVarProvider(Provider):
         else:
             pass
 
-        return ProvideResult.empty().copy_with_additions(errors, logs)
+        return ProvideResult.empty().copy_with_additions(errors=[])
 
     def unprovide(self, requirement, environ, local_state_file, overrides, requirement_status=None):
         """Override superclass to return success always."""

@@ -7,6 +7,7 @@
 """Project class representing a project directory."""
 from __future__ import absolute_import
 
+import contextlib
 from copy import deepcopy, copy
 import os
 
@@ -23,6 +24,7 @@ from anaconda_project.project_lock_file import ProjectLockFile
 from anaconda_project.archiver import _list_relative_paths_for_unignored_project_files
 from anaconda_project.version import version
 from anaconda_project.conda_manager import CondaLockSet
+from anaconda_project.frontend import _null_frontend, _new_error_recorder, Frontend
 
 from anaconda_project.internal.py2_compat import is_string, is_list, is_dict
 from anaconda_project.internal.simple_status import SimpleStatus
@@ -926,10 +928,12 @@ class _ConfigCache(object):
         else:
             skipped_notebooks = []
 
+        recorder = _new_error_recorder(_null_frontend())
         files = _list_relative_paths_for_unignored_project_files(self.directory_path,
-                                                                 problems,
+                                                                 frontend=recorder,
                                                                  requirements=requirements)
         if files is None:
+            problems.extend(recorder.pop_errors())
             assert problems != []
             return
 
@@ -1055,12 +1059,13 @@ class Project(object):
     the project directory or global user configuration.
     """
 
-    def __init__(self, directory_path, plugin_registry=None):
+    def __init__(self, directory_path, plugin_registry=None, frontend=None):
         """Construct a Project with the given directory and plugin registry.
 
         Args:
             directory_path (str): path to the project directory
             plugin_registry (PluginRegistry): where to look up Requirement and Provider instances, None for default
+            frontend (Frontend): the UX using this Project instance
         """
         self._directory_path = os.path.realpath(directory_path)
 
@@ -1075,6 +1080,10 @@ class Project(object):
         self._lock_file = ProjectLockFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
         self._config_cache = _ConfigCache(self._directory_path, plugin_registry)
+        if frontend is None:
+            frontend = _null_frontend()
+        assert isinstance(frontend, Frontend)
+        self._frontends = [frontend]
 
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._lock_file)
@@ -1084,6 +1093,11 @@ class Project(object):
     def directory_path(self):
         """Get path to the project directory."""
         return self._directory_path
+
+    @property
+    def frontend(self):
+        """Return the current UX frontend."""
+        return self._frontends[-1]
 
     @property
     def project_file(self):
@@ -1130,6 +1144,27 @@ class Project(object):
         Use the ``all_variable_requirements`` property to get every variable.
         """
         return [req for req in self.all_variable_requirements if req.__class__ is EnvVarRequirement]
+
+    def push_null_frontend(self):
+        """Push a no-op frontend overriding the currently-active one.
+
+        This is used to disable output temporarily.
+        """
+        self._frontends.append(_null_frontend())
+
+    def pop_null_frontend(self):
+        """Pop the no-op frontend."""
+        assert len(self._frontends) > 1
+        self._frontends = self._frontends[:-1]
+
+    @contextlib.contextmanager
+    def null_frontend(self):
+        """Create a context with the frontend disabled."""
+        self.push_null_frontend()
+        try:
+            yield
+        finally:
+            self.pop_null_frontend()
 
     def find_requirements(self, env_var=None, klass=None):
         """Find requirements that match the given env var and class.
@@ -1180,7 +1215,7 @@ class Project(object):
                 errors.append(problem)
             if description is None:
                 description = "Unable to load the project."
-            return SimpleStatus(success=False, description=description, logs=[], errors=errors)
+            return SimpleStatus(success=False, description=description, errors=errors)
         else:
             return None
 

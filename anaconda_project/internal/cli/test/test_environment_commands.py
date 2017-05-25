@@ -30,12 +30,19 @@ def _monkeypatch_pwd(monkeypatch, dirname):
 def _monkeypatch_record_args(monkeypatch, what, result):
     params = {}
 
-    def mock_add_env_spec(*args, **kwargs):
+    def mock_recorder(*args, **kwargs):
         params['args'] = args
         params['kwargs'] = kwargs
+
+        # log status.errors to the frontend, because the real functions
+        # do that, in theory
+        if hasattr(result, 'errors') and isinstance(args[0], Project):
+            for error in result.errors:
+                args[0].frontend.error(error)
+
         return result
 
-    monkeypatch.setattr(what, mock_add_env_spec)
+    monkeypatch.setattr(what, mock_recorder)
 
     return params
 
@@ -131,7 +138,6 @@ def test_add_env_spec_fails(capsys, monkeypatch):
         _monkeypatch_add_env_spec(monkeypatch,
                                   SimpleStatus(success=False,
                                                description='Environment variable MYDATA is not set.',
-                                               logs=['This is a log message.'],
                                                errors=['This is an error message.']))
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'add-env-spec', '--name', 'foo'])
@@ -139,7 +145,7 @@ def test_add_env_spec_fails(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert 'This is a log message.\nThis is an error message.\nEnvironment variable MYDATA is not set.\n' == err
+        assert 'This is an error message.\nEnvironment variable MYDATA is not set.\n' == err
 
     with_directory_contents_completing_project_file(dict(), check)
 
@@ -763,16 +769,13 @@ def test_unlock_specific_environment(capsys, monkeypatch):
 def test_update_all_environments(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        params = _monkeypatch_update(monkeypatch,
-                                     SimpleStatus(success=True,
-                                                  logs=['Stuff happened'],
-                                                  description='Updated.'))
+        params = _monkeypatch_update(monkeypatch, SimpleStatus(success=True, description='Updated.'))
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'update'])
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert ('Stuff happened\nUpdated.\n') == out
+        assert ('Updated.\n') == out
         assert '' == err
 
         assert 1 == len(params['args'])

@@ -37,7 +37,6 @@ class CondaEnvProvider(EnvVarProvider):
     def __init__(self):
         """Override to create our CondaManager."""
         super(CondaEnvProvider, self).__init__()
-        self._conda = new_conda_manager()
 
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
         """Override superclass to not require ourselves."""
@@ -189,6 +188,8 @@ class CondaEnvProvider(EnvVarProvider):
         """Override superclass to create or update our environment."""
         assert 'PATH' in context.environ
 
+        conda = new_conda_manager(context.frontend)
+
         # set from the inherited vale if necessary
         if context.status.analysis.config['source'] == 'inherited':
             context.environ[requirement.env_var] = context.status.analysis.config['value']
@@ -229,7 +230,7 @@ class CondaEnvProvider(EnvVarProvider):
             # shared packages, but for now we leave it alone
             assert env_spec is not None
             try:
-                self._conda.fix_environment_deviations(prefix, env_spec, create=(not inherited))
+                conda.fix_environment_deviations(prefix, env_spec, create=(not inherited))
             except CondaManagerError as e:
                 return super_result.copy_with_additions(errors=[str(e)])
 

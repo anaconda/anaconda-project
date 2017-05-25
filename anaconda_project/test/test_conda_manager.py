@@ -16,6 +16,9 @@ def test_use_non_default_conda_manager():
     called = dict()
 
     class MyCondaManager(CondaManager):
+        def __init__(self, frontend):
+            pass
+
         def resolve_dependencies(self, package_specs, channels, platforms):
             return CondaLockSet({}, platforms=[])
 

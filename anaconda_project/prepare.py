@@ -10,7 +10,6 @@ from __future__ import print_function
 
 from abc import ABCMeta, abstractmethod
 import os
-import sys
 from copy import deepcopy
 
 from anaconda_project.internal.metaclass import with_metaclass
@@ -40,9 +39,8 @@ def _update_environ(dest, src):
 class PrepareResult(with_metaclass(ABCMeta)):
     """Abstract class describing the result of preparing the project to run."""
 
-    def __init__(self, logs, statuses, environ, overrides):
+    def __init__(self, statuses, environ, overrides):
         """Construct an abstract PrepareResult."""
-        self._logs = logs
         self._statuses = tuple(statuses)
         self._environ = environ
         self._overrides = overrides
@@ -64,22 +62,6 @@ class PrepareResult(with_metaclass(ABCMeta)):
         can continue to be executed and may resolve the issue.
         """
         pass  # pragma: no cover
-
-    @property
-    def logs(self):
-        """Get lines of debug log output.
-
-        Does not include errors in case of failure. This is the
-        "stdout" logs only.
-        """
-        return self._logs
-
-    def print_output(self):
-        """Print logs and errors to stdout and stderr."""
-        for log in self.logs:
-            print(log, file=sys.stdout)
-            # be sure we print all these before the errors
-            sys.stdout.flush()
 
     @property
     def statuses(self):
@@ -123,9 +105,9 @@ class PrepareResult(with_metaclass(ABCMeta)):
 class PrepareSuccess(PrepareResult):
     """Class describing the successful result of preparing the project to run."""
 
-    def __init__(self, logs, statuses, command_exec_info, environ, overrides):
+    def __init__(self, statuses, command_exec_info, environ, overrides):
         """Construct a PrepareSuccess indicating a successful prepare stage."""
-        super(PrepareSuccess, self).__init__(logs, statuses, environ, overrides)
+        super(PrepareSuccess, self).__init__(statuses, environ, overrides)
         self._command_exec_info = command_exec_info
 
     @property
@@ -154,9 +136,9 @@ class PrepareSuccess(PrepareResult):
 class PrepareFailure(PrepareResult):
     """Class describing the failed result of preparing the project to run."""
 
-    def __init__(self, logs, statuses, errors, environ, overrides):
+    def __init__(self, statuses, errors, environ, overrides):
         """Construct a PrepareFailure indicating a failed prepare stage."""
-        super(PrepareFailure, self).__init__(logs, statuses, environ, overrides)
+        super(PrepareFailure, self).__init__(statuses, environ, overrides)
         self._errors = errors
 
     @property
@@ -168,12 +150,6 @@ class PrepareFailure(PrepareResult):
     def errors(self):
         """Get non-empty list of errors."""
         return self._errors
-
-    def print_output(self):
-        """Override superclass to also print errors."""
-        super(PrepareFailure, self).print_output()
-        for error in self.errors:
-            print(error, file=sys.stderr)
 
 
 class ConfigurePrepareContext(object):
@@ -459,7 +435,6 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
         for status in sorted:
             rechecked.append(status.recheck(environ, local_state, default_env_spec_name, overrides))
 
-        logs = []
         errors = []
         did_any_providing = False
         results_by_status = dict()
@@ -471,9 +446,8 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 continue
             else:
                 did_any_providing = True
-                context = ProvideContext(environ, local_state, default_env_spec_name, status, mode)
+                context = ProvideContext(environ, local_state, default_env_spec_name, status, mode, project.frontend)
                 result = status.provider.provide(status.requirement, context)
-                logs.extend(result.logs)
                 errors.extend(result.errors)
                 results_by_status[status] = result
 
@@ -492,14 +466,15 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             if not status:
                 errors.append("missing requirement to run this project: {requirement.description}"
                               .format(requirement=status.requirement))
+                project.frontend.error(errors[-1])
                 errors.append("  {why_not}".format(why_not=status.status_description))
+                project.frontend.error(errors[-1])
                 failed = True
 
         result_statuses = _refresh_status_list(all_statuses, rechecked)
         if failed:
             stage.set_result(
-                PrepareFailure(logs=logs,
-                               statuses=result_statuses,
+                PrepareFailure(statuses=result_statuses,
                                errors=errors,
                                environ=environ,
                                overrides=overrides),
@@ -514,8 +489,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             else:
                 exec_info = command.exec_info_for_environment(environ, extra_args=extra_command_args)
             stage.set_result(
-                PrepareSuccess(logs=logs,
-                               statuses=result_statuses,
+                PrepareSuccess(statuses=result_statuses,
                                command_exec_info=exec_info,
                                environ=environ,
                                overrides=overrides),
@@ -780,8 +754,9 @@ def _project_problems_to_prepare_failure(project, environ, overrides):
         errors = []
         for problem in project.problems:
             errors.append(problem)
+            project.frontend.error(problem)
         errors.append("Unable to load the project.")
-        return PrepareFailure(logs=[], statuses=(), errors=errors, environ=environ, overrides=overrides)
+        return PrepareFailure(statuses=(), errors=errors, environ=environ, overrides=overrides)
     else:
         return None
 
@@ -790,7 +765,8 @@ def _prepare_failure_on_bad_command_name(project, command_name, environ, overrid
     if command_name is not None and command_name not in project.commands:
         error = ("Command name '%s' is not in %s, these names were found: %s" %
                  (command_name, project.project_file.filename, ", ".join(sorted(project.commands.keys()))))
-        return PrepareFailure(logs=[], statuses=(), errors=[error], environ=environ, overrides=overrides)
+        project.frontend.error(error)
+        return PrepareFailure(statuses=(), errors=[error], environ=environ, overrides=overrides)
     else:
         return None
 
@@ -799,7 +775,8 @@ def _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ, overr
     if env_spec_name is not None and env_spec_name not in project.env_specs:
         error = ("Environment name '%s' is not in %s, these names were found: %s" %
                  (env_spec_name, project.project_file.filename, ", ".join(sorted(project.env_specs.keys()))))
-        return PrepareFailure(logs=[], statuses=(), errors=[error], environ=environ, overrides=overrides)
+        project.frontend.error(error)
+        return PrepareFailure(statuses=(), errors=[error], environ=environ, overrides=overrides)
     else:
         return None
 
@@ -1014,6 +991,7 @@ def unprepare(project, prepare_result, whitelist=None):
         errors = []
         for problem in project.problems:
             errors.append(problem)
+            project.frontend.error(problem)
         return SimpleStatus(success=False, description="Unable to load the project.", errors=errors)
 
     local_state_file = LocalStateFile.load_for_directory(project.directory_path)
@@ -1039,17 +1017,23 @@ def unprepare(project, prepare_result, whitelist=None):
 
     if not failed_statuses:
         if len(success_statuses) > 1:
-            logs = [status.status_description for status in success_statuses]
-            return SimpleStatus(success=True, description="Success.", logs=logs)
+            for message in [status.status_description for status in success_statuses]:
+                project.frontend.info(message)
+            return SimpleStatus(success=True, description="Success.")
         elif len(success_statuses) > 0:
             return success_statuses[0]
         else:
             return SimpleStatus(success=True, description="Nothing to clean up.")
     elif len(failed_statuses) == 1:
+        for error in failed_statuses[0].errors:
+            project.frontend.error(error)
         return failed_statuses[0]
     else:
-        all_errors = [error for status in failed_statuses for error in status.errors]
+        all_errors = [error for status in failed_statuses for error in [status.errors + [status.status_description]]]
         all_names = sorted([req.env_var for req in failed_requirements if isinstance(req, EnvVarRequirement)])
+        for error in all_errors:
+            project.frontend.error(error)
+
         return SimpleStatus(success=False,
                             description=("Failed to clean up %s." % ", ".join(all_names)),
                             errors=all_errors)

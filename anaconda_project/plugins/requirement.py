@@ -99,14 +99,6 @@ class RequirementStatus(Status):
         return self._latest_provide_result
 
     @property
-    def logs(self):
-        """Get logs relevant to the status, from either checking status or attempting to provide it."""
-        if self.latest_provide_result is None:
-            return []
-        else:
-            return self.latest_provide_result.logs
-
-    @property
     def errors(self):
         """Get error logs relevant to the status, from either checking status or attempting to provide it."""
         if self.latest_provide_result is None:

@@ -11,13 +11,14 @@ import os
 from anaconda_project import archiver
 from anaconda_project import project_ops
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.internal.test.fake_frontend import FakeFrontend
 
 
 def test_parse_ignore_file():
     def check(dirname):
-        errors = []
-        patterns = archiver._parse_ignore_file(os.path.join(dirname, ".projectignore"), errors)
-        assert [] == errors
+        frontend = FakeFrontend()
+        patterns = archiver._parse_ignore_file(os.path.join(dirname, ".projectignore"), frontend)
+        assert [] == frontend.errors
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
@@ -43,9 +44,9 @@ hello
 
 def test_parse_missing_ignore_file():
     def check(dirname):
-        errors = []
-        patterns = archiver._parse_ignore_file(os.path.join(dirname, ".projectignore"), errors)
-        assert [] == errors
+        frontend = FakeFrontend()
+        patterns = archiver._parse_ignore_file(os.path.join(dirname, ".projectignore"), frontend)
+        assert [] == frontend.errors
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
@@ -56,7 +57,7 @@ def test_parse_missing_ignore_file():
 
 def test_parse_ignore_file_with_io_error(monkeypatch):
     def check(dirname):
-        errors = []
+        frontend = FakeFrontend()
         ignorefile = os.path.join(dirname, ".projectignore")
 
         from codecs import open as real_open
@@ -69,9 +70,9 @@ def test_parse_ignore_file_with_io_error(monkeypatch):
 
         monkeypatch.setattr('codecs.open', mock_codecs_open)
 
-        patterns = archiver._parse_ignore_file(ignorefile, errors)
+        patterns = archiver._parse_ignore_file(ignorefile, frontend)
         assert patterns is None
-        assert ["Failed to read %s: NOPE" % ignorefile] == errors
+        assert ["Failed to read %s: NOPE" % ignorefile] == frontend.errors
 
         # enable cleaning it up
         os.chmod(ignorefile, 0o777)
@@ -85,9 +86,9 @@ def test_parse_default_ignore_file():
         ignorefile = os.path.join(dirname, ".projectignore")
         assert os.path.isfile(ignorefile)
 
-        errors = []
-        patterns = archiver._parse_ignore_file(ignorefile, errors)
-        assert [] == errors
+        frontend = FakeFrontend()
+        patterns = archiver._parse_ignore_file(ignorefile, frontend)
+        assert [] == frontend.errors
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
