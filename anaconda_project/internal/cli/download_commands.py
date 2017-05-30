@@ -60,9 +60,11 @@ def list_downloads(project_dir):
     if console_utils.print_project_problems(project):
         return 1
 
-    if project.downloads:
+    if project.downloads(project.default_env_spec_name):
         print("Downloads for project: {}\n".format(project_dir))
-        console_utils.print_names_and_descriptions(project.download_requirements, name_attr='title')
+        console_utils.print_names_and_descriptions(
+            project.download_requirements(project.default_env_spec_name),
+            name_attr='title')
     else:
         print("No downloads found in project.")
     return 0

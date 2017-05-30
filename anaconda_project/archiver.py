@@ -308,7 +308,9 @@ def _archive_project(project, filename):
         frontend.error("%s has been modified but not saved." % project.project_file.basename)
         return SimpleStatus(success=False, description="Can't create an archive.", errors=frontend.pop_errors())
 
-    infos = _enumerate_archive_files(project.directory_path, frontend, requirements=project.requirements)
+    infos = _enumerate_archive_files(project.directory_path,
+                                     frontend,
+                                     requirements=project.union_of_requirements_for_all_envs)
     if infos is None:
         return SimpleStatus(success=False,
                             description="Failed to list files in the project.",

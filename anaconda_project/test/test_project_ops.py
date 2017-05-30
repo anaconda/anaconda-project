@@ -311,10 +311,10 @@ def test_add_variables():
         project = project_no_dedicated_env(dirname)
         status = project_ops.add_variables(project, ['foo', 'baz'], dict(foo='bar'))
         assert status
-        req = project.find_requirements(env_var='foo')[0]
+        req = project.find_requirements(project.default_env_spec_name, env_var='foo')[0]
         assert req.options['default'] == 'bar'
 
-        req = project.find_requirements(env_var='baz')[0]
+        req = project.find_requirements(project.default_env_spec_name, env_var='baz')[0]
         assert req.options.get('default') is None
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_add_var)

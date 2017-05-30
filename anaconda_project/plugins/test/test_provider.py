@@ -79,7 +79,7 @@ def test_provider_default_method_implementations():
 def _load_env_var_requirement(dirname, env_var):
     project = Project(dirname)
 
-    for requirement in project.requirements:
+    for requirement in project.requirements(project.default_env_spec_name):
         if isinstance(requirement, EnvVarRequirement) and requirement.env_var == env_var:
             return requirement
     assert [] == project.problems

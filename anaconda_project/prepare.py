@@ -684,7 +684,7 @@ def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_unt
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
     statuses = []
-    for requirement in project.requirements:
+    for requirement in project.requirements(overrides.env_spec_name):
         status = requirement.check_status(environ_copy,
                                           local_state,
                                           project.default_env_spec_name_for_command(command),

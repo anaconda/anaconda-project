@@ -292,7 +292,7 @@ def remove_download(project, prepare_result, env_var):
     if failed is not None:
         return failed
     # Modify the project file _in memory only_, do not save
-    requirement = project.find_requirements(env_var, klass=DownloadRequirement)
+    requirement = project.find_requirements(project.default_env_spec_name, env_var, klass=DownloadRequirement)
     if not requirement:
         return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
     assert len(requirement) == 1  # duplicate env vars aren't allowed
@@ -1093,7 +1093,9 @@ def add_variables(project, vars_to_add, defaults=None):
     if defaults is None:
         defaults = dict()
 
-    present_vars = {req.env_var for req in project.requirements if isinstance(req, EnvVarRequirement)}
+    present_vars = {req.env_var
+                    for req in project.requirements(project.default_env_spec_name)
+                    if isinstance(req, EnvVarRequirement)}
     for varname in vars_to_add:
         if varname in defaults:
             # we need to update the default even if var already exists
@@ -1114,7 +1116,7 @@ def add_variables(project, vars_to_add, defaults=None):
 
 
 def _unset_variable(project, env_prefix, varname, local_state):
-    reqs = project.find_requirements(env_var=varname)
+    reqs = project.find_requirements(project.default_env_spec_name, env_var=varname)
     if len(reqs) > 0:
         req = reqs[0]
         if req.encrypted:
@@ -1177,7 +1179,7 @@ def set_variables(project, vars_and_values, env_spec_name=None):
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
     var_reqs = dict()
-    for req in project.find_requirements(klass=EnvVarRequirement):
+    for req in project.find_requirements(env_spec_name, klass=EnvVarRequirement):
         var_reqs[req.env_var] = req
     present_vars = set(var_reqs.keys())
     errors = []
@@ -1466,7 +1468,7 @@ def add_service(project, service_type, variable_name=None):
     assert len(known_types) == 1  # when this fails, see change needed in the loop below
 
     requirement_already_exists = False
-    existing_requirements = project.find_requirements(env_var=variable_name)
+    existing_requirements = project.find_requirements(project.default_env_spec_name, env_var=variable_name)
     if len(existing_requirements) > 0:
         requirement = existing_requirements[0]
         if isinstance(requirement, ServiceRequirement):
@@ -1512,7 +1514,8 @@ def remove_service(project, prepare_result, variable_name):
         return failed
 
     requirements = [req
-                    for req in project.find_requirements(klass=ServiceRequirement)
+                    for req in project.find_requirements(project.default_env_spec_name,
+                                                         klass=ServiceRequirement)
                     if req.service_type == variable_name or req.env_var == variable_name]
     if not requirements:
         return SimpleStatus(success=False,
