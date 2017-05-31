@@ -26,7 +26,8 @@ def _no_op_prepare(config_context):
             PrepareSuccess(statuses=(),
                            command_exec_info=None,
                            environ=dict(),
-                           overrides=UserConfigOverrides()),
+                           overrides=UserConfigOverrides(),
+                           env_spec_name='something'),
             [])
         return None
 

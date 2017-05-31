@@ -443,7 +443,8 @@ def test_skip_after_success_function_when_second_stage_fails():
             PrepareSuccess(statuses=(),
                            command_exec_info=None,
                            environ=dict(),
-                           overrides=UserConfigOverrides()),
+                           overrides=UserConfigOverrides(),
+                           env_spec_name='first'),
             [])
 
         def last(stage):
@@ -453,7 +454,8 @@ def test_skip_after_success_function_when_second_stage_fails():
                 PrepareFailure(statuses=(),
                                errors=[],
                                environ=dict(),
-                               overrides=UserConfigOverrides()),
+                               overrides=UserConfigOverrides(),
+                               env_spec_name='last'),
                 [])
             return None
 
@@ -490,7 +492,8 @@ def test_run_after_success_function_when_second_stage_succeeds():
             PrepareSuccess(statuses=(),
                            command_exec_info=None,
                            environ=dict(),
-                           overrides=UserConfigOverrides()),
+                           overrides=UserConfigOverrides(),
+                           env_spec_name='foo'),
             [])
 
         def last(stage):
@@ -500,7 +503,8 @@ def test_run_after_success_function_when_second_stage_succeeds():
                 PrepareSuccess(statuses=(),
                                command_exec_info=None,
                                environ=dict(),
-                               overrides=UserConfigOverrides()),
+                               overrides=UserConfigOverrides(),
+                               env_spec_name='bar'),
                 [])
             return None
 
@@ -732,8 +736,13 @@ icon: foo.png
 
 
 def test_prepare_success_properties():
-    result = PrepareSuccess(statuses=(), command_exec_info=None, environ=dict(), overrides=UserConfigOverrides())
+    result = PrepareSuccess(statuses=(),
+                            command_exec_info=None,
+                            environ=dict(),
+                            overrides=UserConfigOverrides(),
+                            env_spec_name='foo')
     assert result.statuses == ()
     assert result.status_for('FOO') is None
     assert result.status_for(EnvVarRequirement) is None
     assert result.overrides is not None
+    assert result.env_spec_name == 'foo'

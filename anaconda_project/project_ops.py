@@ -289,10 +289,14 @@ def remove_download(project, prepare_result, env_var):
         ``Status`` instance
     """
     failed = _check_problems(project)
+
     if failed is not None:
         return failed
+
+    assert prepare_result.env_spec_name is not None
+
     # Modify the project file _in memory only_, do not save
-    requirement = project.find_requirements(project.default_env_spec_name, env_var, klass=DownloadRequirement)
+    requirement = project.find_requirements(prepare_result.env_spec_name, env_var, klass=DownloadRequirement)
     if not requirement:
         return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
     assert len(requirement) == 1  # duplicate env vars aren't allowed
@@ -1510,11 +1514,14 @@ def remove_service(project, prepare_result, variable_name):
         ``Status`` instance
     """
     failed = _check_problems(project)
+
     if failed is not None:
         return failed
 
+    assert prepare_result.env_spec_name is not None
+
     requirements = [req
-                    for req in project.find_requirements(project.default_env_spec_name,
+                    for req in project.find_requirements(prepare_result.env_spec_name,
                                                          klass=ServiceRequirement)
                     if req.service_type == variable_name or req.env_var == variable_name]
     if not requirements:
