@@ -185,6 +185,48 @@ variables:
 """}, check_some_env_var)
 
 
+def test_requirement_inheritance():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        assert project.default_env_spec_name == 'foo'
+
+        def var_reqs(name):
+            conda_env_reqs = [req for req in project.requirements(name) if isinstance(req, CondaEnvRequirement)]
+            assert 1 == len(conda_env_reqs)
+            requirements = [(req.env_var, req.options.get('default'))
+                            for req in project.requirements(name) if not isinstance(req, CondaEnvRequirement)]
+            requirements = sorted(requirements, key=lambda x: x[0])
+            return ([t[0] for t in requirements], [t[1] for t in requirements])
+
+        requirements = var_reqs('foo')
+        assert (['BAR', 'DOWNLOAD', 'FOO'], ['hi', None, 'global']) == requirements
+
+        requirements = var_reqs('foo_with_override')
+        assert (['DOWNLOAD', 'FOO'], [None, 'local']) == requirements
+
+        requirements = var_reqs('bar')
+        assert (['DOWNLOAD', 'FOO'], [None, 'global']) == requirements
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: { default: "global" }
+downloads:
+  DOWNLOAD: "http://example.com"
+env_specs:
+  foo:
+    variables:
+      BAR: "hi"
+  foo_with_override:
+    variables:
+      FOO: "local"
+  bar:
+    downloads:
+      DOWNLOAD: "http://example.com/bar"
+"""}, check)
+
+
 def test_problem_in_project_file():
     def check_problem(dirname):
         project = project_no_dedicated_env(dirname)

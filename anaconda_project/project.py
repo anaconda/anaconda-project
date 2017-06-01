@@ -263,16 +263,31 @@ class _ConfigCache(object):
 
         self.icon = icon
 
-    def _new_requirement_per_env_spec(self, requirements, requirement_maker):
+    def _add_requirement(self, requirements, env_spec, requirement):
+        # note that env_spec.name is None for the global_base_env_spec
+        if env_spec.name not in requirements:
+            requirements[env_spec.name] = []
+        requirements[env_spec.name].append(requirement)
+
+    def _update_requirements(self, requirements, problems, project_file, dict_name, updater):
+        global_dict = project_file.get_value(dict_name)
+        updater(requirements, problems, project_file, self.global_base_env_spec, global_dict)
         for env_spec in self.env_specs.values():
-            requirement = requirement_maker()
-            if env_spec.name not in requirements:
-                requirements[env_spec.name] = []
-            requirements[env_spec.name].append(requirement)
+            env_dict = project_file.get_value(['env_specs', env_spec.name, dict_name], None)
+            updater(requirements, problems, project_file, env_spec, env_dict)
 
     def _update_variables(self, requirements, problems, project_file):
-        variables = project_file.get_value("variables")
+        self._update_requirements(requirements, problems, project_file, 'variables',
+                                  self._update_variables_for_env_spec)
 
+    def _update_downloads(self, requirements, problems, project_file):
+        self._update_requirements(requirements, problems, project_file, 'downloads',
+                                  self._update_downloads_for_env_spec)
+
+    def _update_services(self, requirements, problems, project_file):
+        self._update_requirements(requirements, problems, project_file, 'services', self._update_services_for_env_spec)
+
+    def _update_variables_for_env_spec(self, requirements, problems, project_file, env_spec, variables):
         def check_conda_reserved(key):
             if key in ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH', 'CONDA_PREFIX'):
                 _file_problem(problems, project_file, ("Environment variable %s is reserved for Conda's use, " +
@@ -306,11 +321,8 @@ class _ConfigCache(object):
                 assert (isinstance(options, dict))
 
                 if EnvVarRequirement._parse_default(options, key, problems):
-
-                    def make_req_with_options():
-                        return self.registry.find_requirement_by_env_var(key, options)
-
-                    self._new_requirement_per_env_spec(requirements, make_req_with_options)
+                    requirement = self.registry.find_requirement_by_env_var(key, options)
+                    self._add_requirement(requirements, env_spec, requirement)
 
         elif is_list(variables):
             for item in variables:
@@ -322,10 +334,8 @@ class _ConfigCache(object):
                     if check_conda_reserved(item):
                         continue
 
-                    def make_req():
-                        return self.registry.find_requirement_by_env_var(item, options=dict())
-
-                    self._new_requirement_per_env_spec(requirements, make_req)
+                    requirement = self.registry.find_requirement_by_env_var(item, options=dict())
+                    self._add_requirement(requirements, env_spec, requirement)
                 else:
                     _file_problem(
                         problems,
@@ -339,9 +349,7 @@ class _ConfigCache(object):
                 "variables section contains wrong value type {value}, should be dict or list of requirements".format(
                     value=variables))
 
-    def _update_downloads(self, requirements, problems, project_file):
-        downloads = project_file.get_value('downloads')
-
+    def _update_downloads_for_env_spec(self, requirements, problems, project_file, env_spec, downloads):
         if downloads is None:
             return
 
@@ -359,14 +367,10 @@ class _ConfigCache(object):
             if download_kwargs is None:
                 continue
 
-            def make_download_req():
-                return DownloadRequirement(self.registry, **download_kwargs)
+            requirement = DownloadRequirement(self.registry, **download_kwargs)
+            self._add_requirement(requirements, env_spec, requirement)
 
-            self._new_requirement_per_env_spec(requirements, make_download_req)
-
-    def _update_services(self, requirements, problems, project_file):
-        services = project_file.get_value('services')
-
+    def _update_services_for_env_spec(self, requirements, problems, project_file, env_spec, services):
         if services is None:
             return
 
@@ -391,13 +395,10 @@ class _ConfigCache(object):
                 problems.append("Service {} has an unknown type '{}'.".format(varname, service_type))
                 continue
 
-            def make_service_req():
-                requirement = self.registry.find_requirement_by_service_type(**service_kwargs)
-                assert isinstance(requirement, ServiceRequirement)
-                assert 'type' in requirement.options
-                return requirement
-
-            self._new_requirement_per_env_spec(requirements, make_service_req)
+            requirement = self.registry.find_requirement_by_service_type(**service_kwargs)
+            assert isinstance(requirement, ServiceRequirement)
+            assert 'type' in requirement.options
+            self._add_requirement(requirements, env_spec, requirement)
 
     def _parse_string_list_with_special(self, problems, yaml_file, parent_dict, key, what, special_filter):
         items = parent_dict.get(key, [])
@@ -616,8 +617,9 @@ class _ConfigCache(object):
                 if first_env_spec_name is None:
                     first_env_spec_name = name
 
-                _unknown_field_suggestions(project_file, problems, attrs, ('packages', 'channels', 'platforms',
-                                                                           'description', 'inherit_from'))
+                _unknown_field_suggestions(project_file, problems, attrs,
+                                           ('packages', 'channels', 'platforms', 'description', 'inherit_from',
+                                            'variables', 'services', 'downloads'))
         else:
             _file_problem(problems, project_file,
                           "env_specs should be a dictionary from environment name to environment attributes, not %r" %
@@ -838,10 +840,8 @@ class _ConfigCache(object):
         if _fatal_problem(problems):
             return
 
-        def make_env_req():
-            return CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)
-
-        self._new_requirement_per_env_spec(requirements, make_env_req)
+        requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)
+        self._add_requirement(requirements, self.global_base_env_spec, requirement)
 
     def _update_commands(self, problems, project_file, requirements):
         failed = False
