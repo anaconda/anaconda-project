@@ -186,12 +186,12 @@ class _ConfigCache(object):
             self._update_name(problems, project_file)
             self._update_description(problems, project_file)
             self._update_icon(problems, project_file)
+            self._update_lock_sets(problems, lock_file)
+            self._update_env_specs(problems, project_file, lock_file)
             # future: we could un-hardcode this so plugins can add stuff here
             self._update_variables(requirements, problems, project_file)
             self._update_downloads(requirements, problems, project_file)
             self._update_services(requirements, problems, project_file)
-            self._update_lock_sets(problems, lock_file)
-            self._update_env_specs(problems, project_file, lock_file)
             # this MUST be after we _update_variables since we may get CondaEnvRequirement
             # options in the variables section, and after _update_env_specs
             # since we use those
