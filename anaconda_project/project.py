@@ -157,7 +157,7 @@ class _ConfigCache(object):
         self.project_file_count = project_file.change_count
         self.lock_file_count = lock_file.change_count
 
-        requirements = []
+        requirements = dict()
         problems = []
 
         project_exists = os.path.isdir(self.directory_path)
@@ -263,6 +263,13 @@ class _ConfigCache(object):
 
         self.icon = icon
 
+    def _new_requirement_per_env_spec(self, requirements, requirement_maker):
+        for env_spec in self.env_specs.values():
+            requirement = requirement_maker()
+            if env_spec.name not in requirements:
+                requirements[env_spec.name] = []
+            requirements[env_spec.name].append(requirement)
+
     def _update_variables(self, requirements, problems, project_file):
         variables = project_file.get_value("variables")
 
@@ -299,8 +306,12 @@ class _ConfigCache(object):
                 assert (isinstance(options, dict))
 
                 if EnvVarRequirement._parse_default(options, key, problems):
-                    requirement = self.registry.find_requirement_by_env_var(key, options)
-                    requirements.append(requirement)
+
+                    def make_req_with_options():
+                        return self.registry.find_requirement_by_env_var(key, options)
+
+                    self._new_requirement_per_env_spec(requirements, make_req_with_options)
+
         elif is_list(variables):
             for item in variables:
                 if is_string(item):
@@ -310,8 +321,11 @@ class _ConfigCache(object):
                         continue
                     if check_conda_reserved(item):
                         continue
-                    requirement = self.registry.find_requirement_by_env_var(item, options=dict())
-                    requirements.append(requirement)
+
+                    def make_req():
+                        return self.registry.find_requirement_by_env_var(item, options=dict())
+
+                    self._new_requirement_per_env_spec(requirements, make_req)
                 else:
                     _file_problem(
                         problems,
@@ -341,7 +355,14 @@ class _ConfigCache(object):
                 _file_problem(problems, project_file,
                               "Download name cannot be empty string, found: '{}' as name".format(varname))
                 continue
-            DownloadRequirement._parse(self.registry, varname, item, problems, requirements)
+            download_kwargs = DownloadRequirement._parse(varname, item, problems)
+            if download_kwargs is None:
+                continue
+
+            def make_download_req():
+                return DownloadRequirement(self.registry, **download_kwargs)
+
+            self._new_requirement_per_env_spec(requirements, make_download_req)
 
     def _update_services(self, requirements, problems, project_file):
         services = project_file.get_value('services')
@@ -360,7 +381,23 @@ class _ConfigCache(object):
                 _file_problem(problems, project_file,
                               "Service name cannot be empty string, found: '{}' as name".format(varname))
                 continue
-            ServiceRequirement._parse(self.registry, varname, item, problems, requirements)
+
+            service_kwargs = ServiceRequirement._parse(varname, item, problems)
+            if service_kwargs is None:
+                continue
+            service_type = service_kwargs['service_type']
+
+            if not self.registry.can_find_requirement_by_service_type(**service_kwargs):
+                problems.append("Service {} has an unknown type '{}'.".format(varname, service_type))
+                continue
+
+            def make_service_req():
+                requirement = self.registry.find_requirement_by_service_type(**service_kwargs)
+                assert isinstance(requirement, ServiceRequirement)
+                assert 'type' in requirement.options
+                return requirement
+
+            self._new_requirement_per_env_spec(requirements, make_service_req)
 
     def _parse_string_list_with_special(self, problems, yaml_file, parent_dict, key, what, special_filter):
         items = parent_dict.get(key, [])
@@ -801,8 +838,10 @@ class _ConfigCache(object):
         if _fatal_problem(problems):
             return
 
-        env_requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)
-        requirements.append(env_requirement)
+        def make_env_req():
+            return CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)
+
+        self._new_requirement_per_env_spec(requirements, make_env_req)
 
     def _update_commands(self, problems, project_file, requirements):
         failed = False
@@ -929,9 +968,12 @@ class _ConfigCache(object):
             skipped_notebooks = []
 
         recorder = _new_error_recorder(_null_frontend())
+        flat_requirements = []
+        for reqs in requirements.values():
+            flat_requirements.extend(reqs)
         files = _list_relative_paths_for_unignored_project_files(self.directory_path,
                                                                  frontend=recorder,
-                                                                 requirements=requirements)
+                                                                 requirements=flat_requirements)
         if files is None:
             problems.extend(recorder.pop_errors())
             assert problems != []
@@ -1122,14 +1164,18 @@ class Project(object):
             # This is obviously pointless for the time being since
             # all env specs have the same requirements, but we want
             # to change that in the future so simulating it here.
-            combined.extend(self._updated_cache().requirements)
+            combined.extend(self.requirements(env_spec.name))
         return combined
 
     def requirements(self, env_spec_name):
         """Required items in order to run this project (list of ``Requirement`` instances)."""
         if env_spec_name is None:
             env_spec_name = self.default_env_spec_name
-        return self._updated_cache().requirements
+        requirements = self._updated_cache().requirements
+        # the main scenario where "env_spec_name" is not in requirements
+        # would be if the project file is broken such that we weren't
+        # able to parse requirements.
+        return requirements.get(env_spec_name, [])
 
     def service_requirements(self, env_spec_name):
         """All requirements that are ServiceRequirement instances."""

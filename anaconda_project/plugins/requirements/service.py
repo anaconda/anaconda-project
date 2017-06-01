@@ -16,7 +16,7 @@ class ServiceRequirement(EnvVarRequirement):
     """Abstract base class for a requirement from the services section of the project file."""
 
     @classmethod
-    def _parse(cls, registry, varname, item, problems, requirements):
+    def _parse(cls, varname, item, problems):
         """Parse an item from the services: section."""
         service_type = None
         if is_string(item):
@@ -26,25 +26,17 @@ class ServiceRequirement(EnvVarRequirement):
             service_type = item.get('type', None)
             if service_type is None:
                 problems.append("Service {} doesn't contain a 'type' field.".format(varname))
-                return
+                return None
             options = deepcopy(item)
         else:
             problems.append("Service {} should have a service type string or a dictionary as its value.".format(
                 varname))
-            return
+            return None
 
         if not EnvVarRequirement._parse_default(options, varname, problems):
-            return
+            return None
 
-        requirement = registry.find_requirement_by_service_type(service_type=service_type,
-                                                                env_var=varname,
-                                                                options=options)
-        if requirement is None:
-            problems.append("Service {} has an unknown type '{}'.".format(varname, service_type))
-        else:
-            assert isinstance(requirement, ServiceRequirement)
-            assert 'type' in requirement.options
-            requirements.append(requirement)
+        return dict(service_type=service_type, env_var=varname, options=options)
 
     @property
     def service_type(self):
