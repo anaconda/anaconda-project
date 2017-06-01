@@ -1172,10 +1172,22 @@ class Project(object):
         if env_spec_name is None:
             env_spec_name = self.default_env_spec_name
         requirements = self._updated_cache().requirements
-        # the main scenario where "env_spec_name" is not in requirements
-        # would be if the project file is broken such that we weren't
-        # able to parse requirements.
-        return requirements.get(env_spec_name, [])
+
+        def get_reqs(env_spec):
+            return requirements.get(env_spec.name, [])
+
+        def req_key(req):
+            assert isinstance(req, EnvVarRequirement)
+            return req.env_var
+
+        env_spec = self.env_specs.get(env_spec_name)
+        if env_spec is None:
+            # this happens if there was a problem parsing the project
+            return []
+        else:
+            # this should probably really return the tuple instead
+            # of list, but we'd have to fix up tests accordingly
+            return list(env_spec._get_inherited_with_getter(get_reqs, key_func=req_key))
 
     def service_requirements(self, env_spec_name):
         """All requirements that are ServiceRequirement instances."""
