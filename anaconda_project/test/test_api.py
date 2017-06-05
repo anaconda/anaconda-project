@@ -272,7 +272,13 @@ def test_add_download(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.add_download', mock_add_download)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, env_var='boo', url='baz', filename="fname", hash_algorithm="md5", hash_value="foo")
+    kwargs = dict(project=43,
+                  env_spec_name="myenv",
+                  env_var='boo',
+                  url='baz',
+                  filename="fname",
+                  hash_algorithm="md5",
+                  hash_value="foo")
     result = p.add_download(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
@@ -292,7 +298,7 @@ def test_remove_download(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.remove_download', mock_remove_download)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, prepare_result='winnebago', env_var='boo')
+    kwargs = dict(project=43, env_spec_name="blah", prepare_result='winnebago', env_var='boo')
     result = p.remove_download(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
@@ -582,7 +588,7 @@ def test_add_service(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.add_service', mock_add_service)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, service_type='abc', variable_name='xyz')
+    kwargs = dict(project=43, env_spec_name="boo", service_type='abc', variable_name='xyz')
     result = p.add_service(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
@@ -602,7 +608,7 @@ def test_remove_service(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.remove_service', mock_remove_service)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, prepare_result=123, variable_name='xyz')
+    kwargs = dict(project=43, env_spec_name=578, prepare_result=123, variable_name='xyz')
     result = p.remove_service(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

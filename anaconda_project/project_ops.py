@@ -198,7 +198,7 @@ def _try_requirement_without_commit(project, env_var_or_class, env_spec_name=Non
     return status
 
 
-def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=None):
+def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name):
     status = _try_requirement_without_commit(project, env_var_or_class, env_spec_name)
 
     if not status:
@@ -232,7 +232,7 @@ def _apply_lock_file_then_revert(project, env_spec_name):
     return status
 
 
-def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
+def add_download(project, env_spec_name, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
     """Attempt to download the URL; if successful, add it as a download to the project.
 
     The returned ``Status`` should be a ``RequirementStatus`` for
@@ -243,6 +243,7 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
 
     Args:
         project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
         env_var (str): env var to store the local filename
         url (str): url to download
         filename (optional, str): Name to give file or directory after downloading
@@ -257,10 +258,11 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
     failed = _check_problems(project)
     if failed is not None:
         return failed
-    requirement = project.project_file.get_value(['downloads', env_var])
+    path = _path_to_download(env_spec_name, env_var)
+    requirement = project.project_file.get_value(path)
     if requirement is None or not isinstance(requirement, dict):
         requirement = {}
-        project.project_file.set_value(['downloads', env_var], requirement)
+        project.project_file.set_value(path, requirement)
 
     requirement['url'] = url
     if filename:
@@ -271,10 +273,10 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
             requirement.pop(_hash, None)
         requirement[hash_algorithm] = hash_value
 
-    return _commit_requirement_if_it_works(project, env_var)
+    return _commit_requirement_if_it_works(project, env_var, env_spec_name=env_spec_name)
 
 
-def remove_download(project, prepare_result, env_var):
+def remove_download(project, env_spec_name, env_var, prepare_result=None):
     """Remove file or directory referenced by ``env_var`` from file system and the project.
 
     The returned ``Status`` will be an instance of ``SimpleStatus``. A False
@@ -283,8 +285,9 @@ def remove_download(project, prepare_result, env_var):
 
     Args:
         project (Project): the project
-        prepare_result (PrepareResult): result of a previous prepare
+        env_spec_name (str): environment spec name or None for all environment specs
         env_var (str): env var to store the local filename
+        prepare_result (PrepareResult): result of a previous prepare or None
 
     Returns:
         ``Status`` instance
@@ -294,18 +297,24 @@ def remove_download(project, prepare_result, env_var):
     if failed is not None:
         return failed
 
-    assert prepare_result.env_spec_name is not None
-
     # Modify the project file _in memory only_, do not save
-    requirement = project.find_requirements(prepare_result.env_spec_name, env_var, klass=DownloadRequirement)
+    requirement = project.find_requirements(env_spec_name, env_var, klass=DownloadRequirement)
     if not requirement:
         return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
     assert len(requirement) == 1  # duplicate env vars aren't allowed
     requirement = requirement[0]
 
+    if prepare_result is None:
+        prepare_result = prepare.prepare_without_interaction(project,
+                                                             provide_whitelist=(requirement, ),
+                                                             env_spec_name=env_spec_name,
+                                                             mode=provide.PROVIDE_MODE_CHECK)
+
+    assert env_spec_name is None or prepare_result.env_spec_name == env_spec_name
+
     status = prepare.unprepare(project, prepare_result, whitelist=[env_var])
     if status:
-        project.project_file.unset_value(['downloads', env_var])
+        project.project_file.unset_value(_path_to_download(env_spec_name, env_var))
         project.project_file.use_changes_without_saving()
         assert project.problems == []
         project.project_file.save()
@@ -1100,11 +1109,23 @@ def _prepare_env_prefix(project, env_spec_name, prepare_result, mode):
     return (env_prefix, None)
 
 
-def _path_to_variable(env_spec_name, varname):
+def _path_to_per_env_spec_thing(env_spec_name, thing_name, varname):
     if env_spec_name is None:
-        return ['variables', varname]
+        return [thing_name, varname]
     else:
-        return ['env_specs', env_spec_name, 'variables', varname]
+        return ['env_specs', env_spec_name, thing_name, varname]
+
+
+def _path_to_variable(env_spec_name, varname):
+    return _path_to_per_env_spec_thing(env_spec_name, 'variables', varname)
+
+
+def _path_to_download(env_spec_name, varname):
+    return _path_to_per_env_spec_thing(env_spec_name, 'downloads', varname)
+
+
+def _path_to_service(env_spec_name, varname):
+    return _path_to_per_env_spec_thing(env_spec_name, 'services', varname)
 
 
 def add_variables(project, env_spec_name, vars_to_add, defaults=None):
@@ -1479,7 +1500,7 @@ def remove_command(project, name):
     return SimpleStatus(success=True, description="Command: '{}' removed from project file.".format(name))
 
 
-def add_service(project, service_type, variable_name=None):
+def add_service(project, env_spec_name, service_type, variable_name=None):
     """Add a service to anaconda-project.yml.
 
     The returned ``Status`` should be a ``RequirementStatus`` for
@@ -1490,6 +1511,7 @@ def add_service(project, service_type, variable_name=None):
 
     Args:
         project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
         service_type (str): which kind of service
         variable_name (str): environment variable name (None for default)
 
@@ -1541,12 +1563,12 @@ def add_service(project, service_type, variable_name=None):
                                 errors=["Variable %s is already in use." % variable_name])
 
     if not requirement_already_exists:
-        project.project_file.set_value(['services', variable_name], service_type)
+        project.project_file.set_value(_path_to_service(env_spec_name, variable_name), service_type)
 
-    return _commit_requirement_if_it_works(project, variable_name)
+    return _commit_requirement_if_it_works(project, variable_name, env_spec_name=env_spec_name)
 
 
-def remove_service(project, prepare_result, variable_name):
+def remove_service(project, env_spec_name, variable_name, prepare_result=None):
     """Remove a service to anaconda-project.yml.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -1555,8 +1577,9 @@ def remove_service(project, prepare_result, variable_name):
 
     Args:
         project (Project): the project
-        prepare_result (PrepareResult): result of a previous prepare
+        env_spec_name (str): environment spec name or None for all environment specs
         variable_name (str): environment variable name for the service requirement
+        prepare_result (PrepareResult): result of a previous prepare or None
 
     Returns:
         ``Status`` instance
@@ -1566,10 +1589,8 @@ def remove_service(project, prepare_result, variable_name):
     if failed is not None:
         return failed
 
-    assert prepare_result.env_spec_name is not None
-
     requirements = [req
-                    for req in project.find_requirements(prepare_result.env_spec_name,
+                    for req in project.find_requirements(env_spec_name,
                                                          klass=ServiceRequirement)
                     if req.service_type == variable_name or req.env_var == variable_name]
     if not requirements:
@@ -1581,13 +1602,21 @@ def remove_service(project, prepare_result, variable_name):
                             description=("Conflicting results, found {} matches, use list-services"
                                          " to identify which service you want to remove").format(len(requirements)))
 
+    if prepare_result is None:
+        prepare_result = prepare.prepare_without_interaction(project,
+                                                             provide_whitelist=(requirements[0], ),
+                                                             env_spec_name=env_spec_name,
+                                                             mode=provide.PROVIDE_MODE_CHECK)
+
+    assert env_spec_name is None or prepare_result.env_spec_name == env_spec_name
+
     env_var = requirements[0].env_var
 
     status = prepare.unprepare(project, prepare_result, whitelist=[env_var])
     if not status:
         return status
 
-    project.project_file.unset_value(['services', env_var])
+    project.project_file.unset_value(_path_to_service(env_spec_name, env_var))
     project.project_file.use_changes_without_saving()
     assert project.problems == []
 

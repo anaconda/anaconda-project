@@ -172,6 +172,7 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('add-download', help="Add a URL to be downloaded before running commands")
     add_directory_arg(preset)
+    add_env_spec_arg(preset)
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
     preset.add_argument('--filename', help="The name to give the file/folder after downloading it", default=None)
@@ -184,11 +185,13 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('remove-download', help="Remove a download from the project and from the filesystem")
     add_directory_arg(preset)
+    add_env_spec_arg(preset)
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.set_defaults(main=download_commands.main_remove)
 
     preset = subparsers.add_parser('list-downloads', help="List all downloads on the project")
     add_directory_arg(preset)
+    add_env_spec_arg(preset)
     preset.set_defaults(main=download_commands.main_list)
 
     service_types = PluginRegistry().list_service_types()
@@ -199,17 +202,20 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('add-service', help="Add a service to be available before running commands")
     add_directory_arg(preset)
+    add_env_spec_arg(preset)
     add_service_variable_name(preset)
     preset.add_argument('service_type', metavar='SERVICE_TYPE', default=None, choices=service_choices)
     preset.set_defaults(main=service_commands.main_add)
 
     preset = subparsers.add_parser('remove-service', help="Remove a service from the project")
     add_directory_arg(preset)
+    add_env_spec_arg(preset)
     preset.add_argument('variable', metavar='SERVICE_REFERENCE', default=None)
     preset.set_defaults(main=service_commands.main_remove)
 
     preset = subparsers.add_parser('list-services', help="List services present in the project")
     add_directory_arg(preset)
+    add_env_spec_arg(preset)
     preset.set_defaults(main=service_commands.main_list)
 
     def add_package_args(preset):

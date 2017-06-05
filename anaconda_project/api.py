@@ -380,7 +380,7 @@ class AnacondaProject(object):
                                            vars_to_unset=vars_to_unset,
                                            prepare_result=prepare_result)
 
-    def add_download(self, project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
+    def add_download(self, project, env_spec_name, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
         """Attempt to download the URL; if successful, add it as a download to the project.
 
         The returned ``Status`` should be a ``RequirementStatus`` for
@@ -391,6 +391,7 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
             env_var (str): env var to store the local filename
             url (str): url to download
             filename (optional, str): Name to give file or directory after downloading
@@ -402,13 +403,14 @@ class AnacondaProject(object):
             ``Status`` instance
         """
         return project_ops.add_download(project=project,
+                                        env_spec_name=env_spec_name,
                                         env_var=env_var,
                                         url=url,
                                         filename=filename,
                                         hash_algorithm=hash_algorithm,
                                         hash_value=hash_value)
 
-    def remove_download(self, project, prepare_result, env_var):
+    def remove_download(self, project, env_spec_name, env_var, prepare_result=None):
         """Remove file or directory referenced by ``env_var`` from file system and the project.
 
         The returned ``Status`` will be an instance of ``SimpleStatus``. A False
@@ -417,13 +419,17 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
-            prepare_result (PrepareResult): result of a previous prepare
+            env_spec_name (str): environment spec name or None for all environment specs
             env_var (str): env var to store the local filename
+            prepare_result (PrepareResult): result of a previous prepare
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_download(project=project, prepare_result=prepare_result, env_var=env_var)
+        return project_ops.remove_download(project=project,
+                                           env_spec_name=env_spec_name,
+                                           env_var=env_var,
+                                           prepare_result=prepare_result)
 
     def add_env_spec(self, project, name, packages, channels):
         """Attempt to create the environment spec and add it to anaconda-project.yml.
@@ -688,7 +694,7 @@ class AnacondaProject(object):
         """
         return project_ops.remove_command(project=project, name=name)
 
-    def add_service(self, project, service_type, variable_name=None):
+    def add_service(self, project, env_spec_name, service_type, variable_name=None):
         """Add a service to anaconda-project.yml.
 
         The returned ``Status`` should be a ``RequirementStatus`` for
@@ -699,15 +705,19 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
             service_type (str): which kind of service
             variable_name (str): environment variable name (None for default)
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.add_service(project=project, service_type=service_type, variable_name=variable_name)
+        return project_ops.add_service(project=project,
+                                       env_spec_name=env_spec_name,
+                                       service_type=service_type,
+                                       variable_name=variable_name)
 
-    def remove_service(self, project, prepare_result, variable_name):
+    def remove_service(self, project, env_spec_name, variable_name, prepare_result=None):
         """Remove a service to anaconda-project.yml.
 
         Returns a ``Status`` instance which evaluates to True on
@@ -716,13 +726,17 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
-            prepare_result (PrepareResult): result of a previous prepare
+            env_spec_name (str): environment spec name or None for all environment specs
             variable_name (str): environment variable name for the service requirement
+            prepare_result (PrepareResult): result of a previous prepare or None
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_service(project=project, prepare_result=prepare_result, variable_name=variable_name)
+        return project_ops.remove_service(project=project,
+                                          env_spec_name=env_spec_name,
+                                          variable_name=variable_name,
+                                          prepare_result=prepare_result)
 
     def clean(self, project, prepare_result):
         """Blow away auto-provided state for the project.

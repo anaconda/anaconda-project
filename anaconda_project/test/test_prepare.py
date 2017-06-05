@@ -750,3 +750,61 @@ def test_prepare_success_properties():
     assert result.status_for(EnvVarRequirement) is None
     assert result.overrides is not None
     assert result.env_spec_name == 'foo'
+
+
+def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA', checksum=None):
+    from tornado import gen
+
+    @gen.coroutine
+    def mock_downloader_run(self, loop):
+        class Res:
+            pass
+
+        res = Res()
+        res.code = 200
+        with open(os.path.join(dirname, filename), 'w') as out:
+            out.write('data')
+        if checksum:
+            self._hash = checksum
+        raise gen.Return(res)
+
+    monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+
+
+def test_provide_whitelist(monkeypatch):
+    def check(dirname):
+        from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+
+        _monkeypatch_download_file(monkeypatch, dirname, filename="nope")
+
+        no_foo = [('missing requirement to run this project: A downloaded file which is ' + 'referenced by FOO.'),
+                  '  Environment variable FOO is not set.']
+
+        # whitelist only the env req by class
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, provide_whitelist=(CondaEnvRequirement, ), environ=environ)
+        assert result.errors == no_foo
+
+        # whitelist by instance
+        env_req = [req for req in project.requirements(None) if isinstance(req, CondaEnvRequirement)][0]
+        result = prepare_without_interaction(project, provide_whitelist=(env_req, ), environ=environ)
+        assert result.errors == no_foo
+
+        # whitelist by variable name
+        result = prepare_without_interaction(project, provide_whitelist=(env_req.env_var, ), environ=environ)
+        assert result.errors == no_foo
+
+        # whitelist the download
+        result = prepare_without_interaction(project,
+                                             provide_whitelist=(env_req, project.download_requirements(None)[0]),
+                                             environ=environ)
+        assert result.errors == []
+        assert 'FOO' in result.environ
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+downloads:
+  FOO: "http://example.com/nope"
+
+"""}, check)

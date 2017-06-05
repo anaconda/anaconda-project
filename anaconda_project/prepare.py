@@ -21,7 +21,7 @@ from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT)
 from anaconda_project.plugins.provider import ProvideContext
-from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
+from anaconda_project.plugins.requirement import Requirement, EnvVarRequirement, UserConfigOverrides
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
@@ -434,12 +434,15 @@ def _in_provide_whitelist(provide_whitelist, requirement):
         # whitelist of None means "everything"
         return True
 
-    for env_var_or_class in provide_whitelist:
-        if is_string(env_var_or_class):
-            if isinstance(requirement, EnvVarRequirement) and requirement.env_var == env_var_or_class:
+    for env_var_or_class_or_req in provide_whitelist:
+        if isinstance(env_var_or_class_or_req, Requirement):
+            if requirement is env_var_or_class_or_req:
+                return True
+        elif is_string(env_var_or_class_or_req):
+            if isinstance(requirement, EnvVarRequirement) and requirement.env_var == env_var_or_class_or_req:
                 return True
         else:
-            if isinstance(requirement, env_var_or_class):
+            if isinstance(requirement, env_var_or_class_or_req):
                 return True
     return False
 

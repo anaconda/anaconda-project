@@ -1193,7 +1193,7 @@ def test_add_download(monkeypatch):
         _monkeypatch_download_file(monkeypatch, dirname)
 
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
+        status = project_ops.add_download(project, None, 'MYDATA', 'http://localhost:123456')
 
         assert os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert status
@@ -1206,13 +1206,43 @@ def test_add_download(monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
+def test_add_download_to_env_spec(monkeypatch):
+    def check(dirname):
+        _monkeypatch_download_file(monkeypatch, dirname)
+
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.add_download(project, 'myspec', 'MYDATA', 'http://localhost:123456')
+
+        assert os.path.isfile(os.path.join(dirname, "MYDATA"))
+        assert status
+        assert [] == status.errors
+
+        # be sure download was added to the file and saved
+        project2 = project_no_dedicated_env(dirname)
+        assert {"url": 'http://localhost:123456'
+                } == project2.project_file.get_value(['env_specs', 'myspec', 'downloads', 'MYDATA'])
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+env_specs:
+    default:
+      packages: [python]
+      channels: []
+    myspec:
+      packages: [python]
+      channels: []
+        """
+        }, check)
+
+
 def test_add_download_with_filename(monkeypatch):
     def check(dirname):
         FILENAME = 'TEST_FILENAME'
         _monkeypatch_download_file(monkeypatch, dirname, FILENAME)
 
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456', FILENAME)
+        status = project_ops.add_download(project, None, 'MYDATA', 'http://localhost:123456', FILENAME)
 
         assert os.path.isfile(os.path.join(dirname, FILENAME))
         assert status
@@ -1234,6 +1264,7 @@ def test_add_download_with_checksum(monkeypatch):
 
         project = project_no_dedicated_env(dirname)
         status = project_ops.add_download(project,
+                                          None,
                                           'MYDATA',
                                           'http://localhost:123456',
                                           hash_algorithm='md5',
@@ -1261,7 +1292,7 @@ def test_add_download_which_already_exists(monkeypatch):
         assert dict(url='http://localhost:56789',
                     filename='foobar') == dict(project.project_file.get_value(['downloads', 'MYDATA']))
 
-        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
+        status = project_ops.add_download(project, None, 'MYDATA', 'http://localhost:123456')
 
         assert os.path.isfile(os.path.join(dirname, "foobar"))
         assert status
@@ -1288,7 +1319,7 @@ def test_add_download_which_already_exists_with_fname(monkeypatch):
         assert dict(url='http://localhost:56789',
                     filename='foobar') == dict(project.project_file.get_value(['downloads', 'MYDATA']))
 
-        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456', filename="bazqux")
+        status = project_ops.add_download(project, None, 'MYDATA', 'http://localhost:123456', filename="bazqux")
 
         assert os.path.isfile(os.path.join(dirname, "bazqux"))
         assert status
@@ -1310,7 +1341,7 @@ def test_add_download_fails(monkeypatch):
         _monkeypatch_download_file_fails(monkeypatch, dirname)
 
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
+        status = project_ops.add_download(project, None, 'MYDATA', 'http://localhost:123456')
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert not status
@@ -1330,7 +1361,7 @@ def test_add_download_fails_to_get_http_response(monkeypatch):
         _monkeypatch_download_file_fails_to_get_http_response(monkeypatch, dirname)
 
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
+        status = project_ops.add_download(project, None, 'MYDATA', 'http://localhost:123456')
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert not status
@@ -1348,7 +1379,7 @@ def test_add_download_fails_to_get_http_response(monkeypatch):
 def test_add_download_with_project_file_problems():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_download(project, 'MYDATA', 'http://localhost:123456')
+        status = project_ops.add_download(project, None, 'MYDATA', 'http://localhost:123456')
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert not status
@@ -1362,6 +1393,78 @@ def test_add_download_with_project_file_problems():
         assert project.project_file.get_value(['downloads', 'MYDATA']) is None
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
+
+
+def test_remove_download(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.remove_download(project, None, 'MYDATA', prepare_result=None)
+
+        assert status
+        assert [] == status.errors
+
+        # be sure it was removed
+        project2 = project_no_dedicated_env(dirname)
+        assert project2.project_file.get_value(['downloads', 'MYDATA']) is None
+        assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+downloads:
+  MYDATA: "http://localhost:123456"
+"""}, check)
+
+
+def test_remove_download_with_prepare(monkeypatch):
+    def check(dirname):
+        _monkeypatch_download_file(monkeypatch, dirname)
+        project = project_no_dedicated_env(dirname)
+        result = prepare.prepare_without_interaction(project)
+        assert result
+        assert os.path.isfile(os.path.join(dirname, "MYDATA"))
+        status = project_ops.remove_download(project, None, 'MYDATA', prepare_result=result)
+
+        assert status
+        assert [] == status.errors
+        assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
+
+        # be sure download was removed
+        project2 = project_no_dedicated_env(dirname)
+        assert project2.project_file.get_value(['downloads', 'MYDATA']) is None
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+downloads:
+  MYDATA: "http://localhost:123456"
+"""}, check)
+
+
+def test_remove_download_with_env_spec(monkeypatch):
+    def check(dirname):
+        config_path = ['env_specs', 'myspec', 'downloads', 'MYDATA']
+        project = project_no_dedicated_env(dirname)
+        assert "http://localhost:123456" == project.project_file.get_value(config_path)
+        status = project_ops.remove_download(project, 'myspec', 'MYDATA', prepare_result=None)
+
+        assert status
+        assert [] == status.errors
+
+        # be sure it was removed
+        project2 = project_no_dedicated_env(dirname)
+        assert project2.project_file.get_value(config_path) is None
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+    default:
+      packages: [python]
+      channels: []
+    myspec:
+      packages: [python]
+      channels: []
+      downloads:
+        MYDATA: "http://localhost:123456"
+"""}, check)
 
 
 # the other add_env_spec tests use a mock CondaManager, but we want to have
@@ -2968,7 +3071,7 @@ def test_add_service(monkeypatch):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_service(project, service_type='redis')
+        status = project_ops.add_service(project, None, service_type='redis')
 
         assert status
         assert isinstance(project.frontend.logs, list)
@@ -2981,12 +3084,39 @@ def test_add_service(monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
+def test_add_service_with_env_spec(monkeypatch):
+    def check(dirname):
+        _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
+
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.add_service(project, 'myspec', service_type='redis')
+
+        assert status
+        assert isinstance(project.frontend.logs, list)
+        assert [] == status.errors
+
+        # be sure service was added to the file and saved
+        project2 = project_no_dedicated_env(dirname)
+        assert 'redis' == project2.project_file.get_value(['env_specs', 'myspec', 'services', 'REDIS_URL'])
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+    default:
+      packages: [python]
+      channels: []
+    myspec:
+      packages: [python]
+      channels: []
+"""}, check)
+
+
 def test_add_service_nondefault_variable_name(monkeypatch):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_service(project, service_type='redis', variable_name='MY_SPECIAL_REDIS')
+        status = project_ops.add_service(project, None, service_type='redis', variable_name='MY_SPECIAL_REDIS')
 
         assert status
         assert isinstance(project.frontend.logs, list)
@@ -3002,7 +3132,7 @@ def test_add_service_nondefault_variable_name(monkeypatch):
 def test_add_service_with_project_file_problems():
     def check(dirname):
         project = Project(dirname, frontend=FakeFrontend())
-        status = project_ops.add_service(project, service_type='redis')
+        status = project_ops.add_service(project, None, service_type='redis')
 
         assert not status
         assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
@@ -3022,7 +3152,7 @@ def test_add_service_already_exists(monkeypatch):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_service(project, service_type='redis')
+        status = project_ops.add_service(project, None, service_type='redis')
 
         assert status
         assert isinstance(project.frontend.logs, list)
@@ -3044,7 +3174,7 @@ def test_add_service_already_exists_with_different_type(monkeypatch):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
         project = Project(dirname, frontend=FakeFrontend())
-        status = project_ops.add_service(project, service_type='redis')
+        status = project_ops.add_service(project, None, service_type='redis')
 
         assert not status
         # Once we have >1 known service types, we should change this test
@@ -3063,7 +3193,7 @@ def test_add_service_already_exists_as_non_service(monkeypatch):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
         project = Project(dirname, frontend=FakeFrontend())
-        status = project_ops.add_service(project, service_type='redis')
+        status = project_ops.add_service(project, None, service_type='redis')
 
         assert not status
         assert ['Variable REDIS_URL is already in use.'] == status.errors
@@ -3080,12 +3210,78 @@ def test_add_service_bad_service_type(monkeypatch):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
         project = Project(dirname, frontend=FakeFrontend())
-        status = project_ops.add_service(project, service_type='not_a_service')
+        status = project_ops.add_service(project, None, service_type='not_a_service')
 
         assert not status
         assert ["Unknown service type 'not_a_service', we know about: redis"] == status.errors
 
     with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_remove_service(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.remove_service(project, None, variable_name='redis')
+
+        assert status
+        assert [] == status.errors
+
+        project2 = project_no_dedicated_env(dirname)
+        assert project2.project_file.get_value(['services', 'REDIS_URL']) is None
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+services:
+  REDIS_URL: redis
+"""}, check)
+
+
+def test_remove_service_with_prepare(monkeypatch):
+    def check(dirname):
+        _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
+        project = project_no_dedicated_env(dirname)
+        result = prepare.prepare_without_interaction(project)
+        assert result
+        status = project_ops.remove_service(project, None, variable_name='redis', prepare_result=result)
+
+        assert status
+        assert [] == status.errors
+
+        project2 = project_no_dedicated_env(dirname)
+        assert project2.project_file.get_value(['services', 'REDIS_URL']) is None
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+services:
+  REDIS_URL: redis
+"""}, check)
+
+
+def test_remove_service_with_env_spec(monkeypatch):
+    def check(dirname):
+        config_path = ['env_specs', 'myspec', 'services', 'REDIS_URL']
+        project = project_no_dedicated_env(dirname)
+        assert project.project_file.get_value(config_path) == 'redis'
+        status = project_ops.remove_service(project, 'myspec', variable_name='redis')
+
+        assert status
+        assert [] == status.errors
+
+        project2 = project_no_dedicated_env(dirname)
+        assert project2.project_file.get_value(config_path) is None
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+    default:
+      packages: [python]
+      channels: []
+    myspec:
+      packages: [python]
+      channels: []
+      services:
+        REDIS_URL: redis
+"""}, check)
 
 
 def test_clean(monkeypatch):
