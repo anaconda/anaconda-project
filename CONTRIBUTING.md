@@ -199,12 +199,24 @@ auto-fixes, fixing one thing could actually change the list of
 problems you're iterating over. So the mechanism here may need
 some massaging over time depending on what you're trying to do.
 
+## Result objects
+
+Often the code uses return values (such as the `Status` or
+`PrepareResult` classes) to return error states, rather than
+exceptions. These are easier to deal with when an error is
+"expected" and may need to be processed by multiple layers of
+code.
+
 ## Tests
 
 CI enforces 100% test coverage, which is good because there are
 lots of corner cases to worry about! You can modify Anaconda
 Project with pretty good confidence because if you break it, the
 tests will almost always break.
+
+The main goal of 100% test coverage is to test error handling
+codepaths, to be sure they work, and continue to work when
+refactoring.  80%-ish coverage generally neglects error codepaths.
 
 Tips for reaching 100% coverage on your new code:
 
@@ -227,7 +239,7 @@ Always first think about important cases that need to work, write
 those tests that seem logical, and then run the code coverage
 analysis and add tests for anything you missed.
 
-### Avoiding environment creation
+### Avoiding environment creation in tests
 
 Creating conda environments can be pretty slow, so you'll see a
 lot of tests use a function called
