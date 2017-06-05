@@ -206,13 +206,15 @@ lots of corner cases to worry about! You can modify Anaconda
 Project with pretty good confidence because if you break it, the
 tests will almost always break.
 
-Two tips for reaching 100% coverage on your new code:
+Tips for reaching 100% coverage on your new code:
 
  * monkeypatch! Learn to use pytest's `monkeypatch` feature. Look
    through the existing tests for lots of examples.
  * if you can't figure out how to test some code, are you sure
    it's actually possible for that code to run? Maybe you can
    delete it... more common than you might think.
+ * consider changing "if (foo) raise" to "assert not foo";
+   use assertions for invariants and impossible situations.
 
 Don't be misled by the 100% number though; you can reach 100%
 while leaving quite a few important codepaths untested. That's
