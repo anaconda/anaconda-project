@@ -510,7 +510,7 @@ def test_ask_variables_interactively_then_set_variable_fails(monkeypatch, capsys
 
         monkeypatch.setattr('anaconda_project.internal.cli.console_utils.console_input', mock_console_input)
 
-        def mock_set_variables(project, vars_and_values):
+        def mock_set_variables(project, env_spec_name, vars_and_values, prepare_result):
             return SimpleStatus(success=False, description="Set variables FAIL")
 
         monkeypatch.setattr('anaconda_project.project_ops.set_variables', mock_set_variables)

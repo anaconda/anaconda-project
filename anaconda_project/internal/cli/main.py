@@ -136,6 +136,7 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=upload.main)
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
+    add_env_spec_arg(preset)
     preset.add_argument('vars_to_add', metavar='VARS_TO_ADD', default=None, nargs=REMAINDER)
     preset.add_argument('--default',
                         metavar='DEFAULT_VALUE',
@@ -145,22 +146,26 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=variable_commands.main_add)
 
     preset = subparsers.add_parser('remove-variable', help="Remove an environment variable from the project")
+    add_env_spec_arg(preset)
     add_directory_arg(preset)
     preset.add_argument('vars_to_remove', metavar='VARS_TO_REMOVE', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main_remove)
 
     preset = subparsers.add_parser('list-variables', help="List all variables on the project")
+    add_env_spec_arg(preset)
     add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_list)
 
     preset = subparsers.add_parser('set-variable',
                                    help="Set an environment variable value in anaconda-project-local.yml")
+    add_env_spec_arg(preset)
     preset.add_argument('vars_and_values', metavar='VARS_AND_VALUES', default=None, nargs=REMAINDER)
     add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_set)
 
     preset = subparsers.add_parser('unset-variable',
                                    help="Unset an environment variable value from anaconda-project-local.yml")
+    add_env_spec_arg(preset)
     add_directory_arg(preset)
     preset.add_argument('vars_to_unset', metavar='VARS_TO_UNSET', default=None, nargs=REMAINDER)
     preset.set_defaults(main=variable_commands.main_unset)

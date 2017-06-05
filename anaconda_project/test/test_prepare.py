@@ -39,6 +39,7 @@ def test_prepare_empty_directory():
         result = prepare_without_interaction(project, environ=environ)
         assert result.errors == []
         assert result
+        assert result.env_prefix is not None
         assert dict(PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict() == strip_environ(environ)
         assert result.command_exec_info is None
@@ -81,6 +82,7 @@ def test_unprepare_problem_project():
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ)
         assert not result
+        assert result.env_prefix is None
         status = unprepare(project, result)
         assert not status
         assert status.status_description == 'Unable to load the project.'
@@ -160,6 +162,7 @@ def test_prepare_some_env_var_not_set():
         environ = minimal_environ(BAR='bar')
         result = prepare_without_interaction(project, environ=environ)
         assert not result
+        assert result.env_prefix is not None
         assert dict(BAR='bar') == strip_environ(environ)
 
     with_directory_contents_completing_project_file(
@@ -293,6 +296,7 @@ def test_prepare_bad_command_name():
         environ = minimal_environ(BAR='bar')
         result = prepare_without_interaction(project, environ=environ, command_name="blah")
         assert not result
+        assert result.env_prefix is None
         assert result.errors
         assert "Command name 'blah' is not in" in result.errors[0]
 

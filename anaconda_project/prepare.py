@@ -22,6 +22,7 @@ from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT)
 from anaconda_project.plugins.provider import ProvideContext
 from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
+from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
 def _update_environ(dest, src):
@@ -114,6 +115,15 @@ class PrepareResult(with_metaclass(ABCMeta)):
         obscure scenario where it matters.
         """
         return self._env_spec_name
+
+    @property
+    def env_prefix(self):
+        """The prefix of the prepared env, or None if none was created."""
+        status = self.status_for(CondaEnvRequirement)
+        if status is None:
+            return None
+        varname = status.requirement.env_var
+        return self._environ.get(varname, None)
 
 
 class PrepareSuccess(PrepareResult):

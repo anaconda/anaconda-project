@@ -64,7 +64,7 @@ def _interactively_fix_missing_variables(project, result):
         values[status.requirement.env_var] = reply
 
     if len(values) > 0:
-        status = project_ops.set_variables(project, values.items())
+        status = project_ops.set_variables(project, result.env_spec_name, values.items(), result)
         if status:
             return True
         else:

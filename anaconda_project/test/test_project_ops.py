@@ -309,7 +309,7 @@ def test_set_invalid_icon():
 def test_add_variables():
     def check_add_var(dirname):
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_variables(project, ['foo', 'baz'], dict(foo='bar'))
+        status = project_ops.add_variables(project, None, ['foo', 'baz'], dict(foo='bar'))
         assert status
         req = project.find_requirements(project.default_env_spec_name, env_var='foo')[0]
         assert req.options['default'] == 'bar'
@@ -320,10 +320,43 @@ def test_add_variables():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_add_var)
 
 
+def test_add_variables_to_env_spec():
+    def check_add_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.add_variables(project, 'myspec', ['foo', 'baz'], dict(foo='bar'))
+        assert status
+        req = project.find_requirements('myspec', env_var='foo')[0]
+        assert req.options['default'] == 'bar'
+
+        assert [] == project.find_requirements('default', env_var='foo')
+        assert [] == project.find_requirements('default', env_var='baz')
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+    default:
+      packages: [python]
+      channels: []
+    myspec:
+      packages: [python]
+      channels: []
+"""}, check_add_var)
+
+
+def test_add_variables_bad_env_spec():
+    def check_add_var(dirname):
+        project = project_no_dedicated_env(dirname)
+        status = project_ops.add_variables(project, 'nope', ['foo', 'baz'], dict(foo='bar'))
+        assert "Environment spec nope doesn't exist." == status.status_description
+        assert not status
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_add_var)
+
+
 def test_add_variables_existing_download():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
-        project_ops.add_variables(project, ['foo', 'baz'])
+        project_ops.add_variables(project, None, ['foo', 'baz'])
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
         assert dict(foo=None, baz=None, preset=None) == re_loaded.get_value(['variables'])
         assert re_loaded.get_value(['downloads', 'datafile']) == 'http://localhost:8000/data.tgz'
@@ -344,6 +377,7 @@ def test_add_variables_existing_options():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
         status = project_ops.add_variables(project,
+                                           None,
                                            ['foo', 'baz', 'blah', 'woot', 'woot2'],
                                            dict(foo='bar',
                                                 baz='qux',
@@ -386,7 +420,7 @@ def test_add_variables_existing_options():
 def test_remove_variables():
     def check_remove_var(dirname):
         project = project_no_dedicated_env(dirname)
-        project_ops.remove_variables(project, ['foo', 'bar'])
+        project_ops.remove_variables(project, None, ['foo', 'bar'])
         re_loaded = project.project_file.load_for_directory(project.directory_path)
         assert dict() == re_loaded.get_value(['variables'])
         assert re_loaded.get_value(['variables', 'foo']) is None
@@ -401,17 +435,47 @@ def test_remove_variables():
                                     '  foo: baz\n  bar: qux')}, check_remove_var)
 
 
+def test_remove_variables_with_env_spec():
+    def check_remove_var(dirname):
+        project = project_no_dedicated_env(dirname)
+
+        pf = project.project_file
+        assert pf.get_value(['env_specs', 'myspec', 'variables']) == dict(foo='baz', bar='qux')
+        assert pf.get_value(['env_specs', 'myspec', 'variables', 'foo']) is not None
+        assert pf.get_value(['env_specs', 'myspec', 'variables', 'bar']) is not None
+
+        project_ops.remove_variables(project, 'myspec', ['foo', 'bar'])
+        re_loaded = project.project_file.load_for_directory(project.directory_path)
+        assert re_loaded.get_value(['env_specs', 'myspec', 'variables']) == {}
+        assert re_loaded.get_value(['env_specs', 'myspec', 'variables', 'foo']) is None
+        assert re_loaded.get_value(['env_specs', 'myspec', 'variables', 'bar']) is None
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+  default:
+    packages: [python]
+    channels: []
+  myspec:
+    packages: [python]
+    channels: []
+    variables:
+      foo: baz
+      bar: qux
+        """}, check_remove_var)
+
+
 def test_set_variables():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_variables(project, ['foo', 'baz'], dict(foo='no', baz='nope'))
+        status = project_ops.add_variables(project, None, ['foo', 'baz'], dict(foo='no', baz='nope'))
         assert status
 
         local_state = LocalStateFile.load_for_directory(dirname)
         assert local_state.get_value(['variables', 'foo']) is None
         assert local_state.get_value(['variables', 'baz']) is None
 
-        status = project_ops.set_variables(project, [('foo', 'bar'), ('baz', 'qux')])
+        status = project_ops.set_variables(project, None, [('foo', 'bar'), ('baz', 'qux')])
         assert status
 
         local_state = LocalStateFile.load_for_directory(dirname)
@@ -427,7 +491,7 @@ def test_set_variables_nonexistent():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
 
-        status = project_ops.set_variables(project, [('foo', 'bar'), ('baz', 'qux')])
+        status = project_ops.set_variables(project, None, [('foo', 'bar'), ('baz', 'qux')])
         assert not status
         assert status.status_description == "Could not set variables."
         assert status.errors == ["Variable foo does not exist in the project.",
@@ -446,7 +510,7 @@ def test_set_variables_cannot_create_environment(monkeypatch):
     def check_set_var(dirname):
         project = Project(dirname)
 
-        status = project_ops.set_variables(project, [('foo', 'bar'), ('baz', 'qux')])
+        status = project_ops.set_variables(project, None, [('foo', 'bar'), ('baz', 'qux')])
         assert not status
         expected_env_path = os.path.join(dirname, 'envs', 'default')
         assert status.status_description == ("'%s' doesn't look like it contains a Conda environment yet." %
@@ -459,17 +523,17 @@ def test_set_variables_cannot_create_environment(monkeypatch):
 def test_unset_variables():
     def check_unset_var(dirname):
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_variables(project, ['foo', 'baz'])
+        status = project_ops.add_variables(project, None, ['foo', 'baz'])
         assert status
 
-        status = project_ops.set_variables(project, [('foo', 'no'), ('baz', 'nope')])
+        status = project_ops.set_variables(project, None, [('foo', 'no'), ('baz', 'nope')])
         assert status
 
         local_state = LocalStateFile.load_for_directory(dirname)
         assert local_state.get_value(['variables', 'foo']) == 'no'
         assert local_state.get_value(['variables', 'baz']) == 'nope'
 
-        status = project_ops.unset_variables(project, ['foo', 'baz'])
+        status = project_ops.unset_variables(project, None, ['foo', 'baz'])
         assert status
 
         local_state = LocalStateFile.load_for_directory(dirname)
@@ -487,6 +551,7 @@ def test_set_and_unset_variables_encrypted():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
         status = project_ops.add_variables(project,
+                                           None,
                                            ['foo_PASSWORD', 'baz_SECRET'],
                                            dict(foo_PASSWORD='no',
                                                 baz_SECRET='nope'))
@@ -498,7 +563,7 @@ def test_set_and_unset_variables_encrypted():
 
         assert set(keyring.fallback_data().values()) == set()
 
-        status = project_ops.set_variables(project, [('foo_PASSWORD', 'bar'), ('baz_SECRET', 'qux')])
+        status = project_ops.set_variables(project, None, [('foo_PASSWORD', 'bar'), ('baz_SECRET', 'qux')])
         assert status
 
         local_state = LocalStateFile.load_for_directory(dirname)
@@ -508,7 +573,7 @@ def test_set_and_unset_variables_encrypted():
 
         assert set(keyring.fallback_data().values()) == set(['bar', 'qux'])
 
-        status = project_ops.unset_variables(project, ['foo_PASSWORD', 'baz_SECRET'])
+        status = project_ops.unset_variables(project, None, ['foo_PASSWORD', 'baz_SECRET'])
         assert status
 
         assert set(keyring.fallback_data().values()) == set()
@@ -528,6 +593,7 @@ def test_set_and_unset_variables_some_encrypted():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
         status = project_ops.add_variables(project,
+                                           None,
                                            ['foo_PASSWORD', 'baz_SECRET', 'woo'],
                                            dict(foo_PASSWORD='no',
                                                 baz_SECRET='nope',
@@ -541,7 +607,8 @@ def test_set_and_unset_variables_some_encrypted():
 
         assert set(keyring.fallback_data().values()) == set()
 
-        status = project_ops.set_variables(project, [('foo_PASSWORD', 'bar'), ('baz_SECRET', 'qux'), ('woo', 'w00t')])
+        status = project_ops.set_variables(project, None, [('foo_PASSWORD', 'bar'), ('baz_SECRET', 'qux'),
+                                                           ('woo', 'w00t')])
         assert status
 
         local_state = LocalStateFile.load_for_directory(dirname)
@@ -552,7 +619,7 @@ def test_set_and_unset_variables_some_encrypted():
 
         assert set(keyring.fallback_data().values()) == set(['bar', 'qux'])
 
-        status = project_ops.unset_variables(project, ['foo_PASSWORD', 'baz_SECRET', 'woo'])
+        status = project_ops.unset_variables(project, None, ['foo_PASSWORD', 'baz_SECRET', 'woo'])
         assert status
 
         local_state = LocalStateFile.load_for_directory(dirname)

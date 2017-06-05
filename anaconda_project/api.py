@@ -296,7 +296,7 @@ class AnacondaProject(object):
         """
         return project_ops.set_properties(project=project, name=name, icon=icon, description=description)
 
-    def add_variables(self, project, vars_to_add, defaults):
+    def add_variables(self, project, env_spec_name, vars_to_add, defaults):
         """Add variables in anaconda-project.yml, optionally setting their defaults.
 
         Returns a ``Status`` instance which evaluates to True on
@@ -305,15 +305,19 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
             vars_to_add (list of str): variable names
             defaults (dict): dictionary from keys to defaults, can be empty
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.add_variables(project=project, vars_to_add=vars_to_add, defaults=defaults)
+        return project_ops.add_variables(project=project,
+                                         env_spec_name=env_spec_name,
+                                         vars_to_add=vars_to_add,
+                                         defaults=defaults)
 
-    def remove_variables(self, project, vars_to_remove, env_spec_name=None):
+    def remove_variables(self, project, env_spec_name, vars_to_remove, prepare_result=None):
         """Remove variables from anaconda-project.yml and unset their values in local project state.
 
         Returns a ``Status`` instance which evaluates to True on
@@ -322,15 +326,19 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
             vars_to_remove (list of tuple): key-value pairs
-            env_spec_name (str): name of env spec to use
+            prepare_result (PrepareResult): result of a previous prepare or None
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_variables(project=project, vars_to_remove=vars_to_remove, env_spec_name=env_spec_name)
+        return project_ops.remove_variables(project=project,
+                                            env_spec_name=env_spec_name,
+                                            vars_to_remove=vars_to_remove,
+                                            prepare_result=prepare_result)
 
-    def set_variables(self, project, vars_and_values, env_spec_name=None):
+    def set_variables(self, project, env_spec_name, vars_and_values, prepare_result=None):
         """Set variables' values in anaconda-project-local.yml.
 
         Returns a ``Status`` instance which evaluates to True on
@@ -339,15 +347,19 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
             vars_and_values (list of tuple): key-value pairs
-            env_spec_name (str): name of env spec to use
+            prepare_result (PrepareResult): result of a previous prepare or None
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.set_variables(project=project, vars_and_values=vars_and_values, env_spec_name=env_spec_name)
+        return project_ops.set_variables(project=project,
+                                         env_spec_name=env_spec_name,
+                                         vars_and_values=vars_and_values,
+                                         prepare_result=prepare_result)
 
-    def unset_variables(self, project, vars_to_unset, env_spec_name=None):
+    def unset_variables(self, project, env_spec_name, vars_to_unset, prepare_result=None):
         """Unset variables' values in anaconda-project-local.yml.
 
         Returns a ``Status`` instance which evaluates to True on
@@ -356,13 +368,17 @@ class AnacondaProject(object):
 
         Args:
             project (Project): the project
+            env_spec_name (str): environment spec name or None for all environment specs
             vars_to_unset (list of str): variable names
-            env_spec_name (str): name of env spec to use
+            prepare_result (PrepareResult): result of a previous prepare or None
 
         Returns:
             ``Status`` instance
         """
-        return project_ops.unset_variables(project=project, vars_to_unset=vars_to_unset, env_spec_name=env_spec_name)
+        return project_ops.unset_variables(project=project,
+                                           env_spec_name=env_spec_name,
+                                           vars_to_unset=vars_to_unset,
+                                           prepare_result=prepare_result)
 
     def add_download(self, project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
         """Attempt to download the URL; if successful, add it as a download to the project.
