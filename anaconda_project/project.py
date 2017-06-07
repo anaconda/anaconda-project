@@ -157,7 +157,7 @@ class _ConfigCache(object):
         self.project_file_count = project_file.change_count
         self.lock_file_count = lock_file.change_count
 
-        requirements = []
+        requirements = dict()
         problems = []
 
         project_exists = os.path.isdir(self.directory_path)
@@ -186,12 +186,12 @@ class _ConfigCache(object):
             self._update_name(problems, project_file)
             self._update_description(problems, project_file)
             self._update_icon(problems, project_file)
+            self._update_lock_sets(problems, lock_file)
+            self._update_env_specs(problems, project_file, lock_file)
             # future: we could un-hardcode this so plugins can add stuff here
             self._update_variables(requirements, problems, project_file)
             self._update_downloads(requirements, problems, project_file)
             self._update_services(requirements, problems, project_file)
-            self._update_lock_sets(problems, lock_file)
-            self._update_env_specs(problems, project_file, lock_file)
             # this MUST be after we _update_variables since we may get CondaEnvRequirement
             # options in the variables section, and after _update_env_specs
             # since we use those
@@ -263,9 +263,31 @@ class _ConfigCache(object):
 
         self.icon = icon
 
-    def _update_variables(self, requirements, problems, project_file):
-        variables = project_file.get_value("variables")
+    def _add_requirement(self, requirements, env_spec, requirement):
+        # note that env_spec.name is None for the global_base_env_spec
+        if env_spec.name not in requirements:
+            requirements[env_spec.name] = []
+        requirements[env_spec.name].append(requirement)
 
+    def _update_requirements(self, requirements, problems, project_file, dict_name, updater):
+        global_dict = project_file.get_value(dict_name)
+        updater(requirements, problems, project_file, self.global_base_env_spec, global_dict)
+        for env_spec in self.env_specs.values():
+            env_dict = project_file.get_value(['env_specs', env_spec.name, dict_name], None)
+            updater(requirements, problems, project_file, env_spec, env_dict)
+
+    def _update_variables(self, requirements, problems, project_file):
+        self._update_requirements(requirements, problems, project_file, 'variables',
+                                  self._update_variables_for_env_spec)
+
+    def _update_downloads(self, requirements, problems, project_file):
+        self._update_requirements(requirements, problems, project_file, 'downloads',
+                                  self._update_downloads_for_env_spec)
+
+    def _update_services(self, requirements, problems, project_file):
+        self._update_requirements(requirements, problems, project_file, 'services', self._update_services_for_env_spec)
+
+    def _update_variables_for_env_spec(self, requirements, problems, project_file, env_spec, variables):
         def check_conda_reserved(key):
             if key in ('CONDA_DEFAULT_ENV', 'CONDA_ENV_PATH', 'CONDA_PREFIX'):
                 _file_problem(problems, project_file, ("Environment variable %s is reserved for Conda's use, " +
@@ -300,7 +322,8 @@ class _ConfigCache(object):
 
                 if EnvVarRequirement._parse_default(options, key, problems):
                     requirement = self.registry.find_requirement_by_env_var(key, options)
-                    requirements.append(requirement)
+                    self._add_requirement(requirements, env_spec, requirement)
+
         elif is_list(variables):
             for item in variables:
                 if is_string(item):
@@ -310,8 +333,9 @@ class _ConfigCache(object):
                         continue
                     if check_conda_reserved(item):
                         continue
+
                     requirement = self.registry.find_requirement_by_env_var(item, options=dict())
-                    requirements.append(requirement)
+                    self._add_requirement(requirements, env_spec, requirement)
                 else:
                     _file_problem(
                         problems,
@@ -325,9 +349,7 @@ class _ConfigCache(object):
                 "variables section contains wrong value type {value}, should be dict or list of requirements".format(
                     value=variables))
 
-    def _update_downloads(self, requirements, problems, project_file):
-        downloads = project_file.get_value('downloads')
-
+    def _update_downloads_for_env_spec(self, requirements, problems, project_file, env_spec, downloads):
         if downloads is None:
             return
 
@@ -341,11 +363,14 @@ class _ConfigCache(object):
                 _file_problem(problems, project_file,
                               "Download name cannot be empty string, found: '{}' as name".format(varname))
                 continue
-            DownloadRequirement._parse(self.registry, varname, item, problems, requirements)
+            download_kwargs = DownloadRequirement._parse(varname, item, problems)
+            if download_kwargs is None:
+                continue
 
-    def _update_services(self, requirements, problems, project_file):
-        services = project_file.get_value('services')
+            requirement = DownloadRequirement(self.registry, **download_kwargs)
+            self._add_requirement(requirements, env_spec, requirement)
 
+    def _update_services_for_env_spec(self, requirements, problems, project_file, env_spec, services):
         if services is None:
             return
 
@@ -360,7 +385,20 @@ class _ConfigCache(object):
                 _file_problem(problems, project_file,
                               "Service name cannot be empty string, found: '{}' as name".format(varname))
                 continue
-            ServiceRequirement._parse(self.registry, varname, item, problems, requirements)
+
+            service_kwargs = ServiceRequirement._parse(varname, item, problems)
+            if service_kwargs is None:
+                continue
+            service_type = service_kwargs['service_type']
+
+            if not self.registry.can_find_requirement_by_service_type(**service_kwargs):
+                problems.append("Service {} has an unknown type '{}'.".format(varname, service_type))
+                continue
+
+            requirement = self.registry.find_requirement_by_service_type(**service_kwargs)
+            assert isinstance(requirement, ServiceRequirement)
+            assert 'type' in requirement.options
+            self._add_requirement(requirements, env_spec, requirement)
 
     def _parse_string_list_with_special(self, problems, yaml_file, parent_dict, key, what, special_filter):
         items = parent_dict.get(key, [])
@@ -579,8 +617,9 @@ class _ConfigCache(object):
                 if first_env_spec_name is None:
                     first_env_spec_name = name
 
-                _unknown_field_suggestions(project_file, problems, attrs, ('packages', 'channels', 'platforms',
-                                                                           'description', 'inherit_from'))
+                _unknown_field_suggestions(project_file, problems, attrs,
+                                           ('packages', 'channels', 'platforms', 'description', 'inherit_from',
+                                            'variables', 'services', 'downloads'))
         else:
             _file_problem(problems, project_file,
                           "env_specs should be a dictionary from environment name to environment attributes, not %r" %
@@ -801,8 +840,8 @@ class _ConfigCache(object):
         if _fatal_problem(problems):
             return
 
-        env_requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)
-        requirements.append(env_requirement)
+        requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)
+        self._add_requirement(requirements, self.global_base_env_spec, requirement)
 
     def _update_commands(self, problems, project_file, requirements):
         failed = False
@@ -929,9 +968,12 @@ class _ConfigCache(object):
             skipped_notebooks = []
 
         recorder = _new_error_recorder(_null_frontend())
+        flat_requirements = []
+        for reqs in requirements.values():
+            flat_requirements.extend(reqs)
         files = _list_relative_paths_for_unignored_project_files(self.directory_path,
                                                                  frontend=recorder,
-                                                                 requirements=requirements)
+                                                                 requirements=flat_requirements)
         if files is None:
             problems.extend(recorder.pop_errors())
             assert problems != []
@@ -1115,35 +1157,59 @@ class Project(object):
         return self._config_cache.registry
 
     @property
-    def requirements(self):
+    def union_of_requirements_for_all_envs(self):
+        """Required items for ALL envs (list of ``Requirement`` instances)."""
+        combined = []
+        for env_spec in self.env_specs.values():
+            # This is obviously pointless for the time being since
+            # all env specs have the same requirements, but we want
+            # to change that in the future so simulating it here.
+            combined.extend(self.requirements(env_spec.name))
+        return combined
+
+    def requirements(self, env_spec_name):
         """Required items in order to run this project (list of ``Requirement`` instances)."""
-        return self._updated_cache().requirements
+        if env_spec_name is None:
+            env_spec_name = self.default_env_spec_name
+        requirements = self._updated_cache().requirements
 
-    @property
-    def service_requirements(self):
+        def get_reqs(env_spec):
+            return requirements.get(env_spec.name, [])
+
+        def req_key(req):
+            assert isinstance(req, EnvVarRequirement)
+            return req.env_var
+
+        env_spec = self.env_specs.get(env_spec_name)
+        if env_spec is None:
+            # this happens if there was a problem parsing the project
+            return []
+        else:
+            # this should probably really return the tuple instead
+            # of list, but we'd have to fix up tests accordingly
+            return list(env_spec._get_inherited_with_getter(get_reqs, key_func=req_key))
+
+    def service_requirements(self, env_spec_name):
         """All requirements that are ServiceRequirement instances."""
-        return self.find_requirements(klass=ServiceRequirement)
+        return self.find_requirements(env_spec_name, klass=ServiceRequirement)
 
-    @property
-    def download_requirements(self):
+    def download_requirements(self, env_spec_name):
         """All requirements that are DownloadRequirement instances."""
-        return self.find_requirements(klass=DownloadRequirement)
+        return self.find_requirements(env_spec_name, klass=DownloadRequirement)
 
-    @property
-    def all_variable_requirements(self):
+    def all_variable_requirements(self, env_spec_name):
         """All requirements that have an associated environment variable.
 
         Note: this will include services, downloads, and even CondaEnvRequirement.
         """
-        return self.find_requirements(klass=EnvVarRequirement)
+        return self.find_requirements(env_spec_name, klass=EnvVarRequirement)
 
-    @property
-    def plain_variable_requirements(self):
+    def plain_variable_requirements(self, env_spec_name):
         """All 'plain' variables (that aren't services, downloads, or a Conda environment for example).
 
         Use the ``all_variable_requirements`` property to get every variable.
         """
-        return [req for req in self.all_variable_requirements if req.__class__ is EnvVarRequirement]
+        return [req for req in self.all_variable_requirements(env_spec_name) if req.__class__ is EnvVarRequirement]
 
     def push_null_frontend(self):
         """Push a no-op frontend overriding the currently-active one.
@@ -1166,12 +1232,13 @@ class Project(object):
         finally:
             self.pop_null_frontend()
 
-    def find_requirements(self, env_var=None, klass=None):
+    def find_requirements(self, env_spec_name, env_var=None, klass=None):
         """Find requirements that match the given env var and class.
 
         If env_var and klass are both provided, BOTH must match.
 
         Args:
+           env_spec_name (str): name of env spec to find requirements of
            env_var (str): if not None, filter requirements that have this env_var
            klass (class): if not None, filter requirements that are an instance of this class
 
@@ -1179,7 +1246,7 @@ class Project(object):
            list of matching requirements (may be empty)
         """
         found = []
-        for req in self.requirements:
+        for req in self.requirements(env_spec_name):
             if env_var is not None and not (isinstance(req, EnvVarRequirement) and req.env_var == env_var):
                 continue
             if klass is not None and not isinstance(req, klass):
@@ -1295,25 +1362,21 @@ class Project(object):
         """
         return self._updated_cache().global_base_env_spec
 
-    @property
-    def all_variables(self):
+    def all_variables(self, env_spec_name):
         """Get a list of strings with the variables names from ``all_variable_requirements``."""
-        return [r.env_var for r in self.all_variable_requirements]
+        return [r.env_var for r in self.all_variable_requirements(env_spec_name)]
 
-    @property
-    def plain_variables(self):
+    def plain_variables(self, env_spec_name):
         """Get a list of strings with the variables names from ``plain_variable_requirements``."""
-        return [r.env_var for r in self.plain_variable_requirements]
+        return [r.env_var for r in self.plain_variable_requirements(env_spec_name)]
 
-    @property
-    def services(self):
+    def services(self, env_spec_name):
         """Get a list of strings with the variable names for the project services requirements."""
-        return [r.env_var for r in self.service_requirements]
+        return [r.env_var for r in self.service_requirements(env_spec_name)]
 
-    @property
-    def downloads(self):
+    def downloads(self, env_spec_name):
         """Get a list of strings with the variable names for the project download requirements."""
-        return [r.env_var for r in self.download_requirements]
+        return [r.env_var for r in self.download_requirements(env_spec_name)]
 
     @property
     def default_env_spec_name(self):
@@ -1438,33 +1501,35 @@ class Project(object):
                              description=env.description,
                              locked=env.lock_set.enabled,
                              platforms=list(env.platforms))
+
+            variables = dict()
+            downloads = dict()
+            services = dict()
+            for req in self.requirements(key):
+                if isinstance(req, CondaEnvRequirement):
+                    continue
+
+                if isinstance(req, EnvVarRequirement):
+                    data = dict(title=req.title, description=req.description, encrypted=req.encrypted)
+
+                    default = req.default_as_string
+                    if default is not None:
+                        data['default'] = default
+
+                    if isinstance(req, DownloadRequirement):
+                        data['url'] = req.url
+                        downloads[req.env_var] = data
+                    elif isinstance(req, ServiceRequirement):
+                        data['type'] = req.service_type
+                        services[req.env_var] = data
+                    elif isinstance(req, EnvVarRequirement):
+                        variables[req.env_var] = data
+
+            envs[key]['downloads'] = downloads
+            envs[key]['variables'] = variables
+            envs[key]['services'] = services
+
         json['env_specs'] = envs
-        variables = dict()
-        downloads = dict()
-        services = dict()
-        for req in self.requirements:
-            if isinstance(req, CondaEnvRequirement):
-                continue
-
-            if isinstance(req, EnvVarRequirement):
-                data = dict(title=req.title, description=req.description, encrypted=req.encrypted)
-
-                default = req.default_as_string
-                if default is not None:
-                    data['default'] = default
-
-                if isinstance(req, DownloadRequirement):
-                    data['url'] = req.url
-                    downloads[req.env_var] = data
-                elif isinstance(req, ServiceRequirement):
-                    data['type'] = req.service_type
-                    services[req.env_var] = data
-                elif isinstance(req, EnvVarRequirement):
-                    variables[req.env_var] = data
-
-        json['downloads'] = downloads
-        json['variables'] = variables
-        json['services'] = services
 
         return json
 

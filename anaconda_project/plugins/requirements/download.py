@@ -22,7 +22,7 @@ class DownloadRequirement(EnvVarRequirement):
     """A requirement for ``env_var`` to point to a downloaded file."""
 
     @classmethod
-    def _parse(cls, registry, varname, item, problems, requirements):
+    def _parse(cls, varname, item, problems):
         """Parse an item from the downloads: section."""
         url = None
         filename = None
@@ -36,12 +36,12 @@ class DownloadRequirement(EnvVarRequirement):
             url = item.get('url', None)
             if url is None:
                 problems.append("Download item {} doesn't contain a 'url' field.".format(varname))
-                return
+                return None
 
             description = item.get('description', None)
             if description is not None and not is_string(description):
                 problems.append("'description' field for download item {} is not a string".format(varname))
-                return
+                return None
 
             for method in _hash_algorithms:
                 if method not in item:
@@ -50,30 +50,30 @@ class DownloadRequirement(EnvVarRequirement):
                 if hash_algorithm is not None:
                     problems.append("Multiple checksums for download {}: {} and {}.".format(varname, hash_algorithm,
                                                                                             method))
-                    return
+                    return None
                 else:
                     hash_value = item[method]
                     if is_string(hash_value):
                         hash_algorithm = method
                     else:
                         problems.append("Checksum value for {} should be a string not {}.".format(varname, hash_value))
-                        return
+                        return None
 
             filename = item.get('filename', None)
             unzip = item.get('unzip', None)
             if unzip is not None and not isinstance(unzip, bool):
                 problems.append("Value of 'unzip' for download item {} should be a boolean, not {}.".format(varname,
                                                                                                             unzip))
-                return
+                return None
 
         if url is None or not is_string(url):
             problems.append(("Download name {} should be followed by a URL string or a dictionary " +
                              "describing the download.").format(varname))
-            return
+            return None
 
         if url == '':
             problems.append("Download item {} has an empty 'url' field.".format(varname))
-            return
+            return None
 
         # urlsplit doesn't seem to ever throw an exception, but it can
         # return pretty nonsensical stuff on invalid urls, in particular
@@ -103,14 +103,13 @@ class DownloadRequirement(EnvVarRequirement):
         if unzip is None:
             unzip = False
 
-        requirements.append(DownloadRequirement(registry,
-                                                env_var=varname,
-                                                url=url,
-                                                filename=filename,
-                                                hash_algorithm=hash_algorithm,
-                                                hash_value=hash_value,
-                                                unzip=unzip,
-                                                description=description))
+        return dict(env_var=varname,
+                    url=url,
+                    filename=filename,
+                    hash_algorithm=hash_algorithm,
+                    hash_value=hash_value,
+                    unzip=unzip,
+                    description=description)
 
     def __init__(self,
                  registry,

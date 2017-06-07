@@ -70,12 +70,13 @@ def test_single_env_var_requirement():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        assert 2 == len(project.requirements)
-        assert "FOO" == project.requirements[0].env_var
-        assert dict() == project.requirements[0].options
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 2 == len(requirements)
+        assert "FOO" == requirements[0].env_var
+        assert dict() == requirements[0].options
 
         conda_env_var = conda_api.conda_prefix_variable()
-        assert conda_env_var == project.requirements[1].env_var
+        assert conda_env_var == requirements[1].env_var
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -88,14 +89,15 @@ def test_single_env_var_requirement_with_description():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        assert 2 == len(project.requirements)
-        assert "FOO" == project.requirements[0].env_var
-        assert {'description': "Set FOO to the value of your foo"} == project.requirements[0].options
-        assert "Set FOO to the value of your foo" == project.requirements[0].description
-        assert "FOO" == project.requirements[0].title
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 2 == len(requirements)
+        assert "FOO" == requirements[0].env_var
+        assert {'description': "Set FOO to the value of your foo"} == requirements[0].options
+        assert "Set FOO to the value of your foo" == requirements[0].description
+        assert "FOO" == requirements[0].title
 
         conda_env_var = conda_api.conda_prefix_variable()
-        assert conda_env_var == project.requirements[1].env_var
+        assert conda_env_var == requirements[1].env_var
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -108,14 +110,15 @@ def test_single_env_var_requirement_null_for_default():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        assert 3 == len(project.requirements)
-        assert "FOO" == project.requirements[0].env_var
-        assert dict() == project.requirements[0].options
-        assert "BAR" == project.requirements[1].env_var
-        assert dict() == project.requirements[1].options
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 3 == len(requirements)
+        assert "FOO" == requirements[0].env_var
+        assert dict() == requirements[0].options
+        assert "BAR" == requirements[1].env_var
+        assert dict() == requirements[1].options
 
         conda_env_var = conda_api.conda_prefix_variable()
-        assert conda_env_var == project.requirements[2].env_var
+        assert conda_env_var == requirements[2].env_var
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -129,12 +132,13 @@ def test_single_env_var_requirement_string_for_default():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        assert 2 == len(project.requirements)
-        assert "FOO" == project.requirements[0].env_var
-        assert dict(default='hello') == project.requirements[0].options
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 2 == len(requirements)
+        assert "FOO" == requirements[0].env_var
+        assert dict(default='hello') == requirements[0].options
 
         conda_env_var = conda_api.conda_prefix_variable()
-        assert conda_env_var == project.requirements[1].env_var
+        assert conda_env_var == requirements[1].env_var
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -147,12 +151,13 @@ def test_single_env_var_requirement_number_for_default():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        assert 2 == len(project.requirements)
-        assert "FOO" == project.requirements[0].env_var
-        assert dict(default='42') == project.requirements[0].options
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 2 == len(requirements)
+        assert "FOO" == requirements[0].env_var
+        assert dict(default='42') == requirements[0].options
 
         conda_env_var = conda_api.conda_prefix_variable()
-        assert conda_env_var == project.requirements[1].env_var
+        assert conda_env_var == requirements[1].env_var
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -165,12 +170,13 @@ def test_single_env_var_requirement_default_is_in_dict():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        assert 2 == len(project.requirements)
-        assert "FOO" == project.requirements[0].env_var
-        assert dict(default='42') == project.requirements[0].options
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 2 == len(requirements)
+        assert "FOO" == requirements[0].env_var
+        assert dict(default='42') == requirements[0].options
 
         conda_env_var = conda_api.conda_prefix_variable()
-        assert conda_env_var == project.requirements[1].env_var
+        assert conda_env_var == requirements[1].env_var
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -179,10 +185,53 @@ variables:
 """}, check_some_env_var)
 
 
+def test_requirement_inheritance():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        assert project.default_env_spec_name == 'foo'
+
+        def var_reqs(name):
+            conda_env_reqs = [req for req in project.requirements(name) if isinstance(req, CondaEnvRequirement)]
+            assert 1 == len(conda_env_reqs)
+            requirements = [(req.env_var, req.options.get('default'))
+                            for req in project.requirements(name) if not isinstance(req, CondaEnvRequirement)]
+            requirements = sorted(requirements, key=lambda x: x[0])
+            return ([t[0] for t in requirements], [t[1] for t in requirements])
+
+        requirements = var_reqs('foo')
+        assert (['BAR', 'DOWNLOAD', 'FOO'], ['hi', None, 'global']) == requirements
+
+        requirements = var_reqs('foo_with_override')
+        assert (['DOWNLOAD', 'FOO'], [None, 'local']) == requirements
+
+        requirements = var_reqs('bar')
+        assert (['DOWNLOAD', 'FOO'], [None, 'global']) == requirements
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+variables:
+  FOO: { default: "global" }
+downloads:
+  DOWNLOAD: "http://example.com"
+env_specs:
+  foo:
+    variables:
+      BAR: "hi"
+  foo_with_override:
+    variables:
+      FOO: "local"
+  bar:
+    downloads:
+      DOWNLOAD: "http://example.com/bar"
+"""}, check)
+
+
 def test_problem_in_project_file():
     def check_problem(dirname):
         project = project_no_dedicated_env(dirname)
-        assert 0 == len(project.requirements)
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 0 == len(requirements)
         assert 1 == len(project.problems)
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
@@ -242,7 +291,8 @@ def test_project_dir_does_not_exist():
         project = Project(project_dir)
         assert not os.path.isdir(project_dir)
         assert ["Project directory '%s' does not exist." % project_dir] == project.problems
-        assert 0 == len(project.requirements)
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 0 == len(requirements)
 
     with_directory_contents(dict(), check_does_not_exist)
 
@@ -267,12 +317,13 @@ def test_project_dir_not_readable(monkeypatch):
 def test_single_env_var_requirement_with_options():
     def check_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)
-        assert 2 == len(project.requirements)
-        assert "FOO" == project.requirements[0].env_var
-        assert dict(default="hello") == project.requirements[0].options
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 2 == len(requirements)
+        assert "FOO" == requirements[0].env_var
+        assert dict(default="hello") == requirements[0].options
 
         conda_env_var = conda_api.conda_prefix_variable()
-        assert conda_env_var == project.requirements[1].env_var
+        assert conda_env_var == requirements[1].env_var
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -438,9 +489,11 @@ def test_get_package_requirements_from_project_file():
         assert set(["foo", "hello", "world"]) == env.conda_package_names_set
         assert set(["pip1", "pip2", "pip3"]) == env.pip_package_names_set
 
+        requirements = project.requirements(project.default_env_spec_name)
+
         # find CondaEnvRequirement
         conda_env_req = None
-        for r in project.requirements:
+        for r in requirements:
             if isinstance(r, CondaEnvRequirement):
                 assert conda_env_req is None  # only one
                 conda_env_req = r
@@ -856,7 +909,7 @@ def test_load_list_of_variables_requirements():
         assert os.path.exists(filename)
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        requirements = project.requirements
+        requirements = project.requirements(project.default_env_spec_name)
         assert 3 == len(requirements)
         assert isinstance(requirements[0], EnvVarRequirement)
         assert 'FOO' == requirements[0].env_var
@@ -865,7 +918,7 @@ def test_load_list_of_variables_requirements():
         assert isinstance(requirements[2], CondaEnvRequirement)
 
         conda_env_var = conda_api.conda_prefix_variable()
-        assert conda_env_var == project.requirements[2].env_var
+        assert conda_env_var == requirements[2].env_var
 
         assert dict() == requirements[2].options
         assert len(project.problems) == 0
@@ -880,7 +933,7 @@ def test_load_dict_of_variables_requirements():
         assert os.path.exists(filename)
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
-        requirements = project.requirements
+        requirements = project.requirements(project.default_env_spec_name)
         assert 3 == len(requirements)
         assert isinstance(requirements[0], EnvVarRequirement)
         assert 'FOO' == requirements[0].env_var
@@ -891,7 +944,7 @@ def test_load_dict_of_variables_requirements():
         assert isinstance(requirements[2], CondaEnvRequirement)
 
         conda_env_var = conda_api.conda_prefix_variable()
-        assert conda_env_var == project.requirements[2].env_var
+        assert conda_env_var == requirements[2].env_var
 
         assert dict() == requirements[2].options
         assert len(project.problems) == 0
@@ -906,7 +959,8 @@ def test_non_string_variables_requirements():
         assert os.path.exists(filename)
         project = project_no_dedicated_env(dirname)
         assert 2 == len(project.problems)
-        assert 0 == len(project.requirements)
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 0 == len(requirements)
         assert "42 is not a string" in project.problems[0]
         assert "43 is not a string" in project.problems[1]
 
@@ -919,7 +973,8 @@ def test_variable_default_cannot_be_bool():
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
         assert os.path.exists(filename)
         project = project_no_dedicated_env(dirname)
-        assert [] == project.requirements
+        requirements = project.requirements(project.default_env_spec_name)
+        assert [] == requirements
         assert 1 == len(project.problems)
 
         assert ("default value for variable FOO must be null, a string, or a number, not True.") == project.problems[0]
@@ -932,7 +987,8 @@ def test_variable_default_cannot_be_list():
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
         assert os.path.exists(filename)
         project = project_no_dedicated_env(dirname)
-        assert [] == project.requirements
+        requirements = project.requirements(project.default_env_spec_name)
+        assert [] == requirements
         assert 1 == len(project.problems)
 
         assert ("default value for variable FOO must be null, a string, or a number, not [].") == project.problems[0]
@@ -945,7 +1001,8 @@ def test_variable_default_missing_key_field():
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
         assert os.path.exists(filename)
         project = project_no_dedicated_env(dirname)
-        assert [] == project.requirements
+        requirements = project.requirements(project.default_env_spec_name)
+        assert [] == requirements
         assert 1 == len(project.problems)
 
         assert ("default value for variable FOO must be null, a string, or a number, " +
@@ -965,7 +1022,8 @@ def test_variables_requirements_not_a_collection():
         assert os.path.exists(filename)
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        assert 0 == len(project.requirements)
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 0 == len(requirements)
         assert "variables section contains wrong value type 42" in project.problems[0]
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42\n"}, check_file)
@@ -974,7 +1032,8 @@ def test_variables_requirements_not_a_collection():
 def test_corrupted_project_file():
     def check_problem(dirname):
         project = project_no_dedicated_env(dirname)
-        assert 0 == len(project.requirements)
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 0 == len(requirements)
         assert 1 == len(project.problems)
         assert 'anaconda-project.yml: Syntax error: ' in project.problems[0]
 
@@ -994,7 +1053,8 @@ variables:
 def test_corrupted_project_lock_file():
     def check_problem(dirname):
         project = project_no_dedicated_env(dirname)
-        assert 0 == len(project.requirements)
+        requirements = project.requirements(project.default_env_spec_name)
+        assert 0 == len(requirements)
         assert 1 == len(project.problems)
         assert 'anaconda-project-lock.yml: Syntax error: ' in project.problems[0]
 
@@ -2135,12 +2195,12 @@ def test_get_publication_info_from_empty_project():
                     'packages': [],
                     'description': 'Default',
                     'locked': False,
-                    'platforms': []
+                    'platforms': [],
+                    'variables': {},
+                    'downloads': {},
+                    'services': {}
                 }
             },
-            'variables': {},
-            'downloads': {},
-            'services': {}
         }
         assert expected == project.publication_info()
 
@@ -2240,42 +2300,102 @@ def test_get_publication_info_from_complex_project():
                                        'env_spec': 'default',
                                        'supports_http_options': True,
                                        'registers_fusion_function': True}},
-            'downloads': {'FOO': {'encrypted': False,
-                                  'title': 'FOO',
-                                  'description': 'A downloaded file which is referenced by FOO.',
-                                  'url': 'https://example.com/blah'}},
-            'env_specs': {'default': {'channels': ['bar'],
-                                      'packages': ['foo', 'notebook'],
-                                      'description': 'Default',
-                                      'locked': False,
-                                      'platforms': ['linux-64', 'osx-64', 'win-64']},
+            'env_specs': {'default':
+                          {'channels': ['bar'],
+                           'packages': ['foo', 'notebook'],
+                           'description': 'Default',
+                           'locked': False,
+                           'platforms': ['linux-64', 'osx-64', 'win-64'],
+                           'downloads': {'FOO': {'encrypted': False,
+                                                 'title': 'FOO',
+                                                 'description': 'A downloaded file which is referenced by FOO.',
+                                                 'url': 'https://example.com/blah'}},
+                           'variables': {'SOMETHING': {'encrypted': False,
+                                                       'title': 'SOMETHING',
+                                                       'description': 'SOMETHING environment variable must be set.'},
+                                         'SOMETHING_ELSE':
+                                         {'encrypted': False,
+                                          'title': 'SOMETHING_ELSE',
+                                          'description': 'SOMETHING_ELSE environment variable must be set.',
+                                          'default': "42"}},
+                           'services': {'REDIS_URL':
+                                        {'title': 'REDIS_URL',
+                                         'description':
+                                         'A running Redis server, located by a redis: URL set as REDIS_URL.',
+                                         'type': 'redis',
+                                         'encrypted': False}}},
                           'lol': {'channels': ['bar'],
                                   'packages': ['foo'],
                                   'description': 'lol',
                                   'locked': False,
-                                  'platforms': ['linux-64', 'osx-64', 'win-64']},
+                                  'platforms': ['linux-64', 'osx-64', 'win-64'],
+                                  'downloads': {'FOO': {'encrypted': False,
+                                                        'title': 'FOO',
+                                                        'description': 'A downloaded file which is referenced by FOO.',
+                                                        'url': 'https://example.com/blah'}},
+                                  'variables': {'SOMETHING':
+                                                {'encrypted': False,
+                                                 'title': 'SOMETHING',
+                                                 'description': 'SOMETHING environment variable must be set.'},
+                                                'SOMETHING_ELSE':
+                                                {'encrypted': False,
+                                                 'title': 'SOMETHING_ELSE',
+                                                 'description': 'SOMETHING_ELSE environment variable must be set.',
+                                                 'default': "42"}},
+                                  'services': {'REDIS_URL':
+                                               {'title': 'REDIS_URL',
+                                                'description':
+                                                'A running Redis server, located by a redis: URL set as REDIS_URL.',
+                                                'type': 'redis',
+                                                'encrypted': False}}},
                           'w00t': {'channels': ['bar'],
                                    'packages': ['foo', 'something'],
                                    'description': 'double 0',
                                    'locked': False,
-                                   'platforms': ['linux-64', 'osx-64', 'win-64']},
+                                   'platforms': ['linux-64', 'osx-64', 'win-64'],
+                                   'downloads': {'FOO': {'encrypted': False,
+                                                         'title': 'FOO',
+                                                         'description': 'A downloaded file which is referenced by FOO.',
+                                                         'url': 'https://example.com/blah'}},
+                                   'variables': {'SOMETHING':
+                                                 {'encrypted': False,
+                                                  'title': 'SOMETHING',
+                                                  'description': 'SOMETHING environment variable must be set.'},
+                                                 'SOMETHING_ELSE':
+                                                 {'encrypted': False,
+                                                  'title': 'SOMETHING_ELSE',
+                                                  'description': 'SOMETHING_ELSE environment variable must be set.',
+                                                  'default': "42"}},
+                                   'services': {'REDIS_URL':
+                                                {'title': 'REDIS_URL',
+                                                 'description':
+                                                 'A running Redis server, located by a redis: URL set as REDIS_URL.',
+                                                 'type': 'redis',
+                                                 'encrypted': False}}},
                           'woot': {'channels': ['bar', 'woohoo'],
                                    'packages': ['foo', 'blah', 'bokeh'],
                                    'description': 'woot',
                                    'locked': False,
-                                   'platforms': ['linux-64', 'osx-64', 'win-64']}},
-            'variables': {'SOMETHING': {'encrypted': False,
-                                        'title': 'SOMETHING',
-                                        'description': 'SOMETHING environment variable must be set.'},
-                          'SOMETHING_ELSE': {'encrypted': False,
-                                             'title': 'SOMETHING_ELSE',
-                                             'description': 'SOMETHING_ELSE environment variable must be set.',
-                                             'default': "42"}},
-            'services': {'REDIS_URL':
-                         {'title': 'REDIS_URL',
-                          'description': 'A running Redis server, located by a redis: URL set as REDIS_URL.',
-                          'type': 'redis',
-                          'encrypted': False}}
+                                   'platforms': ['linux-64', 'osx-64', 'win-64'],
+                                   'downloads': {'FOO': {'encrypted': False,
+                                                         'title': 'FOO',
+                                                         'description': 'A downloaded file which is referenced by FOO.',
+                                                         'url': 'https://example.com/blah'}},
+                                   'variables': {'SOMETHING':
+                                                 {'encrypted': False,
+                                                  'title': 'SOMETHING',
+                                                  'description': 'SOMETHING environment variable must be set.'},
+                                                 'SOMETHING_ELSE':
+                                                 {'encrypted': False,
+                                                  'title': 'SOMETHING_ELSE',
+                                                  'description': 'SOMETHING_ELSE environment variable must be set.',
+                                                  'default': "42"}},
+                                   'services': {'REDIS_URL':
+                                                {'title': 'REDIS_URL',
+                                                 'description':
+                                                 'A running Redis server, located by a redis: URL set as REDIS_URL.',
+                                                 'type': 'redis',
+                                                 'encrypted': False}}}}
         }
 
         assert expected == project.publication_info()
@@ -2292,24 +2412,26 @@ def test_find_requirements():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
-        reqs = project.find_requirements(env_var='SOMETHING')
+        spec_name = project.default_env_spec_name
+
+        reqs = project.find_requirements(spec_name, env_var='SOMETHING')
         assert len(reqs) == 1
         assert reqs[0].env_var == 'SOMETHING'
 
-        reqs = project.find_requirements(klass=CondaEnvRequirement)
+        reqs = project.find_requirements(spec_name, klass=CondaEnvRequirement)
         assert len(reqs) == 1
         assert isinstance(reqs[0], CondaEnvRequirement)
 
-        reqs = project.find_requirements(klass=ServiceRequirement)
+        reqs = project.find_requirements(spec_name, klass=ServiceRequirement)
         assert len(reqs) == 1
         assert isinstance(reqs[0], ServiceRequirement)
 
-        reqs = project.find_requirements(klass=DownloadRequirement)
+        reqs = project.find_requirements(spec_name, klass=DownloadRequirement)
         assert len(reqs) == 1
         assert isinstance(reqs[0], DownloadRequirement)
 
         # the klass and env_var kwargs must be "AND"-ed together
-        reqs = project.find_requirements(klass=CondaEnvRequirement, env_var='SOMETHING')
+        reqs = project.find_requirements(spec_name, klass=CondaEnvRequirement, env_var='SOMETHING')
         assert [] == reqs
 
     with_directory_contents_completing_project_file(
@@ -2323,22 +2445,22 @@ def test_requirements_subsets():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
-        services = project.service_requirements
+        services = project.service_requirements(project.default_env_spec_name)
         assert len(services) == 1
         assert isinstance(services[0], ServiceRequirement)
         assert services[0].env_var == 'REDIS_URL'
 
-        downloads = project.download_requirements
+        downloads = project.download_requirements(project.default_env_spec_name)
         assert len(downloads) == 1
         assert isinstance(downloads[0], DownloadRequirement)
         assert downloads[0].env_var == 'FOO'
 
-        everything = project.all_variable_requirements
+        everything = project.all_variable_requirements(project.default_env_spec_name)
         everything_names = [req.env_var for req in everything]
         # the first element is CONDA_PREFIX, CONDA_ENV_PATH, or CONDA_DEFAULT_ENV
         assert ['FOO', 'REDIS_URL', 'SOMETHING', 'SOMETHING_ELSE'] == sorted(everything_names)[1:]
 
-        plain = project.plain_variable_requirements
+        plain = project.plain_variable_requirements(project.default_env_spec_name)
         plain_names = [req.env_var for req in plain]
         assert ['SOMETHING', 'SOMETHING_ELSE'] == sorted(plain_names)
 
@@ -2353,17 +2475,17 @@ def test_env_var_name_list_properties():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
-        services = project.services
+        services = project.services(project.default_env_spec_name)
         assert ['REDIS_URL'] == services
 
-        downloads = project.downloads
+        downloads = project.downloads(project.default_env_spec_name)
         assert ['FOO'] == downloads
 
-        everything = project.all_variables
+        everything = project.all_variables(project.default_env_spec_name)
         # the first element is CONDA_PREFIX, CONDA_ENV_PATH, or CONDA_DEFAULT_ENV
         assert ['FOO', 'REDIS_URL', 'SOMETHING', 'SOMETHING_ELSE'] == sorted(everything)[1:]
 
-        plain = project.plain_variables
+        plain = project.plain_variables(project.default_env_spec_name)
         assert ['SOMETHING', 'SOMETHING_ELSE'] == sorted(plain)
 
     with_directory_contents_completing_project_file(

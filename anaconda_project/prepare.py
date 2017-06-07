@@ -21,7 +21,8 @@ from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT)
 from anaconda_project.plugins.provider import ProvideContext
-from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
+from anaconda_project.plugins.requirement import Requirement, EnvVarRequirement, UserConfigOverrides
+from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 
 
 def _update_environ(dest, src):
@@ -39,11 +40,12 @@ def _update_environ(dest, src):
 class PrepareResult(with_metaclass(ABCMeta)):
     """Abstract class describing the result of preparing the project to run."""
 
-    def __init__(self, statuses, environ, overrides):
+    def __init__(self, statuses, environ, overrides, env_spec_name):
         """Construct an abstract PrepareResult."""
         self._statuses = tuple(statuses)
         self._environ = environ
         self._overrides = overrides
+        self._env_spec_name = env_spec_name
 
     def __bool__(self):
         """True if we were successful."""
@@ -101,14 +103,37 @@ class PrepareResult(with_metaclass(ABCMeta)):
         """Get lines of error output."""
         raise NotImplementedError()  # pragma: no cover
 
+    @property
+    def env_spec_name(self):
+        """The env spec name we used for the prepare.
+
+        If the project was broken or the user provided bad input
+        before we could ask CondaEnvRequirement for the env spec
+        name, at the moment we sort of take a guess at the right
+        name in order to guarantee this is never None. The
+        guessing is a little bit broken. But it would be a very
+        obscure scenario where it matters.
+        """
+        return self._env_spec_name
+
+    @property
+    def env_prefix(self):
+        """The prefix of the prepared env, or None if none was created."""
+        status = self.status_for(CondaEnvRequirement)
+        if status is None:
+            return None
+        varname = status.requirement.env_var
+        return self._environ.get(varname, None)
+
 
 class PrepareSuccess(PrepareResult):
     """Class describing the successful result of preparing the project to run."""
 
-    def __init__(self, statuses, command_exec_info, environ, overrides):
+    def __init__(self, statuses, command_exec_info, environ, overrides, env_spec_name):
         """Construct a PrepareSuccess indicating a successful prepare stage."""
-        super(PrepareSuccess, self).__init__(statuses, environ, overrides)
+        super(PrepareSuccess, self).__init__(statuses, environ, overrides, env_spec_name)
         self._command_exec_info = command_exec_info
+        assert self.env_spec_name is not None
 
     @property
     def failed(self):
@@ -136,9 +161,9 @@ class PrepareSuccess(PrepareResult):
 class PrepareFailure(PrepareResult):
     """Class describing the failed result of preparing the project to run."""
 
-    def __init__(self, statuses, errors, environ, overrides):
+    def __init__(self, statuses, errors, environ, overrides, env_spec_name=None):
         """Construct a PrepareFailure indicating a failed prepare stage."""
-        super(PrepareFailure, self).__init__(statuses, environ, overrides)
+        super(PrepareFailure, self).__init__(statuses, environ, overrides, env_spec_name)
         self._errors = errors
 
     @property
@@ -409,12 +434,15 @@ def _in_provide_whitelist(provide_whitelist, requirement):
         # whitelist of None means "everything"
         return True
 
-    for env_var_or_class in provide_whitelist:
-        if is_string(env_var_or_class):
-            if isinstance(requirement, EnvVarRequirement) and requirement.env_var == env_var_or_class:
+    for env_var_or_class_or_req in provide_whitelist:
+        if isinstance(env_var_or_class_or_req, Requirement):
+            if requirement is env_var_or_class_or_req:
+                return True
+        elif is_string(env_var_or_class_or_req):
+            if isinstance(requirement, EnvVarRequirement) and requirement.env_var == env_var_or_class_or_req:
                 return True
         else:
-            if isinstance(requirement, env_var_or_class):
+            if isinstance(requirement, env_var_or_class_or_req):
                 return True
     return False
 
@@ -472,12 +500,24 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 failed = True
 
         result_statuses = _refresh_status_list(all_statuses, rechecked)
+
+        current_env_spec_name = None
+        for status in result_statuses:
+            if status.env_spec_name is not None:
+                # we're expecting exactly one status to set this,
+                # the status from the CondaEnvRequirement. Possibly
+                # we sometimes do a prepare with no CondaEnvRequirement?
+                # but doing one with two wouldn't make sense afaik.
+                assert current_env_spec_name is None
+                current_env_spec_name = status.env_spec_name
+
         if failed:
             stage.set_result(
                 PrepareFailure(statuses=result_statuses,
                                errors=errors,
                                environ=environ,
-                               overrides=overrides),
+                               overrides=overrides,
+                               env_spec_name=current_env_spec_name),
                 rechecked)
             if keep_going_until_success:
                 return _start_over(stage.statuses_after_execute, rechecked)
@@ -492,7 +532,8 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 PrepareSuccess(statuses=result_statuses,
                                command_exec_info=exec_info,
                                environ=environ,
-                               overrides=overrides),
+                               overrides=overrides,
+                               env_spec_name=current_env_spec_name),
                 rechecked)
             return None
 
@@ -684,7 +725,7 @@ def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_unt
     local_state = LocalStateFile.load_for_directory(project.directory_path)
 
     statuses = []
-    for requirement in project.requirements:
+    for requirement in project.requirements(overrides.env_spec_name):
         status = requirement.check_status(environ_copy,
                                           local_state,
                                           project.default_env_spec_name_for_command(command),
@@ -749,45 +790,82 @@ def prepare_in_stages(project,
                                        extra_command_args=extra_command_args)
 
 
-def _project_problems_to_prepare_failure(project, environ, overrides):
+def _project_problems_to_prepare_failure(project, environ, overrides, would_have_used_env_spec):
     if project.problems:
         errors = []
         for problem in project.problems:
             errors.append(problem)
             project.frontend.error(problem)
-        errors.append("Unable to load the project.")
-        return PrepareFailure(statuses=(), errors=errors, environ=environ, overrides=overrides)
+        error = "Unable to load the project."
+        errors.append(error)
+        project.frontend.error(error)
+
+        return PrepareFailure(statuses=(),
+                              errors=errors,
+                              environ=environ,
+                              overrides=overrides,
+                              env_spec_name=would_have_used_env_spec)
     else:
         return None
 
 
-def _prepare_failure_on_bad_command_name(project, command_name, environ, overrides):
+def _prepare_failure_on_bad_command_name(project, command_name, environ, overrides, would_have_used_env_spec):
     if command_name is not None and command_name not in project.commands:
         error = ("Command name '%s' is not in %s, these names were found: %s" %
                  (command_name, project.project_file.filename, ", ".join(sorted(project.commands.keys()))))
         project.frontend.error(error)
-        return PrepareFailure(statuses=(), errors=[error], environ=environ, overrides=overrides)
+        return PrepareFailure(statuses=(),
+                              errors=[error],
+                              environ=environ,
+                              overrides=overrides,
+                              env_spec_name=would_have_used_env_spec)
     else:
         return None
 
 
-def _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ, overrides):
+def _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ, overrides, would_have_used_env_spec):
     if env_spec_name is not None and env_spec_name not in project.env_specs:
         error = ("Environment name '%s' is not in %s, these names were found: %s" %
                  (env_spec_name, project.project_file.filename, ", ".join(sorted(project.env_specs.keys()))))
         project.frontend.error(error)
-        return PrepareFailure(statuses=(), errors=[error], environ=environ, overrides=overrides)
+        return PrepareFailure(statuses=(),
+                              errors=[error],
+                              environ=environ,
+                              overrides=overrides,
+                              env_spec_name=would_have_used_env_spec)
     else:
         return None
 
 
 def _check_prepare_prerequisites(project, env_spec_name, command_name, command, environ, overrides):
     assert not (command_name is not None and command is not None)
-    failed = _project_problems_to_prepare_failure(project, environ, overrides)
+
+    if command is None:
+        command = project.command_for_name(command_name)
+        # at this point, "command" is only None if there are no
+        # commands for this project.
+
+        # this is sort of a hack to predict which env spec the
+        # CondaEnvRequirement will report in its status, since we may
+        # not get to checking its status if these prereqs fail.  I'm
+        # not sure yet how to refactor to avoid duplicating this logic
+        # with CondaEnvRequirement; one thing we fail to handle here
+        # is if CONDA_PREFIX is already set and we are in
+        # inherit_environment=true mode.
+    would_have_used_env_spec = overrides.env_spec_name
+    if would_have_used_env_spec is None:
+        if command is None:
+            would_have_used_env_spec = project.default_env_spec_name
+        else:
+            would_have_used_env_spec = project.default_env_spec_name_for_command(command)
+
+    failed = _project_problems_to_prepare_failure(project, environ, overrides, would_have_used_env_spec)
     if failed is None:
-        failed = _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ, overrides)
+        failed = _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ, overrides,
+                                                       would_have_used_env_spec)
     if failed is None:
-        failed = _prepare_failure_on_bad_command_name(project, command_name, environ, overrides)
+        failed = _prepare_failure_on_bad_command_name(project, command_name, environ, overrides,
+                                                      would_have_used_env_spec)
     return failed
 
 

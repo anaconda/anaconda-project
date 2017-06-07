@@ -28,6 +28,20 @@ class PluginRegistry(object):
         from .requirement import EnvVarRequirement
         return EnvVarRequirement(registry=self, env_var=env_var, options=options)
 
+    def can_find_requirement_by_service_type(self, service_type, env_var, options):
+        """See if we can create a requirement instance given a service type.
+
+        Args:
+            service_type (str): name of the service type
+            env_var (str): environment variable name
+            options (dict): options from the project file for this requirement
+
+        Returns:
+            boolean
+        """
+        # ha. obviously not the long-term implementation
+        return service_type == 'redis'
+
     def find_requirement_by_service_type(self, service_type, env_var, options):
         """Create a requirement instance given a service type.
 
@@ -45,9 +59,11 @@ class PluginRegistry(object):
 
         # future goal will be to un-hardcode this
         if service_type == 'redis':
+            assert self.can_find_requirement_by_service_type(service_type, env_var, options)
             from .requirements.redis import RedisRequirement
             return RedisRequirement(registry=self, env_var=env_var, options=options)
         else:
+            assert not self.can_find_requirement_by_service_type(service_type, env_var, options)
             return None
 
     def list_service_types(self):

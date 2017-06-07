@@ -39,6 +39,7 @@ def test_prepare_empty_directory():
         result = prepare_without_interaction(project, environ=environ)
         assert result.errors == []
         assert result
+        assert result.env_prefix is not None
         assert dict(PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict() == strip_environ(environ)
         assert result.command_exec_info is None
@@ -81,6 +82,7 @@ def test_unprepare_problem_project():
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ)
         assert not result
+        assert result.env_prefix is None
         status = unprepare(project, result)
         assert not status
         assert status.status_description == 'Unable to load the project.'
@@ -160,6 +162,7 @@ def test_prepare_some_env_var_not_set():
         environ = minimal_environ(BAR='bar')
         result = prepare_without_interaction(project, environ=environ)
         assert not result
+        assert result.env_prefix is not None
         assert dict(BAR='bar') == strip_environ(environ)
 
     with_directory_contents_completing_project_file(
@@ -293,6 +296,7 @@ def test_prepare_bad_command_name():
         environ = minimal_environ(BAR='bar')
         result = prepare_without_interaction(project, environ=environ, command_name="blah")
         assert not result
+        assert result.env_prefix is None
         assert result.errors
         assert "Command name 'blah' is not in" in result.errors[0]
 
@@ -443,7 +447,8 @@ def test_skip_after_success_function_when_second_stage_fails():
             PrepareSuccess(statuses=(),
                            command_exec_info=None,
                            environ=dict(),
-                           overrides=UserConfigOverrides()),
+                           overrides=UserConfigOverrides(),
+                           env_spec_name='first'),
             [])
 
         def last(stage):
@@ -453,7 +458,8 @@ def test_skip_after_success_function_when_second_stage_fails():
                 PrepareFailure(statuses=(),
                                errors=[],
                                environ=dict(),
-                               overrides=UserConfigOverrides()),
+                               overrides=UserConfigOverrides(),
+                               env_spec_name='last'),
                 [])
             return None
 
@@ -490,7 +496,8 @@ def test_run_after_success_function_when_second_stage_succeeds():
             PrepareSuccess(statuses=(),
                            command_exec_info=None,
                            environ=dict(),
-                           overrides=UserConfigOverrides()),
+                           overrides=UserConfigOverrides(),
+                           env_spec_name='foo'),
             [])
 
         def last(stage):
@@ -500,7 +507,8 @@ def test_run_after_success_function_when_second_stage_succeeds():
                 PrepareSuccess(statuses=(),
                                command_exec_info=None,
                                environ=dict(),
-                               overrides=UserConfigOverrides()),
+                               overrides=UserConfigOverrides(),
+                               env_spec_name='bar'),
                 [])
             return None
 
@@ -732,8 +740,71 @@ icon: foo.png
 
 
 def test_prepare_success_properties():
-    result = PrepareSuccess(statuses=(), command_exec_info=None, environ=dict(), overrides=UserConfigOverrides())
+    result = PrepareSuccess(statuses=(),
+                            command_exec_info=None,
+                            environ=dict(),
+                            overrides=UserConfigOverrides(),
+                            env_spec_name='foo')
     assert result.statuses == ()
     assert result.status_for('FOO') is None
     assert result.status_for(EnvVarRequirement) is None
     assert result.overrides is not None
+    assert result.env_spec_name == 'foo'
+
+
+def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA', checksum=None):
+    from tornado import gen
+
+    @gen.coroutine
+    def mock_downloader_run(self, loop):
+        class Res:
+            pass
+
+        res = Res()
+        res.code = 200
+        with open(os.path.join(dirname, filename), 'w') as out:
+            out.write('data')
+        if checksum:
+            self._hash = checksum
+        raise gen.Return(res)
+
+    monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
+
+
+def test_provide_whitelist(monkeypatch):
+    def check(dirname):
+        from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+
+        _monkeypatch_download_file(monkeypatch, dirname, filename="nope")
+
+        no_foo = [('missing requirement to run this project: A downloaded file which is ' + 'referenced by FOO.'),
+                  '  Environment variable FOO is not set.']
+
+        # whitelist only the env req by class
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, provide_whitelist=(CondaEnvRequirement, ), environ=environ)
+        assert result.errors == no_foo
+
+        # whitelist by instance
+        env_req = [req for req in project.requirements(None) if isinstance(req, CondaEnvRequirement)][0]
+        result = prepare_without_interaction(project, provide_whitelist=(env_req, ), environ=environ)
+        assert result.errors == no_foo
+
+        # whitelist by variable name
+        result = prepare_without_interaction(project, provide_whitelist=(env_req.env_var, ), environ=environ)
+        assert result.errors == no_foo
+
+        # whitelist the download
+        result = prepare_without_interaction(project,
+                                             provide_whitelist=(env_req, project.download_requirements(None)[0]),
+                                             environ=environ)
+        assert result.errors == []
+        assert 'FOO' in result.environ
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+downloads:
+  FOO: "http://example.com/nope"
+
+"""}, check)

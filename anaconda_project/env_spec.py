@@ -205,6 +205,14 @@ class EnvSpec(object):
         return self._import_hash
 
     def _get_inherited(self, public_attr, key_func=None):
+        private_attr = '_' + public_attr
+
+        def getter(spec):
+            return getattr(spec, private_attr)
+
+        return self._get_inherited_with_getter(getter, key_func=key_func)
+
+    def _get_inherited_with_getter(self, getter, key_func=None):
         def _linearized_ancestors(specs, accumulator):
             for spec in specs:
                 if spec not in accumulator:
@@ -215,10 +223,9 @@ class EnvSpec(object):
         _linearized_ancestors([self], ancestors)
         assert ancestors[-1] is self
 
-        private_attr = '_' + public_attr
         to_combine = []
         for spec in ancestors:
-            to_combine.append(getattr(spec, private_attr))
+            to_combine.append(getter(spec))
         combined = []
         for item in to_combine:
             combined = _combine_keeping_last_duplicate(combined, item, key_func=key_func)

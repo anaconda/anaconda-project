@@ -14,7 +14,7 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 def _load_service_requirement(dirname):
     project = Project(dirname)
     assert [] == project.problems
-    for req in project.requirements:
+    for req in project.requirements(project.default_env_spec_name):
         if isinstance(req, ServiceRequirement):
             return req
     raise RuntimeError("no ServiceRequirement found")

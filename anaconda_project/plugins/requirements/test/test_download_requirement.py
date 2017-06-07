@@ -98,147 +98,115 @@ def test_download_with_no_checksum():
 
 def test_use_variable_name_for_filename():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(),
-                               varname='FOO',
-                               item='http://example.com/',
-                               problems=problems,
-                               requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO', item='http://example.com/', problems=problems)
     assert [] == problems
-    assert len(requirements) == 1
-    assert requirements[0].filename == 'FOO'
-    assert requirements[0].url == 'http://example.com/'
-    assert not requirements[0].unzip
+    assert kwargs['filename'] == 'FOO'
+    assert kwargs['url'] == 'http://example.com/'
+    assert not kwargs['unzip']
 
 
 def test_checksum_is_not_a_string():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(),
-                               varname='FOO',
-                               item=dict(url='http://example.com/',
-                                         md5=[]),
-                               problems=problems,
-                               requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO', item=dict(url='http://example.com/', md5=[]), problems=problems)
     assert ['Checksum value for FOO should be a string not [].'] == problems
-    assert len(requirements) == 0
+    assert kwargs is None
 
 
 def test_description_is_not_a_string():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(),
-                               varname='FOO',
-                               item=dict(url='http://example.com/',
-                                         description=[]),
-                               problems=problems,
-                               requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO',
+                                        item=dict(url='http://example.com/',
+                                                  description=[]),
+                                        problems=problems)
     assert ["'description' field for download item FOO is not a string"] == problems
-    assert len(requirements) == 0
+    assert kwargs is None
 
 
 def test_description_property():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(),
-                               varname='FOO',
-                               item=dict(url='http://example.com/',
-                                         description="hi"),
-                               problems=problems,
-                               requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO',
+                                        item=dict(url='http://example.com/',
+                                                  description="hi"),
+                                        problems=problems)
     assert [] == problems
-    assert len(requirements) == 1
-    assert requirements[0].title == 'FOO'
-    assert requirements[0].description == 'hi'
+    assert kwargs['description'] == 'hi'
+    req = DownloadRequirement(PluginRegistry(), **kwargs)
+    assert req.title == 'FOO'
 
 
 def test_download_item_is_a_list_not_a_string_or_dict():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(), varname='FOO', item=[], problems=problems, requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO', item=[], problems=problems)
     assert ["Download name FOO should be followed by a URL string or a dictionary describing the download."] == problems
-    assert len(requirements) == 0
+    assert kwargs is None
 
 
 def test_download_item_is_none_not_a_string_or_dict():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(), varname='FOO', item=None, problems=problems, requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO', item=None, problems=problems)
     assert ["Download name FOO should be followed by a URL string or a dictionary describing the download."] == problems
-    assert len(requirements) == 0
+    assert kwargs is None
 
 
 def test_unzip_is_not_a_bool():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(),
-                               varname='FOO',
-                               item=dict(url='http://example.com/',
-                                         unzip=[]),
-                               problems=problems,
-                               requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO',
+                                        item=dict(url='http://example.com/',
+                                                  unzip=[]),
+                                        problems=problems)
     assert ["Value of 'unzip' for download item FOO should be a boolean, not []."] == problems
-    assert len(requirements) == 0
+    assert kwargs is None
 
 
 def test_use_unzip_if_url_ends_in_zip():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(),
-                               varname='FOO',
-                               item='http://example.com/bar.zip',
-                               problems=problems,
-                               requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO', item='http://example.com/bar.zip', problems=problems)
     assert [] == problems
-    assert len(requirements) == 1
-    assert requirements[0].filename == 'bar'
-    assert requirements[0].url == 'http://example.com/bar.zip'
-    assert requirements[0].unzip
+    assert kwargs['filename'] == 'bar'
+    assert kwargs['url'] == 'http://example.com/bar.zip'
+    assert kwargs['unzip']
+    req = DownloadRequirement(PluginRegistry(), **kwargs)
+    assert req.filename == 'bar'
+    assert req.url == 'http://example.com/bar.zip'
+    assert req.unzip
 
 
 def test_allow_manual_override_of_use_unzip_if_url_ends_in_zip():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(),
-                               varname='FOO',
-                               item=dict(url='http://example.com/bar.zip',
-                                         unzip=False),
-                               problems=problems,
-                               requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO',
+                                        item=dict(url='http://example.com/bar.zip',
+                                                  unzip=False),
+                                        problems=problems)
     assert [] == problems
-    assert len(requirements) == 1
-    assert requirements[0].filename == 'bar.zip'
-    assert requirements[0].url == 'http://example.com/bar.zip'
-    assert not requirements[0].unzip
+    assert kwargs['filename'] == 'bar.zip'
+    assert kwargs['url'] == 'http://example.com/bar.zip'
+    assert not kwargs['unzip']
+
+    req = DownloadRequirement(PluginRegistry(), **kwargs)
+    assert req.filename == 'bar.zip'
+    assert req.url == 'http://example.com/bar.zip'
+    assert not req.unzip
 
 
 def test_use_unzip_if_url_ends_in_zip_and_filename_does_not():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(),
-                               varname='FOO',
-                               item=dict(url='http://example.com/bar.zip',
-                                         filename='something'),
-                               problems=problems,
-                               requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO',
+                                        item=dict(url='http://example.com/bar.zip',
+                                                  filename='something'),
+                                        problems=problems)
     assert [] == problems
-    assert len(requirements) == 1
-    assert requirements[0].filename == 'something'
-    assert requirements[0].url == 'http://example.com/bar.zip'
-    assert requirements[0].unzip
+    assert kwargs['filename'] == 'something'
+    assert kwargs['url'] == 'http://example.com/bar.zip'
+    assert kwargs['unzip']
 
 
 def test_no_unzip_if_url_ends_in_zip_and_filename_also_does():
     problems = []
-    requirements = []
-    DownloadRequirement._parse(PluginRegistry(),
-                               varname='FOO',
-                               item=dict(url='http://example.com/bar.zip',
-                                         filename='something.zip'),
-                               problems=problems,
-                               requirements=requirements)
+    kwargs = DownloadRequirement._parse(varname='FOO',
+                                        item=dict(url='http://example.com/bar.zip',
+                                                  filename='something.zip'),
+                                        problems=problems)
     assert [] == problems
-    assert len(requirements) == 1
-    assert requirements[0].filename == 'something.zip'
-    assert requirements[0].url == 'http://example.com/bar.zip'
-    assert not requirements[0].unzip
+    assert kwargs['filename'] == 'something.zip'
+    assert kwargs['url'] == 'http://example.com/bar.zip'
+    assert not kwargs['unzip']

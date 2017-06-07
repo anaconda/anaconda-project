@@ -47,7 +47,8 @@ class RequirementStatus(Status):
 
     """
 
-    def __init__(self, requirement, has_been_provided, status_description, provider, analysis, latest_provide_result):
+    def __init__(self, requirement, has_been_provided, status_description, provider, analysis, latest_provide_result,
+                 env_spec_name):
         """Construct an abstract RequirementStatus."""
         self._requirement = requirement
         self._has_been_provided = has_been_provided
@@ -55,6 +56,7 @@ class RequirementStatus(Status):
         self._provider = provider
         self._analysis = analysis
         self._latest_provide_result = latest_provide_result
+        self._env_spec_name = env_spec_name
 
     def __repr__(self):
         """Repr of the status."""
@@ -105,6 +107,11 @@ class RequirementStatus(Status):
             return []
         else:
             return self.latest_provide_result.errors
+
+    @property
+    def env_spec_name(self):
+        """Get the env spec name used to meet the requirement, None if not a ``CondaEnvRequirement``."""
+        return self._env_spec_name
 
     def recheck(self, environ, local_state_file, default_env_spec_name, overrides=None, latest_provide_result=None):
         """Get a new ``RequirementStatus`` reflecting the current state.
@@ -177,24 +184,28 @@ class Requirement(with_metaclass(ABCMeta)):
                        has_been_provided, status_description, provider_class_name):
         provider = self.registry.find_provider_by_class_name(provider_class_name)
         analysis = provider.analyze(self, environ, local_state_file, default_env_spec_name, overrides)
+        env_spec_name = analysis.config.get('env_name', None)
         return RequirementStatus(self,
                                  has_been_provided=has_been_provided,
                                  status_description=status_description,
                                  provider=provider,
                                  analysis=analysis,
-                                 latest_provide_result=latest_provide_result)
+                                 latest_provide_result=latest_provide_result,
+                                 env_spec_name=env_spec_name)
 
     def _create_status_from_analysis(self, environ, local_state_file, default_env_spec_name, overrides,
                                      latest_provide_result, provider_class_name, status_getter):
         provider = self.registry.find_provider_by_class_name(provider_class_name)
         analysis = provider.analyze(self, environ, local_state_file, default_env_spec_name, overrides)
         (has_been_provided, status_description) = status_getter(environ, local_state_file, analysis)
+        env_spec_name = analysis.config.get('env_name', None)
         return RequirementStatus(self,
                                  has_been_provided=has_been_provided,
                                  status_description=status_description,
                                  provider=provider,
                                  analysis=analysis,
-                                 latest_provide_result=latest_provide_result)
+                                 latest_provide_result=latest_provide_result,
+                                 env_spec_name=env_spec_name)
 
     @abstractmethod
     def check_status(self, environ, local_state_file, default_env_spec_name, overrides, latest_provide_result=None):

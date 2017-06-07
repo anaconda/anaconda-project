@@ -14,9 +14,10 @@ import shutil
 import tempfile
 
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
-from anaconda_project import prepare
 from anaconda_project import archiver
 from anaconda_project import client
+from anaconda_project import prepare
+from anaconda_project import provide
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.frontend import _null_frontend
 from anaconda_project.plugins.requirement import EnvVarRequirement
@@ -197,7 +198,7 @@ def _try_requirement_without_commit(project, env_var_or_class, env_spec_name=Non
     return status
 
 
-def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name=None):
+def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name):
     status = _try_requirement_without_commit(project, env_var_or_class, env_spec_name)
 
     if not status:
@@ -231,7 +232,7 @@ def _apply_lock_file_then_revert(project, env_spec_name):
     return status
 
 
-def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
+def add_download(project, env_spec_name, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
     """Attempt to download the URL; if successful, add it as a download to the project.
 
     The returned ``Status`` should be a ``RequirementStatus`` for
@@ -242,6 +243,7 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
 
     Args:
         project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
         env_var (str): env var to store the local filename
         url (str): url to download
         filename (optional, str): Name to give file or directory after downloading
@@ -256,10 +258,11 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
     failed = _check_problems(project)
     if failed is not None:
         return failed
-    requirement = project.project_file.get_value(['downloads', env_var])
+    path = _path_to_download(env_spec_name, env_var)
+    requirement = project.project_file.get_value(path)
     if requirement is None or not isinstance(requirement, dict):
         requirement = {}
-        project.project_file.set_value(['downloads', env_var], requirement)
+        project.project_file.set_value(path, requirement)
 
     requirement['url'] = url
     if filename:
@@ -270,10 +273,10 @@ def add_download(project, env_var, url, filename=None, hash_algorithm=None, hash
             requirement.pop(_hash, None)
         requirement[hash_algorithm] = hash_value
 
-    return _commit_requirement_if_it_works(project, env_var)
+    return _commit_requirement_if_it_works(project, env_var, env_spec_name=env_spec_name)
 
 
-def remove_download(project, prepare_result, env_var):
+def remove_download(project, env_spec_name, env_var, prepare_result=None):
     """Remove file or directory referenced by ``env_var`` from file system and the project.
 
     The returned ``Status`` will be an instance of ``SimpleStatus``. A False
@@ -282,25 +285,36 @@ def remove_download(project, prepare_result, env_var):
 
     Args:
         project (Project): the project
-        prepare_result (PrepareResult): result of a previous prepare
+        env_spec_name (str): environment spec name or None for all environment specs
         env_var (str): env var to store the local filename
+        prepare_result (PrepareResult): result of a previous prepare or None
 
     Returns:
         ``Status`` instance
     """
     failed = _check_problems(project)
+
     if failed is not None:
         return failed
+
     # Modify the project file _in memory only_, do not save
-    requirement = project.find_requirements(env_var, klass=DownloadRequirement)
+    requirement = project.find_requirements(env_spec_name, env_var, klass=DownloadRequirement)
     if not requirement:
         return SimpleStatus(success=False, description="Download requirement: {} not found.".format(env_var))
     assert len(requirement) == 1  # duplicate env vars aren't allowed
     requirement = requirement[0]
 
+    if prepare_result is None:
+        prepare_result = prepare.prepare_without_interaction(project,
+                                                             provide_whitelist=(requirement, ),
+                                                             env_spec_name=env_spec_name,
+                                                             mode=provide.PROVIDE_MODE_CHECK)
+
+    assert env_spec_name is None or prepare_result.env_spec_name == env_spec_name
+
     status = prepare.unprepare(project, prepare_result, whitelist=[env_var])
     if status:
-        project.project_file.unset_value(['downloads', env_var])
+        project.project_file.unset_value(_path_to_download(env_spec_name, env_var))
         project.project_file.use_changes_without_saving()
         assert project.problems == []
         project.project_file.save()
@@ -947,6 +961,16 @@ def unlock(project, env_spec_name):
         return status
 
 
+def _check_env_spec_name(project, name):
+    if name is not None and name not in project.env_specs:
+        problem = "Environment spec {} doesn't exist.".format(name)
+        return SimpleStatus(success=False, description=problem)
+    else:
+        return None
+
+
+# this function is specific to fields that go into the EnvSpec
+# (CondaEnvRequirement/lockset-affecting)
 def _modify_inherited_field(project, name, field, additions, removals):
     # TODO this is not even as clever as remove_packages, in that
     # it simply removes from either the global or single-env-spec
@@ -958,12 +982,11 @@ def _modify_inherited_field(project, name, field, additions, removals):
     # vs. specific lists.
 
     failed = _check_problems(project)
+    if failed is None:
+        failed = _check_env_spec_name(project, name)
+
     if failed is not None:
         return failed
-
-    if name is not None and name not in project.env_specs:
-        problem = "Environment spec {} doesn't exist.".format(name)
-        return SimpleStatus(success=False, description=problem)
 
     # field values will be validated when we try out the new
     # project file, we won't save if the result is invalid.
@@ -1054,24 +1077,58 @@ def remove_platforms(project, env_spec_name, platforms):
     return _modify_platforms(project, env_spec_name, additions=[], removals=platforms)
 
 
-def _prepare_env_prefix(project, env_spec_name):
+def _prepare_env_prefix(project, env_spec_name, prepare_result, mode):
     failed = _check_problems(project)
+    if failed is None:
+        failed = _check_env_spec_name(project, env_spec_name)
     if failed is not None:
         return (None, failed)
 
     # we need an env prefix to store in keyring
-    result = prepare.prepare_without_interaction(project,
-                                                 provide_whitelist=(CondaEnvRequirement, ),
-                                                 env_spec_name=env_spec_name)
-    status = result.status_for(CondaEnvRequirement)
-    assert status is not None
-    if not status:
-        return (None, status)
+
+    env_prefix = None
+    if prepare_result is not None:
+        env_prefix = prepare_result.env_prefix
+
+    if env_prefix is None:
+        result = prepare.prepare_without_interaction(project,
+                                                     provide_whitelist=(CondaEnvRequirement, ),
+                                                     env_spec_name=env_spec_name,
+                                                     mode=mode)
+        status = result.status_for(CondaEnvRequirement)
+        assert status is not None
+        if status:
+            env_prefix = result.environ[status.requirement.env_var]
+        else:
+            # ignore errors if only checking
+            if mode == provide.PROVIDE_MODE_CHECK:
+                return (None, None)
+            else:
+                return (None, status)
+
+    return (env_prefix, None)
+
+
+def _path_to_per_env_spec_thing(env_spec_name, thing_name, varname):
+    if env_spec_name is None:
+        return [thing_name, varname]
     else:
-        return (result.environ[status.requirement.env_var], status)
+        return ['env_specs', env_spec_name, thing_name, varname]
 
 
-def add_variables(project, vars_to_add, defaults=None):
+def _path_to_variable(env_spec_name, varname):
+    return _path_to_per_env_spec_thing(env_spec_name, 'variables', varname)
+
+
+def _path_to_download(env_spec_name, varname):
+    return _path_to_per_env_spec_thing(env_spec_name, 'downloads', varname)
+
+
+def _path_to_service(env_spec_name, varname):
+    return _path_to_per_env_spec_thing(env_spec_name, 'services', varname)
+
+
+def add_variables(project, env_spec_name, vars_to_add, defaults=None):
     """Add variables in anaconda-project.yml, optionally setting their defaults.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -1080,6 +1137,7 @@ def add_variables(project, vars_to_add, defaults=None):
 
     Args:
         project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
         vars_to_add (list of str): variable names
         defaults (dict): dictionary from keys to defaults, can be empty
 
@@ -1087,34 +1145,39 @@ def add_variables(project, vars_to_add, defaults=None):
         ``Status`` instance
     """
     failed = _check_problems(project)
+    if failed is None:
+        failed = _check_env_spec_name(project, env_spec_name)
     if failed is not None:
         return failed
 
     if defaults is None:
         defaults = dict()
 
-    present_vars = {req.env_var for req in project.requirements if isinstance(req, EnvVarRequirement)}
+    present_vars = {req.env_var for req in project.requirements(env_spec_name) if isinstance(req, EnvVarRequirement)}
     for varname in vars_to_add:
+
+        path_to_variable = _path_to_variable(env_spec_name, varname)
+
         if varname in defaults:
             # we need to update the default even if var already exists
             new_default = defaults.get(varname)
-            variable_value = project.project_file.get_value(['variables', varname])
+            variable_value = project.project_file.get_value(path_to_variable)
             if variable_value is None or not isinstance(variable_value, dict):
                 variable_value = new_default
             else:
                 variable_value['default'] = new_default
-            project.project_file.set_value(['variables', varname], variable_value)
+            project.project_file.set_value(path_to_variable, variable_value)
         elif varname not in present_vars:
             # we are only adding the var if nonexistent and should leave
             # the default alone if it's already set
-            project.project_file.set_value(['variables', varname], None)
+            project.project_file.set_value(path_to_variable, None)
     project.project_file.save()
 
     return SimpleStatus(success=True, description="Variables added to the project file.")
 
 
-def _unset_variable(project, env_prefix, varname, local_state):
-    reqs = project.find_requirements(env_var=varname)
+def _unset_variable(project, env_spec_name, env_prefix, varname, local_state):
+    reqs = project.find_requirements(env_spec_name, env_var=varname)
     if len(reqs) > 0:
         req = reqs[0]
         if req.encrypted:
@@ -1127,7 +1190,7 @@ def _unset_variable(project, env_prefix, varname, local_state):
             local_state.unset_value(['variables', varname])
 
 
-def remove_variables(project, vars_to_remove, env_spec_name=None):
+def remove_variables(project, env_spec_name, vars_to_remove, prepare_result=None):
     """Remove variables from anaconda-project.yml and unset their values in local project state.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -1136,27 +1199,34 @@ def remove_variables(project, vars_to_remove, env_spec_name=None):
 
     Args:
         project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
         vars_to_remove (list of str): variable names
-        env_spec_name (str): name of env spec to use
+        prepare_result (PrepareResult): result of a previous prepare or None
 
     Returns:
         ``Status`` instance
     """
-    (env_prefix, status) = _prepare_env_prefix(project, env_spec_name)
-    if env_prefix is None:
+    (env_prefix, status) = _prepare_env_prefix(project, env_spec_name, prepare_result, mode=provide.PROVIDE_MODE_CHECK)
+    # we allow env_prefix of None, which means the env wasn't created so we won't
+    # try to unset any values for the variable.
+    if status is not None and not status:
         return status
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
     for varname in vars_to_remove:
-        _unset_variable(project, env_prefix, varname, local_state)
-        project.project_file.unset_value(['variables', varname])
+        path_to_variable = _path_to_variable(env_spec_name, varname)
+
+        if env_prefix is not None:
+            _unset_variable(project, env_spec_name, env_prefix, varname, local_state)
+        path_to_variable = _path_to_variable(env_spec_name, varname)
+        project.project_file.unset_value(path_to_variable)
         project.project_file.save()
         local_state.save()
 
     return SimpleStatus(success=True, description="Variables removed from the project file.")
 
 
-def set_variables(project, vars_and_values, env_spec_name=None):
+def set_variables(project, env_spec_name, vars_and_values, prepare_result=None):
     """Set variables' values in anaconda-project-local.yml.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -1165,19 +1235,23 @@ def set_variables(project, vars_and_values, env_spec_name=None):
 
     Args:
         project (Project): the project
+        env_spec_name (str): name of env spec to use or None for all
         vars_and_values (list of tuple): key-value pairs
-        env_spec_name (str): name of env spec to use
+        prepare_result (PrepareResult): result of a previous prepare or None
 
     Returns:
         ``Status`` instance
     """
-    (env_prefix, status) = _prepare_env_prefix(project, env_spec_name)
+    (env_prefix, status) = _prepare_env_prefix(project,
+                                               env_spec_name,
+                                               prepare_result,
+                                               mode=provide.PROVIDE_MODE_DEVELOPMENT)
     if env_prefix is None:
         return status
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
     var_reqs = dict()
-    for req in project.find_requirements(klass=EnvVarRequirement):
+    for req in project.find_requirements(env_spec_name, klass=EnvVarRequirement):
         var_reqs[req.env_var] = req
     present_vars = set(var_reqs.keys())
     errors = []
@@ -1213,7 +1287,7 @@ def set_variables(project, vars_and_values, env_spec_name=None):
         return SimpleStatus(success=True, description=description)
 
 
-def unset_variables(project, vars_to_unset, env_spec_name=None):
+def unset_variables(project, env_spec_name, vars_to_unset, prepare_result=None):
     """Unset variables' values in anaconda-project-local.yml.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -1222,19 +1296,20 @@ def unset_variables(project, vars_to_unset, env_spec_name=None):
 
     Args:
         project (Project): the project
+        env_spec_name (str): name of env spec to use or None for all
         vars_to_unset (list of str): variable names
-        env_spec_name (str): name of env spec to use
+        prepare_result (PrepareResult): result of a previous prepare or None
 
     Returns:
         ``Status`` instance
     """
-    (env_prefix, status) = _prepare_env_prefix(project, env_spec_name)
+    (env_prefix, status) = _prepare_env_prefix(project, env_spec_name, prepare_result, mode=provide.PROVIDE_MODE_CHECK)
     if env_prefix is None:
         return status
 
     local_state = LocalStateFile.load_for_directory(project.directory_path)
     for varname in vars_to_unset:
-        _unset_variable(project, env_prefix, varname, local_state)
+        _unset_variable(project, env_spec_name, env_prefix, varname, local_state)
     local_state.save()
 
     return SimpleStatus(success=True, description=("Variables were unset."))
@@ -1425,7 +1500,7 @@ def remove_command(project, name):
     return SimpleStatus(success=True, description="Command: '{}' removed from project file.".format(name))
 
 
-def add_service(project, service_type, variable_name=None):
+def add_service(project, env_spec_name, service_type, variable_name=None):
     """Add a service to anaconda-project.yml.
 
     The returned ``Status`` should be a ``RequirementStatus`` for
@@ -1436,6 +1511,7 @@ def add_service(project, service_type, variable_name=None):
 
     Args:
         project (Project): the project
+        env_spec_name (str): environment spec name or None for all environment specs
         service_type (str): which kind of service
         variable_name (str): environment variable name (None for default)
 
@@ -1466,7 +1542,7 @@ def add_service(project, service_type, variable_name=None):
     assert len(known_types) == 1  # when this fails, see change needed in the loop below
 
     requirement_already_exists = False
-    existing_requirements = project.find_requirements(env_var=variable_name)
+    existing_requirements = project.find_requirements(project.default_env_spec_name, env_var=variable_name)
     if len(existing_requirements) > 0:
         requirement = existing_requirements[0]
         if isinstance(requirement, ServiceRequirement):
@@ -1487,12 +1563,12 @@ def add_service(project, service_type, variable_name=None):
                                 errors=["Variable %s is already in use." % variable_name])
 
     if not requirement_already_exists:
-        project.project_file.set_value(['services', variable_name], service_type)
+        project.project_file.set_value(_path_to_service(env_spec_name, variable_name), service_type)
 
-    return _commit_requirement_if_it_works(project, variable_name)
+    return _commit_requirement_if_it_works(project, variable_name, env_spec_name=env_spec_name)
 
 
-def remove_service(project, prepare_result, variable_name):
+def remove_service(project, env_spec_name, variable_name, prepare_result=None):
     """Remove a service to anaconda-project.yml.
 
     Returns a ``Status`` instance which evaluates to True on
@@ -1501,18 +1577,21 @@ def remove_service(project, prepare_result, variable_name):
 
     Args:
         project (Project): the project
-        prepare_result (PrepareResult): result of a previous prepare
+        env_spec_name (str): environment spec name or None for all environment specs
         variable_name (str): environment variable name for the service requirement
+        prepare_result (PrepareResult): result of a previous prepare or None
 
     Returns:
         ``Status`` instance
     """
     failed = _check_problems(project)
+
     if failed is not None:
         return failed
 
     requirements = [req
-                    for req in project.find_requirements(klass=ServiceRequirement)
+                    for req in project.find_requirements(env_spec_name,
+                                                         klass=ServiceRequirement)
                     if req.service_type == variable_name or req.env_var == variable_name]
     if not requirements:
         return SimpleStatus(success=False,
@@ -1523,13 +1602,21 @@ def remove_service(project, prepare_result, variable_name):
                             description=("Conflicting results, found {} matches, use list-services"
                                          " to identify which service you want to remove").format(len(requirements)))
 
+    if prepare_result is None:
+        prepare_result = prepare.prepare_without_interaction(project,
+                                                             provide_whitelist=(requirements[0], ),
+                                                             env_spec_name=env_spec_name,
+                                                             mode=provide.PROVIDE_MODE_CHECK)
+
+    assert env_spec_name is None or prepare_result.env_spec_name == env_spec_name
+
     env_var = requirements[0].env_var
 
     status = prepare.unprepare(project, prepare_result, whitelist=[env_var])
     if not status:
         return status
 
-    project.project_file.unset_value(['services', env_var])
+    project.project_file.unset_value(_path_to_service(env_spec_name, env_var))
     project.project_file.use_changes_without_saving()
     assert project.problems == []
 

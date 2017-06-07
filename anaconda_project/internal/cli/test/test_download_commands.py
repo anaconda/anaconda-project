@@ -77,6 +77,7 @@ def test_add_download(capsys, monkeypatch):
                                        ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456'])
     assert len(called_params['args']) == 1
     expected_kwargs = {
+        'env_spec_name': None,
         'env_var': 'MYDATA',
         'filename': None,
         'url': 'http://localhost:123456',
@@ -92,6 +93,7 @@ def test_add_download_with_filename(capsys, monkeypatch):
         ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--filename', 'foo'])
     assert len(called_params['args']) == 1
     expected_kwargs = {
+        'env_spec_name': None,
         'env_var': 'MYDATA',
         'filename': 'foo',
         'url': 'http://localhost:123456',
@@ -108,6 +110,7 @@ def test_add_download_with_checksum(capsys, monkeypatch):
     ])
     assert len(called_params['args']) == 1
     expected_kwargs = {
+        'env_spec_name': None,
         'env_var': 'MYDATA',
         'hash_algorithm': 'md5',
         'hash_value': 'foo',
@@ -182,7 +185,7 @@ def test_remove_download(capsys, monkeypatch):
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
         project = Project(dirname)
-        assert not project.downloads
+        assert not project.downloads(project.default_env_spec_name)
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -203,7 +206,7 @@ def test_remove_download_dir(capsys, monkeypatch):
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
         project = Project(dirname)
-        assert not project.downloads
+        assert not project.downloads(project.default_env_spec_name)
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -290,7 +293,7 @@ def test_remove_download_missing_var(capsys, monkeypatch):
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-download', 'TEST_FILE'])
         project = Project(dirname)
-        assert not project.downloads
+        assert not project.downloads(project.default_env_spec_name)
         assert code == 1
 
         out, err = capsys.readouterr()
