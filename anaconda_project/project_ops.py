@@ -815,7 +815,7 @@ def _update_and_lock(project, env_spec_name, update):
     # note that "envs" are frozen from the original project state,
     # and won't update as we go through them
     for env in envs:
-        if update or env.lock_set.disabled:
+        if update or env.lock_set.disabled or env.lock_set.missing:
             try:
                 project.frontend.info("Updating locked dependencies for env spec %s..." % env.name)
                 lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)

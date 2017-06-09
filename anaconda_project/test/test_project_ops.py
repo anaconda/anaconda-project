@@ -2686,6 +2686,65 @@ env_specs:
 """}, check)
 
 
+def test_locking_with_missing_lock_set_does_an_update():
+    def check(dirname):
+        def attempt():
+            filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
+            assert os.path.isfile(filename)
+
+            project = Project(dirname, frontend=FakeFrontend())
+
+            assert project.env_specs['foo'].platforms == ('linux-64', 'osx-64', 'win-64')
+            # lock set should be enabled yet missing and empty
+            assert project.env_specs['foo'].lock_set.enabled
+            assert project.env_specs['foo'].lock_set.missing
+
+            # Lock
+            status = project_ops.lock(project, env_spec_name='foo')
+            assert [] == status.errors
+            assert status
+
+            # yapf: disable
+            assert ['Updating locked dependencies for env spec foo...',
+                    'Changes to locked dependencies for foo:',
+                    '  platforms:',
+                    '+   linux-64',
+                    '+   osx-64',
+                    '+   win-64',
+                    '  packages:',
+                    '+   all:',
+                    '+     a=1.0=1',
+                    'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'] == project.frontend.logs
+            # yapf: enable
+
+            assert 'Project dependencies are locked.' == status.status_description
+
+            assert os.path.isfile(filename)
+            assert project.lock_file.get_value(['env_specs', 'foo']) is not None
+
+            foo_lock_set = project.env_specs['foo'].lock_set
+            assert ('a=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
+            assert foo_lock_set.env_spec_hash == 'b7f3266407fe0056da25fc23764bb7643c3560be'
+            assert project.env_specs['foo'].lock_set.enabled
+            assert not project.env_specs['foo'].lock_set.missing
+
+        _with_conda_test(attempt, resolve_dependencies={'all': ['a=1.0=1']})
+
+    with_directory_contents(
+        {DEFAULT_PROJECT_FILENAME: """
+name: locktest
+platforms: [linux-64,osx-64,win-64]
+env_specs:
+  foo:
+    packages:
+      - a
+        """,
+         DEFAULT_PROJECT_LOCK_FILENAME: """
+locking_enabled: true
+# No lock set in here!
+"""}, check)
+
+
 def test_update_changes_only_the_hash():
     def check(dirname):
         def attempt():

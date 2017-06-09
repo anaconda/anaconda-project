@@ -256,7 +256,7 @@ def _pretty_diff(old_list, new_list, indent):
 class CondaLockSet(object):
     """Represents a locked set of package versions."""
 
-    def __init__(self, package_specs_by_platform, platforms, enabled=True, env_spec_hash=None):
+    def __init__(self, package_specs_by_platform, platforms, enabled=True, env_spec_hash=None, missing=False):
         """Construct a ``CondaLockSet``.
 
         The passed-in dict should be like:
@@ -277,6 +277,7 @@ class CondaLockSet(object):
         self._platforms = tuple(conda_api.sort_platform_list(platforms))
         self._enabled = enabled
         self._env_spec_hash = env_spec_hash
+        self._missing = missing
 
     @property
     def platforms(self):
@@ -295,6 +296,15 @@ class CondaLockSet(object):
         (yes, this is just "not enabled" but this can be more readable sometimes)
         """
         return not self._enabled
+
+    @property
+    def missing(self):
+        """Whether a lock set existed in the lock file.
+
+        This says whether the lock set was loaded from anaconda-project-lock.yml
+        or was just a default we made up on the fly.
+        """
+        return self._missing
 
     @property
     def env_spec_hash(self):
