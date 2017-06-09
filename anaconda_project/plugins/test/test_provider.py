@@ -72,8 +72,6 @@ def test_provider_default_method_implementations():
                                           default_env_spec_name='default',
                                           overrides=None,
                                           values=dict())
-    # this is supposed to return None by default
-    provider.config_html(requirement=None, environ=None, local_state_file=None, overrides=None, status=None) is None
 
 
 def _load_env_var_requirement(dirname, env_var):
@@ -384,51 +382,6 @@ def test_env_var_provider_configure_disabled_local_state_value():
 variables:
   - FOO
 """}, check_env_var_provider_config_disabled_local_state)
-
-
-def test_env_var_provider_config_html():
-    def check_env_var_provider_config(dirname):
-        provider = EnvVarProvider()
-        requirement = _load_env_var_requirement(dirname, "FOO")
-        local_state_file = LocalStateFile.load_for_directory(dirname)
-        environ = dict()
-        config = provider.read_config(requirement, environ, local_state_file, 'default', UserConfigOverrides())
-        assert dict(source='unset') == config
-
-        # config html when variable is unset
-        status = requirement.check_status(dict(), local_state_file, 'default', UserConfigOverrides())
-        html = provider.config_html(requirement, environ, local_state_file, UserConfigOverrides(), status)
-        assert "Keep" not in html
-        assert 'Use this value:' in html
-
-        # config html when variable is unset and we have a default
-        requirement.options['default'] = 'from_default'
-        status = requirement.check_status(dict(), local_state_file, 'default', UserConfigOverrides())
-        html = provider.config_html(requirement, environ, local_state_file, UserConfigOverrides(), status)
-        assert "Keep default 'from_default'" in html
-        assert 'Use this value instead:' in html
-
-        # config html when variable is set
-        environ = dict(FOO='from_environ')
-        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        html = provider.config_html(requirement, environ, local_state_file, UserConfigOverrides(), status)
-        assert "Keep value 'from_environ'" in html
-        assert 'Use this value instead:' in html
-
-        # config html when local state override is present
-        environ = dict(FOO='from_environ')
-        local_state_file.set_value(['variables', 'FOO'], 'from_local_state')
-        status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        html = provider.config_html(requirement, environ, local_state_file, UserConfigOverrides(), status)
-        assert "Keep value 'from_environ'" in html
-        assert 'Use this value instead:' in html
-
-    # set a default to be sure we prefer 'environ' instead
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
-variables:
-  - FOO
-"""}, check_env_var_provider_config)
 
 
 def test_env_var_provider_prepare_unprepare():

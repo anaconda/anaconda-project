@@ -265,18 +265,37 @@ class Provider(with_metaclass(ABCMeta)):
     def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Read a config dict from the local state file for the given requirement.
 
+        You can think of this as the GET returning a web form for
+        configuring the provider. And in fact it was once used for
+        that, though we deleted the html stuff now.
+
+        The returned 'config' has a 'source' field which was
+        essentially a selected radio option for where to get the
+        requirement, and other fields are entry boxes underneath
+        each radio option.
+
+        This method still exists in the code in case we want to
+        do a textual version (or a new HTML version, but probably
+        outside of the anaconda-project codebase). See also
+        UI_MODE_TEXT_ASK_QUESTIONS in the cli code.
+
         Args:
             requirement (Requirement): the requirement we're providing
             environ (dict): current environment variables
             local_state_file (LocalStateFile): file to read from
             default_env_spec_name (str): the fallback env spec name
             overrides (UserConfigOverrides): user-supplied forced config
+
         """
         pass  # pragma: no cover
 
     def set_config_values_as_strings(self, requirement, environ, local_state_file, default_env_spec_name, overrides,
                                      values):
         """Set some config values in the state file (should not save the file).
+
+        You can think of this as the POST submitting a web form
+        for configuring the provider. And in fact it was once used
+        for that, though we deleted the html stuff now.
 
         Args:
             requirement (Requirement): the requirement we're providing
@@ -285,37 +304,9 @@ class Provider(with_metaclass(ABCMeta)):
             default_env_spec_name (str): default env spec name for this prepare
             overrides (UserConfigOverrides): if any values in here change, delete the override
             values (dict): dict from string to string
+
         """
         pass  # silently ignore unknown config values
-
-    def config_html(self, requirement, environ, local_state_file, overrides, status):
-        """Get an HTML string for configuring the provider.
-
-        The HTML string must contain a single <form> tag. Any
-        <input>, <textarea>, and <select> elements should have
-        their name attribute set to match the dict keys used in
-        ``read_config()``'s result.  The <form> should not have a
-        submit button, since it will be merged with other
-        forms. The initial state of all the form fields will be
-        auto-populated from the values in ``read_config()``.  When
-        the form is submitted, any changes made by the user will
-        be set back using ``set_config_values_as_strings()``.
-
-        This is simple to use, but for now not very flexible; if you need
-        more flexibility let us know and we can figure out what API
-        to add in future versions.
-
-        Args:
-            requirement (Requirement): the requirement we're providing
-            environ (dict): current environment variables
-            local_state_file (LocalStateFile): file to save to
-            status (RequirementStatus): last-computed status
-
-        Returns:
-            An HTML string or None if there's nothing to configure.
-
-        """
-        return None
 
     def analyze(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Analyze whether and how we'll be able to provide the requirement.
@@ -500,63 +491,6 @@ class EnvVarProvider(Provider):
                 keyring.unset(env_prefix, requirement.env_var)
             else:
                 keyring.set(env_prefix, requirement.env_var, value_string)
-
-    def _extra_source_options_html(self, requirement, environ, local_state_file, status):
-        """Override this in a subtype to add choices to the config HTML.
-
-        Choices should be radio inputs with name="source"
-        """
-        return ""
-
-    def config_html(self, requirement, environ, local_state_file, overrides, status):
-        """Override superclass to provide our config html."""
-        if status.requirement.encrypted:
-            input_type = 'password'
-        else:
-            input_type = 'text'
-
-        extra_html = self._extra_source_options_html(requirement, environ, local_state_file, status)
-
-        choices_html = extra_html
-
-        if requirement.env_var in environ:
-            choices_html = choices_html + """
-            <div>
-              <label><input type="radio" name="source" value="environ"/>Keep value '{from_environ}'</label>
-            </div>
-            <div>
-              <label><input type="radio" name="source" value="variables"/>Use this value instead:
-                     <input type="{input_type}" name="value"/></label>
-            </div>
-            """.format(from_environ=environ[requirement.env_var],
-                       input_type=input_type)
-        else:
-            if 'default' in requirement.options:
-                choices_html = choices_html + """
-                <div>
-                  <label><input type="radio" name="source" value="default"/>Keep default '{from_default}'</label>
-                </div>
-                <div>
-                  <label><input type="radio" name="source" value="variables"/>Use this value instead:
-                         <input type="{input_type}" name="value"/></label>
-                </div>
-                """.format(input_type=input_type,
-                           from_default=requirement.options['default'])
-            else:
-                choices_html = choices_html + """
-                <div>
-                  <label><input type="radio" name="source" value="variables"/>Use this value:
-                         <input type="{input_type}" name="value"/></label>
-                </div>
-                """.format(input_type=input_type)
-
-        # print(("%s: choices_html=\n" % self.__class__.__name__) + choices_html)
-
-        return """
-<form>
-  %s
-</form>
-""" % (choices_html)
 
     def provide(self, requirement, context):
         """Override superclass to use configured env var (or already-set env var)."""

@@ -151,39 +151,6 @@ class CondaEnvProvider(EnvVarProvider):
                         prefix = env.path(project_dir)
                         local_state_file.set_value(['variables', requirement.env_var], prefix)
 
-    def config_html(self, requirement, environ, local_state_file, overrides, status):
-        """Override superclass to provide the extra option to create one of our configured env_specs."""
-        # print("config_html with config " + repr(status.analysis.config))
-
-        options_html = ('<div><label><input type="radio" name="source" ' +
-                        'value="project"/>Use project-specific environment: <select name="env_name">')
-        for env in requirement.env_specs.values():
-            html = ('<option value="%s">%s</option>\n' % (env.name, env.name))
-            options_html = options_html + html
-
-        options_html = options_html + "</select></div>\n"
-
-        if overrides.inherited_env is not None:
-            options_html = options_html + """
-            <div>
-              <label><input type="radio" name="source"
-                      value="inherited"/>Always use activated environment (currently '{from_inherited}')</label>
-            </div>
-            """.format(from_inherited=overrides.inherited_env)
-
-        options_html = options_html + """
-            <div>
-              <label><input type="radio" name="source" value="variables"/>Use this %s instead:
-                     <input type="text" name="value"/></label>
-            </div>
-            """ % (requirement.env_var)
-
-        return """
-<form>
-  %s
-</form>
-""" % (options_html)
-
     def provide(self, requirement, context):
         """Override superclass to create or update our environment."""
         assert 'PATH' in context.environ

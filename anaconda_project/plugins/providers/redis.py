@@ -138,38 +138,6 @@ class RedisProvider(EnvVarProvider):
     def _can_connect_to_system_default(self):
         return network_util.can_connect_to_socket(host=_DEFAULT_SYSTEM_REDIS_HOST, port=_DEFAULT_SYSTEM_REDIS_PORT)
 
-    def _extra_source_options_html(self, requirement, environ, local_state_file, status):
-        """Override superclass to provide our config html."""
-        analysis = status.analysis
-
-        if analysis.default_system_exists:
-            system_option = """
-  <div>
-    <label><input type="radio" name="source" value="find_system"/>Always use system default Redis on %s port %d</label>
-  </div>
-""" % (_DEFAULT_SYSTEM_REDIS_HOST, _DEFAULT_SYSTEM_REDIS_PORT)
-        else:
-            system_option = ""
-
-        if analysis.existing_scoped_instance_url is not None:
-            project_option = "Use the redis-server we started earlier at %s" % (analysis.existing_scoped_instance_url)
-        else:
-            project_option = """Always start a
-   project-dedicated redis-server, using a port between <input type="text" name="lower_port"/>
-   and <input type="text" name="upper_port"/>
-"""
-
-        return """
-  <div>
-    <label><input type="radio" name="source" value="find_all"/>Use system default Redis when it's running,
-        otherwise start our own redis-server</label>
-  </div>
-  %s
-  <div>
-    <label><input type="radio" name="source" value="find_project"/>%s</label>
-  </div>
-""" % (system_option, project_option)
-
     def analyze(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to store additional fields in the analysis."""
         analysis = super(RedisProvider, self).analyze(requirement, environ, local_state_file, default_env_spec_name,

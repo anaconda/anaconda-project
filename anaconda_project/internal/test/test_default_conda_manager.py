@@ -147,6 +147,14 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         assert deviations.missing_packages == ('ipython', )
         assert deviations.missing_pip_packages == ('flake8', )
 
+        # with create=False, we won't create the env
+        with pytest.raises(CondaManagerError) as excinfo:
+            manager.fix_environment_deviations(envdir, spec, deviations, create=False)
+            assert 'does not exist' in str(excinfo.value)
+
+        assert not os.path.isdir(envdir)
+
+        # now create the env
         manager.fix_environment_deviations(envdir, spec, deviations)
 
         assert os.path.isdir(envdir)

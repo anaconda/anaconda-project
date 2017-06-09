@@ -111,34 +111,6 @@ def test_prepare_project_check(monkeypatch):
     _test_prepare_without_interaction(monkeypatch, 'prepare_project_check', provide.PROVIDE_MODE_CHECK)
 
 
-def test_prepare_project_browser(monkeypatch):
-    from anaconda_project.prepare import prepare_with_browser_ui
-    _verify_args_match(api.AnacondaProject.prepare_project_browser,
-                       prepare_with_browser_ui,
-                       ignored=['self', 'keep_going_until_success'])
-
-    params = dict(args=(), kwargs=dict())
-
-    def mock_prepare_with_browser_ui(*args, **kwargs):
-        params['args'] = args
-        params['kwargs'] = kwargs
-        return 42
-
-    monkeypatch.setattr('anaconda_project.prepare.prepare_with_browser_ui', mock_prepare_with_browser_ui)
-    p = api.AnacondaProject()
-    kwargs = dict(project=43,
-                  environ=57,
-                  env_spec_name='someenv',
-                  command_name='foo',
-                  command=1234,
-                  extra_command_args=['1', '2'],
-                  io_loop=156,
-                  show_url=8909)
-    result = p.prepare_project_browser(**kwargs)
-    assert 42 == result
-    assert kwargs == params['kwargs']
-
-
 def test_unprepare(monkeypatch):
     from anaconda_project.prepare import unprepare
     _verify_args_match(api.AnacondaProject.unprepare, unprepare)

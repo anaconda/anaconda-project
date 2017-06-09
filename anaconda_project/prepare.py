@@ -13,7 +13,6 @@ import os
 from copy import deepcopy
 
 from anaconda_project.internal.metaclass import with_metaclass
-from anaconda_project.internal import prepare_ui
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.toposort import toposort_from_dependency_info
 from anaconda_project.internal import conda_api
@@ -941,76 +940,6 @@ def prepare_without_interaction(project,
     return prepare_execute_without_interaction(stage)
 
 
-def prepare_with_browser_ui(project,
-                            environ=None,
-                            env_spec_name=None,
-                            command_name=None,
-                            command=None,
-                            extra_command_args=None,
-                            keep_going_until_success=True,
-                            io_loop=None,
-                            show_url=None):
-    """Prepare a project to run one of its commands.
-
-    This method can interact with the user via a browser-based UI.
-
-    This method returns a result object. The result object has
-    a ``failed`` property.  If the result is failed, the
-    ``errors`` property has the errors.  If the result is not
-    failed, the ``command_exec_info`` property has the stuff
-    you need to run the project's default command, and the
-    ``environ`` property has the updated environment. The
-    passed-in ``environ`` is not modified in-place.
-
-    You can update your original environment with
-    ``result.update_environ()`` if you like, but it's probably
-    a bad idea to modify ``os.environ`` in that way because
-    the calling app won't want to have the project
-    environment.
-
-    The ``environ`` should usually be kept between
-    preparations, starting out as ``os.environ`` but then
-    being modified by the user.
-
-    If the project has a non-empty ``problems`` attribute,
-    this function returns the project problems inside a failed
-    result. So ``project.problems`` does not need to be checked in
-    advance.
-
-    Args:
-        project (Project): from the ``load_project`` method
-        environ (dict): os.environ or the previously-prepared environ; not modified in-place
-        env_spec_name (str): the environment spec name to require, or None for default
-        command_name (str): which named command to choose from the project, None for default
-        command (ProjectCommand): command object, None for default
-        extra_command_args (list): extra args to include in the returned command argv
-        keep_going_until_success (bool): whether to loop until requirements are met
-        io_loop (IOLoop): tornado IOLoop to use, None for default
-        show_url (function): function that's passed the URL to open it for the user
-
-    Returns:
-        a ``PrepareResult`` instance, which has a ``failed`` flag
-
-    """
-    (environ_copy, overrides) = _prepare_environ_and_overrides(project, environ, env_spec_name)
-
-    failure = _check_prepare_prerequisites(project, env_spec_name, command_name, command, environ_copy, overrides)
-    if failure is not None:
-        return failure
-
-    stage = _internal_prepare_in_stages(project,
-                                        environ_copy=environ_copy,
-                                        overrides=overrides,
-                                        keep_going_until_success=keep_going_until_success,
-                                        mode=PROVIDE_MODE_DEVELOPMENT,
-                                        command_name=command_name,
-                                        command=command,
-                                        provide_whitelist=None,
-                                        extra_command_args=extra_command_args)
-
-    return prepare_execute_with_browser_ui(project, stage, io_loop=io_loop, show_url=show_url)
-
-
 def prepare_execute_without_interaction(stage):
     """Advance through the PrepareStage without any interactivity.
 
@@ -1025,26 +954,6 @@ def prepare_execute_without_interaction(stage):
             break
         stage = next_stage
     return result
-
-
-def prepare_execute_with_browser_ui(project, stage, io_loop=None, show_url=None):
-    """Advance through the PrepareStage using a browser UI.
-
-    This may need to ask the user questions, may start services,
-    run scripts, load configuration, install packages... it can do
-    anything. Expect side effects.
-
-    Args:
-        project (Project): the project
-        stage (PrepareStage): from prepare_in_stages()
-        io_loop (IOLoop): tornado IOLoop to use, None for default
-        show_url (function): takes a URL and displays it in a browser somehow, None for default
-
-    Returns:
-        a ``PrepareResult`` instance
-
-    """
-    return prepare_ui.prepare_browser(project=project, stage=stage, io_loop=io_loop, show_url=show_url)
 
 
 def unprepare(project, prepare_result, whitelist=None):
