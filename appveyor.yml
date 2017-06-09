@@ -35,7 +35,7 @@ install:
   - "%CONDA_ROOT%\\Scripts\\activate root"
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda info -a
-  - conda create -q -n test-environment python=%PYTHON_VERSION% pip pycrypto bcrypt notebook bokeh ruamel_yaml anaconda-client requests beautifulsoup4 tornado coverage pytest pytest-cov
+  - conda create -q -n test-environment python=%PYTHON_VERSION% pip pycrypto bcrypt notebook bokeh ruamel_yaml anaconda-client requests tornado coverage pytest pytest-cov
 
 # Not a .NET project, we build in the install step instead
 build: false
