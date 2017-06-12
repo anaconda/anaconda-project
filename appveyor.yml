@@ -45,8 +45,7 @@ test_script:
   - "%CONDA_ROOT%\\Scripts\\activate test-environment"
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - echo PATH %PATH%
-  - pip install pep257 yapf==0.6.2 pytest-xdist flake8==2.6.2
-  - conda install -y -q -c conda-forge keyring
+  - pip install pep257 yapf==0.6.2 pytest-xdist flake8==2.6.2 keyring
   - conda list
   - conda info -a
   - python -c "import sys; print(sys.version)"
