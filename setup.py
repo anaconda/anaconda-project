@@ -417,7 +417,7 @@ class AllTestsCommand(TestCommand):
 
         if os.path.exists(os.path.join(ROOT, '.eggs')):
             print(".eggs directory exists which means some dependency was not installed via conda/pip")
-            print("  (if this happens on binstar, this may need fixing in .binstar.yml)")
+            print("  (if this happens on CI, this may need fixing in .travis.yml or appveyor.xml)")
             print("  (if this happens on your workstation, try conda/pip installing the deps and deleting .eggs")
             self.failed.append("eggs-directory-exists")
 
