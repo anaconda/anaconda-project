@@ -602,7 +602,8 @@ class _ConfigCache(object):
                 if lock_set is None:
                     lock_set = CondaLockSet(package_specs_by_platform=dict(),
                                             platforms=[],
-                                            enabled=self.locking_globally_enabled)
+                                            enabled=self.locking_globally_enabled,
+                                            missing=True)
 
                 env_spec_attrs[name] = dict(name=name,
                                             conda_packages=deps,
