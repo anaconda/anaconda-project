@@ -2,6 +2,17 @@
 
 Here's how to work on the code:
 
+ * STEP ONE: you need an environment with the right
+   dependencies. A trick is that the formatters/linters need to be
+   specific versions, or the warnings and errors may have changed
+   which will make tests fail.  The simplest way to get the right
+   environment is `conda env create environment.yml` but you can
+   also look in that file and/or .travis.yml/appveyor.xml to see
+   which packages are neded and then create the dev environment
+   by hand as you see fit.
+
+After you've activated your anaconda-project-dev environment,
+
  * `python setup.py test` is configured to run all the checks that
    have to pass before you commit or push. It also reformats the
    code with yapf if necessary. Continuous integration runs this

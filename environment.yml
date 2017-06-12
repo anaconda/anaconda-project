@@ -1,0 +1,21 @@
+# Use `conda env create environment.yml` to create a dev environment
+name: anaconda-project-dev
+dependencies:
+  - python=3.6
+  - redis
+  - notebook
+  - ruamel_yaml
+  - anaconda-client
+  - requests
+  - psutil
+  - tornado=4.4.2
+  - pip
+  - pip:
+    - keyring
+    - coverage
+    - flake8==2.6.2
+    - pep257
+    - pytest
+    - pytest-cov
+    - yapf==0.6.2
+    - pytest-xdist
