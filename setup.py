@@ -398,6 +398,12 @@ class AllTestsCommand(TestCommand):
             self.failed.append('pytest-coverage')
 
     def run_tests(self):
+        if os.path.exists(os.path.join(ROOT, '.eggs')):
+            print(".eggs directory exists which means some dependency was not installed via conda/pip")
+            print("  (if this happens on CI, this may need fixing in .travis.yml or appveyor.xml)")
+            print("  (if this happens on your workstation, try conda/pip installing the deps and deleting .eggs")
+            self.failed.append("eggs-directory-exists")
+
         if self.git_staged_only:
             print("Only formatting %d git-staged python files, skipping %d files" %
                   (len(self._git_staged_py_files()), len(self._py_files())))
@@ -414,12 +420,6 @@ class AllTestsCommand(TestCommand):
         if not self.format_only:
             self._pytest()
         self._pep257()
-
-        if os.path.exists(os.path.join(ROOT, '.eggs')):
-            print(".eggs directory exists which means some dependency was not installed via conda/pip")
-            print("  (if this happens on CI, this may need fixing in .travis.yml or appveyor.xml)")
-            print("  (if this happens on your workstation, try conda/pip installing the deps and deleting .eggs")
-            self.failed.append("eggs-directory-exists")
 
         if len(self.failed) > 0:
             print("Failures in: " + repr(self.failed))
