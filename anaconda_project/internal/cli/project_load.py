@@ -7,7 +7,7 @@
 """Command-line-specific project load utilities."""
 from __future__ import absolute_import, print_function
 
-import sys
+import os, sys
 
 from anaconda_project.project import Project
 from anaconda_project.frontend import Frontend
@@ -37,6 +37,9 @@ class CliFrontend(Frontend):
 def load_project(dirname):
     """Load a Project, fixing it if needed and possible."""
     project = Project(dirname, frontend=CliFrontend())
+
+    if not os.path.exists(project.project_file.filename):
+        raise ValueError("No such file exists.")
 
     if console_utils.stdin_is_interactive():
         had_fixable = len(project.fixable_problems) > 0
