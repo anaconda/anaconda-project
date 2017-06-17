@@ -13,6 +13,7 @@ from anaconda_project.project import Project
 from anaconda_project.frontend import Frontend
 
 import anaconda_project.internal.cli.console_utils as console_utils
+from anaconda_project.internal.cli.init import init_command
 
 
 class CliFrontend(Frontend):
@@ -39,7 +40,8 @@ def load_project(dirname):
     project = Project(dirname, frontend=CliFrontend())
 
     if not os.path.exists(project.project_file.filename):
-        raise ValueError("No such file exists.")
+        print("No project file exists. Please create one by running `anaconda-project init`.")
+        exit(1)
 
     if console_utils.stdin_is_interactive():
         had_fixable = len(project.fixable_problems) > 0
