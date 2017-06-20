@@ -12,9 +12,9 @@ from anaconda_project.test.project_utils import project_dir_disable_dedicated_en
 from anaconda_project.test.environ_utils import (minimal_environ, minimal_environ_no_conda_env)
 from anaconda_project.env_spec import EnvSpec
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.plugins.registry import RequirementsRegistry
-from anaconda_project.plugins.requirement import UserConfigOverrides
-from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirement import UserConfigOverrides
+from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal import conda_api

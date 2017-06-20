@@ -18,8 +18,8 @@ from anaconda_project.internal.test.tmpfile_utils import (with_directory_content
 from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.plugins.registry import RequirementsRegistry
-from anaconda_project.plugins.requirements.download import DownloadRequirement
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
 from anaconda_project.prepare import (prepare_without_interaction, unprepare, prepare_in_stages)
 from anaconda_project import provide
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME

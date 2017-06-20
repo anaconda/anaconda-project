@@ -13,7 +13,7 @@ import shutil
 from anaconda_project.internal import conda_api
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.conda_manager import new_conda_manager, CondaManagerError
-from anaconda_project.plugins.provider import EnvVarProvider
+from anaconda_project.requirements_registry.provider import EnvVarProvider
 from anaconda_project.provide import PROVIDE_MODE_CHECK
 
 

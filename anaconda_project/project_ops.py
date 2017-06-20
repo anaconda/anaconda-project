@@ -20,12 +20,12 @@ from anaconda_project import prepare
 from anaconda_project import provide
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.frontend import _null_frontend
-from anaconda_project.plugins.requirement import EnvVarRequirement
-from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
-from anaconda_project.plugins.requirements.download import DownloadRequirement
-from anaconda_project.plugins.requirements.download import _hash_algorithms
-from anaconda_project.plugins.requirements.service import ServiceRequirement
-from anaconda_project.plugins.providers.conda_env import _remove_env_path
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement
+from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
+from anaconda_project.requirements_registry.requirements.download import _hash_algorithms
+from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
+from anaconda_project.requirements_registry.providers.conda_env import _remove_env_path
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
 from anaconda_project.internal.conda_api import (parse_spec, default_platforms_with_current)

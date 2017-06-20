@@ -4,7 +4,7 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-import anaconda_project.plugins.network_util as network_util
+import anaconda_project.requirements_registry.network_util as network_util
 
 import socket
 

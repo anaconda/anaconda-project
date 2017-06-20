@@ -8,9 +8,9 @@ import hashlib
 import os
 
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.plugins.registry import RequirementsRegistry
-from anaconda_project.plugins.requirement import UserConfigOverrides
-from anaconda_project.plugins.requirements.download import DownloadRequirement
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirement import UserConfigOverrides
+from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 

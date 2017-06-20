@@ -19,9 +19,9 @@ from anaconda_project.prepare import (prepare_without_interaction, prepare_in_st
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project import Project
 from anaconda_project import provide
-from anaconda_project.plugins.registry import RequirementsRegistry
-from anaconda_project.plugins.providers.conda_env import CondaEnvProvider
-from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.providers.conda_env import CondaEnvProvider
+from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 
 if platform.system() == 'Windows':
     script_dir = "Scripts"

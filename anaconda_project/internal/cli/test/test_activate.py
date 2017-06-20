@@ -41,7 +41,8 @@ def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
         can_connect_args['timeout_seconds'] = timeout_seconds
         return True
 
-    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.requirements_registry.network_util.can_connect_to_socket",
+                        mock_can_connect_to_socket)
 
     return can_connect_args
 
@@ -196,7 +197,8 @@ def _monkeypatch_can_connect_to_socket_to_fail_to_find_redis(monkeypatch):
         else:
             return True  # can't start a custom Redis here
 
-    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.requirements_registry.network_util.can_connect_to_socket",
+                        mock_can_connect_to_socket)
 
 
 def test_main_fails_to_redis(monkeypatch, capsys):

@@ -13,11 +13,11 @@ import os
 
 from anaconda_project.env_spec import (EnvSpec, _anaconda_default_env_spec, _find_importable_spec,
                                        _find_out_of_sync_importable_spec)
-from anaconda_project.plugins.registry import RequirementsRegistry
-from anaconda_project.plugins.requirement import EnvVarRequirement
-from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
-from anaconda_project.plugins.requirements.download import DownloadRequirement
-from anaconda_project.plugins.requirements.service import ServiceRequirement
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement
+from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
+from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
 from anaconda_project.project_commands import (ProjectCommand, all_known_command_attributes)
 from anaconda_project.project_file import ProjectFile
 from anaconda_project.project_lock_file import ProjectLockFile

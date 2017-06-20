@@ -3105,7 +3105,7 @@ name: broken
 
 
 def _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch):
-    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
+    from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     can_connect_args_list = []
 
@@ -3120,7 +3120,8 @@ def _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch):
         else:
             return real_can_connect_to_socket(host, port, timeout_seconds)
 
-    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.requirements_registry.network_util.can_connect_to_socket",
+                        mock_can_connect_to_socket)
 
     return can_connect_args_list
 

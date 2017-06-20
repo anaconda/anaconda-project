@@ -7,7 +7,7 @@
 """Conda-env-related requirements."""
 from __future__ import absolute_import, print_function
 
-from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement
 from anaconda_project.conda_manager import new_conda_manager, CondaManagerError
 from anaconda_project.internal import conda_api
 

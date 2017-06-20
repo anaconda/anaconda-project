@@ -13,8 +13,8 @@ from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.internal.cli.main import _parse_args_and_run_subcommand
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
-from anaconda_project.plugins.requirements.redis import RedisRequirement
-from anaconda_project.plugins.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirements.redis import RedisRequirement
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
 from anaconda_project.internal.test.tmpfile_utils import (tmp_script_commandline,
                                                           with_directory_contents_completing_project_file)
 from anaconda_project.internal.simple_status import SimpleStatus
@@ -170,8 +170,8 @@ def test_remove_service_running_redis(monkeypatch):
         print("Cannot start redis-server on Windows")
         return
 
-    from anaconda_project.plugins.network_util import can_connect_to_socket as real_can_connect_to_socket
-    from anaconda_project.plugins.providers.test import test_redis_provider
+    from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
+    from anaconda_project.requirements_registry.providers.test import test_redis_provider
 
     can_connect_args_list = test_redis_provider._monkeypatch_can_connect_to_socket_on_nonstandard_port_only(
         monkeypatch, real_can_connect_to_socket)

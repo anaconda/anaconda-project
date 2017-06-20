@@ -5,9 +5,9 @@
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.plugins.registry import RequirementsRegistry
-from anaconda_project.plugins.requirement import UserConfigOverrides
-from anaconda_project.plugins.requirements.redis import RedisRequirement
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirement import UserConfigOverrides
+from anaconda_project.requirements_registry.requirements.redis import RedisRequirement
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
@@ -55,7 +55,8 @@ def _monkeypatch_can_connect_to_socket_fails(monkeypatch):
         can_connect_args_list.append(can_connect_args)
         return False
 
-    monkeypatch.setattr("anaconda_project.plugins.network_util.can_connect_to_socket", mock_can_connect_to_socket)
+    monkeypatch.setattr("anaconda_project.requirements_registry.network_util.can_connect_to_socket",
+                        mock_can_connect_to_socket)
 
     return can_connect_args_list
 

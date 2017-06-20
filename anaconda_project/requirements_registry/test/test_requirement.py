@@ -4,8 +4,8 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-from anaconda_project.plugins.registry import RequirementsRegistry
-from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement, UserConfigOverrides
 
 from anaconda_project.internal.test.tmpfile_utils import tmp_local_state_file
 

@@ -6,7 +6,7 @@
 # ----------------------------------------------------------------------------
 from anaconda_project.project import Project
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
-from anaconda_project.plugins.requirements.service import ServiceRequirement
+from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents_completing_project_file
 

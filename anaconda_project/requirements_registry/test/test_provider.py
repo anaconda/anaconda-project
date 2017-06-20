@@ -13,10 +13,10 @@ import pytest
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, tmp_script_commandline,
                                                           with_directory_contents_completing_project_file)
 from anaconda_project.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
-from anaconda_project.plugins.provider import (Provider, ProvideContext, EnvVarProvider, ProvideResult,
-                                               shutdown_service_run_state)
-from anaconda_project.plugins.registry import RequirementsRegistry
-from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
+from anaconda_project.requirements_registry.provider import (Provider, ProvideContext, EnvVarProvider, ProvideResult,
+                                                             shutdown_service_run_state)
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement, UserConfigOverrides
 from anaconda_project.project import Project
 from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
