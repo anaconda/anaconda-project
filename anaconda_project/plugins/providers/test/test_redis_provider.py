@@ -17,7 +17,7 @@ from anaconda_project.internal.test.tmpfile_utils import (with_directory_content
 from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.local_state_file import DEFAULT_LOCAL_STATE_FILENAME
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.registry import RequirementsRegistry
 from anaconda_project.plugins.requirement import UserConfigOverrides
 from anaconda_project.plugins.providers.redis import RedisProvider
 from anaconda_project.plugins.requirements.redis import RedisRequirement
@@ -41,7 +41,7 @@ def _prepare_printing_errors(project, environ=None, mode=provide.PROVIDE_MODE_DE
 
 
 def _redis_requirement():
-    return RedisRequirement(registry=PluginRegistry(), env_var="REDIS_URL")
+    return RedisRequirement(registry=RequirementsRegistry(), env_var="REDIS_URL")
 
 
 def test_reading_default_config():

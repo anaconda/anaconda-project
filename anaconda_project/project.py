@@ -13,7 +13,7 @@ import os
 
 from anaconda_project.env_spec import (EnvSpec, _anaconda_default_env_spec, _find_importable_spec,
                                        _find_out_of_sync_importable_spec)
-from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.registry import RequirementsRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.plugins.requirements.download import DownloadRequirement
@@ -133,7 +133,7 @@ class _ConfigCache(object):
     def __init__(self, directory_path, registry):
         self.directory_path = directory_path
         if registry is None:
-            registry = PluginRegistry()
+            registry = RequirementsRegistry()
         self.registry = registry
 
         self.name = None
@@ -1107,7 +1107,8 @@ class Project(object):
 
         Args:
             directory_path (str): path to the project directory
-            plugin_registry (PluginRegistry): where to look up Requirement and Provider instances, None for default
+            plugin_registry (RequirementsRegistry): where to look up Requirement and Provider instances,
+                                                    None for default
             frontend (Frontend): the UX using this Project instance
         """
         self._directory_path = os.path.realpath(directory_path)
@@ -1154,7 +1155,7 @@ class Project(object):
 
     @property
     def plugin_registry(self):
-        """Get the ``PluginRegistry`` for this project."""
+        """Get the ``RequirementsRegistry`` for this project."""
         return self._config_cache.registry
 
     @property

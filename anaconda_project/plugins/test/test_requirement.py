@@ -4,7 +4,7 @@
 #
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
-from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.registry import RequirementsRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
 
 from anaconda_project.internal.test.tmpfile_utils import tmp_local_state_file
@@ -18,7 +18,7 @@ def test_user_config_overrides():
 
 
 def test_find_by_env_var_unknown():
-    registry = PluginRegistry()
+    registry = RequirementsRegistry()
     found = registry.find_requirement_by_env_var(env_var='FOO', options=None)
     assert found is not None
     assert isinstance(found, EnvVarRequirement)
@@ -27,14 +27,14 @@ def test_find_by_env_var_unknown():
 
 
 def test_find_by_service_type_unknown():
-    registry = PluginRegistry()
+    registry = RequirementsRegistry()
     found = registry.find_requirement_by_service_type(service_type='blah', env_var='FOO', options=dict())
     assert found is None
 
 
 def test_autoguess_encrypted_option():
     def req(env_var, options=None):
-        return EnvVarRequirement(registry=PluginRegistry(), env_var=env_var, options=options)
+        return EnvVarRequirement(registry=RequirementsRegistry(), env_var=env_var, options=options)
 
     assert not req(env_var='FOO').encrypted
     assert req(env_var='FOO', options=dict(encrypted=True)).encrypted
@@ -49,7 +49,7 @@ def test_autoguess_encrypted_option():
 
 
 def test_empty_variable_treated_as_unset():
-    requirement = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO')
+    requirement = EnvVarRequirement(registry=RequirementsRegistry(), env_var='FOO')
     status = requirement.check_status(dict(FOO=''), tmp_local_state_file(), 'default', UserConfigOverrides())
     assert not status
     assert "Environment variable FOO is not set." == status.status_description
@@ -57,12 +57,12 @@ def test_empty_variable_treated_as_unset():
 
 
 def test_requirement_repr():
-    requirement = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO')
+    requirement = EnvVarRequirement(registry=RequirementsRegistry(), env_var='FOO')
     assert "EnvVarRequirement(env_var='FOO')" == repr(requirement)
 
 
 def test_requirement_status_repr():
-    requirement = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO')
+    requirement = EnvVarRequirement(registry=RequirementsRegistry(), env_var='FOO')
     status = requirement.check_status(dict(FOO=''), tmp_local_state_file(), 'default', UserConfigOverrides())
     assert "RequirementStatus(False,'Environment variable FOO is not set.',EnvVarRequirement(env_var='FOO'))" == repr(
         status)
@@ -113,14 +113,14 @@ def test_requirement_default_as_string():
     int_default = dict(default=42)
     float_default = dict(default=3.14)
 
-    req = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO', options=no_default)
+    req = EnvVarRequirement(registry=RequirementsRegistry(), env_var='FOO', options=no_default)
     assert req.default_as_string is None
 
-    req = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO', options=string_default)
+    req = EnvVarRequirement(registry=RequirementsRegistry(), env_var='FOO', options=string_default)
     assert req.default_as_string == "foo"
 
-    req = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO', options=int_default)
+    req = EnvVarRequirement(registry=RequirementsRegistry(), env_var='FOO', options=int_default)
     assert req.default_as_string == "42"
 
-    req = EnvVarRequirement(registry=PluginRegistry(), env_var='FOO', options=float_default)
+    req = EnvVarRequirement(registry=RequirementsRegistry(), env_var='FOO', options=float_default)
     assert req.default_as_string == "3.14"

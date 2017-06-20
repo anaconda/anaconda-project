@@ -15,7 +15,7 @@ from anaconda_project.internal.test.tmpfile_utils import (with_directory_content
 from anaconda_project.local_state_file import LocalStateFile, DEFAULT_LOCAL_STATE_FILENAME
 from anaconda_project.plugins.provider import (Provider, ProvideContext, EnvVarProvider, ProvideResult,
                                                shutdown_service_run_state)
-from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.registry import RequirementsRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement, UserConfigOverrides
 from anaconda_project.project import Project
 from anaconda_project.provide import PROVIDE_MODE_DEVELOPMENT
@@ -30,14 +30,14 @@ conda_env_var = conda_api.conda_prefix_variable()
 
 
 def test_find_provider_by_class_name():
-    registry = PluginRegistry()
+    registry = RequirementsRegistry()
     found = registry.find_provider_by_class_name(class_name="CondaEnvProvider")
     assert found is not None
     assert found.__class__.__name__ == "CondaEnvProvider"
 
 
 def test_find_provider_by_class_name_not_found():
-    registry = PluginRegistry()
+    registry = RequirementsRegistry()
     found = registry.find_provider_by_class_name(class_name="NotAThing")
     assert found is None
 
@@ -406,7 +406,7 @@ def test_provide_context_properties():
     def check_provide_contents(dirname):
         environ = dict(foo='bar')
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
+        requirement = EnvVarRequirement(RequirementsRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
@@ -441,7 +441,7 @@ def test_provide_context_ensure_service_directory():
     def check_provide_contents(dirname):
         environ = dict()
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
+        requirement = EnvVarRequirement(RequirementsRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
@@ -474,7 +474,7 @@ def test_provide_context_ensure_service_directory_cannot_create(monkeypatch):
     def check_provide_contents(dirname):
         environ = dict()
         local_state_file = LocalStateFile.load_for_directory(dirname)
-        requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
+        requirement = EnvVarRequirement(RequirementsRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,
@@ -494,7 +494,7 @@ def test_provide_context_transform_service_run_state():
         environ = dict()
         local_state_file = LocalStateFile.load_for_directory(dirname)
         local_state_file.set_service_run_state("myservice", dict(port=42))
-        requirement = EnvVarRequirement(PluginRegistry(), env_var="FOO")
+        requirement = EnvVarRequirement(RequirementsRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         context = ProvideContext(environ=environ,
                                  local_state_file=local_state_file,

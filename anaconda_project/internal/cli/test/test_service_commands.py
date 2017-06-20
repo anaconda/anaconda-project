@@ -14,7 +14,7 @@ from anaconda_project.test.environ_utils import minimal_environ, strip_environ
 from anaconda_project.internal.cli.main import _parse_args_and_run_subcommand
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.plugins.requirements.redis import RedisRequirement
-from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.registry import RequirementsRegistry
 from anaconda_project.internal.test.tmpfile_utils import (tmp_script_commandline,
                                                           with_directory_contents_completing_project_file)
 from anaconda_project.internal.simple_status import SimpleStatus
@@ -52,7 +52,7 @@ def test_add_service(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
 
         status = SimpleStatus(success=True, description='Service added.')
-        status.requirement = RedisRequirement(PluginRegistry(), env_var='REDIS_URL', options=dict(type='redis'))
+        status.requirement = RedisRequirement(RequirementsRegistry(), env_var='REDIS_URL', options=dict(type='redis'))
 
         _monkeypatch_add_service(monkeypatch, status)
 

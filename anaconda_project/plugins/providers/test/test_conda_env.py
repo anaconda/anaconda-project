@@ -19,7 +19,7 @@ from anaconda_project.prepare import (prepare_without_interaction, prepare_in_st
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project import Project
 from anaconda_project import provide
-from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.registry import RequirementsRegistry
 from anaconda_project.plugins.providers.conda_env import CondaEnvProvider
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 
@@ -32,7 +32,7 @@ conda_env_var = conda_api.conda_prefix_variable()
 
 
 def test_find_by_class_name_conda_env():
-    registry = PluginRegistry()
+    registry = RequirementsRegistry()
     found = registry.find_provider_by_class_name(class_name="CondaEnvProvider")
     assert found is not None
     assert isinstance(found, CondaEnvProvider)

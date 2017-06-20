@@ -22,7 +22,7 @@ from anaconda_project.version import version
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
                                                           with_directory_contents_completing_project_file)
 from anaconda_project.internal import conda_api
-from anaconda_project.plugins.registry import PluginRegistry
+from anaconda_project.plugins.registry import RequirementsRegistry
 from anaconda_project.plugins.requirement import EnvVarRequirement
 from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.plugins.requirements.service import ServiceRequirement
@@ -334,7 +334,7 @@ variables:
 
 def test_override_plugin_registry():
     def check_override_plugin_registry(dirname):
-        registry = PluginRegistry()
+        registry = RequirementsRegistry()
         project = project_no_dedicated_env(dirname, registry)
         assert project._config_cache.registry is registry
 
