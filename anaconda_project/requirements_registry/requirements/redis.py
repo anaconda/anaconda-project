@@ -6,9 +6,9 @@
 # ----------------------------------------------------------------------------
 """Redis-related requirements."""
 
-from anaconda_project.plugins.requirements.service import ServiceRequirement
+from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
 # don't "import from" network_util or we can't monkeypatch it in tests
-import anaconda_project.plugins.network_util as network_util
+import anaconda_project.requirements_registry.network_util as network_util
 
 
 class RedisRequirement(ServiceRequirement):

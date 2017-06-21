@@ -19,9 +19,9 @@ from anaconda_project.internal import conda_api
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPMENT)
-from anaconda_project.plugins.provider import ProvideContext
-from anaconda_project.plugins.requirement import Requirement, EnvVarRequirement, UserConfigOverrides
-from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.provider import ProvideContext
+from anaconda_project.requirements_registry.requirement import Requirement, EnvVarRequirement, UserConfigOverrides
+from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 
 
 def _update_environ(dest, src):
@@ -187,7 +187,7 @@ class ConfigurePrepareContext(object):
         self.overrides = overrides
         self.statuses = statuses
         if len(statuses) > 0:
-            from anaconda_project.plugins.requirement import RequirementStatus
+            from anaconda_project.requirements_registry.requirement import RequirementStatus
             assert isinstance(statuses[0], RequirementStatus)
 
 

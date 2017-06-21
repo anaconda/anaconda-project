@@ -9,8 +9,8 @@ from __future__ import absolute_import, print_function
 
 from anaconda_project import prepare
 from anaconda_project import project_ops
-from anaconda_project.plugins.requirement import EnvVarRequirement
-from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement
+from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 
 from anaconda_project.provide import (PROVIDE_MODE_PRODUCTION, PROVIDE_MODE_DEVELOPMENT, PROVIDE_MODE_CHECK)
 

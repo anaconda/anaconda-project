@@ -8,9 +8,9 @@ import hashlib
 import os
 
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.plugins.registry import PluginRegistry
-from anaconda_project.plugins.requirement import UserConfigOverrides
-from anaconda_project.plugins.requirements.download import DownloadRequirement
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirement import UserConfigOverrides
+from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
@@ -20,7 +20,7 @@ ENV_VAR = 'DATAFILE'
 def test_filename_not_set():
     def check_not_set(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
-        requirement = DownloadRequirement(registry=PluginRegistry(),
+        requirement = DownloadRequirement(registry=RequirementsRegistry(),
                                           env_var=ENV_VAR,
                                           url='http://example.com',
                                           filename=ENV_VAR)
@@ -35,7 +35,7 @@ def test_download_filename_missing():
     def check_missing_filename(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
         filename = '/data.zip'
-        requirement = DownloadRequirement(registry=PluginRegistry(),
+        requirement = DownloadRequirement(registry=RequirementsRegistry(),
                                           env_var=ENV_VAR,
                                           url='http://localhost/data.zip',
                                           filename='data.zip')
@@ -64,7 +64,7 @@ def test_download_checksum():
     def verify_checksum(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
         filename = os.path.join(dirname, 'data.zip')
-        requirement = DownloadRequirement(registry=PluginRegistry(),
+        requirement = DownloadRequirement(registry=RequirementsRegistry(),
                                           env_var=ENV_VAR,
                                           url='http://localhost/data.zip',
                                           filename='data.zip',
@@ -84,7 +84,7 @@ def test_download_with_no_checksum():
     def downloaded_file_valid(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
         filename = os.path.join(dirname, 'data.zip')
-        requirement = DownloadRequirement(registry=PluginRegistry(),
+        requirement = DownloadRequirement(registry=RequirementsRegistry(),
                                           env_var=ENV_VAR,
                                           url='http://localhost/data.zip',
                                           filename='data.zip')
@@ -130,7 +130,7 @@ def test_description_property():
                                         problems=problems)
     assert [] == problems
     assert kwargs['description'] == 'hi'
-    req = DownloadRequirement(PluginRegistry(), **kwargs)
+    req = DownloadRequirement(RequirementsRegistry(), **kwargs)
     assert req.title == 'FOO'
 
 
@@ -165,7 +165,7 @@ def test_use_unzip_if_url_ends_in_zip():
     assert kwargs['filename'] == 'bar'
     assert kwargs['url'] == 'http://example.com/bar.zip'
     assert kwargs['unzip']
-    req = DownloadRequirement(PluginRegistry(), **kwargs)
+    req = DownloadRequirement(RequirementsRegistry(), **kwargs)
     assert req.filename == 'bar'
     assert req.url == 'http://example.com/bar.zip'
     assert req.unzip
@@ -182,7 +182,7 @@ def test_allow_manual_override_of_use_unzip_if_url_ends_in_zip():
     assert kwargs['url'] == 'http://example.com/bar.zip'
     assert not kwargs['unzip']
 
-    req = DownloadRequirement(PluginRegistry(), **kwargs)
+    req = DownloadRequirement(RequirementsRegistry(), **kwargs)
     assert req.filename == 'bar.zip'
     assert req.url == 'http://example.com/bar.zip'
     assert not req.unzip

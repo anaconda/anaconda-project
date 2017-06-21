@@ -15,7 +15,7 @@ from tornado.ioloop import IOLoop
 from anaconda_project.internal.http_client import FileDownloader
 from anaconda_project.internal.ziputils import unpack_zip
 from anaconda_project.internal.simple_status import SimpleStatus
-from anaconda_project.plugins.provider import EnvVarProvider, ProviderAnalysis
+from anaconda_project.requirements_registry.provider import EnvVarProvider, ProviderAnalysis
 from anaconda_project.provide import PROVIDE_MODE_CHECK
 from anaconda_project.frontend import _new_error_recorder
 

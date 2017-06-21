@@ -7,7 +7,7 @@
 """A requirement for a service."""
 
 from copy import deepcopy
-from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement
 
 from anaconda_project.internal.py2_compat import is_string
 

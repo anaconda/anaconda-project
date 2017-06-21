@@ -12,7 +12,7 @@ from collections import namedtuple
 ServiceType = namedtuple('ServiceType', ['name', 'default_variable', 'description'])
 
 
-class PluginRegistry(object):
+class RequirementsRegistry(object):
     """Allows creating Requirement and Provider instances."""
 
     def find_requirement_by_env_var(self, env_var, options):

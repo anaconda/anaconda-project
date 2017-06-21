@@ -140,7 +140,7 @@ class Requirement(with_metaclass(ABCMeta)):
         """Construct a Requirement.
 
         Args:
-            registry (PluginRegistry): the plugin registry we came from
+            registry (RequirementsRegistry): the plugin registry we came from
             options (dict): dict of requirement options from the project config
         """
         self.registry = registry

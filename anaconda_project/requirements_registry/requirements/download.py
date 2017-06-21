@@ -10,8 +10,8 @@ from __future__ import absolute_import, print_function
 
 import os
 
-from anaconda_project.plugins.requirement import EnvVarRequirement
-from anaconda_project.plugins.network_util import urlparse
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement
+from anaconda_project.requirements_registry.network_util import urlparse
 
 from anaconda_project.internal.py2_compat import is_string
 

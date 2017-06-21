@@ -22,11 +22,11 @@ from anaconda_project.version import version
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
                                                           with_directory_contents_completing_project_file)
 from anaconda_project.internal import conda_api
-from anaconda_project.plugins.registry import PluginRegistry
-from anaconda_project.plugins.requirement import EnvVarRequirement
-from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
-from anaconda_project.plugins.requirements.service import ServiceRequirement
-from anaconda_project.plugins.requirements.download import DownloadRequirement
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement
+from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
+from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
 from anaconda_project.project import (Project, ProjectProblem)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project_lock_file import DEFAULT_PROJECT_LOCK_FILENAME
@@ -334,7 +334,7 @@ variables:
 
 def test_override_plugin_registry():
     def check_override_plugin_registry(dirname):
-        registry = PluginRegistry()
+        registry = RequirementsRegistry()
         project = project_no_dedicated_env(dirname, registry)
         assert project._config_cache.registry is registry
 

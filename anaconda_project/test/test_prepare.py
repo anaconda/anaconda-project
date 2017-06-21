@@ -23,7 +23,7 @@ from anaconda_project.prepare import (prepare_without_interaction, unprepare, pr
 from anaconda_project.project import Project
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project_commands import ProjectCommand
-from anaconda_project.plugins.requirement import UserConfigOverrides
+from anaconda_project.requirements_registry.requirement import UserConfigOverrides
 from anaconda_project.conda_manager import (push_conda_manager_class, pop_conda_manager_class, CondaManager,
                                             CondaEnvironmentDeviations, CondaLockSet)
 
@@ -569,7 +569,7 @@ def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA', checksum
 
 def test_provide_whitelist(monkeypatch):
     def check(dirname):
-        from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+        from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 
         _monkeypatch_download_file(monkeypatch, dirname, filename="nope")
 

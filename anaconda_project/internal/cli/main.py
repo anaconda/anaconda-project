@@ -17,8 +17,8 @@ from anaconda_project.internal.cli.prepare_with_mode import (UI_MODE_TEXT_ASK_QU
 from anaconda_project.version import version
 from anaconda_project.verbose import push_verbose_logger, pop_verbose_logger
 from anaconda_project.project import ALL_COMMAND_TYPES
-from anaconda_project.plugins.registry import PluginRegistry
-from anaconda_project.plugins.requirements.download import _hash_algorithms
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirements.download import _hash_algorithms
 import anaconda_project
 from anaconda_project.internal.cli.bug_handler import handle_bugs
 import anaconda_project.internal.cli.init as init
@@ -194,7 +194,7 @@ def _parse_args_and_run_subcommand(argv):
     add_env_spec_arg(preset)
     preset.set_defaults(main=download_commands.main_list)
 
-    service_types = PluginRegistry().list_service_types()
+    service_types = RequirementsRegistry().list_service_types()
     service_choices = list(map(lambda s: s.name, service_types))
 
     def add_service_variable_name(preset):

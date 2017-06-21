@@ -12,9 +12,9 @@ from anaconda_project.test.project_utils import project_dir_disable_dedicated_en
 from anaconda_project.test.environ_utils import (minimal_environ, minimal_environ_no_conda_env)
 from anaconda_project.env_spec import EnvSpec
 from anaconda_project.local_state_file import LocalStateFile
-from anaconda_project.plugins.registry import PluginRegistry
-from anaconda_project.plugins.requirement import UserConfigOverrides
-from anaconda_project.plugins.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.registry import RequirementsRegistry
+from anaconda_project.requirements_registry.requirement import UserConfigOverrides
+from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal import conda_api
@@ -23,11 +23,11 @@ conda_env_var = conda_api.conda_prefix_variable()
 
 
 def _empty_default_requirement():
-    return CondaEnvRequirement(registry=PluginRegistry(), env_specs=dict(default=EnvSpec('default', [], [])))
+    return CondaEnvRequirement(registry=RequirementsRegistry(), env_specs=dict(default=EnvSpec('default', [], [])))
 
 
 def test_env_var():
-    registry = PluginRegistry()
+    registry = RequirementsRegistry()
     requirement = CondaEnvRequirement(registry)
     assert requirement.env_var == conda_env_var
 
@@ -82,7 +82,7 @@ def test_conda_fails_while_listing_installed(monkeypatch):
         project_dir_disable_dedicated_env(dirname)
         local_state = LocalStateFile.load_for_directory(dirname)
 
-        requirement = CondaEnvRequirement(registry=PluginRegistry(),
+        requirement = CondaEnvRequirement(registry=RequirementsRegistry(),
                                           env_specs=dict(default=EnvSpec('default', ['not_a_real_package'], [])))
         environ = minimal_environ(PROJECT_DIR=dirname)
         status = requirement.check_status(environ,
@@ -98,7 +98,7 @@ def test_conda_fails_while_listing_installed(monkeypatch):
 def test_missing_package():
     def check_missing_package(dirname):
         requirement = CondaEnvRequirement(
-            registry=PluginRegistry(),
+            registry=RequirementsRegistry(),
             env_specs=dict(default=EnvSpec('default', ['boguspackage', 'boguspackage2'], [])))
         project_dir_disable_dedicated_env(dirname)
         local_state = LocalStateFile.load_for_directory(dirname)

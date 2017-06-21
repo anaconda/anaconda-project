@@ -7,7 +7,7 @@
 """Conda-env-related requirements."""
 from __future__ import absolute_import, print_function
 
-from anaconda_project.plugins.requirement import EnvVarRequirement
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement
 from anaconda_project.conda_manager import new_conda_manager, CondaManagerError
 from anaconda_project.internal import conda_api
 
@@ -19,7 +19,7 @@ class CondaEnvRequirement(EnvVarRequirement):
         """Extend superclass to default to CONDA_PREFIX and carry environment information.
 
         Args:
-            registry (PluginRegistry): plugin registry
+            registry (RequirementsRegistry): plugin registry
             env_specs (dict): dict from env name to ``CondaEnvironment``
         """
         super(CondaEnvRequirement, self).__init__(registry=registry, env_var=conda_api.conda_prefix_variable())
