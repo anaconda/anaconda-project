@@ -11,12 +11,14 @@ from unittest.mock import Mock
 here = os.path.dirname(__file__)
 plugins_path = os.path.join(here, 'assets', 'anaconda-project-plugins')
 
+
 def test_registry_init(tmpdir):
     plugins_dir = tmpdir.mkdir("test-temp").mkdir('anaconda-project-plugins')
     base_dir = plugins_dir.parts()[-2]
     paths = [base_dir.strpath]
     plugins_registry = registry.PluginRegistry(paths)
     assert plugins_registry.search_paths == paths
+
 
 def test_scan_paths(monkeypatch):
     create_mock = Mock()
@@ -28,6 +30,7 @@ def test_scan_paths(monkeypatch):
     assert plugins == ["PluginA", "PluginC"]
     for arg in paths:
         registry.Plugin.create.assert_any_call(arg)
+
 
 def test_module_plugin_ok(monkeypatch):
     plugin_name = 'valid_plugin'
@@ -41,18 +44,54 @@ def test_module_plugin_ok(monkeypatch):
     assert not plugin.error
     assert not plugin.error_detail
 
+
 def test_module_plugin_invalid_syntax(monkeypatch):
     plugin_name = 'invalid_syntax_plugin'
     plugin_path = os.path.join(plugins_path, '%s.py' % plugin_name)
     plugin = registry.ModulePlugin(plugin_path)
 
     default_checks_failed_plugin(plugin, plugin_path, plugin_name)
-    assert 'Invalid syntax in "invalid_syntax_plugin.py"' in plugin.error
+    assert 'Invalid syntax in "%s.py"' % plugin_name in plugin.error
     assert 'SyntaxError: invalid syntax' in plugin.error_detail
+
+
+def test_package_plugin_ok(monkeypatch):
+    plugin_name = 'valid_package_plugin'
+    plugin_path = os.path.join(plugins_path, plugin_name)
+    plugin = registry.PackagePlugin(plugin_path)
+
+    assert plugin
+    assert plugin.path == os.path.join(plugin_path, 'plugin.py')
+    assert plugin._package_path == plugin_path
+    assert plugin.name == plugin_name
+    assert not plugin.failed
+    assert not plugin.error
+    assert not plugin.error_detail
+
+
+def test_package_plugin_invalid_syntax(monkeypatch):
+    plugin_name = 'invalid_syntax_package_plugin'
+    plugin_path = os.path.join(plugins_path, plugin_name)
+    plugin = registry.PackagePlugin(plugin_path)
+
+    check_package_plugin_that_failed(plugin, plugin_path, plugin_name)
+    assert 'Invalid syntax in "plugin.py"' in plugin.error
+    assert 'SyntaxError: invalid syntax' in plugin.error_detail
+
 
 def default_checks_failed_plugin(plugin, plugin_path, plugin_name):
     assert plugin
     assert plugin.path == plugin_path
+    assert plugin.name == plugin_name
+    assert plugin.failed
+    assert plugin.error
+    assert plugin.error_detail
+
+
+def check_package_plugin_that_failed(plugin, plugin_path, plugin_name):
+    assert plugin
+    assert plugin.path == os.path.join(plugin_path, 'plugin.py')
+    assert plugin._package_path == plugin_path
     assert plugin.name == plugin_name
     assert plugin.failed
     assert plugin.error

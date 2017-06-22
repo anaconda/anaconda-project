@@ -128,6 +128,14 @@ class ModulePlugin(Plugin):
 class PackagePlugin(Plugin):
     """Package (directory) plugin."""
 
+    def init_plugin(self):
+        self._package_path = self.path
+        self.name = os.path.basename(self.path)
+        self.path = os.path.join(self._package_path, 'plugin.py')
+
+        with open(self.path, 'r') as f:
+            self._source = f.read()
+
 
 class PluginRegistry(object):
     """Scans and manages plugins discoverable in a plugins path list."""
