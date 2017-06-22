@@ -3,4 +3,6 @@ inherit=false
 # D203 is "there must be a blank line before class docstring"
 # which conflicts with D211 "there cannot be a blank line before
 # class docstring"
-add-ignore=D203
+# D205 is "blank line required between summary line and description"
+# which conflicts with yapf autoformatting for specific class meth cases
+add-ignore=D203,D205

@@ -1,0 +1,3 @@
+
+class CommandPlugin(object):
+    pass
