@@ -37,6 +37,23 @@ def test_module_plugin_ok(monkeypatch):
     assert plugin
     assert plugin.path == plugin_path
     assert plugin.name == plugin_name
+    assert not plugin.failed
     assert not plugin.error
     assert not plugin.error_detail
-    assert not plugin.failed
+
+def test_module_plugin_invalid_syntax(monkeypatch):
+    plugin_name = 'invalid_syntax_plugin'
+    plugin_path = os.path.join(plugins_path, '%s.py' % plugin_name)
+    plugin = registry.ModulePlugin(plugin_path)
+
+    default_checks_failed_plugin(plugin, plugin_path, plugin_name)
+    assert 'Invalid syntax in "invalid_syntax_plugin.py"' in plugin.error
+    assert 'SyntaxError: invalid syntax' in plugin.error_detail
+
+def default_checks_failed_plugin(plugin, plugin_path, plugin_name):
+    assert plugin
+    assert plugin.path == plugin_path
+    assert plugin.name == plugin_name
+    assert plugin.failed
+    assert plugin.error
+    assert plugin.error_detail

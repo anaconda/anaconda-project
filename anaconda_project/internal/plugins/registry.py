@@ -105,8 +105,9 @@ class Plugin(object):
     def load_plugin(self):
         """Run the plugin."""
         self._runner = CodeRunner(self._source, self.path)
-        self._module = self._runner.new_module(self.name)
-        self._runner.run(self._module)
+        if not self._runner.failed:
+            self._module = self._runner.new_module(self.name)
+            self._runner.run(self._module)
 
     def log(self, msg, level='info'):
         """Log log to all activate loggers."""

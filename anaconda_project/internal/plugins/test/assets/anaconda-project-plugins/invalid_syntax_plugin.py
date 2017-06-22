@@ -1,0 +1,4 @@
+
+
+class CommandPlugin(object)
+    pass
