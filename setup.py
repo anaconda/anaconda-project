@@ -17,13 +17,24 @@ import re
 import shutil
 import subprocess
 import sys
-from os.path import dirname, realpath
+from os.path import dirname, realpath, join
 from distutils.core import setup, Command
 from setuptools.command.test import test as TestCommand
 from setup_atomic_replace import atomic_replace
 
 ROOT = dirname(realpath(__file__))
 VERSION_PY = os.path.join(ROOT, 'anaconda_project', 'version.py')
+
+ASSETS_FOLDER = join(ROOT, 'anaconda_project', 'internal', 'plugins', 'test', 'assets')
+# List of folder to skip when creating missing __init__.py files
+# This is to be used when these folders are not intended to be used
+# as python packages
+SKIP_INIT_FILE_ON_FOLDERS = [
+    ASSETS_FOLDER,
+    join(ASSETS_FOLDER, 'anaconda-project-plugins'),
+    join(ASSETS_FOLDER, 'anaconda-project-plugins', 'invalid_syntax_package_plugin'),
+    join(ASSETS_FOLDER, 'anaconda-project-plugins', 'valid_package_plugin'),
+]
 
 
 def _obtain_version():
@@ -234,11 +245,13 @@ class AllTestsCommand(TestCommand):
             for root, dirs, files in os.walk(os.path.join(ROOT, srcdir)):
                 dirs[:] = [d for d in dirs if not (d[0] == '.' or d == '__pycache__')]
                 for d in dirs:
-                    init_py = os.path.join(root, d, "__init__.py")
-                    if not os.path.exists(init_py):
-                        print("Creating " + init_py)
-                        with codecs.open(init_py, 'w', 'utf-8') as handle:
-                            handle.flush()
+                    folder = os.path.join(root, d)
+                    if folder not in SKIP_INIT_FILE_ON_FOLDERS:
+                        init_py = os.path.join(folder, "__init__.py")
+                        if not os.path.exists(init_py):
+                            print("Creating " + init_py)
+                            with codecs.open(init_py, 'w', 'utf-8') as handle:
+                                handle.flush()
 
     def _headerize_file(self, path):
         with codecs.open(path, 'r', 'utf-8') as file:
