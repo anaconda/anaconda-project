@@ -663,6 +663,21 @@ def test_resolve_dependencies_for_bogus_package_with_actual_conda():
     assert 'Package not found' in exc_str or 'Package missing' in exc_str
 
 
+@pytest.mark.slow
+def test_resolve_dependencies_with_actual_conda_depending_on_conda():
+    try:
+        result = conda_api.resolve_dependencies(['conda=4.3.21'], platform=None)
+    except conda_api.CondaError as e:
+        pprint(e.json)
+        raise e
+
+    names = [pkg[0] for pkg in result]
+    assert 'conda' in names
+    names_and_versions = [(pkg[0], pkg[1]) for pkg in result]
+    assert ('conda', '4.3.21') in names_and_versions
+    assert len(result) > 1  # conda has some dependencies so should be >1
+
+
 def test_resolve_dependencies_ignores_rmtree_failure(monkeypatch):
     def mock_call_conda(extra_args, json_mode, platform, stdout_callback=None, stderr_callback=None):
         return json.dumps({'actions': [{'LINK': [{'base_url': None,

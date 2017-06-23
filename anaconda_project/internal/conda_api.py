@@ -297,7 +297,7 @@ def resolve_dependencies(pkgs, channels=(), platform=None):
 
     # even with --dry-run, conda wants to create the prefix,
     # so we ensure it's somewhere out of the way.
-    prefix = tempfile.mkdtemp(prefix="anaconda_project_resolve_")
+    prefix = tempfile.mkdtemp(prefix="_anaconda_project_resolve_")
 
     # conda 4.1 (and possibly other versions) will complain
     # if the directory already exists. An evil attacker
