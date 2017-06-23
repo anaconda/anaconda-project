@@ -44,6 +44,17 @@ unfamiliar with the codebase.
 
 Please feel free to ask questions about how to approach an issue.
 
+# Making releases
+
+There's `build_and_upload.sh` script; the flow is:
+
+ * create a signed git tag `vX.Y.Z`
+ * run `build_and_upload.sh`
+ * push the git tag to the repo
+
+`build_and_upload.sh` assumes you're logged in to anaconda.org and
+have permissions to publish.
+
 # Code Tour
 
 It can be hard to get started in an unfamiliar codebase. Here are a few guideposts.
