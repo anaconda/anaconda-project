@@ -6,10 +6,36 @@
 # ----------------------------------------------------------------------------
 import os
 from anaconda_project.internal.plugins import registry
-from unittest.mock import Mock
+
+try:  # py3.x
+    from unittest.mock import Mock
+except ImportError:
+    from mock import Mock
 
 here = os.path.dirname(__file__)
 plugins_path = os.path.join(here, 'assets', 'anaconda-project-plugins')
+
+BAD_SYNTAX_PLUGIN_CODE = """
+class CommandPlugin(object)
+    pass
+"""
+
+ERROR_PLUGIN_CODE = """
+class CommandPlugin(object):
+    pass
+"""
+
+
+def write_test_plugin(plugin_name, content, tmpdir, plugin_type='package'):
+    tmpplugins = tmpdir.join('anaconda-project-plugins')
+    if plugin_type == 'package':
+        plugin_path = tmpplugins.join(plugin_name).join("plugin.py")
+    else:
+        plugin_path = tmpplugins.join("%s.py" % plugin_name)
+    plugin_path.write("""
+class CommandPlugin(object)
+    pass""", ensure=True)
+    return str(plugin_path)
 
 
 def test_registry_init(tmpdir):
@@ -45,9 +71,11 @@ def test_module_plugin_ok(monkeypatch):
     assert not plugin.error_detail
 
 
-def test_module_plugin_invalid_syntax(monkeypatch):
+def test_module_plugin_invalid_syntax(monkeypatch, tmpdir):
     plugin_name = 'invalid_syntax_plugin'
-    plugin_path = os.path.join(plugins_path, '%s.py' % plugin_name)
+    # plugin_path = os.path.join(plugins_path, '%s.py' % plugin_name)
+    plugin_path = write_test_plugin(plugin_name, BAD_SYNTAX_PLUGIN_CODE, tmpdir, plugin_type='module')
+
     plugin = registry.ModulePlugin(plugin_path)
 
     default_checks_failed_plugin(plugin, plugin_path, plugin_name)
@@ -69,9 +97,10 @@ def test_package_plugin_ok(monkeypatch):
     assert not plugin.error_detail
 
 
-def test_package_plugin_invalid_syntax(monkeypatch):
+def test_package_plugin_invalid_syntax(monkeypatch, tmpdir):
     plugin_name = 'invalid_syntax_package_plugin'
-    plugin_path = os.path.join(plugins_path, plugin_name)
+    plugin_path = write_test_plugin(plugin_name, BAD_SYNTAX_PLUGIN_CODE, tmpdir)
+    plugin_path = os.path.abspath(os.path.join(plugin_path, os.pardir))
     plugin = registry.PackagePlugin(plugin_path)
 
     check_package_plugin_that_failed(plugin, plugin_path, plugin_name)

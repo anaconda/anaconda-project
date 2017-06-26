@@ -6,5 +6,5 @@
 # ----------------------------------------------------------------------------
 
 
-class CommandPlugin(object)
+class CommandPlugin(object):
     pass

@@ -94,7 +94,7 @@ class CodeRunner(object):
                 sys.path.insert(0, os.path.dirname(self._path))
                 sys.argv = [os.path.basename(self._path)] + self._argv
 
-                exec(self._code, module.__dict__)
+                exec (self._code, module.__dict__)
                 if callable(post_check):
                     post_check()
 
