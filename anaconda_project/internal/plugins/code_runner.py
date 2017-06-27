@@ -93,8 +93,9 @@ class CodeRunner(object):
                 _sys_argv = list(sys.argv)
                 sys.path.insert(0, os.path.dirname(self._path))
                 sys.argv = [os.path.basename(self._path)] + self._argv
-
-                exec (self._code, module.__dict__)
+                # yapf: disable
+                exec(self._code, module.__dict__)
+                # yapf: enable
                 if callable(post_check):
                     post_check()
 
