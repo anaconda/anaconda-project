@@ -7,11 +7,10 @@
 import os
 from anaconda_project.internal.plugins import registry
 
-try: #py3.x
+try:  # py3.x
     from unittest.mock import Mock
 except ImportError:
     from mock import Mock
-
 
 here = os.path.dirname(__file__)
 plugins_path = os.path.join(here, 'assets', 'anaconda-project-plugins')
