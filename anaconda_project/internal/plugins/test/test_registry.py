@@ -47,15 +47,11 @@ def test_registry_init(tmpdir):
 
 
 def test_scan_paths(monkeypatch):
-    create_mock = Mock()
-    create_mock.side_effect = ["PluginA", None, "PluginC"]
-    monkeypatch.setattr(registry.Plugin, 'create', create_mock)
-    paths = ["a", "B", "c"]
-    plugins = registry.scan_paths(paths)
+    plugins = registry.scan_paths((plugins_path,))
 
-    assert plugins == ["PluginA", "PluginC"]
-    for arg in paths:
-        registry.Plugin.create.assert_any_call(arg)
+    for plugin in plugins:
+        assert plugin.name in ['valid_plugin', 'valid_package_plugin']
+    assert plugins[0] != plugins[1]
 
 
 def test_module_plugin_ok(monkeypatch):

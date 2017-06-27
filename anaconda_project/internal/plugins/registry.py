@@ -29,6 +29,13 @@ class Plugin(object):
         # implements the plugins API requirements
         self.load_plugin()
 
+    @staticmethod
+    def is_plugin_candidate_path(path):
+        """Return True if the path is a potential plugin path"""
+        if os.path.isdir(path) or path.endswith('.py'):
+            return True
+        return False
+
     @property
     def failed(self):
         """Return if True if the plugin has failed to load, False otherwise.
@@ -81,7 +88,7 @@ class Plugin(object):
             plugin_class = PackagePlugin
         else:
             if path.endswith(".py"):
-                plugin_class = ModulePlugin(path)
+                plugin_class = ModulePlugin
             else:
                 log("Expected a '.py' script, got: '%s'" % path, 'error')
 
@@ -158,11 +165,30 @@ def scan_paths(paths):
     plugins = []
 
     for path in paths:
-        plugin = Plugin.create(path)
+        plugins += scan_path(path)
 
-        if plugin:
-            plugins.append(plugin)
+    return plugins
 
+
+def scan_path(path):
+    """Return a list of Plugins found on the specified path.
+
+    Args:
+        path (seq[str]) : paths to files or directories for registering
+            plugins
+
+    Returns:
+        list[Plugin]
+
+    """
+    plugins = []
+    for plugin_path in os.listdir(path):
+        plugin_path = os.path.join(path, plugin_path)
+        if Plugin.is_plugin_candidate_path(plugin_path):
+            plugin = Plugin.create(plugin_path)
+
+            if plugin:
+                plugins.append(plugin)
     return plugins
 
 
