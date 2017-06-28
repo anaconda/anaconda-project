@@ -5,12 +5,23 @@
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 import os
-from anaconda_project.internal.plugins import registry
 
 try:  # py3.x
     from unittest.mock import Mock
 except ImportError:
     from mock import Mock
+
+
+
+from anaconda_project.test.environ_utils import minimal_environ, strip_environ
+from anaconda_project.test.project_utils import project_no_dedicated_env
+from anaconda_project.prepare import (prepare_without_interaction)
+from anaconda_project.internal.test.tmpfile_utils import (
+    with_directory_contents_completing_project_file)
+from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.internal.plugins import registry
+from anaconda_project import project
+
 
 here = os.path.dirname(__file__)
 plugins_path = os.path.join(here, 'assets', 'anaconda-project-plugins')
@@ -91,6 +102,11 @@ def test_package_plugin_ok(monkeypatch):
     assert not plugin.failed
     assert not plugin.error
     assert not plugin.error_detail
+
+    # Tests related to specific Plugins API implementation
+    assert plugin._module.ArgsTransformer
+    assert plugin._module.Command
+    assert plugin._module.Command.command == 'fancy-bokeh-app'
 
 
 def test_package_plugin_invalid_syntax(monkeypatch, tmpdir):

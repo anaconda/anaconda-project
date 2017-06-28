@@ -6,5 +6,9 @@
 # ----------------------------------------------------------------------------
 
 
-class CommandPlugin(object):
+class Command(object):
+    command = 'fancy-bokeh-app'
+
+
+class ArgsTransformer(object):
     pass

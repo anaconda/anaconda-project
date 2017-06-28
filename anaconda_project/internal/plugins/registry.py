@@ -8,6 +8,7 @@
 from __future__ import absolute_import, print_function
 
 import os
+from os.path import (isdir, join, exists)
 
 from anaconda_project import verbose
 from .code_runner import CodeRunner
@@ -32,7 +33,7 @@ class Plugin(object):
     @staticmethod
     def is_plugin_candidate_path(path):
         """Return True if the path is a potential plugin path"""
-        if os.path.isdir(path) or path.endswith('.py'):
+        if (isdir(path) and exists(join(path, 'plugin.py'))) or path.endswith('.py'):
             return True
         return False
 
