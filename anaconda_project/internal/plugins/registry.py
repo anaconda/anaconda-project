@@ -73,6 +73,11 @@ class Plugin(object):
         """List of activate loggers."""
         return verbose._verbose_loggers
 
+    @property
+    def ProjectCommand(self):
+        # TODO: we should add a Plugin API validation check on the plugin module we get
+        return self._module.ProjectCommand #noqa
+
     @staticmethod
     def create(path):
         """Return a plugin loaded from path.
