@@ -32,7 +32,7 @@ class Plugin(object):
 
     @staticmethod
     def is_plugin_candidate_path(path):
-        """Return True if the path is a potential plugin path"""
+        """Return True if the path is a potential plugin path."""
         if (isdir(path) and exists(join(path, 'plugin.py'))) or path.endswith('.py'):
             return True
         return False
@@ -76,7 +76,7 @@ class Plugin(object):
     @property
     def ProjectCommand(self):
         # TODO: we should add a Plugin API validation check on the plugin module we get
-        return self._module.ProjectCommand #noqa
+        return self._module.ProjectCommand  # noqa
 
     @staticmethod
     def create(path):
