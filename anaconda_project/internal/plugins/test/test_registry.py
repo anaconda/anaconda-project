@@ -5,23 +5,15 @@
 # The full license is in the file LICENSE.txt, distributed with this software.
 # ----------------------------------------------------------------------------
 import os
+from os.path import join
 
-try:  # py3.x
-    from unittest.mock import Mock
-except ImportError:
-    from mock import Mock
-
-
-
-from anaconda_project.test.environ_utils import minimal_environ, strip_environ
+from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.prepare import (prepare_without_interaction)
-from anaconda_project.internal.test.tmpfile_utils import (
-    with_directory_contents_completing_project_file)
+from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents_completing_project_file)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.internal.plugins import registry
 from anaconda_project import project
-
 
 here = os.path.dirname(__file__)
 plugins_path = os.path.join(here, 'assets', 'anaconda-project-plugins')
@@ -58,7 +50,7 @@ def test_registry_init(tmpdir):
 
 
 def test_scan_paths(monkeypatch):
-    plugins = registry.scan_paths((plugins_path,))
+    plugins = registry.scan_paths((plugins_path, ))
 
     for plugin in plugins:
         assert plugin.name in ['valid_plugin', 'valid_package_plugin']
@@ -105,8 +97,8 @@ def test_package_plugin_ok(monkeypatch):
 
     # Tests related to specific Plugins API implementation
     assert plugin._module.ArgsTransformer
-    assert plugin._module.Command
-    assert plugin._module.Command.command == 'fancy-bokeh-app'
+    assert plugin._module.ProjectCommand
+    assert plugin._module.ProjectCommand.command == 'custom-cmd'
 
 
 def test_package_plugin_invalid_syntax(monkeypatch, tmpdir):
@@ -118,6 +110,32 @@ def test_package_plugin_invalid_syntax(monkeypatch, tmpdir):
     check_package_plugin_that_failed(plugin, plugin_path, plugin_name)
     assert 'Invalid syntax in "plugin.py"' in plugin.error
     assert 'SyntaxError: invalid syntax' in plugin.error_detail
+
+
+def test_prepare_plugin_command(monkeypatch, tmpdir):
+    monkeypatch.setattr(project, 'PLUGINS_SEARCH_PATH', (plugins_path, ))
+
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ, command_name='foo')
+
+        cmd_name = 'custom-cmd'
+        cmd_path = join(os.environ['CONDA_PREFIX'], 'bin', cmd_name)
+        expected = [cmd_path, 'custom-sub-cmd', '--%s.TESTARG' % cmd_name, '--show']
+        assert result.errors == []
+        assert result
+        assert result.command_exec_info.args == expected
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+commands:
+    foo:
+       valid_package_plugin: foo.py
+packages:
+  - notebook
+""",
+         "foo.py": "# foo", }, check)
 
 
 def default_checks_failed_plugin(plugin, plugin_path, plugin_name):
