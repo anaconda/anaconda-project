@@ -12,8 +12,10 @@ from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.prepare import (prepare_without_interaction)
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents_completing_project_file)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
-from anaconda_project.internal.plugins import registry
 from anaconda_project import project
+
+from anaconda_project.internal.plugins import registry
+from anaconda_project.plugins import CommandTemplate, ArgsTrasformerTemplate
 
 here = os.path.dirname(__file__)
 plugins_path = os.path.join(here, 'assets', 'anaconda-project-plugins')
@@ -113,7 +115,33 @@ def test_package_plugin_invalid_syntax(monkeypatch, tmpdir):
 
 
 def test_prepare_plugin_command(monkeypatch, tmpdir):
-    monkeypatch.setattr(project, 'PLUGINS_SEARCH_PATH', (plugins_path, ))
+    called_with = {}
+
+    def get_plugins_mock():
+        return {'valid_package_plugin': plugin_init_mock}
+
+    class TestTransformer(ArgsTrasformerTemplate):
+        def add_args(self, results, args):
+            return ['--show']
+
+    class TestCmd(CommandTemplate):
+        args_transformer_cls = TestTransformer
+        command = 'custom-cmd'
+
+        def choose_args_and_shell(self, environ, extra_args=None):
+            assert extra_args is None or isinstance(extra_args, list)
+
+            shell = False
+            args = [self.command_with_conda_prefix, 'custom-sub-cmd', '--%s.TESTARG' % self.command]
+
+            return args + extra_args, shell
+
+    def plugin_init_mock(*args, **kws):
+        called_with['args'] = args
+        called_with['kws'] = kws
+        return TestCmd(*args, **kws)
+
+    monkeypatch.setattr(project, 'get_plugins', get_plugins_mock)
 
     def check(dirname):
         project = project_no_dedicated_env(dirname)
