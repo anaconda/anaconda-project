@@ -32,7 +32,7 @@ from anaconda_project.internal.slugify import slugify
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
-from anaconda_project.plugins import get_all as get_plugins
+from anaconda_project import plugins as plugins_api
 
 # These strings are used in the command line options to anaconda-project,
 # so changing them has back-compat consequences.
@@ -853,7 +853,7 @@ class _ConfigCache(object):
         commands_section = project_file.get_value('commands', None)
 
         # from anaconda_project.internal.plugins import registry
-        plugins = get_plugins()
+        plugins = plugins_api.get_all()
         all_known_command_attributes_extented = all_known_command_attributes + \
             tuple(plugins.keys())
         if commands_section is not None and not is_dict(commands_section):
