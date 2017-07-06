@@ -14,7 +14,7 @@ from entrypoints import get_group_named
 
 def get_all(entry_points_group='anaconda_project.plugins'):
     """Return all the plugins registered."""
-    return {name: plugin for name, plugin in sorted(get_group_named(entry_points_group).items())}
+    return {name: plugin.load() for name, plugin in sorted(get_group_named(entry_points_group).items())}
 
 
 class ArgsTrasformerTemplate(_ArgsTransformer):

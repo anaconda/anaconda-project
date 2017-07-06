@@ -116,6 +116,7 @@ def test_package_plugin_invalid_syntax(monkeypatch, tmpdir):
 
 def test_prepare_plugin_command(monkeypatch, tmpdir):
     called_with = {}
+    cmd_name = 'custom-cmd'
 
     def get_plugins_mock():
         return {'valid_package_plugin': plugin_init_mock}
@@ -126,7 +127,7 @@ def test_prepare_plugin_command(monkeypatch, tmpdir):
 
     class TestCmd(CommandTemplate):
         args_transformer_cls = TestTransformer
-        command = 'custom-cmd'
+        command = cmd_name
 
         def choose_args_and_shell(self, environ, extra_args=None):
             assert extra_args is None or isinstance(extra_args, list)
@@ -144,11 +145,10 @@ def test_prepare_plugin_command(monkeypatch, tmpdir):
     monkeypatch.setattr(project, 'get_plugins', get_plugins_mock)
 
     def check(dirname):
-        project = project_no_dedicated_env(dirname)
+        _project = project_no_dedicated_env(dirname)
         environ = minimal_environ()
-        result = prepare_without_interaction(project, environ=environ, command_name='foo')
+        result = prepare_without_interaction(_project, environ=environ, command_name='foo')
 
-        cmd_name = 'custom-cmd'
         cmd_path = join(os.environ['CONDA_PREFIX'], 'bin', cmd_name)
         expected = [cmd_path, 'custom-sub-cmd', '--%s.TESTARG' % cmd_name, '--show']
         assert result.errors == []
