@@ -142,7 +142,7 @@ def test_prepare_plugin_command(monkeypatch, tmpdir):
         called_with['kws'] = kws
         return TestCmd(*args, **kws)
 
-    monkeypatch.setattr(project, 'get_plugins', get_plugins_mock)
+    monkeypatch.setattr(project.plugins_api, 'get_all', get_plugins_mock)
 
     def check(dirname):
         _project = project_no_dedicated_env(dirname)
