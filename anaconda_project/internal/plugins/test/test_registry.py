@@ -143,7 +143,8 @@ def test_prepare_plugin_command(monkeypatch, tmpdir):
         return TestCmd(*args, **kws)
 
     def check(dirname):
-        monkeypatch.setattr(project.plugins_api, 'get_all', get_plugins_mock)
+        # monkeypatch.setattr(project.plugins_api, 'get_all', get_plugins_mock)
+        project.plugins_api.get_all = get_plugins_mock
         _project = project_no_dedicated_env(dirname)
         environ = minimal_environ()
         result = prepare_without_interaction(_project, environ=environ, command_name='foo')
