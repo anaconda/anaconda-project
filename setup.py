@@ -25,18 +25,6 @@ from setup_atomic_replace import atomic_replace
 ROOT = dirname(realpath(__file__))
 VERSION_PY = os.path.join(ROOT, 'anaconda_project', 'version.py')
 
-ASSETS_FOLDER = join(ROOT, 'anaconda_project', 'internal', 'plugins', 'test', 'assets')
-# List of folder to skip when creating missing __init__.py files
-# This is to be used when these folders are not intended to be used
-# as python packages
-SKIP_INIT_FILE_ON_FOLDERS = [
-    ASSETS_FOLDER,
-    join(ASSETS_FOLDER, 'anaconda-project-plugins'),
-    join(ASSETS_FOLDER, 'anaconda-project-plugins', 'invalid_syntax_package_plugin'),
-    join(ASSETS_FOLDER, 'anaconda-project-plugins', 'valid_package_plugin'),
-]
-
-
 def _obtain_version():
     # if we're running on a git checkout we generate
     # version.py and if we're running from a source dist
