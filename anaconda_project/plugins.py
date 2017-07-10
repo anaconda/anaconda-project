@@ -12,34 +12,33 @@ from anaconda_project.project_commands import (_ArgsTransformer, ProjectCommand,
 from entrypoints import get_group_named
 
 
-def _get_entry_points_plugins(entry_points_group):
+def _get_entry_points_plugins(entry_point_group):
     """Return all the entry points plugins registered."""
-    return {name: plugin.load() 
-        for name, plugin in sorted(get_group_named(entry_points_group).items())
-    }
+    return {name: plugin.load() for name, plugin in sorted(get_group_named(entry_point_group).items())}
 
 
-def get_plugins(entry_points_group='anaconda_project.plugins'):
+def get_plugins(entry_point_group='anaconda_project.plugins'):
     """Return all the entry points plugins registered.
-    
+
     Inputs:
-    
+
         - entry_points_group(str): name of the entry point group to look for
             plugins. Default: 'anaconda_project.plugins'
-            
+
     Output:
         (dict) with plugin name as key and plugin generator function as value
-    
     """
-    entry_point_plugins = _get_entry_points_plugins(entry_points_group)
+    entry_point_plugins = _get_entry_points_plugins(entry_point_group)
     return entry_point_plugins
 
 
 class ArgsTrasformerTemplate(_ArgsTransformer):
     """Template class for plugins args trasformers.
+
     Plugins args transformers should subclass it and redefine add_class
     to implement custom arguments mapping.
     """
+
     def __init__(self, command, specs=None):
         """Construct an ArgTransformer for the given command.
 
@@ -55,6 +54,7 @@ class ArgsTrasformerTemplate(_ArgsTransformer):
 
     def add_args(self, results, args):
         """Overwrite this method to add custom arguments transformation.
+
         It should forwarding the arguments that are custom to the
         specific command served by this trasformer (
             i.e., '--anaconda-project-host' --> 'host'

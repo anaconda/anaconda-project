@@ -16,6 +16,7 @@ from anaconda_project import project
 
 from anaconda_project.plugins import CommandTemplate, ArgsTrasformerTemplate
 
+
 def test_prepare_plugin_command(monkeypatch, tmpdir):
     called_with = {}
     cmd_name = 'custom-cmd'
@@ -45,8 +46,11 @@ def test_prepare_plugin_command(monkeypatch, tmpdir):
         return TestCmd(*args, **kws)
 
     def check(dirname):
-        # monkeypatch.setattr(project.plugins_api, 'get_all', get_plugins_mock)
-        project.plugins_api.get_all = get_plugins_mock
+        # do not use monkeypatch
+        # since with_directory_contents_completing_project_file
+        # monkeypatches zipfile as, that is use by entry_points
+        project.plugins_api.get_plugins = get_plugins_mock
+
         _project = project_no_dedicated_env(dirname)
         environ = minimal_environ()
         result = prepare_without_interaction(_project, environ=environ, command_name='foo')
