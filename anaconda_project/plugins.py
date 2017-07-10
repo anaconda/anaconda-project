@@ -9,7 +9,10 @@ import os
 from os.path import join
 from anaconda_project.project_commands import (_ArgsTransformer, ProjectCommand, _http_specs)
 
-from entrypoints import get_group_named
+try:
+    from entrypoints import get_group_named
+except ImportError: # py 2.7
+    from pkg_resources import iter_entry_points as get_group_named
 
 
 def _get_entry_points_plugins(entry_point_group):
