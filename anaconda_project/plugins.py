@@ -12,7 +12,11 @@ from anaconda_project.project_commands import (_ArgsTransformer, ProjectCommand,
 try:
     from entrypoints import get_group_named
 except ImportError:  # py 2.7
-    from pkg_resources import iter_entry_points as get_group_named
+    from pkg_resources import iter_entry_points
+
+    def get_group_named(group_name):
+        """Facade function to align old entry_points api to new one."""
+        return {plugin.name: plugin for plugin in iter_entry_points(group_name)}
 
 
 def _get_entry_points_plugins(entry_point_group):
