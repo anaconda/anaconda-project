@@ -47,7 +47,7 @@ automatically generated files are not listed.
 
 EXAMPLE::
 
-  unzip -l iris.zip
+  $ unzip -l iris.zip
   Archive:  iris.zip
     Length      Date    Time    Name
   ---------  ---------- -----   ----

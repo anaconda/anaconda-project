@@ -11,8 +11,8 @@ Creating a project
 
    EXAMPLE: To create a project directory called "iris"::
 
-     cd /home/alice/mystuff
-     anaconda-project init --directory iris
+     $ cd /home/alice/mystuff
+     $ anaconda-project init --directory iris
      Create directory '/home/alice/mystuff/iris'? y
      Project configuration is in /home/alice/mystuff/iris/anaconda-project.yml
 

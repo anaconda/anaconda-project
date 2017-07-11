@@ -29,7 +29,7 @@ To set up your project to download data:
    file from a GitHub repository into the "iris" project, whose
    path is stored in the environment variable IRIS_CSV::
 
-     anaconda-project add-download IRIS_CSV https://raw.githubusercontent.com/bokeh/bokeh/f9aa6a8caae8c7c12efd32be95ec7b0216f62203/bokeh/sampledata/iris.csv
+     $ anaconda-project add-download IRIS_CSV https://raw.githubusercontent.com/bokeh/bokeh/f9aa6a8caae8c7c12efd32be95ec7b0216f62203/bokeh/sampledata/iris.csv
      File downloaded to /home/alice/mystuff/iris/iris.csv
      Added https://raw.githubusercontent.com/bokeh/bokeh/f9aa6a8caae8c7c12efd32be95ec7b0216f62203/bokeh/sampledata/iris.csv to the project file.
 

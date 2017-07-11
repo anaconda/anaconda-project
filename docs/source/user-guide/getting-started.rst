@@ -28,9 +28,9 @@ To create a project called "clustering_app":
 #. Create a directory called ``clustering_app``, switch to it
    and then initialize the project::
 
-     mkdir clustering_app
-     cd clustering_app
-     anaconda-project init
+     $ mkdir clustering_app
+     $ cd clustering_app
+     $ anaconda-project init
      Project configuration is in /User/Anaconda/My Anaconda Projects/clustering_app/anaconda-project.yml
 
 #. Inside the ``clustering_app`` project directory, create and

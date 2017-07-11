@@ -2,18 +2,16 @@
 Installation
 ============
 
-Anaconda Project is included in Anaconda\ |reg| and Miniconda versions 4.3.1
-and later.
+Anaconda Project is included in Anaconda\ |reg| versions 4.3.1 and later.
 
-To get Project, you must have `conda
-<https://conda.io/docs/install/quick.html>`_ installed.
-
-Then you can install Project with the following command::
+You can also get Project by `installing Miniconda
+<https://conda.io/docs/install/quick.html>`_ and then installing Project with
+this command::
 
   conda install anaconda-project
 
-Test your installation by running ``anaconda-project`` with
-the ``version`` option::
+Test your installation by running ``anaconda-project`` with the ``version``
+option::
 
   anaconda-project --version
 

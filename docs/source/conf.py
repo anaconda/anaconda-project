@@ -16,7 +16,7 @@
 import os
 
 
-# If extensions or modules to document with autodoc are in another directory,
+# If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
@@ -31,7 +31,7 @@ import os
 # needs_sphinx = '1.0'
 
 # Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx, named 'sphinx.ext.*' or your custom
+# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = []
 
@@ -86,7 +86,7 @@ language = None
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = []
 
-# The reST default role, used for this markup: `text` to use for all
+# The reST default role (used for this markup: `text`) to use for all
 # documents.
 #
 # default_role = None
@@ -150,24 +150,24 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 #
 # html_short_title = None
 
-# The name of an image file, relative to this directory to place at the top
+# The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 #
 # html_logo = None
 
-# The name of an image file, relative to this directory to use as a favicon of
+# The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
 #
 # html_favicon = None
 
-# Add any paths that contain custom static files such as style sheets here,
+# Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = []
 
-# Add any extra paths that contain custom files such as robots.txt or
-# .htaccess here, relative to this directory. These files are copied
+# Add any extra paths that contain custom files (such as robots.txt or
+# .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
 #
 # html_extra_path = []
@@ -222,7 +222,7 @@ html_static_path = []
 #
 # html_use_opensearch = ''
 
-# This is the file name suffix for HTML files e.g. ".xhtml".
+# This is the file name suffix for HTML files (e.g. ".xhtml").
 # html_file_suffix = None
 
 # Language to be used for generating the HTML full-text search index.
@@ -238,7 +238,7 @@ html_static_path = []
 #
 # html_search_options = {'type': 'default'}
 
-# The name of a javascript file, relative to the configuration directory that
+# The name of a javascript file (relative to the configuration directory) that
 # implements a search results scorer. If empty, the default will be used.
 #
 # html_search_scorer = 'scorer.js'
@@ -274,7 +274,7 @@ latex_documents = [
      'Continuum Analytics', 'manual'),
 ]
 
-# The name of an image file, relative to this directory to place at the top of
+# The name of an image file (relative to this directory) to place at the top of
 # the title page.
 #
 # latex_logo = None

@@ -71,9 +71,10 @@ to add code files to your project:
    EXAMPLE: To add a command called "hello" that runs
    ``python hello.py``::
 
-     anaconda-project add-command hello "python hello.py"
+     $ anaconda-project add-command hello "python hello.py"
      Is `hello` a (B)okeh app, (N)otebook, or (C)ommand line? C
-     Added a command 'hello' to the project. Run it with `anaconda-project run hello`.
+     Added a command 'hello' to the project. Run it with
+     `anaconda-project run hello`.
 
 #. OPTIONAL: In a text editor, open ``anaconda-project.yml`` to
    see the new command listed in the commands section.
@@ -116,7 +117,7 @@ To list all of the commands in a project::
 
 EXAMPLE::
 
-  anaconda-project list-commands
+  $ anaconda-project list-commands
   Commands for project: /home/alice/mystuff/iris
 
   Name      Description

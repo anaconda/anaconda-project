@@ -16,13 +16,13 @@ environment:
    The packages are installed in your project's environment, so
    you now see package files in your project folder, such as::
 
-    envs/PATH/package1
+     envs/PATH/package1
 
-    NOTE: Replace PATH with the actual path to your package.
+   NOTE: Replace PATH with the actual path to your package.
 
    EXAMPLE: To add the packages Bokeh and pandas::
 
-     anaconda-project add-packages bokeh=0.12 pandas
+     $ anaconda-project add-packages bokeh=0.12 pandas
      conda install: Using Anaconda Cloud api site https://api.anaconda.org
      Using Conda environment /home/alice/mystuff/iris/envs/default.
      Added packages to project file: bokeh=0.12, pandas.
