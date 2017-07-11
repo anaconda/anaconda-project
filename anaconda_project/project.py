@@ -852,7 +852,7 @@ class _ConfigCache(object):
         commands = dict()
         commands_section = project_file.get_value('commands', None)
 
-        plugins = plugins_api.get_plugins()
+        plugins = plugins_api.get_plugins('command_run')
         all_known_command_attributes_extented = all_known_command_attributes + \
             tuple(plugins.keys())
 

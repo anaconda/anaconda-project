@@ -11,7 +11,7 @@ from anaconda_project.project_commands import (_ArgsTransformer, ProjectCommand,
 
 try:
     from entrypoints import get_group_named
-except ImportError: # py 2.7
+except ImportError:  # py 2.7
     from pkg_resources import iter_entry_points as get_group_named
 
 
@@ -20,18 +20,21 @@ def _get_entry_points_plugins(entry_point_group):
     return {name: plugin.load() for name, plugin in sorted(get_group_named(entry_point_group).items())}
 
 
-def get_plugins(entry_point_group='anaconda_project.plugins'):
-    """Return all the entry points plugins registered.
+def get_plugins(plugin_hook_type):
+    """Return all the entry points plugins registered that implement that hook.
 
-    Inputs:
+    The function will return all the plugins that implement the specified
+    type of hook.
 
-        - entry_points_group(str): name of the entry point group to look for
-            plugins. Default: 'anaconda_project.plugins'
+    Args:
+
+        - plugin_hook_type(str): type of hook
 
     Output:
         (dict) with plugin name as key and plugin generator function as value
     """
-    entry_point_plugins = _get_entry_points_plugins(entry_point_group)
+    command_type = 'anaconda_project.plugins.%s' % plugin_hook_type
+    entry_point_plugins = _get_entry_points_plugins(entry_point_group=command_type)
     return entry_point_plugins
 
 
