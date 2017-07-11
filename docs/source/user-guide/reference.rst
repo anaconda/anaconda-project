@@ -2,9 +2,12 @@
 Reference
 =========
 
-The ``anaconda-project`` command works with *project directories*, which can contain scripts, notebooks, data files, and anything that is related to your project.
+The ``anaconda-project`` command works with *project directories*, which can
+contain scripts, notebooks, data files, and anything that is related to your
+project.
 
-Any directory can be made into a project by adding a configuration file named ``anaconda-project.yml``.
+Any directory can be made into a project by adding a configuration file
+named ``anaconda-project.yml``.
 
 ``.yml`` files are in the YAML format and follow the YAML syntax.
 
@@ -64,7 +67,7 @@ The file ``anaconda-project.yml`` tells conda how to run your project:
       windows: "python %PROJECT_DIR%\analyze.py"
 
 There are separate command lines for Unix shells (Linux and
-Mac) and for Windows. You may target only one platform, and
+macOS) and for Windows. You may target only one platform, and
 are not required to provide command lines for other platforms.
 
 When you send your project to someone else, they can type
