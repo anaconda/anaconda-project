@@ -116,8 +116,7 @@ NOTE: Replace VARIABLE with the name of the variable that you
 want to add. Replace ``_encrypt-flag`` with ``_PASSWORD``,
 ``_SECRET`` or ``_SECRET_KEY``.
 
-EXAMPLE: To create an an encrypted variable called
-``DB_PASSWORD``::
+EXAMPLE: To create an encrypted variable called ``DB_PASSWORD``::
 
     anaconda-project add-variable DB_PASSWORD
 
@@ -138,9 +137,9 @@ NOTE: Replace ``default_value`` with the default value to be set
 and ``VARIABLE`` with the name of the variable to create.
 
 EXAMPLE: To add the variable ``COLUMN_TO_SHOW`` with the default
-value ``pedal_width``::
+value ``petal_width``::
 
-  anaconda-project add-variable --default=pedal_width COLUMN_TO_SHOW
+  anaconda-project add-variable --default=petal_width COLUMN_TO_SHOW
 
 If you or a user sets the variable in
 ``anaconda-project-local.yml``, the default is ignored. However,
