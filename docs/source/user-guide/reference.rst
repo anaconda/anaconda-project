@@ -2,9 +2,12 @@
 Reference
 =========
 
-The ``anaconda-project`` command works with *project directories*, which can contain scripts, notebooks, data files, and anything that is related to your project.
+The ``anaconda-project`` command works with *project directories*, which can
+contain scripts, notebooks, data files, and anything that is related to your
+project.
 
-Any directory can be made into a project by adding a configuration file named ``anaconda-project.yml``.
+Any directory can be made into a project by adding a configuration file
+named ``anaconda-project.yml``.
 
 ``.yml`` files are in the YAML format and follow the YAML syntax.
 
@@ -64,7 +67,7 @@ The file ``anaconda-project.yml`` tells conda how to run your project:
       windows: "python %PROJECT_DIR%\analyze.py"
 
 There are separate command lines for Unix shells (Linux and
-Mac) and for Windows. You may target only one platform, and
+macOS) and for Windows. You may target only one platform, and
 are not required to provide command lines for other platforms.
 
 When you send your project to someone else, they can type
@@ -596,7 +599,7 @@ Variables that are always set
 
 ``anaconda-project`` ensures that the following variables are always set:
 
- * ``KAPSEL_DIR`` is set to the top level directory of your project
+ * ``PROJECT_DIR`` is set to the top level directory of your project
  * ``CONDA_ENV_PATH`` is set to the filesystem location of the current conda environment
  * ``PATH`` includes the binary directory from the current conda environment
 
@@ -712,8 +715,8 @@ case, then the two are consolidated.
 
 EXAMPLE: If your zip file contains a single directory
 ``foo`` with file ``bar`` inside that, and you specify downloading
-to filename ``foo``, then you'll get ``KAPSEL_DIR/foo/bar``, not
-``KAPSEL_DIR/foo/foo/bar``.
+to filename ``foo``, then you'll get ``PROJECT_DIR/foo/bar``, not
+``PROJECT_DIR/foo/foo/bar``.
 
 
 Describing the Project
