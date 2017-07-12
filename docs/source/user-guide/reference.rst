@@ -599,7 +599,7 @@ Variables that are always set
 
 ``anaconda-project`` ensures that the following variables are always set:
 
- * ``KAPSEL_DIR`` is set to the top level directory of your project
+ * ``PROJECT_DIR`` is set to the top level directory of your project
  * ``CONDA_ENV_PATH`` is set to the filesystem location of the current conda environment
  * ``PATH`` includes the binary directory from the current conda environment
 
@@ -715,8 +715,8 @@ case, then the two are consolidated.
 
 EXAMPLE: If your zip file contains a single directory
 ``foo`` with file ``bar`` inside that, and you specify downloading
-to filename ``foo``, then you'll get ``KAPSEL_DIR/foo/bar``, not
-``KAPSEL_DIR/foo/foo/bar``.
+to filename ``foo``, then you'll get ``PROJECT_DIR/foo/bar``, not
+``PROJECT_DIR/foo/foo/bar``.
 
 
 Describing the Project

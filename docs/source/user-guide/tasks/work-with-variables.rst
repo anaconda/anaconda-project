@@ -14,17 +14,11 @@ automatically:
 
 * PROJECT_DIR specifies the location of your project directory.
 
-* KAPSEL_DIR is set to the top level directory of your project.
-
 * CONDA_ENV_PATH is set to the file system location of the
   current conda environment.
 
 * PATH includes the binary directory from the current conda
   environment.
-
-[@electronwill] In the preceding list, PROJECT_DIR and KAPSEL_DIR
-came from different pages in the original files. They seem to
-have the same definition. Should KAPESEL_DIR be deleted?
 
 These variables always exist and can always be used in your
 Python code.
