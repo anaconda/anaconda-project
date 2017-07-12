@@ -80,6 +80,9 @@ differently from other custom variables. See :ref:`encrypted-vars`.
 #. OPTIONAL: In a text editor, open ``anaconda-project.yml`` to
    see the new variable listed in the variables section.
 
+#. OPTIONAL: Use the command ``anaconda-project list-variables``
+   to see the new variables listed.
+
 #. Include the new variable in your script in the same way as you
    would for any other variable.
 

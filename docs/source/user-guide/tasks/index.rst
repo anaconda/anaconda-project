@@ -5,14 +5,13 @@ Tasks
 .. toctree::
    :maxdepth: 1
 
-   create-project.rst
-   download-data.rst
-   work-with-packages.rst
-   work-with-commands.rst
-   work-with-variables.rst
-   run-project.rst
-   create-project-archive.rst
-   share-project.rst
-   clean-project.rst
-   prepare-project.rst
-   
+   create-project
+   download-data
+   work-with-commands
+   work-with-packages
+   work-with-variables
+   run-project
+   clean-project
+   prepare-project
+   create-project-archive
+   share-project

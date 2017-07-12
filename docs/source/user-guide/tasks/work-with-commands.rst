@@ -13,7 +13,7 @@ directory.
 Adding a command to a project
 =============================
 
-A project contains some sort of code, for example, Python files,
+A project contains some sort of code, such as Python files,
 which have a ``.py`` extension.
 
 You could run your Python code with the command::
@@ -30,7 +30,7 @@ to add code files to your project:
 
 #. Add a command to run your file::
 
-    anaconda-project add-command name "command"
+     anaconda-project add-command name "command"
 
    NOTE: Replace ``name`` with a name of your choosing for the
    command. Replace ``command`` with the command string.
@@ -52,21 +52,10 @@ to add code files to your project:
 
 #. When prompted for the type of command, type:
 
-   * ``B`` if the command string is a Bokeh app or other app to
-     run.
+   * ``B`` if the command string is a Bokeh app to run.
    * ``N`` if the command string is a Notebook to run.
-   * ``C`` if the command string is a Code file to run, such as
-     a Python .py file.
-
-   [@electronwill: I tried to provide instructions to clarify when
-   the user would select each type, but I'm not sure they're 100%
-   correct. E.g., Is ``N`` the correct type for an IPython
-   notebook? If so, is generic "notebook" correct for ``N`` or
-   should this say "IPython notebook"? That is, is ``N`` only for
-   IPython notebooks or are there other types of notebooks? Can
-   ``C`` be an actual command-line command or does it have to be
-   a code file? If a file, does it have to be Python (.py) or can
-   it be a different file type?]
+   * ``C`` if the command string is a Command line instruction to run, such as
+     using Python to run a Python .py file.
 
    EXAMPLE: To add a command called "hello" that runs
    ``python hello.py``::

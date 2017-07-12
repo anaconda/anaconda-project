@@ -43,8 +43,7 @@ Benefits of Project
  * You can run ``os.getenv("DB_PASSWORD")`` and configure Project 
    to prompt the user for any missing credentials. This allows 
    you to avoid including your personal passwords or secret keys 
-   in your code just because it is too complicated to do 
-   otherwise.
+   in your code.
 
  * Project improves reproducibility. Someone who wants to 
    reproduce your analysis can ensure that they have the same 
