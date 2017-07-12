@@ -32,6 +32,7 @@ from anaconda_project.internal.slugify import slugify
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
+from anaconda_project import plugins as plugins_api
 
 # These strings are used in the command line options to anaconda-project,
 # so changing them has back-compat consequences.
@@ -850,6 +851,11 @@ class _ConfigCache(object):
         first_command_name = None
         commands = dict()
         commands_section = project_file.get_value('commands', None)
+
+        # from anaconda_project.internal.plugins import registry
+        plugins = plugins_api.get_all()
+        all_known_command_attributes_extented = all_known_command_attributes + \
+            tuple(plugins.keys())
         if commands_section is not None and not is_dict(commands_section):
             _file_problem(problems, project_file,
                           "'commands:' section should be a dictionary from command names to attributes, not %r" %
@@ -872,7 +878,7 @@ class _ConfigCache(object):
                     failed = True
                     continue
 
-                _unknown_field_suggestions(project_file, problems, attrs, all_known_command_attributes)
+                _unknown_field_suggestions(project_file, problems, attrs, all_known_command_attributes_extented)
 
                 if 'description' in attrs and not is_string(attrs['description']):
                     _file_problem(problems, project_file,
@@ -907,13 +913,18 @@ class _ConfigCache(object):
                     copied_attrs['env_spec'] = self.default_env_spec_name
 
                 command_types = []
-                for attr in ALL_COMMAND_TYPES:
+                selected_project_command = ProjectCommand
+                for attr in ALL_COMMAND_TYPES + tuple(plugins.keys()):
                     if attr not in copied_attrs:
                         continue
+                    else:
 
-                    # be sure we add this even if the command is broken, since it's
-                    # confusing to say "does not have a command line in it" below
-                    # if the issue is that the command line is broken.
+                        if attr in plugins:
+                            selected_project_command = plugins[attr]
+
+                            # be sure we add this even if the command is broken, since it's
+                            # confusing to say "does not have a command line in it" below
+                            # if the issue is that the command line is broken.
                     command_types.append(attr)
 
                     if not is_string(copied_attrs[attr]):
@@ -937,7 +948,7 @@ class _ConfigCache(object):
 
                 # note that once one command fails, we don't add any more
                 if not failed:
-                    commands[name] = ProjectCommand(name=name, attributes=copied_attrs)
+                    commands[name] = selected_project_command(name=name, attributes=copied_attrs)
 
         self._verify_notebook_commands(commands, problems, requirements, project_file)
 
@@ -1438,6 +1449,7 @@ class Project(object):
             a CommandExecInfo instance
         """
         command = self.default_command
+
         if command is None:
             return None
         else:

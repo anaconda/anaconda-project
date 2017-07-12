@@ -40,7 +40,6 @@ def run_command(project_dir, ui_mode, conda_environment, command_name, extra_com
     environ = None
 
     command = _command_from_name(project, command_name)
-
     result = prepare_with_ui_mode_printing_errors(project,
                                                   ui_mode=ui_mode,
                                                   env_spec_name=conda_environment,

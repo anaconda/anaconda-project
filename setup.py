@@ -17,14 +17,13 @@ import re
 import shutil
 import subprocess
 import sys
-from os.path import dirname, realpath
+from os.path import dirname, realpath, join
 from distutils.core import setup, Command
 from setuptools.command.test import test as TestCommand
 from setup_atomic_replace import atomic_replace
 
 ROOT = dirname(realpath(__file__))
 VERSION_PY = os.path.join(ROOT, 'anaconda_project', 'version.py')
-
 
 def _obtain_version():
     # if we're running on a git checkout we generate
@@ -234,11 +233,13 @@ class AllTestsCommand(TestCommand):
             for root, dirs, files in os.walk(os.path.join(ROOT, srcdir)):
                 dirs[:] = [d for d in dirs if not (d[0] == '.' or d == '__pycache__')]
                 for d in dirs:
-                    init_py = os.path.join(root, d, "__init__.py")
-                    if not os.path.exists(init_py):
-                        print("Creating " + init_py)
-                        with codecs.open(init_py, 'w', 'utf-8') as handle:
-                            handle.flush()
+                    folder = os.path.join(root, d)
+                    if folder not in SKIP_INIT_FILE_ON_FOLDERS:
+                        init_py = os.path.join(folder, "__init__.py")
+                        if not os.path.exists(init_py):
+                            print("Creating " + init_py)
+                            with codecs.open(init_py, 'w', 'utf-8') as handle:
+                                handle.flush()
 
     def _headerize_file(self, path):
         with codecs.open(path, 'r', 'utf-8') as file:
