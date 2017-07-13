@@ -49,16 +49,12 @@ class ArgsTrasformerTemplate(_ArgsTransformer):
     to implement custom arguments mapping.
     """
 
-    def __init__(self, command, specs=None):
+    def __init__(self, command):
         """Construct an ArgTransformer for the given command.
 
         Args:
             command (ProjectCommand): command that maps to the ArgsTransformer
         """
-        # TODO: document specs
-        # TODO: decide the best way to let users define specs for their
-        #       transformers! Most likely specs should go on the command
-        #       itself?
         super(ArgsTrasformerTemplate, self).__init__(_http_specs)
         self.command = command
 
@@ -71,7 +67,7 @@ class ArgsTrasformerTemplate(_ArgsTransformer):
         )
 
         Inputs:
-            - results [list(tuples)]: list of 2 element tuples the following:
+            - results [list(tuples)]: list of 2 element tuples (option, values):
                            * option (str): name of the option
                             * values (lst(str)): list of the values passed
                                         for the option
