@@ -82,7 +82,14 @@ class ArgsTrasformerTemplate(_ArgsTransformer):
 class CommandTemplate(ProjectCommand):
     """Represents a command from the project file."""
 
+    # ArgsTransformer to be used to parse args before forwarding them
+    # to the actual command args and shell builder (choose_args_and_shell)
     args_transformer_cls = None
+
+    # Base command to be executed. This should be overwritten by the
+    # child class. I.e. command=`python` for a hypotetical python
+    # command
+    command = None
 
     def __init__(self, name, attributes):
         """Construct a command with the given attributes.
