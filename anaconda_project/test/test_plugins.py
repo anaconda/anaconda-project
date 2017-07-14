@@ -20,6 +20,7 @@ from anaconda_project.plugins import CommandTemplate, ArgsTrasformerTemplate
 def test_prepare_plugin_command(monkeypatch, tmpdir):
     called_with = {}
     cmd_name = 'custom-cmd'
+    assert hasattr(project.plugins_api, 'get_plugins')
 
     def get_plugins_mock(cmd_type):
         return {'valid_package_plugin': plugin_init_mock}

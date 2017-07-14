@@ -32,7 +32,7 @@ from anaconda_project.internal.slugify import slugify
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
-from anaconda_project import plugins as plugins_api
+from anaconda_project.internal import plugins as plugins_api
 
 # These strings are used in the command line options to anaconda-project,
 # so changing them has back-compat consequences.
@@ -853,7 +853,7 @@ class _ConfigCache(object):
         commands_section = project_file.get_value('commands', None)
 
         plugins = plugins_api.get_plugins('command_run')
-        all_known_command_attributes_extented = all_known_command_attributes + \
+        all_known_command_attributes_extended = all_known_command_attributes + \
             tuple(plugins.keys())
 
         if commands_section is not None and not is_dict(commands_section):
@@ -878,7 +878,7 @@ class _ConfigCache(object):
                     failed = True
                     continue
 
-                _unknown_field_suggestions(project_file, problems, attrs, all_known_command_attributes_extented)
+                _unknown_field_suggestions(project_file, problems, attrs, all_known_command_attributes_extended)
 
                 if 'description' in attrs and not is_string(attrs['description']):
                     _file_problem(problems, project_file,
