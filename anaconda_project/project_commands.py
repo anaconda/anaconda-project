@@ -408,6 +408,8 @@ class ProjectCommand(object):
             description = self._attributes.get('windows', None)
         if description is None:
             description = self._attributes.get('conda_app_entry', None)
+        if description is None:
+            description = getattr(self, 'command', None)
         # we should have validated that there was a command in here
         assert description is not None
         return description

@@ -31,6 +31,7 @@ from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_
 from anaconda_project.test.fake_server import fake_server
 import anaconda_project.internal.keyring as keyring
 import anaconda_project.internal.conda_api as conda_api
+import anaconda_project.internal.plugins as plugins_api
 
 
 def test_create(monkeypatch):
@@ -3692,6 +3693,10 @@ def test_archive_cannot_write_destination_path(monkeypatch):
             raise IOError("NOPE")
 
         monkeypatch.setattr('zipfile.ZipFile', mock_ZipFile)
+
+        # need to mock plugins since entry_points uses zipfile.ZipFile that
+        # we are mocking for this test
+        monkeypatch.setattr(plugins_api, 'get_plugins', lambda x='fake': {})
 
         def check(dirname):
             # be sure we ignore this
