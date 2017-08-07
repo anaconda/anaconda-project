@@ -8,6 +8,7 @@
 from __future__ import absolute_import, print_function
 
 import sys
+import platform
 from os import environ, execv
 from os.path import join, exists
 
@@ -263,5 +264,10 @@ def run_on_bootstrap_env(project):
     Input:
         project(project.Project): project
     """
-    anaconda_project_exec = join(project.bootstrap_env_prefix, 'bin', 'anaconda-project')
+    if platform.system() == 'Windows':
+        script_dir = "Scripts"
+    else:
+        script_dir = "bin"
+
+    anaconda_project_exec = join(project.bootstrap_env_prefix, script_dir, 'anaconda-project')
     execv(anaconda_project_exec, sys.argv)
