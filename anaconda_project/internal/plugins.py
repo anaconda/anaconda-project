@@ -35,4 +35,5 @@ def get_plugins(plugin_hook_type):
     """
     command_type = 'anaconda_project.plugins.%s' % plugin_hook_type
     entry_point_plugins = _get_entry_points_plugins(entry_point_group=command_type)
+
     return entry_point_plugins

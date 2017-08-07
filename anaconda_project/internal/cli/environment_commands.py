@@ -241,25 +241,27 @@ def running_in_bootstrap_env(project_dir):
         bool: True if anaconda-project is running from the bootstrap env related
             to project_dir, False otherwise
     """
-    bootstrap_env_prefix = join(project_dir, 'envs', 'anaconda-project-bootstrap')
+    bootstrap_env_prefix = join(project_dir, 'envs', 'bootstrap-env')
     return environ['CONDA_PREFIX'] == bootstrap_env_prefix
 
 
-def create_bootstrap_env(project_dir):
+def create_bootstrap_env(project):
     """Create a project bootstrap env, if it doesn't exist.
 
     Input:
-        project_dir(str): path of the project
+        project(project.Project): project
     """
-    bootstrap_env_prefix = join(project_dir, 'envs', 'anaconda-project-bootstrap')
-
-    if not exists(bootstrap_env_prefix):
-        command_line_packages = {'anaconda-project', 'python'}
-        channels = {}
-        conda_api.create(prefix=bootstrap_env_prefix, pkgs=list(command_line_packages), channels=channels)
+    if not exists(project.bootstrap_env_prefix):
+        env_spec = project.env_specs['bootstrap-env']
+        command_line_packages = list(env_spec.conda_packages + env_spec.pip_packages)
+        conda_api.create(prefix=project.bootstrap_env_prefix, pkgs=command_line_packages, channels=env_spec.channels)
 
 
-def run_on_bootstrap_env(project_dir):
-    bootstrap_env_prefix = join(project_dir, 'envs', 'anaconda-project-bootstrap')
-    anaconda_project_exec = join(bootstrap_env_prefix, 'bin', 'anaconda-project')
+def run_on_bootstrap_env(project):
+    """Run the current command in a project bootstrap env.
+
+    Input:
+        project(project.Project): project
+    """
+    anaconda_project_exec = join(project.bootstrap_env_prefix, 'bin', 'anaconda-project')
     execv(anaconda_project_exec, sys.argv)

@@ -507,7 +507,7 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
                 # the status from the CondaEnvRequirement. Possibly
                 # we sometimes do a prepare with no CondaEnvRequirement?
                 # but doing one with two wouldn't make sense afaik.
-                
+
                 # TODO: Should we just remove this? (considering the case of bootstrap env)
                 # assert current_env_spec_name is None
                 current_env_spec_name = status.env_spec_name

@@ -41,8 +41,8 @@ def run_command(project_dir, ui_mode, conda_environment, command_name, extra_com
 
     if project.has_bootstrap_env_spec and not project.is_running_in_bootstrap_env:
         print("Project should be ran by bootstrap env... fixing.")
-        create_bootstrap_env(project_dir)
-        run_on_bootstrap_env(project_dir)
+        create_bootstrap_env(project)
+        run_on_bootstrap_env(project)
     else:
         environ = None
         command = _command_from_name(project, command_name)
