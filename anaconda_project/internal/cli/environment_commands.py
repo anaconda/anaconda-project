@@ -8,10 +8,13 @@
 from __future__ import absolute_import, print_function
 
 import sys
+from os import environ, execv
+from os.path import join, exists
 
 from anaconda_project.internal.cli.project_load import load_project
 from anaconda_project import project_ops
 from anaconda_project.internal.cli import console_utils
+from anaconda_project.internal import conda_api
 
 
 def _handle_status(status, success_message=None):
@@ -226,3 +229,37 @@ def main_update(args):
 def main_unlock(args):
     """Unlock dependency versions and return exit status code."""
     return unlock(args.directory, args.name)
+
+
+def running_in_bootstrap_env(project_dir):
+    """Check if anaconda-project is running inside a project bootstrap env.
+
+    Input:
+        - project_dir(str): path of the project
+
+    Output:
+        bool: True if anaconda-project is running from the bootstrap env related
+            to project_dir, False otherwise
+    """
+    bootstrap_env_prefix = join(project_dir, 'envs', 'anaconda-project-bootstrap')
+    return environ['CONDA_PREFIX'] == bootstrap_env_prefix
+
+
+def create_bootstrap_env(project_dir):
+    """Create a project bootstrap env, if it doesn't exist.
+
+    Input:
+        project_dir(str): path of the project
+    """
+    bootstrap_env_prefix = join(project_dir, 'envs', 'anaconda-project-bootstrap')
+
+    if not exists(bootstrap_env_prefix):
+        command_line_packages = {'anaconda-project', 'python'}
+        channels = {}
+        conda_api.create(prefix=bootstrap_env_prefix, pkgs=list(command_line_packages), channels=channels)
+
+
+def run_on_bootstrap_env(project_dir):
+    bootstrap_env_prefix = join(project_dir, 'envs', 'anaconda-project-bootstrap')
+    anaconda_project_exec = join(bootstrap_env_prefix, 'bin', 'anaconda-project')
+    execv(anaconda_project_exec, sys.argv)

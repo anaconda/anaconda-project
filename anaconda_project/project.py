@@ -10,12 +10,14 @@ from __future__ import absolute_import
 import contextlib
 from copy import deepcopy, copy
 import os
+from os.path import join
 
 from anaconda_project.env_spec import (EnvSpec, _anaconda_default_env_spec, _find_importable_spec,
                                        _find_out_of_sync_importable_spec)
 from anaconda_project.requirements_registry.registry import RequirementsRegistry
 from anaconda_project.requirements_registry.requirement import EnvVarRequirement
-from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.requirements.conda_env import (CondaEnvRequirement,
+                                                                           CondaBootstrapEnvRequirement)
 from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
 from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
 from anaconda_project.project_commands import (ProjectCommand, all_known_command_attributes)
@@ -842,6 +844,10 @@ class _ConfigCache(object):
         if _fatal_problem(problems):
             return
 
+        if 'bootstrap-env' in self.env_specs:
+            requirement = CondaBootstrapEnvRequirement(registry=self.registry, env_specs=self.env_specs)
+            self._add_requirement(requirements, self.global_base_env_spec, requirement)
+
         requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)
         self._add_requirement(requirements, self.global_base_env_spec, requirement)
 
@@ -1103,6 +1109,11 @@ class _ConfigCache(object):
                                          only_a_suggestion=True)
                 problems.append(problem)
 
+    @property
+    def has_bootstrap_env_spec(self):
+        """Return True if bootstrap-env is in env_specs, False otherwise."""
+        return 'bootstrap-env' in self.env_specs
+
 
 class Project(object):
     """Represents the information we've inferred about a project.
@@ -1193,6 +1204,7 @@ class Project(object):
             return req.env_var
 
         env_spec = self.env_specs.get(env_spec_name)
+
         if env_spec is None:
             # this happens if there was a problem parsing the project
             return []
@@ -1573,3 +1585,18 @@ class Project(object):
         """
         self.project_file.use_changes_without_saving()
         self.lock_file.use_changes_without_saving()
+
+    @property
+    def bootstrap_env_prefix(self):
+        """Fullpath to bootstrap environment prefix."""
+        return join(self._directory_path, 'envs', 'anaconda-project-bootstrap')
+
+    @property
+    def is_running_in_bootstrap_env(self):
+        """Return True if anaconda-project is running inside a project bootstrap env False otherwise."""
+        return os.environ['CONDA_PREFIX'] == self.bootstrap_env_prefix
+
+    @property
+    def has_bootstrap_env_spec(self):
+        """Return True if bootstrap-env is in env_specs, False otherwise."""
+        return self._config_cache.has_bootstrap_env_spec
