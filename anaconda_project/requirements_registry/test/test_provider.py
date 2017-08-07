@@ -38,8 +38,8 @@ def test_find_provider_by_class_name():
 
 def test_find_provider_by_class_name_not_found():
     registry = RequirementsRegistry()
-    found = registry.find_provider_by_class_name(class_name="NotAThing")
-    assert found is None
+    with pytest.raises(ValueError):
+        found = registry.find_provider_by_class_name(class_name="NotAThing")
 
 
 def test_provider_default_method_implementations():
