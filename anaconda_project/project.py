@@ -1589,7 +1589,7 @@ class Project(object):
     @property
     def bootstrap_env_prefix(self):
         """Fullpath to bootstrap environment prefix."""
-        return join(self._directory_path, 'envs', 'anaconda-project-bootstrap')
+        return join(self._directory_path, 'envs', 'bootstrap-env')
 
     @property
     def is_running_in_bootstrap_env(self):
