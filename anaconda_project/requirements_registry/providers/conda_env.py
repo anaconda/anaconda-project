@@ -247,81 +247,74 @@ class CondaBootstrapEnvProvider(EnvVarProvider):
         """Override superclass to not require ourselves."""
         return self.missing_env_vars_to_configure(requirement, environ, local_state_file)
 
-    # def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
-    #     """Override superclass to add a choice to create a project-scoped environment."""
-    #     assert 'PROJECT_DIR' in environ
-    #     project_dir = environ['PROJECT_DIR']
+    def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
+        """Override superclass to add a choice to create a project-scoped environment."""
+        assert 'PROJECT_DIR' in environ
+        project_dir = environ['PROJECT_DIR']
 
-    #     if overrides.env_spec_name is not None:
-    #         # short-circuit this whole party
-    #         env = requirement.env_specs.get(overrides.env_spec_name)
-    #         # future: it should be possible to override the env spec without using the
-    #         # default-created project-scoped env.
-    #         config = dict(source='project', env_name=overrides.env_spec_name, value=env.path(project_dir))
-    #         return config
+        if overrides.env_spec_name is not None:
+            # short-circuit this whole party
+            env = requirement.env_specs.get(overrides.env_spec_name)
+            # future: it should be possible to override the env spec without using the
+            # default-created project-scoped env.
+            config = dict(source='project', env_name=overrides.env_spec_name, value=env.path(project_dir))
+            return config
 
-    #     config = super(CondaBootstrapEnvProvider, self).read_config(requirement, environ, local_state_file,
-    #                                                        default_env_spec_name, overrides)
+        config = super(CondaBootstrapEnvProvider, self).read_config(requirement, environ, local_state_file,
+                                                           default_env_spec_name, overrides)
 
-    #     assert 'source' in config
+        assert 'source' in config
 
-    #     # we don't support a default here because it would
-    #     # need a hardcoded path which the anaconda-project.yml author
-    #     # would have no way of providing. Fortunately there's
-    #     # no syntax in anaconda-project.yml that should result in setting
-    #     # a default.
-    #     assert config['source'] != 'default'
+        if config['source'] == 'unset':
+            # if nothing is selected, default to project mode
+            # because we don't have a radio button in the UI for
+            # "do nothing" right now.
+            config['source'] = 'project'
 
-    #     if config['source'] == 'unset':
-    #         # if nothing is selected, default to project mode
-    #         # because we don't have a radio button in the UI for
-    #         # "do nothing" right now.
-    #         config['source'] = 'project'
+        # if we're supposed to inherit the environment, we don't want to look at
+        # anything else. This should always get rid of 'environ' source.
+        if local_state_file.get_value('inherit_environment', default=False) and overrides.inherited_env is not None:
+            config['source'] = 'inherited'
+            config['value'] = overrides.inherited_env
 
-    #     # if we're supposed to inherit the environment, we don't want to look at
-    #     # anything else. This should always get rid of 'environ' source.
-    #     if local_state_file.get_value('inherit_environment', default=False) and overrides.inherited_env is not None:
-    #         config['source'] = 'inherited'
-    #         config['value'] = overrides.inherited_env
+        # convert 'environ' to 'project' when needed... this would
+        # happen if you keep the default 'project' choice, so
+        # there's nothing in anaconda-project-local.yml
+        if config['source'] == 'environ':
+            environ_value = config['value']
+            project_dir = environ['PROJECT_DIR']
+            environ_value_is_project_specific = False
+            for env in requirement.env_specs.values():
+                if env.path(project_dir) == environ_value:
+                    environ_value_is_project_specific = True
+            assert environ_value_is_project_specific
+            config['source'] = 'project'
 
-    #     # convert 'environ' to 'project' when needed... this would
-    #     # happen if you keep the default 'project' choice, so
-    #     # there's nothing in anaconda-project-local.yml
-    #     if config['source'] == 'environ':
-    #         environ_value = config['value']
-    #         project_dir = environ['PROJECT_DIR']
-    #         environ_value_is_project_specific = False
-    #         for env in requirement.env_specs.values():
-    #             if env.path(project_dir) == environ_value:
-    #                 environ_value_is_project_specific = True
-    #         assert environ_value_is_project_specific
-    #         config['source'] = 'project'
+        # we should have changed 'environ' to the specific source; since for conda envs
+        # we ignore the initial environ value, we always have to track our value in
+        assert config['source'] != 'environ'
 
-    #     # we should have changed 'environ' to the specific source; since for conda envs
-    #     # we ignore the initial environ value, we always have to track our value in
-    #     assert config['source'] != 'environ'
+        # be sure we don't get confused by alternate ways to spell the path
+        if 'value' in config:
+            config['value'] = os.path.normpath(config['value'])
 
-    #     # be sure we don't get confused by alternate ways to spell the path
-    #     if 'value' in config:
-    #         config['value'] = os.path.normpath(config['value'])
+        config['env_name'] = default_env_spec_name
 
-    #     config['env_name'] = default_env_spec_name
+        assert config['env_name'] == 'bootstrap-env'
 
-    #     if 'value' in config:
-    #         for env in requirement.env_specs.values():
-    #             if config['value'] == env.path(project_dir):
-    #                 config['env_name'] = env.name
-    #                 if config['source'] == 'variables':
-    #                     config['source'] = 'project'
-    #     elif config['source'] == 'project':
-    #         env = requirement.env_specs.get(config['env_name'])
-    #         config['value'] = env.path(project_dir)
+        if 'value' in config:
+            for env in requirement.env_specs.values():
+                if config['value'] == env.path(project_dir):
+                    config['env_name'] = env.name
+                    if config['source'] == 'variables':
+                        config['source'] = 'project'
+        elif config['source'] == 'project':
+            env = requirement.env_specs.get(config['env_name'])
+            config['value'] = env.path(project_dir)
 
-    #     assert 'env_name' in config
+        assert 'env_name' in config
 
-    #     # print("read_config " + repr(config))
-
-    #     return config
+        return config
 
     def set_config_values_as_strings(self, requirement, environ, local_state_file, default_env_spec_name, overrides,
                                      values):
@@ -408,7 +401,7 @@ class CondaBootstrapEnvProvider(EnvVarProvider):
                                   environ,
                                   local_state_file,
                                   # future: pass in this default_env_spec_name
-                                  default_env_spec_name='default',
+                                  default_env_spec_name='bootstrap-env',
                                   overrides=overrides)
 
         env_path = config.get('value', None)
