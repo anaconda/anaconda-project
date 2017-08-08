@@ -124,7 +124,7 @@ class CondaBootstrapEnvRequirement(CondaEnvRequirement):
         assert 'source' in config
 
         # we expect the bootstrap env to not be the env running the cmd
-        assert config['source'] in ['unset', 'environ']
+        assert config['source'] in ['unset', 'environ', 'project']
 
         env_name = 'bootstrap-env'
         prefix = join(environ['PROJECT_DIR'], 'envs', env_name)
