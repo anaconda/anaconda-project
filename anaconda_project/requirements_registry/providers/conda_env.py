@@ -261,7 +261,7 @@ class CondaBootstrapEnvProvider(EnvVarProvider):
             return config
 
         config = super(CondaBootstrapEnvProvider, self).read_config(requirement, environ, local_state_file,
-                                                           default_env_spec_name, overrides)
+                                                                    default_env_spec_name, overrides)
 
         assert 'source' in config
 

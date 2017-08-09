@@ -20,7 +20,8 @@ from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.project import Project
 from anaconda_project import provide
 from anaconda_project.requirements_registry.registry import RequirementsRegistry
-from anaconda_project.requirements_registry.requirements.conda_env import CondaBootstrapEnvRequirement, CondaEnvRequirement
+from anaconda_project.requirements_registry.requirements.conda_env import (CondaBootstrapEnvRequirement,
+                                                                           CondaEnvRequirement)
 from anaconda_project.requirements_registry.providers.conda_env import CondaBootstrapEnvProvider
 
 if platform.system() == 'Windows':
@@ -55,9 +56,7 @@ def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
                                                                       "bin") + os.pathsep + "foo" + os.pathsep + "bar"
         else:
             expected_new_path = os.path.join(expected_env, script_dir) + os.pathsep + "foo" + os.pathsep + "bar"
-        expected = dict(PROJECT_DIR=project.directory_path, PATH=expected_new_path, 
-            BOOTSTRAP_ENV_PREFIX=expected_env
-        )
+        expected = dict(PROJECT_DIR=project.directory_path, PATH=expected_new_path, BOOTSTRAP_ENV_PREFIX=expected_env)
         conda_api.environ_set_prefix(expected, expected_env)
 
         expected == result.environ
@@ -88,7 +87,8 @@ def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
         assert status.errors == []
         assert not os.path.exists(expected_env)
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   bootstrap-env:
     packages:
@@ -109,10 +109,10 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
         assert not result
         # expected_env_path = os.path.join(dirname, "envs", "default")
         bootstrap_env_path = os.path.join(dirname, "envs", "bootstrap-env")
-        for err in [ 
+        for err in [
             ('missing requirement to run this project: ' +
              'The project needs a Conda bootstrap environment containing all required packages.'),
-            "  '%s' doesn't look like it contains a Conda environment yet." % bootstrap_env_path,
+                "  '%s' doesn't look like it contains a Conda environment yet." % bootstrap_env_path,
         ]:
             assert err in result.errors
 
@@ -120,11 +120,12 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
         status = unprepare(project, result)
         assert status
         assert status.errors == []
-        
-        #todo: would be good to understand the different message got with a "normal" env
+
+        # todo: would be good to understand the different message got with a "normal" env
         assert status.status_description == ("Success.")
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   bootstrap-env:
     packages:
@@ -164,7 +165,7 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
 
         prefix = result.environ[conda_env_var]
         installed = conda_api.installed(prefix)
-        
+
         for pkg in deps:
             assert pkg in installed
 
@@ -204,8 +205,10 @@ def _conda_env_status(prepare_context):
             return status
     raise AssertionError("no CondaBootstrapEnvProvider found")
 
+
 def test_configure_inherited(monkeypatch):
     """Test configure from empty env is the same as before and does not have a bootstrap env req"""
+
     def mock_conda_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         from anaconda_project.internal.makedirs import makedirs_ok_if_exists
         metadir = os.path.join(prefix, "conda-meta")
