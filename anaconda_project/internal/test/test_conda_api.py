@@ -107,7 +107,8 @@ def test_conda_create_no_packages():
 def _assert_packages_not_found(e):
     # conda has changed this message several times
     ok = False
-    for message in ('No packages found', 'Package missing in current', 'Package not found'):
+    for message in ('No packages found', 'Package missing in current', 'Packages missing in current',
+                    'Package not found'):
         if message in str(e):
             ok = True
     if not ok:
@@ -660,7 +661,8 @@ def test_resolve_dependencies_for_bogus_package_with_actual_conda():
     if hasattr(excinfo.value, 'json'):
         pprint(excinfo.value.json)
     exc_str = str(excinfo.value)
-    assert 'Package not found' in exc_str or 'Package missing' in exc_str
+    assert 'Package not found' in exc_str or 'Package missing' in exc_str or \
+        'Packages missing' in exc_str
 
 
 @pytest.mark.slow
