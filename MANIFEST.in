@@ -1,2 +1,3 @@
 include setup_atomic_replace.py
 include setup_yapf_task.py
+include LICENSE.txt
