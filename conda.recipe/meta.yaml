@@ -17,24 +17,20 @@ requirements:
   build:
     - python
     - setuptools
-    - psutil # needed by conda
-    - tornado
-    - "backports_abc >=0.4" # [py2k]
-    - singledispatch
-    - ruamel_yaml
-    - requests
-    - anaconda-client
+#    - backports_abc >=0.4  # [py2k]
+#    - singledispatch
 
   run:
-    - python
-    - tornado
-    - ruamel_yaml
-    - requests
     - anaconda-client
+    - python
+    - requests
+    - ruamel_yaml
+    - tornado
 
 test:
   imports:
     - anaconda_project
+
   commands:
     - echo "First of test commands"
     - anaconda-project --help
@@ -42,5 +38,13 @@ test:
     - echo "Last of test commands"
 
 about:
-  home: https://github.com/Anaconda-Platform/anaconda-project/
-  license: BSD
+  home: https://github.com/Anaconda-Platform/anaconda-project
+  license: BSD 3-Clause
+  license_family: BSD
+  summary: Reproducible, executable project directories.
+  description: |
+    By adding an anaconda-project.yml to a project directory, a single 
+    anaconda-project runcommand will be able to set up all dependencies 
+    and then launch the project.
+  doc_url: http://anaconda-project.readthedocs.io
+  dev_url: https://github.com/Anaconda-Platform/anaconda-project
