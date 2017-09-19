@@ -3345,25 +3345,19 @@ env_specs:
 """}, check)
 
 
-def test_clean(monkeypatch):
-    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
-        os.makedirs(os.path.join(prefix, "conda-meta"))
-
-    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
-
-    def check(dirname):
+def check_cleaned(dirname, envs_dirname="envs"):
         project = Project(dirname, frontend=FakeFrontend())
 
         result = prepare.prepare_without_interaction(project, env_spec_name='foo')
 
         assert result
-        envs_dir = os.path.join(dirname, "envs")
+        envs_dir = os.path.join(dirname, envs_dirname)
         assert os.path.isdir(os.path.join(envs_dir, "foo"))
-
+        # import pdb; pdb.set_trace()
         # prepare again with 'bar' this time
         result = prepare.prepare_without_interaction(project, env_spec_name='bar')
         assert result
-        bar_dir = os.path.join(dirname, "envs", "bar")
+        bar_dir = os.path.join(dirname, envs_dirname, "bar")
         assert os.path.isdir(bar_dir)
 
         # we don't really have a service in the test project file because
@@ -3379,8 +3373,38 @@ def test_clean(monkeypatch):
                                          ("Removing %s." % services_dir), ("Removing %s." % envs_dir)]
         assert status.errors == []
 
-        assert not os.path.isdir(os.path.join(dirname, "envs"))
+        assert not os.path.isdir(os.path.join(dirname, envs_dirname))
         assert not os.path.isdir(os.path.join(dirname, "services"))
+
+def test_clean(monkeypatch):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
+        os.makedirs(os.path.join(prefix, "conda-meta"))
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
+
+    def check(dirname):
+        return check_cleaned(dirname, envs_dirname)
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   foo: {}
+   bar: {}
+"""}, check_cleaned)
+
+
+def test_clean_environ(monkeypatch):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
+        os.makedirs(os.path.join(prefix, "conda-meta"))
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
+
+    def check(dirname):
+        envs_dirname = os.environ['PROJECT_ENVS_PATH'] = os.path.join(
+            dirname, "some_random_path")
+        res = check_cleaned(dirname, "some_random_path")
+        os.environ.pop('PROJECT_ENVS_PATH')
+        return res
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
