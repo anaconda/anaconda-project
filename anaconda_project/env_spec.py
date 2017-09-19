@@ -307,7 +307,9 @@ class EnvSpec(object):
 
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""
-        return os.path.join(project_dir, "envs", self.name)
+        envs_path = os.environ.get('PROJECT_ENVS_PATH', os.path.join(project_dir, "envs"))
+
+        return os.path.join(envs_path, self.name)
 
     def diff_from(self, old):
         """A string showing the comparison between this env spec and another one."""
