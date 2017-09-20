@@ -529,8 +529,7 @@ def test_set_variables_cannot_create_environment_from_environ(monkeypatch):
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
     def check_set_var(dirname):
-        envs_dirname = os.environ['PROJECT_ENVS_PATH'] = os.path.join(
-            dirname, "some_random_path")
+        envs_dirname = os.environ['PROJECT_ENVS_PATH'] = os.path.join(dirname, "some_random_path")
         project = Project(dirname)
 
         status = project_ops.set_variables(project, None, [('foo', 'bar'), ('baz', 'qux')])
@@ -3393,8 +3392,8 @@ def check_cleaned(dirname, envs_dirname="envs"):
     status = project_ops.clean(project, result)
     assert status
     assert status.status_description == "Cleaned."
-    assert project.frontend.logs == [("Deleted environment files in %s." % bar_dir),
-                                        ("Removing %s." % services_dir), ("Removing %s." % envs_dir)]
+    assert project.frontend.logs == [("Deleted environment files in %s." % bar_dir), ("Removing %s." % services_dir),
+                                     ("Removing %s." % envs_dir)]
     assert status.errors == []
 
     assert not os.path.isdir(os.path.join(dirname, envs_dirname))
@@ -3406,9 +3405,6 @@ def test_clean(monkeypatch):
         os.makedirs(os.path.join(prefix, "conda-meta"))
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
-
-    def check(dirname):
-        return check_cleaned(dirname, envs_dirname)
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -3425,8 +3421,7 @@ def test_clean_from_environ(monkeypatch):
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
     def check(dirname):
-        envs_dirname = os.environ['PROJECT_ENVS_PATH'] = os.path.join(
-            dirname, "some_random_path")
+        os.environ['PROJECT_ENVS_PATH'] = os.path.join(dirname, "some_random_path")
         res = check_cleaned(dirname, "some_random_path")
         os.environ.pop('PROJECT_ENVS_PATH')
         return res
@@ -3502,15 +3497,13 @@ def test_clean_environ_failed_delete(monkeypatch):
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
     def check(dirname):
-        envs_dir = os.environ['PROJECT_ENVS_PATH'] = os.path.join(
-            dirname, "some_random_failed_path")
+        envs_dir = os.environ['PROJECT_ENVS_PATH'] = os.path.join(dirname, "some_random_failed_path")
 
         project = Project(dirname, frontend=FakeFrontend())
 
         result = prepare.prepare_without_interaction(project, env_spec_name='foo')
 
         assert result
-        default_envs_dir = os.path.join(envs_dir, "envs")
         assert os.path.isdir(os.path.join(envs_dir, "foo"))
 
         # prepare again with 'bar' this time
