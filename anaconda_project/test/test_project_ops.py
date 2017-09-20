@@ -521,6 +521,30 @@ def test_set_variables_cannot_create_environment(monkeypatch):
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_set_var)
 
 
+def test_set_variables_cannot_create_environment_from_environ(monkeypatch):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
+        from anaconda_project.internal import conda_api
+        raise conda_api.CondaError("error_from_conda_create")
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
+
+    def check_set_var(dirname):
+        envs_dirname = os.environ['PROJECT_ENVS_PATH'] = os.path.join(
+            dirname, "some_random_path")
+        project = Project(dirname)
+
+        status = project_ops.set_variables(project, None, [('foo', 'bar'), ('baz', 'qux')])
+        assert not status
+        expected_env_path = os.path.join(envs_dirname, 'default')
+        assert status.status_description == ("'%s' doesn't look like it contains a Conda environment yet." %
+                                             expected_env_path)
+        assert status.errors == ["Failed to create environment at %s: error_from_conda_create" % expected_env_path]
+        # clean environ
+        os.environ.pop('PROJECT_ENVS_PATH')
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_set_var)
+
+
 def test_unset_variables():
     def check_unset_var(dirname):
         project = project_no_dedicated_env(dirname)
