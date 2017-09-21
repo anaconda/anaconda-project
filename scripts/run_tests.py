@@ -119,6 +119,8 @@ class TestRunner:
 
         self.pytest_args = ['-rfew', '--durations=10', '-v'] + enable_xdist
         if pytest_args:
+            if isinstance(pytest_args, list):
+                pytest_args = pytest_args[0]
             self.pytest_args = [a for a in pytest_args.split(' ') if a]
 
         # 100% coverage on Windows requires us to do extra mocks because
@@ -415,7 +417,7 @@ def main():
                         help="Profile the linter and formatter steps", )
 
     options = parser.parse_args()
-    tr = TestRunner(pytest_args=options.pytest_args[0],
+    tr = TestRunner(pytest_args=options.pytest_args,
                     format_only=options.format_only,
                     git_staged_only=options.git_staged_only,
                     skip_slow_tests=options.skip_slow_tests,
