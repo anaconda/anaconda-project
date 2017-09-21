@@ -4,12 +4,14 @@ package:
 
 source:
   git_url: ../
+  git_tag: {% if environ.get('PRERELEASE', '') %} HEAD {% else %} {{ environ.get('GIT_DESCRIBE_TAG') }} {% endif %}
   # If you're trying to test build changes, you have to add this
   # pointing to the branch you're modifying.
   # git_tag: package-script
 
 build:
   number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
+  script: python setup.py install --single-version-externally-managed --record=record.txt
   entry_points:
     - anaconda-project = anaconda_project.cli:main
 

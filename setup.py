@@ -15,7 +15,7 @@ import os
 from setuptools import find_packages, setup
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-REQUIREMENTS = ['tornado >= 4.2']
+REQUIREMENTS = ['anaconda-client', 'requests', 'ruamel_yaml', 'tornado >= 4.2']
 
 
 def get_version(module='anaconda_project'):
@@ -38,38 +38,27 @@ def get_description():
     return data
 
 
-setup(
-    name='anaconda-project',
-    version=get_version(),
-    keywords=["conda anaconda project reproducible data science"],
-    url='http://github.com/Anaconda-Server/anaconda-project',
-    license='New BSD',
-    author="Anaconda, Inc",
-    author_email='info@anaconda.com',
-    maintainer='Anaconda, Inc',
-    maintainer_email='info@anaconda.com',
-    description='Library to load and manipulate project directories',
-    long_description=get_description(),
-    zip_safe=False,
-    install_requires=REQUIREMENTS,
-    scripts=[
-        'bin/anaconda-project'
-    ],
-    entry_points={
-        'console_scripts': [
-            'anaconda-project = anaconda_project.cli:main',
-        ]
-    },
-    packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
-    #    packages=[
-    #        'anaconda_project', 'anaconda_project.internal',
-    #        'anaconda_project.internal.cli',
-    #        'anaconda_project.requirements_registry',
-    #        'anaconda_project.requirements_registry.providers',
-    #        'anaconda_project.requirements_registry.requirements'
-    #    ],
-    classifiers=[
-        'Development Status :: 5 - Production/Stable', 'License :: OSI Approved :: BSD License',
-        'Operating System :: OS Independent', 'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.5', 'Programming Language :: Python :: 3.6'
-    ])
+setup(name='anaconda-project',
+      version=get_version(),
+      keywords=["conda anaconda project reproducible data science"],
+      url='http://github.com/Anaconda-Server/anaconda-project',
+      license='New BSD',
+      author="Anaconda, Inc",
+      author_email='info@anaconda.com',
+      maintainer='Anaconda, Inc',
+      maintainer_email='info@anaconda.com',
+      description='Library to load and manipulate project directories',
+      long_description=get_description(),
+      zip_safe=False,
+      install_requires=REQUIREMENTS,
+      entry_points={
+          'console_scripts': [
+              'anaconda-project = anaconda_project.cli:main',
+          ]
+      },
+      packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
+      classifiers=[
+          'Development Status :: 5 - Production/Stable', 'License :: OSI Approved :: BSD License',
+          'Operating System :: OS Independent', 'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3.5', 'Programming Language :: Python :: 3.6'
+      ])
