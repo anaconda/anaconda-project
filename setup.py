@@ -18,7 +18,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 REQUIREMENTS = ['tornado >= 4.2']
 
 
-def get_version(module='loghub'):
+def get_version(module='anaconda_project'):
     """Get version."""
     with open(os.path.join(HERE, module, 'version.py'), 'r') as f:
         data = f.read()
