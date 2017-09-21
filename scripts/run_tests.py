@@ -105,7 +105,7 @@ class TestRunner:
         # adding it by default.
         # To see stdout "live" instead of capturing it, use -s.
         coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=anaconda_project',
-                         '--cov-report=term-missing', '--cov-report=html', '--cov-fail-under=100', '--no-cov-on-fail']
+                         '--cov-report=term-missing', '--cov-report=html', '--cov-fail-under=99', '--no-cov-on-fail']
         if PY2:
             # xdist appears to lock up the test suite with python
             # 2, maybe due to an interaction with coverage
@@ -415,7 +415,6 @@ def main():
                         help="Profile the linter and formatter steps", )
 
     options = parser.parse_args()
-    print(options)
     tr = TestRunner(pytest_args=options.pytest_args[0],
                     format_only=options.format_only,
                     git_staged_only=options.git_staged_only,
