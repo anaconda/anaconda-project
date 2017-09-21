@@ -136,41 +136,6 @@ packages: []
         }, prepare_system_environ)
 
 
-def test_default_from_environ_to_system_environ():
-    def prepare_system_environ(dirname):
-        os.environ['PROJECT_ENVS_PATH'] = os.path.join(dirname, "some_random_path")
-        project = project_no_dedicated_env(dirname)
-        os_environ_copy = deepcopy(os.environ)
-        result = prepare_without_interaction(project)
-        assert project.directory_path == strip_environ(result.environ)['PROJECT_DIR']
-        # os.environ wasn't modified
-        assert os_environ_copy == os.environ
-        # result.environ inherits everything in os.environ
-        for key in os_environ_copy:
-            if key == 'PATH' and platform.system() == 'Windows' and result.environ[key] != os.environ[key]:
-                print("prepare changed PATH on Windows and ideally it would not.")
-            else:
-                if key == 'PATH' and result.environ[key] != os.environ[key]:
-                    original = os.environ[key].split(os.pathsep)
-                    updated = result.environ[key].split(os.pathsep)
-                    print("ORIGINAL PATH: " + repr(original))
-                    print("UPDATED PATH: " + repr(updated))
-                    assert original == updated
-                assert result.errors == []
-                assert result
-                assert result.environ.get(key) == os.environ.get(key)
-
-        # clean environ
-        os.environ.pop('PROJECT_ENVS_PATH')
-
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
-packages: []
-        """
-        }, prepare_system_environ)
-
-
 def test_prepare_some_env_var_already_set():
     def prepare_some_env_var(dirname):
         project = project_no_dedicated_env(dirname)

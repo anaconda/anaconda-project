@@ -660,7 +660,8 @@ def test_resolve_dependencies_for_bogus_package_with_actual_conda():
     if hasattr(excinfo.value, 'json'):
         pprint(excinfo.value.json)
     exc_str = str(excinfo.value)
-    assert 'Package not found' in exc_str or 'Package missing' in exc_str
+    assert 'Package not found' in exc_str or 'Package missing' in exc_str or \
+        'Packages missing' in exc_str
 
 
 @pytest.mark.slow
