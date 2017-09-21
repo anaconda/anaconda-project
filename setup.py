@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
-# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+# -----------------------------------------------------------------------------
+# Copyright (c) 2016, Anaconda, Inc. All rights reserved.
 #
+# Licensed under the terms of the BSD 3-Clause License.
 # The full license is in the file LICENSE.txt, distributed with this software.
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 """Setup script."""
 
 from __future__ import print_function
@@ -78,11 +79,12 @@ if os.path.isdir(BUILD_TMP):
 coding_utf8_header = u"# -*- coding: utf-8 -*-\n"
 
 copyright_header = u"""
-# ----------------------------------------------------------------------------
-# Copyright © 2017, Continuum Analytics, Inc. All rights reserved.
+# -----------------------------------------------------------------------------
+# Copyright (c) 2017, Anaconda, Inc. All rights reserved.
 #
+# Licensed under the terms of the BSD 3-Clause License.
 # The full license is in the file LICENSE.txt, distributed with this software.
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 """.lstrip()
 
 copyright_re = re.compile('# *Copyright ')
@@ -544,8 +546,8 @@ class CondaPackageCommand(Command):
 
 setup(name='anaconda-project',
       version=VERSION,
-      author="Continuum Analytics",
-      author_email='info@continuum.io',
+      author="Anaconda, Inc",
+      author_email='info@anaconda.com',
       url='http://github.com/Anaconda-Server/anaconda-project',
       description='Library to load and manipulate project directories',
       license='New BSD',

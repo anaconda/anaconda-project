@@ -22,7 +22,7 @@ them.
 
 You can use Project on Windows, macOS and Linux.
 
-Project is supported and offered by Continuum Analytics\ |reg| 
+Project is supported and offered by Anaconda, Inc\ |reg| 
 and contributors under a 3-clause BSD license.
 
 
