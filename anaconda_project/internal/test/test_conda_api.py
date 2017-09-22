@@ -108,7 +108,8 @@ def test_conda_create_no_packages():
 def _assert_packages_not_found(e):
     # conda has changed this message several times
     ok = False
-    for message in ('No packages found', 'Package missing in current', 'Package not found'):
+    for message in ('No packages found', 'Package missing in current', 'Package not found',
+                    'Packages missing in current', 'PackageNotFoundError'):
         if message in str(e):
             ok = True
     if not ok:
