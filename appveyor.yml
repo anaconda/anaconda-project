@@ -28,12 +28,12 @@ install:
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda config --set always_yes yes
   # upgrade (or downgrade) to our pinned conda version
-  - conda install -n root -q conda=4.1.12
+  - conda install -n root -q conda=4.3
   # activate with newer conda, may set different variables
   - "%CONDA_ROOT%\\Scripts\\activate root"
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda info -a
-  - conda create -q -n test-environment python=%PYTHON_VERSION% pip notebook bokeh ruamel_yaml anaconda-client requests tornado coverage pytest pytest-cov
+  - conda create -q -n test-environment python=%PYTHON_VERSION% pip notebook bokeh ruamel_yaml anaconda-client requests tornado coverage pytest pytest-cov psutil
 
 # Not a .NET project, we build in the install step instead
 build: false
