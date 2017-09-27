@@ -38,7 +38,6 @@ else:
     FLAKE8_BINARY = "bin/flake8"
     # Use a different package from the test env due to weird CI path/env errors
     PYINSTRUMENT_BINARY = "bin/pyinstrument"
-    
 
 test_spec = EnvSpec(name='myenv', conda_packages=['ipython'], pip_packages=['pyinstrument'], channels=[])
 
