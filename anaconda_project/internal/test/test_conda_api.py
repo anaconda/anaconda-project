@@ -107,9 +107,10 @@ def test_conda_create_no_packages():
 def _assert_packages_not_found(e):
     # conda has changed this message several times
     ok = False
-    for message in ('No packages found', 'Package missing in current', 'Package not found'):
-        if message in str(e):
-            ok = True
+    valid_strings = ('No packages found', 'Package missing in current', 'Package missing in current',
+                     'PackageNotFoundError:', 'Package not found')
+
+    ok = any(s in str(e) for s in valid_strings)
     if not ok:
         # pytest truncates the exception message sometimes?
         print("Not the exception we wanted: %r" % e)
