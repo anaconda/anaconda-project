@@ -28,12 +28,12 @@ install:
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda config --set always_yes yes
   # upgrade (or downgrade) to our pinned conda version
-  - conda install -n root -q conda=4.3
+  - conda install -n root -q conda=4.1.12
   # activate with newer conda, may set different variables
   - "%CONDA_ROOT%\\Scripts\\activate root"
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda info -a
-  - conda create -q -n test-environment python=%PYTHON_VERSION% pip notebook bokeh ruamel_yaml anaconda-client requests tornado coverage pytest pytest-cov psutil
+  - conda create -q -n test-environment python=%PYTHON_VERSION% keyring pip notebook bokeh ruamel_yaml anaconda-client requests tornado coverage pytest pytest-cov
 
 # Not a .NET project, we build in the install step instead
 build: false
@@ -43,7 +43,9 @@ test_script:
   - "%CONDA_ROOT%\\Scripts\\activate test-environment"
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - echo PATH %PATH%
-  - pip install pep257 yapf==0.6.2 pytest-xdist flake8==2.6.2 keyring
+  - pip install pep257 yapf==0.6.2 flake8==2.6.2
+  - if "%PYTHON_VERSION%" == "3.5" pip install ruamel.yaml
+  - if "%PYTHON_VERSION%" == "3.6" pip install ruamel.yaml
   - conda list
   - conda info -a
   - python -c "import sys; print(sys.version)"

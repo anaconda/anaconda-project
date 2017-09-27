@@ -19,8 +19,12 @@ from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_
 
 if platform.system() == 'Windows':
     FLAKE8_BINARY = "Scripts\\flake8.exe"
+    # Use a different package from the test env due to weird CI path/env errors
+    PYINSTRUMENT_BINARY = "Scripts\\pyinstrument.exe"
 else:
     FLAKE8_BINARY = "bin/flake8"
+    # Use a different package from the test env due to weird CI path/env errors
+    PYINSTRUMENT_BINARY = "bin/pyinstrument"
 
 
 # lots is in this one big test so we don't have to create
@@ -39,23 +43,23 @@ def test_conda_create_and_install_and_remove_pip_stuff(monkeypatch):
         assert os.path.isdir(os.path.join(envdir, "conda-meta"))
 
         # test that we can install a package via pip
-        assert not os.path.exists(os.path.join(envdir, FLAKE8_BINARY))
-        pip_api.install(prefix=envdir, pkgs=['flake8'])
-        assert os.path.exists(os.path.join(envdir, FLAKE8_BINARY))
+        assert not os.path.exists(os.path.join(envdir, PYINSTRUMENT_BINARY))
+        pip_api.install(prefix=envdir, pkgs=['pyinstrument'])
+        assert os.path.exists(os.path.join(envdir, PYINSTRUMENT_BINARY))
 
         # list what was installed
         installed = pip_api.installed(prefix=envdir)
-        assert 'flake8' in installed
-        assert installed['flake8'][0] == 'flake8'
-        assert installed['flake8'][1] is not None
+        assert 'pyinstrument' in installed
+        assert installed['pyinstrument'][0] == 'pyinstrument'
+        assert installed['pyinstrument'][1] is not None
 
         # test that we can remove it again
-        pip_api.remove(prefix=envdir, pkgs=['flake8'])
-        assert not os.path.exists(os.path.join(envdir, FLAKE8_BINARY))
+        pip_api.remove(prefix=envdir, pkgs=['pyinstrument'])
+        assert not os.path.exists(os.path.join(envdir, PYINSTRUMENT_BINARY))
 
         # no longer in the installed list
         installed = pip_api.installed(prefix=envdir)
-        assert 'flake8' not in installed
+        assert 'pyinstrument' not in installed
 
     with_directory_contents(dict(), do_test)
 
@@ -127,7 +131,7 @@ sys.exit(0)
         pip_api.install(prefix=envdir, pkgs=['flake8'])
 
         # cannot exec pip
-        def mock_popen(args, stdout=None, stderr=None):
+        def mock_popen(args, stdout=None, stderr=None, env=None):
             raise OSError("failed to exec")
 
         monkeypatch.setattr('subprocess.Popen', mock_popen)
