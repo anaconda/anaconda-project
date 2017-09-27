@@ -72,7 +72,10 @@ install:
   - unset CONDA_ENV_PATH # because the older conda in miniconda sets this, confusing some tests
   - export PATH=`echo "$PATH" | sed -e s@"$HOME"/miniconda/bin:@@g`
   - printenv | sort
-  - pip install flake8==2.6.2 pep257 yapf==0.6.2 ruamel.yaml
+  - pip install flake8==2.6.2 pep257 yapf==0.6.2
+  - if [[ "$TRAVIS_PYTHON_VERSION" != "2.7" ]]; then
+      pip install ruamel.yaml;
+    fi ;
 
 script:
   - if test "$TEST_TARGET" = tests; then LANG=en_US.UTF-8 python setup.py test -a '-vv'; fi
