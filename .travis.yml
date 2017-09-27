@@ -66,13 +66,13 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       OS_PACKAGES=libffi ;
     fi ;
-    conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" pip redis notebook bokeh ruamel_yaml anaconda-client requests psutil $OS_PACKAGES
+    conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" coverage tornado keyring pytest pytest-cov pip redis notebook bokeh ruamel_yaml anaconda-client requests psutil $OS_PACKAGES
   - source activate test-environment
   - printenv | sort
   - unset CONDA_ENV_PATH # because the older conda in miniconda sets this, confusing some tests
   - export PATH=`echo "$PATH" | sed -e s@"$HOME"/miniconda/bin:@@g`
   - printenv | sort
-  - pip install coverage flake8==2.6.2 pep257 pytest pytest-cov yapf==0.6.2 tornado pytest-xdist keyring
+  - pip install flake8==2.6.2 pep257 yapf==0.6.2 ruamel.yaml
 
 script:
   - if test "$TEST_TARGET" = tests; then LANG=en_US.UTF-8 python setup.py test -a '-vv'; fi
