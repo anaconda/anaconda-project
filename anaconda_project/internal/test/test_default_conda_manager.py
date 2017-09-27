@@ -247,8 +247,9 @@ def test_conda_create_and_install_and_remove(monkeypatch):
             manager.remove_packages(prefix=envdir, packages=['ipython'])
         # different versions of conda word this differently
         message = str(excinfo.value)
-        assert ('no packages found to remove' in message or 'Package not found' in message or
-                "named 'ipython' found to remove" in message)
+        valid_strings = ('no packages found to remove', 'Package not found', "named 'ipython' found to remove",
+                         "is missing from the environment")
+        assert any(s in message for s in valid_strings)
         assert not manager._timestamp_file_up_to_date(envdir, spec)
 
         # test failure to exec pip

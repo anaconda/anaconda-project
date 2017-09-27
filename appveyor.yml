@@ -33,7 +33,7 @@ install:
   - "%CONDA_ROOT%\\Scripts\\activate root"
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda info -a
-  - conda create -q -n test-environment python=%PYTHON_VERSION% pip notebook bokeh ruamel_yaml anaconda-client requests tornado coverage pytest pytest-cov
+  - conda create -q -n test-environment python=%PYTHON_VERSION% keyring pip notebook bokeh ruamel_yaml anaconda-client requests tornado coverage pytest pytest-cov
 
 # Not a .NET project, we build in the install step instead
 build: false
@@ -43,7 +43,7 @@ test_script:
   - "%CONDA_ROOT%\\Scripts\\activate test-environment"
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - echo PATH %PATH%
-  - pip install pep257 yapf==0.6.2 pytest-xdist flake8==2.6.2 keyring
+  - pip install pep257 yapf==0.6.2 flake8==2.6.2 ruamel.yaml
   - conda list
   - conda info -a
   - python -c "import sys; print(sys.version)"
