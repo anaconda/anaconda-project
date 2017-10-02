@@ -30,12 +30,16 @@ if platform.system() == 'Windows':
     PYTHON_BINARY = "python.exe"
     IPYTHON_BINARY = "Scripts\ipython.exe"
     FLAKE8_BINARY = "Scripts\\flake8.exe"
+    # Use a different package from the test env due to weird CI path/env errors
+    PYINSTRUMENT_BINARY = "Scripts\\pyinstrument.exe"
 else:
     PYTHON_BINARY = "bin/python"
     IPYTHON_BINARY = "bin/ipython"
     FLAKE8_BINARY = "bin/flake8"
+    # Use a different package from the test env due to weird CI path/env errors
+    PYINSTRUMENT_BINARY = "bin/pyinstrument"
 
-test_spec = EnvSpec(name='myenv', conda_packages=['ipython'], pip_packages=['flake8'], channels=[])
+test_spec = EnvSpec(name='myenv', conda_packages=['ipython'], pip_packages=['pyinstrument'], channels=[])
 
 
 def test_current_platform_unsupported_by_env_spec(monkeypatch):
@@ -97,38 +101,38 @@ def test_conda_create_and_install_and_remove(monkeypatch):
 
     spec = test_spec
     assert spec.conda_packages == ('ipython', )
-    assert spec.pip_packages == ('flake8', )
+    assert spec.pip_packages == ('pyinstrument', )
 
     spec_with_phony_pip_package = EnvSpec(name='myenv',
                                           conda_packages=['ipython'],
-                                          pip_packages=['flake8', 'nope_not_a_thing'],
+                                          pip_packages=['pyinstrument', 'nope_not_a_thing'],
                                           channels=[])
     assert spec_with_phony_pip_package.conda_packages == ('ipython', )
-    assert spec_with_phony_pip_package.pip_packages == ('flake8', 'nope_not_a_thing')
-    assert spec_with_phony_pip_package.pip_package_names_set == set(('flake8', 'nope_not_a_thing'))
+    assert spec_with_phony_pip_package.pip_packages == ('pyinstrument', 'nope_not_a_thing')
+    assert spec_with_phony_pip_package.pip_package_names_set == set(('pyinstrument', 'nope_not_a_thing'))
 
     # package url is supposed to be on a nonexistent port, if it
     # causes a problem we need to mock
     spec_with_bad_url_pip_package = EnvSpec(name='myenv',
                                             conda_packages=['ipython'],
-                                            pip_packages=['flake8', 'https://127.0.0.1:24729/nope#egg=phony'],
+                                            pip_packages=['pyinstrument', 'https://127.0.0.1:24729/nope#egg=phony'],
                                             channels=[])
     assert spec_with_bad_url_pip_package.conda_packages == ('ipython', )
-    assert spec_with_bad_url_pip_package.pip_packages == ('flake8', 'https://127.0.0.1:24729/nope#egg=phony')
-    assert spec_with_bad_url_pip_package.pip_package_names_set == set(('flake8', 'phony'))
+    assert spec_with_bad_url_pip_package.pip_packages == ('pyinstrument', 'https://127.0.0.1:24729/nope#egg=phony')
+    assert spec_with_bad_url_pip_package.pip_package_names_set == set(('pyinstrument', 'phony'))
 
     spec_with_old_ipython = EnvSpec(name='myenv',
                                     conda_packages=['ipython=5.2.2'],
-                                    pip_packages=['flake8'],
+                                    pip_packages=['pyinstrument'],
                                     channels=[])
     assert spec_with_old_ipython.conda_packages == ('ipython=5.2.2', )
 
-    spec_with_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=['flake8'], channels=[])
+    spec_with_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=['pyinstrument'], channels=[])
     assert spec_with_bokeh.conda_packages == ('bokeh', )
 
     spec_with_bokeh_and_old_ipython = EnvSpec(name='myenv',
                                               conda_packages=['bokeh', 'ipython=5.2.2'],
-                                              pip_packages=['flake8'],
+                                              pip_packages=['pyinstrument'],
                                               channels=[])
     assert spec_with_bokeh_and_old_ipython.conda_packages == ('bokeh', 'ipython=5.2.2', )
 
@@ -145,7 +149,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         deviations = manager.find_environment_deviations(envdir, spec)
 
         assert deviations.missing_packages == ('ipython', )
-        assert deviations.missing_pip_packages == ('flake8', )
+        assert deviations.missing_pip_packages == ('pyinstrument', )
 
         # with create=False, we won't create the env
         with pytest.raises(CondaManagerError) as excinfo:
@@ -160,7 +164,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         assert os.path.isdir(envdir)
         assert os.path.isdir(os.path.join(envdir, "conda-meta"))
         assert os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
-        assert os.path.exists(os.path.join(envdir, FLAKE8_BINARY))
+        assert os.path.exists(os.path.join(envdir, PYINSTRUMENT_BINARY))
 
         assert manager._timestamp_file_up_to_date(envdir, spec)
         assert not manager._timestamp_file_up_to_date(envdir, spec_with_phony_pip_package)
@@ -243,8 +247,9 @@ def test_conda_create_and_install_and_remove(monkeypatch):
             manager.remove_packages(prefix=envdir, packages=['ipython'])
         # different versions of conda word this differently
         message = str(excinfo.value)
-        assert ('no packages found to remove' in message or 'Package not found' in message or
-                "named 'ipython' found to remove" in message)
+        valid_strings = ('no packages found to remove', 'Package not found', "named 'ipython' found to remove",
+                         "is missing from the environment")
+        assert any(s in message for s in valid_strings)
         assert not manager._timestamp_file_up_to_date(envdir, spec)
 
         # test failure to exec pip
@@ -291,13 +296,13 @@ def test_timestamp_file_works(monkeypatch):
 
         assert not os.path.isdir(envdir)
         assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
-        assert not os.path.exists(os.path.join(envdir, FLAKE8_BINARY))
+        assert not os.path.exists(os.path.join(envdir, PYINSTRUMENT_BINARY))
         assert not manager._timestamp_file_up_to_date(envdir, spec)
 
         deviations = manager.find_environment_deviations(envdir, spec)
 
         assert deviations.missing_packages == ('ipython', )
-        assert deviations.missing_pip_packages == ('flake8', )
+        assert deviations.missing_pip_packages == ('pyinstrument', )
         assert not deviations.ok
 
         manager.fix_environment_deviations(envdir, spec, deviations)
@@ -307,7 +312,7 @@ def test_timestamp_file_works(monkeypatch):
         assert os.path.isdir(envdir)
         assert os.path.isdir(os.path.join(envdir, "conda-meta"))
         assert os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
-        assert os.path.exists(os.path.join(envdir, FLAKE8_BINARY))
+        assert os.path.exists(os.path.join(envdir, PYINSTRUMENT_BINARY))
 
         assert manager._timestamp_file_up_to_date(envdir, spec)
 
