@@ -3398,9 +3398,9 @@ def test_clean_from_environ(monkeypatch):
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
     def check(dirname):
-        os.environ['PROJECT_ENVS_PATH'] = os.path.join(dirname, "some_random_path")
+        os.environ['ANACONDA_PROJECT_ENVS_PATH'] = os.path.join(dirname, "some_random_path")
         res = check_cleaned(dirname, "some_random_path")
-        os.environ.pop('PROJECT_ENVS_PATH')
+        os.environ.pop('ANACONDA_PROJECT_ENVS_PATH')
         return res
 
     with_directory_contents_completing_project_file(
@@ -3474,7 +3474,7 @@ def test_clean_environ_failed_delete(monkeypatch):
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
     def check(dirname):
-        envs_dir = os.environ['PROJECT_ENVS_PATH'] = os.path.join(dirname, "some_random_failed_path")
+        envs_dir = os.environ['ANACONDA_PROJECT_ENVS_PATH'] = os.path.join(dirname, "some_random_failed_path")
 
         project = Project(dirname, frontend=FakeFrontend())
 
@@ -3516,7 +3516,7 @@ def test_clean_environ_failed_delete(monkeypatch):
         # so with_directory_contents_completing_project_file can remove our tmp dir
         monkeypatch.undo()
         # clean environ
-        os.environ.pop('PROJECT_ENVS_PATH')
+        os.environ.pop('ANACONDA_PROJECT_ENVS_PATH')
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
