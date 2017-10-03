@@ -1590,12 +1590,10 @@ class Project(object):
         """Fullpath to bootstrap environment prefix."""
         return join(self._directory_path, 'envs', 'bootstrap-env')
 
-    @property
     def is_running_in_bootstrap_env(self):
         """Return True if anaconda-project is running inside a project bootstrap env False otherwise."""
         return os.environ['CONDA_PREFIX'] == self.bootstrap_env_prefix
 
-    @property
     def has_bootstrap_env_spec(self):
         """Return True if bootstrap-env is in env_specs, False otherwise."""
-        return self._config_cache.has_bootstrap_env_spec
+        return self._config_cache.has_bootstrap_env_spec()
