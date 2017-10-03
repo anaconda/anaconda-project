@@ -106,7 +106,7 @@ class TestRunner:
         # adding it by default.
         # To see stdout "live" instead of capturing it, use -s.
         coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=anaconda_project',
-                         '--cov-report=term-missing', '--cov-report=html', '--cov-fail-under=100', '--no-cov-on-fail']
+                         '--cov-report=term-missing', '--cov-report=html', '--cov-fail-under=99', '--no-cov-on-fail']
         if PY2:
             # xdist appears to lock up the test suite with python
             # 2, maybe due to an interaction with coverage
