@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
-# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+# -----------------------------------------------------------------------------
+# Copyright (c) 2016, Anaconda, Inc. All rights reserved.
 #
+# Licensed under the terms of the BSD 3-Clause License.
 # The full license is in the file LICENSE.txt, distributed with this software.
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 """Environment class representing a conda environment."""
 from __future__ import absolute_import
 
@@ -307,7 +308,9 @@ class EnvSpec(object):
 
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""
-        return os.path.join(project_dir, "envs", self.name)
+        envs_path = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', os.path.join(project_dir, "envs"))
+
+        return os.path.join(envs_path, self.name)
 
     def diff_from(self, old):
         """A string showing the comparison between this env spec and another one."""

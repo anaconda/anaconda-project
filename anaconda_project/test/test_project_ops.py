@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
-# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+# -----------------------------------------------------------------------------
+# Copyright (c) 2016, Anaconda, Inc. All rights reserved.
 #
+# Licensed under the terms of the BSD 3-Clause License.
 # The full license is in the file LICENSE.txt, distributed with this software.
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
 import codecs
@@ -3345,42 +3346,63 @@ env_specs:
 """}, check)
 
 
+def check_cleaned(dirname, envs_dirname="envs"):
+    project = Project(dirname, frontend=FakeFrontend())
+
+    result = prepare.prepare_without_interaction(project, env_spec_name='foo')
+
+    assert result
+    envs_dir = os.path.join(dirname, envs_dirname)
+    assert os.path.isdir(os.path.join(envs_dir, "foo"))
+
+    # prepare again with 'bar' this time
+    result = prepare.prepare_without_interaction(project, env_spec_name='bar')
+    assert result
+    bar_dir = os.path.join(dirname, envs_dirname, "bar")
+    assert os.path.isdir(bar_dir)
+
+    # we don't really have a service in the test project file because
+    # redis-server doesn't work on Windows and it's good to run this
+    # test on Windows. So create some fake junk in services dir.
+    services_dir = os.path.join(dirname, "services")
+    os.makedirs(os.path.join(services_dir, "leftover-debris"))
+
+    status = project_ops.clean(project, result)
+    assert status
+    assert status.status_description == "Cleaned."
+    assert project.frontend.logs == [("Deleted environment files in %s." % bar_dir), ("Removing %s." % services_dir),
+                                     ("Removing %s." % envs_dir)]
+    assert status.errors == []
+
+    assert not os.path.isdir(os.path.join(dirname, envs_dirname))
+    assert not os.path.isdir(os.path.join(dirname, "services"))
+
+
 def test_clean(monkeypatch):
     def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         os.makedirs(os.path.join(prefix, "conda-meta"))
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   foo: {}
+   bar: {}
+"""}, check_cleaned)
+
+
+def test_clean_from_environ(monkeypatch):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
+        os.makedirs(os.path.join(prefix, "conda-meta"))
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
+
     def check(dirname):
-        project = Project(dirname, frontend=FakeFrontend())
-
-        result = prepare.prepare_without_interaction(project, env_spec_name='foo')
-
-        assert result
-        envs_dir = os.path.join(dirname, "envs")
-        assert os.path.isdir(os.path.join(envs_dir, "foo"))
-
-        # prepare again with 'bar' this time
-        result = prepare.prepare_without_interaction(project, env_spec_name='bar')
-        assert result
-        bar_dir = os.path.join(dirname, "envs", "bar")
-        assert os.path.isdir(bar_dir)
-
-        # we don't really have a service in the test project file because
-        # redis-server doesn't work on Windows and it's good to run this
-        # test on Windows. So create some fake junk in services dir.
-        services_dir = os.path.join(dirname, "services")
-        os.makedirs(os.path.join(services_dir, "leftover-debris"))
-
-        status = project_ops.clean(project, result)
-        assert status
-        assert status.status_description == "Cleaned."
-        assert project.frontend.logs == [("Deleted environment files in %s." % bar_dir),
-                                         ("Removing %s." % services_dir), ("Removing %s." % envs_dir)]
-        assert status.errors == []
-
-        assert not os.path.isdir(os.path.join(dirname, "envs"))
-        assert not os.path.isdir(os.path.join(dirname, "services"))
+        os.environ['ANACONDA_PROJECT_ENVS_PATH'] = os.path.join(dirname, "some_random_path")
+        res = check_cleaned(dirname, "some_random_path")
+        os.environ.pop('ANACONDA_PROJECT_ENVS_PATH')
+        return res
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -3437,6 +3459,65 @@ def test_clean_failed_delete(monkeypatch):
 
         # so with_directory_contents_completing_project_file can remove our tmp dir
         monkeypatch.undo()
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+   foo: {}
+   bar: {}
+"""}, check)
+
+
+def test_clean_environ_failed_delete(monkeypatch):
+    def mock_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
+        os.makedirs(os.path.join(prefix, "conda-meta"))
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
+
+    def check(dirname):
+        envs_dir = os.environ['ANACONDA_PROJECT_ENVS_PATH'] = os.path.join(dirname, "some_random_failed_path")
+
+        project = Project(dirname, frontend=FakeFrontend())
+
+        result = prepare.prepare_without_interaction(project, env_spec_name='foo')
+
+        assert result
+        assert os.path.isdir(os.path.join(envs_dir, "foo"))
+
+        # prepare again with 'bar' this time
+        project.frontend.reset()
+        result = prepare.prepare_without_interaction(project, env_spec_name='bar')
+        assert result
+        bar_dir = os.path.join(envs_dir, "bar")
+        assert os.path.isdir(bar_dir)
+
+        # we don't really have a service in the test project file because
+        # redis-server doesn't work on Windows and it's good to run this
+        # test on Windows. So create some fake junk in services dir.
+        services_dir = os.path.join(dirname, "services")
+        os.makedirs(os.path.join(services_dir, "leftover-debris"))
+
+        def mock_rmtree(path, onerror=None):
+            raise IOError("No rmtree here")
+
+        monkeypatch.setattr('shutil.rmtree', mock_rmtree)
+
+        project.frontend.reset()
+        status = project_ops.clean(project, result)
+        assert not status
+        assert status.status_description == "Failed to clean everything up."
+        assert project.frontend.logs == [("Removing %s." % services_dir), ("Removing %s." % envs_dir)]
+        assert status.errors == [("Failed to remove environment files in %s: No rmtree here." % bar_dir),
+                                 ("Error removing %s: No rmtree here." % services_dir),
+                                 ("Error removing %s: No rmtree here." % envs_dir)]
+
+        assert os.path.isdir(os.path.join(envs_dir))
+        assert os.path.isdir(os.path.join(dirname, "services"))
+
+        # so with_directory_contents_completing_project_file can remove our tmp dir
+        monkeypatch.undo()
+        # clean environ
+        os.environ.pop('ANACONDA_PROJECT_ENVS_PATH')
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """

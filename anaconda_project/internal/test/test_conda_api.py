@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
-# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+# -----------------------------------------------------------------------------
+# Copyright (c) 2016, Anaconda, Inc. All rights reserved.
 #
+# Licensed under the terms of the BSD 3-Clause License.
 # The full license is in the file LICENSE.txt, distributed with this software.
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
 import json
@@ -107,10 +108,10 @@ def test_conda_create_no_packages():
 def _assert_packages_not_found(e):
     # conda has changed this message several times
     ok = False
-    for message in ('No packages found', 'Package missing in current', 'Packages missing in current',
-                    'Package not found'):
-        if message in str(e):
-            ok = True
+    valid_strings = ('No packages found', 'Package missing in current', 'Package missing in current',
+                     'PackageNotFoundError:', 'Package not found')
+
+    ok = any(s in str(e) for s in valid_strings)
     if not ok:
         # pytest truncates the exception message sometimes?
         print("Not the exception we wanted: %r" % e)
@@ -661,8 +662,8 @@ def test_resolve_dependencies_for_bogus_package_with_actual_conda():
     if hasattr(excinfo.value, 'json'):
         pprint(excinfo.value.json)
     exc_str = str(excinfo.value)
-    assert 'Package not found' in exc_str or 'Package missing' in exc_str or \
-        'Packages missing' in exc_str
+    valid_strings = ('Package not found', 'Package missing', 'Packages missing')
+    assert any(s in exc_str for s in valid_strings)
 
 
 @pytest.mark.slow

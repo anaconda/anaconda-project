@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
-# Copyright © 2016, Continuum Analytics, Inc. All rights reserved.
+# -----------------------------------------------------------------------------
+# Copyright (c) 2016, Anaconda, Inc. All rights reserved.
 #
+# Licensed under the terms of the BSD 3-Clause License.
 # The full license is in the file LICENSE.txt, distributed with this software.
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 """High-level operations on a project."""
 from __future__ import absolute_import
 
@@ -1664,7 +1665,9 @@ def clean(project, prepare_result):
                 errors.append("Error removing %s: %s." % (dirname, str(e)))
 
     cleanup_dir(os.path.join(project.directory_path, "services"))
-    cleanup_dir(os.path.join(project.directory_path, "envs"))
+
+    envs_path = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', os.path.join(project.directory_path, "envs"))
+    cleanup_dir(envs_path)
 
     if status and len(errors) == 0:
         return SimpleStatus(success=True, description="Cleaned.", errors=errors)

@@ -12,7 +12,7 @@ Paid support
 ============
 
 Anaconda Project is an open source project that originated at 
-`Continuum Analytics, Inc. <https://www.continuum.io/>`_
+`Anaconda, Inc. <https://www.anaconda.com/>`_
 Continuum offers paid `training 
 <https://www.continuum.io/training>`_ and `support 
 <https://www.continuum.io/support>`_.
