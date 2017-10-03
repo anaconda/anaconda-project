@@ -1664,7 +1664,9 @@ def clean(project, prepare_result):
                 errors.append("Error removing %s: %s." % (dirname, str(e)))
 
     cleanup_dir(os.path.join(project.directory_path, "services"))
-    cleanup_dir(os.path.join(project.directory_path, "envs"))
+
+    envs_path = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', os.path.join(project.directory_path, "envs"))
+    cleanup_dir(envs_path)
 
     if status and len(errors) == 0:
         return SimpleStatus(success=True, description="Cleaned.", errors=errors)
