@@ -232,20 +232,6 @@ def main_unlock(args):
     return unlock(args.directory, args.name)
 
 
-def running_in_bootstrap_env(project_dir):
-    """Check if anaconda-project is running inside a project bootstrap env.
-
-    Input:
-        - project_dir(str): path of the project
-
-    Output:
-        bool: True if anaconda-project is running from the bootstrap env related
-            to project_dir, False otherwise
-    """
-    bootstrap_env_prefix = join(project_dir, 'envs', 'bootstrap-env')
-    return environ['CONDA_PREFIX'] == bootstrap_env_prefix
-
-
 def create_bootstrap_env(project):
     """Create a project bootstrap env, if it doesn't exist.
 
