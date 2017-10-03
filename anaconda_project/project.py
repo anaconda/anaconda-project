@@ -844,7 +844,7 @@ class _ConfigCache(object):
         if _fatal_problem(problems):
             return
 
-        if 'bootstrap-env' in self.env_specs:
+        if self.has_bootstrap_env_spec():
             requirement = CondaBootstrapEnvRequirement(registry=self.registry, env_specs=self.env_specs)
             self._add_requirement(requirements, self.global_base_env_spec, requirement)
 
@@ -1109,7 +1109,6 @@ class _ConfigCache(object):
                                          only_a_suggestion=True)
                 problems.append(problem)
 
-    @property
     def has_bootstrap_env_spec(self):
         """Return True if bootstrap-env is in env_specs, False otherwise."""
         return 'bootstrap-env' in self.env_specs
