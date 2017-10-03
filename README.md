@@ -1,6 +1,18 @@
 # Anaconda Project
 
-*Reproducible, executable project directories.*
+*Create, load and manipulate reproducible data science projects.*
+
+## Build status
+
+[![Build Status](https://travis-ci.org/Anaconda-Platform/anaconda-project.svg?branch=rename-to-anaconda-project)](https://travis-ci.org/Anaconda-Platform/anaconda-project)
+[![Build status](https://ci.appveyor.com/api/projects/status/54dmsnyeuutfvutj?svg=true)](https://ci.appveyor.com/project/ContinuumAnalytics/anaconda-project-fqvvy)
+
+## Project information
+
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
+
+## Description
 
 Take any directory full of stuff that you're working on; web apps,
 scripts, Jupyter notebooks, data files, whatever it may be.
