@@ -1,6 +1,6 @@
 # Anaconda Project
 
-*Create, load and manipulate reproducible data science projects.*
+*Tool for encapsulating, running, and reproducing data science projects.*
 
 ## Build status
 

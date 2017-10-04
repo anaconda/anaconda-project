@@ -25,7 +25,7 @@ requirements:
     - python
     - requests
     - ruamel_yaml
-    - tornado
+    - tornado >=4.2
 
 test:
   imports:
@@ -41,7 +41,8 @@ about:
   home: https://github.com/Anaconda-Platform/anaconda-project
   license: BSD 3-Clause
   license_family: BSD
-  summary: Reproducible, executable project directories.
+  license_file: LICENSE.txt
+  summary: Tool for encapsulating, running, and reproducing data science projects
   description: |
     By adding an anaconda-project.yml to a project directory, a single 
     anaconda-project runcommand will be able to set up all dependencies 
