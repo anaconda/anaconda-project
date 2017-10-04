@@ -100,3 +100,4 @@ htmlcov
 /docs/build
 /examples/movies/movies.db
 *.orig
+CHANGELOG.temp

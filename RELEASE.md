@@ -9,7 +9,7 @@
 
 **2.)** Update [CHANGELOG.md](https://github.com/anaconda-platform/anaconda-project/blob/master/CHANGELOG.md), using loghub itself
 
-    loghub anaconda-platform/anaconda-project -m <milestone>
+    loghub anaconda-platform/anaconda-project -u <username> -m <milestone> -ilg type:feature "Features " -ilg type:enhancement "Enhancements" -ilg type:bug "Bugs fixed" -ilr "reso:completed"
 
 **3.)** Update [`anaconda_project/version.py`](https://github.com/anaconda-platform/anaconda-project/blob/master/anaconda_project/version.py) (set release version, remove 'dev0')
 
