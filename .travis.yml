@@ -1,3 +1,5 @@
+# https://travis-ci.org/Anaconda-Platform/anaconda-project/
+
 # language: python sets up virtualenv and pip that we don't need.
 # omitting language gives us ruby stuff. c seems likely to be a minimal setup.
 language: c
@@ -78,10 +80,10 @@ install:
     fi ;
 
 script:
-  - if test "$TEST_TARGET" = tests; then LANG=en_US.UTF-8 python setup.py test -a '-vv'; fi
+  - if test "$TEST_TARGET" = tests; then LANG=en_US.UTF-8 python scripts/run_tests.py --pytest-args ' -vv'; fi
   - if test "$TRAVIS_PYTHON_VERSION" = "3.5" && test "$TEST_TARGET" = "packaging"; then
       git fetch --unshallow ;
-      LANG=en_US.UTF-8 python setup.py conda_package ;
+      LANG=en_US.UTF-8 python scripts/create_conda_packages.py;
     else
       echo "Not building packages on $TRAVIS_PYTHON_VERSION target=$TEST_TARGET" ;
     fi

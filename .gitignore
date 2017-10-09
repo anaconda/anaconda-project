@@ -97,8 +97,7 @@ htmlcov
 /.anaconda
 /.envs
 /record.txt
-# version.py is a generated file
-/anaconda_project/version.py
 /docs/build
 /examples/movies/movies.db
 *.orig
+CHANGELOG.temp
