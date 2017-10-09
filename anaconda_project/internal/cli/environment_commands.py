@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function
 
 import sys
 import platform
-from os import environ, execv
+from os import execv
 from os.path import join, exists
 
 from anaconda_project.internal.cli.project_load import load_project
