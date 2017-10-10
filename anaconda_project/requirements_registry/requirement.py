@@ -200,6 +200,7 @@ class Requirement(with_metaclass(ABCMeta)):
         analysis = provider.analyze(self, environ, local_state_file, default_env_spec_name, overrides)
         (has_been_provided, status_description) = status_getter(environ, local_state_file, analysis)
         env_spec_name = analysis.config.get('env_name', None)
+
         return RequirementStatus(self,
                                  has_been_provided=has_been_provided,
                                  status_description=status_description,

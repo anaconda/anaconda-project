@@ -9,10 +9,14 @@
 from __future__ import absolute_import, print_function
 
 import sys
+import platform
+from os import execv
+from os.path import join, exists
 
 from anaconda_project.internal.cli.project_load import load_project
 from anaconda_project import project_ops
 from anaconda_project.internal.cli import console_utils
+from anaconda_project.internal import conda_api
 
 
 def _handle_status(status, success_message=None):
@@ -227,3 +231,30 @@ def main_update(args):
 def main_unlock(args):
     """Unlock dependency versions and return exit status code."""
     return unlock(args.directory, args.name)
+
+
+def create_bootstrap_env(project):
+    """Create a project bootstrap env, if it doesn't exist.
+
+    Input:
+        project(project.Project): project
+    """
+    if not exists(project.bootstrap_env_prefix):
+        env_spec = project.env_specs['bootstrap-env']
+        command_line_packages = list(env_spec.conda_packages + env_spec.pip_packages)
+        conda_api.create(prefix=project.bootstrap_env_prefix, pkgs=command_line_packages, channels=env_spec.channels)
+
+
+def run_on_bootstrap_env(project):
+    """Run the current command in a project bootstrap env.
+
+    Input:
+        project(project.Project): project
+    """
+    if platform.system() == 'Windows':
+        script_dir = "Scripts"
+    else:
+        script_dir = "bin"
+
+    anaconda_project_exec = join(project.bootstrap_env_prefix, script_dir, 'anaconda-project')
+    execv(anaconda_project_exec, sys.argv)

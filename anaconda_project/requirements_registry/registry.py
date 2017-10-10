@@ -88,6 +88,9 @@ class RequirementsRegistry(object):
         if class_name == 'CondaEnvProvider':
             from .providers.conda_env import CondaEnvProvider
             return CondaEnvProvider()
+        if class_name == 'CondaBootstrapEnvProvider':
+            from .providers.conda_env import CondaBootstrapEnvProvider
+            return CondaBootstrapEnvProvider()
         elif class_name == 'RedisProvider':
             from .providers.redis import RedisProvider
             return RedisProvider()
@@ -98,4 +101,5 @@ class RequirementsRegistry(object):
             from .providers.download import DownloadProvider
             return DownloadProvider()
         else:
-            return None
+            msg = "Provider class %s is not found in providers registry." % class_name
+            raise ValueError(msg)
