@@ -13,14 +13,14 @@ Here's how to work on the code:
 
 After you've activated your anaconda-project-dev environment,
 
- * `python setup.py test` is configured to run all the checks that
+ * `python scripts/run_tests.py` is configured to run all the checks that
    have to pass before you commit or push. It also reformats the
    code with yapf if necessary. Continuous integration runs this
    command so you should run it and make it pass before you push
    to the repo.
- * To only run the formatter and linter, use `python setup.py test
+ * To only run the formatter and linter, use `python scripts/run_tests.py
    --format-only`.
- * If you have added but uncommitted changes, you can use use `python setup.py test
+ * If you have added but uncommitted changes, you can use use `python scripts/run_tests.py
    --format-only --git-staged-only` to lint only the added files.
  * To only run the tests, use `python -m pytest -vv anaconda_project`
  * To only run a single file of tests use `python -m pytest
