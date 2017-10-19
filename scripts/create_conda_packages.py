@@ -113,7 +113,7 @@ class CondaPackageCreator:
                 shutil.copyfile(package_path, final_package_path)
                 print("Created %s" % final_package_path)
 
-            for arch in ('osx-64', 'linux-32', 'win-32', 'win-64'):
+            for arch in ('osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64'):
                 if arch == build_arch:
                     continue
                 converted_output_dir = os.path.join(python_scoped_package_dir)

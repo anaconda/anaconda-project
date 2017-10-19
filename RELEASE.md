@@ -39,9 +39,11 @@
 
 **10.)** Push changes
     
-    git push upstream master
     git push origin master
-    git push --tags
+    git push origin --tags
+
+    git push upstream master
+    git push upstream --tags
 
 
 ## To release a new version of **anaconda-project** on anaconda-platform:
