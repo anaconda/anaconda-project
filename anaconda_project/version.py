@@ -7,6 +7,6 @@
 # -----------------------------------------------------------------------------
 """Version of anaconda-project library."""
 
-VERSION_INFO = (0, 8, 2, 'dev0')
+VERSION_INFO = (0, 8, 2)
 __version__ = '.'.join(map(str, VERSION_INFO))
 version = __version__

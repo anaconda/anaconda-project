@@ -2,6 +2,24 @@
 
 We [keep a changelog.](http://keepachangelog.com/)
 
+
+## Version 0.8.2 (2017/10/19) - Public Release
+
+### Issues Closed
+
+#### Enhancements
+
+* [Issue 134](https://github.com/anaconda-platform/anaconda-project/issues/134) - Add bootstrap environments for projects to run plugins from there ([PR 109](https://github.com/Anaconda-Platform/anaconda-project/pull/109))
+
+In this release 1 issue was closed.
+
+### Pull Requests Merged
+
+* [PR 109](https://github.com/anaconda-platform/anaconda-project/pull/109) - PR: Add bootstrap envs ([134](https://github.com/Anaconda-Platform/anaconda-project/issues/134))
+
+In this release 1 pull request was closed
+
+
 ## Version 0.8.1 (2017/10/03) - Public Release
 
 ### Pull Requests Merged
