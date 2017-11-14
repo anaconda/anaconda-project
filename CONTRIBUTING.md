@@ -10,6 +10,12 @@ Here's how to work on the code:
    also look in that file and/or .travis.yml/appveyor.xml to see
    which packages are neded and then create the dev environment
    by hand as you see fit.
+ * NOTE: Do make sure to respect the version pins found in the
+   `environment.yml` file. In particular, different versions of
+   the reformatting package `yapf` may reformat the code in a
+   slightly different manner. This will introduce a number of
+   spurious changes to your local clone that will break testing
+   in CI if committed.
 
 After you've activated your anaconda-project-dev environment,
 
