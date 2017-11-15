@@ -9,6 +9,7 @@
 
 # Standard library imports
 import ast
+import io
 import os
 
 # Third party imports
@@ -20,7 +21,8 @@ REQUIREMENTS = ['anaconda-client', 'requests', 'ruamel_yaml', 'tornado >= 4.2']
 
 def get_version(module='anaconda_project'):
     """Get version."""
-    with open(os.path.join(HERE, module, 'version.py'), 'r') as f:
+    version_path = os.path.join(HERE, module, 'version.py')
+    with io.open(version_path, 'r', encoding='utf-8') as f:
         data = f.read()
     lines = data.split('\n')
     for line in lines:
@@ -33,7 +35,7 @@ def get_version(module='anaconda_project'):
 
 def get_description():
     """Get long description."""
-    with open(os.path.join(HERE, 'README.md'), 'r') as f:
+    with io.open(os.path.join(HERE, 'README.md'), 'r', encoding='utf-8') as f:
         data = f.read()
     return data
 
