@@ -30,8 +30,8 @@ install:
   - set PATH
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda config --set always_yes yes
-  # upgrade (or downgrade) to our pinned conda version
-  - conda install -n root -q conda=4.1.12
+  # Use the latest conda
+  - conda install -n root -q conda --no-pin
   # activate with newer conda, may set different variables
   - "%CONDA_ROOT%\\Scripts\\activate root"
   - echo CONDA_PREFIX %CONDA_PREFIX%
