@@ -6,6 +6,7 @@ language: c
 # this is here to avoid a hang with python 2.7, suggested in
 # https://github.com/travis-ci/travis-ci/issues/6861
 sudo: required
+
 env:
   # All supported python versions
   - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests CONDA_CANARY=false
@@ -15,9 +16,11 @@ env:
   - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=packaging CONDA_CANARY=false
   # conda canary
   - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=true
+
 os:
   - linux
   - osx
+
 matrix:
   # disable all but one job on OS X, we just want to smoke test OS X.
   exclude:
@@ -30,6 +33,7 @@ matrix:
   allow_failures:
     # conda canary shouldn't block the build, just show us an FYI
     - env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=true
+
 install:
   - printenv | sort
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -79,3 +83,7 @@ script:
     else
       echo "Not building packages on $TRAVIS_PYTHON_VERSION target=$TEST_TARGET" ;
     fi
+
+after_success:
+  - conda install -q -n test-environment -c conda-forge codecov
+  - codecov
