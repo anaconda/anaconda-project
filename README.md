@@ -4,8 +4,9 @@
 
 ## Build status
 
-[![Build Status](https://travis-ci.org/Anaconda-Platform/anaconda-project.svg?branch=rename-to-anaconda-project)](https://travis-ci.org/Anaconda-Platform/anaconda-project)
-[![Build status](https://ci.appveyor.com/api/projects/status/54dmsnyeuutfvutj?svg=true)](https://ci.appveyor.com/project/ContinuumAnalytics/anaconda-project-fqvvy)
+[![Travis Build Status](https://travis-ci.org/Anaconda-Platform/anaconda-project.svg?branch=rename-to-anaconda-project)](https://travis-ci.org/Anaconda-Platform/anaconda-project)
+[![Appveyor Build status](https://ci.appveyor.com/api/projects/status/54dmsnyeuutfvutj?svg=true)](https://ci.appveyor.com/project/ContinuumAnalytics/anaconda-project-fqvvy)
+[![codecov](https://codecov.io/gh/Anaconda-Platform/anaconda-project/branch/master/graph/badge.svg)](https://codecov.io/gh/Anaconda-Platform/anaconda-project)
 
 ## Project information
 
