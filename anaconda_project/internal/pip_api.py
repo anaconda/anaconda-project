@@ -64,9 +64,7 @@ def install(prefix, pkgs=None):
         raise TypeError('must specify a list of one or more packages to install into existing environment, not %r' %
                         pkgs)
 
-    # --no-deps is because we don't want to pull in pip versions of
-    # everything that conda has.
-    args = ['install', '--quiet', '--no-deps']
+    args = ['install', '--quiet']
     args.extend(pkgs)
 
     return _call_pip(prefix, extra_args=args)
