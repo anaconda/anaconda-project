@@ -268,9 +268,9 @@ class CommandExecInfo(object):
                 # jumps through some funky hoops setting flags on
                 # the Windows API calls. We need to do that, rather
                 # than calling os.execvpe which doesn't let us set those
-                # flags. So we spawn the child and then exit.
-                self.popen()
-                sys.exit(0)
+                # flags. So we spawn the child and then exit with its
+                # return code.
+                sys.exit(self.popen().wait())
             else:
                 # this is all shell=True does on unix
                 args = ['/bin/sh', '-c'] + args
