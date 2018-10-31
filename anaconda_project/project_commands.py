@@ -95,7 +95,8 @@ class _ArgsTransformer(object):
         return self.add_args(results_list, with_removed)
 
     def add_args(self, results, args):
-        raise RuntimeError("not implemented")  # pragma: no cover
+        # default implementation: drop all http-related args
+        return args
 
 
 class _BokehArgsTransformer(_ArgsTransformer):
@@ -123,7 +124,7 @@ class _BokehArgsTransformer(_ArgsTransformer):
                 # bokeh doesn't have a way to set this
                 pass
             else:
-                raise RuntimeError("unhandled http option for notebook")  # pragma: no cover
+                raise RuntimeError("unhandled http option for bokeh app")  # pragma: no cover
 
         return added + args
 
@@ -445,6 +446,9 @@ class ProjectCommand(object):
 
         if self.args is not None:
             args = self.args
+            if not self.supports_http_options:
+                # drop the http arguments
+                extra_args = _ArgsTransformer().transform_args(extra_args)
 
         if args is not None:
             if extra_args is not None:
