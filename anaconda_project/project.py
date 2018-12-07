@@ -1099,6 +1099,10 @@ class _ConfigCache(object):
 
     def _verify_command_dependencies(self, problems, project_file):
         for command in self.commands.values():
+            if command.default_env_spec_name not in self.env_specs:
+                # The missing environment will already have been flagged as a problem
+                # in _update_commands, so we can just return
+                return
             env_spec = self.env_specs[command.default_env_spec_name]
             missing = command.missing_packages(env_spec)
             if len(missing) > 0:

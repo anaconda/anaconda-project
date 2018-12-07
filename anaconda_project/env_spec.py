@@ -552,13 +552,18 @@ def _default_env_spec_packages():
 def _anaconda_default_env_spec(shared_base_spec):
     if shared_base_spec is None:
         inherit_from = ()
+        need_packages = need_platforms = True
     else:
         inherit_from = (shared_base_spec, )
+        need_packages = len(shared_base_spec.conda_packages) == 0
+        need_platforms = False
+    packages = ["anaconda"] if need_packages else ()
+    platforms = conda_api.default_platforms_with_current() if need_platforms else ()
     return EnvSpec(
         name="default",
-        conda_packages=_default_env_spec_packages(),
+        conda_packages=packages,
         channels=[],
-        platforms=conda_api.default_platforms_with_current(),
+        platforms=platforms,
         description="Default environment spec for running commands",
         inherit_from_names=(),
         inherit_from=inherit_from)
