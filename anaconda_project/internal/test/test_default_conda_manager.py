@@ -29,7 +29,7 @@ from anaconda_project.internal.test.test_conda_api import monkeypatch_conda_not_
 
 if platform.system() == 'Windows':
     PYTHON_BINARY = "python.exe"
-    IPYTHON_BINARY = "Scripts\ipython.exe"
+    IPYTHON_BINARY = "Scripts\\ipython.exe"
     FLAKE8_BINARY = "Scripts\\flake8.exe"
     # Use a different package from the test env due to weird CI path/env errors
     PYINSTRUMENT_BINARY = "Scripts\\pyinstrument.exe"
@@ -248,7 +248,8 @@ def test_conda_create_and_install_and_remove(monkeypatch):
             manager.remove_packages(prefix=envdir, packages=['ipython'])
         # different versions of conda word this differently
         message = str(excinfo.value)
-        valid_strings = ('no packages found to remove', 'Package not found', "named 'ipython' found to remove",
+        valid_strings = ('no packages found to remove', 'Package not found',
+                         "named 'ipython' found to remove", 'PackagesNotFoundError:',
                          "is missing from the environment")
         assert any(s in message for s in valid_strings)
         assert not manager._timestamp_file_up_to_date(envdir, spec)
@@ -282,16 +283,17 @@ def test_timestamp_file_works(monkeypatch):
             for d in manager._timestamp_comparison_directories(envdir):
                 try:
                     t = os.path.getmtime(d)
-                    if t > newest_in_prefix:
-                        newest_in_prefix = t
-                except Exception:
-                    pass
-            timestamp_file = 0
+                except Exception as e:
+                    t = 0
+                if t > newest_in_prefix:
+                    newest_in_prefix = t
+            timestamp_fname = manager._timestamp_file(envdir, spec)
             try:
-                timestamp_file = os.path.getmtime(manager._timestamp_file(envdir, spec))
+                timestamp_file = os.path.getmtime(timestamp_fname)
             except Exception:
-                pass
-            print("%s: timestamp file %d prefix %d" % (when, timestamp_file, newest_in_prefix))
+                timestamp_file = 0
+            print("%s: timestamp file %d prefix %d diff %g" % (when, timestamp_file, newest_in_prefix,
+                                                               newest_in_prefix - timestamp_file))
 
         print_timestamps("before env creation")
 
@@ -318,20 +320,20 @@ def test_timestamp_file_works(monkeypatch):
         assert manager._timestamp_file_up_to_date(envdir, spec)
 
         called = []
-        from anaconda_project.internal.pip_api import _call_pip as real_call_pip
-        from anaconda_project.internal.conda_api import _call_conda as real_call_conda
+        from anaconda_project.internal.pip_api import installed as real_pip_installed
+        from anaconda_project.internal.conda_api import installed as real_conda_installed
 
-        def traced_call_pip(*args, **kwargs):
-            called.append(("pip", args, kwargs))
-            return real_call_pip(*args, **kwargs)
+        def traced_pip_installed(*args, **kwargs):
+            called.append(("pip_api.installed", args, kwargs))
+            return real_pip_installed(*args, **kwargs)
 
-        monkeypatch.setattr('anaconda_project.internal.pip_api._call_pip', traced_call_pip)
+        monkeypatch.setattr('anaconda_project.internal.pip_api.installed', traced_pip_installed)
 
-        def traced_call_conda(*args, **kwargs):
-            called.append(("conda", args, kwargs))
-            return real_call_conda(*args, **kwargs)
+        def trace_conda_installed(*args, **kwargs):
+            called.append(("conda_api.installed", args, kwargs))
+            return real_conda_installed(*args, **kwargs)
 
-        monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', traced_call_conda)
+        monkeypatch.setattr('anaconda_project.internal.conda_api.installed', trace_conda_installed)
 
         deviations = manager.find_environment_deviations(envdir, spec)
 

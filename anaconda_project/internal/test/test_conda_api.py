@@ -21,7 +21,7 @@ from anaconda_project.internal.test.tmpfile_utils import (with_directory_content
 
 if platform.system() == 'Windows':
     PYTHON_BINARY = "python.exe"
-    IPYTHON_BINARY = "Scripts\ipython.exe"
+    IPYTHON_BINARY = "Scripts\\ipython.exe"
 else:
     PYTHON_BINARY = "bin/python"
     IPYTHON_BINARY = "bin/ipython"
@@ -109,7 +109,7 @@ def _assert_packages_not_found(e):
     # conda has changed this message several times
     ok = False
     valid_strings = ('No packages found', 'Package missing in current', 'Package missing in current',
-                     'PackageNotFoundError:', 'Package not found')
+                     'PackageNotFoundError:', 'PackagesNotFoundError:', 'Package not found')
 
     ok = any(s in str(e) for s in valid_strings)
     if not ok:
@@ -662,7 +662,8 @@ def test_resolve_dependencies_for_bogus_package_with_actual_conda():
     if hasattr(excinfo.value, 'json'):
         pprint(excinfo.value.json)
     exc_str = str(excinfo.value)
-    valid_strings = ('Package not found', 'Package missing', 'Packages missing')
+    valid_strings = ('Package not found', 'Package missing', 'Packages missing',
+                     'packages are not available')
     assert any(s in exc_str for s in valid_strings)
 
 
@@ -1073,12 +1074,13 @@ def test_msys_for_all_platforms():
                 return url
 
         channels = [no_slash(channel) for channel in info['channels']]
+        # Designed to handle repo.continuum.io and repo.anaconda.com
+        channels = '\n'.join(channels)
         if name == 'win':
-            assert ('https://repo.continuum.io/pkgs/msys2/%s' % p) in channels
-            assert ('https://repo.continuum.io/pkgs/msys2/noarch') in channels
+            assert '/msys2/%s' % p in channels
+            assert '/msys2/noarch' in channels
         else:
-            for c in channels:
-                assert 'msys' not in c
+            assert '/msys2' not in channels
 
 
 def test_sort_platform_list():

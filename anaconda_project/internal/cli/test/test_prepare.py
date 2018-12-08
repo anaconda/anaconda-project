@@ -192,7 +192,6 @@ def test_prepare_command_choose_command_chooses_env_spec(capsys):
         assert result == 1
 
         out, err = capsys.readouterr()
-        assert 'Fetching package' in out
         assert 'nonexistent_bar' in err
         assert 'nonexistent_foo' not in err
 
@@ -201,7 +200,6 @@ def test_prepare_command_choose_command_chooses_env_spec(capsys):
         assert result == 1
 
         out, err = capsys.readouterr()
-        assert 'Fetching package' in out
         assert 'nonexistent_foo' in err
         assert 'nonexistent_bar' not in err
 
