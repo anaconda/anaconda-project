@@ -34,7 +34,7 @@ bar
 /baz
    whitespace_surrounding%s
 foo # this comment will be part of the pattern
-\#patternwithhash
+\\#patternwithhash
 
 # blank line above me
 

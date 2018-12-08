@@ -511,6 +511,7 @@ def parse_spec(spec):
                       exact_version=exact_version,
                       exact_build_string=exact_build_string)
 
+
 # these are in order of preference. On pre-4.1.4 Windows,
 # CONDA_PREFIX and CONDA_ENV_PATH aren't set, so we get to
 # CONDA_DEFAULT_ENV.
@@ -580,6 +581,7 @@ def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
                 if name != prefix:
                     break
         environ['CONDA_DEFAULT_ENV'] = name
+
 
 # This isn't all (e.g. leaves out arm, power).  it's sort of "all
 # that people typically publish for"

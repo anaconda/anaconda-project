@@ -1389,8 +1389,8 @@ def test_notebook_command_disabled_project_http_args():
                         '--anaconda-project-use-xheaders', '--anaconda-project-address', '1.2.3.4'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
-        assert cmd_exec.args == [jupyter_notebook, os.path.join(
-            dirname, 'test.ipynb'), 'foo', 'bar', '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port',
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), 'foo', 'bar',
+                                 '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port',
                                  '1234', '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
                                  '--anaconda-project-use-xheaders', '--anaconda-project-address', '1.2.3.4']
         assert cmd_exec.shell is False
@@ -1419,8 +1419,8 @@ def test_notebook_command_project_http_args_after_double_hyphen():
                         '--anaconda-project-use-xheaders'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
-        assert cmd_exec.args == [jupyter_notebook, os.path.join(
-            dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb', '--', 'foo', 'bar',
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'),
+                                 '--NotebookApp.default_url=/notebooks/test.ipynb', '--', 'foo', 'bar',
                                  '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port', '1234',
                                  '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
                                  '--anaconda-project-use-xheaders']
@@ -1447,8 +1447,8 @@ def test_notebook_command_with_project_http_args_separated_by_equals():
                         '--anaconda-project-address=1.2.3.4'])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
-        assert cmd_exec.args == [jupyter_notebook, os.path.join(
-            dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb', '--ip', '1.2.3.4',
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'),
+                                 '--NotebookApp.default_url=/notebooks/test.ipynb', '--ip', '1.2.3.4',
                                  '--no-browser', '--port', '1234', '--NotebookApp.base_url=blah', 'foo', 'bar']
         assert cmd_exec.shell is False
 
@@ -2029,7 +2029,7 @@ def _run_argv_for_environment(environ,
                           file=sys.stderr)
                     try:
                         print("after remove, os.stat(%s) = %r" % (batscript, os.stat(batscript)))
-                    except Exception as e:
+                    except Exception:
                         print("after remove, could not stat the script")
 
                     try:

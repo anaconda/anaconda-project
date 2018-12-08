@@ -465,7 +465,7 @@ def _load_environment_yml(filename):
     return EnvSpec(name=name, conda_packages=conda_packages, channels=channels, pip_packages=pip_packages, platforms=())
 
 
-_requirement_option_re = re.compile('^-([-a-zA-Z0-9]+)\s(.*)')
+_requirement_option_re = re.compile(r'^-([-a-zA-Z0-9]+)\s(.*)')
 
 
 def _load_requirements_txt(filename):

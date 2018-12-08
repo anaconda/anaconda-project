@@ -564,19 +564,24 @@ def test_invalid_specs():
 
 
 def test_conda_style_specs():
-    cases = [('foo', ('foo', None, None, None, None)), ('foo=1.0', ('foo', '=1.0', None, '1.0', None)),
-             ('foo=1.0*', ('foo', '=1.0*', None, None, None)), ('foo=1.0|1.2', ('foo', '=1.0|1.2', None, None, None)),
+    cases = [('foo', ('foo', None, None, None, None)),
+             ('foo=1.0', ('foo', '=1.0', None, '1.0', None)),
+             ('foo=1.0*', ('foo', '=1.0*', None, None, None)),
+             ('foo=1.0|1.2', ('foo', '=1.0|1.2', None, None, None)),
              ('foo=1.0=2', ('foo', '=1.0=2', None, '1.0', '2'))]
     for case in cases:
         assert conda_api.parse_spec(case[0]) == case[1]
 
 
 def test_pip_style_specs():
-    cases = [('foo>=1.0', ('foo', None, '>=1.0', None, None)), ('foo >=1.0', ('foo', None, '>=1.0', None, None)), (
-        'FOO-Bar >=1.0', ('foo-bar', None, '>=1.0', None, None)), ('foo >= 1.0', ('foo', None, '>=1.0', None, None)),
-             ('foo > 1.0', ('foo', None, '>1.0', None, None)), ('foo != 1.0', ('foo', None, '!=1.0', None, None)),
-             ('foo <1.0', ('foo', None, '<1.0', None, None)), ('foo >=1.0 , < 2.0',
-                                                               ('foo', None, '>=1.0,<2.0', None, None))]
+    cases = [('foo>=1.0', ('foo', None, '>=1.0', None, None)),
+             ('foo >=1.0', ('foo', None, '>=1.0', None, None)),
+             ('FOO-Bar >=1.0', ('foo-bar', None, '>=1.0', None, None)),
+             ('foo >= 1.0', ('foo', None, '>=1.0', None, None)),
+             ('foo > 1.0', ('foo', None, '>1.0', None, None)),
+             ('foo != 1.0', ('foo', None, '!=1.0', None, None)),
+             ('foo <1.0', ('foo', None, '<1.0', None, None)),
+             ('foo >=1.0 , < 2.0', ('foo', None, '>=1.0,<2.0', None, None))]
     for case in cases:
         assert conda_api.parse_spec(case[0]) == case[1]
 
@@ -984,10 +989,8 @@ def test_resolve_dependencies_with_conda_43_json(monkeypatch):
              'PREFIX': '/tmp/kapsel_resolve__7_udcjm',
              'SYMLINK_CONDA': ['/home/hp/bin/anaconda2'],
              'op_order': ['CHECK_FETCH', 'RM_FETCHED', 'FETCH', 'CHECK_EXTRACT', 'RM_EXTRACTED', 'EXTRACT', 'UNLINK',
-                          'LINK', 'SYMLINK_CONDA']}
-        ],
-                    'dry_run': True,
-                    'success': True}
+                          'LINK', 'SYMLINK_CONDA']}],
+            'dry_run': True, 'success': True}
         return json.dumps(old_json)
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)

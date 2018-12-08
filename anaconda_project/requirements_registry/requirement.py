@@ -231,6 +231,7 @@ class Requirement(with_metaclass(ABCMeta)):
         """
         pass  # pragma: no cover (abstract method)
 
+
 # suffixes that change the default for the "encrypted" option
 _secret_suffixes = ('_PASSWORD', '_SECRET_KEY', '_SECRET')
 

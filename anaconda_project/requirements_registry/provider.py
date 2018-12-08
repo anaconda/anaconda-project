@@ -233,6 +233,7 @@ class ProvideResult(object):
         """Get an empty ProvideResult (currently a singleton since these are immutable)."""
         return _empty_provide_result
 
+
 # get this via ProvideResult.empty()
 _empty_provide_result = ProvideResult()
 

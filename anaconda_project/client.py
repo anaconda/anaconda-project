@@ -163,7 +163,7 @@ def _upload(project, archive_filename, uploaded_basename, site=None, username=No
     try:
         json = client.upload(project.publication_info(), archive_filename, uploaded_basename)
         return _UploadedStatus(json)
-    except Unauthorized as e:
+    except Unauthorized:
         return SimpleStatus(success=False,
                             description='Please log in with the "anaconda login" command.',
                             errors=["Not logged in."])

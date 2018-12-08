@@ -433,8 +433,7 @@ class _ConfigCache(object):
         platforms = self._parse_string_list(problems, yaml_file, parent_dict, 'platforms', 'platform name')
         (platforms, unknown, invalid) = conda_api.validate_platform_list(platforms)
         for u in unknown:
-            problems.append(ProjectProblem(text=(
-                "Unusual platform name '%s' may be a typo (more usual examples: linux-64, osx-64, win-64)" % u),
+            problems.append(ProjectProblem(text=("Unusual platform name '%s' may be a typo (more usual examples: linux-64, osx-64, win-64)" % u),
                                            filename=yaml_file.filename,
                                            only_a_suggestion=True))
         for i in invalid:
@@ -1102,10 +1101,10 @@ class _ConfigCache(object):
                     project.project_file.set_value(['env_specs', env_spec.name, 'packages'], packages)
 
                 problem = ProjectProblem(text=("Command %s uses env spec %s which does not have the packages: %s" % (
-                    command.name, env_spec.name, ", ".join(missing))),
+                                               command.name, env_spec.name, ", ".join(missing))),
                                          filename=project_file.filename,
-                                         fix_prompt=("Add %s to env spec %s in %s?" % (", ".join(
-                                             missing), env_spec.name, os.path.basename(project_file.filename))),
+                                         fix_prompt=("Add %s to env spec %s in %s?" % (", ".join(missing),
+                                                     env_spec.name, os.path.basename(project_file.filename))),
                                          fix_function=add_packages_to_env_spec,
                                          only_a_suggestion=True)
                 problems.append(problem)

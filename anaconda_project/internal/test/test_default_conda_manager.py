@@ -283,7 +283,7 @@ def test_timestamp_file_works(monkeypatch):
             for d in manager._timestamp_comparison_directories(envdir):
                 try:
                     t = os.path.getmtime(d)
-                except Exception as e:
+                except Exception:
                     t = 0
                 if t > newest_in_prefix:
                     newest_in_prefix = t

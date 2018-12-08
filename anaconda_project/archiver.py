@@ -124,7 +124,7 @@ def _parse_ignore_file(filename, frontend):
                     continue
 
                 # you can backslash-escape a hash at the start
-                if line.startswith("\#"):
+                if line.startswith(r"\#"):
                     line = line[1:]
 
                 if line != '':
