@@ -48,27 +48,30 @@ def run_command(project_dir, ui_mode, conda_environment, command_name, extra_com
         environ = None
         command = _command_from_name(project, command_name)
 
-        result = prepare_with_ui_mode_printing_errors(project,
-                                                      ui_mode=ui_mode,
-                                                      env_spec_name=conda_environment,
-                                                      command=command,
-                                                      extra_command_args=extra_command_args,
-                                                      environ=environ)
+        result = prepare_with_ui_mode_printing_errors(
+            project,
+            ui_mode=ui_mode,
+            env_spec_name=conda_environment,
+            command=command,
+            extra_command_args=extra_command_args,
+            environ=environ)
 
         if result.failed:
             # errors were printed already
             return
         elif result.command_exec_info is None:
-            print("No known run command for project %s; try adding a 'commands:' section to anaconda-project.yml" %
-                  project_dir,
-                  file=sys.stderr)
+            print(
+                "No known run command for project %s; try adding a 'commands:' section to anaconda-project.yml" %
+                project_dir,
+                file=sys.stderr)
         else:
             try:
 
                 result.command_exec_info.execvpe()
             except OSError as e:
-                print("Failed to execute '%s': %s" % (" ".join(result.command_exec_info.args), e.strerror),
-                      file=sys.stderr)
+                print(
+                    "Failed to execute '%s': %s" % (" ".join(result.command_exec_info.args), e.strerror),
+                    file=sys.stderr)
 
 
 def main(args):

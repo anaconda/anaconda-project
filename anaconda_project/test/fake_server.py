@@ -175,9 +175,8 @@ class FakeServerContext(object):
 
     def _run(self):
         self._loop = IOLoop()
-        self._server = FakeAnacondaServer(io_loop=self._loop,
-                                          fail_these=self._fail_these,
-                                          expected_basename=self._expected_basename)
+        self._server = FakeAnacondaServer(
+            io_loop=self._loop, fail_these=self._fail_these, expected_basename=self._expected_basename)
         self._url = self._server.url
 
         def notify_started():
@@ -195,6 +194,7 @@ class FakeServerContext(object):
             if self._loop is not None:
                 self._loop.stop()
                 self._loop = None
+
         # the delay allows pending next-tick things to go ahead
         # and happen, which may avoid some problems with trying to
         # output to stdout after pytest closes it

@@ -564,23 +564,18 @@ def test_invalid_specs():
 
 
 def test_conda_style_specs():
-    cases = [('foo', ('foo', None, None, None, None)),
-             ('foo=1.0', ('foo', '=1.0', None, '1.0', None)),
-             ('foo=1.0*', ('foo', '=1.0*', None, None, None)),
-             ('foo=1.0|1.2', ('foo', '=1.0|1.2', None, None, None)),
+    cases = [('foo', ('foo', None, None, None, None)), ('foo=1.0', ('foo', '=1.0', None, '1.0', None)),
+             ('foo=1.0*', ('foo', '=1.0*', None, None, None)), ('foo=1.0|1.2', ('foo', '=1.0|1.2', None, None, None)),
              ('foo=1.0=2', ('foo', '=1.0=2', None, '1.0', '2'))]
     for case in cases:
         assert conda_api.parse_spec(case[0]) == case[1]
 
 
 def test_pip_style_specs():
-    cases = [('foo>=1.0', ('foo', None, '>=1.0', None, None)),
-             ('foo >=1.0', ('foo', None, '>=1.0', None, None)),
+    cases = [('foo>=1.0', ('foo', None, '>=1.0', None, None)), ('foo >=1.0', ('foo', None, '>=1.0', None, None)),
              ('FOO-Bar >=1.0', ('foo-bar', None, '>=1.0', None, None)),
-             ('foo >= 1.0', ('foo', None, '>=1.0', None, None)),
-             ('foo > 1.0', ('foo', None, '>1.0', None, None)),
-             ('foo != 1.0', ('foo', None, '!=1.0', None, None)),
-             ('foo <1.0', ('foo', None, '<1.0', None, None)),
+             ('foo >= 1.0', ('foo', None, '>=1.0', None, None)), ('foo > 1.0', ('foo', None, '>1.0', None, None)),
+             ('foo != 1.0', ('foo', None, '!=1.0', None, None)), ('foo <1.0', ('foo', None, '<1.0', None, None)),
              ('foo >=1.0 , < 2.0', ('foo', None, '>=1.0,<2.0', None, None))]
     for case in cases:
         assert conda_api.parse_spec(case[0]) == case[1]
@@ -667,8 +662,7 @@ def test_resolve_dependencies_for_bogus_package_with_actual_conda():
     if hasattr(excinfo.value, 'json'):
         pprint(excinfo.value.json)
     exc_str = str(excinfo.value)
-    valid_strings = ('Package not found', 'Package missing', 'Packages missing',
-                     'packages are not available')
+    valid_strings = ('Package not found', 'Package missing', 'Packages missing', 'packages are not available')
     assert any(s in exc_str for s in valid_strings)
 
 
@@ -689,15 +683,21 @@ def test_resolve_dependencies_with_actual_conda_depending_on_conda():
 
 def test_resolve_dependencies_ignores_rmtree_failure(monkeypatch):
     def mock_call_conda(extra_args, json_mode, platform, stdout_callback=None, stderr_callback=None):
-        return json.dumps({'actions': [{'LINK': [{'base_url': None,
-                                                  'build_number': 0,
-                                                  'build_string': '0',
-                                                  'channel': 'defaults',
-                                                  'dist_name': 'mkl-2017.0.1-0',
-                                                  'name': 'mkl',
-                                                  'platform': None,
-                                                  'version': '2017.0.1',
-                                                  'with_features_depends': None}]}]})
+        return json.dumps({
+            'actions': [{
+                'LINK': [{
+                    'base_url': None,
+                    'build_number': 0,
+                    'build_string': '0',
+                    'channel': 'defaults',
+                    'dist_name': 'mkl-2017.0.1-0',
+                    'name': 'mkl',
+                    'platform': None,
+                    'version': '2017.0.1',
+                    'with_features_depends': None
+                }]
+            }]
+        })
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
 
@@ -747,15 +747,21 @@ def test_resolve_dependencies_pass_through_channels(monkeypatch):
         assert '--channel' in extra_args
         assert 'abc' in extra_args
         assert 'nbc' in extra_args
-        return json.dumps({'actions': [{'LINK': [{'base_url': None,
-                                                  'build_number': 0,
-                                                  'build_string': '0',
-                                                  'channel': 'defaults',
-                                                  'dist_name': 'mkl-2017.0.1-0',
-                                                  'name': 'mkl',
-                                                  'platform': None,
-                                                  'version': '2017.0.1',
-                                                  'with_features_depends': None}]}]})
+        return json.dumps({
+            'actions': [{
+                'LINK': [{
+                    'base_url': None,
+                    'build_number': 0,
+                    'build_string': '0',
+                    'channel': 'defaults',
+                    'dist_name': 'mkl-2017.0.1-0',
+                    'name': 'mkl',
+                    'platform': None,
+                    'version': '2017.0.1',
+                    'with_features_depends': None
+                }]
+            }]
+        })
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
 
@@ -775,222 +781,296 @@ def test_resolve_dependencies_no_packages():
 
 def test_resolve_dependencies_with_conda_43_json(monkeypatch):
     def mock_call_conda(extra_args, json_mode, platform=None, stdout_callback=None, stderr_callback=None):
-        old_json = {'actions': [
-            {'LINK':
-             [{'base_url': None,
-               'build_number': 0,
-               'build_string': '0',
-               'channel': 'defaults',
-               'dist_name': 'mkl-2017.0.1-0',
-               'name': 'mkl',
-               'platform': None,
-               'version': '2017.0.1',
-               'with_features_depends': None}, {'base_url': None,
-                                                'build_number': 1,
-                                                'build_string': '1',
-                                                'channel': 'defaults',
-                                                'dist_name': 'openssl-1.0.2k-1',
-                                                'name': 'openssl',
-                                                'platform': None,
-                                                'version': '1.0.2k',
-                                                'with_features_depends': None}, {'base_url': None,
-                                                                                 'build_number': 2,
-                                                                                 'build_string': '2',
-                                                                                 'channel': 'defaults',
-                                                                                 'dist_name': 'readline-6.2-2',
-                                                                                 'name': 'readline',
-                                                                                 'platform': None,
-                                                                                 'version': '6.2',
-                                                                                 'with_features_depends': None},
-              {'base_url': None,
-               'build_number': 0,
-               'build_string': '0',
-               'channel': 'defaults',
-               'dist_name': 'sqlite-3.13.0-0',
-               'name': 'sqlite',
-               'platform': None,
-               'version': '3.13.0',
-               'with_features_depends': None}, {'base_url': None,
-                                                'build_number': 0,
-                                                'build_string': '0',
-                                                'channel': 'defaults',
-                                                'dist_name': 'tk-8.5.18-0',
-                                                'name': 'tk',
-                                                'platform': None,
-                                                'version': '8.5.18',
-                                                'with_features_depends': None}, {'base_url': None,
-                                                                                 'build_number': 0,
-                                                                                 'build_string': '0',
-                                                                                 'channel': 'defaults',
-                                                                                 'dist_name': 'yaml-0.1.6-0',
-                                                                                 'name': 'yaml',
-                                                                                 'platform': None,
-                                                                                 'version': '0.1.6',
-                                                                                 'with_features_depends': None},
-              {'base_url': None,
-               'build_number': 3,
-               'build_string': '3',
-               'channel': 'defaults',
-               'dist_name': 'zlib-1.2.8-3',
-               'name': 'zlib',
-               'platform': None,
-               'version': '1.2.8',
-               'with_features_depends': None}, {'base_url': None,
-                                                'build_number': 0,
-                                                'build_string': '0',
-                                                'channel': 'defaults',
-                                                'dist_name': 'python-2.7.13-0',
-                                                'name': 'python',
-                                                'platform': None,
-                                                'version': '2.7.13',
-                                                'with_features_depends': None}, {'base_url': None,
-                                                                                 'build_number': 0,
-                                                                                 'build_string': 'py27_0',
-                                                                                 'channel': 'defaults',
-                                                                                 'dist_name': 'backports-1.0-py27_0',
-                                                                                 'name': 'backports',
-                                                                                 'platform': None,
-                                                                                 'version': '1.0',
-                                                                                 'with_features_depends': None},
-              {'base_url': None,
-               'build_number': 0,
-               'build_string': 'py27_0',
-               'channel': 'defaults',
-               'dist_name': 'backports_abc-0.5-py27_0',
-               'name': 'backports_abc',
-               'platform': None,
-               'version': '0.5',
-               'with_features_depends': None}, {'base_url': None,
-                                                'build_number': 0,
-                                                'build_string': 'py27_0',
-                                                'channel': 'defaults',
-                                                'dist_name': 'futures-3.0.5-py27_0',
-                                                'name': 'futures',
-                                                'platform': None,
-                                                'version': '3.0.5',
-                                                'with_features_depends': None}, {'base_url': None,
-                                                                                 'build_number': 2,
-                                                                                 'build_string': 'py27_2',
-                                                                                 'channel': 'defaults',
-                                                                                 'dist_name': 'markupsafe-0.23-py27_2',
-                                                                                 'name': 'markupsafe',
-                                                                                 'platform': None,
-                                                                                 'version': '0.23',
-                                                                                 'with_features_depends': None},
-              {'base_url': None,
-               'build_number': 0,
-               'build_string': 'py27_0',
-               'channel': 'defaults',
-               'dist_name': 'numpy-1.12.0-py27_0',
-               'name': 'numpy',
-               'platform': None,
-               'version': '1.12.0',
-               'with_features_depends': None}, {'base_url': None,
-                                                'build_number': 0,
-                                                'build_string': 'py27_0',
-                                                'channel': 'defaults',
-                                                'dist_name': 'pyyaml-3.12-py27_0',
-                                                'name': 'pyyaml',
-                                                'platform': None,
-                                                'version': '3.12',
-                                                'with_features_depends': None}, {'base_url': None,
-                                                                                 'build_number': 0,
-                                                                                 'build_string': 'py27_0',
-                                                                                 'channel': 'defaults',
-                                                                                 'dist_name': 'requests-2.13.0-py27_0',
-                                                                                 'name': 'requests',
-                                                                                 'platform': None,
-                                                                                 'version': '2.13.0',
-                                                                                 'with_features_depends': None},
-              {'base_url': None,
-               'build_number': 0,
-               'build_string': 'py27_0',
-               'channel': 'defaults',
-               'dist_name': 'setuptools-27.2.0-py27_0',
-               'name': 'setuptools',
-               'platform': None,
-               'version': '27.2.0',
-               'with_features_depends': None}, {'base_url': None,
-                                                'build_number': 0,
-                                                'build_string': 'py27_0',
-                                                'channel': 'defaults',
-                                                'dist_name': 'six-1.10.0-py27_0',
-                                                'name': 'six',
-                                                'platform': None,
-                                                'version': '1.10.0',
-                                                'with_features_depends': None}, {'base_url': None,
-                                                                                 'build_number': 0,
-                                                                                 'build_string': 'py27_0',
-                                                                                 'channel': 'defaults',
-                                                                                 'dist_name': 'wheel-0.29.0-py27_0',
-                                                                                 'name': 'wheel',
-                                                                                 'platform': None,
-                                                                                 'version': '0.29.0',
-                                                                                 'with_features_depends': None},
-              {'base_url': None,
-               'build_number': 0,
-               'build_string': 'py27_0',
-               'channel': 'defaults',
-               'dist_name': 'jinja2-2.9.5-py27_0',
-               'name': 'jinja2',
-               'platform': None,
-               'version': '2.9.5',
-               'with_features_depends': None}, {'base_url': None,
-                                                'build_number': 1,
-                                                'build_string': 'py27_1',
-                                                'channel': 'defaults',
-                                                'dist_name': 'pip-9.0.1-py27_1',
-                                                'name': 'pip',
-                                                'platform': None,
-                                                'version': '9.0.1',
-                                                'with_features_depends': None},
-              {'base_url': None,
-               'build_number': 0,
-               'build_string': 'py27_0',
-               'channel': 'defaults',
-               'dist_name': 'python-dateutil-2.6.0-py27_0',
-               'name': 'python-dateutil',
-               'platform': None,
-               'version': '2.6.0',
-               'with_features_depends': None}, {'base_url': None,
-                                                'build_number': 0,
-                                                'build_string': 'py27_0',
-                                                'channel': 'defaults',
-                                                'dist_name': 'singledispatch-3.4.0.3-py27_0',
-                                                'name': 'singledispatch',
-                                                'platform': None,
-                                                'version': '3.4.0.3',
-                                                'with_features_depends': None},
-              {'base_url': None,
-               'build_number': 1,
-               'build_string': 'py27_1',
-               'channel': 'defaults',
-               'dist_name': 'ssl_match_hostname-3.4.0.2-py27_1',
-               'name': 'ssl_match_hostname',
-               'platform': None,
-               'version': '3.4.0.2',
-               'with_features_depends': None}, {'base_url': None,
-                                                'build_number': 0,
-                                                'build_string': 'py27_0',
-                                                'channel': 'defaults',
-                                                'dist_name': 'tornado-4.4.2-py27_0',
-                                                'name': 'tornado',
-                                                'platform': None,
-                                                'version': '4.4.2',
-                                                'with_features_depends': None}, {'base_url': None,
-                                                                                 'build_number': 0,
-                                                                                 'build_string': 'py27_0',
-                                                                                 'channel': 'defaults',
-                                                                                 'dist_name': 'bokeh-0.12.4-py27_0',
-                                                                                 'name': 'bokeh',
-                                                                                 'platform': None,
-                                                                                 'version': '0.12.4',
-                                                                                 'with_features_depends': None}],
-             'PREFIX': '/tmp/kapsel_resolve__7_udcjm',
-             'SYMLINK_CONDA': ['/home/hp/bin/anaconda2'],
-             'op_order': ['CHECK_FETCH', 'RM_FETCHED', 'FETCH', 'CHECK_EXTRACT', 'RM_EXTRACTED', 'EXTRACT', 'UNLINK',
-                          'LINK', 'SYMLINK_CONDA']}],
-            'dry_run': True, 'success': True}
+        old_json = {
+            'actions': [{
+                'LINK': [{
+                    'base_url': None,
+                    'build_number': 0,
+                    'build_string': '0',
+                    'channel': 'defaults',
+                    'dist_name': 'mkl-2017.0.1-0',
+                    'name': 'mkl',
+                    'platform': None,
+                    'version': '2017.0.1',
+                    'with_features_depends': None
+                },
+                         {
+                             'base_url': None,
+                             'build_number': 1,
+                             'build_string': '1',
+                             'channel': 'defaults',
+                             'dist_name': 'openssl-1.0.2k-1',
+                             'name': 'openssl',
+                             'platform': None,
+                             'version': '1.0.2k',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 2,
+                             'build_string': '2',
+                             'channel': 'defaults',
+                             'dist_name': 'readline-6.2-2',
+                             'name': 'readline',
+                             'platform': None,
+                             'version': '6.2',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': '0',
+                             'channel': 'defaults',
+                             'dist_name': 'sqlite-3.13.0-0',
+                             'name': 'sqlite',
+                             'platform': None,
+                             'version': '3.13.0',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': '0',
+                             'channel': 'defaults',
+                             'dist_name': 'tk-8.5.18-0',
+                             'name': 'tk',
+                             'platform': None,
+                             'version': '8.5.18',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': '0',
+                             'channel': 'defaults',
+                             'dist_name': 'yaml-0.1.6-0',
+                             'name': 'yaml',
+                             'platform': None,
+                             'version': '0.1.6',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 3,
+                             'build_string': '3',
+                             'channel': 'defaults',
+                             'dist_name': 'zlib-1.2.8-3',
+                             'name': 'zlib',
+                             'platform': None,
+                             'version': '1.2.8',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': '0',
+                             'channel': 'defaults',
+                             'dist_name': 'python-2.7.13-0',
+                             'name': 'python',
+                             'platform': None,
+                             'version': '2.7.13',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'backports-1.0-py27_0',
+                             'name': 'backports',
+                             'platform': None,
+                             'version': '1.0',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'backports_abc-0.5-py27_0',
+                             'name': 'backports_abc',
+                             'platform': None,
+                             'version': '0.5',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'futures-3.0.5-py27_0',
+                             'name': 'futures',
+                             'platform': None,
+                             'version': '3.0.5',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 2,
+                             'build_string': 'py27_2',
+                             'channel': 'defaults',
+                             'dist_name': 'markupsafe-0.23-py27_2',
+                             'name': 'markupsafe',
+                             'platform': None,
+                             'version': '0.23',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'numpy-1.12.0-py27_0',
+                             'name': 'numpy',
+                             'platform': None,
+                             'version': '1.12.0',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'pyyaml-3.12-py27_0',
+                             'name': 'pyyaml',
+                             'platform': None,
+                             'version': '3.12',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'requests-2.13.0-py27_0',
+                             'name': 'requests',
+                             'platform': None,
+                             'version': '2.13.0',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'setuptools-27.2.0-py27_0',
+                             'name': 'setuptools',
+                             'platform': None,
+                             'version': '27.2.0',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'six-1.10.0-py27_0',
+                             'name': 'six',
+                             'platform': None,
+                             'version': '1.10.0',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'wheel-0.29.0-py27_0',
+                             'name': 'wheel',
+                             'platform': None,
+                             'version': '0.29.0',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'jinja2-2.9.5-py27_0',
+                             'name': 'jinja2',
+                             'platform': None,
+                             'version': '2.9.5',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 1,
+                             'build_string': 'py27_1',
+                             'channel': 'defaults',
+                             'dist_name': 'pip-9.0.1-py27_1',
+                             'name': 'pip',
+                             'platform': None,
+                             'version': '9.0.1',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'python-dateutil-2.6.0-py27_0',
+                             'name': 'python-dateutil',
+                             'platform': None,
+                             'version': '2.6.0',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'singledispatch-3.4.0.3-py27_0',
+                             'name': 'singledispatch',
+                             'platform': None,
+                             'version': '3.4.0.3',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 1,
+                             'build_string': 'py27_1',
+                             'channel': 'defaults',
+                             'dist_name': 'ssl_match_hostname-3.4.0.2-py27_1',
+                             'name': 'ssl_match_hostname',
+                             'platform': None,
+                             'version': '3.4.0.2',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'tornado-4.4.2-py27_0',
+                             'name': 'tornado',
+                             'platform': None,
+                             'version': '4.4.2',
+                             'with_features_depends': None
+                         },
+                         {
+                             'base_url': None,
+                             'build_number': 0,
+                             'build_string': 'py27_0',
+                             'channel': 'defaults',
+                             'dist_name': 'bokeh-0.12.4-py27_0',
+                             'name': 'bokeh',
+                             'platform': None,
+                             'version': '0.12.4',
+                             'with_features_depends': None
+                         }],
+                'PREFIX':
+                '/tmp/kapsel_resolve__7_udcjm',
+                'SYMLINK_CONDA': ['/home/hp/bin/anaconda2'],
+                'op_order': [
+                    'CHECK_FETCH', 'RM_FETCHED', 'FETCH', 'CHECK_EXTRACT', 'RM_EXTRACTED', 'EXTRACT', 'UNLINK', 'LINK',
+                    'SYMLINK_CONDA'
+                ]
+            }],
+            'dry_run':
+            True,
+            'success':
+            True
+        }
         return json.dumps(old_json)
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
@@ -1010,29 +1090,36 @@ def test_resolve_dependencies_with_conda_43_json(monkeypatch):
 
 def test_resolve_dependencies_with_conda_41_json(monkeypatch):
     def mock_call_conda(extra_args, json_mode, platform=None, stdout_callback=None, stderr_callback=None):
-        old_json = {'actions': {'EXTRACT': ['mkl-2017.0.1-0', 'openssl-1.0.2k-1', 'xz-5.2.2-1', 'python-3.6.0-0',
-                                            'markupsafe-0.23-py36_2', 'numpy-1.12.0-py36_0', 'pyyaml-3.12-py36_0',
-                                            'requests-2.13.0-py36_0', 'setuptools-27.2.0-py36_0', 'six-1.10.0-py36_0',
-                                            'tornado-4.4.2-py36_0', 'wheel-0.29.0-py36_0', 'jinja2-2.9.5-py36_0',
-                                            'pip-9.0.1-py36_1', 'python-dateutil-2.6.0-py36_0', 'bokeh-0.12.4-py36_0'],
-                                'FETCH': ['mkl-2017.0.1-0', 'openssl-1.0.2k-1', 'xz-5.2.2-1', 'python-3.6.0-0',
-                                          'markupsafe-0.23-py36_2', 'numpy-1.12.0-py36_0', 'pyyaml-3.12-py36_0',
-                                          'requests-2.13.0-py36_0', 'setuptools-27.2.0-py36_0', 'six-1.10.0-py36_0',
-                                          'tornado-4.4.2-py36_0', 'wheel-0.29.0-py36_0', 'jinja2-2.9.5-py36_0',
-                                          'pip-9.0.1-py36_1', 'python-dateutil-2.6.0-py36_0', 'bokeh-0.12.4-py36_0'],
-                                'LINK': ['mkl-2017.0.1-0 2', 'openssl-1.0.2k-1 2', 'readline-6.2-2 2',
-                                         'sqlite-3.13.0-0 2', 'tk-8.5.18-0 2', 'xz-5.2.2-1 2', 'yaml-0.1.6-0 2',
-                                         'zlib-1.2.8-3 2', 'python-3.6.0-0 2', 'markupsafe-0.23-py36_2 2',
-                                         'numpy-1.12.0-py36_0 2', 'pyyaml-3.12-py36_0 2', 'requests-2.13.0-py36_0 2',
-                                         'setuptools-27.2.0-py36_0 2', 'six-1.10.0-py36_0 2', 'tornado-4.4.2-py36_0 2',
-                                         'wheel-0.29.0-py36_0 2', 'jinja2-2.9.5-py36_0 2', 'pip-9.0.1-py36_1 2',
-                                         'python-dateutil-2.6.0-py36_0 2', 'bokeh-0.12.4-py36_0 2'],
-                                'PREFIX': '/tmp/kapsel_resolve_luiqsjla',
-                                'SYMLINK_CONDA': ['/home/hp/bin/anaconda3_4.1.11'],
-                                'op_order': ['RM_FETCHED', 'FETCH', 'RM_EXTRACTED', 'EXTRACT', 'UNLINK', 'LINK',
-                                             'SYMLINK_CONDA']},
-                    'dry_run': True,
-                    'success': True}
+        old_json = {
+            'actions': {
+                'EXTRACT': [
+                    'mkl-2017.0.1-0', 'openssl-1.0.2k-1', 'xz-5.2.2-1', 'python-3.6.0-0', 'markupsafe-0.23-py36_2',
+                    'numpy-1.12.0-py36_0', 'pyyaml-3.12-py36_0', 'requests-2.13.0-py36_0', 'setuptools-27.2.0-py36_0',
+                    'six-1.10.0-py36_0', 'tornado-4.4.2-py36_0', 'wheel-0.29.0-py36_0', 'jinja2-2.9.5-py36_0',
+                    'pip-9.0.1-py36_1', 'python-dateutil-2.6.0-py36_0', 'bokeh-0.12.4-py36_0'
+                ],
+                'FETCH': [
+                    'mkl-2017.0.1-0', 'openssl-1.0.2k-1', 'xz-5.2.2-1', 'python-3.6.0-0', 'markupsafe-0.23-py36_2',
+                    'numpy-1.12.0-py36_0', 'pyyaml-3.12-py36_0', 'requests-2.13.0-py36_0', 'setuptools-27.2.0-py36_0',
+                    'six-1.10.0-py36_0', 'tornado-4.4.2-py36_0', 'wheel-0.29.0-py36_0', 'jinja2-2.9.5-py36_0',
+                    'pip-9.0.1-py36_1', 'python-dateutil-2.6.0-py36_0', 'bokeh-0.12.4-py36_0'
+                ],
+                'LINK': [
+                    'mkl-2017.0.1-0 2', 'openssl-1.0.2k-1 2', 'readline-6.2-2 2', 'sqlite-3.13.0-0 2', 'tk-8.5.18-0 2',
+                    'xz-5.2.2-1 2', 'yaml-0.1.6-0 2', 'zlib-1.2.8-3 2', 'python-3.6.0-0 2', 'markupsafe-0.23-py36_2 2',
+                    'numpy-1.12.0-py36_0 2', 'pyyaml-3.12-py36_0 2', 'requests-2.13.0-py36_0 2',
+                    'setuptools-27.2.0-py36_0 2', 'six-1.10.0-py36_0 2', 'tornado-4.4.2-py36_0 2',
+                    'wheel-0.29.0-py36_0 2', 'jinja2-2.9.5-py36_0 2', 'pip-9.0.1-py36_1 2',
+                    'python-dateutil-2.6.0-py36_0 2', 'bokeh-0.12.4-py36_0 2'
+                ],
+                'PREFIX':
+                '/tmp/kapsel_resolve_luiqsjla',
+                'SYMLINK_CONDA': ['/home/hp/bin/anaconda3_4.1.11'],
+                'op_order': ['RM_FETCHED', 'FETCH', 'RM_EXTRACTED', 'EXTRACT', 'UNLINK', 'LINK', 'SYMLINK_CONDA']
+            },
+            'dry_run': True,
+            'success': True
+        }
         return json.dumps(old_json)
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)

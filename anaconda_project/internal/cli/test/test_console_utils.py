@@ -101,10 +101,8 @@ def test_format_names_and_descriptions():
             self.name = name
             self.description = description
 
-    cases = [
-        ([], "\n"), ([Thing("a", "b")], "Name  Description\n====  ===========\na     b\n"),
-        ([Thing("cd", "ef"), Thing("a", "b")], "Name  Description\n====  ===========\na     b\ncd    ef\n")
-    ]
+    cases = [([], "\n"), ([Thing("a", "b")], "Name  Description\n====  ===========\na     b\n"),
+             ([Thing("cd", "ef"), Thing("a", "b")], "Name  Description\n====  ===========\na     b\ncd    ef\n")]
     for case in cases:
         assert console_utils.format_names_and_descriptions(case[0]) == case[1]
 

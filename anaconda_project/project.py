@@ -108,18 +108,16 @@ def _make_problems_into_objects(problems):
 
 
 def _file_problem(problems, yaml_file, text, fix_prompt=None, fix_function=None):
-    problems.append(ProjectProblem(text=text,
-                                   filename=yaml_file.filename,
-                                   fix_prompt=fix_prompt,
-                                   fix_function=fix_function))
+    problems.append(
+        ProjectProblem(text=text, filename=yaml_file.filename, fix_prompt=fix_prompt, fix_function=fix_function))
 
 
 def _unknown_field_suggestions(project_file, problems, yaml_dict, known_fields):
     for key in yaml_dict.keys():
         if key not in known_fields:
-            problems.append(ProjectProblem(text="Unknown field name '%s'" % (key),
-                                           filename=project_file.filename,
-                                           only_a_suggestion=True))
+            problems.append(
+                ProjectProblem(
+                    text="Unknown field name '%s'" % (key), filename=project_file.filename, only_a_suggestion=True))
 
 
 def _fatal_problem(problems):
@@ -169,16 +167,20 @@ class _ConfigCache(object):
             problems.append("Project directory '%s' does not exist." % self.directory_path)
 
         if project_file.corrupted:
-            problems.append(ProjectProblem(text=("Syntax error: %s" % (project_file.corrupted_error_message)),
-                                           filename=project_file.filename,
-                                           line_number=project_file.corrupted_maybe_line,
-                                           column_number=project_file.corrupted_maybe_column))
+            problems.append(
+                ProjectProblem(
+                    text=("Syntax error: %s" % (project_file.corrupted_error_message)),
+                    filename=project_file.filename,
+                    line_number=project_file.corrupted_maybe_line,
+                    column_number=project_file.corrupted_maybe_column))
 
         if lock_file.corrupted:
-            problems.append(ProjectProblem(text=("Syntax error: %s" % (lock_file.corrupted_error_message)),
-                                           filename=lock_file.filename,
-                                           line_number=lock_file.corrupted_maybe_line,
-                                           column_number=lock_file.corrupted_maybe_column))
+            problems.append(
+                ProjectProblem(
+                    text=("Syntax error: %s" % (lock_file.corrupted_error_message)),
+                    filename=lock_file.filename,
+                    line_number=lock_file.corrupted_maybe_line,
+                    column_number=lock_file.corrupted_maybe_column))
 
         if project_exists and not (project_file.corrupted or lock_file.corrupted):
             _unknown_field_suggestions(project_file, problems, project_file.root,
@@ -220,10 +222,12 @@ class _ConfigCache(object):
             def set_name_field(project):
                 project.project_file.set_value('name', default_name)
 
-            problems.append(ProjectProblem(text="The 'name:' field is missing.",
-                                           filename=project_file.filename,
-                                           fix_prompt=("Name the project '%s'?" % default_name),
-                                           fix_function=set_name_field))
+            problems.append(
+                ProjectProblem(
+                    text="The 'name:' field is missing.",
+                    filename=project_file.filename,
+                    fix_prompt=("Name the project '%s'?" % default_name),
+                    fix_function=set_name_field))
             # Note: we continue on here to set set the default name below,
             # just to avoid dealing with `project.name is None` elsewhere
             # in the code, but we don't save the name to the project_file.
@@ -342,14 +346,12 @@ class _ConfigCache(object):
                     self._add_requirement(requirements, env_spec, requirement)
                 else:
                     _file_problem(
-                        problems,
-                        project_file,
+                        problems, project_file,
                         ("variables section should contain environment variable names, {item} is not a string".format(
                             item=item)))
         else:
             _file_problem(
-                problems,
-                project_file,
+                problems, project_file,
                 "variables section contains wrong value type {value}, should be dict or list of requirements".format(
                     value=variables))
 
@@ -358,8 +360,8 @@ class _ConfigCache(object):
             return
 
         if not is_dict(downloads):
-            _file_problem(problems, project_file,
-                          "'downloads:' section should be a dictionary, found {}".format(repr(downloads)))
+            _file_problem(problems, project_file, "'downloads:' section should be a dictionary, found {}".format(
+                repr(downloads)))
             return
 
         for varname, item in downloads.items():
@@ -422,20 +424,19 @@ class _ConfigCache(object):
         return (cleaned, special)
 
     def _parse_string_list(self, problems, yaml_file, parent_dict, key, what):
-        return self._parse_string_list_with_special(problems,
-                                                    yaml_file,
-                                                    parent_dict,
-                                                    key,
-                                                    what,
-                                                    special_filter=lambda x: False)[0]
+        return self._parse_string_list_with_special(
+            problems, yaml_file, parent_dict, key, what, special_filter=lambda x: False)[0]
 
     def _parse_platforms(self, problems, yaml_file, parent_dict):
         platforms = self._parse_string_list(problems, yaml_file, parent_dict, 'platforms', 'platform name')
         (platforms, unknown, invalid) = conda_api.validate_platform_list(platforms)
         for u in unknown:
-            problems.append(ProjectProblem(text=("Unusual platform name '%s' may be a typo (more usual examples: linux-64, osx-64, win-64)" % u),
-                                           filename=yaml_file.filename,
-                                           only_a_suggestion=True))
+            problems.append(
+                ProjectProblem(
+                    text=(
+                        "Unusual platform name '%s' may be a typo (more usual examples: linux-64, osx-64, win-64)" % u),
+                    filename=yaml_file.filename,
+                    only_a_suggestion=True))
         for i in invalid:
             _file_problem(problems, yaml_file,
                           "Platform name '%s' is invalid (valid examples: linux-64, osx-64, win-64)" % i)
@@ -480,9 +481,9 @@ class _ConfigCache(object):
 
         for (name, lock_set) in lock_sets.items():
             if not is_dict(lock_set):
-                _file_problem(problems, lock_file,
-                              "Field '%s' in env_specs in lock file should be a dictionary, found %r" %
-                              (name, lock_set))
+                _file_problem(
+                    problems, lock_file,
+                    "Field '%s' in env_specs in lock file should be a dictionary, found %r" % (name, lock_set))
                 continue
 
             _unknown_field_suggestions(lock_file, problems, lock_set,
@@ -499,9 +500,9 @@ class _ConfigCache(object):
             # want to evolve those someday, and if someone sets the hash by hand to
             # "foobar" that's fine, won't hurt anything.
             if env_spec_hash is not None and not is_string(env_spec_hash):
-                _file_problem(problems, lock_file,
-                              "Value for env_spec_hash for env spec '%s' should be a string, found %r" %
-                              (name, env_spec_hash))
+                _file_problem(
+                    problems, lock_file,
+                    "Value for env_spec_hash for env spec '%s' should be a string, found %r" % (name, env_spec_hash))
                 continue
 
             platforms = self._parse_platforms(problems, lock_file, lock_set)
@@ -509,9 +510,10 @@ class _ConfigCache(object):
             conda_packages_by_platform = dict()
             packages_by_platform = lock_set.get('packages', {})
             if not is_dict(packages_by_platform):
-                _file_problem(problems, lock_file,
-                              "'packages:' section in env spec '%s' in lock file should be a dictionary, found %r" %
-                              (name, packages_by_platform))
+                _file_problem(
+                    problems, lock_file,
+                    "'packages:' section in env spec '%s' in lock file should be a dictionary, found %r" %
+                    (name, packages_by_platform))
                 continue
 
             for platform in packages_by_platform.keys():
@@ -525,16 +527,16 @@ class _ConfigCache(object):
                 if len(pip_deps) > 0:
                     # we warn but don't fail on this, so if we add pip support in the future
                     # older versions of anaconda-project won't puke on it.
-                    problems.append(ProjectProblem(
-                        text="env spec '%s': pip dependencies are currently ignored in the lock file" % name,
-                        filename=lock_file.filename,
-                        only_a_suggestion=True))
+                    problems.append(
+                        ProjectProblem(
+                            text="env spec '%s': pip dependencies are currently ignored in the lock file" % name,
+                            filename=lock_file.filename,
+                            only_a_suggestion=True))
 
                 conda_packages_by_platform[platform] = deps
 
-            lock_set_object = CondaLockSet(package_specs_by_platform=conda_packages_by_platform,
-                                           platforms=platforms,
-                                           enabled=enabled)
+            lock_set_object = CondaLockSet(
+                package_specs_by_platform=conda_packages_by_platform, platforms=platforms, enabled=enabled)
             lock_set_object.env_spec_hash = env_spec_hash
 
             self.lock_sets[name] = lock_set_object
@@ -560,14 +562,15 @@ class _ConfigCache(object):
         env_specs_is_empty_or_missing = False  # this should be iff it's an empty dict or absent entirely
 
         # this one isn't in the env_specs dict
-        self.global_base_env_spec = EnvSpec(name=None,
-                                            conda_packages=shared_deps,
-                                            pip_packages=shared_pip_deps,
-                                            channels=shared_channels,
-                                            platforms=shared_platforms,
-                                            description="Global packages and channels",
-                                            inherit_from_names=(),
-                                            inherit_from=())
+        self.global_base_env_spec = EnvSpec(
+            name=None,
+            conda_packages=shared_deps,
+            pip_packages=shared_pip_deps,
+            channels=shared_channels,
+            platforms=shared_platforms,
+            description="Global packages and channels",
+            inherit_from_names=(),
+            inherit_from=())
 
         env_spec_attrs = dict()
         if is_dict(env_specs):
@@ -603,20 +606,22 @@ class _ConfigCache(object):
 
                 lock_set = self.lock_sets.get(name, None)
                 if lock_set is None:
-                    lock_set = CondaLockSet(package_specs_by_platform=dict(),
-                                            platforms=[],
-                                            enabled=self.locking_globally_enabled,
-                                            missing=True)
+                    lock_set = CondaLockSet(
+                        package_specs_by_platform=dict(),
+                        platforms=[],
+                        enabled=self.locking_globally_enabled,
+                        missing=True)
 
-                env_spec_attrs[name] = dict(name=name,
-                                            conda_packages=deps,
-                                            pip_packages=pip_deps,
-                                            channels=channels,
-                                            platforms=platforms,
-                                            description=description,
-                                            inherit_from_names=tuple(inherit_from_names),
-                                            inherit_from=(),
-                                            lock_set=lock_set)
+                env_spec_attrs[name] = dict(
+                    name=name,
+                    conda_packages=deps,
+                    pip_packages=pip_deps,
+                    channels=channels,
+                    platforms=platforms,
+                    description=description,
+                    inherit_from_names=tuple(inherit_from_names),
+                    inherit_from=(),
+                    lock_set=lock_set)
 
                 if first_env_spec_name is None:
                     first_env_spec_name = name
@@ -625,9 +630,10 @@ class _ConfigCache(object):
                                            ('packages', 'channels', 'platforms', 'description', 'inherit_from',
                                             'variables', 'services', 'downloads'))
         else:
-            _file_problem(problems, project_file,
-                          "env_specs should be a dictionary from environment name to environment attributes, not %r" %
-                          (env_specs))
+            _file_problem(
+                problems, project_file,
+                "env_specs should be a dictionary from environment name to environment attributes, not %r" %
+                (env_specs))
 
         self.env_specs = dict()
 
@@ -695,11 +701,12 @@ class _ConfigCache(object):
                 def set_global_default_platforms(project):
                     project.project_file.set_value(['platforms'], default_platforms)
 
-                _file_problem(problems,
-                              project_file,
-                              "The 'platforms:' field should list platforms the project supports.",
-                              fix_prompt=("Set platforms to '%s'?" % ", ".join(default_platforms)),
-                              fix_function=set_global_default_platforms)
+                _file_problem(
+                    problems,
+                    project_file,
+                    "The 'platforms:' field should list platforms the project supports.",
+                    fix_prompt=("Set platforms to '%s'?" % ", ".join(default_platforms)),
+                    fix_function=set_global_default_platforms)
             else:
                 for missing in sorted(missing_platforms):
 
@@ -709,11 +716,12 @@ class _ConfigCache(object):
 
                         return set_env_spec_platforms
 
-                    _file_problem(problems,
-                                  project_file,
-                                  "Env spec %s does not have anything in its 'platforms:' field." % missing,
-                                  fix_prompt=("Set platforms to '%s'?" % ", ".join(default_platforms)),
-                                  fix_function=make_fix(missing))
+                    _file_problem(
+                        problems,
+                        project_file,
+                        "Env spec %s does not have anything in its 'platforms:' field." % missing,
+                        fix_prompt=("Set platforms to '%s'?" % ", ".join(default_platforms)),
+                        fix_function=make_fix(missing))
 
         # Find lock-set-out-of-sync-with-env-spec issues
 
@@ -723,9 +731,9 @@ class _ConfigCache(object):
 
             locked_hash = env_spec.lock_set.env_spec_hash
             if locked_hash is not None and locked_hash != env_spec.logical_hash:
-                text = (
-                    "Env spec '%s' has changed since the lock file was last updated "
-                    "(env spec hash has changed from %s to %s)") % (env_spec.name, locked_hash, env_spec.logical_hash)
+                text = ("Env spec '%s' has changed since the lock file was last updated "
+                        "(env spec hash has changed from %s to %s)") % (env_spec.name, locked_hash,
+                                                                        env_spec.logical_hash)
                 problems.append(ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
 
             if env_spec.platforms != env_spec.lock_set.platforms:
@@ -757,9 +765,8 @@ class _ConfigCache(object):
                         if len(unlocked_names) > 0:
                             text = "Lock file is missing %s packages for env spec %s on %s (%s)" % (
                                 len(unlocked_names), env_spec.name, platform, ",".join(sorted(list(unlocked_names))))
-                            problems.append(ProjectProblem(text=text,
-                                                           filename=lock_file.filename,
-                                                           only_a_suggestion=True))
+                            problems.append(
+                                ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
 
         # Look for lock sets that don't go with an env spec
         for name in self.lock_sets.keys():
@@ -812,10 +819,12 @@ class _ConfigCache(object):
 
             # we don't set the filename here because it isn't really an error in the
             # file, it ends up reading strangely.
-            problems.append(ProjectProblem(text=text,
-                                           fix_prompt=prompt,
-                                           fix_function=overwrite_env_spec_from_importable,
-                                           no_fix_function=remember_no_import_importable))
+            problems.append(
+                ProjectProblem(
+                    text=text,
+                    fix_prompt=prompt,
+                    fix_function=overwrite_env_spec_from_importable,
+                    no_fix_function=remember_no_import_importable))
         elif env_specs_is_empty_or_missing:
             # we do NOT want to add this problem if we merely
             # failed to parse individual env specs; it must be
@@ -827,11 +836,12 @@ class _ConfigCache(object):
                 default_spec = _anaconda_default_env_spec(self.global_base_env_spec)
                 project.project_file.set_value(['env_specs', default_spec.name], default_spec.to_json())
 
-            problems.append(ProjectProblem(text="The env_specs section is empty.",
-                                           filename=project_file.filename,
-                                           fix_prompt=("Add an environment spec to %s?" % os.path.basename(
-                                               project_file.filename)),
-                                           fix_function=add_default_env_spec))
+            problems.append(
+                ProjectProblem(
+                    text="The env_specs section is empty.",
+                    filename=project_file.filename,
+                    fix_prompt=("Add an environment spec to %s?" % os.path.basename(project_file.filename)),
+                    fix_function=add_default_env_spec))
 
         # this is only used for commands that don't specify anything
         # (when/if we require all commands to specify, then remove this.)
@@ -863,9 +873,10 @@ class _ConfigCache(object):
             tuple(plugins.keys())
 
         if commands_section is not None and not is_dict(commands_section):
-            _file_problem(problems, project_file,
-                          "'commands:' section should be a dictionary from command names to attributes, not %r" %
-                          (commands_section))
+            _file_problem(
+                problems, project_file,
+                "'commands:' section should be a dictionary from command names to attributes, not %r" %
+                (commands_section))
             failed = True
         elif commands_section is not None:
             for (name, attrs) in commands_section.items():
@@ -878,9 +889,9 @@ class _ConfigCache(object):
                     first_command_name = name
 
                 if not is_dict(attrs):
-                    _file_problem(problems, project_file,
-                                  "command name '%s' should be followed by a dictionary of attributes not %r" %
-                                  (name, attrs))
+                    _file_problem(
+                        problems, project_file,
+                        "command name '%s' should be followed by a dictionary of attributes not %r" % (name, attrs))
                     failed = True
                     continue
 
@@ -903,9 +914,10 @@ class _ConfigCache(object):
                             "'env_spec' field of command {} must be a string (an environment spec name)".format(name))
                         failed = True
                     elif attrs['env_spec'] not in self.env_specs:
-                        _file_problem(problems, project_file,
-                                      "env_spec '%s' for command '%s' does not appear in the env_specs section" %
-                                      (attrs['env_spec'], name))
+                        _file_problem(
+                            problems, project_file,
+                            "env_spec '%s' for command '%s' does not appear in the env_specs section" %
+                            (attrs['env_spec'], name))
                         failed = True
 
                 if 'registers_fusion_function' in attrs and not isinstance(attrs['registers_fusion_function'], bool):
@@ -933,8 +945,9 @@ class _ConfigCache(object):
                     command_types.append(attr)
 
                     if not is_string(copied_attrs[attr]):
-                        _file_problem(problems, project_file, "command '%s' attribute '%s' should be a string not '%r'"
-                                      % (name, attr, copied_attrs[attr]))
+                        _file_problem(
+                            problems, project_file, "command '%s' attribute '%s' should be a string not '%r'" %
+                            (name, attr, copied_attrs[attr]))
                         failed = True
 
                 if len(command_types) == 0:
@@ -946,9 +959,9 @@ class _ConfigCache(object):
                     others = copy(command_types)
                     others.remove(label)
                     others = [("'%s'" % other) for other in others]
-                    _file_problem(problems, project_file,
-                                  "command '%s' has multiple commands in it, '%s' can't go with %s" %
-                                  (name, label, ", ".join(others)))
+                    _file_problem(
+                        problems, project_file, "command '%s' has multiple commands in it, '%s' can't go with %s" %
+                        (name, label, ", ".join(others)))
                     failed = True
 
                 # note that once one command fails, we don't add any more
@@ -978,8 +991,8 @@ class _ConfigCache(object):
                 return
             elif not is_list(skipped_notebooks):
                 _file_problem(
-                    problems, project_file,
-                    "'skip_imports: notebooks:' value should be a list, found {}".format(repr(skipped_notebooks)))
+                    problems, project_file, "'skip_imports: notebooks:' value should be a list, found {}".format(
+                        repr(skipped_notebooks)))
                 return
         else:
             skipped_notebooks = []
@@ -988,9 +1001,8 @@ class _ConfigCache(object):
         flat_requirements = []
         for reqs in requirements.values():
             flat_requirements.extend(reqs)
-        files = _list_relative_paths_for_unignored_project_files(self.directory_path,
-                                                                 frontend=recorder,
-                                                                 requirements=flat_requirements)
+        files = _list_relative_paths_for_unignored_project_files(
+            self.directory_path, frontend=recorder, requirements=flat_requirements)
         if files is None:
             problems.extend(recorder.pop_errors())
             assert problems != []
@@ -1062,8 +1074,9 @@ class _ConfigCache(object):
                 only_a_suggestion=True)
             problems.append(problem)
         elif len(need_to_import) > 1:
-            add_funcs = [make_add_notebook_func(relative_name, self.default_env_spec_name)
-                         for relative_name in need_to_import]
+            add_funcs = [
+                make_add_notebook_func(relative_name, self.default_env_spec_name) for relative_name in need_to_import
+            ]
             no_add_funcs = [make_no_add_notebook_func(relative_name) for relative_name in need_to_import]
 
             def add_all(project):
@@ -1074,13 +1087,14 @@ class _ConfigCache(object):
                 for f in no_add_funcs:
                     f(project)
 
-            problem = ProjectProblem(text="No commands run notebooks %s" % (", ".join(need_to_import)),
-                                     filename=project_file.filename,
-                                     fix_prompt="Create commands in %s for all missing notebooks?" % (os.path.basename(
-                                         project_file.filename)),
-                                     fix_function=add_all,
-                                     no_fix_function=no_add_all,
-                                     only_a_suggestion=True)
+            problem = ProjectProblem(
+                text="No commands run notebooks %s" % (", ".join(need_to_import)),
+                filename=project_file.filename,
+                fix_prompt="Create commands in %s for all missing notebooks?" % (os.path.basename(
+                    project_file.filename)),
+                fix_function=add_all,
+                no_fix_function=no_add_all,
+                only_a_suggestion=True)
             problems.append(problem)
 
     def _verify_command_dependencies(self, problems, project_file):
@@ -1100,13 +1114,14 @@ class _ConfigCache(object):
                             packages.append(m)
                     project.project_file.set_value(['env_specs', env_spec.name, 'packages'], packages)
 
-                problem = ProjectProblem(text=("Command %s uses env spec %s which does not have the packages: %s" % (
-                                               command.name, env_spec.name, ", ".join(missing))),
-                                         filename=project_file.filename,
-                                         fix_prompt=("Add %s to env spec %s in %s?" % (", ".join(missing),
-                                                     env_spec.name, os.path.basename(project_file.filename))),
-                                         fix_function=add_packages_to_env_spec,
-                                         only_a_suggestion=True)
+                problem = ProjectProblem(
+                    text=("Command %s uses env spec %s which does not have the packages: %s" %
+                          (command.name, env_spec.name, ", ".join(missing))),
+                    filename=project_file.filename,
+                    fix_prompt=("Add %s to env spec %s in %s?" % (", ".join(missing), env_spec.name,
+                                                                  os.path.basename(project_file.filename))),
+                    fix_function=add_packages_to_env_spec,
+                    only_a_suggestion=True)
                 problems.append(problem)
 
     def has_bootstrap_env_spec(self):
@@ -1519,11 +1534,12 @@ class Project(object):
         json['commands'] = commands
         envs = dict()
         for key, env in self.env_specs.items():
-            envs[key] = dict(packages=list(env.conda_packages),
-                             channels=list(env.channels),
-                             description=env.description,
-                             locked=env.lock_set.enabled,
-                             platforms=list(env.platforms))
+            envs[key] = dict(
+                packages=list(env.conda_packages),
+                channels=list(env.channels),
+                description=env.description,
+                locked=env.lock_set.enabled,
+                platforms=list(env.platforms))
 
             variables = dict()
             downloads = dict()

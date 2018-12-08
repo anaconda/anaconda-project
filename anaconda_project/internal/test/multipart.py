@@ -104,9 +104,9 @@ class MultipartEncoder(object):
         self.encoding = encoding
 
         # Pre-encoded boundary
-        self._encoded_boundary = b''.join([
-            encode_with(self.boundary, self.encoding), encode_with('\r\n', self.encoding)
-        ])
+        self._encoded_boundary = b''.join(
+            [encode_with(self.boundary, self.encoding),
+             encode_with('\r\n', self.encoding)])
 
         #: Fields provided by the user
         self.fields = fields

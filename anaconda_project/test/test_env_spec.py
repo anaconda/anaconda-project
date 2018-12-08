@@ -30,7 +30,8 @@ def test_load_environment_yml():
 
         assert spec.logical_hash == 'e91a2263df510c9b188b132b801ba53aa99cc407'
 
-    with_file_contents("""
+    with_file_contents(
+        """
 name: foo
 dependencies:
   - bar=1.0
@@ -56,7 +57,8 @@ def test_load_environment_yml_with_prefix():
 
         assert spec.logical_hash == 'e91a2263df510c9b188b132b801ba53aa99cc407'
 
-    with_file_contents("""
+    with_file_contents(
+        """
 prefix: /opt/foo
 dependencies:
   - bar=1.0
@@ -82,7 +84,8 @@ def test_load_environment_yml_no_name():
 
         assert spec.logical_hash == 'e91a2263df510c9b188b132b801ba53aa99cc407'
 
-    with_file_contents("""
+    with_file_contents(
+        """
 dependencies:
   - bar=1.0
   - baz
@@ -144,7 +147,8 @@ def test_load_requirements_txt():
 
         assert spec.logical_hash == '784ba385d4cd468756e3cbc57f33e97afdc38059'
 
-    with_file_contents("""
+    with_file_contents(
+        """
 MyApp
 # Comment; this is a framework
 Framework==0.9.4
@@ -165,18 +169,17 @@ def test_load_recursive_requirements_txt():
         assert spec.name == 'default'
         assert spec.pip_packages == ('a', 'b', 'c', 'd')
 
-    with_directory_contents(
-        {
-            "requirements.txt": """
+    with_directory_contents({
+        "requirements.txt": """
 a
 b
 -r more-requirements.txt
         """,
-            "more-requirements.txt": """
+        "more-requirements.txt": """
 c
 d
 """
-        }, check)
+    }, check)
 
 
 def test_find_in_sync_environment_yml():
@@ -189,7 +192,8 @@ def test_find_in_sync_environment_yml():
         assert desynced is None
         assert name is None
 
-    with_named_file_contents("environment.yml", """
+    with_named_file_contents(
+        "environment.yml", """
 name: foo
 dependencies:
   - bar=1.0
@@ -209,17 +213,19 @@ def test_find_out_of_sync_environment_yml():
 
         assert spec is not None
 
-        changed = EnvSpec(name=spec.name,
-                          conda_packages=spec.conda_packages[1:],
-                          pip_packages=spec.pip_packages,
-                          channels=spec.channels)
+        changed = EnvSpec(
+            name=spec.name,
+            conda_packages=spec.conda_packages[1:],
+            pip_packages=spec.pip_packages,
+            channels=spec.channels)
 
         (desynced, name) = _find_out_of_sync_importable_spec([changed], os.path.dirname(filename))
         assert desynced is not None
         assert desynced.logical_hash == spec.logical_hash
         assert name == os.path.basename(filename)
 
-    with_named_file_contents("environment.yaml", """
+    with_named_file_contents(
+        "environment.yaml", """
 name: foo
 dependencies:
   - bar=1.0
@@ -246,51 +252,63 @@ def test_find_out_of_sync_does_not_exist():
 
 def test_to_json():
     # the stuff from this parent env spec should NOT end up in the JSON
-    hi = EnvSpec(name="hi",
-                 conda_packages=['q', 'r'],
-                 pip_packages=['zoo', 'boo'],
-                 channels=['x1', 'y1'],
-                 inherit_from_names=(),
-                 inherit_from=())
-    spec = EnvSpec(name="foo",
-                   description="The Foo Spec",
-                   conda_packages=['a', 'b'],
-                   pip_packages=['c', 'd'],
-                   channels=['x', 'y'],
-                   inherit_from_names=('hi', ),
-                   inherit_from=(hi, ))
+    hi = EnvSpec(
+        name="hi",
+        conda_packages=['q', 'r'],
+        pip_packages=['zoo', 'boo'],
+        channels=['x1', 'y1'],
+        inherit_from_names=(),
+        inherit_from=())
+    spec = EnvSpec(
+        name="foo",
+        description="The Foo Spec",
+        conda_packages=['a', 'b'],
+        pip_packages=['c', 'd'],
+        channels=['x', 'y'],
+        inherit_from_names=('hi', ),
+        inherit_from=(hi, ))
     json = spec.to_json()
 
-    assert {'description': "The Foo Spec",
-            'channels': ['x', 'y'],
-            'inherit_from': 'hi',
-            'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
+    assert {
+        'description': "The Foo Spec",
+        'channels': ['x', 'y'],
+        'inherit_from': 'hi',
+        'packages': ['a', 'b', {
+            'pip': ['c', 'd']
+        }]
+    } == json
 
 
 def test_to_json_no_description_no_pip_no_inherit():
     # should be able to jsonify a spec with no description
-    spec = EnvSpec(name="foo",
-                   conda_packages=['a', 'b'],
-                   pip_packages=[],
-                   channels=['x', 'y'],
-                   inherit_from_names=(),
-                   inherit_from=())
+    spec = EnvSpec(
+        name="foo",
+        conda_packages=['a', 'b'],
+        pip_packages=[],
+        channels=['x', 'y'],
+        inherit_from_names=(),
+        inherit_from=())
     json = spec.to_json()
 
     assert {'channels': ['x', 'y'], 'packages': ['a', 'b']} == json
 
 
 def test_to_json_multiple_inheritance():
-    spec = EnvSpec(name="foo",
-                   conda_packages=['a', 'b'],
-                   pip_packages=['c', 'd'],
-                   channels=['x', 'y'],
-                   inherit_from_names=('hi', 'hello'))
+    spec = EnvSpec(
+        name="foo",
+        conda_packages=['a', 'b'],
+        pip_packages=['c', 'd'],
+        channels=['x', 'y'],
+        inherit_from_names=('hi', 'hello'))
     json = spec.to_json()
 
-    assert {'channels': ['x', 'y'],
-            'inherit_from': ['hi', 'hello'],
-            'packages': ['a', 'b', {'pip': ['c', 'd']}]} == json
+    assert {
+        'channels': ['x', 'y'],
+        'inherit_from': ['hi', 'hello'],
+        'packages': ['a', 'b', {
+            'pip': ['c', 'd']
+        }]
+    } == json
 
 
 def test_diff_from():
@@ -329,7 +347,8 @@ def test_save_environment_yml():
 
         with_directory_contents({}, lambda dirname: check_save(spec, dirname))
 
-    with_file_contents("""
+    with_file_contents(
+        """
 name: foo
 dependencies:
   - xyz
@@ -347,24 +366,20 @@ channels:
 
 def test_overwrite_packages_with_lock_set():
     lock_set = CondaLockSet({'all': ['a=1.0=1']}, platforms=['linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64'])
-    spec = EnvSpec(name="foo",
-                   conda_packages=['a', 'b'],
-                   pip_packages=['c', 'd'],
-                   channels=['x', 'y'],
-                   lock_set=lock_set)
+    spec = EnvSpec(
+        name="foo", conda_packages=['a', 'b'], pip_packages=['c', 'd'], channels=['x', 'y'], lock_set=lock_set)
 
     # package "b" is now ignored
     assert ('a=1.0=1', ) == spec.conda_packages_for_create
 
 
 def test_lock_set_affects_name_sets():
-    lock_set = CondaLockSet({'all': ['a=1.0=1', 'q=2.0=2']},
+    lock_set = CondaLockSet({
+        'all': ['a=1.0=1', 'q=2.0=2']
+    },
                             platforms=['linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64'])
-    spec = EnvSpec(name="foo",
-                   conda_packages=['a', 'b'],
-                   pip_packages=['c', 'd'],
-                   channels=['x', 'y'],
-                   lock_set=lock_set)
+    spec = EnvSpec(
+        name="foo", conda_packages=['a', 'b'], pip_packages=['c', 'd'], channels=['x', 'y'], lock_set=lock_set)
 
     assert ('a', 'b') == spec.conda_packages
     assert ('a=1.0=1', 'q=2.0=2') == spec.conda_packages_for_create
@@ -374,16 +389,14 @@ def test_lock_set_affects_name_sets():
 
 def test_lock_set_affects_hash():
     lock_set = CondaLockSet({'all': ['a=1.0=1']}, platforms=['linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64'])
-    with_lock_spec = EnvSpec(name="foo",
-                             conda_packages=['a', 'b'],
-                             pip_packages=['c', 'd'],
-                             channels=['x', 'y'],
-                             lock_set=lock_set)
-    without_lock_spec = EnvSpec(name=with_lock_spec.name,
-                                conda_packages=with_lock_spec.conda_packages,
-                                pip_packages=with_lock_spec.pip_packages,
-                                channels=with_lock_spec.channels,
-                                lock_set=None)
+    with_lock_spec = EnvSpec(
+        name="foo", conda_packages=['a', 'b'], pip_packages=['c', 'd'], channels=['x', 'y'], lock_set=lock_set)
+    without_lock_spec = EnvSpec(
+        name=with_lock_spec.name,
+        conda_packages=with_lock_spec.conda_packages,
+        pip_packages=with_lock_spec.pip_packages,
+        channels=with_lock_spec.channels,
+        lock_set=None)
 
     assert with_lock_spec.conda_packages != with_lock_spec.conda_packages_for_create
     assert without_lock_spec.conda_packages == without_lock_spec.conda_packages_for_create
@@ -397,16 +410,14 @@ def test_lock_set_affects_hash():
 
 
 def test_platforms_affect_hash():
-    with_platforms_spec = EnvSpec(name="foo",
-                                  conda_packages=['a', 'b'],
-                                  pip_packages=['c', 'd'],
-                                  channels=['x', 'y'],
-                                  platforms=('linux-64', ))
-    without_platforms_spec = EnvSpec(name=with_platforms_spec.name,
-                                     conda_packages=with_platforms_spec.conda_packages,
-                                     pip_packages=with_platforms_spec.pip_packages,
-                                     channels=with_platforms_spec.channels,
-                                     platforms=())
+    with_platforms_spec = EnvSpec(
+        name="foo", conda_packages=['a', 'b'], pip_packages=['c', 'd'], channels=['x', 'y'], platforms=('linux-64', ))
+    without_platforms_spec = EnvSpec(
+        name=with_platforms_spec.name,
+        conda_packages=with_platforms_spec.conda_packages,
+        pip_packages=with_platforms_spec.pip_packages,
+        channels=with_platforms_spec.channels,
+        platforms=())
 
     assert with_platforms_spec.logical_hash != with_platforms_spec.locked_hash
     assert with_platforms_spec.logical_hash != with_platforms_spec.import_hash

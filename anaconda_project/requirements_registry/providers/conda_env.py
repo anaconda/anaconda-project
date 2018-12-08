@@ -28,8 +28,8 @@ def _remove_env_path(env_path):
             problem = "Failed to remove environment files in {}: {}.".format(env_path, str(e))
             return SimpleStatus(success=False, description=problem)
     else:
-        return SimpleStatus(success=True,
-                            description=("Nothing to clean up for environment '%s'." % os.path.basename(env_path)))
+        return SimpleStatus(
+            success=True, description=("Nothing to clean up for environment '%s'." % os.path.basename(env_path)))
 
 
 class CondaEnvProvider(EnvVarProvider):
@@ -216,19 +216,20 @@ class CondaEnvProvider(EnvVarProvider):
 
     def unprovide(self, requirement, environ, local_state_file, overrides, requirement_status=None):
         """Override superclass to delete project-scoped envs directory."""
-        config = self.read_config(requirement,
-                                  environ,
-                                  local_state_file,
-                                  # future: pass in this default_env_spec_name
-                                  default_env_spec_name='default',
-                                  overrides=overrides)
+        config = self.read_config(
+            requirement,
+            environ,
+            local_state_file,
+            # future: pass in this default_env_spec_name
+            default_env_spec_name='default',
+            overrides=overrides)
 
         env_path = config.get('value', None)
         assert env_path is not None
         project_dir = environ['PROJECT_DIR']
         if not env_path.startswith(project_dir):
-            return SimpleStatus(success=True,
-                                description=("Current environment is not in %s, no need to delete it." % project_dir))
+            return SimpleStatus(
+                success=True, description=("Current environment is not in %s, no need to delete it." % project_dir))
 
         return _remove_env_path(env_path)
 
@@ -398,18 +399,19 @@ class CondaBootstrapEnvProvider(EnvVarProvider):
 
     def unprovide(self, requirement, environ, local_state_file, overrides, requirement_status=None):
         """Override superclass to delete project-scoped envs directory."""
-        config = self.read_config(requirement,
-                                  environ,
-                                  local_state_file,
-                                  # future: pass in this default_env_spec_name
-                                  default_env_spec_name='bootstrap-env',
-                                  overrides=overrides)
+        config = self.read_config(
+            requirement,
+            environ,
+            local_state_file,
+            # future: pass in this default_env_spec_name
+            default_env_spec_name='bootstrap-env',
+            overrides=overrides)
 
         env_path = config.get('value', None)
         assert env_path is not None
         project_dir = environ['PROJECT_DIR']
         if not env_path.startswith(project_dir):
-            return SimpleStatus(success=True,
-                                description=("Current environment is not in %s, no need to delete it." % project_dir))
+            return SimpleStatus(
+                success=True, description=("Current environment is not in %s, no need to delete it." % project_dir))
 
         return _remove_env_path(env_path)

@@ -369,8 +369,9 @@ class EnvSpec(object):
         # have ordering... OrderedDict doesn't work because the
         # yaml saver saves them as some "!!omap" nonsense. Other
         # than ordering, the formatting isn't even preserved here.
-        template_json = ryaml.load("something:\n    description: null\n" + "    packages: []\n" + "    channels: []\n",
-                                   Loader=ryaml.RoundTripLoader)
+        template_json = ryaml.load(
+            "something:\n    description: null\n" + "    packages: []\n" + "    channels: []\n",
+            Loader=ryaml.RoundTripLoader)
 
         if self._description is not None:
             template_json['something']['description'] = self._description
@@ -548,10 +549,11 @@ def _anaconda_default_env_spec(shared_base_spec):
         inherit_from = ()
     else:
         inherit_from = (shared_base_spec, )
-    return EnvSpec(name="default",
-                   conda_packages=["anaconda"],
-                   channels=[],
-                   platforms=conda_api.default_platforms_with_current(),
-                   description="Default environment spec for running commands",
-                   inherit_from_names=(),
-                   inherit_from=inherit_from)
+    return EnvSpec(
+        name="default",
+        conda_packages=["anaconda"],
+        channels=[],
+        platforms=conda_api.default_platforms_with_current(),
+        description="Default environment spec for running commands",
+        inherit_from_names=(),
+        inherit_from=inherit_from)

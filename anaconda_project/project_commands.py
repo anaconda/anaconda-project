@@ -247,11 +247,8 @@ class CommandExecInfo(object):
         else:
 
             args = self._args
-        return logged_subprocess.Popen(args=args,
-                                       env=py2_compat.env_without_unicode(self._env),
-                                       cwd=self._cwd,
-                                       shell=self._shell,
-                                       **kwargs)
+        return logged_subprocess.Popen(
+            args=args, env=py2_compat.env_without_unicode(self._env), cwd=self._cwd, shell=self._shell, **kwargs)
 
     def execvpe(self):
         """Convenience method exec's the command replacing the current process.

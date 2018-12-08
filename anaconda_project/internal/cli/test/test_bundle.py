@@ -43,9 +43,9 @@ def test_archive_command_on_simple_project(capsys):
                             "  Consider using the 'anaconda-project lock' command to lock the project.")
 
         out, err = capsys.readouterr()
-        assert ('  added %s\n  added %s\n%s\nCreated project archive %s\n' %
-                (os.path.join("some_name", DEFAULT_PROJECT_FILENAME), os.path.join("some_name", "foo.py"),
-                 unlocked_warning, archivefile)) == out
+        assert ('  added %s\n  added %s\n%s\nCreated project archive %s\n' % (os.path.join(
+            "some_name", DEFAULT_PROJECT_FILENAME), os.path.join("some_name", "foo.py"), unlocked_warning,
+                                                                              archivefile)) == out
 
         with zipfile.ZipFile(archivefile, mode='r') as zf:
             assert [os.path.basename(x) for x in sorted(zf.namelist())] == [DEFAULT_PROJECT_FILENAME, "foo.py"]

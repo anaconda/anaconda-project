@@ -73,11 +73,8 @@ class AnacondaProject(object):
         Returns:
             a Project instance
         """
-        return project_ops.create(directory_path=directory_path,
-                                  make_directory=make_directory,
-                                  name=name,
-                                  icon=icon,
-                                  description=description)
+        return project_ops.create(
+            directory_path=directory_path, make_directory=make_directory, name=name, icon=icon, description=description)
 
     def prepare_project_locally(self,
                                 project,
@@ -130,13 +127,14 @@ class AnacondaProject(object):
             a ``PrepareResult`` instance, which has a ``failed`` flag
 
         """
-        return prepare.prepare_without_interaction(project=project,
-                                                   environ=environ,
-                                                   mode=provide.PROVIDE_MODE_DEVELOPMENT,
-                                                   env_spec_name=env_spec_name,
-                                                   command_name=command_name,
-                                                   command=command,
-                                                   extra_command_args=extra_command_args)
+        return prepare.prepare_without_interaction(
+            project=project,
+            environ=environ,
+            mode=provide.PROVIDE_MODE_DEVELOPMENT,
+            env_spec_name=env_spec_name,
+            command_name=command_name,
+            command=command,
+            extra_command_args=extra_command_args)
 
     def prepare_project_production(self,
                                    project,
@@ -173,13 +171,14 @@ class AnacondaProject(object):
             a ``PrepareResult`` instance, which has a ``failed`` flag
 
         """
-        return prepare.prepare_without_interaction(project=project,
-                                                   environ=environ,
-                                                   mode=provide.PROVIDE_MODE_PRODUCTION,
-                                                   env_spec_name=env_spec_name,
-                                                   command_name=command_name,
-                                                   command=command,
-                                                   extra_command_args=extra_command_args)
+        return prepare.prepare_without_interaction(
+            project=project,
+            environ=environ,
+            mode=provide.PROVIDE_MODE_PRODUCTION,
+            env_spec_name=env_spec_name,
+            command_name=command_name,
+            command=command,
+            extra_command_args=extra_command_args)
 
     def prepare_project_check(self,
                               project,
@@ -211,13 +210,14 @@ class AnacondaProject(object):
             a ``PrepareResult`` instance, which has a ``failed`` flag
 
         """
-        return prepare.prepare_without_interaction(project=project,
-                                                   environ=environ,
-                                                   mode=provide.PROVIDE_MODE_CHECK,
-                                                   env_spec_name=env_spec_name,
-                                                   command_name=command_name,
-                                                   command=command,
-                                                   extra_command_args=extra_command_args)
+        return prepare.prepare_without_interaction(
+            project=project,
+            environ=environ,
+            mode=provide.PROVIDE_MODE_CHECK,
+            env_spec_name=env_spec_name,
+            command_name=command_name,
+            command=command,
+            extra_command_args=extra_command_args)
 
     def unprepare(self, project, prepare_result, whitelist=None):
         """Attempt to clean up project-scoped resources allocated by prepare().
@@ -273,10 +273,8 @@ class AnacondaProject(object):
         Returns:
             ``Status`` instance
         """
-        return project_ops.add_variables(project=project,
-                                         env_spec_name=env_spec_name,
-                                         vars_to_add=vars_to_add,
-                                         defaults=defaults)
+        return project_ops.add_variables(
+            project=project, env_spec_name=env_spec_name, vars_to_add=vars_to_add, defaults=defaults)
 
     def remove_variables(self, project, env_spec_name, vars_to_remove, prepare_result=None):
         """Remove variables from anaconda-project.yml and unset their values in local project state.
@@ -294,10 +292,8 @@ class AnacondaProject(object):
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_variables(project=project,
-                                            env_spec_name=env_spec_name,
-                                            vars_to_remove=vars_to_remove,
-                                            prepare_result=prepare_result)
+        return project_ops.remove_variables(
+            project=project, env_spec_name=env_spec_name, vars_to_remove=vars_to_remove, prepare_result=prepare_result)
 
     def set_variables(self, project, env_spec_name, vars_and_values, prepare_result=None):
         """Set variables' values in anaconda-project-local.yml.
@@ -315,10 +311,11 @@ class AnacondaProject(object):
         Returns:
             ``Status`` instance
         """
-        return project_ops.set_variables(project=project,
-                                         env_spec_name=env_spec_name,
-                                         vars_and_values=vars_and_values,
-                                         prepare_result=prepare_result)
+        return project_ops.set_variables(
+            project=project,
+            env_spec_name=env_spec_name,
+            vars_and_values=vars_and_values,
+            prepare_result=prepare_result)
 
     def unset_variables(self, project, env_spec_name, vars_to_unset, prepare_result=None):
         """Unset variables' values in anaconda-project-local.yml.
@@ -336,10 +333,8 @@ class AnacondaProject(object):
         Returns:
             ``Status`` instance
         """
-        return project_ops.unset_variables(project=project,
-                                           env_spec_name=env_spec_name,
-                                           vars_to_unset=vars_to_unset,
-                                           prepare_result=prepare_result)
+        return project_ops.unset_variables(
+            project=project, env_spec_name=env_spec_name, vars_to_unset=vars_to_unset, prepare_result=prepare_result)
 
     def add_download(self, project, env_spec_name, env_var, url, filename=None, hash_algorithm=None, hash_value=None):
         """Attempt to download the URL; if successful, add it as a download to the project.
@@ -363,13 +358,14 @@ class AnacondaProject(object):
         Returns:
             ``Status`` instance
         """
-        return project_ops.add_download(project=project,
-                                        env_spec_name=env_spec_name,
-                                        env_var=env_var,
-                                        url=url,
-                                        filename=filename,
-                                        hash_algorithm=hash_algorithm,
-                                        hash_value=hash_value)
+        return project_ops.add_download(
+            project=project,
+            env_spec_name=env_spec_name,
+            env_var=env_var,
+            url=url,
+            filename=filename,
+            hash_algorithm=hash_algorithm,
+            hash_value=hash_value)
 
     def remove_download(self, project, env_spec_name, env_var, prepare_result=None):
         """Remove file or directory referenced by ``env_var`` from file system and the project.
@@ -387,10 +383,8 @@ class AnacondaProject(object):
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_download(project=project,
-                                           env_spec_name=env_spec_name,
-                                           env_var=env_var,
-                                           prepare_result=prepare_result)
+        return project_ops.remove_download(
+            project=project, env_spec_name=env_spec_name, env_var=env_var, prepare_result=prepare_result)
 
     def add_env_spec(self, project, name, packages, channels):
         """Attempt to create the environment spec and add it to anaconda-project.yml.
@@ -466,10 +460,8 @@ class AnacondaProject(object):
             ``Status`` instance
 
         """
-        return project_ops.add_packages(project=project,
-                                        env_spec_name=env_spec_name,
-                                        packages=packages,
-                                        channels=channels)
+        return project_ops.add_packages(
+            project=project, env_spec_name=env_spec_name, packages=packages, channels=channels)
 
     def remove_packages(self, project, env_spec_name, packages):
         """Attempt to remove packages from an environment spec in anaconda-project.yml.
@@ -609,12 +601,13 @@ class AnacondaProject(object):
            a ``Status`` instance
 
         """
-        return project_ops.add_command(project=project,
-                                       name=name,
-                                       command_type=command_type,
-                                       command=command,
-                                       env_spec_name=env_spec_name,
-                                       supports_http_options=supports_http_options)
+        return project_ops.add_command(
+            project=project,
+            name=name,
+            command_type=command_type,
+            command=command,
+            env_spec_name=env_spec_name,
+            supports_http_options=supports_http_options)
 
     def update_command(self, project, name, command_type=None, command=None, new_name=None):
         """Update attributes of a command in anaconda-project.yml.
@@ -633,11 +626,8 @@ class AnacondaProject(object):
         Returns:
            a ``Status`` instance
         """
-        return project_ops.update_command(project=project,
-                                          name=name,
-                                          command_type=command_type,
-                                          command=command,
-                                          new_name=new_name)
+        return project_ops.update_command(
+            project=project, name=name, command_type=command_type, command=command, new_name=new_name)
 
     def remove_command(self, project, name):
         """Remove a command from anaconda-project.yml.
@@ -673,10 +663,8 @@ class AnacondaProject(object):
         Returns:
             ``Status`` instance
         """
-        return project_ops.add_service(project=project,
-                                       env_spec_name=env_spec_name,
-                                       service_type=service_type,
-                                       variable_name=variable_name)
+        return project_ops.add_service(
+            project=project, env_spec_name=env_spec_name, service_type=service_type, variable_name=variable_name)
 
     def remove_service(self, project, env_spec_name, variable_name, prepare_result=None):
         """Remove a service to anaconda-project.yml.
@@ -694,10 +682,8 @@ class AnacondaProject(object):
         Returns:
             ``Status`` instance
         """
-        return project_ops.remove_service(project=project,
-                                          env_spec_name=env_spec_name,
-                                          variable_name=variable_name,
-                                          prepare_result=prepare_result)
+        return project_ops.remove_service(
+            project=project, env_spec_name=env_spec_name, variable_name=variable_name, prepare_result=prepare_result)
 
     def clean(self, project, prepare_result):
         """Blow away auto-provided state for the project.
@@ -751,10 +737,8 @@ class AnacondaProject(object):
             a ``Status``, if failed has ``errors``, on success has ``project_dir`` property.
 
         """
-        return project_ops.unarchive(filename=filename,
-                                     project_dir=project_dir,
-                                     parent_dir=parent_dir,
-                                     frontend=frontend)
+        return project_ops.unarchive(
+            filename=filename, project_dir=project_dir, parent_dir=parent_dir, frontend=frontend)
 
     def upload(self, project, site=None, username=None, token=None, log_level=None):
         """Upload the project to the Anaconda server.

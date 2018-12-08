@@ -85,11 +85,8 @@ def test_create(monkeypatch):
 
 def test_create_with_properties():
     def check_create(dirname):
-        project = project_ops.create(dirname,
-                                     make_directory=False,
-                                     name='hello',
-                                     icon='something.png',
-                                     description="Hello World")
+        project = project_ops.create(
+            dirname, make_directory=False, name='hello', icon='something.png', description="Hello World")
         assert [] == project.problems
         assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
         assert project.name == 'hello'
@@ -101,11 +98,8 @@ def test_create_with_properties():
 
 def test_create_imports_environment_yml():
     def check_create(dirname):
-        project = project_ops.create(dirname,
-                                     make_directory=False,
-                                     name='hello',
-                                     icon='something.png',
-                                     description="Hello World")
+        project = project_ops.create(
+            dirname, make_directory=False, name='hello', icon='something.png', description="Hello World")
         assert [] == project.problems
         assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
 
@@ -116,8 +110,9 @@ def test_create_imports_environment_yml():
         assert spec.channels == ('bar', )
 
     with_directory_contents(
-        {'something.png': 'not a real png',
-         "environment.yml": """
+        {
+            'something.png': 'not a real png',
+            "environment.yml": """
 name: stuff
 dependencies:
  - a
@@ -126,17 +121,19 @@ dependencies:
    - foo
 channels:
  - bar
-"""}, check_create)
+"""
+        }, check_create)
 
 
 def test_create_imports_environment_yml_when_project_yml_exists_and_fix_problems():
     def check_create(dirname):
-        project = project_ops.create(dirname,
-                                     make_directory=False,
-                                     name='hello',
-                                     icon='something.png',
-                                     description="Hello World",
-                                     fix_problems=True)
+        project = project_ops.create(
+            dirname,
+            make_directory=False,
+            name='hello',
+            icon='something.png',
+            description="Hello World",
+            fix_problems=True)
         assert [] == project.problems
         assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
 
@@ -147,12 +144,13 @@ def test_create_imports_environment_yml_when_project_yml_exists_and_fix_problems
         assert spec.channels == ('bar', )
 
     with_directory_contents(
-        {'something.png': 'not a real png',
-         "anaconda-project.yml": """
+        {
+            'something.png': 'not a real png',
+            "anaconda-project.yml": """
 name: foo
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 """,
-         "environment.yml": """
+            "environment.yml": """
 name: stuff
 dependencies:
  - a
@@ -161,26 +159,29 @@ dependencies:
    - foo
 channels:
  - bar
-"""}, check_create)
+"""
+        }, check_create)
 
 
 def test_create_no_import_environment_yml_when_not_fix_problems():
     def check_create(dirname):
-        project = project_ops.create(dirname,
-                                     make_directory=False,
-                                     name='hello',
-                                     icon='something.png',
-                                     description="Hello World",
-                                     fix_problems=False)
+        project = project_ops.create(
+            dirname,
+            make_directory=False,
+            name='hello',
+            icon='something.png',
+            description="Hello World",
+            fix_problems=False)
         assert ["Environment spec 'stuff' from environment.yml is not in anaconda-project.yml."] == project.problems
 
     with_directory_contents(
-        {'something.png': 'not a real png',
-         "anaconda-project.yml": """
+        {
+            'something.png': 'not a real png',
+            "anaconda-project.yml": """
 name: foo
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 """,
-         "environment.yml": """
+            "environment.yml": """
 name: stuff
 dependencies:
  - a
@@ -189,7 +190,8 @@ dependencies:
    - foo
 channels:
  - bar
-"""}, check_create)
+"""
+        }, check_create)
 
 
 def test_create_with_invalid_environment_yml():
@@ -200,13 +202,14 @@ def test_create_with_invalid_environment_yml():
         # we should NOT create the anaconda-project.yml if it would be broken
         assert not os.path.isfile(project_filename)
 
-    with_directory_contents(
-        {'something.png': 'not a real png',
-         "environment.yml": """
+    with_directory_contents({
+        'something.png': 'not a real png',
+        "environment.yml": """
 name: stuff
 dependencies:
  - b $ 1.0
-"""}, check_create)
+"""
+    }, check_create)
 
 
 def test_create_imports_notebook():
@@ -259,8 +262,10 @@ def test_set_properties_with_project_file_problems():
         project = Project(dirname)
         status = project_ops.set_properties(project, name='foo')
         assert not status
-        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.basename] == status.errors
+        assert [
+            "%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+            project.project_file.basename
+        ] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -333,8 +338,9 @@ def test_add_variables_to_env_spec():
         assert [] == project.find_requirements('default', env_var='foo')
         assert [] == project.find_requirements('default', env_var='baz')
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
     default:
       packages: [python]
@@ -342,7 +348,8 @@ env_specs:
     myspec:
       packages: [python]
       channels: []
-"""}, check_add_var)
+"""
+    }, check_add_var)
 
 
 def test_add_variables_bad_env_spec():
@@ -368,22 +375,19 @@ def test_add_variables_existing_download():
         assert local_state.get_value(['variables', 'baz']) is None
         assert local_state.get_value(['variables', 'datafile']) is None
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('variables:\n'
-                                    '  preset: null\n'
-                                    'downloads:\n'
-                                    '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('variables:\n'
+                                   '  preset: null\n'
+                                   'downloads:\n'
+                                   '  datafile: http://localhost:8000/data.tgz')
+    }, check_set_var)
 
 
 def test_add_variables_existing_options():
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_variables(project,
-                                           None,
-                                           ['foo', 'baz', 'blah', 'woot', 'woot2'],
-                                           dict(foo='bar',
-                                                baz='qux',
-                                                woot2='updated'))
+        status = project_ops.add_variables(project, None, ['foo', 'baz', 'blah', 'woot', 'woot2'],
+                                           dict(foo='bar', baz='qux', woot2='updated'))
         assert status
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
 
@@ -408,15 +412,16 @@ def test_add_variables_existing_options():
         woot2 = re_loaded.get_value(['variables', 'woot2'])
         assert woot2 == 'updated'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('variables:\n'
-                                    '  foo: { something: 42 }\n'
-                                    '  baz: { default: "hello" }\n'
-                                    '  blah: { default: "unchanged" }\n'
-                                    '  woot: "world"\n'
-                                    '  woot2: "changed"\n'
-                                    'downloads:\n'
-                                    '  datafile: http://localhost:8000/data.tgz')}, check_set_var)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('variables:\n'
+                                   '  foo: { something: 42 }\n'
+                                   '  baz: { default: "hello" }\n'
+                                   '  blah: { default: "unchanged" }\n'
+                                   '  woot: "world"\n'
+                                   '  woot2: "changed"\n'
+                                   'downloads:\n'
+                                   '  datafile: http://localhost:8000/data.tgz')
+    }, check_set_var)
 
 
 def test_remove_variables():
@@ -432,9 +437,10 @@ def test_remove_variables():
         assert local_state.get_value(['variables', 'foo']) is None
         assert local_state.get_value(['variables', 'bar']) is None
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('variables:\n'
-                                    '  foo: baz\n  bar: qux')}, check_remove_var)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('variables:\n'
+                                   '  foo: baz\n  bar: qux')
+    }, check_remove_var)
 
 
 def test_remove_variables_with_env_spec():
@@ -452,8 +458,9 @@ def test_remove_variables_with_env_spec():
         assert re_loaded.get_value(['env_specs', 'myspec', 'variables', 'foo']) is None
         assert re_loaded.get_value(['env_specs', 'myspec', 'variables', 'bar']) is None
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
   default:
     packages: [python]
@@ -464,7 +471,8 @@ env_specs:
     variables:
       foo: baz
       bar: qux
-        """}, check_remove_var)
+        """
+    }, check_remove_var)
 
 
 def test_set_variables():
@@ -484,9 +492,10 @@ def test_set_variables():
         assert local_state.get_value(['variables', 'foo']) == 'bar'
         assert local_state.get_value(['variables', 'baz']) == 'qux'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('variables:\n'
-                                    '  preset: null')}, check_set_var)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('variables:\n'
+                                   '  preset: null')
+    }, check_set_var)
 
 
 def test_set_variables_nonexistent():
@@ -496,8 +505,9 @@ def test_set_variables_nonexistent():
         status = project_ops.set_variables(project, None, [('foo', 'bar'), ('baz', 'qux')])
         assert not status
         assert status.status_description == "Could not set variables."
-        assert status.errors == ["Variable foo does not exist in the project.",
-                                 "Variable baz does not exist in the project."]
+        assert status.errors == [
+            "Variable foo does not exist in the project.", "Variable baz does not exist in the project."
+        ]
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_set_var)
 
@@ -515,8 +525,8 @@ def test_set_variables_cannot_create_environment(monkeypatch):
         status = project_ops.set_variables(project, None, [('foo', 'bar'), ('baz', 'qux')])
         assert not status
         expected_env_path = os.path.join(dirname, 'envs', 'default')
-        assert status.status_description == ("'%s' doesn't look like it contains a Conda environment yet." %
-                                             expected_env_path)
+        assert status.status_description == (
+            "'%s' doesn't look like it contains a Conda environment yet." % expected_env_path)
         assert status.errors == ["Failed to create environment at %s: error_from_conda_create" % expected_env_path]
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_set_var)
@@ -542,9 +552,10 @@ def test_unset_variables():
         assert local_state.get_value(['variables', 'foo']) is None
         assert local_state.get_value(['variables', 'baz']) is None
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('variables:\n'
-                                    '  preset: null')}, check_unset_var)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('variables:\n'
+                                   '  preset: null')
+    }, check_unset_var)
 
 
 def test_set_and_unset_variables_encrypted():
@@ -552,11 +563,8 @@ def test_set_and_unset_variables_encrypted():
 
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_variables(project,
-                                           None,
-                                           ['foo_PASSWORD', 'baz_SECRET'],
-                                           dict(foo_PASSWORD='no',
-                                                baz_SECRET='nope'))
+        status = project_ops.add_variables(project, None, ['foo_PASSWORD', 'baz_SECRET'],
+                                           dict(foo_PASSWORD='no', baz_SECRET='nope'))
         assert status
 
         local_state = LocalStateFile.load_for_directory(dirname)
@@ -582,9 +590,10 @@ def test_set_and_unset_variables_encrypted():
 
     try:
         keyring.enable_fallback_keyring()
-        with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: ('variables:\n'
-                                        '  preset: null')}, check_set_var)
+        with_directory_contents_completing_project_file({
+            DEFAULT_PROJECT_FILENAME: ('variables:\n'
+                                       '  preset: null')
+        }, check_set_var)
     finally:
         keyring.disable_fallback_keyring()
 
@@ -594,12 +603,8 @@ def test_set_and_unset_variables_some_encrypted():
 
     def check_set_var(dirname):
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_variables(project,
-                                           None,
-                                           ['foo_PASSWORD', 'baz_SECRET', 'woo'],
-                                           dict(foo_PASSWORD='no',
-                                                baz_SECRET='nope',
-                                                woo='something'))
+        status = project_ops.add_variables(project, None, ['foo_PASSWORD', 'baz_SECRET', 'woo'],
+                                           dict(foo_PASSWORD='no', baz_SECRET='nope', woo='something'))
         assert status
 
         local_state = LocalStateFile.load_for_directory(dirname)
@@ -630,9 +635,10 @@ def test_set_and_unset_variables_some_encrypted():
 
     try:
         keyring.enable_fallback_keyring()
-        with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: ('variables:\n'
-                                        '  preset: null')}, check_set_var)
+        with_directory_contents_completing_project_file({
+            DEFAULT_PROJECT_FILENAME: ('variables:\n'
+                                       '  preset: null')
+        }, check_set_var)
     finally:
         keyring.disable_fallback_keyring()
 
@@ -647,10 +653,11 @@ def _test_add_command_line(command_type):
         command = re_loaded.get_value(['commands', 'default'])
         assert command[command_type] == 'echo "test"'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    %s: echo "pass"\n') % command_type}, check_add_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    %s: echo "pass"\n') % command_type
+    }, check_add_command)
 
 
 def test_add_command_shell():
@@ -672,10 +679,11 @@ def _test_add_command_windows_to_shell(command_type):
         assert command['windows'] == 'echo "test"'
         assert command['unix'] == 'echo "pass"'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    unix: echo "pass"\n') % command_type}, check_add_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    unix: echo "pass"\n') % command_type
+    }, check_add_command)
 
 
 def test_add_command_bokeh():
@@ -705,12 +713,13 @@ def test_add_command_bokeh_overwrites():
         assert command['bokeh_app'] == 'file.py'
         assert command['env_spec'] == 'default'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  bokeh_test:\n'
-                                    '    bokeh_app: replaced.py\n'
-                                    'packages:\n'
-                                    '  - bokeh\n')}, check_add_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  bokeh_test:\n'
+                                   '    bokeh_app: replaced.py\n'
+                                   'packages:\n'
+                                   '  - bokeh\n')
+    }, check_add_command)
 
 
 def test_add_command_sets_env_spec():
@@ -724,12 +733,13 @@ def test_add_command_sets_env_spec():
         assert command['bokeh_app'] == 'file.py'
         assert command['env_spec'] == 'foo'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                    '  foo: { "packages" : ["bokeh"] }\n'
-                                    'commands:\n'
-                                    '  bokeh_test:\n'
-                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                   '  foo: { "packages" : ["bokeh"] }\n'
+                                   'commands:\n'
+                                   '  bokeh_test:\n'
+                                   '    bokeh_app: replaced.py\n')
+    }, check_add_command)
 
 
 def test_add_command_leaves_env_spec():
@@ -743,13 +753,14 @@ def test_add_command_leaves_env_spec():
         assert command['bokeh_app'] == 'file.py'
         assert command['env_spec'] == 'foo'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                    '  foo: { "packages" : ["bokeh"] }\n'
-                                    'commands:\n'
-                                    '  bokeh_test:\n'
-                                    '    env_spec: "foo"\n'
-                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                   '  foo: { "packages" : ["bokeh"] }\n'
+                                   'commands:\n'
+                                   '  bokeh_test:\n'
+                                   '    env_spec: "foo"\n'
+                                   '    bokeh_app: replaced.py\n')
+    }, check_add_command)
 
 
 def test_add_command_generates_env_spec_suggestion():
@@ -781,25 +792,22 @@ def test_add_command_generates_env_spec_suggestion():
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
         assert re_loaded.get_value(['env_specs', 'bar', 'packages']) == ['bokeh']
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                    '  foo: { "packages" : ["bokeh"] }\n'
-                                    '  bar: {}\n'
-                                    'commands:\n'
-                                    '  bokeh_test:\n'
-                                    '    env_spec: "foo"\n'
-                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                   '  foo: { "packages" : ["bokeh"] }\n'
+                                   '  bar: {}\n'
+                                   'commands:\n'
+                                   '  bokeh_test:\n'
+                                   '    env_spec: "foo"\n'
+                                   '    bokeh_app: replaced.py\n')
+    }, check_add_command)
 
 
 def test_add_command_leaves_supports_http_options():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project,
-                                         'bokeh_test',
-                                         'bokeh_app',
-                                         'file.py',
-                                         env_spec_name=None,
-                                         supports_http_options=None)
+        result = project_ops.add_command(
+            project, 'bokeh_test', 'bokeh_app', 'file.py', env_spec_name=None, supports_http_options=None)
         assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
@@ -808,24 +816,21 @@ def test_add_command_leaves_supports_http_options():
         assert command['env_spec'] == 'foo'
         assert command['supports_http_options'] is False
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                    '  foo: { "packages" : ["bokeh"] }\n'
-                                    'commands:\n'
-                                    '  bokeh_test:\n'
-                                    '    supports_http_options: false\n'
-                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                   '  foo: { "packages" : ["bokeh"] }\n'
+                                   'commands:\n'
+                                   '  bokeh_test:\n'
+                                   '    supports_http_options: false\n'
+                                   '    bokeh_app: replaced.py\n')
+    }, check_add_command)
 
 
 def test_add_command_leaves_supports_http_options_unset():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project,
-                                         'bokeh_test',
-                                         'bokeh_app',
-                                         'file.py',
-                                         env_spec_name=None,
-                                         supports_http_options=None)
+        result = project_ops.add_command(
+            project, 'bokeh_test', 'bokeh_app', 'file.py', env_spec_name=None, supports_http_options=None)
         assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
@@ -834,23 +839,20 @@ def test_add_command_leaves_supports_http_options_unset():
         assert command['env_spec'] == 'foo'
         assert 'supports_http_options' not in command
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                    '  foo: { "packages" : ["bokeh"] }\n'
-                                    'commands:\n'
-                                    '  bokeh_test:\n'
-                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                   '  foo: { "packages" : ["bokeh"] }\n'
+                                   'commands:\n'
+                                   '  bokeh_test:\n'
+                                   '    bokeh_app: replaced.py\n')
+    }, check_add_command)
 
 
 def test_add_command_modifies_supports_http_options():
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
-        result = project_ops.add_command(project,
-                                         'bokeh_test',
-                                         'bokeh_app',
-                                         'file.py',
-                                         env_spec_name=None,
-                                         supports_http_options=True)
+        result = project_ops.add_command(
+            project, 'bokeh_test', 'bokeh_app', 'file.py', env_spec_name=None, supports_http_options=True)
         assert result
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
@@ -859,13 +861,14 @@ def test_add_command_modifies_supports_http_options():
         assert command['env_spec'] == 'foo'
         assert command['supports_http_options'] is True
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                    '  foo: { "packages" : ["bokeh"] }\n'
-                                    'commands:\n'
-                                    '  bokeh_test:\n'
-                                    '    supports_http_options: false\n'
-                                    '    bokeh_app: replaced.py\n')}, check_add_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                   '  foo: { "packages" : ["bokeh"] }\n'
+                                   'commands:\n'
+                                   '  bokeh_test:\n'
+                                   '    supports_http_options: false\n'
+                                   '    bokeh_app: replaced.py\n')
+    }, check_add_command)
 
 
 def test_add_command_notebook():
@@ -882,13 +885,16 @@ def test_add_command_notebook():
         assert command['env_spec'] == 'default'
         assert command['registers_fusion_function'] is True
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: "",
-         'foo.ipynb': """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        "",
+        'foo.ipynb':
+        """
 {
   "cells" : [ { "source" : [ "@fusion.register\\n", "def foo():\\n", "  pass\\n" ] } ]
 }
-                                                     """}, check_add_command)
+                                                     """
+    }, check_add_command)
 
 
 def test_add_command_broken_notebook():
@@ -925,10 +931,11 @@ def test_add_command_conflicting_type():
         assert command['unix'] == 'echo "pass"'
         assert 'bokeh_app' not in command
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    unix: echo "pass"\n')}, check_add_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    unix: echo "pass"\n')
+    }, check_add_command)
 
 
 def test_update_command_with_project_file_problems():
@@ -937,8 +944,10 @@ def test_update_command_with_project_file_problems():
         status = project_ops.update_command(project, 'foo', 'unix', 'echo hello')
 
         assert not status
-        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.basename] == status.errors
+        assert [
+            "%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+            project.project_file.basename
+        ] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -983,10 +992,11 @@ def test_update_command_no_command():
             project_ops.update_command(project, 'default', 'bokeh_app')
         assert 'must also specify the command' in str(excinfo.value)
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    unix: echo "pass"\n')}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    unix: echo "pass"\n')
+    }, check)
 
 
 def test_update_command_does_not_exist():
@@ -999,10 +1009,11 @@ def test_update_command_does_not_exist():
 
         assert ["No command 'myapp' found."] == result.errors
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    unix: echo "pass"\n')}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    unix: echo "pass"\n')
+    }, check)
 
 
 def test_update_command_conflicting_type():
@@ -1026,10 +1037,11 @@ def test_update_command_conflicting_type():
         command = re_loaded.get_value(['commands', 'default'])
         assert command['bokeh_app'] == 'myapp.py'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    unix: echo "pass"\n')}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    unix: echo "pass"\n')
+    }, check)
 
 
 def test_update_command_same_type():
@@ -1052,10 +1064,11 @@ def test_update_command_same_type():
         command = re_loaded.get_value(['commands', 'default'])
         assert command['unix'] == 'echo "blah"'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    unix: echo "pass"\n')}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    unix: echo "pass"\n')
+    }, check)
 
 
 def test_update_command_add_windows_alongside_shell():
@@ -1075,10 +1088,11 @@ def test_update_command_add_windows_alongside_shell():
         assert command.unix_shell_commandline == 'echo "pass"'
         assert command.windows_cmd_commandline == 'echo "blah"'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    unix: echo "pass"\n')}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    unix: echo "pass"\n')
+    }, check)
 
 
 def test_update_command_add_shell_alongside_windows():
@@ -1098,10 +1112,11 @@ def test_update_command_add_shell_alongside_windows():
         assert command.unix_shell_commandline == 'echo "pass"'
         assert command.windows_cmd_commandline == 'echo "blah"'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    windows: echo "blah"\n')}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    windows: echo "blah"\n')
+    }, check)
 
 
 def test_update_command_empty_update():
@@ -1120,10 +1135,11 @@ def test_update_command_empty_update():
         command = project.commands['default']
         assert command.unix_shell_commandline == 'echo "pass"'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    unix: echo "pass"\n')}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    unix: echo "pass"\n')
+    }, check)
 
 
 def test_update_command_to_non_string_value():
@@ -1138,17 +1154,19 @@ def test_update_command_to_non_string_value():
 
         result = project_ops.update_command(project, 'default', 'notebook', 42)
         assert not result
-        assert [("%s: command 'default' attribute 'notebook' should be a string not '42'" %
-                 project.project_file.basename)] == result.errors
+        assert [
+            ("%s: command 'default' attribute 'notebook' should be a string not '42'" % project.project_file.basename)
+        ] == result.errors
 
         assert 'default' in project.commands
         command = project.commands['default']
         assert command.unix_shell_commandline == 'echo "pass"'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('commands:\n'
-                                    '  default:\n'
-                                    '    unix: echo "pass"\n')}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('commands:\n'
+                                   '  default:\n'
+                                   '    unix: echo "pass"\n')
+    }, check)
 
 
 def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA', checksum=None):
@@ -1221,12 +1239,13 @@ def test_add_download_to_env_spec(monkeypatch):
 
         # be sure download was added to the file and saved
         project2 = project_no_dedicated_env(dirname)
-        assert {"url": 'http://localhost:123456'
-                } == project2.project_file.get_value(['env_specs', 'myspec', 'downloads', 'MYDATA'])
+        assert {
+            "url": 'http://localhost:123456'
+        } == project2.project_file.get_value(['env_specs', 'myspec', 'downloads', 'MYDATA'])
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
     default:
       packages: [python]
@@ -1235,7 +1254,7 @@ env_specs:
       packages: [python]
       channels: []
         """
-        }, check)
+    }, check)
 
 
 def test_add_download_with_filename(monkeypatch):
@@ -1265,12 +1284,8 @@ def test_add_download_with_checksum(monkeypatch):
         _monkeypatch_download_file(monkeypatch, dirname, checksum='DIGEST')
 
         project = project_no_dedicated_env(dirname)
-        status = project_ops.add_download(project,
-                                          None,
-                                          'MYDATA',
-                                          'http://localhost:123456',
-                                          hash_algorithm='md5',
-                                          hash_value='DIGEST')
+        status = project_ops.add_download(
+            project, None, 'MYDATA', 'http://localhost:123456', hash_algorithm='md5', hash_value='DIGEST')
         assert os.path.isfile(os.path.join(dirname, FILENAME))
         assert status
         assert [] == status.errors
@@ -1291,8 +1306,9 @@ def test_add_download_which_already_exists(monkeypatch):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
-        assert dict(url='http://localhost:56789',
-                    filename='foobar') == dict(project.project_file.get_value(['downloads', 'MYDATA']))
+        assert dict(
+            url='http://localhost:56789', filename='foobar') == dict(
+                project.project_file.get_value(['downloads', 'MYDATA']))
 
         status = project_ops.add_download(project, None, 'MYDATA', 'http://localhost:123456')
 
@@ -1303,12 +1319,14 @@ def test_add_download_which_already_exists(monkeypatch):
         # be sure download was added to the file and saved, and
         # the filename attribute was kept
         project2 = project_no_dedicated_env(dirname)
-        assert dict(url='http://localhost:123456',
-                    filename='foobar') == dict(project2.project_file.get_value(['downloads', 'MYDATA']))
+        assert dict(
+            url='http://localhost:123456', filename='foobar') == dict(
+                project2.project_file.get_value(['downloads', 'MYDATA']))
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'downloads:\n    MYDATA: { url: "http://localhost:56789", filename: foobar }'},
-        check)
+        {
+            DEFAULT_PROJECT_FILENAME: 'downloads:\n    MYDATA: { url: "http://localhost:56789", filename: foobar }'
+        }, check)
 
 
 def test_add_download_which_already_exists_with_fname(monkeypatch):
@@ -1318,8 +1336,9 @@ def test_add_download_which_already_exists_with_fname(monkeypatch):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
-        assert dict(url='http://localhost:56789',
-                    filename='foobar') == dict(project.project_file.get_value(['downloads', 'MYDATA']))
+        assert dict(
+            url='http://localhost:56789', filename='foobar') == dict(
+                project.project_file.get_value(['downloads', 'MYDATA']))
 
         status = project_ops.add_download(project, None, 'MYDATA', 'http://localhost:123456', filename="bazqux")
 
@@ -1330,12 +1349,14 @@ def test_add_download_which_already_exists_with_fname(monkeypatch):
         # be sure download was added to the file and saved, and
         # the filename attribute was kept
         project2 = project_no_dedicated_env(dirname)
-        assert dict(url='http://localhost:123456',
-                    filename='bazqux') == dict(project2.project_file.get_value(['downloads', 'MYDATA']))
+        assert dict(
+            url='http://localhost:123456', filename='bazqux') == dict(
+                project2.project_file.get_value(['downloads', 'MYDATA']))
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'downloads:\n    MYDATA: { url: "http://localhost:56789", filename: foobar }'},
-        check)
+        {
+            DEFAULT_PROJECT_FILENAME: 'downloads:\n    MYDATA: { url: "http://localhost:56789", filename: foobar }'
+        }, check)
 
 
 def test_add_download_fails(monkeypatch):
@@ -1385,8 +1406,10 @@ def test_add_download_with_project_file_problems():
 
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
         assert not status
-        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.basename] == status.errors
+        assert [
+            "%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+            project.project_file.basename
+        ] == status.errors
 
         # be sure download was NOT added to the file
         project2 = project_no_dedicated_env(dirname)
@@ -1411,10 +1434,12 @@ def test_remove_download(monkeypatch):
         assert not os.path.isfile(os.path.join(dirname, "MYDATA"))
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 downloads:
   MYDATA: "http://localhost:123456"
-"""}, check)
+"""
+        }, check)
 
 
 def test_remove_download_with_prepare(monkeypatch):
@@ -1435,10 +1460,12 @@ def test_remove_download_with_prepare(monkeypatch):
         assert project2.project_file.get_value(['downloads', 'MYDATA']) is None
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 downloads:
   MYDATA: "http://localhost:123456"
-"""}, check)
+"""
+        }, check)
 
 
 def test_remove_download_with_env_spec(monkeypatch):
@@ -1455,8 +1482,9 @@ def test_remove_download_with_env_spec(monkeypatch):
         project2 = project_no_dedicated_env(dirname)
         assert project2.project_file.get_value(config_path) is None
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
     default:
       packages: [python]
@@ -1466,7 +1494,8 @@ env_specs:
       channels: []
       downloads:
         MYDATA: "http://localhost:123456"
-"""}, check)
+"""
+    }, check)
 
 
 # the other add_env_spec tests use a mock CondaManager, but we want to have
@@ -1503,11 +1532,12 @@ def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove
         def __init__(self, frontend):
             self.fix_works = fix_works
             self.fixed = False
-            self.deviations = CondaEnvironmentDeviations(summary="test deviation",
-                                                         missing_packages=missing_packages,
-                                                         wrong_version_packages=wrong_version_packages,
-                                                         missing_pip_packages=(),
-                                                         wrong_version_pip_packages=())
+            self.deviations = CondaEnvironmentDeviations(
+                summary="test deviation",
+                missing_packages=missing_packages,
+                wrong_version_packages=wrong_version_packages,
+                missing_pip_packages=(),
+                wrong_version_pip_packages=())
 
         def resolve_dependencies(self, package_specs, channels, platforms):
             if resolve_dependencies_error is not None:
@@ -1517,11 +1547,12 @@ def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove
 
         def find_environment_deviations(self, prefix, spec):
             if self.fixed:
-                return CondaEnvironmentDeviations(summary="fixed",
-                                                  missing_packages=(),
-                                                  wrong_version_packages=(),
-                                                  missing_pip_packages=(),
-                                                  wrong_version_pip_packages=())
+                return CondaEnvironmentDeviations(
+                    summary="fixed",
+                    missing_packages=(),
+                    wrong_version_packages=(),
+                    missing_pip_packages=(),
+                    wrong_version_pip_packages=())
             else:
                 return self.deviations
 
@@ -1609,9 +1640,8 @@ def test_add_env_spec_no_global_platforms():
         # be sure we really made the config changes
         project2 = Project(dirname)
         assert dict(
-            packages=[],
-            channels=[],
-            platforms=['linux-64', 'osx-64', 'win-64']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
+            packages=[], channels=[], platforms=['linux-64', 'osx-64', 'win-64']) == dict(
+                project2.project_file.get_value(['env_specs', 'foo']))
 
         assert dict(
             locked=True,
@@ -1626,18 +1656,17 @@ def test_add_env_spec_with_packages_and_channels():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_env_spec(project,
-                                              name='foo',
-                                              packages=['a', 'b', 'c'],
-                                              channels=['c1', 'c2', 'c3'])
+            status = project_ops.add_env_spec(
+                project, name='foo', packages=['a', 'b', 'c'], channels=['c1', 'c2', 'c3'])
             assert status
 
         _with_conda_test(attempt)
 
         # be sure download was added to the file and saved
         project2 = Project(dirname)
-        assert dict(packages=['a', 'b', 'c'],
-                    channels=['c1', 'c2', 'c3']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
+        assert dict(
+            packages=['a', 'b', 'c'], channels=['c1', 'c2', 'c3']) == dict(
+                project2.project_file.get_value(['env_specs', 'foo']))
 
         env_spec = project2.env_specs['foo']
         assert env_spec.name == 'foo'
@@ -1651,52 +1680,54 @@ def test_add_env_spec_extending_existing_lists():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_env_spec(project,
-                                              name='foo',
-                                              packages=['a', 'b', 'c'],
-                                              channels=['c1', 'c2', 'c3'])
+            status = project_ops.add_env_spec(
+                project, name='foo', packages=['a', 'b', 'c'], channels=['c1', 'c2', 'c3'])
             assert status
 
         _with_conda_test(attempt)
 
         # be sure download was added to the file and saved
         project2 = Project(dirname)
-        assert dict(packages=['b', 'a', 'c'],
-                    channels=['c3', 'c1', 'c2']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
+        assert dict(
+            packages=['b', 'a', 'c'], channels=['c3', 'c1', 'c2']) == dict(
+                project2.project_file.get_value(['env_specs', 'foo']))
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
     packages: [ 'b' ]
     channels: [ 'c3']
-"""}, check)
+"""
+        }, check)
 
 
 def test_add_env_spec_extending_existing_lists_with_versions():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_env_spec(project,
-                                              name='foo',
-                                              packages=['a', 'b=2.0', 'c'],
-                                              channels=['c1', 'c2', 'c3'])
+            status = project_ops.add_env_spec(
+                project, name='foo', packages=['a', 'b=2.0', 'c'], channels=['c1', 'c2', 'c3'])
             assert status
 
         _with_conda_test(attempt)
 
         # be sure download was added to the file and saved
         project2 = Project(dirname)
-        assert dict(packages=['b=2.0', 'a', 'c'],
-                    channels=['c3', 'c1', 'c2']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
+        assert dict(
+            packages=['b=2.0', 'a', 'c'], channels=['c3', 'c1', 'c2']) == dict(
+                project2.project_file.get_value(['env_specs', 'foo']))
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
     packages: [ 'b=1.0' ]
     channels: [ 'c3']
-"""}, check)
+"""
+        }, check)
 
 
 def test_add_env_spec_cannot_resolve_deps():
@@ -1742,8 +1773,9 @@ def test_remove_env_spec():
         project2 = Project(dirname)
         assert project2.lock_file.get_value(['env_specs', 'hello'], None) is None
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: foo
 env_specs:
   hello:
@@ -1753,7 +1785,8 @@ env_specs:
    packages:
      - b
     """,
-         DEFAULT_PROJECT_LOCK_FILENAME: """
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        """
 locking_enabled: true
 env_specs:
   hello:
@@ -1761,7 +1794,8 @@ env_specs:
     packages:
       all:
       - a=1.0=1
-"""}, check)
+"""
+    }, check)
 
 
 def test_remove_only_env_spec():
@@ -1785,13 +1819,15 @@ def test_remove_only_env_spec():
         assert project2.lock_file.get_value(['env_specs', 'hello'], None) is None
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 name: foo
 env_specs:
   hello:
    packages:
      - a
-    """}, check)
+    """
+        }, check)
 
 
 def test_remove_env_spec_causes_problem():
@@ -1819,8 +1855,9 @@ def test_remove_env_spec_causes_problem():
         assert project2.lock_file.get_value(['env_specs', 'hello'], None) is not None
         assert project2.project_file.get_value(['env_specs', 'hello'], None) is not None
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: foo
 commands:
   default:
@@ -1834,7 +1871,8 @@ env_specs:
    packages:
      - b
     """,
-         DEFAULT_PROJECT_LOCK_FILENAME: """
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        """
 locking_enabled: true
 env_specs:
   hello:
@@ -1842,17 +1880,16 @@ env_specs:
     packages:
       all:
       - a=1.0=1
-"""}, check)
+"""
+    }, check)
 
 
 def test_add_packages_to_all_environments():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_packages(project,
-                                              env_spec_name=None,
-                                              packages=['foo', 'bar'],
-                                              channels=['hello', 'world'])
+            status = project_ops.add_packages(
+                project, env_spec_name=None, packages=['foo', 'bar'], channels=['hello', 'world'])
             assert status
             assert [] == status.errors
 
@@ -1866,25 +1903,27 @@ def test_add_packages_to_all_environments():
         for env_spec in project2.env_specs.values():
             assert env_spec.lock_set.enabled
             assert env_spec.lock_set.equivalent_to(
-                CondaLockSet({'all': []},
-                             platforms=['linux-64', 'osx-64', 'win-64']))
+                CondaLockSet({
+                    'all': []
+                }, platforms=['linux-64', 'osx-64', 'win-64']))
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 packages:
  - pip: [] # be sure we don't break with this in the list
                 """,
-         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        "locking_enabled: true\n"
+    }, check)
 
 
 def test_add_packages_cannot_resolve_deps():
     def check(dirname):
         def attempt():
             project = Project(dirname, frontend=FakeFrontend())
-            status = project_ops.add_packages(project,
-                                              env_spec_name=None,
-                                              packages=['foo', 'bar'],
-                                              channels=['hello', 'world'])
+            status = project_ops.add_packages(
+                project, env_spec_name=None, packages=['foo', 'bar'], channels=['hello', 'world'])
             assert status.status_description == "Error resolving dependencies for default: NOPE."
             assert status.errors == []
             assert project.frontend.logs == []
@@ -1908,10 +1947,8 @@ def test_add_packages_nonexistent_environment():
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            status = project_ops.add_packages(project,
-                                              env_spec_name="not_an_env",
-                                              packages=['foo', 'bar'],
-                                              channels=['hello', 'world'])
+            status = project_ops.add_packages(
+                project, env_spec_name="not_an_env", packages=['foo', 'bar'], channels=['hello', 'world'])
             assert not status
             assert [] == status.errors
 
@@ -1959,11 +1996,13 @@ def test_remove_packages_from_all_environments():
         for env_spec in project2.env_specs.values():
             assert env_spec.lock_set.enabled
             assert env_spec.lock_set.equivalent_to(
-                CondaLockSet({'all': []},
-                             platforms=['linux-64', 'osx-64', 'win-64']))
+                CondaLockSet({
+                    'all': []
+                }, platforms=['linux-64', 'osx-64', 'win-64']))
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 packages:
   - foo
   - bar
@@ -1979,7 +2018,9 @@ env_specs:
      - bar
      - pip: [] # make sure we don't choke on non-string items in list
         """,
-         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        "locking_enabled: true\n"
+    }, check)
 
 
 def test_remove_packages_from_one_environment():
@@ -2015,13 +2056,15 @@ def test_remove_packages_from_one_environment():
             if env_spec.name == 'hello':
                 assert env_spec.lock_set.enabled
                 assert env_spec.lock_set.equivalent_to(
-                    CondaLockSet({'all': []},
-                                 platforms=['linux-64', 'osx-64', 'win-64']))
+                    CondaLockSet({
+                        'all': []
+                    }, platforms=['linux-64', 'osx-64', 'win-64']))
             else:
                 assert env_spec.lock_set.enabled
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 packages:
   # this is a pre comment
   - qbert # this is a post comment
@@ -2032,7 +2075,9 @@ env_specs:
     packages:
      - foo
         """,
-         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        "locking_enabled: true\n"
+    }, check)
 
 
 def test_remove_packages_from_one_environment_leaving_others_unaffected():
@@ -2051,8 +2096,8 @@ def test_remove_packages_from_one_environment_leaving_others_unaffected():
         project2 = Project(dirname)
         assert ['qbert'] == list(project2.project_file.get_value('packages'))
         assert [] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
-        assert set(['baz', 'foo', 'bar']) == set(project2.project_file.get_value(
-            ['env_specs', 'another', 'packages'], []))
+        assert set(['baz', 'foo', 'bar']) == set(
+            project2.project_file.get_value(['env_specs', 'another', 'packages'], []))
         assert project2.env_specs['another'].conda_package_names_set == set(['qbert', 'foo', 'bar', 'baz'])
         assert project2.env_specs['hello'].conda_package_names_set == set(['qbert'])
 
@@ -2061,8 +2106,9 @@ def test_remove_packages_from_one_environment_leaving_others_unaffected():
         assert '# this is a pre comment' in content
         assert '# this is a post comment' in content
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 packages:
   - qbert
   - foo
@@ -2075,7 +2121,8 @@ env_specs:
     packages:
      # this is a pre comment
      - baz # this is a post comment
-"""}, check)
+"""
+    }, check)
 
 
 def test_remove_packages_cannot_resolve_deps():
@@ -2106,8 +2153,9 @@ def test_remove_packages_cannot_resolve_deps():
             assert env_spec.lock_set.enabled
             assert env_spec.lock_set.platforms == ()
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 packages:
   - foo
   - bar
@@ -2118,7 +2166,9 @@ env_specs:
      - foo
      - woot
         """,
-         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        "locking_enabled: true\n"
+    }, check)
 
 
 def test_remove_packages_from_nonexistent_environment():
@@ -2137,12 +2187,13 @@ def test_remove_packages_from_nonexistent_environment():
         project2 = Project(dirname)
         assert ['foo', 'bar'] == list(project2.project_file.get_value('packages'))
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 packages:
   - foo
   - bar
-"""}, check)
+"""
+    }, check)
 
 
 def test_remove_packages_with_project_file_problems():
@@ -2151,8 +2202,10 @@ def test_remove_packages_with_project_file_problems():
         status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo'])
 
         assert not status
-        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.basename] == status.errors
+        assert [
+            "%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+            project.project_file.basename
+        ] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -2174,14 +2227,17 @@ def test_add_platforms_to_all_environments():
         for env_spec in project2.env_specs.values():
             assert env_spec.lock_set.enabled
             assert env_spec.lock_set.equivalent_to(
-                CondaLockSet({'all': []},
-                             platforms=['linux-64', 'osx-32', 'win-64']))
+                CondaLockSet({
+                    'all': []
+                }, platforms=['linux-64', 'osx-32', 'win-64']))
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 platforms: [osx-32]
                 """,
-         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
 
 
 def test_add_platforms_already_exists():
@@ -2198,10 +2254,12 @@ def test_add_platforms_already_exists():
         assert ['osx-32', 'win-64'] == list(project2.project_file.get_value('platforms'))
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 platforms: [osx-32, win-64]
                 """,
-         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
 
 
 def test_add_platforms_cannot_resolve_deps():
@@ -2248,8 +2306,10 @@ def test_add_platforms_invalid_platform():
             status = project_ops.add_platforms(project, env_spec_name=None, platforms=['invalid_platform'])
             assert not status
             assert 'Unable to load the project.' == status.status_description
-            assert ["anaconda-project.yml: Platform name 'invalid_platform' is invalid (valid "
-                    "examples: linux-64, osx-64, win-64)"] == status.errors
+            assert [
+                "anaconda-project.yml: Platform name 'invalid_platform' is invalid (valid "
+                "examples: linux-64, osx-64, win-64)"
+            ] == status.errors
 
         _with_conda_test(attempt)
 
@@ -2276,14 +2336,16 @@ def test_remove_platforms_from_all_environments():
         assert ['osx-32'] == list(project2.project_file.get_value('platforms'))
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 platforms:
   - linux-64
   - osx-32
 env_specs:
   hello: {}
         """,
-         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
 
 
 def test_remove_platforms_from_one_environment():
@@ -2296,8 +2358,8 @@ def test_remove_platforms_from_one_environment():
                 assert env_spec.lock_set.platforms == ()
 
             assert ['linux-64', 'osx-32'] == list(project.project_file.get_value('platforms'))
-            assert ['linux-32', 'osx-32'] == list(project.project_file.get_value(
-                ['env_specs', 'hello', 'platforms'], []))
+            assert ['linux-32', 'osx-32'] == list(
+                project.project_file.get_value(['env_specs', 'hello', 'platforms'], []))
             status = project_ops.remove_platforms(project, env_spec_name='hello', platforms=['osx-32'])
             assert status
             assert [] == status.errors
@@ -2318,8 +2380,9 @@ def test_remove_platforms_from_one_environment():
         assert '# this is a pre comment' in content
         assert '# this is a post comment' in content
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 platforms:
   # this is a pre comment
   - linux-64 # this is a post comment
@@ -2330,7 +2393,9 @@ env_specs:
      - linux-32
      - osx-32
         """,
-         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        "locking_enabled: true\n"
+    }, check)
 
 
 def test_remove_platforms_cannot_resolve_deps():
@@ -2342,8 +2407,8 @@ def test_remove_platforms_cannot_resolve_deps():
                 assert env_spec.lock_set.platforms == ()
 
             assert ['linux-64', 'osx-32'] == list(project.project_file.get_value('platforms'))
-            assert ['linux-32', 'osx-32'] == list(project.project_file.get_value(
-                ['env_specs', 'hello', 'platforms'], []))
+            assert ['linux-32', 'osx-32'] == list(
+                project.project_file.get_value(['env_specs', 'hello', 'platforms'], []))
 
             status = project_ops.remove_platforms(project, env_spec_name='hello', platforms=['linux-32'])
             assert status.errors == []
@@ -2358,8 +2423,9 @@ def test_remove_platforms_cannot_resolve_deps():
         assert ['linux-64', 'osx-32'] == list(project2.project_file.get_value('platforms'))
         assert ['linux-32', 'osx-32'] == list(project2.project_file.get_value(['env_specs', 'hello', 'platforms'], []))
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 platforms:
   - linux-64
   - osx-32
@@ -2369,7 +2435,9 @@ env_specs:
      - linux-32
      - osx-32
         """,
-         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        "locking_enabled: true\n"
+    }, check)
 
 
 def test_remove_platforms_from_nonexistent_environment():
@@ -2400,8 +2468,10 @@ def test_remove_platforms_with_project_file_problems():
         status = project_ops.remove_platforms(project, env_spec_name=None, platforms=['foo'])
 
         assert not status
-        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.basename] == status.errors
+        assert [
+            "%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+            project.project_file.basename
+        ] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -2532,10 +2602,12 @@ def test_lock_and_update_and_unlock_all_envs():
             status = project_ops.update(project, env_spec_name=None)
             assert [] == status.errors
             assert status
-            assert ["Updating locked dependencies for env spec bar...",
-                    "Locked dependencies for env spec bar are already up to date.",
-                    "Updating locked dependencies for env spec foo...",
-                    "Locked dependencies for env spec foo are already up to date."] == project.frontend.logs
+            assert [
+                "Updating locked dependencies for env spec bar...",
+                "Locked dependencies for env spec bar are already up to date.",
+                "Updating locked dependencies for env spec foo...",
+                "Locked dependencies for env spec foo are already up to date."
+            ] == project.frontend.logs
             assert status.status_description == "Update complete."
 
             # Update (does something after tweaking resolve results)
@@ -2565,8 +2637,9 @@ def test_lock_and_update_and_unlock_all_envs():
 
         _with_conda_test(attempt, resolve_dependencies=resolve_results)
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: locktest
 env_specs:
   foo:
@@ -2575,7 +2648,8 @@ env_specs:
   bar:
     packages:
       - b
-"""}, check)
+"""
+    }, check)
 
 
 def test_lock_and_unlock_single_env():
@@ -2625,9 +2699,11 @@ def test_lock_and_unlock_single_env():
 
             # we should NOT have set the global platforms
             assert project.project_file.get_value('platforms', None) is None
-            assert conda_api.default_platforms == project.project_file.get_value(
-                ['env_specs', 'foo', 'platforms'], None)
-            assert ['osx-64', ] == project.project_file.get_value(['env_specs', 'bar', 'platforms'], None)
+            assert conda_api.default_platforms == project.project_file.get_value(['env_specs', 'foo', 'platforms'],
+                                                                                 None)
+            assert [
+                'osx-64',
+            ] == project.project_file.get_value(['env_specs', 'bar', 'platforms'], None)
 
             # Locking a second time is a no-op
             project.frontend.reset()
@@ -2642,8 +2718,10 @@ def test_lock_and_unlock_single_env():
             status = project_ops.update(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
-            assert ["Updating locked dependencies for env spec foo...",
-                    "Locked dependencies for env spec foo are already up to date."] == project.frontend.logs
+            assert [
+                "Updating locked dependencies for env spec foo...",
+                "Locked dependencies for env spec foo are already up to date."
+            ] == project.frontend.logs
             assert 'Update complete.' == status.status_description
 
             # Now add a package (should change the hash)
@@ -2674,8 +2752,9 @@ def test_lock_and_unlock_single_env():
 
         _with_conda_test(attempt, resolve_dependencies={'all': ['a=1.0=1']})
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: locktest
 env_specs:
   foo:
@@ -2685,7 +2764,8 @@ env_specs:
     platforms: [osx-64]
     packages:
       - b
-"""}, check)
+"""
+    }, check)
 
 
 def test_locking_with_missing_lock_set_does_an_update():
@@ -2732,8 +2812,9 @@ def test_locking_with_missing_lock_set_does_an_update():
 
         _with_conda_test(attempt, resolve_dependencies={'all': ['a=1.0=1']})
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: locktest
 platforms: [linux-64,osx-64,win-64]
 env_specs:
@@ -2741,10 +2822,12 @@ env_specs:
     packages:
       - a
         """,
-         DEFAULT_PROJECT_LOCK_FILENAME: """
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        """
 locking_enabled: true
 # No lock set in here!
-"""}, check)
+"""
+    }, check)
 
 
 def test_update_changes_only_the_hash():
@@ -2762,9 +2845,11 @@ def test_update_changes_only_the_hash():
             status = project_ops.update(project, env_spec_name='foo')
             assert [] == status.errors
             assert status
-            assert ['Updating locked dependencies for env spec foo...',
-                    'Updated hash for env spec foo to 9990ec43408f9593030a3a136c916022189f04b3 in '
-                    'anaconda-project-lock.yml.'] == project.frontend.logs
+            assert [
+                'Updating locked dependencies for env spec foo...',
+                'Updated hash for env spec foo to 9990ec43408f9593030a3a136c916022189f04b3 in '
+                'anaconda-project-lock.yml.'
+            ] == project.frontend.logs
             assert 'Update complete.' == status.status_description
 
             foo_lock_set = project.env_specs['foo'].lock_set
@@ -2773,8 +2858,9 @@ def test_update_changes_only_the_hash():
 
         _with_conda_test(attempt, resolve_dependencies={'all': ['a=1.0=1']})
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
@@ -2782,7 +2868,8 @@ env_specs:
     packages:
       - a
 """,
-         DEFAULT_PROJECT_LOCK_FILENAME: """
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        """
 locking_enabled: true
 env_specs:
   foo:
@@ -2790,7 +2877,8 @@ env_specs:
     env_spec_hash: old
     packages:
       all: ['a=1.0=1']
-"""}, check)
+"""
+    }, check)
 
 
 def test_lock_conda_error():
@@ -2807,13 +2895,12 @@ def test_lock_conda_error():
 
             assert not os.path.isfile(filename)
 
-        _with_conda_test(attempt,
-                         missing_packages=('a', 'b'),
-                         resolve_dependencies={'all': ['a=1.0=1']},
-                         fix_works=False)
+        _with_conda_test(
+            attempt, missing_packages=('a', 'b'), resolve_dependencies={'all': ['a=1.0=1']}, fix_works=False)
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
@@ -2823,7 +2910,8 @@ env_specs:
   bar:
     packages:
       - b
-"""}, check)
+"""
+    }, check)
 
 
 def test_lock_resolve_dependencies_error(monkeypatch):
@@ -2842,8 +2930,9 @@ def test_lock_resolve_dependencies_error(monkeypatch):
 
         _with_conda_test(attempt, missing_packages=('a', 'b'), resolve_dependencies_error="Nope on resolve")
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
@@ -2853,7 +2942,8 @@ env_specs:
   bar:
     packages:
       - b
-"""}, check)
+"""
+    }, check)
 
 
 def test_unlock_conda_error():
@@ -2877,13 +2967,12 @@ def test_unlock_conda_error():
             assert project.env_specs['foo'].lock_set.enabled
             assert project.env_specs['bar'].lock_set.enabled
 
-        _with_conda_test(attempt,
-                         missing_packages=('a', 'b'),
-                         resolve_dependencies={'all': ['a=1.0=1']},
-                         fix_works=False)
+        _with_conda_test(
+            attempt, missing_packages=('a', 'b'), resolve_dependencies={'all': ['a=1.0=1']}, fix_works=False)
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
@@ -2894,7 +2983,8 @@ env_specs:
     packages:
       - b
 """,
-         DEFAULT_PROJECT_LOCK_FILENAME: """
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        """
 locking_enabled: true
 env_specs:
   foo:
@@ -2909,7 +2999,8 @@ env_specs:
     packages:
        all:
          - d
-"""}, check)
+"""
+    }, check)
 
 
 def test_update_unlocked_envs():
@@ -2945,8 +3036,9 @@ def test_update_unlocked_envs():
 
         _with_conda_test(attempt, resolve_dependencies=resolve_results)
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
@@ -2956,7 +3048,8 @@ env_specs:
   bar:
     packages:
       - b
-"""}, check)
+"""
+    }, check)
 
 
 def test_update_empty_lock_sets():
@@ -3009,8 +3102,9 @@ def test_update_empty_lock_sets():
 
         _with_conda_test(attempt, resolve_dependencies=resolve_results)
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: locktest
 platforms: [linux-64,osx-64,win-64]
 env_specs:
@@ -3021,7 +3115,9 @@ env_specs:
     packages:
       - b
         """,
-         DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        "locking_enabled: true\n"
+    }, check)
 
 
 def test_export_env_spec():
@@ -3161,8 +3257,9 @@ def test_add_service_with_env_spec(monkeypatch):
         project2 = project_no_dedicated_env(dirname)
         assert 'redis' == project2.project_file.get_value(['env_specs', 'myspec', 'services', 'REDIS_URL'])
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
     default:
       packages: [python]
@@ -3170,7 +3267,8 @@ env_specs:
     myspec:
       packages: [python]
       channels: []
-"""}, check)
+"""
+    }, check)
 
 
 def test_add_service_nondefault_variable_name(monkeypatch):
@@ -3197,8 +3295,10 @@ def test_add_service_with_project_file_problems():
         status = project_ops.add_service(project, None, service_type='redis')
 
         assert not status
-        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.basename] == status.errors
+        assert [
+            "%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+            project.project_file.basename
+        ] == status.errors
 
         # be sure service was NOT added to the file
         project2 = Project(dirname, frontend=FakeFrontend())
@@ -3224,11 +3324,12 @@ def test_add_service_already_exists(monkeypatch):
         project2 = Project(dirname, frontend=FakeFrontend())
         assert 'redis' == project2.project_file.get_value(['services', 'REDIS_URL'])
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, check)
+"""
+    }, check)
 
 
 def test_add_service_already_exists_with_different_type(monkeypatch):
@@ -3243,11 +3344,12 @@ def test_add_service_already_exists_with_different_type(monkeypatch):
         # to use the one other than redis and then this error will change.
         assert ["Service REDIS_URL has an unknown type 'foo'."] == status.errors
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: foo
-"""}, check)
+"""
+    }, check)
 
 
 def test_add_service_already_exists_as_non_service(monkeypatch):
@@ -3260,11 +3362,12 @@ def test_add_service_already_exists_as_non_service(monkeypatch):
         assert not status
         assert ['Variable REDIS_URL is already in use.'] == status.errors
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   REDIS_URL: something
-"""}, check)
+"""
+    }, check)
 
 
 def test_add_service_bad_service_type(monkeypatch):
@@ -3291,11 +3394,12 @@ def test_remove_service(monkeypatch):
         project2 = project_no_dedicated_env(dirname)
         assert project2.project_file.get_value(['services', 'REDIS_URL']) is None
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, check)
+"""
+    }, check)
 
 
 def test_remove_service_with_prepare(monkeypatch):
@@ -3312,11 +3416,12 @@ def test_remove_service_with_prepare(monkeypatch):
         project2 = project_no_dedicated_env(dirname)
         assert project2.project_file.get_value(['services', 'REDIS_URL']) is None
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, check)
+"""
+    }, check)
 
 
 def test_remove_service_with_env_spec(monkeypatch):
@@ -3332,8 +3437,9 @@ def test_remove_service_with_env_spec(monkeypatch):
         project2 = project_no_dedicated_env(dirname)
         assert project2.project_file.get_value(config_path) is None
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
     default:
       packages: [python]
@@ -3343,7 +3449,8 @@ env_specs:
       channels: []
       services:
         REDIS_URL: redis
-"""}, check)
+"""
+    }, check)
 
 
 def check_cleaned(dirname, envs_dirname="envs"):
@@ -3384,12 +3491,13 @@ def test_clean(monkeypatch):
 
     monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_create)
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 env_specs:
    foo: {}
    bar: {}
-"""}, check_cleaned)
+"""
+    }, check_cleaned)
 
 
 def test_clean_from_environ(monkeypatch):
@@ -3404,12 +3512,13 @@ def test_clean_from_environ(monkeypatch):
         os.environ.pop('ANACONDA_PROJECT_ENVS_PATH')
         return res
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 env_specs:
    foo: {}
    bar: {}
-"""}, check)
+"""
+    }, check)
 
 
 def test_clean_failed_delete(monkeypatch):
@@ -3460,12 +3569,13 @@ def test_clean_failed_delete(monkeypatch):
         # so with_directory_contents_completing_project_file can remove our tmp dir
         monkeypatch.undo()
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 env_specs:
    foo: {}
    bar: {}
-"""}, check)
+"""
+    }, check)
 
 
 def test_clean_environ_failed_delete(monkeypatch):
@@ -3519,12 +3629,13 @@ def test_clean_environ_failed_delete(monkeypatch):
         # clean environ
         os.environ.pop('ANACONDA_PROJECT_ENVS_PATH')
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 env_specs:
    foo: {}
    bar: {}
-"""}, check)
+"""
+    }, check)
 
 
 def _strip_prefixes(names):
@@ -3574,27 +3685,31 @@ def test_archive_zip():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py',
-                                               'anaconda-project.yml', 'anaconda-project-local.yml'])
+            _assert_zip_contains(archivefile, [
+                'a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'anaconda-project.yml', 'anaconda-project-local.yml'
+            ])
 
             # overwriting should work
             status = project_ops.archive(project, archivefile)
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py',
-                                               'anaconda-project.yml', 'anaconda-project-local.yml'])
+            _assert_zip_contains(archivefile, [
+                'a/b/c/d.py', 'a/b/c/e.py', 'emptydir/', 'foo.py', 'anaconda-project.yml', 'anaconda-project-local.yml'
+            ])
 
         with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+            {
+                DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
 services:
    REDIS_URL: redis
     """,
-             "foo.py": "print('hello')\n",
-             "emptydir": None,
-             "a/b/c/d.py": "",
-             "a/b/c/e.py": ""}, check)
+                "foo.py": "print('hello')\n",
+                "emptydir": None,
+                "a/b/c/d.py": "",
+                "a/b/c/e.py": ""
+            }, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -3626,8 +3741,9 @@ def test_archive_unlocked_warning():
             ] == project.frontend.logs
             # yapf: enable
 
-        with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+        with_directory_contents_completing_project_file({
+            DEFAULT_PROJECT_FILENAME:
+            """
 name: archivedproj
 env_specs:
   foo:
@@ -3635,7 +3751,8 @@ env_specs:
   bar:
     packages: []
     """,
-             DEFAULT_PROJECT_LOCK_FILENAME: """
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            """
 locking_enabled: false
 env_specs:
   foo:
@@ -3644,7 +3761,9 @@ env_specs:
     packages:
       all: []
              """,
-             "foo.py": "print('hello')\n"}, check)
+            "foo.py":
+            "print('hello')\n"
+        }, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -3663,27 +3782,31 @@ def test_archive_tar():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml',
-                                               'anaconda-project-local.yml'])
+            _assert_tar_contains(archivefile, [
+                'a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml', 'anaconda-project-local.yml'
+            ])
 
             # overwriting should work
             status = project_ops.archive(project, archivefile)
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml',
-                                               'anaconda-project-local.yml'])
+            _assert_tar_contains(archivefile, [
+                'a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml', 'anaconda-project-local.yml'
+            ])
 
         with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+            {
+                DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
 services:
    REDIS_URL: redis
     """,
-             "foo.py": "print('hello')\n",
-             "emptydir": None,
-             "a/b/c/d.py": "",
-             "a/b/c/e.py": ""}, check)
+                "foo.py": "print('hello')\n",
+                "emptydir": None,
+                "a/b/c/d.py": "",
+                "a/b/c/e.py": ""
+            }, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -3702,27 +3825,31 @@ def test_archive_tar_gz():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml',
-                                               'anaconda-project-local.yml'])
+            _assert_tar_contains(archivefile, [
+                'a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml', 'anaconda-project-local.yml'
+            ])
 
             # overwriting should work
             status = project_ops.archive(project, archivefile)
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml',
-                                               'anaconda-project-local.yml'])
+            _assert_tar_contains(archivefile, [
+                'a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml', 'anaconda-project-local.yml'
+            ])
 
         with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+            {
+                DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
 services:
    REDIS_URL: redis
     """,
-             "foo.py": "print('hello')\n",
-             "emptydir": None,
-             "a/b/c/d.py": "",
-             "a/b/c/e.py": ""}, check)
+                "foo.py": "print('hello')\n",
+                "emptydir": None,
+                "a/b/c/d.py": "",
+                "a/b/c/e.py": ""
+            }, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -3741,27 +3868,31 @@ def test_archive_tar_bz2():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml',
-                                               'anaconda-project-local.yml'])
+            _assert_tar_contains(archivefile, [
+                'a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml', 'anaconda-project-local.yml'
+            ])
 
             # overwriting should work
             status = project_ops.archive(project, archivefile)
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_tar_contains(archivefile, ['a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml',
-                                               'anaconda-project-local.yml'])
+            _assert_tar_contains(archivefile, [
+                'a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml', 'anaconda-project-local.yml'
+            ])
 
         with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+            {
+                DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
 services:
    REDIS_URL: redis
     """,
-             "foo.py": "print('hello')\n",
-             "emptydir": None,
-             "a/b/c/d.py": "",
-             "a/b/c/e.py": ""}, check)
+                "foo.py": "print('hello')\n",
+                "emptydir": None,
+                "a/b/c/d.py": "",
+                "a/b/c/e.py": ""
+            }, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -3790,11 +3921,12 @@ def test_archive_cannot_write_destination_path(monkeypatch):
             assert status.status_description == ('Failed to write project archive %s.' % archivefile)
             assert ['NOPE'] == status.errors
 
-        with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+        with_directory_contents_completing_project_file({
+            DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
     """,
-             "foo.py": "print('hello')\n"}, check)
+            "foo.py": "print('hello')\n"
+        }, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -3804,22 +3936,32 @@ def _add_empty_git(contents):
         # I'm not sure these are all really needed for git to
         # recognize the directory as a git repo, but this is what
         # "git init" creates.
-        '.git/branches': None,
-        '.git/hooks': None,
-        '.git/info': None,
-        '.git/objects/info': None,
-        '.git/objects/pack': None,
-        '.git/refs/heads': None,
-        '.git/refs/tags': None,
-        '.git/config': """
+        '.git/branches':
+        None,
+        '.git/hooks':
+        None,
+        '.git/info':
+        None,
+        '.git/objects/info':
+        None,
+        '.git/objects/pack':
+        None,
+        '.git/refs/heads':
+        None,
+        '.git/refs/tags':
+        None,
+        '.git/config':
+        """
 [core]
         repositoryformatversion = 0
         filemode = true
         bare = false
         logallrefupdates = true
         """,
-        '.git/description': "TestingGitRepository\n",
-        '.git/HEAD': 'ref: refs/heads/master\n'
+        '.git/description':
+        "TestingGitRepository\n",
+        '.git/HEAD':
+        'ref: refs/heads/master\n'
     })
     return contents
 
@@ -3837,19 +3979,21 @@ def test_archive_zip_with_gitignore():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['foo.py', '.gitignore', 'anaconda-project.yml',
-                                               'anaconda-project-local.yml'])
+            _assert_zip_contains(archivefile,
+                                 ['foo.py', '.gitignore', 'anaconda-project.yml', 'anaconda-project-local.yml'])
 
         with_directory_contents_completing_project_file(
-            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+            _add_empty_git({
+                DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
         """,
-                            "foo.py": "print('hello')\n",
-                            '.gitignore': "/ignored.py\n/subdir\n/subwithslash/\n",
-                            'ignored.py': 'print("ignore me!")',
-                            'subdir/foo.py': 'foo',
-                            'subdir/subsub/bar.py': 'bar',
-                            'subwithslash/something.py': 'something'}), check)
+                "foo.py": "print('hello')\n",
+                '.gitignore': "/ignored.py\n/subdir\n/subwithslash/\n",
+                'ignored.py': 'print("ignore me!")',
+                'subdir/foo.py': 'foo',
+                'subdir/subsub/bar.py': 'bar',
+                'subwithslash/something.py': 'something'
+            }), check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -3882,9 +4026,11 @@ def test_archive_zip_with_failing_git_command(monkeypatch):
             assert status.errors == ["'git ls-files' failed to list ignored files: ."]
 
         with_directory_contents_completing_project_file(
-            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+            _add_empty_git({
+                DEFAULT_PROJECT_FILENAME: """
         """,
-                            "foo.py": "print('hello')\n"}), check)
+                "foo.py": "print('hello')\n"
+            }), check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -3916,9 +4062,11 @@ def test_archive_zip_with_exception_executing_git_command(monkeypatch):
             assert status.errors[0].startswith("Failed to run 'git ls-files'")
 
         with_directory_contents_completing_project_file(
-            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+            _add_empty_git({
+                DEFAULT_PROJECT_FILENAME: """
         """,
-                            "foo.py": "print('hello')\n"}), check)
+                "foo.py": "print('hello')\n"
+            }), check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -3949,10 +4097,12 @@ def test_archive_zip_with_inability_to_walk_directory(monkeypatch):
             assert status.errors[0].startswith("Could not list files in")
 
         with_directory_contents_completing_project_file(
-            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+            _add_empty_git({
+                DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
         """,
-                            "foo.py": "print('hello')\n"}), check)
+                "foo.py": "print('hello')\n"
+            }), check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -3989,10 +4139,12 @@ def test_archive_zip_with_unreadable_projectignore(monkeypatch):
             assert ["Failed to read %s: NOPE" % ignorefile] == status.errors
 
         with_directory_contents_completing_project_file(
-            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+            _add_empty_git({
+                DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
         """,
-                            "foo.py": "print('hello')\n"}), check)
+                "foo.py": "print('hello')\n"
+            }), check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -4012,10 +4164,12 @@ def test_archive_with_bogus_filename(monkeypatch):
             assert status.errors == ["Unsupported archive filename %s." % archivefile]
 
         with_directory_contents_completing_project_file(
-            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+            _add_empty_git({
+                DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
         """,
-                            "foo.py": "print('hello')\n"}), check)
+                "foo.py": "print('hello')\n"
+            }), check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -4057,11 +4211,13 @@ def test_archive_with_unsaved_project(monkeypatch):
             assert status.errors == ["%s has been modified but not saved." % DEFAULT_PROJECT_FILENAME]
 
         with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+            {
+                DEFAULT_PROJECT_FILENAME: """
 env_specs:
   default:
     packages: []
-"""}, check)
+"""
+            }, check)
 
     with_directory_contents(dict(), archivetest)
 
@@ -4079,14 +4235,20 @@ def test_archive_zip_with_downloaded_file():
             _assert_zip_contains(archivefile, ['foo.py', 'anaconda-project.yml', 'anaconda-project-local.yml'])
 
         with_directory_contents_completing_project_file(
-            _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+            _add_empty_git({
+                DEFAULT_PROJECT_FILENAME:
+                """
 name: archivedproj
 downloads:
    MYDOWNLOAD: "http://example.com/downloaded.py"
 """,
-                            "foo.py": "print('hello')\n",
-                            'downloaded.py': 'print("ignore me!")',
-                            'downloaded.py.part': ''}), check)
+                "foo.py":
+                "print('hello')\n",
+                'downloaded.py':
+                'print("ignore me!")',
+                'downloaded.py.part':
+                ''
+            }), check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -4114,11 +4276,13 @@ def test_archive_zip_overwrites_but_does_not_include_the_dest_zip():
         _assert_zip_contains(archivefile, ['foo.py', 'anaconda-project.yml', 'anaconda-project-local.yml'])
 
     with_directory_contents_completing_project_file(
-        _add_empty_git({DEFAULT_PROJECT_FILENAME: """
+        _add_empty_git({
+            DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
 """,
-                        "foo.py": "print('hello')\n",
-                        'foo.zip': ""}), check)
+            "foo.py": "print('hello')\n",
+            'foo.zip': ""
+        }), check)
 
 
 def test_archive_zip_with_projectignore():
@@ -4137,14 +4301,15 @@ def test_archive_zip_with_projectignore():
             assert os.path.exists(archivefile)
             _assert_zip_contains(archivefile, ['foo.py', 'anaconda-project.yml', '.projectignore', 'bar/'])
 
-        with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+        with_directory_contents_completing_project_file({
+            DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
         """,
-             "foo.py": "print('hello')\n",
-             "foo.pyc": "",
-             ".ipynb_checkpoints": "",
-             "bar/blah.pyc": ""}, check)
+            "foo.py": "print('hello')\n",
+            "foo.pyc": "",
+            ".ipynb_checkpoints": "",
+            "bar/blah.pyc": ""
+        }, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
 
@@ -4213,12 +4378,14 @@ def _make_tar(archive_dest_dir, contents, compression=None):
 
 def _test_unarchive_tar(compression):
     def archivetest(archive_dest_dir):
-        archivefile = _make_tar(archive_dest_dir,
-                                {'a/a.txt': _CONTENTS_FILE,
-                                 'a/q/b.txt': _CONTENTS_FILE,
-                                 'a/c': _CONTENTS_DIR,
-                                 'a': _CONTENTS_DIR},
-                                compression=compression)
+        archivefile = _make_tar(
+            archive_dest_dir, {
+                'a/a.txt': _CONTENTS_FILE,
+                'a/q/b.txt': _CONTENTS_FILE,
+                'a/c': _CONTENTS_DIR,
+                'a': _CONTENTS_DIR
+            },
+            compression=compression)
         # with tarfile.open(archivefile, 'r') as tf:
         #     tf.list()
         if compression is not None:
@@ -4252,10 +4419,12 @@ def test_unarchive_tar_bz2():
 
 def test_unarchive_zip():
     def archivetest(archive_dest_dir):
-        archivefile = _make_zip(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
-                                                   'a/q/b.txt': _CONTENTS_FILE,
-                                                   'a/c': _CONTENTS_DIR,
-                                                   'a': _CONTENTS_DIR})
+        archivefile = _make_zip(archive_dest_dir, {
+            'a/a.txt': _CONTENTS_FILE,
+            'a/q/b.txt': _CONTENTS_FILE,
+            'a/c': _CONTENTS_DIR,
+            'a': _CONTENTS_DIR
+        })
 
         # with zipfile.ZipFile(archivefile, 'r') as zf:
         #    print(repr(zf.namelist()))
@@ -4277,10 +4446,12 @@ def test_unarchive_zip():
 
 def test_unarchive_zip_to_current_directory():
     def archivetest(archive_dest_dir):
-        archivefile = _make_zip(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
-                                                   'a/q/b.txt': _CONTENTS_FILE,
-                                                   'a/c': _CONTENTS_DIR,
-                                                   'a': _CONTENTS_DIR})
+        archivefile = _make_zip(archive_dest_dir, {
+            'a/a.txt': _CONTENTS_FILE,
+            'a/q/b.txt': _CONTENTS_FILE,
+            'a/c': _CONTENTS_DIR,
+            'a': _CONTENTS_DIR
+        })
 
         # with zipfile.ZipFile(archivefile, 'r') as zf:
         #    print(repr(zf.namelist()))
@@ -4308,9 +4479,11 @@ def test_unarchive_zip_to_current_directory():
 
 def test_unarchive_zip_to_parent_dir_with_auto_project_dir():
     def archivetest(archive_dest_dir):
-        archivefile = _make_zip(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
-                                                   'a/q/b.txt': _CONTENTS_FILE,
-                                                   'a/c': _CONTENTS_DIR})
+        archivefile = _make_zip(archive_dest_dir, {
+            'a/a.txt': _CONTENTS_FILE,
+            'a/q/b.txt': _CONTENTS_FILE,
+            'a/c': _CONTENTS_DIR
+        })
 
         # with zipfile.ZipFile(archivefile, 'r') as zf:
         #    print(repr(zf.namelist()))
@@ -4332,9 +4505,11 @@ def test_unarchive_zip_to_parent_dir_with_auto_project_dir():
 
 def test_unarchive_tar_to_parent_dir_with_auto_project_dir():
     def archivetest(archive_dest_dir):
-        archivefile = _make_tar(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
-                                                   'a/q/b.txt': _CONTENTS_FILE,
-                                                   'a/c': _CONTENTS_DIR})
+        archivefile = _make_tar(archive_dest_dir, {
+            'a/a.txt': _CONTENTS_FILE,
+            'a/q/b.txt': _CONTENTS_FILE,
+            'a/c': _CONTENTS_DIR
+        })
 
         def check(dirname):
             unpacked = os.path.join(dirname, "a")
@@ -4495,10 +4670,12 @@ def test_unarchive_tar_ignores_symlink():
         return
 
     def archivetest(archive_dest_dir):
-        archivefile = _make_tar(archive_dest_dir, {'a/a.txt': _CONTENTS_FILE,
-                                                   'a/q/b.txt': _CONTENTS_FILE,
-                                                   'a/c': _CONTENTS_DIR,
-                                                   'a/link': _CONTENTS_SYMLINK})
+        archivefile = _make_tar(archive_dest_dir, {
+            'a/a.txt': _CONTENTS_FILE,
+            'a/q/b.txt': _CONTENTS_FILE,
+            'a/c': _CONTENTS_DIR,
+            'a/link': _CONTENTS_SYMLINK
+        })
         with tarfile.open(archivefile, 'r') as tf:
             member = tf.getmember('a/link')
             assert member is not None
@@ -4791,9 +4968,10 @@ def test_upload(monkeypatch):
             assert status
             assert status.url == 'http://example.com/whatevs'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\n",
-         "foo.py": "print('hello')\n"}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: "name: foo\n",
+        "foo.py": "print('hello')\n"
+    }, check)
 
 
 def test_upload_with_project_file_problems():
@@ -4801,8 +4979,10 @@ def test_upload_with_project_file_problems():
         project = Project(dirname, frontend=FakeFrontend())
         status = project_ops.upload(project)
         assert not status
-        assert ["%s: variables section contains wrong value type 42, should be dict or list of requirements" %
-                project.project_file.basename] == status.errors
+        assert [
+            "%s: variables section contains wrong value type 42, should be dict or list of requirements" %
+            project.project_file.basename
+        ] == status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, check)
 
@@ -4821,6 +5001,7 @@ def test_upload_cannot_walk_directory(monkeypatch):
         assert not status
         assert status.errors[0].startswith("Could not list files in")
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: "name: foo\n",
-         "foo.py": "print('hello')\n"}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: "name: foo\n",
+        "foo.py": "print('hello')\n"
+    }, check)

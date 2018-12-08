@@ -209,8 +209,8 @@ class YamlFile(object):
 
     def _throw_if_corrupted(self):
         if self._corrupted:
-            raise ValueError("Cannot modify corrupted YAML file %s\n%s" %
-                             (self.filename, self._corrupted_error_message))
+            raise ValueError(
+                "Cannot modify corrupted YAML file %s\n%s" % (self.filename, self._corrupted_error_message))
 
     @property
     def basename(self):

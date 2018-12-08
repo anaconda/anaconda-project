@@ -57,8 +57,8 @@ def test_upload_command_with_token_and_user(capsys, monkeypatch):
     params = _monkeypatch_upload(monkeypatch)
 
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'upload', '--directory', dirname, '--user=foo',
-                                               '--token=bar'])
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'upload', '--directory', dirname, '--user=foo', '--token=bar'])
         assert code == 0
 
         out, err = capsys.readouterr()

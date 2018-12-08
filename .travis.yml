@@ -44,9 +44,10 @@ install:
   - source "$HOME"/miniconda/bin/activate root
   - printenv | sort
   - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
+  # Prefer defaults, drop down to conda-forge only when necessary
+  - conda config --add channels conda-forge --add channels defaults
   # Use the latest conda
   - conda update conda --no-pin -q
-  - if test x"$CONDA_CANARY" = xtrue ; then conda update -n root -c conda-canary conda; fi
   - conda install -n root conda-build$CONDA_BUILD_CONSTRAINT psutil
   - conda info -a
   # we don't use environment.yml in here because I'm not sure how to parameterize the
@@ -55,16 +56,11 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       OS_PACKAGES=libffi ;
     fi ;
-    conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" coverage tornado=4 keyring pytest pytest-cov pip redis notebook bokeh ruamel_yaml anaconda-client requests psutil $OS_PACKAGES
+    conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" coverage tornado=4 keyring pytest pytest-cov pip redis notebook bokeh ruamel_yaml anaconda-client requests psutil flake8 pep257 yapf $OS_PACKAGES
   - source activate test-environment
-  - printenv | sort
   - unset CONDA_ENV_PATH # because the older conda in miniconda sets this, confusing some tests
   - export PATH=`echo "$PATH" | sed -e s@"$HOME"/miniconda/bin:@@g`
   - printenv | sort
-  - pip install flake8==2.6.2 pep257 yapf==0.6.2
-  - if [[ "$TRAVIS_PYTHON_VERSION" != "2.7" ]]; then
-      pip install ruamel.yaml;
-    fi ;
 
 script:
   - if test "$TEST_TARGET" = tests; then LANG=en_US.UTF-8 python scripts/run_tests.py --pytest-args ' -vv'; fi

@@ -104,10 +104,11 @@ def _make_file_contents(packages, channels, platforms, env_specs):
     return expected_default_file_template % (packages, channels, platforms, env_specs)
 
 
-expected_default_file = _make_file_contents(packages=empty_global_packages,
-                                            channels=empty_global_channels,
-                                            platforms=default_global_platforms,
-                                            env_specs=empty_default_env_specs)
+expected_default_file = _make_file_contents(
+    packages=empty_global_packages,
+    channels=empty_global_channels,
+    platforms=default_global_platforms,
+    env_specs=empty_default_env_specs)
 
 
 def test_create_missing_project_file():
@@ -194,22 +195,26 @@ env_specs:
     channels: []
 """
 
-expected_one_env_spec_contents = _make_file_contents(packages=anaconda_global_packages,
-                                                     channels=mychannel_global_channels,
-                                                     platforms=default_global_platforms,
-                                                     env_specs=abc_empty_env_spec)
+expected_one_env_spec_contents = _make_file_contents(
+    packages=anaconda_global_packages,
+    channels=mychannel_global_channels,
+    platforms=default_global_platforms,
+    env_specs=abc_empty_env_spec)
 
 
 def test_create_missing_project_file_one_default_env_spec():
     def create_file(dirname):
         def default_env_specs_func():
-            return [EnvSpec(name='abc',
-                            conda_packages=['anaconda'],
-                            pip_packages=[],
-                            channels=['mychannel'],
-                            description="ABC",
-                            inherit_from_names=(),
-                            inherit_from=())]
+            return [
+                EnvSpec(
+                    name='abc',
+                    conda_packages=['anaconda'],
+                    pip_packages=[],
+                    channels=['mychannel'],
+                    description="ABC",
+                    inherit_from_names=(),
+                    inherit_from=())
+            ]
 
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
         assert not os.path.exists(filename)
@@ -247,28 +252,34 @@ env_specs:
     - bar
 """
 
-expected_two_env_spec_contents = _make_file_contents(packages=empty_global_packages,
-                                                     channels=empty_global_channels,
-                                                     platforms=default_global_platforms,
-                                                     env_specs=abc_xyz_env_specs)
+expected_two_env_spec_contents = _make_file_contents(
+    packages=empty_global_packages,
+    channels=empty_global_channels,
+    platforms=default_global_platforms,
+    env_specs=abc_xyz_env_specs)
 
 
 def test_create_missing_project_file_two_default_env_specs():
     def create_file(dirname):
         def default_env_specs_func():
-            return [EnvSpec(name='abc',
-                            conda_packages=['anaconda'],
-                            pip_packages=[],
-                            channels=['mychannel'],
-                            description="ABC",
-                            inherit_from_names=(),
-                            inherit_from=()), EnvSpec(name='xyz',
-                                                      conda_packages=['foo'],
-                                                      pip_packages=[],
-                                                      channels=['bar'],
-                                                      description="XYZ",
-                                                      inherit_from_names=(),
-                                                      inherit_from=())]
+            return [
+                EnvSpec(
+                    name='abc',
+                    conda_packages=['anaconda'],
+                    pip_packages=[],
+                    channels=['mychannel'],
+                    description="ABC",
+                    inherit_from_names=(),
+                    inherit_from=()),
+                EnvSpec(
+                    name='xyz',
+                    conda_packages=['foo'],
+                    pip_packages=[],
+                    channels=['bar'],
+                    description="XYZ",
+                    inherit_from_names=(),
+                    inherit_from=())
+            ]
 
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
         assert not os.path.exists(filename)

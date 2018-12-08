@@ -206,8 +206,9 @@ def test_add_command_specifying_notebook(monkeypatch, capsys):
         assert command['env_spec'] == 'default'
         assert len(command.keys()) == 2
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n'}, check_specifying_notebook)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n'
+    }, check_specifying_notebook)
 
 
 def test_add_command_guessing_notebook(monkeypatch, capsys):
@@ -223,15 +224,18 @@ def test_add_command_guessing_notebook(monkeypatch, capsys):
         assert command['env_spec'] == 'default'
         assert len(command.keys()) == 2
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n',
-         'file.ipynb': "{}"}, check_guessing_notebook)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n',
+        'file.ipynb': "{}"
+    }, check_guessing_notebook)
 
 
 def test_add_command_with_env_spec(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-command', '--directory', dirname, '--env-spec',
-                                               'foo', '--type', 'notebook', 'test', 'file.ipynb'])
+        code = _parse_args_and_run_subcommand([
+            'anaconda-project', 'add-command', '--directory', dirname, '--env-spec', 'foo', '--type', 'notebook',
+            'test', 'file.ipynb'
+        ])
         assert code == 0
 
         project = Project(dirname)
@@ -241,14 +245,17 @@ def test_add_command_with_env_spec(monkeypatch, capsys):
         assert command['env_spec'] == 'foo'
         assert len(command.keys()) == 2
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'
+    }, check)
 
 
 def test_add_command_with_supports_http_options(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-command', '--directory', dirname,
-                                               '--supports-http-options', '--type', 'notebook', 'test', 'file.ipynb'])
+        code = _parse_args_and_run_subcommand([
+            'anaconda-project', 'add-command', '--directory', dirname, '--supports-http-options', '--type', 'notebook',
+            'test', 'file.ipynb'
+        ])
         assert code == 0
 
         project = Project(dirname)
@@ -259,15 +266,17 @@ def test_add_command_with_supports_http_options(monkeypatch, capsys):
         assert command['supports_http_options'] is True
         assert len(command.keys()) == 3
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'
+    }, check)
 
 
 def test_add_command_with_no_supports_http_options(monkeypatch, capsys):
     def check(dirname):
-        code = _parse_args_and_run_subcommand(
-            ['anaconda-project', 'add-command', '--directory', dirname, '--no-supports-http-options', '--type',
-             'notebook', 'test', 'file.ipynb'])
+        code = _parse_args_and_run_subcommand([
+            'anaconda-project', 'add-command', '--directory', dirname, '--no-supports-http-options', '--type',
+            'notebook', 'test', 'file.ipynb'
+        ])
         assert code == 0
 
         project = Project(dirname)
@@ -278,8 +287,9 @@ def test_add_command_with_no_supports_http_options(monkeypatch, capsys):
         assert command['supports_http_options'] is False
         assert len(command.keys()) == 3
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'
+    }, check)
 
 
 def _test_command_command_project_problem(capsys, monkeypatch, command, append_dir=False):
@@ -298,13 +308,10 @@ def _test_command_command_project_problem(capsys, monkeypatch, command, append_d
 
 
 def test_add_command_project_problem(capsys, monkeypatch):
-    _test_command_command_project_problem(capsys,
-                                          monkeypatch,
-                                          [
-                                              'anaconda-project', 'add-command', '--type', 'notebook', 'test',
-                                              'file.ipynb'
-                                          ],
-                                          append_dir=True)
+    _test_command_command_project_problem(
+        capsys,
+        monkeypatch, ['anaconda-project', 'add-command', '--type', 'notebook', 'test', 'file.ipynb'],
+        append_dir=True)
 
 
 def test_add_command_breaks_project(capsys, monkeypatch):
@@ -318,15 +325,14 @@ def test_add_command_breaks_project(capsys, monkeypatch):
         assert (("%s: command 'test' has multiple commands in it, 'notebook' can't go with 'unix'\n" %
                  DEFAULT_PROJECT_FILENAME) + "Unable to add the command.\n") == err
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    unix: foo\n")}, check_problem_add_cmd)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    unix: foo\n")
+    }, check_problem_add_cmd)
 
 
 def test_remove_command_with_project_file_problems(capsys, monkeypatch):
-    _test_command_command_project_problem(capsys,
-                                          monkeypatch,
-                                          ['anaconda-project', 'remove-command', 'test'],
-                                          append_dir=True)
+    _test_command_command_project_problem(
+        capsys, monkeypatch, ['anaconda-project', 'remove-command', 'test'], append_dir=True)
 
 
 def test_remove_command(monkeypatch, capsys):
@@ -344,7 +350,9 @@ def test_remove_command(monkeypatch, capsys):
         assert err == ''
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'packages: ["notebook"]\ncommands:\n  test:\n    notebook: file.ipynb\n'}, check)
+        {
+            DEFAULT_PROJECT_FILENAME: 'packages: ["notebook"]\ncommands:\n  test:\n    notebook: file.ipynb\n'
+        }, check)
 
 
 def test_remove_command_missing(monkeypatch, capsys):
@@ -394,12 +402,13 @@ run_notebook  Notebook test.ipynb
 
         assert expected_out == out
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ("commands:\n"
-                                    "  default:\n"
-                                    "    bokeh_app: test.py\n"
-                                    "  run_notebook:\n"
-                                    "    notebook: test.ipynb\n"
-                                    "packages:\n"
-                                    " - bokeh\n"
-                                    " - notebook\n")}, check_empty_project)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ("commands:\n"
+                                   "  default:\n"
+                                   "    bokeh_app: test.py\n"
+                                   "  run_notebook:\n"
+                                   "    notebook: test.ipynb\n"
+                                   "packages:\n"
+                                   " - bokeh\n"
+                                   " - notebook\n")
+    }, check_empty_project)

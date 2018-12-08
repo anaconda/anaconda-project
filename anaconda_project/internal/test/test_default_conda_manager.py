@@ -45,12 +45,13 @@ test_spec = EnvSpec(name='myenv', conda_packages=['ipython'], pip_packages=['pyi
 
 def test_current_platform_unsupported_by_env_spec(monkeypatch):
     lock_set = CondaLockSet(package_specs_by_platform={'all': []}, platforms=conda_api.default_platforms)
-    spec = EnvSpec(name='myenv',
-                   conda_packages=['ipython'],
-                   pip_packages=['flake8'],
-                   channels=[],
-                   platforms=['commodore-64', 'apple-2'],
-                   lock_set=lock_set)
+    spec = EnvSpec(
+        name='myenv',
+        conda_packages=['ipython'],
+        pip_packages=['flake8'],
+        channels=[],
+        platforms=['commodore-64', 'apple-2'],
+        lock_set=lock_set)
 
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
@@ -72,12 +73,13 @@ def test_current_platform_unsupported_by_env_spec(monkeypatch):
 
 def test_current_platform_unsupported_by_lock_set(monkeypatch):
     lock_set = CondaLockSet(package_specs_by_platform={'all': []}, platforms=[])
-    spec = EnvSpec(name='myenv',
-                   conda_packages=['ipython'],
-                   pip_packages=['flake8'],
-                   channels=[],
-                   platforms=conda_api.default_platforms,
-                   lock_set=lock_set)
+    spec = EnvSpec(
+        name='myenv',
+        conda_packages=['ipython'],
+        pip_packages=['flake8'],
+        channels=[],
+        platforms=conda_api.default_platforms,
+        lock_set=lock_set)
 
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
@@ -104,38 +106,36 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     assert spec.conda_packages == ('ipython', )
     assert spec.pip_packages == ('pyinstrument', )
 
-    spec_with_phony_pip_package = EnvSpec(name='myenv',
-                                          conda_packages=['ipython'],
-                                          pip_packages=['pyinstrument', 'nope_not_a_thing'],
-                                          channels=[])
+    spec_with_phony_pip_package = EnvSpec(
+        name='myenv', conda_packages=['ipython'], pip_packages=['pyinstrument', 'nope_not_a_thing'], channels=[])
     assert spec_with_phony_pip_package.conda_packages == ('ipython', )
     assert spec_with_phony_pip_package.pip_packages == ('pyinstrument', 'nope_not_a_thing')
     assert spec_with_phony_pip_package.pip_package_names_set == set(('pyinstrument', 'nope_not_a_thing'))
 
     # package url is supposed to be on a nonexistent port, if it
     # causes a problem we need to mock
-    spec_with_bad_url_pip_package = EnvSpec(name='myenv',
-                                            conda_packages=['ipython'],
-                                            pip_packages=['pyinstrument', 'https://127.0.0.1:24729/nope#egg=phony'],
-                                            channels=[])
+    spec_with_bad_url_pip_package = EnvSpec(
+        name='myenv',
+        conda_packages=['ipython'],
+        pip_packages=['pyinstrument', 'https://127.0.0.1:24729/nope#egg=phony'],
+        channels=[])
     assert spec_with_bad_url_pip_package.conda_packages == ('ipython', )
     assert spec_with_bad_url_pip_package.pip_packages == ('pyinstrument', 'https://127.0.0.1:24729/nope#egg=phony')
     assert spec_with_bad_url_pip_package.pip_package_names_set == set(('pyinstrument', 'phony'))
 
-    spec_with_old_ipython = EnvSpec(name='myenv',
-                                    conda_packages=['ipython=5.2.2'],
-                                    pip_packages=['pyinstrument'],
-                                    channels=[])
+    spec_with_old_ipython = EnvSpec(
+        name='myenv', conda_packages=['ipython=5.2.2'], pip_packages=['pyinstrument'], channels=[])
     assert spec_with_old_ipython.conda_packages == ('ipython=5.2.2', )
 
     spec_with_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=['pyinstrument'], channels=[])
     assert spec_with_bokeh.conda_packages == ('bokeh', )
 
-    spec_with_bokeh_and_old_ipython = EnvSpec(name='myenv',
-                                              conda_packages=['bokeh', 'ipython=5.2.2'],
-                                              pip_packages=['pyinstrument'],
-                                              channels=[])
-    assert spec_with_bokeh_and_old_ipython.conda_packages == ('bokeh', 'ipython=5.2.2', )
+    spec_with_bokeh_and_old_ipython = EnvSpec(
+        name='myenv', conda_packages=['bokeh', 'ipython=5.2.2'], pip_packages=['pyinstrument'], channels=[])
+    assert spec_with_bokeh_and_old_ipython.conda_packages == (
+        'bokeh',
+        'ipython=5.2.2',
+    )
 
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
@@ -248,9 +248,8 @@ def test_conda_create_and_install_and_remove(monkeypatch):
             manager.remove_packages(prefix=envdir, packages=['ipython'])
         # different versions of conda word this differently
         message = str(excinfo.value)
-        valid_strings = ('no packages found to remove', 'Package not found',
-                         "named 'ipython' found to remove", 'PackagesNotFoundError:',
-                         "is missing from the environment")
+        valid_strings = ('no packages found to remove', 'Package not found', "named 'ipython' found to remove",
+                         'PackagesNotFoundError:', "is missing from the environment")
         assert any(s in message for s in valid_strings)
         assert not manager._timestamp_file_up_to_date(envdir, spec)
 
@@ -473,20 +472,14 @@ def test_installed_version_comparison(monkeypatch):
 
         monkeypatch.setattr('anaconda_project.internal.conda_api.installed', mock_installed)
 
-        spec_with_matching_bokeh = EnvSpec(name='myenv',
-                                           conda_packages=['bokeh=0.12.4=1'],
-                                           pip_packages=[],
-                                           channels=[])
+        spec_with_matching_bokeh = EnvSpec(
+            name='myenv', conda_packages=['bokeh=0.12.4=1'], pip_packages=[], channels=[])
         spec_with_more_vague_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh=0.12'], pip_packages=[], channels=[])
         spec_with_unspecified_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=[], channels=[])
-        spec_with_wrong_version_bokeh = EnvSpec(name='myenv',
-                                                conda_packages=['bokeh=0.12.3'],
-                                                pip_packages=[],
-                                                channels=[])
-        spec_with_wrong_build_bokeh = EnvSpec(name='myenv',
-                                              conda_packages=['bokeh=0.12.4=0'],
-                                              pip_packages=[],
-                                              channels=[])
+        spec_with_wrong_version_bokeh = EnvSpec(
+            name='myenv', conda_packages=['bokeh=0.12.3'], pip_packages=[], channels=[])
+        spec_with_wrong_build_bokeh = EnvSpec(
+            name='myenv', conda_packages=['bokeh=0.12.4=0'], pip_packages=[], channels=[])
 
         manager = DefaultCondaManager(frontend=NullFrontend())
 
@@ -514,22 +507,26 @@ def test_installed_version_comparison(monkeypatch):
 
 
 def test_extract_common():
-    resolve_results = {'linux-32': ['linux-32-only', 'linux-only', 'unix-only', 'common'],
-                       'linux-64': ['linux-64-only', 'linux-only', 'unix-only', 'common'],
-                       'win-32': ['win-32-only', 'win-only', 'common'],
-                       'win-64': ['win-64-only', 'win-only', 'common'],
-                       'osx-64': ['osx-64-only', 'osx-only', 'unix-only', 'common']}
+    resolve_results = {
+        'linux-32': ['linux-32-only', 'linux-only', 'unix-only', 'common'],
+        'linux-64': ['linux-64-only', 'linux-only', 'unix-only', 'common'],
+        'win-32': ['win-32-only', 'win-only', 'common'],
+        'win-64': ['win-64-only', 'win-only', 'common'],
+        'osx-64': ['osx-64-only', 'osx-only', 'unix-only', 'common']
+    }
     factored = _extract_common(resolve_results)
 
-    assert {'all': ['common'],
-            'linux': ['linux-only'],
-            'unix': ['unix-only'],
-            'win': ['win-only'],
-            'osx-64': ['osx-64-only', 'osx-only'],
-            'linux-32': ['linux-32-only'],
-            'linux-64': ['linux-64-only'],
-            'win-32': ['win-32-only'],
-            'win-64': ['win-64-only']} == factored
+    assert {
+        'all': ['common'],
+        'linux': ['linux-only'],
+        'unix': ['unix-only'],
+        'win': ['win-only'],
+        'osx-64': ['osx-64-only', 'osx-only'],
+        'linux-32': ['linux-32-only'],
+        'linux-64': ['linux-64-only'],
+        'win-32': ['win-32-only'],
+        'win-64': ['win-64-only']
+    } == factored
 
 
 def test_extract_common_empty_deps():

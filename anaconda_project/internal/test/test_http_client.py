@@ -125,8 +125,10 @@ def test_download_fail_to_open_file(monkeypatch):
                 if platform.system() == 'Windows':
                     # I dunno. that's what Windows gives us.
                     filename_with_weird_extra_slashes = filename.replace("\\", "\\\\")
-                assert ["Failed to open %s.part: [Errno 13] Permission denied: '%s.part'" %
-                        (filename, filename_with_weird_extra_slashes)] == download.errors
+                assert [
+                    "Failed to open %s.part: [Errno 13] Permission denied: '%s.part'" %
+                    (filename, filename_with_weird_extra_slashes)
+                ] == download.errors
                 assert response is None
                 assert not os.path.isfile(filename)
                 if platform.system() != 'Windows':

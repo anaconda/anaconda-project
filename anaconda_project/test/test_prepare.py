@@ -57,9 +57,9 @@ def test_prepare_bad_provide_mode():
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(platform.system() == 'Windows' and
-                    not (sys.version_info.major == 3 and sys.version_info.minor == 4),
-                    reason="on Windows, can't delete env dir except on python 3.4, don't know why")
+@pytest.mark.skipif(
+    platform.system() == 'Windows' and not (sys.version_info.major == 3 and sys.version_info.minor == 4),
+    reason="on Windows, can't delete env dir except on python 3.4, don't know why")
 def test_unprepare_empty_directory():
     def unprepare_empty(dirname):
         project = Project(dirname)
@@ -84,8 +84,10 @@ def test_unprepare_problem_project():
         status = unprepare(project, result)
         assert not status
         assert status.status_description == 'Unable to load the project.'
-        assert status.errors == [('%s: variables section contains wrong value type 42, ' +
-                                  'should be dict or list of requirements') % project.project_file.basename]
+        assert status.errors == [
+            ('%s: variables section contains wrong value type 42, ' + 'should be dict or list of requirements') %
+            project.project_file.basename
+        ]
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  42"}, unprepare_problems)
 
@@ -129,12 +131,11 @@ def test_default_to_system_environ():
                 assert result
                 assert result.environ.get(key) == os.environ.get(key)
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 packages: []
         """
-        }, prepare_system_environ)
+    }, prepare_system_environ)
 
 
 def test_prepare_some_env_var_already_set():
@@ -147,11 +148,12 @@ def test_prepare_some_env_var_already_set():
         assert dict(FOO='bar', PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict(FOO='bar') == strip_environ(environ)
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
-"""}, prepare_some_env_var)
+"""
+    }, prepare_some_env_var)
 
 
 def test_prepare_some_env_var_not_set():
@@ -163,11 +165,12 @@ def test_prepare_some_env_var_not_set():
         assert result.env_prefix is not None
         assert dict(BAR='bar') == strip_environ(environ)
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
-"""}, prepare_some_env_var)
+"""
+    }, prepare_some_env_var)
 
 
 def test_prepare_some_env_var_not_set_keep_going():
@@ -195,11 +198,12 @@ def test_prepare_some_env_var_not_set_keep_going():
             stage = next_stage
         assert dict(BAR='bar') == strip_environ(environ)
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
-"""}, prepare_some_env_var_keep_going)
+"""
+    }, prepare_some_env_var_keep_going)
 
 
 def test_prepare_with_app_entry():
@@ -224,8 +228,9 @@ def test_prepare_with_app_entry():
         assert out.decode().strip() == ("['echo.py', '%s', 'foo', 'bar']" % (env_path.replace("\\", "\\\\")))
         assert err.decode() == ""
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 variables:
   FOO: {}
 
@@ -233,11 +238,13 @@ commands:
   default:
     conda_app_entry: python echo.py ${PREFIX} foo bar
 """,
-         "echo.py": """
+        "echo.py":
+        """
 from __future__ import print_function
 import sys
 print(repr(sys.argv))
-"""}, prepare_with_app_entry)
+"""
+    }, prepare_with_app_entry)
 
 
 def test_prepare_choose_command():
@@ -255,8 +262,9 @@ def test_prepare_choose_command():
         assert result
         assert os.path.join(project.directory_path, 'bar.py') in result.command_exec_info.args
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 commands:
     foo:
        bokeh_app: foo.py
@@ -265,32 +273,37 @@ commands:
 packages:
   - bokeh
 """,
-         "foo.py": "# foo",
-         "bar.py": "# bar"}, check)
+        "foo.py":
+        "# foo",
+        "bar.py":
+        "# bar"
+    }, check)
 
 
 def test_prepare_command_not_in_project():
     def check(dirname):
         # create a command that isn't in the Project
         project = project_no_dedicated_env(dirname)
-        command = ProjectCommand(name="foo",
-                                 attributes=dict(bokeh_app="foo.py",
-                                                 env_spec=project.default_env_spec_name))
+        command = ProjectCommand(
+            name="foo", attributes=dict(bokeh_app="foo.py", env_spec=project.default_env_spec_name))
         environ = minimal_environ()
         result = prepare_without_interaction(project, environ=environ, command=command)
         assert result.errors == []
         assert result
         assert os.path.join(project.directory_path, 'foo.py') in result.command_exec_info.args
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 commands:
   decoy:
     description: "do not use me"
     unix: foobar
     windows: foobar
 """,
-         "foo.py": "# foo"}, check)
+        "foo.py":
+        "# foo"
+    }, check)
 
 
 def test_prepare_bad_command_name():
@@ -316,11 +329,12 @@ def _push_fake_env_creator():
             return CondaLockSet({})
 
         def find_environment_deviations(self, prefix, spec):
-            return CondaEnvironmentDeviations(summary="all good",
-                                              missing_packages=(),
-                                              wrong_version_packages=(),
-                                              missing_pip_packages=(),
-                                              wrong_version_pip_packages=())
+            return CondaEnvironmentDeviations(
+                summary="all good",
+                missing_packages=(),
+                wrong_version_packages=(),
+                missing_pip_packages=(),
+                wrong_version_pip_packages=())
 
         def fix_environment_deviations(self, prefix, spec, deviations=None, create=True):
             pass
@@ -356,14 +370,16 @@ def test_prepare_choose_environment():
         finally:
             _pop_fake_env_creator()
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: blah
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
     foo: {}
     bar: {}
-"""}, check)
+"""
+    }, check)
 
 
 def test_prepare_use_command_specified_env_spec():
@@ -383,8 +399,9 @@ def test_prepare_use_command_specified_env_spec():
         finally:
             _pop_fake_env_creator()
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
 name: blah
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
@@ -396,7 +413,8 @@ commands:
        env_spec: foo
        unix: echo hello
        windows: echo hello
-"""}, check)
+"""
+    }, check)
 
 
 def test_update_environ():
@@ -411,11 +429,12 @@ def test_update_environ():
         result.update_environ(other)
         assert dict(FOO='bar', BAR='baz', PROJECT_DIR=dirname) == strip_environ(other)
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
-"""}, prepare_then_update_environ)
+"""
+    }, prepare_then_update_environ)
 
 
 def test_attempt_to_grab_result_early():
@@ -447,23 +466,19 @@ def test_skip_after_success_function_when_second_stage_fails():
         assert state['state'] == 'start'
         state['state'] = 'first'
         stage.set_result(
-            PrepareSuccess(statuses=(),
-                           command_exec_info=None,
-                           environ=dict(),
-                           overrides=UserConfigOverrides(),
-                           env_spec_name='first'),
-            [])
+            PrepareSuccess(
+                statuses=(),
+                command_exec_info=None,
+                environ=dict(),
+                overrides=UserConfigOverrides(),
+                env_spec_name='first'), [])
 
         def last(stage):
             assert state['state'] == 'first'
             state['state'] = 'second'
             stage.set_result(
-                PrepareFailure(statuses=(),
-                               errors=[],
-                               environ=dict(),
-                               overrides=UserConfigOverrides(),
-                               env_spec_name='last'),
-                [])
+                PrepareFailure(
+                    statuses=(), errors=[], environ=dict(), overrides=UserConfigOverrides(), env_spec_name='last'), [])
             return None
 
         return _FunctionPrepareStage(dict(), UserConfigOverrides(), "second", [], last)
@@ -496,23 +511,23 @@ def test_run_after_success_function_when_second_stage_succeeds():
         assert state['state'] == 'start'
         state['state'] = 'first'
         stage.set_result(
-            PrepareSuccess(statuses=(),
-                           command_exec_info=None,
-                           environ=dict(),
-                           overrides=UserConfigOverrides(),
-                           env_spec_name='foo'),
-            [])
+            PrepareSuccess(
+                statuses=(),
+                command_exec_info=None,
+                environ=dict(),
+                overrides=UserConfigOverrides(),
+                env_spec_name='foo'), [])
 
         def last(stage):
             assert state['state'] == 'first'
             state['state'] = 'second'
             stage.set_result(
-                PrepareSuccess(statuses=(),
-                               command_exec_info=None,
-                               environ=dict(),
-                               overrides=UserConfigOverrides(),
-                               env_spec_name='bar'),
-                [])
+                PrepareSuccess(
+                    statuses=(),
+                    command_exec_info=None,
+                    environ=dict(),
+                    overrides=UserConfigOverrides(),
+                    env_spec_name='bar'), [])
             return None
 
         return _FunctionPrepareStage(dict(), UserConfigOverrides(), "second", [], last)
@@ -593,15 +608,16 @@ def test_provide_whitelist(monkeypatch):
         assert result.errors == no_foo
 
         # whitelist the download
-        result = prepare_without_interaction(project,
-                                             provide_whitelist=(env_req, project.download_requirements(None)[0]),
-                                             environ=environ)
+        result = prepare_without_interaction(
+            project, provide_whitelist=(env_req, project.download_requirements(None)[0]), environ=environ)
         assert result.errors == []
         assert 'FOO' in result.environ
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 downloads:
   FOO: "http://example.com/nope"
 
-"""}, check)
+"""
+        }, check)

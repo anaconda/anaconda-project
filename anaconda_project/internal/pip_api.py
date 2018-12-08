@@ -61,8 +61,8 @@ def _call_pip(prefix, extra_args):
 def install(prefix, pkgs=None):
     """Install packages into an environment."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
-        raise TypeError('must specify a list of one or more packages to install into existing environment, not %r' %
-                        pkgs)
+        raise TypeError(
+            'must specify a list of one or more packages to install into existing environment, not %r' % pkgs)
 
     # --no-deps is because we don't want to pull in pip versions of
     # everything that conda has.

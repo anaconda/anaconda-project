@@ -59,8 +59,7 @@ def _test_add_download(capsys, monkeypatch, command):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_add_download(monkeypatch,
-                                           FakeRequirementStatus(success=True,
-                                                                 status_description='File downloaded.'))
+                                           FakeRequirementStatus(success=True, status_description='File downloaded.'))
 
         code = _parse_args_and_run_subcommand(command)
         assert code == 0
@@ -125,8 +124,7 @@ def _test_add_download_with_only_one_hash_param(capsys, monkeypatch, command):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_add_download(monkeypatch,
-                                           FakeRequirementStatus(success=True,
-                                                                 status_description='File downloaded.'))
+                                           FakeRequirementStatus(success=True, status_description='File downloaded.'))
 
         code = _parse_args_and_run_subcommand(command)
         assert code == 1
@@ -140,17 +138,17 @@ def _test_add_download_with_only_one_hash_param(capsys, monkeypatch, command):
 
 
 def test_add_download_with_only_hash_algorithm(capsys, monkeypatch):
-    called_params = _test_add_download_with_only_one_hash_param(capsys, monkeypatch, [
-        'anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-algorithm', 'md5'
-    ])
+    called_params = _test_add_download_with_only_one_hash_param(
+        capsys, monkeypatch,
+        ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-algorithm', 'md5'])
     assert len(called_params['args']) == 0
     assert called_params['kwargs'] == {}
 
 
 def test_add_download_with_only_hash_value(capsys, monkeypatch):
-    called_params = _test_add_download_with_only_one_hash_param(capsys, monkeypatch, [
-        'anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-value', 'foo'
-    ])
+    called_params = _test_add_download_with_only_one_hash_param(
+        capsys, monkeypatch,
+        ['anaconda-project', 'add-download', 'MYDATA', 'http://localhost:123456', '--hash-value', 'foo'])
     assert len(called_params['args']) == 0
     assert called_params['kwargs'] == {}
 
@@ -301,8 +299,9 @@ def test_remove_download_missing_var(capsys, monkeypatch):
         assert ("Download requirement: TEST_FILE not found.\n") == err
         assert '' == out
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'variables:\n  foo: {default: bar}'}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: 'variables:\n  foo: {default: bar}'
+    }, check)
 
 
 def test_list_downloads_with_project_file_problems(capsys, monkeypatch):
@@ -350,7 +349,8 @@ train  A downloaded file which is referenced by train.
 """.format(dirname=dirname).strip() + "\n"
         assert out == expected_out
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('downloads:\n'
-                                    '  test: http://localhost:8000/test.tgz\n'
-                                    '  train: http://localhost:8000/train.tgz\n')}, check_list_not_empty)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('downloads:\n'
+                                   '  test: http://localhost:8000/test.tgz\n'
+                                   '  train: http://localhost:8000/train.tgz\n')
+    }, check_list_not_empty)

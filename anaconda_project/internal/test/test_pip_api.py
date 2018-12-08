@@ -163,9 +163,10 @@ def test_parse_spec():
     assert "nope_not_a_thing" == pip_api.parse_spec("nope_not_a_thing").name
 
     # a bunch of examples from the pip docs
-    for spec in ['SomeProject', 'SomeProject == 1.3', 'SomeProject >=1.2,<.2.0', 'SomeProject[foo, bar]',
-                 'SomeProject~=1.4.2', "SomeProject ==5.4 ; python_version < '2.7'",
-                 "SomeProject; sys_platform == 'win32'"]:
+    for spec in [
+            'SomeProject', 'SomeProject == 1.3', 'SomeProject >=1.2,<.2.0', 'SomeProject[foo, bar]',
+            'SomeProject~=1.4.2', "SomeProject ==5.4 ; python_version < '2.7'", "SomeProject; sys_platform == 'win32'"
+    ]:
         assert "SomeProject" == pip_api.parse_spec(spec).name
 
 

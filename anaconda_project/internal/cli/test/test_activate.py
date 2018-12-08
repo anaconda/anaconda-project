@@ -78,11 +78,12 @@ def test_activate(monkeypatch):
         result = _filter_activate_result(result, ('PROJECT_DIR', 'REDIS_URL'))
         assert result == (quote(dirname), 'redis://localhost:6379')
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-    """}, activate_redis_url)
+    """
+    }, activate_redis_url)
 
 
 def test_activate_quoting(monkeypatch):
@@ -92,17 +93,16 @@ def test_activate_quoting(monkeypatch):
         result = _filter_activate_result(result, ('FOO', 'PROJECT_DIR'))
         assert result == ("'$! boo'", quote(dirname))
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
     """,
-            DEFAULT_LOCAL_STATE_FILENAME: """
+        DEFAULT_LOCAL_STATE_FILENAME: """
 variables:
   FOO: $! boo
 """
-        }, activate_foo)
+    }, activate_foo)
 
 
 def test_main(monkeypatch, capsys):
@@ -117,11 +117,12 @@ def test_main(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         main(Args(directory=dirname))
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, main_redis_url)
+"""
+    }, main_redis_url)
 
     assert can_connect_args['port'] == 6379
 
@@ -148,11 +149,12 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'activate'])
         assert code == 0
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, main_redis_url)
+"""
+    }, main_redis_url)
 
     assert can_connect_args['port'] == 6379
 
@@ -170,11 +172,12 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', '--directory', dirname])
         assert code == 0
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, main_redis_url)
+"""
+    }, main_redis_url)
 
     assert can_connect_args['port'] == 6379
 
@@ -187,15 +190,16 @@ services:
 def test_main_bad_command_provided(capsys):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', '--directory', dirname, '--command',
-                                               'nope'])
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'activate', '--directory', dirname, '--command', 'nope'])
         assert code == 1
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, check)
+"""
+    }, check)
 
     out, err = capsys.readouterr()
     assert err.startswith("Command name 'nope' is not in")
@@ -220,11 +224,12 @@ def test_main_fails_to_redis(monkeypatch, capsys):
         code = main(Args(directory=dirname))
         assert 1 == code
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, main_redis_url)
+"""
+    }, main_redis_url)
 
     out, err = capsys.readouterr()
     assert "missing requirement" in err

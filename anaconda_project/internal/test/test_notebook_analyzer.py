@@ -17,11 +17,11 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 def _fake_notebook_json_with_code(source):
     ipynb = {
-        "cells": [
-            {"cell_type": "code",
-             # source is a list of lines with the newline included in each
-             "source": [(s + "\n") for s in source.split("\n")]}
-        ]
+        "cells": [{
+            "cell_type": "code",
+            # source is a list of lines with the newline included in each
+            "source": [(s + "\n") for s in source.split("\n")]
+        }]
     }
     return ipynb
 
