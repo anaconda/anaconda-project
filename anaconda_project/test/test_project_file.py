@@ -9,6 +9,7 @@ import codecs
 import os
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.test.project_utils import assert_identical_except_blank_lines
 from anaconda_project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME, possible_project_file_names
 from anaconda_project.env_spec import EnvSpec
 
@@ -121,7 +122,7 @@ def test_create_missing_project_file():
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
             expected = expected_default_file.replace("<NAME>", os.path.basename(dirname))
-            assert expected == contents
+            assert_identical_except_blank_lines(expected, contents)
 
     with_directory_contents(dict(), create_file)
 
@@ -220,7 +221,7 @@ def test_create_missing_project_file_one_default_env_spec():
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
             expected = expected_one_env_spec_contents.replace("<NAME>", os.path.basename(dirname))
-            assert expected == contents
+            assert_identical_except_blank_lines(expected, contents)
 
     with_directory_contents(dict(), create_file)
 
@@ -279,6 +280,6 @@ def test_create_missing_project_file_two_default_env_specs():
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
             expected = expected_two_env_spec_contents.replace("<NAME>", os.path.basename(dirname))
-            assert expected == contents
+            assert_identical_except_blank_lines(expected, contents)
 
     with_directory_contents(dict(), create_file)

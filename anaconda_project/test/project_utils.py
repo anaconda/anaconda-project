@@ -36,3 +36,10 @@ def project_no_dedicated_env(*args, **kwargs):
     project = Project(*args, **kwargs)
 
     return project
+
+
+def assert_identical_except_blank_lines(f1, f2):
+    """Compare two files that should be identical, ignoring blank lines."""
+    f1 = [c for c in f1.splitlines() if c.strip()]
+    f2 = [c for c in f2.splitlines() if c.strip()]
+    assert f1 == f2

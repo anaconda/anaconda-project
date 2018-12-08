@@ -9,6 +9,7 @@ import codecs
 import os
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.test.project_utils import assert_identical_except_blank_lines
 from anaconda_project.project_lock_file import (ProjectLockFile, DEFAULT_PROJECT_LOCK_FILENAME,
                                                 possible_project_lock_file_names)
 from anaconda_project.conda_manager import CondaLockSet
@@ -83,7 +84,7 @@ def test_create_missing_lock_file_only_when_not_default():
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
             expected = expected_default_file + "something: 42\n"
-            assert expected == contents
+            assert_identical_except_blank_lines(expected, contents)
 
     with_directory_contents(dict(), create_file)
 
