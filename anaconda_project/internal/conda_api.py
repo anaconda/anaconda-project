@@ -21,6 +21,8 @@ from anaconda_project.internal import streaming_popen
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
 from anaconda_project.internal.py2_compat import is_string
 
+CONDA_EXE = os.environ.get("CONDA_EXE", "conda")
+
 
 class CondaError(Exception):
     """General Conda error."""
@@ -39,7 +41,7 @@ class CondaEnvExistsError(CondaError):
 # this function exists so we can monkeypatch it in tests
 def _get_conda_command(extra_args):
     # just use whatever conda is on the path
-    cmd_list = ['conda']
+    cmd_list = [CONDA_EXE]
     cmd_list.extend(extra_args)
     return cmd_list
 
