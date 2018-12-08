@@ -105,8 +105,11 @@ class TestRunner:
         # traces huge by showing source code for each frame, so not
         # adding it by default.
         # To see stdout "live" instead of capturing it, use -s.
-        coverage_args = ['--cov-config', os.path.join(ROOT, ".coveragerc"), '--cov=anaconda_project',
-                         '--cov-report=term-missing', '--cov-report=html', '--cov-fail-under=99', '--no-cov-on-fail']
+        coverage_args = [
+            '--cov-config',
+            os.path.join(ROOT, ".coveragerc"), '--cov=anaconda_project', '--cov-report=term-missing',
+            '--cov-report=html', '--cov-fail-under=99', '--no-cov-on-fail'
+        ]
         if PY2:
             # xdist appears to lock up the test suite with python
             # 2, maybe due to an interaction with coverage
@@ -280,10 +283,14 @@ class TestRunner:
         assert [] == processes
 
     def _flake8(self):
-        from flake8.engine import get_style_guide
+        try:
+            from flake8.engine import get_style_guide
+        except ImportError:
+            from flake8.api.legacy import get_style_guide
         ignore = [
-            'E126',  # complains about this list's indentation
-            'E401'  # multiple imports on one line
+            'W503',  # line break before binary op
+            'W504',  # line break after binary op
+            'E126',  # continuation line over-indented
         ]
         flake8_style = get_style_guide(paths=self._git_staged_or_all_py_files(), max_line_length=120, ignore=ignore)
         print("running flake8...")
@@ -390,39 +397,50 @@ class TestRunner:
 
 def main():
     parser = argparse.ArgumentParser(description='Run tests')
-    parser.add_argument('--pytest-args',
-                        action="store",
-                        dest="pytest_args",
-                        default=None,
-                        nargs='*',
-                        help="Pass custom pytests arguments", )
-    parser.add_argument('--format-only',
-                        action="store_true",
-                        dest="format_only",
-                        default=None,
-                        help="Only run the linters and formatters not the actual tests", )
-    parser.add_argument('--git-staged-only',
-                        action="store_true",
-                        dest="git_staged_only",
-                        default=None,
-                        help="Only run the linters and formatters on files added to the commit", )
-    parser.add_argument('--skip-slow-tests',
-                        action="store_true",
-                        dest="skip_slow_tests",
-                        default=None,
-                        help="Skip tests marked slow", )
-    parser.add_argument('--profile-formatting',
-                        action="store_true",
-                        dest="profile_formatting",
-                        default=None,
-                        help="Profile the linter and formatter steps", )
+    parser.add_argument(
+        '--pytest-args',
+        action="store",
+        dest="pytest_args",
+        default=None,
+        nargs='*',
+        help="Pass custom pytests arguments",
+    )
+    parser.add_argument(
+        '--format-only',
+        action="store_true",
+        dest="format_only",
+        default=None,
+        help="Only run the linters and formatters not the actual tests",
+    )
+    parser.add_argument(
+        '--git-staged-only',
+        action="store_true",
+        dest="git_staged_only",
+        default=None,
+        help="Only run the linters and formatters on files added to the commit",
+    )
+    parser.add_argument(
+        '--skip-slow-tests',
+        action="store_true",
+        dest="skip_slow_tests",
+        default=None,
+        help="Skip tests marked slow",
+    )
+    parser.add_argument(
+        '--profile-formatting',
+        action="store_true",
+        dest="profile_formatting",
+        default=None,
+        help="Profile the linter and formatter steps",
+    )
 
     options = parser.parse_args()
-    tr = TestRunner(pytest_args=options.pytest_args,
-                    format_only=options.format_only,
-                    git_staged_only=options.git_staged_only,
-                    skip_slow_tests=options.skip_slow_tests,
-                    profile_formatting=options.profile_formatting)
+    tr = TestRunner(
+        pytest_args=options.pytest_args,
+        format_only=options.format_only,
+        git_staged_only=options.git_staged_only,
+        skip_slow_tests=options.skip_slow_tests,
+        profile_formatting=options.profile_formatting)
     tr.run_tests()
 
 

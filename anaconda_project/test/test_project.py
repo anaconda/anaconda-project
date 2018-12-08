@@ -556,7 +556,7 @@ def test_complain_about_packages_not_a_list():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        "should be a list of strings not 'CommentedMap" in project.problems[0]
+        "should be a list of strings not" in project.problems[0]
 
     with_directory_contents_completing_project_file({
         DEFAULT_PROJECT_FILENAME: """
@@ -570,7 +570,7 @@ def test_complain_about_pip_deps_not_a_list():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        "should be a list of strings not 'CommentedMap" in project.problems[0]
+        "should be a list of strings not" in project.problems[0]
 
     with_directory_contents_completing_project_file({
         DEFAULT_PROJECT_FILENAME: """
@@ -851,7 +851,7 @@ def test_complain_about_environments_not_a_dict():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
-        "should be a directory from environment name to environment attributes, not 42" in project.problems[0]
+        "should be a directory from environment name to environment attributes" in project.problems[0]
 
     with_directory_contents_completing_project_file({
         DEFAULT_PROJECT_FILENAME: """
@@ -879,10 +879,8 @@ env_specs:
 def test_complain_about_non_string_inherit_from():
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [
-            "%s: inherit_from: value should be a list of env spec names, not 'CommentedMap()'" %
-            (project.project_file.basename)
-        ] == project.problems
+        assert 1 == len(project.problems)
+        assert "inherit_from: value should be a list of env spec names" in project.problems[0]
 
     with_directory_contents_completing_project_file(
         {
@@ -1050,8 +1048,7 @@ def test_variable_default_cannot_be_bool():
         requirements = project.requirements(project.default_env_spec_name)
         assert [] == requirements
         assert 1 == len(project.problems)
-
-        assert ("default value for variable FOO must be null, a string, or a number, not True.") == project.problems[0]
+        assert "default value for variable FOO must be null, a string, or a number" in project.problems[0]
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  FOO: true\n"}, check_file)
 
@@ -1064,8 +1061,7 @@ def test_variable_default_cannot_be_list():
         requirements = project.requirements(project.default_env_spec_name)
         assert [] == requirements
         assert 1 == len(project.problems)
-
-        assert ("default value for variable FOO must be null, a string, or a number, not [].") == project.problems[0]
+        assert "default value for variable FOO must be null, a string, or a number" in project.problems[0]
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  FOO: []\n"}, check_file)
 
@@ -1078,9 +1074,7 @@ def test_variable_default_missing_key_field():
         requirements = project.requirements(project.default_env_spec_name)
         assert [] == requirements
         assert 1 == len(project.problems)
-
-        assert ("default value for variable FOO must be null, a string, or a number, " +
-                "not CommentedMap([('encrypted', 'abcdefg')]).") == project.problems[0]
+        assert "default value for variable FOO must be null, a string, or a number" in project.problems[0]
 
     with_directory_contents_completing_project_file(
         {
@@ -1751,11 +1745,8 @@ def test_skip_all_notebook_imports():
 def test_invalid_skip_imports_notebooks():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-
-        assert [
-            "%s: 'skip_imports: notebooks:' value should be a list, found CommentedMap()" %
-            project.project_file.basename
-        ] == project.problems
+        assert 1 == len(project.problems)
+        assert "'skip_imports: notebooks:' value should be a list" in project.problems[0]
         assert [] == project.suggestions
 
     with_directory_contents_completing_project_file({

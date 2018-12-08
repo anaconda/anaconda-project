@@ -22,10 +22,11 @@ def add_variables(project_dir, env_spec_name, vars_to_add, default):
         Returns exit code
     """
     if len(vars_to_add) > 1 and default is not None:
-        print(
-            "It isn't clear which variable your --default option goes with; "
-            "add one variable at a time if using --default.",
-            file=sys.stderr)
+        # yapf on P2.7 vs yapf on P3.6 disagree here.
+        # yapf: disable
+        print("It isn't clear which variable your --default option goes with; "
+              "add one variable at a time if using --default.", file=sys.stderr)
+        # yapf: enable
         return 1
     project = load_project(project_dir)
     status = project_ops.add_variables(project, env_spec_name, vars_to_add, {vars_to_add[0]: default})

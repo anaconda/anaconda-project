@@ -22,6 +22,14 @@ os:
   - osx
 
 matrix:
+  # disable all but one job on OS X, we just want to smoke test OS X.
+  exclude:
+    - os: osx
+      env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests CONDA_CANARY=false
+    - os: osx
+      env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=false
+    - os: osx
+      env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=packaging CONDA_CANARY=false
   allow_failures:
     # conda canary shouldn't block the build, just show us an FYI
     - env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=tests CONDA_CANARY=true
@@ -44,8 +52,6 @@ install:
   - source "$HOME"/miniconda/bin/activate root
   - printenv | sort
   - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
-  # Prefer defaults, drop down to conda-forge only when necessary
-  - conda config --add channels conda-forge --add channels defaults
   # Use the latest conda
   - conda update conda --no-pin -q
   - conda install -n root conda-build$CONDA_BUILD_CONSTRAINT psutil
@@ -53,17 +59,23 @@ install:
   # we don't use environment.yml in here because I'm not sure how to parameterize the
   # Python version and OS version in it. If we switch to being recursive and use
   # anaconda-project.yml instead of environment.yml there's a way to do that though.
+  # Adding conda-forge as a lower-priority channel to pick up a few packages
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       OS_PACKAGES=libffi ;
     fi ;
-    conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" coverage tornado=4 keyring pytest pytest-cov pip redis notebook bokeh ruamel_yaml anaconda-client requests psutil flake8 pep257 yapf $OS_PACKAGES
+    conda create -q -n test-environment -c defaults -c conda-forge
+        python="$TRAVIS_PYTHON_VERSION" coverage tornado=4 pytest pytest-cov
+        pip redis notebook bokeh ruamel_yaml anaconda-client requests psutil
+        flake8 pep257 yapf keyring $OS_PACKAGES
   - source activate test-environment
   - unset CONDA_ENV_PATH # because the older conda in miniconda sets this, confusing some tests
   - export PATH=`echo "$PATH" | sed -e s@"$HOME"/miniconda/bin:@@g`
   - printenv | sort
 
 script:
-  - if test "$TEST_TARGET" = tests; then LANG=en_US.UTF-8 python scripts/run_tests.py --pytest-args ' -vv'; fi
+  - if test "$TEST_TARGET" = tests; then
+      LANG=en_US.UTF-8 python scripts/run_tests.py --pytest-args ' -vv'; 
+    fi
   - if test "$TRAVIS_PYTHON_VERSION" = "3.5" && test "$TEST_TARGET" = "packaging"; then
       git fetch --unshallow ;
       LANG=en_US.UTF-8 python scripts/create_conda_packages.py;
