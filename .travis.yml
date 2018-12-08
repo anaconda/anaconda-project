@@ -10,29 +10,21 @@ sudo: required
 env:
   # All supported python versions
   - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests CONDA_CANARY=false
-  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=tests CONDA_CANARY=false
   - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=false
+  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=tests CONDA_CANARY=false
   # Can build the package
-  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=packaging CONDA_CANARY=false
+  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=packaging CONDA_CANARY=false
   # conda canary
-  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=true
+  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=tests CONDA_CANARY=true
 
 os:
   - linux
   - osx
 
 matrix:
-  # disable all but one job on OS X, we just want to smoke test OS X.
-  exclude:
-    - os: osx
-      env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests CONDA_CANARY=false
-    - os: osx
-      env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.5 TEST_TARGET=tests CONDA_CANARY=false
-    - os: osx
-      env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=packaging CONDA_CANARY=false
   allow_failures:
     # conda canary shouldn't block the build, just show us an FYI
-    - env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=true
+    - env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=tests CONDA_CANARY=true
 
 install:
   - printenv | sort
@@ -55,7 +47,6 @@ install:
   # Use the latest conda
   - conda update conda --no-pin -q
   - if test x"$CONDA_CANARY" = xtrue ; then conda update -n root -c conda-canary conda; fi
-  - if test x"$MINICONDA_VERSION" = x"4.1.11" ; then CONDA_BUILD_CONSTRAINT='=2.1.5'; else CONDA_BUILD_CONSTRAINT='' ; fi
   - conda install -n root conda-build$CONDA_BUILD_CONSTRAINT psutil
   - conda info -a
   # we don't use environment.yml in here because I'm not sure how to parameterize the
@@ -64,7 +55,7 @@ install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
       OS_PACKAGES=libffi ;
     fi ;
-    conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" coverage tornado keyring pytest pytest-cov pip redis notebook bokeh ruamel_yaml anaconda-client requests psutil $OS_PACKAGES
+    conda create -q -n test-environment python="$TRAVIS_PYTHON_VERSION" coverage tornado=4 keyring pytest pytest-cov pip redis notebook bokeh ruamel_yaml anaconda-client requests psutil $OS_PACKAGES
   - source activate test-environment
   - printenv | sort
   - unset CONDA_ENV_PATH # because the older conda in miniconda sets this, confusing some tests
