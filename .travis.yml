@@ -54,7 +54,8 @@ install:
   - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
   # Use the latest conda
   - conda update conda --no-pin -q
-  - conda install -n root conda-build$CONDA_BUILD_CONSTRAINT psutil
+  - if test x"$CONDA_CANARY" = xtrue ; then conda update -n root -c conda-canary conda; fi
+  - conda install -n root conda-build psutil
   - conda info -a
   # we don't use environment.yml in here because I'm not sure how to parameterize the
   # Python version and OS version in it. If we switch to being recursive and use

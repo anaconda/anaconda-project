@@ -1146,7 +1146,7 @@ class Project(object):
                                                     None for default
             frontend (Frontend): the UX using this Project instance
         """
-        self._directory_path = os.path.realpath(directory_path)
+        self._directory_path = os.path.realpath(directory_path).rstrip(os.sep)
 
         def load_default_specs():
             (importable_spec, importable_filename) = _find_importable_spec(directory_path)

@@ -173,7 +173,8 @@ def test_conda_invoke_fails(monkeypatch):
         with pytest.raises(conda_api.CondaError) as excinfo:
             conda_api.info()
         assert 'failed to exec' in repr(excinfo.value)
-        assert 'conda info' in repr(excinfo.value)
+        conda_cmd = os.path.basename(conda_api.CONDA_EXE)
+        assert conda_cmd + ' info' in repr(excinfo.value)
 
     with_directory_contents(dict(), do_test)
 
