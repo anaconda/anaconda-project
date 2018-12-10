@@ -568,7 +568,7 @@ def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA', checksum
     from tornado import gen
 
     @gen.coroutine
-    def mock_downloader_run(self, loop):
+    def mock_downloader_run(self):
         class Res:
             pass
 

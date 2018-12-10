@@ -1171,7 +1171,7 @@ def test_update_command_to_non_string_value():
 
 def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA', checksum=None):
     @gen.coroutine
-    def mock_downloader_run(self, loop):
+    def mock_downloader_run(self):
         class Res:
             pass
 
@@ -1188,7 +1188,7 @@ def _monkeypatch_download_file(monkeypatch, dirname, filename='MYDATA', checksum
 
 def _monkeypatch_download_file_fails(monkeypatch, dirname):
     @gen.coroutine
-    def mock_downloader_run(self, loop):
+    def mock_downloader_run(self):
         class Res:
             pass
 
@@ -1201,7 +1201,7 @@ def _monkeypatch_download_file_fails(monkeypatch, dirname):
 
 def _monkeypatch_download_file_fails_to_get_http_response(monkeypatch, dirname):
     @gen.coroutine
-    def mock_downloader_run(self, loop):
+    def mock_downloader_run(self):
         self._errors.append("Nope nope nope")
         raise gen.Return(None)
 

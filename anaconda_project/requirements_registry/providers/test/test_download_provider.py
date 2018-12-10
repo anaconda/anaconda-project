@@ -58,7 +58,7 @@ def _download_requirement():
 def test_prepare_and_unprepare_download(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -93,7 +93,7 @@ def test_prepare_and_unprepare_download(monkeypatch):
 def test_prepare_download_mismatched_checksum_after_download(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -118,7 +118,7 @@ def test_prepare_download_mismatched_checksum_after_download(monkeypatch):
 def test_prepare_download_exception(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             raise Exception('error')
 
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
@@ -143,7 +143,7 @@ def test_prepare_download_exception(monkeypatch):
 def test_unprepare_download_fails(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -185,7 +185,7 @@ def test_provide_minimal(monkeypatch):
 
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -209,7 +209,7 @@ def test_provide_no_download_in_check_mode(monkeypatch):
 
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             raise Exception("should not have tried to download in check mode")
 
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
@@ -274,7 +274,7 @@ def test_provide_wrong_form(monkeypatch):
 def test_failed_download(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -295,7 +295,7 @@ def test_failed_download(monkeypatch):
 def test_failed_download_before_connect(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             # if we don't even get an HTTP response, the errors are handled this way,
             # e.g. if the URL is bad.
             self._errors = ['This went horribly wrong']
@@ -340,7 +340,7 @@ def test_prepare_download_of_zip_file(monkeypatch):
             f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT))
 
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -371,7 +371,7 @@ def test_prepare_download_of_zip_file_checksum(monkeypatch):
             f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT_CHECKSUM))
 
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -411,7 +411,7 @@ def test_prepare_download_of_zip_file_no_unzip(monkeypatch):
             f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT_NO_UNZIP))
 
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -444,7 +444,7 @@ def test_prepare_download_of_zip_file_no_zip_extension(monkeypatch):
             f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT_NO_ZIP_SUFFIX))
 
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -476,7 +476,7 @@ def test_prepare_download_of_broken_zip_file(monkeypatch):
             f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT))
 
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -511,7 +511,7 @@ def _download_status(prepare_context):
 def test_configure(monkeypatch):
     def check(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 

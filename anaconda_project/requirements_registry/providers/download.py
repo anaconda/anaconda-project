@@ -92,7 +92,7 @@ class DownloadProvider(EnvVarProvider):
 
         try:
             _ioloop = IOLoop(make_current=False)
-            response = _ioloop.run_sync(lambda: download.run(_ioloop))
+            response = _ioloop.run_sync(download.run)
             if response is None:
                 for error in download.errors:
                     frontend.error(error)
