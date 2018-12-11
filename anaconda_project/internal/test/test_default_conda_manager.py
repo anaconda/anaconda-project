@@ -124,17 +124,17 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     assert spec_with_bad_url_pip_package.pip_package_names_set == set(('pyinstrument', 'phony'))
 
     spec_with_old_ipython = EnvSpec(
-        name='myenv', conda_packages=['ipython=5.2.2'], pip_packages=['pyinstrument'], channels=[])
-    assert spec_with_old_ipython.conda_packages == ('ipython=5.2.2', )
+        name='myenv', conda_packages=['ipython=5.4.1'], pip_packages=['pyinstrument'], channels=[])
+    assert spec_with_old_ipython.conda_packages == ('ipython=5.4.1', )
 
     spec_with_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=['pyinstrument'], channels=[])
     assert spec_with_bokeh.conda_packages == ('bokeh', )
 
     spec_with_bokeh_and_old_ipython = EnvSpec(
-        name='myenv', conda_packages=['bokeh', 'ipython=5.2.2'], pip_packages=['pyinstrument'], channels=[])
+        name='myenv', conda_packages=['bokeh', 'ipython=5.4.1'], pip_packages=['pyinstrument'], channels=[])
     assert spec_with_bokeh_and_old_ipython.conda_packages == (
         'bokeh',
-        'ipython=5.2.2',
+        'ipython=5.4.1',
     )
 
     def do_test(dirname):

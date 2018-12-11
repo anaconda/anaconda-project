@@ -23,6 +23,7 @@ import anaconda_project.prepare as prepare
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, with_temporary_script_commandline,
                                                           with_directory_contents_completing_project_file,
                                                           complete_project_file_content)
+from anaconda_project.test.test_prepare import _monkeypatch_reduced_environment
 from anaconda_project.local_state_file import LocalStateFile
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME, ProjectFile
 from anaconda_project.project_lock_file import DEFAULT_PROJECT_LOCK_FILENAME
@@ -1503,10 +1504,11 @@ env_specs:
 @pytest.mark.slow
 def test_add_env_spec_with_real_conda_manager(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
+    _monkeypatch_reduced_environment(monkeypatch)
 
     def check(dirname):
         project = Project(dirname)
-        status = project_ops.add_env_spec(project, name='foo', packages=['numpy'], channels=[])
+        status = project_ops.add_env_spec(project, name='foo', packages=['numpy=1.15.4'], channels=[])
         if not status:
             print(status.status_description)
             print(repr(status.errors))
@@ -1520,7 +1522,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
         # be sure it was really done
         project2 = Project(dirname)
         env_commented_map = project2.project_file.get_value(['env_specs', 'foo'])
-        assert dict(packages=['numpy'], channels=[]) == dict(env_commented_map)
+        assert dict(packages=['numpy=1.15.4'], channels=[]) == dict(env_commented_map)
         assert os.path.isdir(os.path.join(dirname, 'envs', 'foo', 'conda-meta'))
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)

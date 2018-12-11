@@ -622,7 +622,7 @@ def test_environ_set_prefix_to_root():
 @pytest.mark.slow
 def test_resolve_dependencies_with_actual_conda_current_platform():
     try:
-        result = conda_api.resolve_dependencies(['bokeh=0.12.4'], platform=None)
+        result = conda_api.resolve_dependencies(['bokeh=0.12.7'], platform=None)
     except conda_api.CondaError as e:
         pprint(e.json)
         raise e
@@ -630,7 +630,7 @@ def test_resolve_dependencies_with_actual_conda_current_platform():
     names = [pkg[0] for pkg in result]
     assert 'bokeh' in names
     names_and_versions = [(pkg[0], pkg[1]) for pkg in result]
-    assert ('bokeh', '0.12.4') in names_and_versions
+    assert ('bokeh', '0.12.7') in names_and_versions
     assert len(result) > 1  # bokeh has some dependencies so should be >1
 
 
@@ -641,7 +641,7 @@ def test_resolve_dependencies_with_actual_conda_other_platforms():
             print("Skipping dependency resolution test on current platform %s" % p)
             continue
         try:
-            result = conda_api.resolve_dependencies(['bokeh=0.12.4'], platform=p)
+            result = conda_api.resolve_dependencies(['bokeh=0.12.7'], platform=p)
         except conda_api.CondaError as e:
             print("*** Dependency resolution failed on %s" % p)
             pprint(e.json)
@@ -650,7 +650,7 @@ def test_resolve_dependencies_with_actual_conda_other_platforms():
         names = [pkg[0] for pkg in result]
         assert 'bokeh' in names
         names_and_versions = [(pkg[0], pkg[1]) for pkg in result]
-        assert ('bokeh', '0.12.4') in names_and_versions
+        assert ('bokeh', '0.12.7') in names_and_versions
         assert len(result) > 1  # bokeh has some dependencies so should be >1
 
         print("Dependency resolution test OK on %s" % p)
@@ -670,7 +670,7 @@ def test_resolve_dependencies_for_bogus_package_with_actual_conda():
 @pytest.mark.slow
 def test_resolve_dependencies_with_actual_conda_depending_on_conda():
     try:
-        result = conda_api.resolve_dependencies(['conda=4.3.21'], platform=None)
+        result = conda_api.resolve_dependencies(['conda=4.3.27'], platform=None)
     except conda_api.CondaError as e:
         pprint(e.json)
         raise e
@@ -678,7 +678,7 @@ def test_resolve_dependencies_with_actual_conda_depending_on_conda():
     names = [pkg[0] for pkg in result]
     assert 'conda' in names
     names_and_versions = [(pkg[0], pkg[1]) for pkg in result]
-    assert ('conda', '4.3.21') in names_and_versions
+    assert ('conda', '4.3.27') in names_and_versions
     assert len(result) > 1  # conda has some dependencies so should be >1
 
 

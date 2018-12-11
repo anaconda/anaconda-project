@@ -214,16 +214,17 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         result = prepare_without_interaction(project, environ=environ)
         assert not result
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 packages:
+    - python=3.7
     - ipython
-    - numpy
+    - numpy=1.15
     - pip:
       - flake8
 """
-        }, prepare_project_scoped_env_with_packages)
+    }, prepare_project_scoped_env_with_packages)
 
 
 def _conda_env_status(prepare_context):

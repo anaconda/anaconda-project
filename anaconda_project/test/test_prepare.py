@@ -29,8 +29,17 @@ from anaconda_project.conda_manager import (push_conda_manager_class, pop_conda_
                                             CondaEnvironmentDeviations, CondaLockSet)
 
 
+def _monkeypatch_reduced_environment(monkeypatch):
+    def mock_env_packages():
+        return ['python=3.7']
+
+    monkeypatch.setattr('anaconda_project.env_spec._default_env_spec_packages', mock_env_packages)
+
+
 @pytest.mark.slow
-def test_prepare_empty_directory():
+def test_prepare_empty_directory(monkeypatch):
+    _monkeypatch_reduced_environment(monkeypatch)
+
     def prepare_empty(dirname):
         project = Project(dirname)
         environ = minimal_environ()
@@ -60,7 +69,9 @@ def test_prepare_bad_provide_mode():
 @pytest.mark.skipif(
     platform.system() == 'Windows' and not (sys.version_info.major == 3 and sys.version_info.minor == 4),
     reason="on Windows, can't delete env dir except on python 3.4, don't know why")
-def test_unprepare_empty_directory():
+def test_unprepare_empty_directory(monkeypatch):
+    _monkeypatch_reduced_environment(monkeypatch)
+
     def unprepare_empty(dirname):
         project = Project(dirname)
         environ = minimal_environ()
@@ -93,7 +104,9 @@ def test_unprepare_problem_project():
 
 
 @pytest.mark.slow
-def test_unprepare_nothing_to_do():
+def test_unprepare_nothing_to_do(monkeypatch):
+    _monkeypatch_reduced_environment(monkeypatch)
+
     def unprepare_nothing(dirname):
         project = Project(dirname)
         environ = minimal_environ()

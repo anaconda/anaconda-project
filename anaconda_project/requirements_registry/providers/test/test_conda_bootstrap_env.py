@@ -190,8 +190,9 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
 env_specs:
   bootstrap-env:
     packages:
+        - python=3.7
         - ipython
-        - numpy
+        - numpy=1.15
         - pip:
             - flake8
 """
