@@ -2,6 +2,7 @@
 
 We [keep a changelog.](http://keepachangelog.com/)
 
+* [PR 167](https://github.com/Anaconda-Platform/anaconda-project/pull/167) - Fixes required to support newer versions of conda, pip, and tornado.
 
 ## Version 0.8.2 (2017/10/19) - Public Release
 
