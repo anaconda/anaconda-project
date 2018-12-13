@@ -1,89 +1,42 @@
-# https://travis-ci.org/Anaconda-Platform/anaconda-project/
-
-# language: python sets up virtualenv and pip that we don't need.
-# omitting language gives us ruby stuff. c seems likely to be a minimal setup.
+# Don't use language: python; this gives us an unnecessary virtualenv
 language: c
-# this is here to avoid a hang with python 2.7, suggested in
+# Seems to be needed to prevent hanging in Python 2.7
 # https://github.com/travis-ci/travis-ci/issues/6861
 sudo: required
 
 env:
-  # All supported python versions
-  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests CONDA_CANARY=false
-  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=false
-  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=tests CONDA_CANARY=false
-  # Can build the package
-  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=packaging CONDA_CANARY=false
-  # conda canary
-  - MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=tests CONDA_CANARY=true
+  # Build and test package on all supported python version
+  - BUILD_TARGET=3.7
+  - BUILD_TARGET=3.6 
+  - BUILD_TARGET=2.7
+  # Smoketest package on conda canary
+  - BUILD_TARGET=3.7 CONDA_CANARY="-c conda-canary"
 
 os:
   - linux
   - osx
 
 matrix:
-  # disable all but one job on OS X, we just want to smoke test OS X.
-  exclude:
-    - os: osx
-      env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=2.7 TEST_TARGET=tests CONDA_CANARY=false
-    - os: osx
-      env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.6 TEST_TARGET=tests CONDA_CANARY=false
-    - os: osx
-      env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=packaging CONDA_CANARY=false
+  # conda canary shouldn't block the build, just show us an FYI
   allow_failures:
-    # conda canary shouldn't block the build, just show us an FYI
-    - env: MINICONDA_VERSION=latest TRAVIS_PYTHON_VERSION=3.7 TEST_TARGET=tests CONDA_CANARY=true
+    - env: BUILD_TARGET=3.7 CONDA_CANARY="-c conda-canary"
 
 install:
-  - printenv | sort
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      MINICONDA_PYVERSION=2 ;
-    else
-      MINICONDA_PYVERSION=3 ;
-    fi ;
-    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      MINICONDA_OS=Linux ;
-    else
-      MINICONDA_OS=MacOSX ;
-    fi ;
-    echo "Fetching Python $MINICONDA_PYVERSION miniconda for $MINICONDA_OS" ;
-    wget https://repo.continuum.io/miniconda/Miniconda$MINICONDA_PYVERSION-$MINICONDA_VERSION-$MINICONDA_OS-x86_64.sh -O miniconda.sh
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then MINICONDA_OS=Linux; else MINICONDA_OS=MacOSX; fi
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-$MINICONDA_OS-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p "$HOME"/miniconda
-  - source "$HOME"/miniconda/bin/activate root
-  - printenv | sort
+  - source "$HOME"/miniconda/etc/profile.d/conda.sh
   - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
-  # Use the latest conda
-  - conda update conda --no-pin -q
-  - if test x"$CONDA_CANARY" = xtrue ; then conda update -n root -c conda-canary conda; fi
-  - conda install -n root conda-build psutil
+  - conda install -q $CONDA_CANARY -c defaults -c conda-forge conda conda-build conda-verify codecov flake8 pep257 yapf
   - conda info -a
-  # we don't use environment.yml in here because I'm not sure how to parameterize the
-  # Python version and OS version in it. If we switch to being recursive and use
-  # anaconda-project.yml instead of environment.yml there's a way to do that though.
-  # Adding conda-forge as a lower-priority channel to pick up a few packages
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      OS_PACKAGES=libffi ;
-    fi ;
-    conda create -q -n test-environment -c defaults -c conda-forge
-        python="$TRAVIS_PYTHON_VERSION" coverage tornado=4 pytest pytest-cov
-        pip redis notebook bokeh ruamel_yaml anaconda-client requests psutil
-        flake8 pep257 yapf keyring $OS_PACKAGES
-  - source activate test-environment
-  - unset CONDA_ENV_PATH # because the older conda in miniconda sets this, confusing some tests
-  - export PATH=`echo "$PATH" | sed -e s@"$HOME"/miniconda/bin:@@g`
+  - export LANG=en_US.UTF-8
+  - export COVERAGE_DIR=":$HOME/htmlcov"
   - printenv | sort
 
 script:
-  - if test "$TEST_TARGET" = tests; then
-      LANG=en_US.UTF-8 python scripts/run_tests.py --pytest-args ' -vv'; 
-    fi
-  - if test "$TRAVIS_PYTHON_VERSION" = "3.5" && test "$TEST_TARGET" = "packaging"; then
-      git fetch --unshallow ;
-      LANG=en_US.UTF-8 python scripts/create_conda_packages.py;
-    else
-      echo "Not building packages on $TRAVIS_PYTHON_VERSION target=$TEST_TARGET" ;
-    fi
+  - conda build conda.recipe --python=$BUILD_TARGET
+  - conda activate
+  - python scripts/run_tests.py --format-only
 
 after_success:
-  - conda install -q -n test-environment -c conda-forge codecov
   - codecov
