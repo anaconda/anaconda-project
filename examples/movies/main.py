@@ -59,9 +59,9 @@ def select_movies():
     genre_val = genre.value
     director_val = director.value.strip()
     cast_val = cast.value.strip()
-    selected = movies[
-        (movies.Reviews >= reviews.value) & (movies.BoxOffice >= (boxoffice.value * 1e6)) & (
-            movies.Year >= min_year.value) & (movies.Year <= max_year.value) & (movies.Oscars >= oscars.value)]
+    selected = movies[(movies.Reviews >= reviews.value) & (movies.BoxOffice >= (boxoffice.value * 1e6)) &
+                      (movies.Year >= min_year.value) & (movies.Year <= max_year.value) &
+                      (movies.Oscars >= oscars.value)]
     if (genre_val != "All"):
         selected = selected[selected.Genre.str.contains(genre_val)]
     if (director_val != ""):
@@ -79,13 +79,15 @@ def update(attrname, old, new):
     p.xaxis.axis_label = x_axis.value
     p.yaxis.axis_label = y_axis.value
     p.title = "%d movies selected" % len(df)
-    source.data = dict(x=df[x_name],
-                       y=df[y_name],
-                       color=df["color"],
-                       title=df["Title"],
-                       year=df["Year"],
-                       revenue=df["revenue"],
-                       alpha=df["alpha"], )
+    source.data = dict(
+        x=df[x_name],
+        y=df[y_name],
+        color=df["color"],
+        title=df["Title"],
+        year=df["Year"],
+        revenue=df["revenue"],
+        alpha=df["alpha"],
+    )
 
 
 controls = [reviews, boxoffice, genre, min_year, max_year, oscars, director, cast, x_axis, y_axis]

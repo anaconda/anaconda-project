@@ -70,10 +70,11 @@ class DownloadProvider(EnvVarProvider):
             existing_filename = filename
         else:
             existing_filename = None
-        return _DownloadProviderAnalysis(analysis.config,
-                                         analysis.missing_env_vars_to_configure,
-                                         analysis.missing_env_vars_to_provide,
-                                         existing_filename=existing_filename)
+        return _DownloadProviderAnalysis(
+            analysis.config,
+            analysis.missing_env_vars_to_configure,
+            analysis.missing_env_vars_to_provide,
+            existing_filename=existing_filename)
 
     def _provide_download(self, requirement, context, frontend):
         filename = context.status.analysis.existing_filename
@@ -86,13 +87,12 @@ class DownloadProvider(EnvVarProvider):
             download_filename = filename + ".zip"
         else:
             download_filename = filename
-        download = FileDownloader(url=requirement.url,
-                                  filename=download_filename,
-                                  hash_algorithm=requirement.hash_algorithm)
+        download = FileDownloader(
+            url=requirement.url, filename=download_filename, hash_algorithm=requirement.hash_algorithm)
 
         try:
             _ioloop = IOLoop(make_current=False)
-            response = _ioloop.run_sync(lambda: download.run(_ioloop))
+            response = _ioloop.run_sync(download.run)
             if response is None:
                 for error in download.errors:
                     frontend.error(error)
@@ -152,8 +152,8 @@ class DownloadProvider(EnvVarProvider):
             elif os.path.isfile(filename):
                 os.remove(filename)
             else:
-                return SimpleStatus(success=True,
-                                    description=("No need to remove %s which wasn't downloaded." % filename))
+                return SimpleStatus(
+                    success=True, description=("No need to remove %s which wasn't downloaded." % filename))
             return SimpleStatus(success=True, description=("Removed downloaded file %s." % filename))
         except Exception as e:
             return SimpleStatus(success=False, description=("Failed to remove %s: %s." % (filename, str(e))))

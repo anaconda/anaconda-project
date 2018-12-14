@@ -30,8 +30,8 @@ class ServiceRequirement(EnvVarRequirement):
                 return None
             options = deepcopy(item)
         else:
-            problems.append("Service {} should have a service type string or a dictionary as its value.".format(
-                varname))
+            problems.append(
+                "Service {} should have a service type string or a dictionary as its value.".format(varname))
             return None
 
         if not EnvVarRequirement._parse_default(options, varname, problems):

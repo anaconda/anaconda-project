@@ -369,8 +369,9 @@ class EnvSpec(object):
         # have ordering... OrderedDict doesn't work because the
         # yaml saver saves them as some "!!omap" nonsense. Other
         # than ordering, the formatting isn't even preserved here.
-        template_json = ryaml.load("something:\n    description: null\n" + "    packages: []\n" + "    channels: []\n",
-                                   Loader=ryaml.RoundTripLoader)
+        template_json = ryaml.load(
+            "something:\n    description: null\n" + "    packages: []\n" + "    channels: []\n",
+            Loader=ryaml.RoundTripLoader)
 
         if self._description is not None:
             template_json['something']['description'] = self._description
@@ -465,7 +466,7 @@ def _load_environment_yml(filename):
     return EnvSpec(name=name, conda_packages=conda_packages, channels=channels, pip_packages=pip_packages, platforms=())
 
 
-_requirement_option_re = re.compile('^-([-a-zA-Z0-9]+)\s(.*)')
+_requirement_option_re = re.compile(r'^-([-a-zA-Z0-9]+)\s(.*)')
 
 
 def _load_requirements_txt(filename):
@@ -543,15 +544,21 @@ def _find_out_of_sync_importable_spec(project_specs, directory_path):
     return (spec, filename)
 
 
+# Added so it can be mocked
+def _default_env_spec_packages():
+    return ['anaconda']
+
+
 def _anaconda_default_env_spec(shared_base_spec):
     if shared_base_spec is None:
         inherit_from = ()
     else:
         inherit_from = (shared_base_spec, )
-    return EnvSpec(name="default",
-                   conda_packages=["anaconda"],
-                   channels=[],
-                   platforms=conda_api.default_platforms_with_current(),
-                   description="Default environment spec for running commands",
-                   inherit_from_names=(),
-                   inherit_from=inherit_from)
+    return EnvSpec(
+        name="default",
+        conda_packages=_default_env_spec_packages(),
+        channels=[],
+        platforms=conda_api.default_platforms_with_current(),
+        description="Default environment spec for running commands",
+        inherit_from_names=(),
+        inherit_from=inherit_from)

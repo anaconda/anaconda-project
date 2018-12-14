@@ -92,22 +92,19 @@ class ProjectViewHandler(RequestHandler):
 
 
 class FakeAnacondaApplication(Application):
-    def __init__(self, server, io_loop, **kwargs):
+    def __init__(self, server, **kwargs):
         self.server = server
-        self.io_loop = io_loop
 
         patterns = [(r'/(.*)', ProjectViewHandler)]
         super(FakeAnacondaApplication, self).__init__(patterns, **kwargs)
 
 
 class FakeAnacondaServer(object):
-    def __init__(self, io_loop, fail_these, expected_basename):
-        assert io_loop is not None
-
+    def __init__(self, fail_these, expected_basename):
         self.fail_these = fail_these
         self.expected_basename = expected_basename
-        self._application = FakeAnacondaApplication(server=self, io_loop=io_loop)
-        self._http = HTTPServer(self._application, io_loop=io_loop)
+        self._application = FakeAnacondaApplication(server=self)
+        self._http = HTTPServer(self._application)
 
         # these would throw OSError on failure
         sockets = bind_sockets(port=None, address='127.0.0.1')
@@ -175,9 +172,7 @@ class FakeServerContext(object):
 
     def _run(self):
         self._loop = IOLoop()
-        self._server = FakeAnacondaServer(io_loop=self._loop,
-                                          fail_these=self._fail_these,
-                                          expected_basename=self._expected_basename)
+        self._server = FakeAnacondaServer(fail_these=self._fail_these, expected_basename=self._expected_basename)
         self._url = self._server.url
 
         def notify_started():
@@ -195,6 +190,7 @@ class FakeServerContext(object):
             if self._loop is not None:
                 self._loop.stop()
                 self._loop = None
+
         # the delay allows pending next-tick things to go ahead
         # and happen, which may avoid some problems with trying to
         # output to stdout after pytest closes it

@@ -88,12 +88,14 @@ def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
         assert not os.path.exists(expected_env)
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 env_specs:
   bootstrap-env:
     packages:
         - python
-"""}, prepare_project_scoped_env)
+"""
+        }, prepare_project_scoped_env)
 
 
 def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
@@ -125,12 +127,14 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
         assert status.status_description == ("Success.")
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 env_specs:
   bootstrap-env:
     packages:
         - ipython
-"""}, prepare_project_scoped_env_not_attempted)
+"""
+        }, prepare_project_scoped_env_not_attempted)
 
 
 @pytest.mark.slow
@@ -180,16 +184,19 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         result = prepare_without_interaction(project, environ=environ)
         assert not result
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
   bootstrap-env:
     packages:
+        - python=3.7
         - ipython
-        - numpy
+        - numpy=1.15
         - pip:
             - flake8
-"""}, prepare_project_scoped_env_with_packages)
+"""
+    }, prepare_project_scoped_env_with_packages)
 
 
 def _conda_bootstrap_env_status(prepare_context):
@@ -305,9 +312,9 @@ def test_configure_different_env_spec(monkeypatch):
 
         assert os.path.join(envs_dir, 'bar') == prepare_context.local_state_file.get_value(['variables', req.env_var])
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
   bootstrap-env:
     packages: []
@@ -319,4 +326,4 @@ env_specs:
     packages: []
     channels: []
 """
-        }, check)
+    }, check)

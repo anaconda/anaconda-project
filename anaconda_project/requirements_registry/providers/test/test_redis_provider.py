@@ -67,15 +67,15 @@ def test_reading_valid_config():
         assert 7421 == config['upper_port']
         assert 'find_all' == config['source']
 
-    with_directory_contents(
-        {
-            DEFAULT_LOCAL_STATE_FILENAME: """
+    with_directory_contents({
+        DEFAULT_LOCAL_STATE_FILENAME:
+        """
 service_options:
   REDIS_URL:
     port_range: 7389-7421
     autostart: false
          """
-        }, read_config)
+    }, read_config)
 
 
 def _read_invalid_port_range(capsys, port_range):
@@ -126,33 +126,20 @@ def test_set_config_values_as_strings():
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = _redis_requirement()
         provider = RedisProvider()
-        provider.set_config_values_as_strings(requirement,
-                                              dict(),
-                                              local_state,
-                                              'default',
-                                              UserConfigOverrides(),
+        provider.set_config_values_as_strings(requirement, dict(), local_state, 'default', UserConfigOverrides(),
                                               dict(lower_port="6001"))
         config = provider.read_config(requirement, dict(), local_state, 'default', UserConfigOverrides())
         assert config['lower_port'] == 6001
         assert config['upper_port'] == 6449
 
-        provider.set_config_values_as_strings(requirement,
-                                              dict(),
-                                              local_state,
-                                              'default',
-                                              UserConfigOverrides(),
+        provider.set_config_values_as_strings(requirement, dict(), local_state, 'default', UserConfigOverrides(),
                                               dict(upper_port="6700"))
         config2 = provider.read_config(requirement, dict(), local_state, 'default', UserConfigOverrides())
         assert config2['lower_port'] == 6001
         assert config2['upper_port'] == 6700
 
-        provider.set_config_values_as_strings(requirement,
-                                              dict(),
-                                              local_state,
-                                              'default',
-                                              UserConfigOverrides(),
-                                              dict(lower_port="5500",
-                                                   upper_port="6800"))
+        provider.set_config_values_as_strings(requirement, dict(), local_state, 'default', UserConfigOverrides(),
+                                              dict(lower_port="5500", upper_port="6800"))
         config2 = provider.read_config(requirement, dict(), local_state, 'default', UserConfigOverrides())
         assert config2['lower_port'] == 5500
         assert config2['upper_port'] == 6800
@@ -182,15 +169,16 @@ def test_prepare_redis_url_with_dict_in_variables_section(monkeypatch):
         project = project_no_dedicated_env(dirname)
         result = _prepare_printing_errors(project, environ=minimal_environ())
         assert result
-        assert dict(REDIS_URL="redis://localhost:6379",
-                    PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert dict(
+            REDIS_URL="redis://localhost:6379", PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, prepare_redis_url)
+"""
+    }, prepare_redis_url)
 
 
 def _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket):
@@ -222,8 +210,8 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
 
     from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
 
-    can_connect_args_list = _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch,
-                                                                                        real_can_connect_to_socket)
+    can_connect_args_list = _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(
+        monkeypatch, real_can_connect_to_socket)
 
     def start_local_redis(dirname):
         project = project_no_dedicated_env(dirname)
@@ -235,8 +223,9 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         assert 'port' in state
         port = state['port']
 
-        assert dict(REDIS_URL=("redis://localhost:" + str(port)),
-                    PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert dict(
+            REDIS_URL=("redis://localhost:" + str(port)),
+            PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert len(can_connect_args_list) >= 2
 
         servicedir = os.path.join(dirname, "services")
@@ -262,11 +251,12 @@ def test_prepare_and_unprepare_local_redis_server(monkeypatch):
         local_state_file.load()
         assert dict() == local_state_file.get_service_run_state("REDIS_URL")
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, start_local_redis)
+"""
+    }, start_local_redis)
 
 
 def test_prepare_and_unprepare_local_redis_server_with_failed_unprovide(monkeypatch):
@@ -293,11 +283,12 @@ def test_prepare_and_unprepare_local_redis_server_with_failed_unprovide(monkeypa
         assert not status
         assert status.status_description == 'Shutdown commands failed for REDIS_URL.'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, start_local_redis)
+"""
+    }, start_local_redis)
 
 
 def test_prepare_and_unprepare_two_local_redis_servers_with_failed_unprovide(monkeypatch):
@@ -326,11 +317,13 @@ def test_prepare_and_unprepare_two_local_redis_servers_with_failed_unprovide(mon
         assert status.status_description == 'Failed to clean up REDIS_URL, REDIS_URL_2.'
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
   REDIS_URL_2: redis
-"""}, start_local_redis)
+"""
+        }, start_local_redis)
 
 
 def test_prepare_local_redis_server_twice_reuses(monkeypatch):
@@ -342,8 +335,8 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
 
     from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
 
-    can_connect_args_list = _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch,
-                                                                                        real_can_connect_to_socket)
+    can_connect_args_list = _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(
+        monkeypatch, real_can_connect_to_socket)
 
     def start_local_redis(dirname):
         project = project_no_dedicated_env(dirname)
@@ -356,8 +349,9 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert 'port' in state
         port = state['port']
 
-        assert dict(REDIS_URL=("redis://localhost:" + str(port)),
-                    PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert dict(
+            REDIS_URL=("redis://localhost:" + str(port)),
+            PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert len(can_connect_args_list) >= 2
 
         pidfile = os.path.join(dirname, "services/REDIS_URL/redis.pid")
@@ -379,8 +373,9 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         assert result2
 
         # port should be the same, and set in the environment
-        assert dict(REDIS_URL=("redis://localhost:" + str(port)),
-                    PROJECT_DIR=project.directory_path) == strip_environ(result2.environ)
+        assert dict(
+            REDIS_URL=("redis://localhost:" + str(port)),
+            PROJECT_DIR=project.directory_path) == strip_environ(result2.environ)
 
         # no new pid file
         assert pidfile_mtime == os.path.getmtime(pidfile)
@@ -398,11 +393,12 @@ def test_prepare_local_redis_server_twice_reuses(monkeypatch):
         local_state_file.load()
         assert dict() == local_state_file.get_service_run_state("REDIS_URL")
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, start_local_redis)
+"""
+    }, start_local_redis)
 
 
 def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
@@ -461,11 +457,12 @@ def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
         assert "redis-server started successfully, but we timed out trying to connect to it on port" in out
         assert "redis-server process failed or timed out, exited with code 0" in err
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, start_local_redis_and_time_out)
+"""
+    }, start_local_redis_and_time_out)
 
 
 def _monkeypatch_can_connect_to_socket_always_succeeds_on_nonstandard(monkeypatch):
@@ -494,11 +491,12 @@ def test_fail_to_prepare_local_redis_server_no_port_available(monkeypatch, capsy
         assert not result
         assert 73 == len(can_connect_args_list)
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, start_local_redis)
+"""
+    }, start_local_redis)
 
     out, err = capsys.readouterr()
     assert "All ports from 6380 to 6449 were in use, could not start redis-server on one of them." in err
@@ -516,11 +514,12 @@ def test_do_not_start_local_redis_server_in_prod_mode(monkeypatch, capsys):
         assert not result
         assert 3 == len(can_connect_args_list)
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, no_start_local_redis)
+"""
+    }, no_start_local_redis)
 
     out, err = capsys.readouterr()
     assert "Could not connect to system default Redis." in err
@@ -538,11 +537,12 @@ def test_do_not_start_local_redis_server_in_check_mode(monkeypatch, capsys):
         assert not result
         assert 3 == len(can_connect_args_list)
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, no_start_local_redis)
+"""
+    }, no_start_local_redis)
 
     out, err = capsys.readouterr()
     assert "Could not connect to system default Redis." in err
@@ -568,15 +568,17 @@ def test_fail_to_prepare_local_redis_server_scope_system(monkeypatch, capsys):
         assert not result
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
 """,
-         DEFAULT_LOCAL_STATE_FILENAME: """
+            DEFAULT_LOCAL_STATE_FILENAME: """
 service_options:
   REDIS_URL:
     scope: system
-"""}, check_no_autostart)
+"""
+        }, check_no_autostart)
 
     out, err = capsys.readouterr()
     assert out == ""
@@ -596,15 +598,17 @@ def test_redis_server_configure_custom_port_range(monkeypatch, capsys):
         assert 36 == len(can_connect_args_list)
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
     """,
-         DEFAULT_LOCAL_STATE_FILENAME: """
+            DEFAULT_LOCAL_STATE_FILENAME: """
 service_options:
   REDIS_URL:
     port_range: 7389-7421
-"""}, start_local_redis)
+"""
+        }, start_local_redis)
 
     out, err = capsys.readouterr()
     assert "All ports from 7389 to 7421 were in use, could not start redis-server on one of them." in err
@@ -661,11 +665,12 @@ sys.exit(1)
         result = _prepare_printing_errors(project, environ=minimal_environ())
         assert not result
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, start_local_redis)
+"""
+    }, start_local_redis)
 
     # this doesn't capture "It did not work stdout" because
     # of some pytest detail I don't understand.
@@ -721,11 +726,12 @@ def test_fail_to_prepare_local_redis_server_not_on_path(monkeypatch, capsys):
         result = _prepare_printing_errors(project, environ=minimal_environ())
         assert not result
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, start_local_redis)
+"""
+    }, start_local_redis)
 
     # this doesn't capture "It did not work stdout" because
     # of some pytest detail I don't understand.
@@ -746,35 +752,19 @@ def test_set_scope_in_local_state(monkeypatch):
         environ = minimal_environ()
         config = provider.read_config(requirement, environ, local_state, 'default', UserConfigOverrides())
         assert config['source'] == 'find_all'
-        provider.set_config_values_as_strings(requirement,
-                                              environ,
-                                              local_state,
-                                              'default',
-                                              UserConfigOverrides(),
+        provider.set_config_values_as_strings(requirement, environ, local_state, 'default', UserConfigOverrides(),
                                               dict(source='find_project'))
         config = provider.read_config(requirement, environ, local_state, 'default', UserConfigOverrides())
         assert config['source'] == 'find_project'
-        provider.set_config_values_as_strings(requirement,
-                                              environ,
-                                              local_state,
-                                              'default',
-                                              UserConfigOverrides(),
+        provider.set_config_values_as_strings(requirement, environ, local_state, 'default', UserConfigOverrides(),
                                               dict(source='find_all'))
         config = provider.read_config(requirement, environ, local_state, 'default', UserConfigOverrides())
         assert config['source'] == 'find_all'
-        provider.set_config_values_as_strings(requirement,
-                                              environ,
-                                              local_state,
-                                              'default',
-                                              UserConfigOverrides(),
+        provider.set_config_values_as_strings(requirement, environ, local_state, 'default', UserConfigOverrides(),
                                               dict(source='environ'))
         config = provider.read_config(requirement, environ, local_state, 'default', UserConfigOverrides())
         assert config['source'] == 'find_all'  # default if no env var set
-        provider.set_config_values_as_strings(requirement,
-                                              environ,
-                                              local_state,
-                                              'default',
-                                              UserConfigOverrides(),
+        provider.set_config_values_as_strings(requirement, environ, local_state, 'default', UserConfigOverrides(),
                                               dict(source='environ'))
         environ_with_redis_url = environ.copy()
         environ_with_redis_url['REDIS_URL'] = 'blah'
@@ -783,35 +773,21 @@ def test_set_scope_in_local_state(monkeypatch):
         assert config['source'] == 'environ'  # default when the env var IS set
 
         # use local variable when env var not set
-        provider.set_config_values_as_strings(requirement,
-                                              environ,
-                                              local_state,
-                                              'default',
-                                              UserConfigOverrides(),
-                                              dict(source='variables',
-                                                   value='foo'))
+        provider.set_config_values_as_strings(requirement, environ, local_state, 'default', UserConfigOverrides(),
+                                              dict(source='variables', value='foo'))
         config = provider.read_config(requirement, environ, local_state, 'default', UserConfigOverrides())
         assert config['source'] == 'variables'
         assert config['value'] == 'foo'
 
         # use local variable when env var _is_ set
-        provider.set_config_values_as_strings(requirement,
-                                              environ_with_redis_url,
-                                              local_state,
-                                              'default',
-                                              UserConfigOverrides(),
-                                              dict(source='variables',
-                                                   value='foo'))
+        provider.set_config_values_as_strings(requirement, environ_with_redis_url, local_state, 'default',
+                                              UserConfigOverrides(), dict(source='variables', value='foo'))
         config = provider.read_config(requirement, environ, local_state, 'default', UserConfigOverrides())
         assert config['source'] == 'variables'
         assert config['value'] == 'foo'
 
         # set to use system, which should override using the local state
-        provider.set_config_values_as_strings(requirement,
-                                              environ,
-                                              local_state,
-                                              'default',
-                                              UserConfigOverrides(),
+        provider.set_config_values_as_strings(requirement, environ, local_state, 'default', UserConfigOverrides(),
                                               dict(source='find_system'))
         config = provider.read_config(requirement, environ, local_state, 'default', UserConfigOverrides())
         assert config['source'] == 'find_system'
@@ -819,12 +795,13 @@ def test_set_scope_in_local_state(monkeypatch):
         project = project_no_dedicated_env(dirname)
         result = _prepare_printing_errors(project, environ=minimal_environ())
         assert result
-        assert dict(REDIS_URL="redis://localhost:6379",
-                    PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert dict(
+            REDIS_URL="redis://localhost:6379", PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, prepare_after_setting_scope)
+"""
+    }, prepare_after_setting_scope)

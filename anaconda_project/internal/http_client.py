@@ -31,7 +31,7 @@ class FileDownloader(object):
         self._errors = []
 
     @gen.coroutine
-    def run(self, io_loop):
+    def run(self):
         """Run the download on the given io_loop."""
         assert self._client is None
 
@@ -45,7 +45,8 @@ class FileDownloader(object):
         if self._hash_algorithm is not None:
             hasher = getattr(hashlib, self._hash_algorithm)()
         self._client = httpclient.AsyncHTTPClient(
-            io_loop=io_loop,
+            # No need for this, and removed in 5.0 anyway
+            # io_loop=io_loop,
             max_clients=1,
             # without this we buffer a huge amount
             # of stuff and then call the streaming_callback
@@ -90,9 +91,8 @@ class FileDownloader(object):
 
         try:
             timeout_in_seconds = 60 * 10  # pretty long because we could be dealing with huge files
-            request = httpclient.HTTPRequest(url=self._url,
-                                             streaming_callback=writer,
-                                             request_timeout=timeout_in_seconds)
+            request = httpclient.HTTPRequest(
+                url=self._url, streaming_callback=writer, request_timeout=timeout_in_seconds)
             try:
                 response = yield self._client.fetch(request)
             except Exception as e:

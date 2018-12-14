@@ -18,14 +18,12 @@ from anaconda_project.provide import PROVIDE_MODE_CHECK
 def add_service(project_dir, env_spec_name, service_type, variable_name):
     """Add an item to the services section."""
     project = load_project(project_dir)
-    status = project_ops.add_service(project,
-                                     env_spec_name=env_spec_name,
-                                     service_type=service_type,
-                                     variable_name=variable_name)
+    status = project_ops.add_service(
+        project, env_spec_name=env_spec_name, service_type=service_type, variable_name=variable_name)
     if status:
         print(status.status_description)
-        print("Added service %s to the project file, its address will be in %s." %
-              (status.requirement.service_type, status.requirement.env_var))
+        print("Added service %s to the project file, its address will be in %s." % (status.requirement.service_type,
+                                                                                    status.requirement.env_var))
         return 0
     else:
         console_utils.print_status_errors(status)
@@ -39,10 +37,8 @@ def remove_service(project_dir, env_spec_name, variable_name):
     # service can proceed even though the prepare fails.
     with project.null_frontend():
         result = prepare_without_interaction(project, env_spec_name=env_spec_name, mode=PROVIDE_MODE_CHECK)
-    status = project_ops.remove_service(project,
-                                        env_spec_name=env_spec_name,
-                                        variable_name=variable_name,
-                                        prepare_result=result)
+    status = project_ops.remove_service(
+        project, env_spec_name=env_spec_name, variable_name=variable_name, prepare_result=result)
     if status:
         print(status.status_description)
         return 0

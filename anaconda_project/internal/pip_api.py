@@ -61,8 +61,8 @@ def _call_pip(prefix, extra_args):
 def install(prefix, pkgs=None):
     """Install packages into an environment."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
-        raise TypeError('must specify a list of one or more packages to install into existing environment, not %r' %
-                        pkgs)
+        raise TypeError(
+            'must specify a list of one or more packages to install into existing environment, not %r' % pkgs)
 
     # --no-deps is because we don't want to pull in pip versions of
     # everything that conda has.
@@ -87,27 +87,10 @@ def installed(prefix):
     if not os.path.isdir(prefix):
         return dict()
 
-    # In pip 9, there's a big ugly deprecation warning by default if
-    # you type `pip list`, unless you do `pip list --format=legacy`
-    # pip 8 of course does not support --format=legacy, so that
-    # can't be done unconditionally.
-    format_args = ["--format=legacy"]
     try:
-        out = _call_pip(prefix, extra_args=['--version']).decode('utf-8')
-
-        if out.startswith("pip "):
-            try:
-                major_version = int(out[4])
-                if major_version <= 8:
-                    format_args = []
-            except ValueError:
-                # didn't get an integer, who knows
-                pass
-    except PipNotInstalledError:
-        pass
-
-    try:
-        out = _call_pip(prefix, extra_args=(['list'] + format_args)).decode('utf-8')
+        # Use freeze instead of list so we get a consistent format across
+        # different versions of pip
+        out = _call_pip(prefix, extra_args=['freeze']).decode('utf-8')
         # on Windows, $ in a regex doesn't match \r\n, we need to get rid of \r
         out = out.replace("\r\n", "\n")
     except PipNotInstalledError:
@@ -116,7 +99,7 @@ def installed(prefix):
     #   ympy (0.7.6.1)
     #   tables (3.2.2)
     #   terminado (0.5)
-    line_re = re.compile("^ *([^ ]+) *\(([^)]+)\)$", flags=re.MULTILINE)
+    line_re = re.compile(r"^(.+)==(.+)$", flags=re.MULTILINE)
     result = dict()
     for match in line_re.finditer(out):
         result[match.group(1)] = (match.group(1), match.group(2))
@@ -125,11 +108,11 @@ def installed(prefix):
 
 ParsedPipSpec = collections.namedtuple('ParsedPipSpec', ['name'])
 
-_spec_pat = re.compile(' *([a-zA-Z0-9][-_.a-zA-Z0-9]+)')
+_spec_pat = re.compile(r' *([a-zA-Z0-9][-_.a-zA-Z0-9]+)')
 
-_egg_fragment_re = re.compile('[#&]egg=([^&]*)')
+_egg_fragment_re = re.compile(r'[#&]egg=([^&]*)')
 
-_egg_fragment_postfix_re = re.compile('^(.*?)(?:-dev|-\d.*)$')
+_egg_fragment_postfix_re = re.compile(r'^(.*?)(?:-dev|-\d.*)$')
 
 _url_schemes = set(('http', 'https', 'file', 'ftp', 'git', 'git+http', 'git+https', 'git+ssh', 'git+git', 'git+file',
                     'hg', 'hg+http', 'hg+https', 'hg+ssh', 'hg+static-http'

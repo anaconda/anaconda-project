@@ -85,9 +85,9 @@ def stdin_is_interactive():
 # "input".
 def _input(prompt):
     if _PY2:  # pragma: no cover
-        return raw_input(prompt)  # flake8: noqa # pragma: no cover (py2 only)
+        return raw_input(prompt)  # noqa # pragma: no cover (py2 only)
     else:
-        return input(prompt)  # flake8: noqa # pragma: no cover
+        return input(prompt)  # noqa # pragma: no cover
 
 
 def console_input(prompt, encrypted=False):

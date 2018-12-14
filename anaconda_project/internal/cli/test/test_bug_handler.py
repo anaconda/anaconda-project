@@ -39,11 +39,8 @@ def test_bug_handling(capsys, monkeypatch):
 
     # we name the program something wonky to be sure we slugify
     # it, and use a non-BMP unicode char to be sure we handle that
-    code = handle_bugs(buggy_main,
-                       program_name=u"my$ 🌟program",
-                       details_dict=dict(thing1="foo",
-                                         thing2="bar",
-                                         thing3=u"🌟"))
+    code = handle_bugs(
+        buggy_main, program_name=u"my$ 🌟program", details_dict=dict(thing1="foo", thing2="bar", thing3=u"🌟"))
 
     assert code is 1
     out, err = capsys.readouterr()
@@ -85,11 +82,8 @@ def test_bug_handling_not_interactive(capsys, monkeypatch):
 
     # we name the program something wonky to be sure we slugify
     # it, and use a non-BMP unicode char to be sure we handle that
-    code = handle_bugs(buggy_main,
-                       program_name=u"my$ 🌟program",
-                       details_dict=dict(thing1="foo",
-                                         thing2="bar",
-                                         thing3=u"🌟"))
+    code = handle_bugs(
+        buggy_main, program_name=u"my$ 🌟program", details_dict=dict(thing1="foo", thing2="bar", thing3=u"🌟"))
 
     assert code is 1
     out, err = capsys.readouterr()

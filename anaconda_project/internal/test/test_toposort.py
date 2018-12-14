@@ -28,8 +28,8 @@ def sort_tuples(tuples, can_ignore=None):
     else:
         can_ignore_func = can_ignore_key
 
-    return list(map(lambda t: t[0], toposort_from_dependency_info(tuples, get_node_key, get_dependency_keys,
-                                                                  can_ignore_func)))
+    return list(
+        map(lambda t: t[0], toposort_from_dependency_info(tuples, get_node_key, get_dependency_keys, can_ignore_func)))
 
 
 def test_empty():

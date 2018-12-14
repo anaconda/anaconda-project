@@ -22,10 +22,8 @@ def prepare_command(project_dir, ui_mode, conda_environment, command_name):
     project = load_project(project_dir)
     if console_utils.print_project_problems(project):
         return False
-    result = prepare_with_ui_mode_printing_errors(project,
-                                                  env_spec_name=conda_environment,
-                                                  ui_mode=ui_mode,
-                                                  command_name=command_name)
+    result = prepare_with_ui_mode_printing_errors(
+        project, env_spec_name=conda_environment, ui_mode=ui_mode, command_name=command_name)
 
     return result
 

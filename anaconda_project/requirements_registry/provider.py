@@ -138,9 +138,8 @@ def shutdown_service_run_state(local_state_file, service_name):
     local_state_file.save()
 
     if errors:
-        return SimpleStatus(success=False,
-                            description=("Shutdown commands failed for %s." % service_name),
-                            errors=errors)
+        return SimpleStatus(
+            success=False, description=("Shutdown commands failed for %s." % service_name), errors=errors)
     else:
         return SimpleStatus(success=True, description=("Successfully shut down %s." % service_name))
 
@@ -233,6 +232,7 @@ class ProvideResult(object):
         """Get an empty ProvideResult (currently a singleton since these are immutable)."""
         return _empty_provide_result
 
+
 # get this via ProvideResult.empty()
 _empty_provide_result = ProvideResult()
 
@@ -322,9 +322,10 @@ class Provider(with_metaclass(ABCMeta)):
         config = self.read_config(requirement, environ, local_state_file, default_env_spec_name, overrides)
         missing_to_configure = self.missing_env_vars_to_configure(requirement, environ, local_state_file)
         missing_to_provide = self.missing_env_vars_to_provide(requirement, environ, local_state_file)
-        return ProviderAnalysis(config=config,
-                                missing_env_vars_to_configure=missing_to_configure,
-                                missing_env_vars_to_provide=missing_to_provide)
+        return ProviderAnalysis(
+            config=config,
+            missing_env_vars_to_configure=missing_to_configure,
+            missing_env_vars_to_provide=missing_to_provide)
 
     @abstractmethod
     def provide(self, requirement, context):

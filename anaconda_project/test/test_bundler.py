@@ -23,24 +23,28 @@ def test_parse_ignore_file():
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
-        assert pattern_strings == ['bar', '/baz', 'whitespace_surrounding',
-                                   'foo # this comment will be part of the pattern', '#patternwithhash', 'hello']
+        assert pattern_strings == [
+            'bar', '/baz', 'whitespace_surrounding', 'foo # this comment will be part of the pattern',
+            '#patternwithhash', 'hello'
+        ]
 
-    with_directory_contents(
-        {".projectignore": """
+    with_directory_contents({
+        ".projectignore":
+        """
 # this is a sample .projectignore
    # there can be whitespace before the comment
 bar
 /baz
    whitespace_surrounding%s
 foo # this comment will be part of the pattern
-\#patternwithhash
+\\#patternwithhash
 
 # blank line above me
 
 hello
 
-        """ % ("   ")}, check)
+        """ % ("   ")
+    }, check)
 
 
 def test_parse_missing_ignore_file():
@@ -93,8 +97,10 @@ def test_parse_default_ignore_file():
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
-        assert pattern_strings == ['/anaconda-project-local.yml', '__pycache__/', '*.pyc', '*.pyo', '*.pyd',
-                                   '/.ipynb_checkpoints', '/.spyderproject']
+        assert pattern_strings == [
+            '/anaconda-project-local.yml', '__pycache__/', '*.pyc', '*.pyo', '*.pyd', '/.ipynb_checkpoints',
+            '/.spyderproject'
+        ]
 
     with_directory_contents(dict(), check)
 

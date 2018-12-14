@@ -90,15 +90,15 @@ class CondaPackageCreator:
             final_package_path = os.path.join(python_scoped_package_dir, build_arch, os.path.basename(package_path))
             all_final_package_paths.append(final_package_path)
             if os.path.isfile(final_package_path):
-                print("Package for python %s platform %s already exists: %s" %
-                      (python_version, build_arch, final_package_path))
+                print("Package for python %s platform %s already exists: %s" % (python_version, build_arch,
+                                                                                final_package_path))
             else:
                 if os.path.isfile(package_path):
                     print("Already built for python %s at %s" % (python_version, package_path))
                 else:
                     print("Calling conda build for %s %s" % (python_version, build_arch))
-                    code = subprocess.call(['conda', 'build', '--no-binstar-upload', '--python', python_version,
-                                            recipe_dir])
+                    code = subprocess.call(
+                        ['conda', 'build', '--no-binstar-upload', '--python', python_version, recipe_dir])
                     if code != 0:
                         raise Exception("Failed to build for python version " + python_version)
                     if not os.path.isfile(package_path):
@@ -124,11 +124,12 @@ class CondaPackageCreator:
                     print("Creating %s by conversion %s=>%s" % (converted_package_path, build_arch, arch))
                     self._safe_makedirs(converted_output_dir)
                     # this automatically creates the "arch" directory to put the package in
-                    code = subprocess.call(['conda', 'convert', '--platform', arch, final_package_path, '--output-dir',
-                                            converted_output_dir])
+                    code = subprocess.call([
+                        'conda', 'convert', '--platform', arch, final_package_path, '--output-dir', converted_output_dir
+                    ])
                     if code != 0:
-                        raise Exception("Failed to convert from %s to %s to create %s" %
-                                        (build_arch, arch, converted_package_path))
+                        raise Exception(
+                            "Failed to convert from %s to %s to create %s" % (build_arch, arch, converted_package_path))
                     all_final_package_paths.append(converted_package_path)
 
         print("Packages in " + self.packages_dir)
@@ -143,11 +144,8 @@ class CondaPackageCreator:
 def main():
     parser = argparse.ArgumentParser(description='Script to create conda packages for all platforms and '
                                      'python version 2.7, 3.5 and 3.6')
-    parser.add_argument(action="store",
-                        dest="packages_dir",
-                        default=None,
-                        help="location directory for built packages",
-                        nargs='?')
+    parser.add_argument(
+        action="store", dest="packages_dir", default=None, help="location directory for built packages", nargs='?')
 
     options = parser.parse_args()
     cpc = CondaPackageCreator(packages_dir=options.packages_dir)

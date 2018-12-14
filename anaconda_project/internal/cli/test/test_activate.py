@@ -13,6 +13,7 @@ except ImportError:
     from pipes import quote
 
 import platform
+import re
 
 from anaconda_project.internal.cli.main import _parse_args_and_run_subcommand
 from anaconda_project.internal.cli.activate import activate, main
@@ -48,6 +49,25 @@ def _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch):
     return can_connect_args
 
 
+def _filter_activate_result(result, vars):
+    additional_output = False
+    outputs = {}
+    for line in (result or ()):
+        match = re.match(r'^export ([^=]*)=(.*)$', line)
+        if match:
+            var, value = match.groups()
+            if var == 'PATH' and platform.system() == 'Windows':
+                print("activate changed PATH on Windows and ideally it would not.")
+            outputs[var] = value
+        else:
+            additional_output = True
+    if set(outputs) != set(vars) or additional_output:
+        import os
+        print("os.environ=" + repr(os.environ))
+        print("result=" + repr(result))
+    return tuple(outputs.get(v) for v in vars)
+
+
 def test_activate(monkeypatch):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
@@ -55,44 +75,34 @@ def test_activate(monkeypatch):
         project_dir_disable_dedicated_env(dirname)
         result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None, command_name=None)
         assert can_connect_args['port'] == 6379
-        assert result is not None
-        if platform.system() == 'Windows':
-            result = [line for line in result if not line.startswith("export PATH")]
-            print("activate changed PATH on Windows and ideally it would not.")
-        if len(result) > 2:
-            import os
-            print("os.environ=" + repr(os.environ))
-            print("result=" + repr(result))
-        assert ['export PROJECT_DIR=' + quote(dirname), 'export REDIS_URL=redis://localhost:6379'] == result
+        result = _filter_activate_result(result, ('PROJECT_DIR', 'REDIS_URL'))
+        assert result == (quote(dirname), 'redis://localhost:6379')
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-    """}, activate_redis_url)
+    """
+    }, activate_redis_url)
 
 
 def test_activate_quoting(monkeypatch):
     def activate_foo(dirname):
         project_dir_disable_dedicated_env(dirname)
         result = activate(dirname, UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT, conda_environment=None, command_name=None)
-        assert result is not None
-        if platform.system() == 'Windows':
-            result = [line for line in result if not line.startswith("export PATH")]
-            print("activate changed PATH on Windows and ideally it would not.")
-        assert ["export FOO='$! boo'", 'export PROJECT_DIR=' + quote(dirname)] == result
+        result = _filter_activate_result(result, ('FOO', 'PROJECT_DIR'))
+        assert result == ("'$! boo'", quote(dirname))
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
     """,
-            DEFAULT_LOCAL_STATE_FILENAME: """
+        DEFAULT_LOCAL_STATE_FILENAME: """
 variables:
   FOO: $! boo
 """
-        }, activate_foo)
+    }, activate_foo)
 
 
 def test_main(monkeypatch, capsys):
@@ -107,11 +117,12 @@ def test_main(monkeypatch, capsys):
         project_dir_disable_dedicated_env(dirname)
         main(Args(directory=dirname))
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, main_redis_url)
+"""
+    }, main_redis_url)
 
     assert can_connect_args['port'] == 6379
 
@@ -138,11 +149,12 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'activate'])
         assert code == 0
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, main_redis_url)
+"""
+    }, main_redis_url)
 
     assert can_connect_args['port'] == 6379
 
@@ -160,11 +172,12 @@ def test_main_dirname_provided_use_it(monkeypatch, capsys):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', '--directory', dirname])
         assert code == 0
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, main_redis_url)
+"""
+    }, main_redis_url)
 
     assert can_connect_args['port'] == 6379
 
@@ -177,15 +190,16 @@ services:
 def test_main_bad_command_provided(capsys):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'activate', '--directory', dirname, '--command',
-                                               'nope'])
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'activate', '--directory', dirname, '--command', 'nope'])
         assert code == 1
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, check)
+"""
+    }, check)
 
     out, err = capsys.readouterr()
     assert err.startswith("Command name 'nope' is not in")
@@ -210,11 +224,12 @@ def test_main_fails_to_redis(monkeypatch, capsys):
         code = main(Args(directory=dirname))
         assert 1 == code
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, main_redis_url)
+"""
+    }, main_redis_url)
 
     out, err = capsys.readouterr()
     assert "missing requirement" in err

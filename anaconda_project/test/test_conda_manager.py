@@ -38,21 +38,23 @@ def test_use_non_default_conda_manager():
         manager.find_environment_deviations(None, None)
         manager.fix_environment_deviations(None, None)
         manager.remove_packages(None, None)
-        assert dict(find_environment_deviations=(None, None),
-                    fix_environment_deviations=(None, None),
-                    remove_packages=(None, None)) == called
+        assert dict(
+            find_environment_deviations=(None, None),
+            fix_environment_deviations=(None, None),
+            remove_packages=(None, None)) == called
     finally:
         pop_conda_manager_class()
 
 
 def test_lock_set_properties(monkeypatch):
-    lock_set = CondaLockSet(
-        {'all': ["something=0.5=2", "bokeh=0.12.4=1"],
-         'linux-64': ["linux-thing=1.0=0"],
-         'unix': ["unix-thing=5=1"],
-         'win': ["windows-cross-bit-thing=3.2"],
-         'win-32': ["windows-thing=2.0=3", "bokeh=2.3=7"]},
-        platforms=['linux-64', 'win-32'])
+    lock_set = CondaLockSet({
+        'all': ["something=0.5=2", "bokeh=0.12.4=1"],
+        'linux-64': ["linux-thing=1.0=0"],
+        'unix': ["unix-thing=5=1"],
+        'win': ["windows-cross-bit-thing=3.2"],
+        'win-32': ["windows-thing=2.0=3", "bokeh=2.3=7"]
+    },
+                            platforms=['linux-64', 'win-32'])
     # it is part of the API definition that we need to APPEND the
     # per-platform stuff, so it overrides.
     assert lock_set.package_specs_for_platform('win-32') == ("something=0.5=2", "windows-cross-bit-thing=3.2",
@@ -69,26 +71,32 @@ def test_lock_set_properties(monkeypatch):
 
 
 def test_lock_set_to_json(monkeypatch):
-    lock_set = CondaLockSet(
-        {'all': ["something=0.5=2", "bokeh=0.12.4=1"],
-         'linux-64': ["linux-thing=1.0=0"],
-         'win-32': ["windows-thing=2.0=3", "bokeh=2.3=7"]},
-        platforms=['linux-64', 'win-32'])
-    assert {'locked': True,
-            'packages': {'all': ['something=0.5=2', 'bokeh=0.12.4=1'],
-                         'linux-64': ['linux-thing=1.0=0'],
-                         'win-32': ['windows-thing=2.0=3', 'bokeh=2.3=7']},
-            'platforms': ['linux-64', 'win-32']} == lock_set.to_json()
+    lock_set = CondaLockSet({
+        'all': ["something=0.5=2", "bokeh=0.12.4=1"],
+        'linux-64': ["linux-thing=1.0=0"],
+        'win-32': ["windows-thing=2.0=3", "bokeh=2.3=7"]
+    },
+                            platforms=['linux-64', 'win-32'])
+    assert {
+        'locked': True,
+        'packages': {
+            'all': ['something=0.5=2', 'bokeh=0.12.4=1'],
+            'linux-64': ['linux-thing=1.0=0'],
+            'win-32': ['windows-thing=2.0=3', 'bokeh=2.3=7']
+        },
+        'platforms': ['linux-64', 'win-32']
+    } == lock_set.to_json()
 
 
 def test_lock_set_to_yaml(monkeypatch):
-    lock_set = CondaLockSet(
-        {'all': ['a', 'b'],
-         'linux': ['x'],
-         'win': ['y'],
-         'linux-64': ['z', 'q'],
-         'osx-64': ['s']},
-        platforms=['linux-64', 'win-64', 'osx-64'])
+    lock_set = CondaLockSet({
+        'all': ['a', 'b'],
+        'linux': ['x'],
+        'win': ['y'],
+        'linux-64': ['z', 'q'],
+        'osx-64': ['s']
+    },
+                            platforms=['linux-64', 'win-64', 'osx-64'])
 
     # Mostly our interest here is that the ordering of the dict
     # is deterministic
@@ -115,21 +123,23 @@ packages:
 
 
 def test_lock_set_diff_and_equivalent():
-    old_lock_set = CondaLockSet(
-        {'all': ['a', 'b'],
-         'linux': ['x'],
-         'win': ['y'],
-         'linux-64': ['z', 'q'],
-         'osx-64': ['s']},
-        platforms=['linux-64', 'osx-64'])
-    new_lock_set = CondaLockSet(
-        {'all': ['a', 'b', 'c'],
-         'linux': ['x', 'h'],
-         'win': ['y'],
-         'linux-64': ['q', 'w'],
-         'osx-64': ['s'],
-         'win-64': ['j']},
-        platforms=['linux-64', 'win-64'])
+    old_lock_set = CondaLockSet({
+        'all': ['a', 'b'],
+        'linux': ['x'],
+        'win': ['y'],
+        'linux-64': ['z', 'q'],
+        'osx-64': ['s']
+    },
+                                platforms=['linux-64', 'osx-64'])
+    new_lock_set = CondaLockSet({
+        'all': ['a', 'b', 'c'],
+        'linux': ['x', 'h'],
+        'win': ['y'],
+        'linux-64': ['q', 'w'],
+        'osx-64': ['s'],
+        'win-64': ['j']
+    },
+                                platforms=['linux-64', 'win-64'])
 
     assert """  platforms:
 -   osx-64

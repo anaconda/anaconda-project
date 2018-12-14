@@ -54,9 +54,13 @@ class _Client(object):
 
     def create(self, project_info):
         url = "{}/apps/{}/projects".format(self._api.domain, self._username())
-        json = {'name': project_info['name'],
-                'access': 'public',
-                'profile': {'description': project_info['description']}}
+        json = {
+            'name': project_info['name'],
+            'access': 'public',
+            'profile': {
+                'description': project_info['description']
+            }
+        }
         data, headers = binstar_utils.jencode(json)
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
@@ -103,14 +107,10 @@ class _Client(object):
 
         with open(archive_filename, 'rb') as archive_file_object:
             data_stream, headers = binstar_requests_ext.stream_multipart(
-                s3data,
-                files={'file': (uploaded_basename, archive_file_object)})
+                s3data, files={'file': (uploaded_basename, archive_file_object)})
 
-            res = requests.post(url,
-                                data=data_stream,
-                                verify=self._api.session.verify,
-                                timeout=10 * 60 * 60,
-                                headers=headers)
+            res = requests.post(
+                url, data=data_stream, verify=self._api.session.verify, timeout=10 * 60 * 60, headers=headers)
             self._check_response(res)
         return res
 
@@ -120,9 +120,8 @@ class _Client(object):
             res = self.create(project_info=project_info)
             assert res.status_code in (200, 201)
 
-        res = self.stage(project_info=project_info,
-                         archive_filename=archive_filename,
-                         uploaded_basename=uploaded_basename)
+        res = self.stage(
+            project_info=project_info, archive_filename=archive_filename, uploaded_basename=uploaded_basename)
         assert res.status_code in (200, 201)
 
         stage_info = res.json()
@@ -131,10 +130,8 @@ class _Client(object):
         assert 'form_data' in stage_info
         assert 'dist_id' in stage_info
 
-        res = self._put_on_s3(archive_filename,
-                              uploaded_basename,
-                              url=stage_info['post_url'],
-                              s3data=stage_info['form_data'])
+        res = self._put_on_s3(
+            archive_filename, uploaded_basename, url=stage_info['post_url'], s3data=stage_info['form_data'])
         assert res.status_code in (200, 201)
 
         res = self.commit(project_info['name'], stage_info['dist_id'])
@@ -163,9 +160,8 @@ def _upload(project, archive_filename, uploaded_basename, site=None, username=No
     try:
         json = client.upload(project.publication_info(), archive_filename, uploaded_basename)
         return _UploadedStatus(json)
-    except Unauthorized as e:
-        return SimpleStatus(success=False,
-                            description='Please log in with the "anaconda login" command.',
-                            errors=["Not logged in."])
+    except Unauthorized:
+        return SimpleStatus(
+            success=False, description='Please log in with the "anaconda login" command.', errors=["Not logged in."])
     except BinstarError as e:
         return SimpleStatus(success=False, description="Upload failed.", errors=[str(e)])

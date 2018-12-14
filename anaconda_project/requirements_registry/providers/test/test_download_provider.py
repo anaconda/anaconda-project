@@ -51,16 +51,14 @@ ZIPPED_DATAFILE_CONTENT_NO_ZIP_SUFFIX = ("downloads:\n"
 
 
 def _download_requirement():
-    return DownloadRequirement(registry=RequirementsRegistry(),
-                               env_var="DATAFILE",
-                               url='http://localhost/data.csv',
-                               filename='data.csv')
+    return DownloadRequirement(
+        registry=RequirementsRegistry(), env_var="DATAFILE", url='http://localhost/data.csv', filename='data.csv')
 
 
 def test_prepare_and_unprepare_download(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -81,8 +79,10 @@ def test_prepare_and_unprepare_download(monkeypatch):
 
         project.frontend.reset()
         status = unprepare(project, result)
-        assert project.frontend.logs == ["Removed downloaded file %s." % filename,
-                                         ("Current environment is not in %s, no need to delete it." % dirname)]
+        assert project.frontend.logs == [
+            "Removed downloaded file %s." % filename,
+            ("Current environment is not in %s, no need to delete it." % dirname)
+        ]
         assert status.status_description == 'Success.'
         assert status
         assert not os.path.exists(filename)
@@ -93,7 +93,7 @@ def test_prepare_and_unprepare_download(monkeypatch):
 def test_prepare_download_mismatched_checksum_after_download(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -118,7 +118,7 @@ def test_prepare_download_mismatched_checksum_after_download(monkeypatch):
 def test_prepare_download_exception(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             raise Exception('error')
 
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
@@ -131,8 +131,10 @@ def test_prepare_download_exception(monkeypatch):
         project.frontend.reset()
         status = unprepare(project, result)
         filename = os.path.join(dirname, 'data.csv')
-        assert project.frontend.logs == ["No need to remove %s which wasn't downloaded." % filename,
-                                         ("Current environment is not in %s, no need to delete it." % dirname)]
+        assert project.frontend.logs == [
+            "No need to remove %s which wasn't downloaded." % filename,
+            ("Current environment is not in %s, no need to delete it." % dirname)
+        ]
         assert status.status_description == 'Success.'
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT}, provide_download)
@@ -141,7 +143,7 @@ def test_prepare_download_exception(monkeypatch):
 def test_unprepare_download_fails(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -183,7 +185,7 @@ def test_provide_minimal(monkeypatch):
 
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -207,15 +209,14 @@ def test_provide_no_download_in_check_mode(monkeypatch):
 
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             raise Exception("should not have tried to download in check mode")
 
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
 
         project = project_no_dedicated_env(dirname)
-        result = prepare_without_interaction(project,
-                                             environ=minimal_environ(PROJECT_DIR=dirname),
-                                             mode=provide.PROVIDE_MODE_CHECK)
+        result = prepare_without_interaction(
+            project, environ=minimal_environ(PROJECT_DIR=dirname), mode=provide.PROVIDE_MODE_CHECK)
         assert not result
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: MIN_DATAFILE_CONTENT}, provide_download)
@@ -273,7 +274,7 @@ def test_provide_wrong_form(monkeypatch):
 def test_failed_download(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -294,7 +295,7 @@ def test_failed_download(monkeypatch):
 def test_failed_download_before_connect(monkeypatch):
     def provide_download(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             # if we don't even get an HTTP response, the errors are handled this way,
             # e.g. if the URL is bad.
             self._errors = ['This went horribly wrong']
@@ -327,11 +328,10 @@ def test_file_exists(monkeypatch):
 
     LOCAL_STATE = ("DATAFILE:\n" "  filename: data.csv")
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT,
-            DEFAULT_LOCAL_STATE_FILENAME: LOCAL_STATE
-        }, provide_download)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT,
+        DEFAULT_LOCAL_STATE_FILENAME: LOCAL_STATE
+    }, provide_download)
 
 
 def test_prepare_download_of_zip_file(monkeypatch):
@@ -340,7 +340,7 @@ def test_prepare_download_of_zip_file(monkeypatch):
             f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT))
 
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -371,7 +371,7 @@ def test_prepare_download_of_zip_file_checksum(monkeypatch):
             f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT_CHECKSUM))
 
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -396,8 +396,10 @@ def test_prepare_download_of_zip_file_checksum(monkeypatch):
         project.frontend.reset()
         status = unprepare(project, result)
         filename = os.path.join(dirname, 'data')
-        assert project.frontend.logs == ["Removed downloaded file %s." % filename,
-                                         ("Current environment is not in %s, no need to delete it." % dirname)]
+        assert project.frontend.logs == [
+            "Removed downloaded file %s." % filename,
+            ("Current environment is not in %s, no need to delete it." % dirname)
+        ]
         assert status.status_description == "Success."
 
     with_tmp_zipfile(dict(foo='hello\n'), provide_download_of_zip)
@@ -409,7 +411,7 @@ def test_prepare_download_of_zip_file_no_unzip(monkeypatch):
             f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT_NO_UNZIP))
 
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -442,7 +444,7 @@ def test_prepare_download_of_zip_file_no_zip_extension(monkeypatch):
             f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT_NO_ZIP_SUFFIX))
 
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -474,7 +476,7 @@ def test_prepare_download_of_broken_zip_file(monkeypatch):
             f.write(complete_project_file_content(ZIPPED_DATAFILE_CONTENT))
 
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -509,7 +511,7 @@ def _download_status(prepare_context):
 def test_configure(monkeypatch):
     def check(dirname):
         @gen.coroutine
-        def mock_downloader_run(self, loop):
+        def mock_downloader_run(self):
             class Res:
                 pass
 
@@ -566,7 +568,9 @@ def test_configure(monkeypatch):
         assert dict(source='variables', value='qrs.txt') == config
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 downloads:
   FOO: http://example.com/data.csv
-    """}, check)
+    """
+        }, check)

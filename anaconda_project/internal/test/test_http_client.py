@@ -25,7 +25,7 @@ def _download_file(length, hash_algorithm):
         with HttpServerTestContext() as server:
             url = server.new_download_url(download_length=length, hash_algorithm=hash_algorithm)
             download = FileDownloader(url=url, filename=filename, hash_algorithm=hash_algorithm)
-            response = IOLoop.current().run_sync(lambda: download.run(IOLoop.current()))
+            response = IOLoop.current().run_sync(download.run)
             assert [] == download.errors
             assert response is not None
             assert response.code == 200
@@ -74,7 +74,7 @@ def test_download_has_http_error():
         with HttpServerTestContext() as server:
             url = server.error_url
             download = FileDownloader(url=url, filename=filename, hash_algorithm='md5')
-            response = IOLoop.current().run_sync(lambda: download.run(IOLoop.current()))
+            response = IOLoop.current().run_sync(download.run)
             assert ['Failed download to %s: HTTP 404: Not Found' % filename] == download.errors
             assert response is None
             assert not os.path.isfile(filename)
@@ -93,7 +93,7 @@ def test_download_fail_to_create_directory(monkeypatch):
         with HttpServerTestContext() as server:
             url = server.error_url
             download = FileDownloader(url=url, filename=filename, hash_algorithm='md5')
-            response = IOLoop.current().run_sync(lambda: download.run(IOLoop.current()))
+            response = IOLoop.current().run_sync(download.run)
             assert ["Could not create directory '%s': Cannot create %s" % (dirname, dirname)] == download.errors
             assert response is None
             assert not os.path.isfile(filename)
@@ -120,13 +120,15 @@ def test_download_fail_to_open_file(monkeypatch):
             with HttpServerTestContext() as server:
                 url = server.error_url
                 download = FileDownloader(url=url, filename=filename, hash_algorithm='md5')
-                response = IOLoop.current().run_sync(lambda: download.run(IOLoop.current()))
+                response = IOLoop.current().run_sync(download.run)
                 filename_with_weird_extra_slashes = filename
                 if platform.system() == 'Windows':
                     # I dunno. that's what Windows gives us.
                     filename_with_weird_extra_slashes = filename.replace("\\", "\\\\")
-                assert ["Failed to open %s.part: [Errno 13] Permission denied: '%s.part'" %
-                        (filename, filename_with_weird_extra_slashes)] == download.errors
+                assert [
+                    "Failed to open %s.part: [Errno 13] Permission denied: '%s.part'" %
+                    (filename, filename_with_weird_extra_slashes)
+                ] == download.errors
                 assert response is None
                 assert not os.path.isfile(filename)
                 if platform.system() != 'Windows':
@@ -164,7 +166,7 @@ def test_download_fail_to_write_file(monkeypatch):
             else:
                 monkeypatch.setattr('__builtin__.open', mock_open)
 
-            response = IOLoop.current().run_sync(lambda: download.run(IOLoop.current()))
+            response = IOLoop.current().run_sync(download.run)
             assert ["Failed to write to %s: FAIL" % (filename + ".part")] == download.errors
             assert response.code == 200
             assert not os.path.isfile(filename)
@@ -185,7 +187,7 @@ def test_download_fail_to_rename_tmp_file(monkeypatch):
 
             monkeypatch.setattr('anaconda_project.internal.rename.rename_over_existing', mock_rename)
 
-            response = IOLoop.current().run_sync(lambda: download.run(IOLoop.current()))
+            response = IOLoop.current().run_sync(download.run)
             assert ["Failed to rename %s to %s: FAIL" % (filename + ".part", filename)] == download.errors
             assert response.code == 200
             assert not os.path.isfile(filename)

@@ -9,6 +9,7 @@ import codecs
 import os
 
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
+from anaconda_project.test.project_utils import assert_identical_except_blank_lines
 from anaconda_project.project_lock_file import (ProjectLockFile, DEFAULT_PROJECT_LOCK_FILENAME,
                                                 possible_project_lock_file_names)
 from anaconda_project.conda_manager import CondaLockSet
@@ -83,7 +84,7 @@ def test_create_missing_lock_file_only_when_not_default():
         with codecs.open(filename, 'r', 'utf-8') as file:
             contents = file.read()
             expected = expected_default_file + "something: 42\n"
-            assert expected == contents
+            assert_identical_except_blank_lines(expected, contents)
 
     with_directory_contents(dict(), create_file)
 
@@ -96,8 +97,9 @@ def _use_existing_lock_file(relative_name):
         assert lock_file.get_value(['env_specs', 'foo']) is not None
         assert lock_file.get_value(['locking_enabled']) is True
 
-    with_directory_contents(
-        {relative_name: """
+    with_directory_contents({
+        relative_name:
+        """
 locking_enabled: true
 env_specs:
   foo:
@@ -112,7 +114,8 @@ env_specs:
     packages:
       all:
         - bar=2.0=2
-"""}, check_file)
+"""
+    }, check_file)
 
 
 def test_use_existing_lock_file_default_name():
@@ -135,8 +138,9 @@ def test_get_lock_set():
         bar_lock_set = _get_lock_set(lock_file, 'bar')
         assert bar_lock_set.disabled
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_LOCK_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        """
 locking_enabled: true
 env_specs:
   foo:
@@ -151,7 +155,8 @@ env_specs:
     packages:
       all:
         - bar=2.0=2
-"""}, check_file)
+"""
+    }, check_file)
 
 
 def test_disable_single_spec_locking():
@@ -168,8 +173,9 @@ def test_disable_single_spec_locking():
         assert foo_lock_set.disabled
         assert _get_locking_enabled(lock_file, 'foo') is False
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_LOCK_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        """
 locking_enabled: true
 env_specs:
   foo:
@@ -184,7 +190,8 @@ env_specs:
     packages:
       all:
         - bar=2.0=2
-"""}, check_file)
+"""
+    }, check_file)
 
 
 def test_set_lock_set():
@@ -203,7 +210,9 @@ def test_set_lock_set():
 
         all_names = ['foo', 'bar']
 
-        lock_set = CondaLockSet({'all': ['something=3.0=0']},
+        lock_set = CondaLockSet({
+            'all': ['something=3.0=0']
+        },
                                 platforms=['linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64'])
         lock_set.env_spec_hash = "hash-hash-hash"
 
@@ -243,8 +252,9 @@ def test_set_lock_set():
         bar_lock_set = _get_lock_set(reloaded, 'bar')
         assert bar_lock_set.env_spec_hash == 'hash2.0'
 
-    with_directory_contents(
-        {DEFAULT_PROJECT_LOCK_FILENAME: """
+    with_directory_contents({
+        DEFAULT_PROJECT_LOCK_FILENAME:
+        """
 locking_enabled: false
 env_specs:
   foo:
@@ -258,7 +268,8 @@ env_specs:
     packages:
       all:
         - bar=2.0=2
-"""}, check_file)
+"""
+    }, check_file)
 
 
 def test_set_lock_set_has_to_create_env_specs_to_disable():
@@ -269,7 +280,9 @@ def test_set_lock_set_has_to_create_env_specs_to_disable():
 
         all_names = ['foo', 'bar']
 
-        lock_set = CondaLockSet({'all': ['something=3.0=0']},
+        lock_set = CondaLockSet({
+            'all': ['something=3.0=0']
+        },
                                 platforms=['linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64'])
 
         # so the point of this test is that we need to create env_specs

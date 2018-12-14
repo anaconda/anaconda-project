@@ -115,12 +115,11 @@ def test_add_env_spec_no_packages(capsys, monkeypatch):
 def test_add_env_spec_with_packages(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        params = _monkeypatch_add_env_spec(monkeypatch,
-                                           SimpleStatus(success=True,
-                                                        description='Environment looks good.'))
+        params = _monkeypatch_add_env_spec(monkeypatch, SimpleStatus(
+            success=True, description='Environment looks good.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-env-spec', '--name', 'foo', '--channel', 'c1',
-                                               '--channel=c2', 'a', 'b'])
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'add-env-spec', '--name', 'foo', '--channel', 'c1', '--channel=c2', 'a', 'b'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -136,10 +135,12 @@ def test_add_env_spec_with_packages(capsys, monkeypatch):
 def test_add_env_spec_fails(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
-        _monkeypatch_add_env_spec(monkeypatch,
-                                  SimpleStatus(success=False,
-                                               description='Environment variable MYDATA is not set.',
-                                               errors=['This is an error message.']))
+        _monkeypatch_add_env_spec(
+            monkeypatch,
+            SimpleStatus(
+                success=False,
+                description='Environment variable MYDATA is not set.',
+                errors=['This is an error message.']))
 
         code = _parse_args_and_run_subcommand(['anaconda-project', 'add-env-spec', '--name', 'foo'])
         assert code == 1
@@ -190,12 +191,13 @@ def test_remove_env_spec_fails(capsys, monkeypatch):
         assert '' == out
         assert ("Failed to remove environment files in %s: Error.\n" % os.path.join(dirname, "envs", "foo")) == err
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
-            '  baz:\n    channels: []\n    packages:\n    - bar\n',
-            'envs/foo/bin/test': 'code here'
-        }, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
+        '  baz:\n    channels: []\n    packages:\n    - bar\n',
+        'envs/foo/bin/test':
+        'code here'
+    }, check)
 
 
 def test_remove_env_spec(capsys, monkeypatch):
@@ -210,12 +212,13 @@ def test_remove_env_spec(capsys, monkeypatch):
         assert ('Deleted environment files in %s.\nRemoved environment foo from the project file.\n' % os.path.join(
             dirname, "envs", "foo")) == out
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
-            '  bar:\n    channels: []\n    packages:\n    - baz\n',
-            'envs/foo/bin/test': 'code here'
-        }, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
+        '  bar:\n    channels: []\n    packages:\n    - baz\n',
+        'envs/foo/bin/test':
+        'code here'
+    }, check)
 
 
 def test_remove_only_env_spec(capsys, monkeypatch):
@@ -248,9 +251,9 @@ def test_remove_env_spec_in_use(capsys, monkeypatch):
         assert (("%s: env_spec 'bar' for command 'foo' does not appear in the env_specs section\n" %
                  DEFAULT_PROJECT_FILENAME) + "Unable to load the project.\n") == err
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 commands:
   foo:
     unix: envs/foo/bin/test
@@ -264,8 +267,9 @@ env_specs:
       packages:
         - boo
 """,
-            'envs/foo/bin/test': 'code here'
-        }, check)
+        'envs/foo/bin/test':
+        'code here'
+    }, check)
 
 
 def test_add_env_spec_with_project_file_problems(capsys, monkeypatch):
@@ -290,12 +294,13 @@ def test_export_env_spec(capsys, monkeypatch):
         assert '' == err
         assert ('Exported environment spec foo to %s.\n' % exported) == out
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
-            '  bar:\n    channels: []\n    packages:\n    - baz\n',
-            'envs/foo/bin/test': 'code here'
-        }, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
+        '  bar:\n    channels: []\n    packages:\n    - baz\n',
+        'envs/foo/bin/test':
+        'code here'
+    }, check)
 
 
 def test_export_env_spec_default_name(capsys, monkeypatch):
@@ -310,12 +315,13 @@ def test_export_env_spec_default_name(capsys, monkeypatch):
         assert '' == err
         assert ('Exported environment spec foo to %s.\n' % exported) == out
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
-            '  bar:\n    channels: []\n    packages:\n    - baz\n',
-            'envs/foo/bin/test': 'code here'
-        }, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
+        '  bar:\n    channels: []\n    packages:\n    - baz\n',
+        'envs/foo/bin/test':
+        'code here'
+    }, check)
 
 
 def test_export_env_spec_no_filename(capsys, monkeypatch):
@@ -329,17 +335,18 @@ def test_export_env_spec_no_filename(capsys, monkeypatch):
         assert 'ENVIRONMENT_FILE' in err
         assert '' == out
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: 'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
-            '  bar:\n    channels: []\n    packages:\n    - baz\n',
-            'envs/foo/bin/test': 'code here'
-        }, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        'env_specs:\n  foo:\n    channels: []\n    packages:\n    - bar\n' +
+        '  bar:\n    channels: []\n    packages:\n    - baz\n',
+        'envs/foo/bin/test':
+        'code here'
+    }, check)
 
 
 def test_add_packages_with_project_file_problems(capsys, monkeypatch):
-    _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'add-packages',
-                                                                               'foo'])
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch,
+                                                         ['anaconda-project', 'add-packages', 'foo'])
 
 
 def test_remove_packages_with_project_file_problems(capsys, monkeypatch):
@@ -352,8 +359,8 @@ def test_add_packages_to_all_environments(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_add_packages(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-packages', '--channel', 'c1', '--channel=c2',
-                                               'a', 'b'])
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'add-packages', '--channel', 'c1', '--channel=c2', 'a', 'b'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -371,8 +378,8 @@ def test_add_packages_to_specific_environment(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_add_packages(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-packages', '--env-spec', 'foo', '--channel',
-                                               'c1', '--channel=c2', 'a', 'b'])
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'add-packages', '--env-spec', 'foo', '--channel', 'c1', '--channel=c2', 'a', 'b'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -383,12 +390,14 @@ def test_add_packages_to_specific_environment(capsys, monkeypatch):
         assert dict(env_spec_name='foo', packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
    packages:
      - bar
-"""}, check)
+"""
+        }, check)
 
 
 def test_remove_packages_from_all_environments(capsys, monkeypatch):
@@ -428,8 +437,8 @@ def test_remove_packages_from_specific_environment(capsys, monkeypatch):
 
 
 def test_add_platforms_with_project_file_problems(capsys, monkeypatch):
-    _test_environment_command_with_project_file_problems(capsys, monkeypatch, ['anaconda-project', 'add-platforms',
-                                                                               'foo'])
+    _test_environment_command_with_project_file_problems(capsys, monkeypatch,
+                                                         ['anaconda-project', 'add-platforms', 'foo'])
 
 
 def test_remove_platforms_with_project_file_problems(capsys, monkeypatch):
@@ -471,12 +480,14 @@ def test_add_platforms_to_specific_environment(capsys, monkeypatch):
         assert dict(env_spec_name='foo', platforms=['a', 'b']) == params['kwargs']
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
    packages:
      - bar
-"""}, check)
+"""
+        }, check)
 
 
 def test_remove_platforms_from_all_environments(capsys, monkeypatch):
@@ -532,14 +543,15 @@ foo
 
         assert out == expected_out
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                    '  foo:\n'
-                                    '    packages:\n'
-                                    '      - bar\n'
-                                    '  bar:\n'
-                                    '    packages:\n'
-                                    '      - bar\n')}, check_list_not_empty)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
+                                   '  foo:\n'
+                                   '    packages:\n'
+                                   '      - bar\n'
+                                   '  bar:\n'
+                                   '    packages:\n'
+                                   '      - bar\n')
+    }, check_list_not_empty)
 
 
 def test_list_empty_environments(capsys, monkeypatch):
@@ -561,17 +573,15 @@ default
 
 
 def test_list_environments_with_project_file_problems(capsys, monkeypatch):
-    _test_environment_command_with_project_file_problems(capsys,
-                                                         monkeypatch,
-                                                         ['anaconda-project', 'list-env-specs', '--directory'],
-                                                         append_dirname=True)
+    _test_environment_command_with_project_file_problems(
+        capsys, monkeypatch, ['anaconda-project', 'list-env-specs', '--directory'], append_dirname=True)
 
 
 def test_list_packages_wrong_env(capsys):
     def check_missing_env(dirname):
         env_name = 'not-there'
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-packages', '--directory', dirname,
-                                               '--env-spec', env_name])
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'list-packages', '--directory', dirname, '--env-spec', env_name])
 
         assert code == 1
 
@@ -625,17 +635,15 @@ def test_list_packages_from_env_default(capsys):
 
 
 def test_list_packages_with_project_file_problems(capsys, monkeypatch):
-    _test_environment_command_with_project_file_problems(capsys,
-                                                         monkeypatch,
-                                                         ['anaconda-project', 'list-packages', '--directory'],
-                                                         append_dirname=True)
+    _test_environment_command_with_project_file_problems(
+        capsys, monkeypatch, ['anaconda-project', 'list-packages', '--directory'], append_dirname=True)
 
 
 def test_list_platforms_wrong_env(capsys):
     def check_missing_env(dirname):
         env_name = 'not-there'
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-platforms', '--directory', dirname,
-                                               '--env-spec', env_name])
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'list-platforms', '--directory', dirname, '--env-spec', env_name])
 
         assert code == 1
 
@@ -689,10 +697,8 @@ def test_list_platforms_from_env_default(capsys):
 
 
 def test_list_platforms_with_project_file_problems(capsys, monkeypatch):
-    _test_environment_command_with_project_file_problems(capsys,
-                                                         monkeypatch,
-                                                         ['anaconda-project', 'list-platforms', '--directory'],
-                                                         append_dirname=True)
+    _test_environment_command_with_project_file_problems(
+        capsys, monkeypatch, ['anaconda-project', 'list-platforms', '--directory'], append_dirname=True)
 
 
 def test_lock_all_environments(capsys, monkeypatch):

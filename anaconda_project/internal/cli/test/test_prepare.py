@@ -57,11 +57,12 @@ def _test_prepare_command(monkeypatch, ui_mode):
         assert can_connect_args['port'] == 6379
         assert result
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, prepare_redis_url)
+"""
+    }, prepare_redis_url)
 
 
 def test_prepare_command_development(monkeypatch):
@@ -106,11 +107,12 @@ def test_main_fails_to_redis(monkeypatch, capsys):
         code = main(Args(directory=dirname))
         assert 1 == code
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
   REDIS_URL: redis
-"""}, main_redis_url)
+"""
+    }, main_redis_url)
 
     out, err = capsys.readouterr()
     assert "missing requirement" in err
@@ -131,8 +133,8 @@ def test_prepare_command_choose_environment(capsys, monkeypatch):
     def check_prepare_choose_environment(dirname):
         wrong_envdir = os.path.join(dirname, "envs", "foo")
         envdir = os.path.join(dirname, "envs", "bar")
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--env-spec=bar'
-                                                 ])
+        result = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'prepare', '--directory', dirname, '--env-spec=bar'])
         assert result == 0
 
         assert os.path.isdir(envdir)
@@ -141,8 +143,9 @@ def test_prepare_command_choose_environment(capsys, monkeypatch):
         package_json = os.path.join(envdir, "conda-meta", "nonexistent_bar-0.1-pyNN.json")
         assert os.path.isfile(package_json)
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
   foo:
     packages:
@@ -150,7 +153,8 @@ env_specs:
   bar:
     packages:
         - nonexistent_bar
-"""}, check_prepare_choose_environment)
+"""
+    }, check_prepare_choose_environment)
 
     out, err = capsys.readouterr()
     assert out == (
@@ -161,18 +165,19 @@ env_specs:
 def test_prepare_command_choose_environment_does_not_exist(capsys):
     def check_prepare_choose_environment_does_not_exist(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname,
-                                                 '--env-spec=nope'])
+        result = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'prepare', '--directory', dirname, '--env-spec=nope'])
         assert result == 1
 
-        expected_error = ("Environment name 'nope' is not in %s, these names were found: bar, foo" %
-                          os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
+        expected_error = ("Environment name 'nope' is not in %s, these names were found: bar, foo" % os.path.join(
+            dirname, DEFAULT_PROJECT_FILENAME))
         out, err = capsys.readouterr()
         assert out == ""
         assert expected_error in err
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
   foo:
     packages:
@@ -180,33 +185,33 @@ env_specs:
   bar:
     packages:
         - nonexistent_bar
-"""}, check_prepare_choose_environment_does_not_exist)
+"""
+    }, check_prepare_choose_environment_does_not_exist)
 
 
 @pytest.mark.slow
 def test_prepare_command_choose_command_chooses_env_spec(capsys):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname,
-                                                 '--command=with_bar'])
+        result = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'prepare', '--directory', dirname, '--command=with_bar'])
         assert result == 1
 
         out, err = capsys.readouterr()
-        assert 'Fetching package' in out
         assert 'nonexistent_bar' in err
         assert 'nonexistent_foo' not in err
 
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname,
-                                                 '--command=with_foo'])
+        result = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'prepare', '--directory', dirname, '--command=with_foo'])
         assert result == 1
 
         out, err = capsys.readouterr()
-        assert 'Fetching package' in out
         assert 'nonexistent_foo' in err
         assert 'nonexistent_bar' not in err
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
   foo:
     packages:
@@ -222,7 +227,8 @@ commands:
     conda_app_entry: python --version
     env_spec: bar
 
-"""}, check)
+"""
+    }, check)
 
 
 def test_ask_variables_interactively(monkeypatch):
@@ -252,11 +258,13 @@ def test_ask_variables_interactively(monkeypatch):
     keyring.enable_fallback_keyring()
     try:
         with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+            {
+                DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR_PASSWORD: null
-"""}, check)
+"""
+            }, check)
     finally:
         keyring.disable_fallback_keyring()
 
@@ -284,12 +292,13 @@ def test_ask_variables_interactively_empty_answer_re_asks(monkeypatch):
         assert local_state.get_value(['variables', 'FOO']) == 'foo'
         assert local_state.get_value(['variables', 'BAR']) == 'bar'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: null
-"""}, check)
+"""
+    }, check)
 
 
 def test_ask_variables_interactively_whitespace_answer_re_asks(monkeypatch):
@@ -315,12 +324,13 @@ def test_ask_variables_interactively_whitespace_answer_re_asks(monkeypatch):
         assert local_state.get_value(['variables', 'FOO']) == 'foo'
         assert local_state.get_value(['variables', 'BAR']) == 'bar'
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: null
-"""}, check)
+"""
+    }, check)
 
 
 _foo_and_bar_missing = ("missing requirement to run this project: BAR environment variable must be set.\n" +
@@ -350,12 +360,13 @@ def test_ask_variables_interactively_eof_answer_gives_up(monkeypatch, capsys):
 
         assert err == _foo_and_bar_missing
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: null
-"""}, check)
+"""
+    }, check)
 
 
 def test_ask_variables_interactively_then_set_variable_fails(monkeypatch, capsys):
@@ -386,12 +397,13 @@ def test_ask_variables_interactively_then_set_variable_fails(monkeypatch, capsys
 
         assert err == _foo_and_bar_missing + "Set variables FAIL\n"
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: null
-"""}, check)
+"""
+    }, check)
 
 
 def test_no_ask_variables_interactively_not_interactive(monkeypatch, capsys):
@@ -415,12 +427,13 @@ def test_no_ask_variables_interactively_not_interactive(monkeypatch, capsys):
 
         assert err == _foo_and_bar_missing
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: null
-"""}, check)
+"""
+    }, check)
 
 
 def test_no_ask_variables_interactively_if_no_variables_missing_but_prepare_fails(monkeypatch, capsys):
@@ -446,8 +459,9 @@ def test_no_ask_variables_interactively_if_no_variables_missing_but_prepare_fail
         assert err == ("%s: env_specs should be a dictionary from environment name to environment attributes, not 42\n"
                        "Unable to load the project.\n") % DEFAULT_PROJECT_FILENAME
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 variables:
   FOO: { default: "foo" }
   BAR: { default: "bar" }
@@ -455,7 +469,8 @@ variables:
 # breakage
 env_specs: 42
 
-"""}, check)
+"""
+    }, check)
 
 
 @pytest.mark.slow
@@ -481,10 +496,12 @@ def test_no_ask_conda_prefix_interactively(monkeypatch, capsys):
         assert err.endswith("Conda environment is missing packages: nonexistent_package_name\n")
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 packages:
  - nonexistent_package_name
-"""}, check)
+"""
+        }, check)
 
 
 def test_display_suggestions(monkeypatch, capsys):
@@ -514,8 +531,9 @@ Use `anaconda-project list-commands` to see what's available.
 """ == out
         assert '' == err
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 packages: []
 weird_field: 42
-"""}, check)
+"""
+    }, check)

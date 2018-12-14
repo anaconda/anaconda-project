@@ -28,10 +28,12 @@ def test_service_dict_with_options():
         assert req.env_var == 'FOOBAR'
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 services:
     FOOBAR: { type: redis, foo: bar, default: hello }
-    """}, check)
+    """
+        }, check)
 
 
 def test_service_dict_with_bad_value():
@@ -40,11 +42,13 @@ def test_service_dict_with_bad_value():
         assert ["Service FOOBAR should have a service type string or a dictionary as its value."] == project.problems
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 services:
     FOOBAR:
      - 42
-    """}, check)
+    """
+        }, check)
 
 
 def test_service_with_bad_service_type():
@@ -53,10 +57,12 @@ def test_service_with_bad_service_type():
         assert ["Service FOOBAR has an unknown type 'not_a_service'."] == project.problems
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 services:
     FOOBAR: not_a_service
-    """}, check)
+    """
+        }, check)
 
 
 def test_service_dict_with_no_service_type():
@@ -64,11 +70,12 @@ def test_service_dict_with_no_service_type():
         project = Project(dirname)
         assert ["Service FOOBAR doesn't contain a 'type' field."] == project.problems
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: """
 services:
     FOOBAR: {}
-    """}, check)
+    """
+    }, check)
 
 
 def test_service_dict_bad_default():
@@ -77,7 +84,9 @@ def test_service_dict_bad_default():
         assert ["default value for variable FOOBAR must be null, a string, or a number, not []."] == project.problems
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME: """
 services:
     FOOBAR: { type: redis, default: [] }
-    """}, check)
+    """
+        }, check)

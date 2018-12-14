@@ -300,13 +300,14 @@ class DefaultCondaManager(CondaManager):
     def find_environment_deviations(self, prefix, spec):
         broken_lock_set = self._broken_lock_set_error(spec)
         if broken_lock_set is not None:
-            return CondaEnvironmentDeviations(summary=broken_lock_set,
-                                              missing_packages=(),
-                                              wrong_version_packages=(),
-                                              missing_pip_packages=(),
-                                              wrong_version_pip_packages=(),
-                                              broken=True,
-                                              unfixable=True)
+            return CondaEnvironmentDeviations(
+                summary=broken_lock_set,
+                missing_packages=(),
+                wrong_version_packages=(),
+                missing_pip_packages=(),
+                wrong_version_pip_packages=(),
+                broken=True,
+                unfixable=True)
 
         if not os.path.isdir(os.path.join(prefix, 'conda-meta')):
             return CondaEnvironmentDeviations(
@@ -342,12 +343,13 @@ class DefaultCondaManager(CondaManager):
             summary = "Conda environment needs to be marked as up-to-date"
         else:
             summary = "OK"
-        return CondaEnvironmentDeviations(summary=summary,
-                                          missing_packages=conda_missing,
-                                          wrong_version_packages=conda_wrong_version,
-                                          missing_pip_packages=pip_missing,
-                                          wrong_version_pip_packages=(),
-                                          broken=(not timestamp_ok))
+        return CondaEnvironmentDeviations(
+            summary=summary,
+            missing_packages=conda_missing,
+            wrong_version_packages=conda_wrong_version,
+            missing_pip_packages=pip_missing,
+            wrong_version_pip_packages=(),
+            broken=(not timestamp_ok))
 
     def fix_environment_deviations(self, prefix, spec, deviations=None, create=True):
         if deviations is None:
@@ -362,11 +364,12 @@ class DefaultCondaManager(CondaManager):
                 specs = spec.specs_for_conda_package_names(to_update)
                 assert len(specs) == len(to_update)
                 try:
-                    conda_api.install(prefix=prefix,
-                                      pkgs=specs,
-                                      channels=spec.channels,
-                                      stdout_callback=self._on_stdout,
-                                      stderr_callback=self._on_stderr)
+                    conda_api.install(
+                        prefix=prefix,
+                        pkgs=specs,
+                        channels=spec.channels,
+                        stdout_callback=self._on_stdout,
+                        stderr_callback=self._on_stderr)
                 except conda_api.CondaError as e:
                     raise CondaManagerError("Failed to install packages: {}: {}".format(", ".join(specs), str(e)))
         elif create:
@@ -378,11 +381,12 @@ class DefaultCondaManager(CondaManager):
                 command_line_packages = set(['python'])
 
             try:
-                conda_api.create(prefix=prefix,
-                                 pkgs=list(command_line_packages),
-                                 channels=spec.channels,
-                                 stdout_callback=self._on_stdout,
-                                 stderr_callback=self._on_stderr)
+                conda_api.create(
+                    prefix=prefix,
+                    pkgs=list(command_line_packages),
+                    channels=spec.channels,
+                    stdout_callback=self._on_stdout,
+                    stderr_callback=self._on_stderr)
             except conda_api.CondaError as e:
                 raise CondaManagerError("Failed to create environment at %s: %s" % (prefix, str(e)))
         else:
@@ -396,8 +400,8 @@ class DefaultCondaManager(CondaManager):
             try:
                 pip_api.install(prefix=prefix, pkgs=specs)
             except pip_api.PipError as e:
-                raise CondaManagerError("Failed to install missing pip packages: {}: {}".format(", ".join(missing), str(
-                    e)))
+                raise CondaManagerError("Failed to install missing pip packages: {}: {}".format(
+                    ", ".join(missing), str(e)))
 
         # write a file to tell us we can short-circuit next time
         self._write_timestamp_file(prefix, spec)

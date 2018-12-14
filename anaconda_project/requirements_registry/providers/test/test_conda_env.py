@@ -134,8 +134,8 @@ def test_unprepare_gets_error_on_delete(monkeypatch):
         monkeypatch.setattr('shutil.rmtree', mock_rmtree)
 
         status = unprepare(project, result)
-        assert status.status_description == ('Failed to remove environment files in %s: I will never rm the tree!.' %
-                                             (expected_env))
+        assert status.status_description == (
+            'Failed to remove environment files in %s: I will never rm the tree!.' % (expected_env))
         assert not status
 
         assert os.path.exists(expected_env)
@@ -158,11 +158,9 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
         result = prepare_without_interaction(project, environ=environ, mode=provide.PROVIDE_MODE_CHECK)
         assert not result
         expected_env_path = os.path.join(dirname, "envs", "default")
-        assert [
-            ('missing requirement to run this project: ' +
-             'The project needs a Conda environment containing all required packages.'),
-            "  '%s' doesn't look like it contains a Conda environment yet." % expected_env_path
-        ] == result.errors
+        assert [('missing requirement to run this project: ' +
+                 'The project needs a Conda environment containing all required packages.'),
+                "  '%s' doesn't look like it contains a Conda environment yet." % expected_env_path] == result.errors
 
         # unprepare should not have anything to do
         status = unprepare(project, result)
@@ -216,14 +214,17 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         result = prepare_without_interaction(project, environ=environ)
         assert not result
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 packages:
+    - python=3.7
     - ipython
-    - numpy
+    - numpy=1.15
     - pip:
       - flake8
-"""}, prepare_project_scoped_env_with_packages)
+"""
+    }, prepare_project_scoped_env_with_packages)
 
 
 def _conda_env_status(prepare_context):
@@ -331,9 +332,9 @@ def test_configure_different_env_spec(monkeypatch):
 
         assert os.path.join(envs_dir, 'bar') == prepare_context.local_state_file.get_value(['variables', req.env_var])
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 env_specs:
   default:
     packages: []
@@ -345,4 +346,4 @@ env_specs:
     packages: []
     channels: []
 """
-        }, check)
+    }, check)

@@ -12,15 +12,15 @@ environment:
                       # to the matrix section.
   matrix:
     - PYTHON_VERSION: "2.7"
-    - PYTHON_VERSION: "3.5"
     - PYTHON_VERSION: "3.6"
+    - PYTHON_VERSION: "3.7"
 
 platform:
   -x64
 
 install:
-  - if "%PYTHON_VERSION%" == "3.5" set "BASE_PYTHON_VERSION=35"
-  - if "%PYTHON_VERSION%" == "3.6" set "BASE_PYTHON_VERSION=3"
+  - if "%PYTHON_VERSION%" == "3.6" set "BASE_PYTHON_VERSION=36"
+  - if "%PYTHON_VERSION%" == "3.7" set "BASE_PYTHON_VERSION=3"
   - if "%PYTHON_ARCH%" == "64" set "ARCH_LABEL=-x64"
   # These are already installed on appveyor.  Update them.
   - set "CONDA_ROOT=C:\Miniconda%BASE_PYTHON_VERSION%%ARCH_LABEL%"
@@ -30,13 +30,14 @@ install:
   - set PATH
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda config --set always_yes yes
+  - conda config --add channels conda-forge --add channels defaults
   # Use the latest conda
   - conda install -n root -q conda --no-pin
   # activate with newer conda, may set different variables
   - "%CONDA_ROOT%\\Scripts\\activate root"
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - conda info -a
-  - conda create -q -n test-environment python=%PYTHON_VERSION% keyring pip notebook bokeh ruamel_yaml anaconda-client requests tornado coverage pytest pytest-cov
+  - conda create -q -n test-environment python=%PYTHON_VERSION% keyring pip notebook bokeh ruamel_yaml anaconda-client requests tornado coverage pytest pytest-cov pep257 flake8 yapf
 
 # Not a .NET project, we build in the install step instead
 build: false
@@ -46,9 +47,6 @@ test_script:
   - "%CONDA_ROOT%\\Scripts\\activate test-environment"
   - echo CONDA_PREFIX %CONDA_PREFIX%
   - echo PATH %PATH%
-  - pip install pep257 yapf==0.6.2 flake8==2.6.2
-  - if "%PYTHON_VERSION%" == "3.5" pip install ruamel.yaml
-  - if "%PYTHON_VERSION%" == "3.6" pip install ruamel.yaml
   - conda list
   - conda info -a
   - python -c "import sys; print(sys.version)"

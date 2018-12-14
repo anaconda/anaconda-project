@@ -49,8 +49,8 @@ class DownloadRequirement(EnvVarRequirement):
                     continue
 
                 if hash_algorithm is not None:
-                    problems.append("Multiple checksums for download {}: {} and {}.".format(varname, hash_algorithm,
-                                                                                            method))
+                    problems.append("Multiple checksums for download {}: {} and {}.".format(
+                        varname, hash_algorithm, method))
                     return None
                 else:
                     hash_value = item[method]
@@ -63,8 +63,8 @@ class DownloadRequirement(EnvVarRequirement):
             filename = item.get('filename', None)
             unzip = item.get('unzip', None)
             if unzip is not None and not isinstance(unzip, bool):
-                problems.append("Value of 'unzip' for download item {} should be a boolean, not {}.".format(varname,
-                                                                                                            unzip))
+                problems.append("Value of 'unzip' for download item {} should be a boolean, not {}.".format(
+                    varname, unzip))
                 return None
 
         if url is None or not is_string(url):
@@ -104,13 +104,14 @@ class DownloadRequirement(EnvVarRequirement):
         if unzip is None:
             unzip = False
 
-        return dict(env_var=varname,
-                    url=url,
-                    filename=filename,
-                    hash_algorithm=hash_algorithm,
-                    hash_value=hash_value,
-                    unzip=unzip,
-                    description=description)
+        return dict(
+            env_var=varname,
+            url=url,
+            filename=filename,
+            hash_algorithm=hash_algorithm,
+            hash_value=hash_value,
+            unzip=unzip,
+            description=description)
 
     def __init__(self,
                  registry,
@@ -163,11 +164,12 @@ class DownloadRequirement(EnvVarRequirement):
             status_description = ("File downloaded to {}".format(self._get_value_of_env_var(environ)))
         else:
             status_description = why_not_provided
-        return self._create_status(environ,
-                                   local_state_file,
-                                   default_env_spec_name,
-                                   overrides=overrides,
-                                   has_been_provided=has_been_provided,
-                                   status_description=status_description,
-                                   provider_class_name='DownloadProvider',
-                                   latest_provide_result=latest_provide_result)
+        return self._create_status(
+            environ,
+            local_state_file,
+            default_env_spec_name,
+            overrides=overrides,
+            has_been_provided=has_been_provided,
+            status_description=status_description,
+            provider_class_name='DownloadProvider',
+            latest_provide_result=latest_provide_result)

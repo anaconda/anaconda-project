@@ -80,8 +80,9 @@ class RedisProvider(EnvVarProvider):
         port_range_string = local_state_file.get_value(section + ['port_range'], default=default_port_range)
         parsed_port_range = self._parse_port_range(port_range_string)
         if parsed_port_range is None:
-            print("Invalid port_range '%s', should be like '%s'" % (port_range_string, default_port_range),
-                  file=sys.stderr)
+            print(
+                "Invalid port_range '%s', should be like '%s'" % (port_range_string, default_port_range),
+                file=sys.stderr)
             config['lower_port'] = default_lower_port
             config['upper_port'] = default_upper_port
         else:
@@ -147,11 +148,12 @@ class RedisProvider(EnvVarProvider):
         previous = self._previously_run_redis_url_if_alive(run_state)
         systemwide = self._can_connect_to_system_default()
 
-        return _RedisProviderAnalysis(analysis.config,
-                                      analysis.missing_env_vars_to_configure,
-                                      analysis.missing_env_vars_to_provide,
-                                      existing_scoped_instance_url=previous,
-                                      default_system_exists=systemwide)
+        return _RedisProviderAnalysis(
+            analysis.config,
+            analysis.missing_env_vars_to_configure,
+            analysis.missing_env_vars_to_provide,
+            existing_scoped_instance_url=previous,
+            default_system_exists=systemwide)
 
     def _provide_system(self, requirement, context, frontend):
         if context.status.analysis.default_system_exists:
@@ -194,8 +196,8 @@ class RedisProvider(EnvVarProvider):
                 port += 1
             if port > UPPER_PORT:
                 frontend.error(("All ports from {lower} to {upper} were in use, " +
-                                "could not start redis-server on one of them.").format(lower=LOWER_PORT,
-                                                                                       upper=UPPER_PORT))
+                                "could not start redis-server on one of them.").format(
+                                    lower=LOWER_PORT, upper=UPPER_PORT))
                 return None
 
             # be sure we don't get confused by an old log file
@@ -206,17 +208,18 @@ class RedisProvider(EnvVarProvider):
             except OSError:  # pragma: no cover (py2 only)
                 pass
 
-            command = ['redis-server', '--pidfile', pidfile, '--logfile', logfile, '--daemonize', 'yes', '--port',
-                       str(port)]
+            command = [
+                'redis-server', '--pidfile', pidfile, '--logfile', logfile, '--daemonize', 'yes', '--port',
+                str(port)
+            ]
             frontend.info("Starting " + repr(command))
 
             # we don't close_fds=True because on Windows that is documented to
             # keep us from collected stderr. But on Unix it's kinda broken not
             # to close_fds. Hmm.
             try:
-                popen = logged_subprocess.Popen(args=command,
-                                                stderr=subprocess.PIPE,
-                                                env=py2_compat.env_without_unicode(context.environ))
+                popen = logged_subprocess.Popen(
+                    args=command, stderr=subprocess.PIPE, env=py2_compat.env_without_unicode(context.environ))
             except Exception as e:
                 frontend.error("Error executing redis-server: %s" % (str(e)))
                 return None
@@ -277,8 +280,8 @@ class RedisProvider(EnvVarProvider):
                     if e.errno != errno.ENOENT:
                         frontend.info("Failed to read {logfile}: {error}".format(logfile=logfile, error=e))
 
-                frontend.error("redis-server process failed or timed out, exited with code {code}".format(
-                    code=popen.returncode))
+                frontend.error(
+                    "redis-server process failed or timed out, exited with code {code}".format(code=popen.returncode))
 
             return url
 

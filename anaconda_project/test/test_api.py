@@ -87,12 +87,13 @@ def _test_prepare_without_interaction(monkeypatch, api_method, provide_mode):
 
     params = _monkeypatch_prepare_without_interaction(monkeypatch)
     p = api.AnacondaProject()
-    kwargs = dict(project=43,
-                  environ=57,
-                  env_spec_name='someenv',
-                  command_name='foo',
-                  command=1234,
-                  extra_command_args=['1', '2'])
+    kwargs = dict(
+        project=43,
+        environ=57,
+        env_spec_name='someenv',
+        command_name='foo',
+        command=1234,
+        extra_command_args=['1', '2'])
     result = getattr(p, api_method)(**kwargs)
     assert 42 == result
     assert params['kwargs']['mode'] == provide_mode
@@ -245,13 +246,14 @@ def test_add_download(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.add_download', mock_add_download)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43,
-                  env_spec_name="myenv",
-                  env_var='boo',
-                  url='baz',
-                  filename="fname",
-                  hash_algorithm="md5",
-                  hash_value="foo")
+    kwargs = dict(
+        project=43,
+        env_spec_name="myenv",
+        env_var='boo',
+        url='baz',
+        filename="fname",
+        hash_algorithm="md5",
+        hash_value="foo")
     result = p.add_download(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
@@ -494,12 +496,13 @@ def test_add_command(monkeypatch):
 
     p = api.AnacondaProject()
 
-    kwargs = dict(project=43,
-                  command_type='bokeh_app',
-                  name='name',
-                  command='file.py',
-                  env_spec_name='foo',
-                  supports_http_options=True)
+    kwargs = dict(
+        project=43,
+        command_type='bokeh_app',
+        name='name',
+        command='file.py',
+        env_spec_name='foo',
+        supports_http_options=True)
     result = p.add_command(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

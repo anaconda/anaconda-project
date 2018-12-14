@@ -63,12 +63,15 @@ def test_prepare_plugin_command(monkeypatch, tmpdir):
         assert result
         assert result.command_exec_info.args == expected
 
-    with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
 commands:
     foo:
        valid_package_plugin: foo.py
 packages:
   - notebook
 """,
-         "foo.py": "# foo", }, check)
+        "foo.py":
+        "# foo",
+    }, check)

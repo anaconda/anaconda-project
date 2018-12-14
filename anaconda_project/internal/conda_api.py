@@ -21,6 +21,8 @@ from anaconda_project.internal import streaming_popen
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
 from anaconda_project.internal.py2_compat import is_string
 
+CONDA_EXE = os.environ.get("CONDA_EXE", "conda")
+
 
 class CondaError(Exception):
     """General Conda error."""
@@ -39,7 +41,7 @@ class CondaEnvExistsError(CondaError):
 # this function exists so we can monkeypatch it in tests
 def _get_conda_command(extra_args):
     # just use whatever conda is on the path
-    cmd_list = ['conda']
+    cmd_list = [CONDA_EXE]
     cmd_list.extend(extra_args)
     return cmd_list
 
@@ -97,8 +99,8 @@ import sys
 
 sys.argv[0] = "conda"
 sys.exit(conda.cli.main())
-""".format(platform=platform,
-           bits=bits).strip() + "\n"
+""".format(
+        platform=platform, bits=bits).strip() + "\n"
 
 
 def _get_platform_hacked_conda_command(extra_args, platform):
@@ -115,8 +117,8 @@ def _get_platform_hacked_conda_command(extra_args, platform):
         # so the conda modules will be found.
         root_prefix = _get_root_prefix()
         root_python = None
-        for location in (('bin', 'python'), ('python.exe', ), ('Scripts', 'python.exe'),
-                         ('Library', 'bin', 'python.exe')):
+        for location in (('bin', 'python'), ('python.exe', ), ('Scripts', 'python.exe'), ('Library', 'bin',
+                                                                                          'python.exe')):
             candidate = os.path.join(root_prefix, *location)
             if os.path.isfile(candidate):
                 root_python = candidate
@@ -134,9 +136,8 @@ def _call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None
     (cmd_list, command_in_errors) = _get_platform_hacked_conda_command(extra_args, platform=platform)
 
     try:
-        (p, stdout_lines, stderr_lines) = streaming_popen.popen(cmd_list,
-                                                                stdout_callback=stdout_callback,
-                                                                stderr_callback=stderr_callback)
+        (p, stdout_lines, stderr_lines) = streaming_popen.popen(
+            cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
     except OSError as e:
         raise CondaError("failed to run: %r: %r" % (command_in_errors, repr(e)))
     errstr = "".join(stderr_lines)
@@ -354,8 +355,8 @@ def resolve_dependencies(pkgs, channels=(), platform=None):
                     results.append(found)
 
     if len(results) == 0:
-        raise CondaError("Could not understand JSON from Conda, could be a problem with this Conda version.",
-                         json=parsed)
+        raise CondaError(
+            "Could not understand JSON from Conda, could be a problem with this Conda version.", json=parsed)
 
     return results
 
@@ -450,11 +451,12 @@ def set_conda_env_in_path(path, prefix):
         return _set_conda_env_in_path_unix(path, prefix)
 
 
-ParsedSpec = collections.namedtuple('ParsedSpec', ['name', 'conda_constraint', 'pip_constraint', 'exact_version',
-                                                   'exact_build_string'])
+ParsedSpec = collections.namedtuple(
+    'ParsedSpec', ['name', 'conda_constraint', 'pip_constraint', 'exact_version', 'exact_build_string'])
 
 # this is copied from conda
-_spec_pat = re.compile(r'''
+_spec_pat = re.compile(
+    r'''
 (?P<name>[^=<>!\s]+)               # package name
 \s*                                # ignore spaces
 (
@@ -503,11 +505,13 @@ def parse_spec(spec):
                 assert exact_build_string[0] == '='
                 exact_build_string = exact_build_string[1:]
 
-    return ParsedSpec(name=name,
-                      conda_constraint=conda_constraint,
-                      pip_constraint=pip_constraint,
-                      exact_version=exact_version,
-                      exact_build_string=exact_build_string)
+    return ParsedSpec(
+        name=name,
+        conda_constraint=conda_constraint,
+        pip_constraint=pip_constraint,
+        exact_version=exact_version,
+        exact_build_string=exact_build_string)
+
 
 # these are in order of preference. On pre-4.1.4 Windows,
 # CONDA_PREFIX and CONDA_ENV_PATH aren't set, so we get to
@@ -579,6 +583,7 @@ def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
                     break
         environ['CONDA_DEFAULT_ENV'] = name
 
+
 # This isn't all (e.g. leaves out arm, power).  it's sort of "all
 # that people typically publish for"
 default_platforms = ('linux-64', 'osx-64', 'win-64')
@@ -591,8 +596,8 @@ assert tuple(sorted(default_platforms_plus_32_bit)) == default_platforms_plus_32
 _non_x86_linux_machines = {'armv6l', 'armv7l', 'ppc64le'}
 
 # this list will get outdated, unfortunately.
-_known_platforms = tuple(sorted(list(default_platforms_plus_32_bit) + ['osx-32'] + [("linux-%s" % m)
-                                                                                    for m in _non_x86_linux_machines]))
+_known_platforms = tuple(
+    sorted(list(default_platforms_plus_32_bit) + ['osx-32'] + [("linux-%s" % m) for m in _non_x86_linux_machines]))
 
 known_platform_names = ('linux', 'osx', 'win')
 assert tuple(sorted(known_platform_names)) == known_platform_names
@@ -639,7 +644,12 @@ def current_platform():
     if m in _non_x86_linux_machines:
         return 'linux-%s' % m
     else:
-        _platform_map = {'linux2': 'linux', 'linux': 'linux', 'darwin': 'osx', 'win32': 'win', }
+        _platform_map = {
+            'linux2': 'linux',
+            'linux': 'linux',
+            'darwin': 'osx',
+            'win32': 'win',
+        }
         p = _platform_map.get(sys.platform, 'unknown')
         return '%s-%d' % (p, (8 * tuple.__itemsize__))
 
