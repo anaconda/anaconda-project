@@ -268,7 +268,7 @@ class CommandExecInfo(object):
                 # jumps through some funky hoops setting flags on
                 # the Windows API calls. We need to do that, rather
                 # than calling os.execvpe which doesn't let us set those
-                # flags. So we spawn the child and then exit with its
+                # flags. So we spawn the child and then exit with the
                 # return code.
                 sys.exit(self.popen().wait())
             else:
