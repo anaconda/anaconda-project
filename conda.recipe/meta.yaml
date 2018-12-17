@@ -48,7 +48,11 @@ test:
     # in conda build sessions, as indicated by the existence of the CONDA_BUILD
     # environment variable. But we need to allow this---during testing at least.
     - unset CONDA_BUILD
-    # The warnings for Python 2.7 are pretty extensive.
+    # conda build also double-activates the test environment, which confuses
+    # conda's own activate/deactivate scripts when executed from within. What
+    # we want is a properly activated test environment and nothing else.
+    - export PATH="$PREFIX/bin:"$(echo $PATH | sed "s@$PREFIX[^:]*:@@g;s@$(dirname $CONDA_EXE):@@g")
+    # The warnings for Python 2.7 are pretty extensive, so let's not print them in CI
     - python -m pytest --pyargs -v -rfe --durations=10
           --cov-config .coveragerc --cov-report html$COVERAGE_DIR
           --cov-report term-missing --cov anaconda_project

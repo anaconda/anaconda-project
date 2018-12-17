@@ -140,14 +140,6 @@ def test_default_to_system_environ():
                     continue
                 updated = updated.split(os.pathsep)
                 original = original.split(os.pathsep)
-                if 'PYTEST_CURRENT_TEST' in os.environ:
-                    # conda build uses a non-standard environment activation method
-                    # that duplicates some PATH entries and confuses conda a bit if
-                    # you try to activate environments inside the test phase. We can
-                    # work around that here by deduplicating the PATH.
-                    u_dups, o_dups = set(), set()
-                    updated = [p for p in updated if p not in u_dups and not u_dups.add(p)]
-                    original = [p for p in original if p not in o_dups and not o_dups.add(p)]
                 print("ORIGINAL PATH: " + repr(original))
                 print("UPDATED PATH: " + repr(updated))
             assert updated == original
