@@ -47,17 +47,19 @@ test:
     # In the conda ecosystem, setuptools has been patched to prevent downloads
     # in conda build sessions, as indicated by the existence of the CONDA_BUILD
     # environment variable. But we need to allow this---during testing at least.
-    - unset CONDA_BUILD
+    - unset CONDA_BUILD # [not win]
+    - set CONDA_BUILD= # [win]
     # conda build also double-activates the test environment, which confuses
     # conda's own activate/deactivate scripts when executed from within. What
-    # we want is a properly activated test environment and nothing else.
-    - export PATH="$PREFIX/bin:"$(echo $PATH | sed "s@$PREFIX[^:]*:@@g;s@$(dirname $CONDA_EXE):@@g")
+    # we want is a properly activated test environment and nothing else. The
+    # test this impacts is relaxed on Windows, so this is only needed for Unix.
+    - export PATH="$PREFIX/bin:"$(echo $PATH | sed "s@$PREFIX[^:]*:@@g;s@$(dirname $CONDA_EXE):@@g") # [not win]
     # The warnings for Python 2.7 are pretty extensive, so let's not print them in CI
     - python -m pytest --pyargs -v -rfe --durations=10
-          --cov-config .coveragerc --cov-report html$COVERAGE_DIR
-          --cov-report term-missing --cov anaconda_project
-          --cov-fail-under=99 --no-cov-on-fail
-          anaconda_project
+          --cov-config .coveragerc --cov-report term-missing --no-cov-on-fail
+          --cov-fail-under=99 --cov-report html$COVERAGE_DIR # [not win]
+          --cov-fail-under=98 --cov-report html%COVERAGE_DIR% # [win]
+          --cov anaconda_project anaconda_project
 
 about:
   home: https://github.com/Anaconda-Platform/anaconda-project
