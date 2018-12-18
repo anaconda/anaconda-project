@@ -16,8 +16,16 @@ from anaconda_project.internal.py2_compat import _PY2
 from anaconda_project.internal.test.tmpfile_utils import tmp_script_commandline
 
 
-def add_lineseps(lines):
-    return list(map(lambda l: l + os.linesep, lines))
+def detect_linesep(lines):
+    # We discovered that for Windows / Py 2.7 / PYTHONUNBUFFERED=1
+    # the line separator is in fact "\n" for stdout and "\r\n" for stderr
+    # so we needed to be more intelligent about detecting this.
+    return '\r\n' if any('\r' in line for line in lines) else '\n'
+
+
+def add_lineseps(lines, sep=None):
+    sep = sep or os.linesep
+    return list(map(lambda l: l + sep, lines))
 
 
 def test_streaming():
@@ -73,17 +81,19 @@ sys.exit(2)
         stderr_from_callback.append(data)
 
     (p, out_lines, err_lines) = streaming_popen.popen(print_stuff, on_stdout, on_stderr)
+    sep_out = detect_linesep(out_lines)
+    sep_err = detect_linesep(err_lines)
 
-    expected_out = add_lineseps([u'a', u'b', u'c', u'd', u'123456', u'💯 🌟', u'1', u'2', u'3', u'4', u'5'])
+    expected_out = add_lineseps([u'a', u'b', u'c', u'd', u'123456', u'💯 🌟', u'1', u'2', u'3', u'4', u'5'], sep_out)
     if platform.system() == 'Windows':
         # Windows can't output unicode
         if _PY2:
-            expected_out[5] = u'\U0001f4af \U0001f31f\r\n'
+            expected_out[5] = u'\U0001f4af \U0001f31f' + sep_out
         else:
-            expected_out[5] = u"Windows\r\n"
+            expected_out[5] = u"Windows" + sep_out
 
     expected_out.append(u'6')  # no newline after this one
-    expected_err = add_lineseps([u'x', u'y', u'z'])
+    expected_err = add_lineseps([u'x', u'y', u'z'], sep_err)
 
     assert expected_out == out_lines
     assert "".join(expected_out) == "".join(stdout_from_callback)
@@ -122,8 +132,9 @@ sys.exit(0)
         stderr_from_callback.append(data)
 
     (p, out_lines, err_lines) = streaming_popen.popen(print_bad, on_stdout, on_stderr)
+    sep_out = detect_linesep(out_lines)
 
-    expected_out = add_lineseps([u'hello', u'B��\x00\x01�goodbye'])
+    expected_out = add_lineseps([u'hello', u'B��\x00\x01�goodbye'], sep_out)
     expected_err = []
 
     assert expected_out == out_lines
@@ -145,9 +156,11 @@ sys.exit(0)
 """)
 
     (p, out_lines, err_lines) = streaming_popen.popen(print_stuff, None, None)
+    sep_out = detect_linesep(out_lines)
+    sep_err = detect_linesep(err_lines)
 
-    expected_out = add_lineseps(['a'])
-    expected_err = add_lineseps(['b'])
+    expected_out = add_lineseps(['a'], sep_out)
+    expected_err = add_lineseps(['b'], sep_err)
 
     assert expected_out == out_lines
     assert expected_err == err_lines
