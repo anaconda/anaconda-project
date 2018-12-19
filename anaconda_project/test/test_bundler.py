@@ -98,7 +98,7 @@ def test_parse_default_ignore_file():
         pattern_strings = [pattern.pattern for pattern in patterns]
 
         assert pattern_strings == [
-            '/anaconda-project-local.yml', '__pycache__/', '*.pyc', '*.pyo', '*.pyd', '/.ipynb_checkpoints',
+            '/anaconda-project-local.yml', '__pycache__/', '*.pyc', '*.pyo', '*.pyd', '.ipynb_checkpoints/',
             '/.spyderproject'
         ]
 

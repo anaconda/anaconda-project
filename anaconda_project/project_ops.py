@@ -44,7 +44,7 @@ __pycache__/
 *.pyd
 
 # Notebook stuff
-/.ipynb_checkpoints
+.ipynb_checkpoints/
 
 # Spyder stuff
 /.spyderproject

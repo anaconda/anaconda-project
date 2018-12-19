@@ -4309,7 +4309,7 @@ name: archivedproj
         """,
             "foo.py": "print('hello')\n",
             "foo.pyc": "",
-            ".ipynb_checkpoints": "",
+            ".ipynb_checkpoints/bleh": "",
             "bar/blah.pyc": ""
         }, check)
 
