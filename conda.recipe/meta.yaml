@@ -1,24 +1,24 @@
+{% set data = load_setup_py_data() %}
+
 package:
   name: anaconda-project
-  version: {{ environ.get('GIT_DESCRIBE_TAG', '').replace('v', '') }}
+  version: {{ data.get('version') }}
 
 source:
-  git_url: ../
-  git_tag: {% if environ.get('PRERELEASE', '') %} HEAD {% else %} {{ environ.get('GIT_DESCRIBE_TAG') }} {% endif %}
-  # If you're trying to test build changes, you have to add this
-  # pointing to the branch you're modifying.
-  # git_tag: package-script
+  path: ../
 
 build:
-  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
-  script: python setup.py install --single-version-externally-managed --record=record.txt
+  number: 0
+  script: pip install . --no-deps --ignore-installed --no-cache-dir
   entry_points:
     - anaconda-project = anaconda_project.cli:main
+  script_env:
+    - COVERAGE_DIR
 
 requirements:
-  build:
-    - python
-    - setuptools
+  host:
+    - python {{ python }}
+    - pip
 
   run:
     - anaconda-client
@@ -28,14 +28,38 @@ requirements:
     - tornado >=4.2
 
 test:
-  imports:
-    - anaconda_project
+  requires:
+    - coverage
+    - pytest
+    - pytest-cov
+    - redis
+    - notebook
+    - bokeh
+    - psutil
+    - keyring
+    - setuptools
+    - pip
+
+  source_files:
+    - .coveragerc
 
   commands:
-    - echo "First of test commands"
-    - anaconda-project --help
-    - anaconda-project --version
-    - echo "Last of test commands"
+    # In the conda ecosystem, setuptools has been patched to prevent downloads
+    # in conda build sessions, as indicated by the existence of the CONDA_BUILD
+    # environment variable. But we need to allow this---during testing at least.
+    - unset CONDA_BUILD # [not win]
+    - set CONDA_BUILD= # [win]
+    # conda build also double-activates the test environment, which confuses
+    # conda's own activate/deactivate scripts when executed from within. What
+    # we want is a properly activated test environment and nothing else. The
+    # test this impacts is relaxed on Windows, so this is only needed for Unix.
+    - export PATH="$PREFIX/bin:"$(echo $PATH | sed "s@$PREFIX[^:]*:@@g;s@$(dirname $CONDA_EXE):@@g") # [not win]
+    # The warnings for Python 2.7 are pretty extensive, so let's not print them in CI
+    - python -m pytest --pyargs -v -rfe --durations=10
+          --cov-config .coveragerc --cov-report term-missing --no-cov-on-fail
+          --cov-fail-under=99 --cov-report html$COVERAGE_DIR # [not win]
+          --cov-fail-under=98 --cov-report html%COVERAGE_DIR% # [win]
+          --cov anaconda_project anaconda_project
 
 about:
   home: https://github.com/Anaconda-Platform/anaconda-project
@@ -45,7 +69,7 @@ about:
   summary: Tool for encapsulating, running, and reproducing data science projects
   description: |
     By adding an anaconda-project.yml to a project directory, a single 
-    anaconda-project runcommand will be able to set up all dependencies 
+    anaconda-project run command will be able to set up all dependencies 
     and then launch the project.
   doc_url: http://anaconda-project.readthedocs.io
   dev_url: https://github.com/Anaconda-Platform/anaconda-project

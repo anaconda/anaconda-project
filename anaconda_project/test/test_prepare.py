@@ -126,23 +126,23 @@ def test_default_to_system_environ():
         project = project_no_dedicated_env(dirname)
         os_environ_copy = deepcopy(os.environ)
         result = prepare_without_interaction(project)
+        assert result
+        assert result.errors == []
         assert project.directory_path == strip_environ(result.environ)['PROJECT_DIR']
         # os.environ wasn't modified
         assert os_environ_copy == os.environ
         # result.environ inherits everything in os.environ
-        for key in os_environ_copy:
-            if key == 'PATH' and platform.system() == 'Windows' and result.environ[key] != os.environ[key]:
-                print("prepare changed PATH on Windows and ideally it would not.")
-            else:
-                if key == 'PATH' and result.environ[key] != os.environ[key]:
-                    original = os.environ[key].split(os.pathsep)
-                    updated = result.environ[key].split(os.pathsep)
-                    print("ORIGINAL PATH: " + repr(original))
-                    print("UPDATED PATH: " + repr(updated))
-                    assert original == updated
-                assert result.errors == []
-                assert result
-                assert result.environ.get(key) == os.environ.get(key)
+        for key, original in os_environ_copy.items():
+            updated = result.environ.get(key)
+            if key == 'PATH' and updated != original:
+                if platform.system() == 'Windows':
+                    print("prepare changed PATH on Windows and ideally it would not.")
+                    continue
+                updated = updated.split(os.pathsep)
+                original = original.split(os.pathsep)
+                print("ORIGINAL PATH: " + repr(original))
+                print("UPDATED PATH: " + repr(updated))
+            assert updated == original
 
     with_directory_contents_completing_project_file({
         DEFAULT_PROJECT_FILENAME: """
