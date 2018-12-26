@@ -557,9 +557,10 @@ class _ConfigCache(object):
         (shared_deps, shared_pip_deps) = _parse_packages(project_file.root)
         shared_channels = _parse_channels(project_file.root)
         shared_platforms = _parse_platforms(project_file.root)
-        env_specs = project_file.get_value('env_specs', default={})
+        env_specs = project_file.get_value('env_specs', default=None)
         first_env_spec_name = None
-        env_specs_is_empty_or_missing = False  # this should be iff it's an empty dict or absent entirely
+        env_specs_is_empty = False
+        env_specs_is_missing = False
 
         # this one isn't in the env_specs dict
         self.global_base_env_spec = EnvSpec(
@@ -573,9 +574,11 @@ class _ConfigCache(object):
             inherit_from=())
 
         env_spec_attrs = dict()
-        if is_dict(env_specs):
+        if env_specs is None:
+            env_specs_is_missing = True
+        elif is_dict(env_specs):
             if len(env_specs) == 0:
-                env_specs_is_empty_or_missing = True
+                env_specs_is_empty = True
             for (name, attrs) in env_specs.items():
                 if name.strip() == '':
                     _file_problem(problems, project_file,
@@ -825,7 +828,7 @@ class _ConfigCache(object):
                     fix_prompt=prompt,
                     fix_function=overwrite_env_spec_from_importable,
                     no_fix_function=remember_no_import_importable))
-        elif env_specs_is_empty_or_missing:
+        elif env_specs_is_empty or env_specs_is_missing:
             # we do NOT want to add this problem if we merely
             # failed to parse individual env specs; it must be
             # safe to overwrite the env_specs key, so it has to
@@ -838,7 +841,7 @@ class _ConfigCache(object):
 
             problems.append(
                 ProjectProblem(
-                    text="The env_specs section is empty.",
+                    text="The env_specs section is %s." % ("missing" if env_specs_is_missing else "empty"),
                     filename=project_file.filename,
                     fix_prompt=("Add an environment spec to %s?" % os.path.basename(project_file.filename)),
                     fix_function=add_default_env_spec))
