@@ -2783,13 +2783,15 @@ def test_auto_fix_missing_name():
         }, check)
 
 
-def test_auto_fix_missing_env_specs_section():
+@pytest.mark.parametrize("mode", ['missing', 'missing-command', 'empty', 'empty-command'])
+def test_auto_fix_env_specs_section(mode):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert len(project.problems) == 1
         assert len(project.problem_objects) == 1
         problem = project.problem_objects[0]
-        assert problem.text == ("%s: The env_specs section is empty." % DEFAULT_PROJECT_FILENAME)
+        msg = mode.split('-', 1)[0]
+        assert problem.text == "%s: The env_specs section is %s." % (DEFAULT_PROJECT_FILENAME, msg)
         assert problem.can_fix
 
         problem.fix(project)
@@ -2798,31 +2800,12 @@ def test_auto_fix_missing_env_specs_section():
         assert project.problems == []
         assert list(project.env_specs.keys()) == ['default']
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME: "name: foo\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n"
-    }, check)
-
-
-def test_auto_fix_empty_env_specs_section():
-    def check(dirname):
-        project = project_no_dedicated_env(dirname)
-        assert len(project.problems) == 1
-        assert len(project.problem_objects) == 1
-        assert len(project.fixable_problems) == 1
-        problem = project.problem_objects[0]
-        assert problem.text == ("%s: The env_specs section is empty." % DEFAULT_PROJECT_FILENAME)
-        assert problem.can_fix
-
-        problem.fix(project)
-        project.project_file.save()
-
-        assert project.problems == []
-        assert list(project.env_specs.keys()) == ['default']
-
-    with_directory_contents(
-        {
-            DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: {}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n"
-        }, check)
+    yaml = "name: foo\n"
+    if mode.startswith('empty'):
+        yaml += "env_specs: {}\n"
+    if mode.endswith('command'):
+        yaml += "commands:\n default:\n  bokeh_app: .\n"
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: yaml}, check)
 
 
 def test_auto_fix_env_spec_import():
@@ -3236,7 +3219,7 @@ def test_empty_file_has_problems():
         project = project_no_dedicated_env(dirname)
         assert [
             "anaconda-project.yml: The 'name:' field is missing.",
-            "anaconda-project.yml: The env_specs section is empty."
+            "anaconda-project.yml: The env_specs section is missing."
         ] == project.problems
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
@@ -3265,7 +3248,7 @@ def test_with_locking_enabled_no_env_specs_has_problems():
         project = project_no_dedicated_env(dirname)
         assert [
             "anaconda-project.yml: The 'name:' field is missing.",
-            "anaconda-project.yml: The env_specs section is empty."
+            "anaconda-project.yml: The env_specs section is missing."
         ] == project.problems
 
     with_directory_contents({
