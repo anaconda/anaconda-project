@@ -1497,9 +1497,7 @@ def test_notebook_command_disabled_project_http_args():
         jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [
             jupyter_notebook,
-            os.path.join(dirname, 'test.ipynb'), 'foo', 'bar', '--anaconda-project-url-prefix', 'blah',
-            '--anaconda-project-port', '1234', '--anaconda-project-host', 'example.com',
-            '--anaconda-project-no-browser', '--anaconda-project-use-xheaders', '--anaconda-project-address', '1.2.3.4'
+            os.path.join(dirname, 'test.ipynb'), 'foo', 'bar'
         ]
         assert cmd_exec.shell is False
 

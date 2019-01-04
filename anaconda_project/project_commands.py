@@ -50,8 +50,7 @@ _http_specs = (_ArgSpec('--anaconda-project-host', True), _ArgSpec('--anaconda-p
 
 
 class _ArgsTransformer(object):
-    def __init__(self, specs):
-        self.specs = specs
+    specs = _http_specs
 
     def _parse_args_removing_known(self, results, args):
         if not args:
@@ -100,9 +99,6 @@ class _ArgsTransformer(object):
 
 
 class _BokehArgsTransformer(_ArgsTransformer):
-    def __init__(self):
-        super(_BokehArgsTransformer, self).__init__(_http_specs)
-
     def add_args(self, results, args):
         added = []
         for (option, values) in results:
@@ -131,7 +127,6 @@ class _BokehArgsTransformer(_ArgsTransformer):
 
 class _NotebookArgsTransformer(_ArgsTransformer):
     def __init__(self, command):
-        super(_NotebookArgsTransformer, self).__init__(_http_specs)
         self.command = command
 
     def add_args(self, results, args):
@@ -432,6 +427,10 @@ class ProjectCommand(object):
         args = None
         shell = False
 
+        if not self.supports_http_options:
+            # drop the http arguments
+            extra_args = _ArgsTransformer().transform_args(extra_args)
+
         if self.notebook is not None:
             path = os.path.join(environ['PROJECT_DIR'], self.notebook)
             args = ['jupyter-notebook', path]
@@ -446,9 +445,6 @@ class ProjectCommand(object):
 
         if self.args is not None:
             args = self.args
-            if not self.supports_http_options:
-                # drop the http arguments
-                extra_args = _ArgsTransformer().transform_args(extra_args)
 
         if args is not None:
             if extra_args is not None:
