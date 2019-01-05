@@ -15,7 +15,7 @@ from anaconda_project.internal.test.tmpfile_utils import (with_directory_content
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project import project
 
-from anaconda_project.plugins import CommandTemplate, ArgsTrasformerTemplate
+from anaconda_project.plugins import CommandTemplate, ArgsTransformerTemplate
 
 
 def test_prepare_plugin_command(monkeypatch, tmpdir):
@@ -26,7 +26,7 @@ def test_prepare_plugin_command(monkeypatch, tmpdir):
     def get_plugins_mock(cmd_type):
         return {'valid_package_plugin': plugin_init_mock}
 
-    class TestTransformer(ArgsTrasformerTemplate):
+    class TestTransformer(ArgsTransformerTemplate):
         def add_args(self, results, args):
             return ['--show']
 

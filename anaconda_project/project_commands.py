@@ -43,14 +43,14 @@ def _is_windows():
 
 _ArgSpec = namedtuple('_ArgSpec', ['option', 'has_value'])
 
-_http_specs = (_ArgSpec('--anaconda-project-host', True), _ArgSpec('--anaconda-project-address', True),
-               _ArgSpec('--anaconda-project-port', True), _ArgSpec('--anaconda-project-url-prefix', True),
-               _ArgSpec('--anaconda-project-no-browser', False), _ArgSpec('--anaconda-project-iframe-hosts', True),
-               _ArgSpec('--anaconda-project-use-xheaders', False))
+HTTP_SPECS = (_ArgSpec('--anaconda-project-host', True), _ArgSpec('--anaconda-project-address', True),
+              _ArgSpec('--anaconda-project-port', True), _ArgSpec('--anaconda-project-url-prefix', True),
+              _ArgSpec('--anaconda-project-no-browser', False), _ArgSpec('--anaconda-project-iframe-hosts', True),
+              _ArgSpec('--anaconda-project-use-xheaders', False))
 
 
 class _ArgsTransformer(object):
-    specs = _http_specs
+    specs = HTTP_SPECS
 
     def _parse_args_removing_known(self, results, args):
         if not args:
@@ -281,7 +281,7 @@ class CommandExecInfo(object):
 
 
 def _append_extra_args_to_command_line(command, extra_args):
-    if extra_args is None:
+    if not extra_args:
         return command
     else:
         if _is_windows():  # pragma: no cover
