@@ -43,15 +43,14 @@ def _is_windows():
 
 _ArgSpec = namedtuple('_ArgSpec', ['option', 'has_value'])
 
-_http_specs = (_ArgSpec('--anaconda-project-host', True), _ArgSpec('--anaconda-project-address', True),
-               _ArgSpec('--anaconda-project-port', True), _ArgSpec('--anaconda-project-url-prefix', True),
-               _ArgSpec('--anaconda-project-no-browser', False), _ArgSpec('--anaconda-project-iframe-hosts', True),
-               _ArgSpec('--anaconda-project-use-xheaders', False))
+HTTP_SPECS = (_ArgSpec('--anaconda-project-host', True), _ArgSpec('--anaconda-project-address', True),
+              _ArgSpec('--anaconda-project-port', True), _ArgSpec('--anaconda-project-url-prefix', True),
+              _ArgSpec('--anaconda-project-no-browser', False), _ArgSpec('--anaconda-project-iframe-hosts', True),
+              _ArgSpec('--anaconda-project-use-xheaders', False))
 
 
 class _ArgsTransformer(object):
-    def __init__(self, specs):
-        self.specs = specs
+    specs = HTTP_SPECS
 
     def _parse_args_removing_known(self, results, args):
         if not args:
@@ -95,13 +94,11 @@ class _ArgsTransformer(object):
         return self.add_args(results_list, with_removed)
 
     def add_args(self, results, args):
-        raise RuntimeError("not implemented")  # pragma: no cover
+        # default implementation: drop all http-related args
+        return args
 
 
 class _BokehArgsTransformer(_ArgsTransformer):
-    def __init__(self):
-        super(_BokehArgsTransformer, self).__init__(_http_specs)
-
     def add_args(self, results, args):
         added = []
         for (option, values) in results:
@@ -123,14 +120,13 @@ class _BokehArgsTransformer(_ArgsTransformer):
                 # bokeh doesn't have a way to set this
                 pass
             else:
-                raise RuntimeError("unhandled http option for notebook")  # pragma: no cover
+                raise RuntimeError("unhandled http option for bokeh app")  # pragma: no cover
 
         return added + args
 
 
 class _NotebookArgsTransformer(_ArgsTransformer):
     def __init__(self, command):
-        super(_NotebookArgsTransformer, self).__init__(_http_specs)
         self.command = command
 
     def add_args(self, results, args):
@@ -285,7 +281,7 @@ class CommandExecInfo(object):
 
 
 def _append_extra_args_to_command_line(command, extra_args):
-    if extra_args is None:
+    if not extra_args:
         return command
     else:
         if _is_windows():  # pragma: no cover
@@ -430,6 +426,10 @@ class ProjectCommand(object):
 
         args = None
         shell = False
+
+        if not self.supports_http_options:
+            # drop the http arguments
+            extra_args = _ArgsTransformer().transform_args(extra_args)
 
         if self.notebook is not None:
             path = os.path.join(environ['PROJECT_DIR'], self.notebook)

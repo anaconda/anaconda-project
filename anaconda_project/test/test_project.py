@@ -1495,12 +1495,7 @@ def test_notebook_command_disabled_project_http_args():
             ])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
-        assert cmd_exec.args == [
-            jupyter_notebook,
-            os.path.join(dirname, 'test.ipynb'), 'foo', 'bar', '--anaconda-project-url-prefix', 'blah',
-            '--anaconda-project-port', '1234', '--anaconda-project-host', 'example.com',
-            '--anaconda-project-no-browser', '--anaconda-project-use-xheaders', '--anaconda-project-address', '1.2.3.4'
-        ]
+        assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), 'foo', 'bar']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file({
@@ -2015,12 +2010,7 @@ def test_bokeh_command_with_disabled_project_http_args():
             ])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         bokeh = _assert_find_executable('bokeh', path)
-        assert cmd_exec.args == [
-            bokeh, 'serve',
-            os.path.join(dirname, 'test.py'), '--foo', '--anaconda-project-url-prefix', 'blah',
-            '--anaconda-project-port', '1234', '--anaconda-project-host', 'example.com',
-            '--anaconda-project-no-browser', '--anaconda-project-use-xheaders'
-        ]
+        assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--foo']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(

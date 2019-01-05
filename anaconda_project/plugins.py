@@ -8,10 +8,10 @@
 """Plugins base classes and functions."""
 import os
 from os.path import join
-from anaconda_project.project_commands import (_ArgsTransformer, ProjectCommand, _http_specs)
+from anaconda_project.project_commands import (_ArgsTransformer, ProjectCommand)
 
 
-class ArgsTrasformerTemplate(_ArgsTransformer):
+class ArgsTransformerTemplate(_ArgsTransformer):
     """Template class for plugins args trasformers.
 
     Plugins args transformers should subclass it and redefine add_class
@@ -24,7 +24,6 @@ class ArgsTrasformerTemplate(_ArgsTransformer):
         Args:
             command (ProjectCommand): command that maps to the ArgsTransformer
         """
-        super(ArgsTrasformerTemplate, self).__init__(_http_specs)
         self.command = command
 
     def add_args(self, results, args):
