@@ -49,6 +49,12 @@ def test_execvpe_with_shell_on_windows(monkeypatch):
         executed['cwd'] = cwd
         executed['shell'] = shell
 
+        class MockProcess(object):
+            def wait(self):
+                return 0
+
+        return MockProcess()
+
     monkeypatch.setattr('subprocess.Popen', mock_popen)
 
     info = CommandExecInfo(cwd='/somewhere', args=['foo bar'], shell=True, env=dict(FOO='bar'))
