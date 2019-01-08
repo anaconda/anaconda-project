@@ -37,21 +37,34 @@ class CliFrontend(Frontend):
 
 def load_project(dirname):
     """Load a Project, fixing it if needed and possible."""
-    project = Project(dirname, frontend=CliFrontend())
+    project = Project(dirname, frontend=CliFrontend(), must_exist=True)
+
+    # No sense in engaging the user if we cannot achieve a fixed state.
+    if project.unfixable_problems:
+        return project
 
     if console_utils.stdin_is_interactive():
-        had_fixable = len(project.fixable_problems) > 0
-        for problem in project.fixable_problems:
+        regressions = 0
+        problems = project.fixable_problems
+        while problems and regressions < 3:
+            # Instead of looping through the problems in the list, we
+            # fix only the first one and refresh the list. This allows
+            # us to detect when fixing one problem impacts another,
+            # positively or negatively.
+            problem = problems[0]
             print(problem.text)
             should_fix = console_utils.console_ask_yes_or_no(problem.fix_prompt, default=False)
-            if should_fix:
-                problem.fix(project)
-            else:
-                problem.no_fix(project)
-
-        # both fix() and no_fix() can modify project_file, if no changes
-        # were made this is a no-op.
-        if had_fixable:
+            if not should_fix:
+                break
+            problem.fix(project)
+            project.use_changes_without_saving()
+            o_problems, problems = problems, project.fixable_problems
+            # If the number of problems doesn't decrease as a result of
+            # fixing a problem, it suggests some sort of negative cycle.
+            # We can't reliably detect a cycle, so instead we simply let
+            # this happen 3 times before we give up.
+            regressions += (len(problems) >= len(o_problems))
+        if not problems:
             project.save()
 
     return project

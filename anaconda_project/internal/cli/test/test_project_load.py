@@ -7,6 +7,7 @@
 # -----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
+import os
 import sys
 
 from anaconda_project.project import Project
@@ -24,6 +25,9 @@ def _monkeypatch_input(monkeypatch, answer):
         answers = list(answer)
         answers.reverse()
 
+    def mock_isatty_true():
+        return True
+
     def mock_input(prompt):
         sys.stdout.write(prompt)
         item = answers.pop()
@@ -32,20 +36,46 @@ def _monkeypatch_input(monkeypatch, answer):
         else:
             return item
 
+    # python 2 can throw a "readonly" error if you try to patch sys.stdin.isatty itself
+    monkeypatch.setattr('anaconda_project.internal.cli.console_utils.stdin_is_interactive', mock_isatty_true)
     monkeypatch.setattr('anaconda_project.internal.cli.console_utils._input', mock_input)
+
+
+def test_interactively_fix_empty_project(monkeypatch, capsys):
+    def check(dirname):
+        _monkeypatch_input(monkeypatch, ["y"])
+
+        project = load_project(dirname)
+        assert project.problems == []
+
+        out, err = capsys.readouterr()
+        assert out == ("Project file '%s' does not exist.\nCreate file '%s'? " %
+                       (DEFAULT_PROJECT_FILENAME, os.path.join(dirname, DEFAULT_PROJECT_FILENAME)))
+        assert err == ""
+
+    with_directory_contents({}, check)
+
+
+def test_interactively_no_fix_empty_project(monkeypatch, capsys):
+    def check(dirname):
+        _monkeypatch_input(monkeypatch, ["n"])
+
+        project = load_project(dirname)
+        first_line = "Project file '%s' does not exist." % DEFAULT_PROJECT_FILENAME
+        assert project.problems == [first_line]
+
+        out, err = capsys.readouterr()
+        assert out == ("%s\nCreate file '%s'? " % (first_line, os.path.join(dirname, DEFAULT_PROJECT_FILENAME)))
+        assert err == ""
+
+    with_directory_contents({}, check)
 
 
 def test_interactively_fix_project(monkeypatch, capsys):
     def check(dirname):
-
         broken_project = Project(dirname)
         assert len(broken_project.fixable_problems) == 1
 
-        def mock_isatty_true():
-            return True
-
-        # python 2 can throw a "readonly" error if you try to patch sys.stdin.isatty itself
-        monkeypatch.setattr('anaconda_project.internal.cli.console_utils.stdin_is_interactive', mock_isatty_true)
         _monkeypatch_input(monkeypatch, ["y"])
 
         project = load_project(dirname)
@@ -61,23 +91,17 @@ def test_interactively_fix_project(monkeypatch, capsys):
 
 def test_interactively_no_fix_project(monkeypatch, capsys):
     def check(dirname):
-
         broken_project = Project(dirname)
         assert len(broken_project.fixable_problems) == 1
 
-        def mock_isatty_true():
-            return True
-
-        # python 2 can throw a "readonly" error if you try to patch sys.stdin.isatty itself
-        monkeypatch.setattr('anaconda_project.internal.cli.console_utils.stdin_is_interactive', mock_isatty_true)
         _monkeypatch_input(monkeypatch, ["n"])
 
         project = load_project(dirname)
-        assert project.problems == ["%s: The env_specs section is missing." % DEFAULT_PROJECT_FILENAME]
+        first_line = "%s: The env_specs section is missing." % DEFAULT_PROJECT_FILENAME
+        assert project.problems == [first_line]
 
         out, err = capsys.readouterr()
-        assert out == ("%s: The env_specs section is missing.\nAdd an environment spec to anaconda-project.yml? " %
-                       DEFAULT_PROJECT_FILENAME)
+        assert out == "%s\nAdd an environment spec to anaconda-project.yml? " % first_line
         assert err == ""
 
     with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\nplatforms: [linux-64,osx-64,win-64]\n"}, check)

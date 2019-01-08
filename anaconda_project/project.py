@@ -132,7 +132,7 @@ def _fatal_problem(problems):
 
 
 class _ConfigCache(object):
-    def __init__(self, directory_path, registry):
+    def __init__(self, directory_path, registry, must_exist):
         self.directory_path = directory_path
         if registry is None:
             registry = RequirementsRegistry()
@@ -150,6 +150,7 @@ class _ConfigCache(object):
         self.locking_globally_enabled = False
         self.default_env_spec_name = None
         self.global_base_env_spec = None
+        self.must_exist = must_exist
 
     def update(self, project_file, lock_file):
         if project_file.change_count == self.project_file_count and \
@@ -162,9 +163,18 @@ class _ConfigCache(object):
         requirements = dict()
         problems = []
 
+        def accept_project_creation(project):
+            self.must_exist = False
+
         project_exists = os.path.isdir(self.directory_path)
         if not project_exists:
             problems.append("Project directory '%s' does not exist." % self.directory_path)
+        elif self.must_exist and not os.path.isfile(project_file.filename):
+            problems.append(
+                ProjectProblem(
+                    text="Project file '%s' does not exist." % os.path.basename(project_file.filename),
+                    fix_prompt="Create file '%s'?" % project_file.filename,
+                    fix_function=accept_project_creation))
 
         if project_file.corrupted:
             problems.append(
@@ -1144,7 +1154,7 @@ class Project(object):
     the project directory or global user configuration.
     """
 
-    def __init__(self, directory_path, plugin_registry=None, frontend=None):
+    def __init__(self, directory_path, plugin_registry=None, frontend=None, must_exist=False):
         """Construct a Project with the given directory and plugin registry.
 
         Args:
@@ -1152,6 +1162,7 @@ class Project(object):
             plugin_registry (RequirementsRegistry): where to look up Requirement and Provider instances,
                                                     None for default
             frontend (Frontend): the UX using this Project instance
+            must_exist (bool): if True, the absence of a project file is a problem
         """
         self._directory_path = os.path.realpath(directory_path).rstrip(os.sep)
 
@@ -1165,7 +1176,7 @@ class Project(object):
         self._project_file = ProjectFile.load_for_directory(directory_path, default_env_specs_func=load_default_specs)
         self._lock_file = ProjectLockFile.load_for_directory(directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
-        self._config_cache = _ConfigCache(self._directory_path, plugin_registry)
+        self._config_cache = _ConfigCache(self._directory_path, plugin_registry, must_exist)
         if frontend is None:
             frontend = _null_frontend()
         assert isinstance(frontend, Frontend)
@@ -1318,6 +1329,11 @@ class Project(object):
     def fixable_problems(self):
         """List of ProjectProblem that have associated fix prompts."""
         return [p for p in self.problem_objects if p.can_fix and not p.only_a_suggestion]
+
+    @property
+    def unfixable_problems(self):
+        """List of ProjectProblem that cannot be fixed."""
+        return [p for p in self.problem_objects if not p.can_fix and not p.only_a_suggestion]
 
     def problems_status(self, description=None):
         """Get a ``Status`` describing project problems, or ``None`` if no problems."""
