@@ -54,7 +54,7 @@ def test_create_project(monkeypatch):
 def test_load_project(monkeypatch):
     from anaconda_project.project import Project
     _verify_args_match(
-        api.AnacondaProject.load_project, Project.__init__, ignored=['self', 'plugin_registry', 'if_missing'])
+        api.AnacondaProject.load_project, Project.__init__, ignored=['self', 'plugin_registry', 'must_exist'])
 
     class MockProject(object):
         def __init__(self, *args, **kwargs):

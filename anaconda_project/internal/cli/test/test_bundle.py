@@ -23,7 +23,7 @@ def test_archive_command_on_empty_project(capsys):
         assert code == 1
 
         out, err = capsys.readouterr()
-        assert "anaconda-project.yml does not exist.\nCan't create an archive.\n" == err
+        assert "Project file 'anaconda-project.yml' does not exist.\nUnable to load the project.\n" == err
         assert '' == out
 
         assert not os.path.exists(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
