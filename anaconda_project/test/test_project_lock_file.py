@@ -24,9 +24,8 @@ expected_default_file = """# This is an Anaconda project lock file.
 
 #
 # Set to false to ignore locked versions.
+#
 locking_enabled: false
-
-
 
 #
 # A key goes in here for each env spec.
