@@ -81,6 +81,12 @@ def test_create(monkeypatch):
         assert spec.pip_packages == ()
         assert spec.channels == ()
 
+        # Test the --empty-environment flag
+        project = project_ops.create(subdir, make_directory=True, empty_environment=True)
+        spec = project.env_specs['default']
+        assert spec.conda_packages == ()
+        assert spec.pip_packages == ()
+
     with_directory_contents(dict(), check_create)
 
 

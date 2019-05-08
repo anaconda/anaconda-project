@@ -61,7 +61,13 @@ def _add_projectignore_if_none(project_directory):
             pass
 
 
-def create(directory_path, make_directory=False, name=None, icon=None, description=None, fix_problems=None):
+def create(directory_path,
+           make_directory=False,
+           empty_environment=False,
+           name=None,
+           icon=None,
+           description=None,
+           fix_problems=None):
     """Create a project skeleton in the given directory.
 
     Returns a Project instance even if creation fails or the directory
@@ -76,6 +82,7 @@ def create(directory_path, make_directory=False, name=None, icon=None, descripti
     Args:
         directory_path (str): directory to contain anaconda-project.yml
         make_directory (bool): True to create the directory if it doesn't exist
+        empty_environment (bool): True to create an empty base environment
         name (str): Name of the new project or None to leave unset (uses directory name)
         icon (str): Icon for the new project or None to leave unset (uses no icon)
         description (str): Description for the new project or None to leave unset
@@ -96,6 +103,8 @@ def create(directory_path, make_directory=False, name=None, icon=None, descripti
 
     project = Project(directory_path)
 
+    if empty_environment:
+        project.project_file.set_value('packages', [])
     if name is not None:
         project.project_file.set_value('name', name)
     if icon is not None:

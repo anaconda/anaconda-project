@@ -92,6 +92,11 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('init', help="Initialize a directory with default project configuration")
     add_directory_arg(preset)
+    preset.add_argument(
+        '--empty-environment',
+        action='store_true',
+        help="Do not add the default package set to the environment.",
+        default=None)
     preset.add_argument('-y', '--yes', action='store_true', help="Assume yes to all confirmation prompts", default=None)
     preset.set_defaults(main=init.main)
 
