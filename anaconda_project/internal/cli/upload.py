@@ -19,7 +19,6 @@ def upload_command(project_dir, private, site, username, token):
     Returns:
         exit code
     """
-    print(private)
     project = load_project(project_dir)
     status = project_ops.upload(project, private=private, site=site, username=username, token=token)
     if status:

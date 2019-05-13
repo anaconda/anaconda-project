@@ -63,8 +63,6 @@ class _Client(object):
         }
         if private:
             json['access'] = 'private'
-        print('json')
-        print(json)
         data, headers = binstar_utils.jencode(json)
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
@@ -130,7 +128,6 @@ class _Client(object):
             project_info=project_info, archive_filename=archive_filename,
             uploaded_basename=uploaded_basename, private=private)
         assert res.status_code in (200, 201)
-        print(project_info)
         stage_info = res.json()
 
         assert 'post_url' in stage_info
