@@ -740,11 +740,12 @@ class AnacondaProject(object):
         return project_ops.unarchive(
             filename=filename, project_dir=project_dir, parent_dir=parent_dir, frontend=frontend)
 
-    def upload(self, project, site=None, username=None, token=None, log_level=None):
+    def upload(self, project, private=None, site=None, username=None, token=None, log_level=None):
         """Upload the project to the Anaconda server.
 
         Args:
             project (``Project``): the project
+            private (bool): make project private
             site (str): site alias from Anaconda config
             username (str): Anaconda username
             token (str): Anaconda auth token
@@ -753,4 +754,4 @@ class AnacondaProject(object):
         Returns:
             a ``Status``, if failed has ``errors``
         """
-        return project_ops.upload(project=project, site=site, username=username, token=token, log_level=log_level)
+        return project_ops.upload(project=project, private=private, site=site, username=username, token=token, log_level=log_level)
