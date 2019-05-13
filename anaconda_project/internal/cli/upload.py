@@ -13,14 +13,15 @@ from anaconda_project.internal.cli import console_utils
 import anaconda_project.project_ops as project_ops
 
 
-def upload_command(project_dir, site, username, token):
+def upload_command(project_dir, private, site, username, token):
     """Upload project to Anaconda.
 
     Returns:
         exit code
     """
+    print(private)
     project = load_project(project_dir)
-    status = project_ops.upload(project, site=site, username=username, token=token)
+    status = project_ops.upload(project, private=private, site=site, username=username, token=token)
     if status:
         print(status.status_description)
         return 0
@@ -31,4 +32,4 @@ def upload_command(project_dir, site, username, token):
 
 def main(args):
     """Start the upload command and return exit status code."""
-    return upload_command(args.directory, args.site, args.user, args.token)
+    return upload_command(args.directory, args.private, args.site, args.user, args.token)

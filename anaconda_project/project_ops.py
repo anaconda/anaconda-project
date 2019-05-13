@@ -1721,13 +1721,14 @@ def unarchive(filename, project_dir, parent_dir=None, frontend=None):
     return archiver._unarchive_project(filename, project_dir=project_dir, parent_dir=parent_dir, frontend=frontend)
 
 
-def upload(project, site=None, username=None, token=None, log_level=None):
+def upload(project, private=None, site=None, username=None, token=None, log_level=None):
     """Upload the project to the Anaconda server.
 
     The returned status; if successful, has a 'url' attribute with the project URL.
 
     Args:
         project (``Project``): the project
+        private (bool): make project private
         site (str): site alias from Anaconda config
         username (str): Anaconda username
         token (str): Anaconda auth token
@@ -1754,6 +1755,7 @@ def upload(project, site=None, username=None, token=None, log_level=None):
             project,
             tmp_tarfile.name,
             uploaded_basename=(project.name + suffix),
+            private=private,
             site=site,
             username=username,
             token=token,

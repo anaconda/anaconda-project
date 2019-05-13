@@ -137,6 +137,7 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('upload', help="Upload the project to Anaconda Cloud")
     add_directory_arg(preset)
+    preset.add_argument('-p', '--private', action='store_true', help="Upload a private project", default=None)
     preset.add_argument('-s', '--site', metavar='SITE', help='Select site to use')
     preset.add_argument('-t', '--token', metavar='TOKEN', help='Auth token or a path to a file containing a token')
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
