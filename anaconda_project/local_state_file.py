@@ -30,6 +30,12 @@ class LocalStateFile(YamlFile):
     because you have to think about when other code might load or
     save in a way that conflicts with your loads and saves.
     """
+    # The dummy entry works around a bug/quirk in ruamel.yaml that drops the
+    # top comment for an empty dictionary
+    template = '''
+# Anaconda local project state (specific to this user/machine)
+__dummy__: dummy
+'''
 
     @classmethod
     def load_for_directory(cls, directory):
@@ -56,9 +62,6 @@ class LocalStateFile(YamlFile):
             if os.path.isfile(path):
                 return LocalStateFile(path)
         return LocalStateFile(os.path.join(directory, DEFAULT_LOCAL_STATE_FILENAME))
-
-    def _default_comment(self):
-        return "Anaconda local project state (specific to this user/machine)"
 
     def set_service_run_state(self, service_name, state):
         """Set a dict value in the ``service_run_states`` section.
