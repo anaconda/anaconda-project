@@ -52,7 +52,7 @@ class _Client(object):
         res = self._api.session.get(url)
         return res.status_code == 200
 
-    def create(self, project_info):
+    def create(self, project_info, private):
         url = "{}/apps/{}/projects".format(self._api.domain, self._username())
         json = {
             'name': project_info['name'],
@@ -61,6 +61,8 @@ class _Client(object):
                 'description': project_info['description']
             }
         }
+        if private:
+            json['access'] = 'private'
         data, headers = binstar_utils.jencode(json)
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
@@ -76,10 +78,12 @@ class _Client(object):
                 return len(zf.namelist())
         assert False, ("unsupported archive filename %s" % archive_filename)  # pragma: no cover (should not be reached)
 
-    def stage(self, project_info, archive_filename, uploaded_basename):
+    def stage(self, project_info, archive_filename, uploaded_basename, private):
         url = "{}/apps/{}/projects/{}/stage".format(self._api.domain, self._username(), project_info['name'])
         config = project_info.copy()
         config['size'] = os.path.getsize(archive_filename)
+        if private:
+            config['access'] = 'private'
         file_count = self._file_count(archive_filename)
         if file_count is not None:
             config['num_of_files'] = file_count
@@ -114,16 +118,18 @@ class _Client(object):
             self._check_response(res)
         return res
 
-    def upload(self, project_info, archive_filename, uploaded_basename):
+    def upload(self, project_info, archive_filename, uploaded_basename, private):
         """Upload archive_filename created from project, throwing BinstarError."""
         if not self._exists(project_info['name']):
-            res = self.create(project_info=project_info)
+            res = self.create(project_info=project_info, private=private)
             assert res.status_code in (200, 201)
 
         res = self.stage(
-            project_info=project_info, archive_filename=archive_filename, uploaded_basename=uploaded_basename)
+            project_info=project_info,
+            archive_filename=archive_filename,
+            uploaded_basename=uploaded_basename,
+            private=private)
         assert res.status_code in (200, 201)
-
         stage_info = res.json()
 
         assert 'post_url' in stage_info
@@ -153,12 +159,19 @@ class _UploadedStatus(SimpleStatus):
 # require any other files to import binstar_client).
 # archive_filename is the path to a local tmp file to upload
 # uploaded_basename is the filename the server should remember
-def _upload(project, archive_filename, uploaded_basename, site=None, username=None, token=None, log_level=None):
+def _upload(project,
+            archive_filename,
+            uploaded_basename,
+            private=None,
+            site=None,
+            username=None,
+            token=None,
+            log_level=None):
     assert not project.problems
 
     client = _Client(site=site, username=username, token=token, log_level=log_level)
     try:
-        json = client.upload(project.publication_info(), archive_filename, uploaded_basename)
+        json = client.upload(project.publication_info(), archive_filename, uploaded_basename, private)
         return _UploadedStatus(json)
     except Unauthorized:
         return SimpleStatus(

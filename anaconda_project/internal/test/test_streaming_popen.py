@@ -101,7 +101,7 @@ sys.exit(2)
     assert expected_err == err_lines
     assert "".join(expected_err) == "".join(stderr_from_callback)
 
-    assert p.returncode is 2
+    assert p.returncode == 2
 
 
 def test_bad_utf8():
@@ -165,7 +165,7 @@ sys.exit(0)
     assert expected_out == out_lines
     assert expected_err == err_lines
 
-    assert p.returncode is 0
+    assert p.returncode == 0
 
 
 def test_io_error(monkeypatch):

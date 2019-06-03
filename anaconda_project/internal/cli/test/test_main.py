@@ -188,7 +188,7 @@ def test_main_when_buggy(capsys, monkeypatch):
     monkeypatch.setattr("sys.argv", ['anaconda-project'])
 
     result = main()
-    assert result is 1
+    assert result == 1
     out, err = capsys.readouterr()
 
     assert '' == out
