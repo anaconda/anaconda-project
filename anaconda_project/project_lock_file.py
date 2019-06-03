@@ -20,6 +20,7 @@ DEFAULT_PROJECT_LOCK_FILENAME = possible_project_lock_file_names[0]
 
 class ProjectLockFile(YamlFile):
     """Represents the ``anaconda-project-lock.yml`` file which describes locked package versions."""
+
     template = '''
 # This is an Anaconda project lock file.
 # The lock file locks down exact versions of all your dependencies.

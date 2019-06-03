@@ -30,6 +30,7 @@ class LocalStateFile(YamlFile):
     because you have to think about when other code might load or
     save in a way that conflicts with your loads and saves.
     """
+
     # The dummy entry works around a bug/quirk in ruamel.yaml that drops the
     # top comment for an empty dictionary
     template = '''

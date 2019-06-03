@@ -114,6 +114,7 @@ class YamlFile(object):
     save in a way that conflicts with your loads and saves.
 
     """
+
     # The dummy entry works around a bug/quirk in ruamel.yaml that drops the
     # top comment for an empty dictionary
     template = '# yaml file\n__dummy__: dummy'

@@ -37,6 +37,7 @@ class ProjectFile(YamlFile):
     save in a way that conflicts with your loads and saves.
 
     """
+
     template = '''
 # This is an Anaconda project file.
 #
