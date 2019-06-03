@@ -754,4 +754,5 @@ class AnacondaProject(object):
         Returns:
             a ``Status``, if failed has ``errors``
         """
-        return project_ops.upload(project=project, private=private, site=site, username=username, token=token, log_level=log_level)
+        return project_ops.upload(
+            project=project, private=private, site=site, username=username, token=token, log_level=log_level)

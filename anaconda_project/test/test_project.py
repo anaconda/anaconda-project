@@ -2314,7 +2314,7 @@ def test_run_command_does_not_exist():
         exec_info = project.default_exec_info_for_environment(environ)
         assert exec_info.args[0] == 'this-command-does-not-exist'
         try:
-            FileNotFoundError
+            FileNotFoundError  # noqa
         except NameError:
             # python 2
             FileNotFoundError = OSError

@@ -20,7 +20,7 @@ def test_no_bug_happens(capsys):
         return 0
 
     code = handle_bugs(unbuggy_main, program_name="myprogram", details_dict=dict())
-    assert code is 0
+    assert code == 0
 
     out, err = capsys.readouterr()
 
@@ -42,7 +42,7 @@ def test_bug_handling(capsys, monkeypatch):
     code = handle_bugs(
         buggy_main, program_name=u"my$ 🌟program", details_dict=dict(thing1="foo", thing2="bar", thing3=u"🌟"))
 
-    assert code is 1
+    assert code == 1
     out, err = capsys.readouterr()
 
     assert '' == out
@@ -85,7 +85,7 @@ def test_bug_handling_not_interactive(capsys, monkeypatch):
     code = handle_bugs(
         buggy_main, program_name=u"my$ 🌟program", details_dict=dict(thing1="foo", thing2="bar", thing3=u"🌟"))
 
-    assert code is 1
+    assert code == 1
     out, err = capsys.readouterr()
 
     assert '' == out
@@ -147,7 +147,7 @@ def test_keyboard_interrupt(capsys):
 
     code = handle_bugs(buggy_main, program_name=u"myprogram", details_dict=dict())
 
-    assert code is 1
+    assert code == 1
     out, err = capsys.readouterr()
 
     assert '' == out

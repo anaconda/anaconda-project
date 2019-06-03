@@ -125,8 +125,10 @@ class _Client(object):
             assert res.status_code in (200, 201)
 
         res = self.stage(
-            project_info=project_info, archive_filename=archive_filename,
-            uploaded_basename=uploaded_basename, private=private)
+            project_info=project_info,
+            archive_filename=archive_filename,
+            uploaded_basename=uploaded_basename,
+            private=private)
         assert res.status_code in (200, 201)
         stage_info = res.json()
 
@@ -157,7 +159,14 @@ class _UploadedStatus(SimpleStatus):
 # require any other files to import binstar_client).
 # archive_filename is the path to a local tmp file to upload
 # uploaded_basename is the filename the server should remember
-def _upload(project, archive_filename, uploaded_basename, private=None, site=None, username=None, token=None, log_level=None):
+def _upload(project,
+            archive_filename,
+            uploaded_basename,
+            private=None,
+            site=None,
+            username=None,
+            token=None,
+            log_level=None):
     assert not project.problems
 
     client = _Client(site=site, username=username, token=token, log_level=log_level)
