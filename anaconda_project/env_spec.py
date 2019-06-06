@@ -438,7 +438,7 @@ def _load_environment_yml(filename):
     # keeping the new project file if it's messed up.
     #
     # However we do try to avoid crashing on None or type errors here.
-    print(type(yaml))
+    
     raw_dependencies = yaml.get('dependencies', [])
     if not isinstance(raw_dependencies, list) or len(raw_dependencies) == 0:
         raw_dependencies = yaml.get('packages', [])
