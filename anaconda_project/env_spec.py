@@ -17,15 +17,7 @@ import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
 from anaconda_project.internal.py2_compat import is_string
 
-from anaconda_project.yaml_file import _load_string, _save_file, _YAMLError
-
-try:
-    # this is the conda-packaged version of ruamel.yaml which has the
-    # module renamed
-    import ruamel_yaml as ryaml
-except ImportError:  # pragma: no cover
-    # this is the upstream version
-    import ruamel.yaml as ryaml  # pragma: no cover
+from anaconda_project.yaml_file import _load_string, _save_file, _YAMLError, ryaml
 
 
 def _combine_keeping_last_duplicate(items1, items2, key_func=None):

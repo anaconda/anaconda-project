@@ -9,15 +9,6 @@
 from __future__ import absolute_import
 
 import os
-from collections import OrderedDict
-
-try:
-    # this is the conda-packaged version of ruamel.yaml which has the
-    # module renamed
-    import ruamel_yaml as ryaml
-except ImportError:  # pragma: no cover
-    # this is the upstream version
-    import ruamel.yaml as ryaml  # pragma: no cover
 
 from anaconda_project.yaml_file import YamlFile, _CommentedMap, _block_style_all_nodes
 
@@ -29,6 +20,26 @@ DEFAULT_PROJECT_LOCK_FILENAME = possible_project_lock_file_names[0]
 
 class ProjectLockFile(YamlFile):
     """Represents the ``anaconda-project-lock.yml`` file which describes locked package versions."""
+
+    template = '''
+# This is an Anaconda project lock file.
+# The lock file locks down exact versions of all your dependencies.
+#
+# In most cases, this file is automatically maintained by the `anaconda-project` command or GUI tools.
+# It's best to keep this file in revision control (such as git or svn).
+# The file is in YAML format, please see http://www.yaml.org/start.html for more.
+#
+
+#
+# Set to false to ignore locked versions.
+#
+locking_enabled: false
+
+#
+# A key goes in here for each env spec.
+#
+env_specs: {}
+'''
 
     @classmethod
     def load_for_directory(cls, directory):
@@ -74,38 +85,6 @@ class ProjectLockFile(YamlFile):
             filename (str): path to the project file
         """
         super(ProjectLockFile, self).__init__(filename)
-
-    def _default_content(self):
-        header = (
-            "This is an Anaconda project lock file.\n" +
-            "The lock file locks down exact versions of all your dependencies.\n" + "\n" +
-            "In most cases, this file is automatically maintained by the `anaconda-project` command or GUI tools.\n" +
-            "It's best to keep this file in revision control (such as git or svn).\n" +
-            "The file is in YAML format, please see http://www.yaml.org/start.html for more.\n")
-        sections = OrderedDict()
-
-        sections['locking_enabled'] = ("Set to false to ignore locked versions.")
-        sections['env_specs'] = ("A key goes in here for each env spec.\n")
-
-        # we make a big string and then parse it because I can't figure out the
-        # ruamel.yaml API to insert comments in front of map keys.
-        def comment_out(comment):
-            return ("# " + "\n# ".join(comment.split("\n")) + "\n").replace("# \n", "#\n")
-
-        to_parse = comment_out(header)
-        for section_name, comment in sections.items():
-            # future: this is if/else is silly, we should be
-            # assigning these bodies up above when we assign the
-            # comments.
-            if section_name in ('env_specs', ):
-                section_body = "  {}"
-            elif section_name in ('locking_enabled', ):
-                section_body = " false"
-            to_parse = to_parse + "\n#\n" + comment_out(comment) + section_name + ":\n" + section_body + "\n\n\n"
-
-        as_json = ryaml.load(to_parse, Loader=ryaml.RoundTripLoader)
-
-        return as_json
 
     def _save_default_content(self):
         # We don't want to save empty lock files.

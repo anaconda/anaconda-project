@@ -115,6 +115,10 @@ class YamlFile(object):
 
     """
 
+    # The dummy entry works around a bug/quirk in ruamel.yaml that drops the
+    # top comment for an empty dictionary
+    template = '# yaml file\n__dummy__: dummy'
+
     def __init__(self, filename):
         """Load a YamlFile with the given filename.
 
@@ -186,22 +190,27 @@ class YamlFile(object):
                 # so stick an empty dict in here
                 self._yaml = dict()
             else:
-                self._yaml = self._default_content()
+                self._yaml = self._load_template()
+                self._fill_default_content(self._yaml)
                 # make it pretty
                 _block_style_all_nodes(self._yaml)
                 if not self._save_default_content():
                     # pretend we already saved
                     self._previous_content = _dump_string(self._yaml)
 
-    def _default_comment(self):
-        return "yaml file"
-
-    def _default_content(self):
+    def _load_template(self):
         # ruamel.yaml returns None if you load an empty file,
         # so we have to build this ourselves
-        root = CommentedMap()
-        root.yaml_set_start_comment(self._default_comment())
-        return root
+        assert self.template is not None
+        result = _load_string(self.template.lstrip())
+        # ruamel.yaml doesn't preserve a header comment for an empty dictionary.
+        # To work around this we add a dummy element in the template, then we
+        # delete that element to obtain an empty map
+        result.pop('__dummy__', None)
+        return result
+
+    def _fill_default_content(self, template):
+        pass
 
     def _save_default_content(self):
         """Override to change whether we consider a default, unmodified file dirty."""
