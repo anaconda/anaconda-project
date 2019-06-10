@@ -105,13 +105,17 @@ class EnvSpec(object):
             assert name is None or name in self._inherit_from_names
 
         conda_specs_by_name = dict()
+        conda_names_constrained = []
         for spec in self.conda_packages_for_create:
             # we quietly skip invalid specs here and let them fail
             # somewhere we can more easily report an error message.
             parsed = conda_api.parse_spec(spec)
             if parsed is not None:
                 conda_specs_by_name[parsed.name] = spec
+                if parsed.conda_constraint is not None or parsed.pip_constraint is not None:
+                    conda_names_constrained.append(parsed.name)
         self._conda_specs_for_create_by_name = conda_specs_by_name
+        self._conda_names_constrained = sorted(conda_names_constrained)
 
         name_set = set()
         for spec in self.conda_packages:
@@ -255,6 +259,11 @@ class EnvSpec(object):
         return set(self._conda_specs_for_create_by_name.keys())
 
     @property
+    def conda_package_names_constrained_set(self):
+        """List of conda package names with version constraints."""
+        return set(self._conda_names_constrained)
+
+    @property
     def pip_package_names_set(self):
         """Pip package names that we require, as a Python set."""
         return set(self._pip_specs_by_name.keys())
@@ -287,6 +296,12 @@ class EnvSpec(object):
     def specs_for_pip_package_names(self, names):
         """Get the full install specs given an iterable of package names."""
         return self._specs_for_package_names(names, self._pip_specs_by_name)
+
+    @property
+    def conda_pinned_specs_list(self):
+        """Get the full install specs for all constrained conda packages."""
+        names = self.conda_package_names_constrained_set
+        return self._specs_for_package_names(names, self._conda_specs_for_create_by_name)
 
     @property
     def inherit_from(self):
@@ -385,6 +400,39 @@ class EnvSpec(object):
             template_json['something']['inherit_from'] = names
 
         return template_json['something']
+
+    def _pin_fnames(self, prefix):
+        conda_meta_path = os.path.join(prefix, 'conda-meta')
+        if not os.path.isdir(conda_meta_path):
+            raise RuntimeError('Expected path {} to exist'.format(conda_meta_path))
+        fname = os.path.join(prefix, 'pinned')
+        orig = fname + '.__ap_orig__'
+        new = fname + '.__ap_new__'
+        return fname, orig, new
+
+    def apply_pins(self, prefix):
+        """Write the augmented pinned file in the environment."""
+        all_pins = []
+        fname, orig, new = self._pin_fnames(prefix)
+        if os.path.exists(fname):
+            with open(fname, 'r') as fp:
+                all_pins.extend(p.strip() for p in fp if p.strip())
+        all_pins.extend(self.conda_pinned_specs_list)
+        if all_pins:
+            with open(new, 'w') as fp:
+                fp.write('\n'.join(all_pins))
+        if os.path.exists(fname):
+            os.rename(fname, orig)
+        if os.path.exists(new):
+            os.rename(new, fname)
+
+    def remove_pins(self, prefix):
+        """Remove our pins. Assumes that apply_pins was called previously."""
+        fname, orig, _ = self._pin_fnames(prefix)
+        if os.path.exists(orig):
+            os.rename(orig, fname)
+        elif os.path.exists(fname):
+            os.remove(fname)
 
     def save_environment_yml(self, filename):
         """Save as an environment.yml file."""

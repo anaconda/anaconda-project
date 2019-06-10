@@ -364,14 +364,18 @@ class DefaultCondaManager(CondaManager):
                 specs = spec.specs_for_conda_package_names(to_update)
                 assert len(specs) == len(to_update)
                 try:
-                    conda_api.install(
-                        prefix=prefix,
-                        pkgs=specs,
-                        channels=spec.channels,
-                        stdout_callback=self._on_stdout,
-                        stderr_callback=self._on_stderr)
-                except conda_api.CondaError as e:
-                    raise CondaManagerError("Failed to install packages: {}: {}".format(", ".join(specs), str(e)))
+                    spec.apply_pins(prefix)
+                    try:
+                        conda_api.install(
+                            prefix=prefix,
+                            pkgs=specs,
+                            channels=spec.channels,
+                            stdout_callback=self._on_stdout,
+                            stderr_callback=self._on_stderr)
+                    except conda_api.CondaError as e:
+                        raise CondaManagerError("Failed to install packages: {}: {}".format(", ".join(specs), str(e)))
+                finally:
+                    spec.remove_pins(prefix)
         elif create:
             # Create environment from scratch
 
