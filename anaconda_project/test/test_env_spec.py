@@ -44,20 +44,6 @@ channels:
   - channel2
     """, check)
 
-    with_file_contents(
-        """
-name: foo
-packages:
-  - bar=1.0
-  - baz
-  - pip:
-    - pippy
-    - poppy==2.0
-channels:
-  - channel1
-  - channel2
-    """, check)
-
 
 def test_load_environment_yml_with_prefix():
     def check(filename):
@@ -75,20 +61,6 @@ def test_load_environment_yml_with_prefix():
         """
 prefix: /opt/foo
 dependencies:
-  - bar=1.0
-  - baz
-  - pip:
-    - pippy
-    - poppy==2.0
-channels:
-  - channel1
-  - channel2
-    """, check)
-
-    with_file_contents(
-        """
-name: foo
-packages:
   - bar=1.0
   - baz
   - pip:
@@ -125,19 +97,6 @@ channels:
   - channel2
     """, check)
 
-    with_file_contents(
-        """
-packages:
-  - bar=1.0
-  - baz
-  - pip:
-    - pippy
-    - poppy==2.0
-channels:
-  - channel1
-  - channel2
-    """, check)
-
 
 def test_load_environment_yml_with_broken_sections():
     def check(filename):
@@ -155,12 +114,6 @@ dependencies: 42
 channels: 57
     """, check)
 
-    with_file_contents("""
-name: foo
-packages: 42
-channels: 57
-        """, check)
-
 
 def test_load_environment_yml_with_broken_pip_section():
     def check(filename):
@@ -175,13 +128,6 @@ def test_load_environment_yml_with_broken_pip_section():
     with_file_contents("""
 name: foo
 dependencies:
- - pip: 42
-channels: 57
-    """, check)
-
-    with_file_contents("""
-name: foo
-packages:
  - pip: 42
 channels: 57
     """, check)
@@ -260,20 +206,6 @@ channels:
   - channel2
     """, check)
 
-    with_named_file_contents(
-        "environment.yml", """
-name: foo
-packages:
-  - bar=1.0
-  - baz
-  - pip:
-    - pippy
-    - poppy==2.0
-channels:
-  - channel1
-  - channel2
-    """, check)
-
 
 def test_find_out_of_sync_environment_yml():
     def check(filename):
@@ -296,20 +228,6 @@ def test_find_out_of_sync_environment_yml():
         "environment.yaml", """
 name: foo
 dependencies:
-  - bar=1.0
-  - baz
-  - pip:
-    - pippy
-    - poppy==2.0
-channels:
-  - channel1
-  - channel2
-    """, check)
-
-    with_named_file_contents(
-        "environment.yaml", """
-name: foo
-packages:
   - bar=1.0
   - baz
   - pip:
@@ -433,22 +351,6 @@ def test_save_environment_yml():
         """
 name: foo
 dependencies:
-  - xyz
-  - bar=1.0
-  - baz
-  - abc
-  - pip:
-    - pippy
-    - poppy==2.0
-channels:
-  - channel1
-  - channel2
-    """, check)
-
-    with_file_contents(
-        """
-name: foo
-packages:
   - xyz
   - bar=1.0
   - baz

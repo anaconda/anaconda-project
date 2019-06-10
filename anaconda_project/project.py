@@ -195,7 +195,7 @@ class _ConfigCache(object):
         if project_exists and not (project_file.corrupted or lock_file.corrupted):
             _unknown_field_suggestions(project_file, problems, project_file.root,
                                        ('name', 'description', 'icon', 'variables', 'downloads', 'services',
-                                        'env_specs', 'commands', 'packages', 'channels', 'platforms', 'skip_imports'))
+                                        'env_specs', 'commands', 'packages', 'dependencies', 'channels', 'platforms', 'skip_imports'))
 
             _unknown_field_suggestions(lock_file, problems, lock_file.root, ('env_specs', 'locking_enabled'))
 
@@ -497,7 +497,7 @@ class _ConfigCache(object):
                 continue
 
             _unknown_field_suggestions(lock_file, problems, lock_set,
-                                       ('packages', 'platforms', 'locked', 'env_spec_hash'))
+                                       ('packages', 'dependencies', 'platforms', 'locked', 'env_spec_hash'))
 
             enabled = lock_set.get('locked', self.locking_globally_enabled)
             if not isinstance(enabled, bool):
@@ -640,7 +640,7 @@ class _ConfigCache(object):
                     first_env_spec_name = name
 
                 _unknown_field_suggestions(project_file, problems, attrs,
-                                           ('packages', 'channels', 'platforms', 'description', 'inherit_from',
+                                           ('packages', 'dependencies', 'channels', 'platforms', 'description', 'inherit_from',
                                             'variables', 'services', 'downloads'))
         else:
             _file_problem(

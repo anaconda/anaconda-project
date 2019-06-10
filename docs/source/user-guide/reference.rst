@@ -77,7 +77,7 @@ prerequisites are set up *before* it runs the script.
 
 Let's say your script requires a certain conda package to be
 installed. Add the ``redis-py`` package to ``anaconda-project.yml`` as a
-dependency:
+dependency using either the ``packages`` or ``dependencies`` key:
 
 .. code-block:: yaml
 
@@ -254,7 +254,7 @@ principle) deploy any application which supports these options.
 Environments and Channels
 =========================
 
-You can configure packages in a top level ``packages``
+You can configure packages in a top level ``packages`` or ``dependencies``
 section of the ``anaconda-project.yml`` file, as we discussed earlier:
 
 .. code-block:: yaml
@@ -353,7 +353,7 @@ something like this:
 pip packages
 ============
 
-Underneath any `packages:` section, you can add a `pip:`
+Underneath any `packages:` or `dependencies:` section, you can add a `pip:`
 section with a list of pip requirement specifiers.
 
 .. code-block:: yaml

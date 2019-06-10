@@ -24,7 +24,7 @@ following sections:
 * variables
 * services
 * downloads
-* packages
+* packages or dependencies
 * channels
 * env_specs
 
