@@ -432,8 +432,10 @@ def _load_environment_yml(filename):
     # However we do try to avoid crashing on None or type errors here.
 
     raw_dependencies = yaml.get('dependencies', [])
-    if not isinstance(raw_dependencies, list):
-        raw_dependencies = []
+    if not isinstance(raw_dependencies, list) or len(raw_dependencies) == 0:
+        raw_dependencies = yaml.get('packages', [])
+        if not isinstance(raw_dependencies, list):
+            raw_dependencies = []
 
     raw_channels = yaml.get('channels', [])
     if not isinstance(raw_channels, list):
