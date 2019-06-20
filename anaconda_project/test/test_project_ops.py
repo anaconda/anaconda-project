@@ -1520,11 +1520,12 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
 
     def check(dirname):
         project = Project(dirname)
-        for spec in ('numpy<1.11.3', 'pandas'):
-            if spec == 'pandas':
-                status = project_ops.add_packages(project, 'foo', packages=[spec], channels=[])
-            else:
+        specs = ('numpy<1.11.3', 'pandas')
+        for spec in specs:
+            if spec == specs[0]:
                 status = project_ops.add_env_spec(project, name='foo', packages=[spec], channels=[])
+            else:
+                status = project_ops.add_packages(project, 'foo', packages=[spec], channels=[])
             if not status:
                 print(status.status_description)
                 print(repr(status.errors))
@@ -1543,6 +1544,9 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             # ensure numpy <1.11.3 is present in both passes
             meta_path = os.path.join(dirname, 'envs', 'foo', 'conda-meta')
             assert os.path.isdir(meta_path)
+            pinned = os.path.join(meta_path, 'pinned')
+            assert os.path.exists(pinned)
+            assert open(pinned, 'r').read() == specs[0]
             files = glob.glob(os.path.join(meta_path, 'numpy-1.*-*'))
             assert len(files) == 1, files
             version = os.path.basename(files[0]).split('-', 2)[1]

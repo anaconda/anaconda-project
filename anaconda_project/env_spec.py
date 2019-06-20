@@ -105,24 +105,24 @@ class EnvSpec(object):
             assert name is None or name in self._inherit_from_names
 
         conda_specs_by_name = dict()
-        conda_names_constrained = []
         for spec in self.conda_packages_for_create:
             # we quietly skip invalid specs here and let them fail
             # somewhere we can more easily report an error message.
             parsed = conda_api.parse_spec(spec)
             if parsed is not None:
                 conda_specs_by_name[parsed.name] = spec
-                if parsed.conda_constraint is not None or parsed.pip_constraint is not None:
-                    conda_names_constrained.append(parsed.name)
         self._conda_specs_for_create_by_name = conda_specs_by_name
-        self._conda_names_constrained = sorted(conda_names_constrained)
 
         name_set = set()
+        conda_constrained_packages = []
         for spec in self.conda_packages:
             parsed = conda_api.parse_spec(spec)
             if parsed is not None:
                 name_set.add(parsed.name)
+                if parsed.conda_constraint is not None or parsed.pip_constraint is not None:
+                    conda_constrained_packages.append(spec)
         self._conda_logical_specs_name_set = name_set
+        self.conda_constrained_packages = sorted(conda_constrained_packages)
 
         pip_specs_by_name = dict()
         for spec in self.pip_packages:
@@ -298,12 +298,6 @@ class EnvSpec(object):
         return self._specs_for_package_names(names, self._pip_specs_by_name)
 
     @property
-    def conda_pinned_specs_list(self):
-        """Get the full install specs for all constrained conda packages."""
-        names = self.conda_package_names_constrained_set
-        return self._specs_for_package_names(names, self._conda_specs_for_create_by_name)
-
-    @property
     def inherit_from(self):
         """Env spec that we inherit stuff from."""
         return self._inherit_from
@@ -401,38 +395,26 @@ class EnvSpec(object):
 
         return template_json['something']
 
-    def _pin_fnames(self, prefix):
+    def apply_pins(self, prefix):
+        """Write the augmented pinned file in the environment."""
         conda_meta_path = os.path.join(prefix, 'conda-meta')
         if not os.path.isdir(conda_meta_path):
             raise RuntimeError('Expected path {} to exist'.format(conda_meta_path))
-        fname = os.path.join(prefix, 'pinned')
-        orig = fname + '.__ap_orig__'
-        new = fname + '.__ap_new__'
-        return fname, orig, new
-
-    def apply_pins(self, prefix):
-        """Write the augmented pinned file in the environment."""
-        all_pins = []
-        fname, orig, new = self._pin_fnames(prefix)
+        fname = os.path.join(conda_meta_path, 'pinned')
         if os.path.exists(fname):
             with open(fname, 'r') as fp:
-                all_pins.extend(p.strip() for p in fp if p.strip())
-        all_pins.extend(self.conda_pinned_specs_list)
-        if all_pins:
-            with open(new, 'w') as fp:
-                fp.write('\n'.join(all_pins))
-        if os.path.exists(fname):
-            os.rename(fname, orig)
-        if os.path.exists(new):
-            os.rename(new, fname)
-
-    def remove_pins(self, prefix):
-        """Remove our pins. Assumes that apply_pins was called previously."""
-        fname, orig, _ = self._pin_fnames(prefix)
-        if os.path.exists(orig):
-            os.rename(orig, fname)
-        elif os.path.exists(fname):
-            os.remove(fname)
+                old_list = fp.read()
+        else:
+            old_list = ''
+        new_list = '\n'.join(self.conda_constrained_packages)
+        if old_list != new_list:
+            if new_list:
+                with open(fname + '.__ap_new', 'w') as fp:
+                    fp.write(new_list)
+            if os.path.exists(fname):
+                os.rename(fname, fname + '.__ap_orig')
+            if new_list:
+                os.rename(fname + '.__ap_new', fname)
 
     def save_environment_yml(self, filename):
         """Save as an environment.yml file."""
