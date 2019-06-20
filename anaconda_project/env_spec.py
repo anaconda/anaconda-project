@@ -114,11 +114,15 @@ class EnvSpec(object):
         self._conda_specs_for_create_by_name = conda_specs_by_name
 
         name_set = set()
+        conda_constrained_packages = []
         for spec in self.conda_packages:
             parsed = conda_api.parse_spec(spec)
             if parsed is not None:
                 name_set.add(parsed.name)
+                if parsed.conda_constraint is not None or parsed.pip_constraint is not None:
+                    conda_constrained_packages.append(spec)
         self._conda_logical_specs_name_set = name_set
+        self.conda_constrained_packages = sorted(conda_constrained_packages)
 
         pip_specs_by_name = dict()
         for spec in self.pip_packages:
@@ -255,6 +259,11 @@ class EnvSpec(object):
         return set(self._conda_specs_for_create_by_name.keys())
 
     @property
+    def conda_package_names_constrained_set(self):
+        """List of conda package names with version constraints."""
+        return set(self._conda_names_constrained)
+
+    @property
     def pip_package_names_set(self):
         """Pip package names that we require, as a Python set."""
         return set(self._pip_specs_by_name.keys())
@@ -385,6 +394,27 @@ class EnvSpec(object):
             template_json['something']['inherit_from'] = names
 
         return template_json['something']
+
+    def apply_pins(self, prefix):
+        """Write the augmented pinned file in the environment."""
+        conda_meta_path = os.path.join(prefix, 'conda-meta')
+        if not os.path.isdir(conda_meta_path):
+            raise RuntimeError('Expected path {} to exist'.format(conda_meta_path))
+        fname = os.path.join(conda_meta_path, 'pinned')
+        if os.path.exists(fname):
+            with open(fname, 'r') as fp:
+                old_list = fp.read()
+        else:
+            old_list = ''
+        new_list = '\n'.join(self.conda_constrained_packages)
+        if old_list != new_list:
+            if new_list:
+                with open(fname + '.__ap_new', 'w') as fp:
+                    fp.write(new_list)
+            if os.path.exists(fname):
+                os.rename(fname, fname + '.__ap_orig')
+            if new_list:
+                os.rename(fname + '.__ap_new', fname)
 
     def save_environment_yml(self, filename):
         """Save as an environment.yml file."""

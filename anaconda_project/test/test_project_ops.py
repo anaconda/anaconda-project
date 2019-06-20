@@ -14,6 +14,7 @@ import platform
 import pytest
 import tarfile
 import zipfile
+import glob
 
 from anaconda_project import project_ops
 from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaLockSet, CondaManagerError,
@@ -1506,7 +1507,12 @@ env_specs:
 
 
 # the other add_env_spec tests use a mock CondaManager, but we want to have
-# one test that does the real thing to be sure it works.
+# one test that does the real thing to be sure it works. Furthermore, we want
+# to exercise the logic that ensures anaconda-project can properly pin package
+# versions during intermediate install steps. To do so, we purposefully install
+# a version of numpy that is incompatible with the latest version of pandas, and
+# then we add a latest version of pandas. If anaconda-project does the right thing,
+# conda will install an earlier version of pandas to respect the numpy version pin.
 @pytest.mark.slow
 def test_add_env_spec_with_real_conda_manager(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
@@ -1514,22 +1520,37 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
 
     def check(dirname):
         project = Project(dirname)
-        status = project_ops.add_env_spec(project, name='foo', packages=['numpy=1.15.4'], channels=[])
-        if not status:
-            print(status.status_description)
-            print(repr(status.errors))
-        assert status
+        specs = ('numpy<1.11.3', 'pandas')
+        for spec in specs:
+            if spec == specs[0]:
+                status = project_ops.add_env_spec(project, name='foo', packages=[spec], channels=[])
+            else:
+                status = project_ops.add_packages(project, 'foo', packages=[spec], channels=[])
+            if not status:
+                print(status.status_description)
+                print(repr(status.errors))
+            assert status
 
-        assert 'foo' in project.env_specs
-        env = project.env_specs['foo']
-        assert env.lock_set.enabled
-        assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME))
+            assert 'foo' in project.env_specs
+            env = project.env_specs['foo']
+            assert env.lock_set.enabled
+            assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME))
 
-        # be sure it was really done
-        project2 = Project(dirname)
-        env_commented_map = project2.project_file.get_value(['env_specs', 'foo'])
-        assert dict(packages=['numpy=1.15.4'], channels=[]) == dict(env_commented_map)
-        assert os.path.isdir(os.path.join(dirname, 'envs', 'foo', 'conda-meta'))
+            # be sure it was really done
+            project2 = Project(dirname)
+            env_commented_map = project2.project_file.get_value(['env_specs', 'foo'])
+            assert spec in env_commented_map['packages'], env_commented_map['packages']
+
+            # ensure numpy <1.11.3 is present in both passes
+            meta_path = os.path.join(dirname, 'envs', 'foo', 'conda-meta')
+            assert os.path.isdir(meta_path)
+            pinned = os.path.join(meta_path, 'pinned')
+            assert os.path.exists(pinned)
+            assert open(pinned, 'r').read() == specs[0]
+            files = glob.glob(os.path.join(meta_path, 'numpy-1.*-*'))
+            assert len(files) == 1, files
+            version = os.path.basename(files[0]).split('-', 2)[1]
+            assert tuple(map(int, version.split('.'))) < (1, 11, 3), files[0]
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
