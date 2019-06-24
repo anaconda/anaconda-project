@@ -2,7 +2,23 @@
 
 We [keep a changelog.](http://keepachangelog.com/)
 
-* [PR 167](https://github.com/Anaconda-Platform/anaconda-project/pull/167) - Fixes required to support newer versions of conda, pip, and tornado.
+## Version 0.8.3 (2019/06/20) - Public Release
+
+### Issues Closed
+
+* [Issue 202](https://github.com/Anaconda-Platform/anaconda-project/issues/201) - Not respecting version pins when adding new packages to a project ([PR 203](https://github.com/Anaconda-Platform/anaconda-project/pull/203))
+* [Issue 154](https://github.com/Anaconda-Platform/anaconda-project/issues/154) - switching between prompts for commands on Windows ([PR 177](https://github.com/Anaconda-Platform/anaconda-project/pull/177))
+* [Issue 70](https://github.com/Anaconda-Platform/anaconda-project/issues/70) - `run` in absence of yaml file should return error ([PR 176](https://github.com/Anaconda-Platform/anaconda-project/pull/176))
+* [PR 171](https://github.com/Anaconda-Platform/anaconda-project/pull/171) - avoid crash in prepare/update if env_specs is missing
+* [PR 167](https://github.com/Anaconda-Platform/anaconda-project/pull/167), [PR 142](https://github.com/Anaconda-Platform/anaconda-project/pull/142) - issues with the latest versions of pip, conda, tornado
+* [PR 162](https://github.com/Anaconda-Platform/anaconda-project/pull/162) - properly honor `supports_http_options: false`
+
+#### Enhancements
+
+* [Issue 194](https://github.com/Anaconda-Platform/anaconda-project/issues/194) - Allow "dependencies" as a synonym for "packages" to facilitate use of `anaconda-project.yml` files by `conda env` ([PR 200](https://github.com/Anaconda-Platform/anaconda-project/pull/200))
+* [PR 192](https://github.com/Anaconda-Platform/anaconda-project/pull/192) - Provide the ability to set a project uploaded to anaconda.org as private
+* [PR 178](https://github.com/Anaconda-Platform/anaconda-project/pull/178) - Add an `--empty-environment` option to the `init` command
+* [PR 144](https://github.com/Anaconda-Platform/anaconda-project/pull/144) - Remove `--no-deps` from pip install command
 
 ## Version 0.8.2 (2017/10/19) - Public Release
 
