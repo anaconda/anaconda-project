@@ -69,3 +69,57 @@ def test_upload_command_with_token_and_user(capsys, monkeypatch):
         assert params['kwargs']['username'] == 'foo'
 
     with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_upload_command_with_suffix_zip(capsys, monkeypatch):
+    params = _monkeypatch_upload(monkeypatch)
+
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'upload', '--directory', dirname,
+             '--suffix', '.zip'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert 'Hello\nYay\n' == out
+        assert '' == err
+
+        assert params['kwargs']['suffix'] == '.zip'
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_upload_command_with_suffix_tarbz2(capsys, monkeypatch):
+    params = _monkeypatch_upload(monkeypatch)
+
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'upload', '--directory', dirname,
+             '--suffix', '.tar.bz2'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert 'Hello\nYay\n' == out
+        assert '' == err
+
+        assert params['kwargs']['suffix'] == '.tar.bz2'
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_upload_command_with_suffix_targz(capsys, monkeypatch):
+    params = _monkeypatch_upload(monkeypatch)
+
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'upload', '--directory', dirname,
+             '--suffix', '.tar.gz'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert 'Hello\nYay\n' == out
+        assert '' == err
+
+        assert params['kwargs']['suffix'] == '.tar.gz'
+
+    with_directory_contents_completing_project_file(dict(), check)
