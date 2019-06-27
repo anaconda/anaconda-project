@@ -141,6 +141,10 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('-s', '--site', metavar='SITE', help='Select site to use')
     preset.add_argument('-t', '--token', metavar='TOKEN', help='Auth token or a path to a file containing a token')
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
+    preset.add_argument('--suffix', metavar='SUFFIX',
+                        help='Project archive suffix (.tar.gz, .tar.bz2, .zip)',
+                        default='.tar.bz2',
+                        choices=['.tar.gz', '.tar.bz2', '.zip'])
     preset.set_defaults(main=upload.main)
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
