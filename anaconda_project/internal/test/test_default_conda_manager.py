@@ -40,7 +40,7 @@ else:
     # Use a different package from the test env due to weird CI path/env errors
     PYINSTRUMENT_BINARY = "bin/pyinstrument"
 
-test_spec = EnvSpec(name='myenv', conda_packages=['ipython'], pip_packages=['pyinstrument'], channels=[])
+test_spec = EnvSpec(name='myenv', conda_packages=['ipython', 'python=3.6'], pip_packages=['pyinstrument'], channels=[])
 
 
 def test_current_platform_unsupported_by_env_spec(monkeypatch):
@@ -103,7 +103,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
     spec = test_spec
-    assert spec.conda_packages == ('ipython', )
+    assert spec.conda_packages == ('ipython', 'python=3.6')
     assert spec.pip_packages == ('pyinstrument', )
 
     spec_with_phony_pip_package = EnvSpec(
@@ -149,7 +149,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
 
         deviations = manager.find_environment_deviations(envdir, spec)
 
-        assert deviations.missing_packages == ('ipython', )
+        assert set(deviations.missing_packages) == {'python', 'ipython'}
         assert deviations.missing_pip_packages == ('pyinstrument', )
 
         # with create=False, we won't create the env
@@ -303,7 +303,7 @@ def test_timestamp_file_works(monkeypatch):
 
         deviations = manager.find_environment_deviations(envdir, spec)
 
-        assert deviations.missing_packages == ('ipython', )
+        assert set(deviations.missing_packages) == {'python', 'ipython'}
         assert deviations.missing_pip_packages == ('pyinstrument', )
         assert not deviations.ok
 
