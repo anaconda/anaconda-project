@@ -125,7 +125,8 @@ env_specs: {}
     def load_for_directory(cls, directory, default_env_specs_func=_empty_default_env_spec):
         """Load the project file from the given directory, even if it doesn't exist.
 
-        If the directory has no project file, the loaded
+        If the directory has no project file, and the project file
+        cannot be found in any parent directory, the loaded
         ``ProjectFile`` will be empty. It won't actually be
         created on disk unless you call ``save()``.
 
@@ -144,10 +145,14 @@ env_specs: {}
             a new ``ProjectFile``
 
         """
-        for name in possible_project_file_names:
-            path = os.path.join(directory, name)
-            if os.path.isfile(path):
-                return ProjectFile(path)
+        current_dir = directory
+        while current_dir != '/':
+            for name in possible_project_file_names:
+                path = os.path.join(current_dir, name)
+                if os.path.isfile(path):
+                    return ProjectFile(path)
+            current_dir = os.path.dirname(os.path.abspath(directory))
+
         return ProjectFile(os.path.join(directory, DEFAULT_PROJECT_FILENAME), default_env_specs_func)
 
     def __init__(self, filename, default_env_specs_func=_empty_default_env_spec):
