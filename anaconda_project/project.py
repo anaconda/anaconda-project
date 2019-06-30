@@ -1182,7 +1182,9 @@ class Project(object):
                 return [_anaconda_default_env_spec(shared_base_spec=None)]
 
         self._project_file = ProjectFile.load_for_directory(directory_path, default_env_specs_func=load_default_specs)
-        self._lock_file = ProjectLockFile.load_for_directory(directory_path)
+        self._directory_path = self._project_file.project_dir
+
+        self._lock_file = ProjectLockFile.load_for_directory(self._directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
         self._config_cache = _ConfigCache(self._directory_path, plugin_registry, must_exist)
         if frontend is None:

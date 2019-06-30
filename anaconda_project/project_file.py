@@ -151,7 +151,7 @@ env_specs: {}
                 path = os.path.join(current_dir, name)
                 if os.path.isfile(path):
                     return ProjectFile(path)
-            current_dir = os.path.dirname(os.path.abspath(directory))
+            current_dir = os.path.dirname(os.path.abspath(current_dir))
 
         return ProjectFile(os.path.join(directory, DEFAULT_PROJECT_FILENAME), default_env_specs_func)
 
@@ -171,7 +171,9 @@ env_specs: {}
             filename (str): path to the project file
         """
         self._default_env_specs_func = default_env_specs_func
+        self.project_dir = os.path.dirname(filename)
         super(ProjectFile, self).__init__(filename)
+
 
     def _fill_default_content(self, as_json):
         as_json['name'] = os.path.basename(os.path.dirname(self.filename))
