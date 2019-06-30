@@ -76,8 +76,7 @@ def test_upload_command_with_suffix_zip(capsys, monkeypatch):
 
     def check(dirname):
         code = _parse_args_and_run_subcommand(
-            ['anaconda-project', 'upload', '--directory', dirname,
-             '--suffix', '.zip'])
+            ['anaconda-project', 'upload', '--directory', dirname, '--suffix', '.zip'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -94,8 +93,7 @@ def test_upload_command_with_suffix_tarbz2(capsys, monkeypatch):
 
     def check(dirname):
         code = _parse_args_and_run_subcommand(
-            ['anaconda-project', 'upload', '--directory', dirname,
-             '--suffix', '.tar.bz2'])
+            ['anaconda-project', 'upload', '--directory', dirname, '--suffix', '.tar.bz2'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -112,8 +110,7 @@ def test_upload_command_with_suffix_targz(capsys, monkeypatch):
 
     def check(dirname):
         code = _parse_args_and_run_subcommand(
-            ['anaconda-project', 'upload', '--directory', dirname,
-             '--suffix', '.tar.gz'])
+            ['anaconda-project', 'upload', '--directory', dirname, '--suffix', '.tar.gz'])
         assert code == 0
 
         out, err = capsys.readouterr()

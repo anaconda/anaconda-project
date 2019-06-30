@@ -20,8 +20,7 @@ def upload_command(project_dir, private, site, username, token, suffix):
         exit code
     """
     project = load_project(project_dir)
-    status = project_ops.upload(project, private=private, site=site,
-                                username=username, token=token, suffix=suffix)
+    status = project_ops.upload(project, private=private, site=site, username=username, token=token, suffix=suffix)
     if status:
         print(status.status_description)
         return 0
@@ -32,5 +31,4 @@ def upload_command(project_dir, private, site, username, token, suffix):
 
 def main(args):
     """Start the upload command and return exit status code."""
-    return upload_command(args.directory, args.private, args.site,
-                          args.user, args.token, args.suffix)
+    return upload_command(args.directory, args.private, args.site, args.user, args.token, args.suffix)

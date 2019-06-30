@@ -1721,8 +1721,7 @@ def unarchive(filename, project_dir, parent_dir=None, frontend=None):
     return archiver._unarchive_project(filename, project_dir=project_dir, parent_dir=parent_dir, frontend=frontend)
 
 
-def upload(project, private=None, site=None, username=None, token=None,
-           suffix='.tar.bz2', log_level=None):
+def upload(project, private=None, site=None, username=None, token=None, suffix='.tar.bz2', log_level=None):
     """Upload the project to the Anaconda server.
 
     The returned status; if successful, has a 'url' attribute with the project URL.
