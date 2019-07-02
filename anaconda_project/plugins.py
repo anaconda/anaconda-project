@@ -82,3 +82,7 @@ class CommandTemplate(ProjectCommand):
     def choose_args_and_shell(self, environ, extra_args=None):
         """Overwrite this method to implement custom plugin logic."""
         raise NotImplementedError()
+
+
+# Some other packages depend upon this typo from 0.8.2 and earlier
+ArgsTrasformerTemplate = ArgsTransformerTemplate
