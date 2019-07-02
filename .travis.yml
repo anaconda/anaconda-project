@@ -28,7 +28,7 @@ install:
   - source "$HOME"/miniconda/etc/profile.d/conda.sh
   - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
   # yapf is pinned to help make sure we get the same results here as a user does locally.
-  - conda install -q $CONDA_CANARY -c defaults -c conda-forge conda conda-build conda-verify codecov flake8 pep257 yapf==0.25.0
+  - conda install -q $CONDA_CANARY -c defaults -c conda-forge conda=4.6 conda-build conda-verify codecov flake8 pep257 yapf==0.25.0
   - conda info -a
   - export LANG=en_US.UTF-8
   - export COVERAGE_DIR=":$HOME/htmlcov"
