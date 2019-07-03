@@ -740,7 +740,7 @@ class AnacondaProject(object):
         return project_ops.unarchive(
             filename=filename, project_dir=project_dir, parent_dir=parent_dir, frontend=frontend)
 
-    def upload(self, project, private=None, site=None, username=None, token=None, log_level=None):
+    def upload(self, project, private=None, site=None, username=None, token=None, suffix='.tar.bz2', log_level=None):
         """Upload the project to the Anaconda server.
 
         Args:
@@ -755,4 +755,10 @@ class AnacondaProject(object):
             a ``Status``, if failed has ``errors``
         """
         return project_ops.upload(
-            project=project, private=private, site=site, username=username, token=token, log_level=log_level)
+            project=project,
+            private=private,
+            site=site,
+            username=username,
+            token=token,
+            suffix=suffix,
+            log_level=log_level)

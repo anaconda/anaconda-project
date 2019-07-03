@@ -1721,7 +1721,7 @@ def unarchive(filename, project_dir, parent_dir=None, frontend=None):
     return archiver._unarchive_project(filename, project_dir=project_dir, parent_dir=parent_dir, frontend=frontend)
 
 
-def upload(project, private=None, site=None, username=None, token=None, log_level=None):
+def upload(project, private=None, site=None, username=None, token=None, suffix='.tar.bz2', log_level=None):
     """Upload the project to the Anaconda server.
 
     The returned status; if successful, has a 'url' attribute with the project URL.
@@ -1732,6 +1732,7 @@ def upload(project, private=None, site=None, username=None, token=None, log_leve
         site (str): site alias from Anaconda config
         username (str): Anaconda username
         token (str): Anaconda auth token
+        suffix (str): project archive suffix
         log_level (str): Anaconda log level
 
     Returns:
@@ -1740,8 +1741,6 @@ def upload(project, private=None, site=None, username=None, token=None, log_leve
     failed = _check_problems(project)
     if failed is not None:
         return failed
-
-    suffix = ".tar.bz2"
 
     # delete=True breaks on windows if you use tmp_tarfile.name to re-open the file,
     # so don't use delete=True.
