@@ -33,33 +33,6 @@ from anaconda_project.internal.conda_api import (parse_spec, default_platforms_w
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 from anaconda_project.internal.py2_compat import is_string
 
-_default_projectignore = """
-# project-local contains your personal configuration choices and state
-/anaconda-project-local.yml
-
-# Files autocreated by Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Notebook stuff
-.ipynb_checkpoints/
-
-# Spyder stuff
-/.spyderproject
-""".lstrip()
-
-
-def _add_projectignore_if_none(project_directory):
-    filename = os.path.join(project_directory, ".projectignore")
-    if not os.path.exists(filename):
-        try:
-            with codecs.open(filename, 'w', 'utf-8') as f:
-                f.write(_default_projectignore)
-        except IOError:
-            pass
-
 
 def create(directory_path,
            make_directory=False,
@@ -98,10 +71,7 @@ def create(directory_path,
             # allow project.problems to report the issue
             pass
 
-    # do this first so Project constructor can load it
-    _add_projectignore_if_none(directory_path)
-
-    project = Project(directory_path)
+    project = Project(directory_path, scan_parents=False)
 
     if empty_environment:
         project.project_file.set_value('packages', [])

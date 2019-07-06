@@ -122,7 +122,7 @@ env_specs: {}
 '''
 
     @classmethod
-    def load_for_directory(cls, directory, default_env_specs_func=_empty_default_env_spec):
+    def load_for_directory(cls, directory, default_env_specs_func=_empty_default_env_spec, scan_parents=True):
         """Load the project file from the given directory, even if it doesn't exist.
 
         If the directory has no project file, and the project file
@@ -140,6 +140,8 @@ env_specs: {}
         Args:
             directory (str): path to the project directory
             default_env_specs_func (function makes list of EnvSpec): if file is created, use these
+            scan_parents (bool): if True search for anaconda-project.yml file in parent directories
+                                 If one is found change the directory_path to its location.
 
         Returns:
             a new ``ProjectFile``
@@ -151,8 +153,14 @@ env_specs: {}
                 path = os.path.join(current_dir, name)
                 if os.path.isfile(path):
                     return ProjectFile(path)
-            current_dir = os.path.dirname(os.path.abspath(current_dir))
 
+            if scan_parents:
+                current_dir = os.path.dirname(os.path.abspath(current_dir))
+                continue
+            else:
+                break
+
+        # No file was found, create a new one
         return ProjectFile(os.path.join(directory, DEFAULT_PROJECT_FILENAME), default_env_specs_func)
 
     def __init__(self, filename, default_env_specs_func=_empty_default_env_spec):
