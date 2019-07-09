@@ -96,6 +96,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
     def _mock_prepare_do_not_keep_going(project,
                                         environ=None,
                                         ui_mode=UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                                        all=False,
                                         extra_command_args=None):
         return real_prepare(project, environ, ui_mode=ui_mode, extra_command_args=extra_command_args)
 
@@ -104,7 +105,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = main(Args(directory=dirname))
+        code = main(Args(directory=dirname, all=False))
         assert 1 == code
 
     with_directory_contents_completing_project_file({
