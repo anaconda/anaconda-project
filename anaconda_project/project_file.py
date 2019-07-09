@@ -182,7 +182,6 @@ env_specs: {}
         self.project_dir = os.path.dirname(filename)
         super(ProjectFile, self).__init__(filename)
 
-
     def _fill_default_content(self, as_json):
         as_json['name'] = os.path.basename(os.path.dirname(self.filename))
         as_json['platforms'].extend(conda_api.default_platforms_with_current())

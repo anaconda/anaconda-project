@@ -1184,7 +1184,9 @@ class Project(object):
             else:
                 return [_anaconda_default_env_spec(shared_base_spec=None)]
 
-        self._project_file = ProjectFile.load_for_directory(directory_path, default_env_specs_func=load_default_specs, scan_parents=scan_parents)
+        self._project_file = ProjectFile.load_for_directory(directory_path,
+                                                            default_env_specs_func=load_default_specs,
+                                                            scan_parents=scan_parents)
         self._directory_path = self._project_file.project_dir
         add_projectignore_if_none(self._directory_path)
 
@@ -1195,7 +1197,6 @@ class Project(object):
             frontend = _null_frontend()
         assert isinstance(frontend, Frontend)
         self._frontends = [frontend]
-
 
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._lock_file)

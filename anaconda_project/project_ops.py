@@ -8,7 +8,6 @@
 """High-level operations on a project."""
 from __future__ import absolute_import
 
-import codecs
 import contextlib
 import os
 import shutil

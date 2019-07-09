@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2019, Anaconda, Inc. All rights reserved.
@@ -30,6 +29,7 @@ __pycache__/
 
 
 def add_projectignore_if_none(project_directory):
+    """Add .projectignore if not found in project directory."""
     filename = os.path.join(project_directory, ".projectignore")
     if not os.path.exists(filename):
         try:
