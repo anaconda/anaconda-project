@@ -179,6 +179,7 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
         project = Project(dirname)
         environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare_without_interaction(project, environ=environ)
+        print(result.errors)
         assert result
 
         prefix = result.environ[conda_env_var]
@@ -221,6 +222,7 @@ packages:
     - python=3.7
     - ipython
     - numpy=1.15
+    - pip
     - pip:
       - flake8
 """
