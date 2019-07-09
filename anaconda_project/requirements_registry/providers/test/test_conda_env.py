@@ -81,7 +81,7 @@ def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
 
         # Now unprepare
         status = unprepare(project, result)
-        assert status
+        assert status, status.errors
         assert status.status_description == ('Deleted environment files in %s.' % (expected_env))
         assert status.errors == []
         assert not os.path.exists(expected_env)
