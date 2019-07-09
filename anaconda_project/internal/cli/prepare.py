@@ -13,7 +13,7 @@ from anaconda_project.internal.cli.prepare_with_mode import prepare_with_ui_mode
 from anaconda_project.internal.cli.project_load import load_project
 
 
-def prepare_command(project_dir, ui_mode, conda_environment, command_name, all):
+def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=False):
     """Configure the project to run.
 
     Returns:

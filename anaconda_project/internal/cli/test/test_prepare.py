@@ -176,8 +176,7 @@ def test_prepare_command_all_environments(capsys, monkeypatch):
     def check_prepare_choose_environment(dirname):
         foo_envdir = os.path.join(dirname, "envs", "foo")
         bar_envdir = os.path.join(dirname, "envs", "bar")
-        result = _parse_args_and_run_subcommand(
-            ['anaconda-project', 'prepare', '--directory', dirname, '--all'])
+        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--all'])
         assert result == 0
 
         assert os.path.isdir(foo_envdir)
