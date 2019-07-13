@@ -14,7 +14,7 @@ import anaconda_project.project_ops as project_ops
 
 def download_command(
         project,
-        unarchive,
+        unpack,
         parent_dir,
         site,
         username,
@@ -26,7 +26,7 @@ def download_command(
         exit code
     """
     status = project_ops.download(
-        project, unarchive=unarchive, parent_dir=parent_dir, site=site, username=username, token=token)
+        project, unpack=unpack, parent_dir=parent_dir, site=site, username=username, token=token)
     if status:
         print(status.status_description)
         return 0

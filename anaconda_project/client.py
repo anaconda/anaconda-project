@@ -20,7 +20,6 @@ import binstar_client.requests_ext as binstar_requests_ext
 from binstar_client.errors import BinstarError, Unauthorized
 
 from anaconda_project.internal.simple_status import SimpleStatus
-from anaconda_project import project_ops
 
 
 def _basename(fname):
@@ -161,7 +160,7 @@ class _Client(object):
 
         return res.json()
 
-    def download(self, project, unarchive=True, project_dir=None, parent_dir=None):
+    def download(self, project, project_dir=None, parent_dir=None):
         """Download project archive and extract."""
         owner, project_name = project.split('/')
         if not self._exists(project_name, owner):
@@ -182,10 +181,6 @@ class _Client(object):
                         print('.', end='')
                         f.write(chunk)
             print()
-        if unarchive:
-            status = project_ops.unarchive(filename, project_dir=project_dir, parent_dir=parent_dir)
-            if status:
-                print(status.status_description)
         self._check_response(res)
         return os.path.abspath(filename)
 
@@ -235,7 +230,6 @@ def _upload(project,
 
 
 def _download(project,
-              unarchive=True,
               project_dir=None,
               parent_dir=None,
               site=None,
@@ -244,7 +238,7 @@ def _download(project,
               log_level=None):
     client = _Client(site=site, username=username, token=token, log_level=log_level)
     try:
-        fn = client.download(project, unarchive, project_dir, parent_dir)
+        fn = client.download(project, project_dir, parent_dir)
         return _DownloadedStatus(fn)
     except BinstarError as e:
         return SimpleStatus(success=False, description="{} Download failed.".format(project), errors=[str(e)])
