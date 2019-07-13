@@ -229,13 +229,7 @@ def _upload(project,
         return SimpleStatus(success=False, description="Upload failed.", errors=[str(e)])
 
 
-def _download(project,
-              project_dir=None,
-              parent_dir=None,
-              site=None,
-              username=None,
-              token=None,
-              log_level=None):
+def _download(project, project_dir=None, parent_dir=None, site=None, username=None, token=None, log_level=None):
     client = _Client(site=site, username=username, token=token, log_level=log_level)
     try:
         fn = client.download(project, project_dir, parent_dir)

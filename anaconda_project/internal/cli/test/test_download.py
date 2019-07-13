@@ -49,7 +49,7 @@ def test_download_no_unpack(capsys, monkeypatch):
         assert 'Yay\n' == out
         assert '' == err
 
-        assert not params['kwargs']['unarchive']
+        assert not params['kwargs']['unpack']
 
     with_directory_contents_completing_project_file(dict(), check)
 

@@ -1771,12 +1771,7 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
         project: The project in format <username>/<project_name>
     """
     download_status = client._download(
-        project,
-        project_dir=project_dir,
-        parent_dir=parent_dir,
-        site=site,
-        username=username,
-        token=token)
+        project, project_dir=project_dir, parent_dir=parent_dir, site=site, username=username, token=token)
     if unpack:
         unpack_status = unarchive(download_status.filename, project_dir=project_dir, parent_dir=parent_dir)
         if unpack_status:

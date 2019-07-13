@@ -12,14 +12,11 @@ import os
 import socket
 import sys
 import threading
-import tempfile
 
 from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
 from tornado.netutil import bind_sockets
 from tornado.web import Application, RequestHandler
-
-import anaconda_project.project_ops as project_ops
 
 
 class ProjectViewHandler(RequestHandler):
@@ -48,13 +45,9 @@ class ProjectViewHandler(RequestHandler):
             self.set_header('Content-Type', 'application/json')
             self.set_status(200)
         elif path == 'apps/fake_username/projects/fake_project/download':
-            with tempfile.TemporaryDirectory() as dirname:
-                project = project_ops.create(dirname)
-                archivefile = os.path.join(dirname, "fake_project.zip")
-                project_ops.archive(project, archivefile)
-                print(os.listdir(dirname))
-                with open(archivefile, 'rb') as f:
-                    self.write(f.read())
+            dirname = os.path.dirname(__file__)
+            with open(os.path.join(dirname, 'fake_project.zip'), 'rb') as f:
+                self.write(f.read())
 
             self.set_header('Content-Type', 'application/zip')
             self.set_header('Content-Disposition',
