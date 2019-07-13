@@ -164,7 +164,7 @@ class _Client(object):
         """Download project archive and extract."""
         owner, project_name = project.split('/')
         if not self._exists(project_name, owner):
-            raise BinstarError('Project {} not found.'.format(project))
+            raise BinstarError('404')
 
         url = "{}/apps/{}/projects/{}/download".format(self._api.domain, owner, project_name)
         data, headers = binstar_utils.jencode({})
@@ -235,4 +235,4 @@ def _download(project, project_dir=None, parent_dir=None, site=None, username=No
         fn = client.download(project, project_dir, parent_dir)
         return _DownloadedStatus(fn)
     except BinstarError as e:
-        return SimpleStatus(success=False, description="{} Download failed.".format(project), errors=[str(e)])
+        return SimpleStatus(success=False, description="{} was not found.".format(project), errors=[str(e)])
