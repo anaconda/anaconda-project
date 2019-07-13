@@ -58,6 +58,7 @@ setup(
         'anaconda-project = anaconda_project.cli:main',
     ]},
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
+    include_package_data=True,
     classifiers=[
         'Development Status :: 5 - Production/Stable', 'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent', 'Programming Language :: Python :: 2.7',

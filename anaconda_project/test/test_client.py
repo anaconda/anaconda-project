@@ -144,7 +144,7 @@ def test_download(monkeypatch):
 def test_download_missing(monkeypatch):
     def check(dirname):
         with fake_server(monkeypatch, expected_basename='fake_project.zip'):
-            status = _download('fake_username/404_project', site='unit_test')
+            status = _download('fake_username/missing_project', site='unit_test')
             assert '404' in status.errors[0]
 
     with_directory_contents(dict(), check)
