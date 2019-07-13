@@ -20,7 +20,7 @@ import binstar_client.requests_ext as binstar_requests_ext
 from binstar_client.errors import BinstarError, Unauthorized
 
 from anaconda_project.internal.simple_status import SimpleStatus
-import anaconda_project.project_ops as project_ops
+from anaconda_project import project_ops
 
 
 def _basename(fname):
