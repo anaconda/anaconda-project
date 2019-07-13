@@ -157,9 +157,9 @@ def _parse_args_and_run_subcommand(argv):
         'project',
         help='The project to download as <username>/<projectname>. If <projectname>' +
         'has spaces inclose everything in quotes "<username>/<project name>".')
-    preset.add_argument('--no-extract', action='store_true', help='Do not extract the project archive.')
+    preset.add_argument('--no-unpack', action='store_true', help='Do not unpack the project archive.')
     preset.add_argument(
-        '--projects_dir',
+        '--parent_dir',
         default=None,
         help='Download archive to specific directory, otherwise downloaded to current working directory.')
     preset.add_argument('-s', '--site', metavar='SITE', help='Select site to use')
