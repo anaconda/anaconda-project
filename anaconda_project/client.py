@@ -22,6 +22,7 @@ from binstar_client.errors import BinstarError, Unauthorized
 
 from anaconda_project.internal.simple_status import SimpleStatus
 
+
 def _basename(fname):
     base1, ext1 = os.path.splitext(fname)
     if ext1 == '.zip':
@@ -31,6 +32,7 @@ def _basename(fname):
         return base2
     else:
         raise ValueError('{} does not appear to be a compressed archive.'.format(fname))
+
 
 class _Client(object):
     def __init__(self, site=None, username=None, token=None, log_level=None):
@@ -158,8 +160,7 @@ class _Client(object):
         assert res.status_code in (200, 201)
 
         return res.json()
-    
-    
+
     def download(self, project, extract=True, projects_dir=None):
         """Download project archive and extract."""
         owner, project_name = project.split('/')
@@ -197,13 +198,14 @@ class _UploadedStatus(SimpleStatus):
             logs.append("Project is at %s" % self.url)
         super(_UploadedStatus, self).__init__(success=True, description="Upload successful.", logs=logs)
 
+
 class _DownloadedStatus(SimpleStatus):
     def __init__(self, filename):
         self.filename = filename
         logs = []
         if self.filename is not None:
             logs.append("Project is at %s" % self.filename)
-        
+
         super(_DownloadedStatus, self).__init__(success=True, description="Download successful.", logs=logs)
 
 
@@ -230,6 +232,7 @@ def _upload(project,
             success=False, description='Please log in with the "anaconda login" command.', errors=["Not logged in."])
     except BinstarError as e:
         return SimpleStatus(success=False, description="Upload failed.", errors=[str(e)])
+
 
 def _download(project, extract=True, projects_dir=None, site=None, username=None, token=None, log_level=None):
     client = _Client(site=site, username=username, token=token, log_level=log_level)
