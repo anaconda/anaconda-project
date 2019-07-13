@@ -13,7 +13,6 @@ import os
 import re
 import tarfile
 import zipfile
-import shutil
 
 import requests
 import binstar_client.utils as binstar_utils

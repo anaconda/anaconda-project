@@ -8,14 +8,18 @@
 from __future__ import absolute_import, print_function
 
 import json
+import os
 import socket
 import sys
 import threading
+import tempfile
 
 from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
 from tornado.netutil import bind_sockets
 from tornado.web import Application, RequestHandler
+
+import anaconda_project.project_ops as project_ops
 
 
 class ProjectViewHandler(RequestHandler):
@@ -39,6 +43,23 @@ class ProjectViewHandler(RequestHandler):
         elif path == 'user/foobar':
             self.set_header('Content-Type', 'application/json')
             self.write('{"login":"foobar"}\n')
+        elif path == 'apps/fake_username/projects/fake_project':
+            self.write('{"name":"fake_project"}')
+            self.set_header('Content-Type', 'application/json')
+            self.set_status(200)
+        elif path == 'apps/fake_username/projects/fake_project/download':
+            with tempfile.TemporaryDirectory() as dirname:
+                project = project_ops.create(dirname)
+                archivefile = os.path.join(dirname, "fake_project.zip")
+                project_ops.archive(project, archivefile)
+                print(os.listdir(dirname))
+                with open(archivefile, 'rb') as f:
+                    self.write(f.read())
+
+            self.set_header('Content-Type', 'application/zip')
+            self.set_header('Content-Disposition',
+                            '''attachment; filename="fake_project.zip"; filename*=UTF-8\'\'fake_project.zip''')
+            self.set_status(200)
         else:
             self.set_status(status_code=404)
 

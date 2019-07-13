@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function
 import os
 
 import anaconda_project.project_ops as project_ops
-from anaconda_project.client import _upload, _Client
+from anaconda_project.client import _upload, _Client, _download
 from anaconda_project.test.fake_server import fake_server
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
@@ -128,5 +128,23 @@ def test_upload_failing_commit(monkeypatch):
             status = _upload(project, archivefile, "foo.zip", site='unit_test')
             assert not status
             assert '501' in status.errors[0]
+
+    with_directory_contents(dict(), check)
+
+
+def test_download(monkeypatch):
+    def check(dirname):
+        with fake_server(monkeypatch, expected_basename='fake_project.zip'):
+            status = _download('fake_username/fake_project', unarchive=False, site='unit_test')
+            assert status
+
+    with_directory_contents(dict(), check)
+
+
+def test_download_missing(monkeypatch):
+    def check(dirname):
+        with fake_server(monkeypatch, expected_basename='fake_project.zip'):
+            status = _download('fake_username/404_project', unarchive=False, site='unit_test')
+            assert '404' in status.errors[0]
 
     with_directory_contents(dict(), check)
