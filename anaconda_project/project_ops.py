@@ -1762,3 +1762,11 @@ def upload(project, private=None, site=None, username=None, token=None, suffix='
         return status
     finally:
         os.remove(tmp_tarfile.name)
+    
+def download(project, site=None, username=None, token=None):
+    """Download project from Anaconda Server
+
+    Args:
+        project: The project in format <username>/<project_name>
+    """
+    return client._download(project, site=site, username=username, token=token)

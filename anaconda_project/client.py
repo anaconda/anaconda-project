@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 
 import logging
 import os
+import re
 import tarfile
 import zipfile
 
@@ -47,8 +48,11 @@ class _Client(object):
 
     # HACK ALERT: using this is a workaround for
     # https://github.com/Anaconda-Platform/anaconda-server/issues/2229
-    def _exists(self, project_name):
-        url = "{}/apps/{}/projects/{}".format(self._api.domain, self._username(), project_name)
+    def _exists(self, project_name, username=None):
+        if username:
+            url = "{}/apps/{}/projects/{}".format(self._api.domain, username, project_name)
+        else:
+            url = "{}/apps/{}/projects/{}".format(self._api.domain, self._username(), project_name)
         res = self._api.session.get(url)
         return res.status_code == 200
 
@@ -144,6 +148,24 @@ class _Client(object):
         assert res.status_code in (200, 201)
 
         return res.json()
+    
+    def download(self, project):
+        """Download project archive and extract."""
+        owner, project_name = project.split('/')
+        if not self._exists(project_name, owner):
+            raise BinstarError('Project {} not found.'.format(project))
+
+        url = "{}/apps/{}/projects/{}/download".format(self._api.domain, owner, project_name)
+        data, headers = binstar_utils.jencode({})
+        with self._api.session.get(url, data=data, headers=headers, stream=True) as res:
+            res.raise_for_status()
+            filename = eval(re.findall("filename=(.+);", res.headers["Content-Disposition"])[0])
+            with open(filename, 'wb') as f:
+                for chunk in res.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+        self._check_response(res)
+        return os.path.abspath(filename)
 
 
 class _UploadedStatus(SimpleStatus):
@@ -153,6 +175,16 @@ class _UploadedStatus(SimpleStatus):
         if self.url is not None:
             logs.append("Project is at %s" % self.url)
         super(_UploadedStatus, self).__init__(success=True, description="Upload successful.", logs=logs)
+
+class _DownloadedStatus(SimpleStatus):
+    def __init__(self, filename):
+        self.filename = filename
+        logs = []
+        if self.filename is not None:
+            logs.append("Project is at %s" % self.filename)
+        
+        desc = '{} Downloaded successfully.'.format(self.filename)
+        super(_DownloadedStatus, self).__init__(success=True, description=desc, logs=logs)
 
 
 # This function is supposed to encapsulate the binstar API (don't
@@ -178,3 +210,11 @@ def _upload(project,
             success=False, description='Please log in with the "anaconda login" command.', errors=["Not logged in."])
     except BinstarError as e:
         return SimpleStatus(success=False, description="Upload failed.", errors=[str(e)])
+
+def _download(project, site=None, username=None, token=None, log_level=None):
+    client = _Client(site=site, username=username, token=token, log_level=log_level)
+    try:
+        fn = client.download(project)
+        return _DownloadedStatus(fn)
+    except BinstarError as e:
+        return SimpleStatus(success=False, description="{} Download failed.".format(project), errors=[str(e)])
