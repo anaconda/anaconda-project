@@ -160,10 +160,14 @@ class _Client(object):
         with self._api.session.get(url, data=data, headers=headers, stream=True) as res:
             res.raise_for_status()
             filename = eval(re.findall("filename=(.+);", res.headers["Content-Disposition"])[0])
+            print('Downloading {}'.format(project))
+            print('.', end='')
             with open(filename, 'wb') as f:
-                for chunk in res.iter_content(chunk_size=8192):
+                for chunk in res.iter_content(chunk_size=4096):
                     if chunk:
+                        print('.', end='')
                         f.write(chunk)
+            print()
         self._check_response(res)
         return os.path.abspath(filename)
 
