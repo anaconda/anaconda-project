@@ -154,6 +154,7 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser('download', help="Download the project from Anaconda Cloud")
     add_directory_arg(preset)
     preset.add_argument('project', help='The project to download as <username>/<project_name>')
+    preset.add_argument('--no-extract', action='store_true', help='Do not extract the project archive.')
     preset.add_argument('-s', '--site', metavar='SITE', help='Select site to use')
     preset.add_argument('-t', '--token', metavar='TOKEN', help='Auth token or a path to a file containing a token')
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')

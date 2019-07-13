@@ -13,6 +13,7 @@ import os
 import re
 import tarfile
 import zipfile
+import shutil
 
 import requests
 import binstar_client.utils as binstar_utils
@@ -21,6 +22,15 @@ from binstar_client.errors import BinstarError, Unauthorized
 
 from anaconda_project.internal.simple_status import SimpleStatus
 
+def _basename(fname):
+    base1, ext1 = os.path.splitext(fname)
+    if ext1 == '.zip':
+        return base1
+    elif ext1 in ['.gz', '.bz2']:
+        base2, ext1 = os.path.splitext(base1)
+        return base2
+    else:
+        raise ValueError('{} does not appear to be a compressed archive.'.format(fname))
 
 class _Client(object):
     def __init__(self, site=None, username=None, token=None, log_level=None):
@@ -149,7 +159,8 @@ class _Client(object):
 
         return res.json()
     
-    def download(self, project):
+    
+    def download(self, project, extract=True):
         """Download project archive and extract."""
         owner, project_name = project.split('/')
         if not self._exists(project_name, owner):
@@ -168,6 +179,10 @@ class _Client(object):
                         print('.', end='')
                         f.write(chunk)
             print()
+        if extract:
+            shutil.unpack_archive(filename)
+            dirname = os.path.abspath(_basename(filename))
+            print('Project extracted to {}'.format(dirname))
         self._check_response(res)
         return os.path.abspath(filename)
 
@@ -187,8 +202,7 @@ class _DownloadedStatus(SimpleStatus):
         if self.filename is not None:
             logs.append("Project is at %s" % self.filename)
         
-        desc = '{} Downloaded successfully.'.format(self.filename)
-        super(_DownloadedStatus, self).__init__(success=True, description=desc, logs=logs)
+        super(_DownloadedStatus, self).__init__(success=True, description="Download successful.", logs=logs)
 
 
 # This function is supposed to encapsulate the binstar API (don't
@@ -215,10 +229,10 @@ def _upload(project,
     except BinstarError as e:
         return SimpleStatus(success=False, description="Upload failed.", errors=[str(e)])
 
-def _download(project, site=None, username=None, token=None, log_level=None):
+def _download(project, extract=True, site=None, username=None, token=None, log_level=None):
     client = _Client(site=site, username=username, token=token, log_level=log_level)
     try:
-        fn = client.download(project)
+        fn = client.download(project, extract)
         return _DownloadedStatus(fn)
     except BinstarError as e:
         return SimpleStatus(success=False, description="{} Download failed.".format(project), errors=[str(e)])

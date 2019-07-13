@@ -11,13 +11,13 @@ from __future__ import absolute_import, print_function
 from anaconda_project.internal.cli import console_utils
 import anaconda_project.project_ops as project_ops
 
-def download_command(project, site, username, token,):
+def download_command(project, extract, site, username, token,):
     """Download project from Anaconda Cloud.
 
     Returns:
         exit code
     """
-    status = project_ops.download(project, site=site, username=username, token=token)
+    status = project_ops.download(project, extract, site=site, username=username, token=token)
     if status:
         print(status.status_description)
         return 0
@@ -28,4 +28,4 @@ def download_command(project, site, username, token,):
 
 def main(args):
     """Start the upload command and return exit status code."""
-    return download_command(args.project, args.site, args.user, args.token)
+    return download_command(args.project, not args.no_extract, args.site, args.user, args.token)
