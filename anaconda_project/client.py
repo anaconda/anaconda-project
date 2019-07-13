@@ -160,7 +160,7 @@ class _Client(object):
         return res.json()
     
     
-    def download(self, project, extract=True):
+    def download(self, project, extract=True, projects_dir=None):
         """Download project archive and extract."""
         owner, project_name = project.split('/')
         if not self._exists(project_name, owner):
@@ -171,6 +171,8 @@ class _Client(object):
         with self._api.session.get(url, data=data, headers=headers, stream=True) as res:
             res.raise_for_status()
             filename = eval(re.findall("filename=(.+);", res.headers["Content-Disposition"])[0])
+            if projects_dir:
+                filename = os.path.join(projects_dir, filename)
             print('Downloading {}'.format(project))
             print('.', end='')
             with open(filename, 'wb') as f:
@@ -180,7 +182,7 @@ class _Client(object):
                         f.write(chunk)
             print()
         if extract:
-            shutil.unpack_archive(filename)
+            shutil.unpack_archive(filename, extract_dir=projects_dir)
             dirname = os.path.abspath(_basename(filename))
             print('Project extracted to {}'.format(dirname))
         self._check_response(res)
@@ -229,10 +231,10 @@ def _upload(project,
     except BinstarError as e:
         return SimpleStatus(success=False, description="Upload failed.", errors=[str(e)])
 
-def _download(project, extract=True, site=None, username=None, token=None, log_level=None):
+def _download(project, extract=True, projects_dir=None, site=None, username=None, token=None, log_level=None):
     client = _Client(site=site, username=username, token=token, log_level=log_level)
     try:
-        fn = client.download(project, extract)
+        fn = client.download(project, extract, projects_dir)
         return _DownloadedStatus(fn)
     except BinstarError as e:
         return SimpleStatus(success=False, description="{} Download failed.".format(project), errors=[str(e)])
