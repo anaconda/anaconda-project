@@ -162,7 +162,12 @@ class _Client(object):
 
     def download(self, project, project_dir=None, parent_dir=None):
         """Download project archive and extract."""
-        owner, project_name = project.split('/')
+        if '/' in project:
+            owner, project_name = project.split('/')
+        else:
+            owner = self._username()
+            project_name = project
+
         if not self._exists(project_name, owner):
             raise BinstarError('404')
 

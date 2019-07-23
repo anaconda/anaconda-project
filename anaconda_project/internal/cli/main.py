@@ -156,7 +156,8 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument(
         'project',
         help='The project to download as <username>/<projectname>. If <projectname>' +
-        'has spaces inclose everything in quotes "<username>/<project name>".')
+        'has spaces inclose everything in quotes "<username>/<project name>".' +
+        'If specified as <projectname> then the logged-in username is used.')
     preset.add_argument('--no-unpack', action='store_true', help='Do not unpack the project archive.')
     preset.add_argument(
         '--parent_dir',

@@ -38,6 +38,20 @@ def test_download(capsys, monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
+def test_download_no_username(capsys, monkeypatch):
+    _monkeypatch_download(monkeypatch)
+
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'download', 'fake_project'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert 'Yay\n' == out
+        assert '' == err
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
 def test_download_no_unpack(capsys, monkeypatch):
     params = _monkeypatch_download(monkeypatch)
 
