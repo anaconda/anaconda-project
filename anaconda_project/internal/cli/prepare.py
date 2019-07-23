@@ -13,7 +13,7 @@ from anaconda_project.internal.cli.prepare_with_mode import prepare_with_ui_mode
 from anaconda_project.internal.cli.project_load import load_project
 
 
-def prepare_command(project_dir, ui_mode, conda_environment, command_name):
+def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=False):
     """Configure the project to run.
 
     Returns:
@@ -22,15 +22,21 @@ def prepare_command(project_dir, ui_mode, conda_environment, command_name):
     project = load_project(project_dir)
     if console_utils.print_project_problems(project):
         return False
-    result = prepare_with_ui_mode_printing_errors(
-        project, env_spec_name=conda_environment, ui_mode=ui_mode, command_name=command_name)
+    if all:
+        result = []
+        for k, v in project.env_specs.items():
+            result = prepare_with_ui_mode_printing_errors(
+                project, env_spec_name=k, ui_mode=ui_mode, command_name=command_name)
+    else:
+        result = prepare_with_ui_mode_printing_errors(
+            project, env_spec_name=conda_environment, ui_mode=ui_mode, command_name=command_name)
 
     return result
 
 
 def main(args):
     """Start the prepare command and return exit status code."""
-    if prepare_command(args.directory, args.mode, args.env_spec, args.command):
+    if prepare_command(args.directory, args.mode, args.env_spec, args.command, args.all):
         print("The project is ready to run commands.")
         print("Use `anaconda-project list-commands` to see what's available.")
         return 0
