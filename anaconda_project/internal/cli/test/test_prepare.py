@@ -105,7 +105,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = main(Args(directory=dirname, all=False))
+        code = main(Args(directory=dirname, all=False, refresh=False))
         assert 1 == code
 
     with_directory_contents_completing_project_file({
@@ -253,7 +253,8 @@ env_specs:
 
     out, err = capsys.readouterr()
     assert out == (
-        "The project is ready to run commands.\n" + "Use `anaconda-project list-commands` to see what's available.\n")
+        "The project is ready to run commands.\n" + "Use `anaconda-project list-commands` to see what's available.\n" +
+    "The project is ready to run commands.\n" + "Use `anaconda-project list-commands` to see what's available.\n")
     assert err == ""
 
 
