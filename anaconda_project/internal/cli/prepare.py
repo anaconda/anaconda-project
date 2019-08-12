@@ -37,7 +37,6 @@ def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=F
         result = prepare_with_ui_mode_printing_errors(
             project, env_spec_name=conda_environment, ui_mode=ui_mode, command_name=command_name)
 
-
     return result
 
 

@@ -225,8 +225,8 @@ def test_prepare_command_all_environments_refresh(capsys, monkeypatch):
         result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--all'])
         assert result == 0
 
-        result = _parse_args_and_run_subcommand(['anaconda-project', 'prepare', '--directory', dirname, '--all',
-                                                 '--refresh'])
+        result = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'prepare', '--directory', dirname, '--all', '--refresh'])
         assert result == 0
 
         assert os.path.isdir(foo_envdir)
@@ -254,7 +254,7 @@ env_specs:
     out, err = capsys.readouterr()
     assert out == (
         "The project is ready to run commands.\n" + "Use `anaconda-project list-commands` to see what's available.\n" +
-    "The project is ready to run commands.\n" + "Use `anaconda-project list-commands` to see what's available.\n")
+        "The project is ready to run commands.\n" + "Use `anaconda-project list-commands` to see what's available.\n")
     assert err == ""
 
 
