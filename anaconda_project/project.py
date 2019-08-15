@@ -163,7 +163,7 @@ class _ConfigCache(object):
 
     def update(self, project_file, lock_file):
         if project_file.change_count == self.project_file_count and \
-                lock_file.change_count == self.lock_file_count:
+            lock_file.change_count == self.lock_file_count:
             return
 
         self.project_file_count = project_file.change_count
@@ -238,6 +238,7 @@ class _ConfigCache(object):
         default_name = os.path.basename(self.directory_path)
 
         if 'name' not in project_file.root:
+
             def set_name_field(project):
                 project.project_file.set_value('name', default_name)
 
@@ -453,7 +454,7 @@ class _ConfigCache(object):
             problems.append(
                 ProjectProblem(
                     text=(
-                            "Unusual platform name '%s' may be a typo (more usual examples: linux-64, osx-64, win-64)" % u),
+                        "Unusual platform name '%s' may be a typo (more usual examples: linux-64, osx-64, win-64)" % u),
                     filename=yaml_file.filename,
                     only_a_suggestion=True))
         for i in invalid:
@@ -682,12 +683,12 @@ class _ConfigCache(object):
                                            "the name of another env spec").format(parent, attrs['name']))
                         else:
                             inherit_from = make_env_spec(parent, trail)
-                            attrs['inherit_from'] = attrs['inherit_from'] + (inherit_from,)
+                            attrs['inherit_from'] = attrs['inherit_from'] + (inherit_from, )
 
                 # All parent-less env specs get the global base spec as parent,
                 # which means the global base spec is in everyone's ancestry
                 if attrs['inherit_from'] == ():
-                    attrs['inherit_from'] = (self.global_base_env_spec,)
+                    attrs['inherit_from'] = (self.global_base_env_spec, )
 
                 self.env_specs[name] = EnvSpec(**attrs)
 
@@ -731,6 +732,7 @@ class _ConfigCache(object):
                     fix_function=set_global_default_platforms)
             else:
                 for missing in sorted(missing_platforms):
+
                     def make_fix(missing):
                         def set_env_spec_platforms(project):
                             project.project_file.set_value(['env_specs', missing, 'platforms'], default_platforms)
@@ -818,7 +820,7 @@ class _ConfigCache(object):
         # out of sync, and `anaconda-project init` in a directory with a .ipynb
         # and an environment.yml doesn't result in a valid project.
         if importable_spec is not None and old is not None and \
-                importable_spec.diff_only_removes_notebook_or_bokeh(old):
+            importable_spec.diff_only_removes_notebook_or_bokeh(old):
             importable_spec = None
 
         if importable_spec is not None:
@@ -891,7 +893,7 @@ class _ConfigCache(object):
 
         plugins = plugins_api.get_plugins('command_run')
         all_known_command_attributes_extended = all_known_command_attributes + \
-                                                tuple(plugins.keys())
+            tuple(plugins.keys())
 
         if commands_section is not None and not is_dict(commands_section):
             _file_problem(
@@ -968,7 +970,7 @@ class _ConfigCache(object):
                     if not is_string(copied_attrs[attr]):
                         _file_problem(
                             problems, project_file, "command '%s' attribute '%s' should be a string not '%r'" %
-                                                    (name, attr, copied_attrs[attr]))
+                            (name, attr, copied_attrs[attr]))
                         failed = True
 
                 if len(command_types) == 0:
@@ -982,7 +984,7 @@ class _ConfigCache(object):
                     others = [("'%s'" % other) for other in others]
                     _file_problem(
                         problems, project_file, "command '%s' has multiple commands in it, '%s' can't go with %s" %
-                                                (name, label, ", ".join(others)))
+                        (name, label, ", ".join(others)))
                     failed = True
 
                 # note that once one command fails, we don't add any more
