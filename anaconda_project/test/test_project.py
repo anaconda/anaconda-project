@@ -2225,6 +2225,7 @@ echo %*
 
 def test_run_command_in_project_dir():
     prefix = conda_api.environ_get_prefix(os.environ)
+    print(prefix)
     _run_argv_for_environment(dict(), "%s foo bar" % (prefix))
 
 
