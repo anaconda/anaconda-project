@@ -23,6 +23,7 @@ environment:
 install:
   # conda 4.5.11 seems to expect that this directory exists already
   - mkdir C:\Users\appveyor\.conda
+  - set PREFIX=C:\\Miniconda3-x64
   - call %MINICONDA%\Scripts\activate.bat
   # The safety checks are simply intended to ensure that there is enough disk space
   # and the user has the necessary permissions to make environment changes. In a CI
