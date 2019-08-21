@@ -2224,7 +2224,9 @@ echo %*
 
 
 def test_run_command_in_project_dir():
-    print(os.environ)
+    print(os.environ.get('CONDA_PREFIX', ''))
+    print(os.environ.get('CONDA_ENV_PATH', ''))
+    print(os.environ.get('CONDA_DEFAULT_ENV', ''))
     prefix = conda_api.environ_get_prefix(os.environ)
     print(prefix)
     _run_argv_for_environment(dict(), "%s foo bar" % (prefix))
