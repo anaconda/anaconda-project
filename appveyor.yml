@@ -14,7 +14,6 @@ environment:
   PYTHONUNBUFFERED: 1
   COVERAGE_DIR: ""
   MINICONDA: C:\\Miniconda3-x64
-  PREFIX: C:\\Miniconda3-x64
   matrix:
     - PYTHON_VERSION: 3.7
     - PYTHON_VERSION: 3.6
@@ -23,13 +22,13 @@ environment:
 install:
   # conda 4.5.11 seems to expect that this directory exists already
   - mkdir C:\Users\appveyor\.conda
-  - set PREFIX=C:\\Miniconda3-x64
   - call %MINICONDA%\Scripts\activate.bat
   # The safety checks are simply intended to ensure that there is enough disk space
   # and the user has the necessary permissions to make environment changes. In a CI
   # environment these are not necessary and slow things down noticeably on Windows.
   - conda config --set always_yes yes --set changeps1 no --set auto_update_conda no --set safety_checks disabled
-  - conda install -q conda=4.6 conda-build conda-verify
+# - conda install -q conda=4.6 conda-build conda-verify
+  - conda install -q conda-build conda-verify
   - conda info -a
 
 # Not a .NET project, we build in the install step instead
