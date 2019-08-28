@@ -163,7 +163,7 @@ class _ConfigCache(object):
 
     def update(self, project_file, lock_file):
         if project_file.change_count == self.project_file_count and \
-            lock_file.change_count == self.lock_file_count:
+           lock_file.change_count == self.lock_file_count:
             return
 
         self.project_file_count = project_file.change_count
@@ -820,7 +820,7 @@ class _ConfigCache(object):
         # out of sync, and `anaconda-project init` in a directory with a .ipynb
         # and an environment.yml doesn't result in a valid project.
         if importable_spec is not None and old is not None and \
-            importable_spec.diff_only_removes_notebook_or_bokeh(old):
+           importable_spec.diff_only_removes_notebook_or_bokeh(old):
             importable_spec = None
 
         if importable_spec is not None:
