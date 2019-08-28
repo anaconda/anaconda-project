@@ -125,8 +125,8 @@ def _unknown_field_suggestions(project_file, problems, yaml_dict, known_fields):
 def _add_user_fields(yaml_dict, known_fields):
     user_fields = yaml_dict['user_fields']
     user_fields.append('user_fields')
-    all = [known_fields, user_fields]
-    return [i for sub in all for i in sub]
+    all_fields = [known_fields, user_fields]
+    return [i for sub in all_fields for i in sub]
 
 
 def _fatal_problem(problems):
