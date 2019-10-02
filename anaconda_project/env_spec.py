@@ -395,7 +395,7 @@ class EnvSpec(object):
 
         return template_json['something']
 
-    def apply_pins(self, prefix):
+    def apply_pins(self, prefix, updating=()):
         """Write the augmented pinned file in the environment."""
         conda_meta_path = os.path.join(prefix, 'conda-meta')
         if not os.path.isdir(conda_meta_path):
@@ -406,7 +406,9 @@ class EnvSpec(object):
                 old_list = fp.read()
         else:
             old_list = ''
-        new_list = '\n'.join(self.conda_constrained_packages)
+        # Don't add pins for packages we are currently updating to avoid issues
+        # with the historical soft pins of conda 4.6 and later
+        new_list = '\n'.join(set(self.conda_constrained_packages) - set(updating))
         if old_list != new_list:
             if new_list:
                 with open(fname + '.__ap_new', 'w') as fp:
