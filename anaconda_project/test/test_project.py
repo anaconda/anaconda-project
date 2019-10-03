@@ -2139,18 +2139,30 @@ commands:
         }, check_exec_info)
 
 
-if platform.system() == 'Windows':
-    echo_stuff = "echo_stuff.bat"
-else:
-    echo_stuff = "echo_stuff.sh"
-
-
-def _run_argv_for_environment(environ,
-                              expected_output,
+def _run_argv_for_environment(environ=None,
+                              expected_output=None,
                               chdir=False,
-                              command_line=('conda_app_entry: %s ${PREFIX} foo bar' % echo_stuff),
+                              command_name=None,
                               extra_args=None):
-    environ = minimal_environ(**environ)
+    environ = minimal_environ(**(environ or {}))
+
+    prefix_var = conda_api.conda_prefix_variable() if command_name else 'PREFIX'
+    if platform.system() == 'Windows':
+        echo_stuff = 'echo_stuff.bat'
+        echo_path  = '%PROJECT_DIR%\\\\' + echo_stuff
+        prefix_var = '%{}%'.format(prefix_var)
+    else:
+        echo_stuff = 'echo_stuff.sh'
+        echo_path = echo_stuff if command_name is None else '${PROJECT_DIR}/' + echo_stuff
+        prefix_var = '${%s}' % prefix_var
+    if command_name is None:
+        command_name = 'conda_app_entry'
+    if expected_output is None:
+        args = ' '.join(['foo', 'bar'] + (extra_args or []))
+        expected_output = conda_api.environ_get_prefix(os.environ) + ' ' + args
+    command_line = '%s: "%s %s foo bar"' % (command_name, echo_path, prefix_var)
+    print('Using command line: %s' % command_line)
+    print('Expected output: %s' % expected_output)
 
     def check_echo_output(dirname):
         if 'PROJECT_DIR' not in environ:
@@ -2225,59 +2237,27 @@ echo %*
 
 def test_run_command_in_project_dir():
     prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment(dict(), "%s foo bar" % (prefix))
+    _run_argv_for_environment()
 
 
 def test_run_command_in_project_dir_extra_args():
     prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment(dict(), "%s foo bar baz" % (prefix), extra_args=["baz"])
+    _run_argv_for_environment(extra_args=["baz"])
 
 
-def test_run_command_in_project_dir_with_shell(monkeypatch):
-    if platform.system() == 'Windows':
-        print("Cannot test shell on Windows")
-        return
-    prefix = conda_api.environ_get_prefix(os.environ)
-    command_line = 'unix: "${PROJECT_DIR}/echo_stuff.sh ${%s} foo bar"' % conda_api.conda_prefix_variable()
-    _run_argv_for_environment(dict(), "%s foo bar" % (prefix), command_line=command_line)
+def test_run_command_in_project_dir_os(monkeypatch):
+    command_name = 'windows' if platform.system() == 'Windows' else 'unix'
+    _run_argv_for_environment(command_name=command_name)
 
 
-def test_run_command_in_project_dir_with_shell_extra_args(monkeypatch):
-    if platform.system() == 'Windows':
-        print("Cannot test shell on Windows")
-        return
-    prefix = conda_api.environ_get_prefix(os.environ)
-    command_line = 'unix: "${PROJECT_DIR}/echo_stuff.sh ${%s} foo bar"' % conda_api.conda_prefix_variable()
-    _run_argv_for_environment(dict(), "%s foo bar baz" % (prefix), command_line=command_line, extra_args=["baz"])
-
-
-def test_run_command_in_project_dir_with_windows(monkeypatch):
-    if platform.system() != 'Windows':
-        print("Cannot test windows cmd on unix")
-        return
-    prefix = conda_api.environ_get_prefix(os.environ)
-    command_line = '''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %{}% foo bar"'''.format(
-        conda_api.conda_prefix_variable())
-    _run_argv_for_environment(dict(), "%s foo bar" % (prefix), command_line=command_line)
-
-
-def test_run_command_in_project_dir_with_windows_extra_args(monkeypatch):
-    if platform.system() != 'Windows':
-        print("Cannot test windows cmd on unix")
-        return
-    prefix = conda_api.environ_get_prefix(os.environ)
-    command_line = '''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %{}% foo bar"'''.format(
-        conda_api.conda_prefix_variable())
-    _run_argv_for_environment(dict(), "%s foo bar baz" % (prefix), command_line=command_line, extra_args=["baz"])
+def test_run_command_in_project_dir_os_extra_args(monkeypatch):
+    command_name = 'windows' if platform.system() == 'Windows' else 'unix'
+    _run_argv_for_environment(command_name=command_name, extra_args=["baz"])
 
 
 def test_run_command_in_project_dir_and_cwd_is_project_dir():
     prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment(
-        dict(),
-        "%s foo bar" % prefix,
-        chdir=True,
-        command_line=('conda_app_entry: %s ${PREFIX} foo bar' % os.path.join(".", echo_stuff)))
+    _run_argv_for_environment(chdir=True)
 
 
 def test_run_command_in_project_dir_with_conda_env():
