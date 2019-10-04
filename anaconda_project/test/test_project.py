@@ -1665,8 +1665,8 @@ def test_notebook_command_jupyter_not_on_path(monkeypatch):
         monkeypatch.setattr('distutils.spawn.find_executable', mock_find_executable)
 
         cmd_exec = command.exec_info_for_environment(environ)
-        assert cmd_exec.args == [
-            'jupyter-notebook',
+        assert 'jupyter-notebook' in cmd_exec.args[0]
+        assert cmd_exec.args[1:] == [
             os.path.join(dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb'
         ]
         assert cmd_exec.shell is False
