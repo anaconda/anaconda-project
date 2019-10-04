@@ -2142,27 +2142,32 @@ commands:
 def _run_argv_for_environment(environ=None,
                               expected_output=None,
                               chdir=False,
-                              command_name=None,
+                              os_specific=False,
                               extra_args=None):
     environ = minimal_environ(**(environ or {}))
 
-    prefix_var = conda_api.conda_prefix_variable() if command_name else 'PREFIX'
+    prefix_var = conda_api.conda_prefix_variable() if os_specific else 'PREFIX'
     if platform.system() == 'Windows':
         echo_stuff = 'echo_stuff.bat'
         echo_path  = '%PROJECT_DIR%\\\\' + echo_stuff
         prefix_var = '%{}%'.format(prefix_var)
+        command_name = 'windows'
     else:
         echo_stuff = 'echo_stuff.sh'
-        echo_path = echo_stuff if command_name is None else '${PROJECT_DIR}/' + echo_stuff
+        echo_path = '${PROJECT_DIR}/' + echo_stuff
         prefix_var = '${%s}' % prefix_var
-    if command_name is None:
+        command_name = 'unix'
+    if not os_specific:
         command_name = 'conda_app_entry'
+        echo_path = echo_stuff
     if expected_output is None:
         args = ' '.join(['foo', 'bar'] + (extra_args or []))
         expected_output = conda_api.environ_get_prefix(os.environ) + ' ' + args
     command_line = '%s: "%s %s foo bar"' % (command_name, echo_path, prefix_var)
-    print('Using command line: %s' % command_line)
+    print('YAML command line: %s' % command_line)
     print('Expected output: %s' % expected_output)
+    print('Current directory: %s' % os.getcwd())
+    print('Path: %s' % os.environ.get('PATH'))
 
     def check_echo_output(dirname):
         if 'PROJECT_DIR' not in environ:
@@ -2182,6 +2187,9 @@ def _run_argv_for_environment(environ=None,
                 args = exec_info.args
             output = subprocess.check_output(args, shell=exec_info.shell, env=environ).decode()
             # strip() removes \r\n or \n so we don't have to deal with the difference
+            print('Command args: %s' % repr(args))
+            print('Using shell: %s' % str(exec_info.shell))
+            print('Actual output: %s' % output.strip())
             assert output.strip() == expected_output.format(dirname=dirname)
         finally:
             if old_dir is not None:
@@ -2237,27 +2245,24 @@ echo %*
 
 def test_run_command_in_project_dir():
     prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment()
+    _run_argv_for_environment(os_specific=False, extra_args=[])
 
 
 def test_run_command_in_project_dir_extra_args():
     prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment(extra_args=["baz"])
+    _run_argv_for_environment(os_specific=False, extra_args=["baz"])
 
 
 def test_run_command_in_project_dir_os(monkeypatch):
-    command_name = 'windows' if platform.system() == 'Windows' else 'unix'
-    _run_argv_for_environment(command_name=command_name)
+    _run_argv_for_environment(os_specific=True, extra_args=[])
 
 
 def test_run_command_in_project_dir_os_extra_args(monkeypatch):
-    command_name = 'windows' if platform.system() == 'Windows' else 'unix'
-    _run_argv_for_environment(command_name=command_name, extra_args=["baz"])
+    _run_argv_for_environment(os_specific=True, extra_args=["baz"])
 
 
 def test_run_command_in_project_dir_and_cwd_is_project_dir():
-    prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment(chdir=True)
+    _run_argv_for_environment(os_specific=False, extra_args=[], chdir=True)
 
 
 def test_run_command_in_project_dir_with_conda_env():
