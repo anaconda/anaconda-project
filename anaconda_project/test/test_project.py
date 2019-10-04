@@ -2139,17 +2139,13 @@ commands:
         }, check_exec_info)
 
 
-def _run_argv_for_environment(environ=None,
-                              expected_output=None,
-                              chdir=False,
-                              os_specific=False,
-                              extra_args=None):
+def _run_argv_for_environment(environ=None, expected_output=None, chdir=False, os_specific=False, extra_args=None):
     environ = minimal_environ(**(environ or {}))
 
     prefix_var = conda_api.conda_prefix_variable() if os_specific else 'PREFIX'
     if platform.system() == 'Windows':
         echo_stuff = 'echo_stuff.bat'
-        echo_path  = '%PROJECT_DIR%\\\\' + echo_stuff
+        echo_path = '%PROJECT_DIR%\\\\' + echo_stuff
         prefix_var = '%{}%'.format(prefix_var)
         command_name = 'windows'
     else:
@@ -2185,10 +2181,10 @@ def _run_argv_for_environment(environ=None,
                 args = exec_info.args[0]
             else:
                 args = exec_info.args
-            output = subprocess.check_output(args, shell=exec_info.shell, env=environ).decode()
-            # strip() removes \r\n or \n so we don't have to deal with the difference
             print('Command args: %s' % repr(args))
             print('Using shell: %s' % str(exec_info.shell))
+            output = subprocess.check_output(args, shell=exec_info.shell, env=environ).decode()
+            # strip() removes \r\n or \n so we don't have to deal with the difference
             print('Actual output: %s' % output.strip())
             assert output.strip() == expected_output.format(dirname=dirname)
         finally:
@@ -2244,31 +2240,35 @@ echo %*
 
 
 def test_run_command_in_project_dir():
-    prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment(os_specific=False, extra_args=[])
+    # We can't use a generic command name with Windows batch files
+    if platform.system() != 'Windows':
+        _run_argv_for_environment(os_specific=False, extra_args=[])
 
 
 def test_run_command_in_project_dir_extra_args():
-    prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment(os_specific=False, extra_args=["baz"])
+    # We can't use a generic command name with Windows batch files
+    if platform.system() != 'Windows':
+        _run_argv_for_environment(os_specific=False, extra_args=["baz"])
 
 
-def test_run_command_in_project_dir_os(monkeypatch):
+def test_run_command_in_project_dir_os_specific(monkeypatch):
     _run_argv_for_environment(os_specific=True, extra_args=[])
 
 
-def test_run_command_in_project_dir_os_extra_args(monkeypatch):
+def test_run_command_in_project_dir_os_specific_extra_args(monkeypatch):
     _run_argv_for_environment(os_specific=True, extra_args=["baz"])
 
 
-def test_run_command_in_project_dir_and_cwd_is_project_dir():
-    _run_argv_for_environment(os_specific=False, extra_args=[], chdir=True)
+def test_run_command_in_project_dir_os_specific_and_cwd_is_project_dir():
+    # We can't use a generic command name with Windows batch files
+    _run_argv_for_environment(os_specific=True, extra_args=[], chdir=True)
 
 
-def test_run_command_in_project_dir_with_conda_env():
+def test_run_command_in_project_dir_os_specific_with_conda_env():
     _run_argv_for_environment(
         dict(CONDA_PREFIX='/someplace', CONDA_ENV_PATH='/someplace', CONDA_DEFAULT_ENV='/someplace'),
-        "/someplace foo bar")
+        "/someplace foo bar",
+        os_specific=True)
 
 
 def test_run_command_is_on_system_path():

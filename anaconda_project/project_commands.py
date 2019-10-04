@@ -10,7 +10,6 @@ from __future__ import absolute_import
 
 from copy import copy
 from collections import namedtuple
-import distutils.spawn as spawn
 
 import os
 import platform
@@ -503,13 +502,23 @@ class ProjectCommand(object):
         # line and not a single program name, and the shell will
         # search the path for us.
         if not shell:
-            executable = spawn.find_executable(args[0], path)
+            # We used to use spawn.find_executable but it is not
+            # consistent across platforms. Specifically, for Windows
+            # it seems to insist unnecessarily on an .exe extension
+            # (unnecessary for our purposes at least)
+            extensions = ['', '.bat', '.exe'] if _is_windows() else ['']
+            executable = None
+            for pdir in path.split(os.pathsep):
+                for ext in extensions:
+                    fpath = os.path.join(pdir, args[0] + ext)
+                    if os.path.exists(fpath):
+                        executable = fpath
+                        break
+                if executable is not None:
+                    args[0] = os.path.abspath(executable)
+                    break
             # if we didn't find args[0] on the path, we leave it as-is
             # and wait for it to fail when we later try to run it.
-            if executable is not None:
-                # if the executable is in cwd, for some reason spawn.find_executable does not
-                # return the full path to it, just a relative path.
-                args[0] = os.path.abspath(executable)
 
         # conda.misc.launch() uses the home directory
         # instead of the project directory as cwd when
