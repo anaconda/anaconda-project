@@ -1665,8 +1665,8 @@ def test_notebook_command_jupyter_not_on_path(monkeypatch):
         monkeypatch.setattr('distutils.spawn.find_executable', mock_find_executable)
 
         cmd_exec = command.exec_info_for_environment(environ)
-        assert cmd_exec.args == [
-            'jupyter-notebook',
+        assert 'jupyter-notebook' in cmd_exec.args[0]
+        assert cmd_exec.args[1:] == [
             os.path.join(dirname, 'test.ipynb'), '--NotebookApp.default_url=/notebooks/test.ipynb'
         ]
         assert cmd_exec.shell is False
@@ -2139,18 +2139,31 @@ commands:
         }, check_exec_info)
 
 
-if platform.system() == 'Windows':
-    echo_stuff = "echo_stuff.bat"
-else:
-    echo_stuff = "echo_stuff.sh"
+def _run_argv_for_environment(environ=None, expected_output=None, chdir=False, os_specific=False, extra_args=None):
+    environ = minimal_environ(**(environ or {}))
 
-
-def _run_argv_for_environment(environ,
-                              expected_output,
-                              chdir=False,
-                              command_line=('conda_app_entry: %s ${PREFIX} foo bar' % echo_stuff),
-                              extra_args=None):
-    environ = minimal_environ(**environ)
+    prefix_var = conda_api.conda_prefix_variable() if os_specific else 'PREFIX'
+    if platform.system() == 'Windows':
+        echo_stuff = 'echo_stuff.bat'
+        echo_path = '%PROJECT_DIR%\\\\' + echo_stuff
+        prefix_var = '%{}%'.format(prefix_var)
+        command_name = 'windows'
+    else:
+        echo_stuff = 'echo_stuff.sh'
+        echo_path = '${PROJECT_DIR}/' + echo_stuff
+        prefix_var = '${%s}' % prefix_var
+        command_name = 'unix'
+    if not os_specific:
+        command_name = 'conda_app_entry'
+        echo_path = echo_stuff
+    if expected_output is None:
+        args = ' '.join(['foo', 'bar'] + (extra_args or []))
+        expected_output = conda_api.environ_get_prefix(os.environ) + ' ' + args
+    command_line = '%s: "%s %s foo bar"' % (command_name, echo_path, prefix_var)
+    print('YAML command line: %s' % command_line)
+    print('Expected output: %s' % expected_output)
+    print('Current directory: %s' % os.getcwd())
+    print('Path: %s' % os.environ.get('PATH'))
 
     def check_echo_output(dirname):
         if 'PROJECT_DIR' not in environ:
@@ -2168,8 +2181,11 @@ def _run_argv_for_environment(environ,
                 args = exec_info.args[0]
             else:
                 args = exec_info.args
+            print('Command args: %s' % repr(args))
+            print('Using shell: %s' % str(exec_info.shell))
             output = subprocess.check_output(args, shell=exec_info.shell, env=environ).decode()
             # strip() removes \r\n or \n so we don't have to deal with the difference
+            print('Actual output: %s' % output.strip())
             assert output.strip() == expected_output.format(dirname=dirname)
         finally:
             if old_dir is not None:
@@ -2224,66 +2240,35 @@ echo %*
 
 
 def test_run_command_in_project_dir():
-    prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment(dict(), "%s foo bar" % (prefix))
+    # We can't use a generic command name with Windows batch files
+    if platform.system() != 'Windows':
+        _run_argv_for_environment(os_specific=False, extra_args=[])
 
 
 def test_run_command_in_project_dir_extra_args():
-    prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment(dict(), "%s foo bar baz" % (prefix), extra_args=["baz"])
-
-
-def test_run_command_in_project_dir_with_shell(monkeypatch):
-    if platform.system() == 'Windows':
-        print("Cannot test shell on Windows")
-        return
-    prefix = conda_api.environ_get_prefix(os.environ)
-    command_line = 'unix: "${PROJECT_DIR}/echo_stuff.sh ${%s} foo bar"' % conda_api.conda_prefix_variable()
-    _run_argv_for_environment(dict(), "%s foo bar" % (prefix), command_line=command_line)
-
-
-def test_run_command_in_project_dir_with_shell_extra_args(monkeypatch):
-    if platform.system() == 'Windows':
-        print("Cannot test shell on Windows")
-        return
-    prefix = conda_api.environ_get_prefix(os.environ)
-    command_line = 'unix: "${PROJECT_DIR}/echo_stuff.sh ${%s} foo bar"' % conda_api.conda_prefix_variable()
-    _run_argv_for_environment(dict(), "%s foo bar baz" % (prefix), command_line=command_line, extra_args=["baz"])
-
-
-def test_run_command_in_project_dir_with_windows(monkeypatch):
+    # We can't use a generic command name with Windows batch files
     if platform.system() != 'Windows':
-        print("Cannot test windows cmd on unix")
-        return
-    prefix = conda_api.environ_get_prefix(os.environ)
-    command_line = '''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %{}% foo bar"'''.format(
-        conda_api.conda_prefix_variable())
-    _run_argv_for_environment(dict(), "%s foo bar" % (prefix), command_line=command_line)
+        _run_argv_for_environment(os_specific=False, extra_args=["baz"])
 
 
-def test_run_command_in_project_dir_with_windows_extra_args(monkeypatch):
-    if platform.system() != 'Windows':
-        print("Cannot test windows cmd on unix")
-        return
-    prefix = conda_api.environ_get_prefix(os.environ)
-    command_line = '''windows: "\\"%PROJECT_DIR%\\\\echo_stuff.bat\\" %{}% foo bar"'''.format(
-        conda_api.conda_prefix_variable())
-    _run_argv_for_environment(dict(), "%s foo bar baz" % (prefix), command_line=command_line, extra_args=["baz"])
+def test_run_command_in_project_dir_os_specific(monkeypatch):
+    _run_argv_for_environment(os_specific=True, extra_args=[])
 
 
-def test_run_command_in_project_dir_and_cwd_is_project_dir():
-    prefix = conda_api.environ_get_prefix(os.environ)
-    _run_argv_for_environment(
-        dict(),
-        "%s foo bar" % prefix,
-        chdir=True,
-        command_line=('conda_app_entry: %s ${PREFIX} foo bar' % os.path.join(".", echo_stuff)))
+def test_run_command_in_project_dir_os_specific_extra_args(monkeypatch):
+    _run_argv_for_environment(os_specific=True, extra_args=["baz"])
 
 
-def test_run_command_in_project_dir_with_conda_env():
+def test_run_command_in_project_dir_os_specific_and_cwd_is_project_dir():
+    # We can't use a generic command name with Windows batch files
+    _run_argv_for_environment(os_specific=True, extra_args=[], chdir=True)
+
+
+def test_run_command_in_project_dir_os_specific_with_conda_env():
     _run_argv_for_environment(
         dict(CONDA_PREFIX='/someplace', CONDA_ENV_PATH='/someplace', CONDA_DEFAULT_ENV='/someplace'),
-        "/someplace foo bar")
+        "/someplace foo bar",
+        os_specific=True)
 
 
 def test_run_command_is_on_system_path():

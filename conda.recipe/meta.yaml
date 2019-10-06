@@ -30,7 +30,7 @@ requirements:
 test:
   requires:
     - coverage
-    - pytest
+    - pytest<5
     - pytest-cov
     - redis
     - notebook
