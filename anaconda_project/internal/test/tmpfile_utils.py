@@ -9,8 +9,6 @@ from __future__ import print_function, absolute_import
 
 import codecs
 import os
-import platform
-import shutil
 import sys
 try:
     from backports.tempfile import TemporaryDirectory
@@ -99,7 +97,7 @@ def with_named_file_contents(filename, contents, func, dir=None):
     if dir is None:
         dir = local_tmp
 
-    with (TmpDir(prefix="test-")) as dirname:
+    with TemporaryDirectory(prefix="test-") as dirname:
         full = os.path.join(dirname, filename)
         with codecs.open(full, 'w', encoding='utf-8') as f:
             f.write(contents)
