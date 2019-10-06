@@ -29,7 +29,9 @@ requirements:
 
 test:
   requires:
+    - coverage
     - pytest<5
+    - pytest-cov
     - redis
     - notebook
     - bokeh
@@ -53,11 +55,11 @@ test:
     # test this impacts is relaxed on Windows, so this is only needed for Unix.
     - export PATH="$PREFIX/bin:"$(echo $PATH | sed "s@$PREFIX[^:]*:@@g;s@$(dirname $CONDA_EXE):@@g") # [not win]
     # The warnings for Python 2.7 are pretty extensive, so let's not print them in CI
-    - python -m pytest --pyargs -v -rfe --tb=long --durations=10 anaconda_project
-    #      --cov-config .coveragerc --cov-report term-missing --no-cov-on-fail
-    #      --cov-fail-under=99 --cov-report html$COVERAGE_DIR # [not win]
-    #      --cov-fail-under=98 --cov-report html%COVERAGE_DIR% # [win]
-    #       --cov anaconda_project anaconda_project
+    - python -m pytest --pyargs -v -rfe --durations=10
+          --cov-config .coveragerc --cov-report term-missing --no-cov-on-fail
+          --cov-fail-under=99 --cov-report html$COVERAGE_DIR # [not win]
+          --cov-fail-under=98 --cov-report html%COVERAGE_DIR% # [win]
+          --cov anaconda_project anaconda_project
 
 about:
   home: https://github.com/Anaconda-Platform/anaconda-project
