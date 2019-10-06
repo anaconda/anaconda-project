@@ -140,6 +140,7 @@ def test_download(monkeypatch):
 
     with_directory_contents(dict(), check)
 
+
 def test_download_no_username(monkeypatch):
     def check(dirname):
         with fake_server(monkeypatch, expected_basename='fake_project.zip'):
@@ -148,6 +149,7 @@ def test_download_no_username(monkeypatch):
 
     with_directory_contents(dict(), check)
 
+
 def test_download_missing(monkeypatch):
     def check(dirname):
         with fake_server(monkeypatch, expected_basename='fake_project.zip'):
@@ -155,6 +157,7 @@ def test_download_missing(monkeypatch):
             assert '404' in status.errors[0]
 
     with_directory_contents(dict(), check)
+
 
 def test_download_missing_no_username(monkeypatch):
     def check(dirname):
