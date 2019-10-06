@@ -113,11 +113,20 @@ def _file_problem(problems, yaml_file, text, fix_prompt=None, fix_function=None)
 
 
 def _unknown_field_suggestions(project_file, problems, yaml_dict, known_fields):
+    if 'user_fields' in yaml_dict.keys():
+        known_fields = _add_user_fields(yaml_dict, known_fields)
     for key in yaml_dict.keys():
         if key not in known_fields:
             problems.append(
                 ProjectProblem(
                     text="Unknown field name '%s'" % (key), filename=project_file.filename, only_a_suggestion=True))
+
+
+def _add_user_fields(yaml_dict, known_fields):
+    user_fields = yaml_dict['user_fields']
+    user_fields.append('user_fields')
+    all = [known_fields, user_fields]
+    return [i for sub in all for i in sub]
 
 
 def _fatal_problem(problems):
@@ -154,7 +163,7 @@ class _ConfigCache(object):
 
     def update(self, project_file, lock_file):
         if project_file.change_count == self.project_file_count and \
-           lock_file.change_count == self.lock_file_count:
+                lock_file.change_count == self.lock_file_count:
             return
 
         self.project_file_count = project_file.change_count
@@ -811,7 +820,7 @@ class _ConfigCache(object):
         # out of sync, and `anaconda-project init` in a directory with a .ipynb
         # and an environment.yml doesn't result in a valid project.
         if importable_spec is not None and old is not None and \
-           importable_spec.diff_only_removes_notebook_or_bokeh(old):
+                importable_spec.diff_only_removes_notebook_or_bokeh(old):
             importable_spec = None
 
         if importable_spec is not None:
@@ -883,8 +892,7 @@ class _ConfigCache(object):
         commands_section = project_file.get_value('commands', None)
 
         plugins = plugins_api.get_plugins('command_run')
-        all_known_command_attributes_extended = all_known_command_attributes + \
-            tuple(plugins.keys())
+        all_known_command_attributes_extended = (all_known_command_attributes + tuple(plugins.keys()))
 
         if commands_section is not None and not is_dict(commands_section):
             _file_problem(

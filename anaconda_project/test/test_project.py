@@ -3158,6 +3158,18 @@ def test_unknown_field_in_env_spec():
         }, check)
 
 
+def test_unknown_field_in_env_spec_allowed():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+        assert [] == project.suggestions
+
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        "env_specs:\n  foo:\n    packages: [something]\n    somejunk: True\n    user_fields: [somejunk]\n"
+    }, check)
+
+
 def test_unknown_field_in_root_of_lock_file():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
