@@ -22,8 +22,6 @@ matrix:
   # not locally. I'm not going to sweat about that right now.
   allow_failures:
     - env: BUILD_TARGET=3.7 CONDA_CANARY="-c conda-canary"
-    - env: BUILD_TARGET=3.7
-      os: osx
 
 install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then MINICONDA_OS=Linux; else MINICONDA_OS=MacOSX; fi
