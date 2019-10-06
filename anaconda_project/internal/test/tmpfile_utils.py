@@ -27,7 +27,9 @@ makedirs_ok_if_exists(local_tmp)
 
 
 def with_directory_contents(contents, func):
-    with TemporaryDirectory(prefix="test-") as dirname:
+    tempd = TemporaryDirectory(prefix="test-")
+    dirname = tempd.name
+    try:
         for filename, file_content in contents.items():
             path = os.path.join(dirname, filename)
             if file_content is None:
@@ -38,6 +40,13 @@ def with_directory_contents(contents, func):
                 with codecs.open(path, 'w', 'utf-8') as f:
                     f.write(file_content)
         return func(os.path.realpath(dirname))
+    finally:
+        # Windows experiences PermissionError exceptions here
+        # but we can just let them pass.
+        try:
+            tempd.cleanup()
+        except PermissionError:
+            pass
 
 
 def complete_project_file_content(content):
