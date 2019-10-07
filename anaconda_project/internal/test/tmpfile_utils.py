@@ -39,14 +39,17 @@ def with_directory_contents(contents, func):
                 makedirs_ok_if_exists(os.path.dirname(path))
                 with codecs.open(path, 'w', 'utf-8') as f:
                     f.write(file_content)
-        return func(os.path.realpath(dirname))
+        result = func(os.path.realpath(dirname))
     finally:
         # Windows experiences PermissionError exceptions here
-        # but we can just let them pass.
+        # but we can just let them pass. And we also see some
+        # FileNotFound error issues as well in Unix. But test
+        # passage really is not dependent on either.
         try:
             tempd.cleanup()
-        except PermissionError:
+        except (PermissionError, FileNotFoundError):
             pass
+    return result
 
 
 def complete_project_file_content(content):
