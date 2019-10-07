@@ -6,31 +6,41 @@ sudo: required
 
 env:
   # Build and test package on all supported python versions
-  - BUILD_TARGET=3.7
-  - BUILD_TARGET=3.6 
-  - BUILD_TARGET=2.7
+  - BUILD_TARGET=3.7 MINICONDA_VERSION=4.7.10
+  - BUILD_TARGET=3.6 MINICONDA_VERSION=4.7.10
+  - BUILD_TARGET=2.7 MINICONDA_VERSION=4.7.10
+  # To make sure it's still working with conda 4.6
+  - BUILD_TARGET=3.7 MINICONDA_VERSION=4.6.14
+  - BUILD_TARGET=3.6 MINICONDA_VERSION=4.5.12
   # Smoketest package on conda canary
-  - BUILD_TARGET=3.7 CONDA_CANARY="-c conda-canary"
+  - BUILD_TARGET=3.7 MINICONDA_VERSION=latest CONDA_CANARY="yes"
 
 os:
   - linux
   - osx
 
 matrix:
-  # conda canary shouldn't block the build, just show us an FYI
-  # and for some reason Mac & python 3.7 is hosed on Travis but
-  # not locally. I'm not going to sweat about that right now.
+  # conda canary shouldn't block the build, just show us as an FYI
   allow_failures:
-    - env: BUILD_TARGET=3.7 CONDA_CANARY="-c conda-canary"
+    - env: BUILD_TARGET=3.7 MINICONDA_VERSION=latest CONDA_CANARY="yes"
+  # skip the historical conda tests on Mac to save time
+  exclude:
+    - env: BUILD_TARGET=3.7 MINICONDA_VERSION=4.6.14
+      os: osx
+    - env: BUILD_TARGET=3.6 MINICONDA_VERSION=4.5.12
+      os: osx
+    - env: BUILD_TARGET=3.7 MINICONDA_VERSION=latest CONDA_CANARY="yes"
+      os: osx
 
 install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then MINICONDA_OS=Linux; else MINICONDA_OS=MacOSX; fi
-  - wget https://repo.anaconda.com/miniconda/Miniconda3-4.6.14-$MINICONDA_OS-x86_64.sh -O miniconda.sh
+  - wget https://repo.anaconda.com/miniconda/Miniconda3-$MINICONDA_VERSION-$MINICONDA_OS-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p "$HOME"/miniconda
   - source "$HOME"/miniconda/etc/profile.d/conda.sh
-  - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false
+  - conda config --set always_yes yes --set changeps1 no --set auto_update_conda false --set notify_outdated_conda false
   # yapf is pinned to help make sure we get the same results here as a user does locally.
-  - conda install -q $CONDA_CANARY -c defaults -c conda-forge conda-build conda-verify codecov flake8 pep257 yapf==0.25.0
+  - conda install -c defaults -c conda-forge conda-build conda-verify codecov flake8 pep257 yapf==0.25.0
+  - if [[ "$CONDA_CANARY" == "yes" ]]; then conda install -c conda-canary conda; fi
   - conda info -a
   - export LANG=en_US.UTF-8
   - export COVERAGE_DIR=":$HOME/htmlcov"
