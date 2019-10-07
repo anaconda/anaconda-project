@@ -9,11 +9,13 @@ from __future__ import print_function, absolute_import
 
 import codecs
 import os
-import platform
-import shutil
 import sys
-import tempfile
+try:
+    from backports.tempfile import TemporaryDirectory
+except ImportError:
+    from tempfile import TemporaryDirectory
 import zipfile
+import tempfile
 
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
 from anaconda_project.local_state_file import LocalStateFile
@@ -24,46 +26,10 @@ local_tmp = os.path.abspath("./build/tmp")
 makedirs_ok_if_exists(local_tmp)
 
 
-class TmpDir(object):
-    def __init__(self, prefix):
-        self._dir = tempfile.mkdtemp(prefix=prefix, dir=local_tmp)
-
-    def __exit__(self, type, value, traceback):
-        def log_errors(func, path, exc):
-            print("%s: Error on func %r exc %r" % (path, func, exc), file=sys.stderr)
-
-        if platform.system() == 'Windows':
-            onerror = log_errors
-        else:
-            onerror = None
-
-        # On Windows, this rmtree will give a permission denied
-        # error seemingly at random; so far can't figure out
-        # what's causing it, but it makes the CI very flaky.  So
-        # we just log the errors on Windows (the onerror handler
-        # should prevent exceptions from being raised). Unix
-        # should catch any true logic errors.
-        try:
-            shutil.rmtree(path=self._dir, onerror=onerror)
-        except Exception as e:
-            # prefer original exception to rmtree exception
-            if value is None:
-                print("Exception cleaning up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
-                try:
-                    print("Files in %s: %r" % (self._dir, os.listdir(self._dir)), file=sys.stderr)
-                except Exception:
-                    pass
-                raise e
-            else:
-                print("Failed to clean up TmpDir %s: %s" % (self._dir, str(e)), file=sys.stderr)
-                raise value
-
-    def __enter__(self):
-        return self._dir
-
-
 def with_directory_contents(contents, func):
-    with (TmpDir(prefix="test-")) as dirname:
+    tempd = TemporaryDirectory(prefix="test-")
+    dirname = tempd.name
+    try:
         for filename, file_content in contents.items():
             path = os.path.join(dirname, filename)
             if file_content is None:
@@ -73,7 +39,17 @@ def with_directory_contents(contents, func):
                 makedirs_ok_if_exists(os.path.dirname(path))
                 with codecs.open(path, 'w', 'utf-8') as f:
                     f.write(file_content)
-        return func(os.path.realpath(dirname))
+        result = func(os.path.realpath(dirname))
+    finally:
+        # Windows experiences PermissionError exceptions here
+        # but we can just let them pass. And we also see some
+        # FileNotFound error issues as well in Unix. But test
+        # passage really is not dependent on either.
+        try:
+            tempd.cleanup()
+        except (PermissionError, FileNotFoundError):
+            pass
+    return result
 
 
 def complete_project_file_content(content):
@@ -117,7 +93,6 @@ def with_directory_contents_completing_project_file(contents, func):
 def with_temporary_file(func, dir=None):
     if dir is None:
         dir = local_tmp
-    import tempfile
     # Windows throws a permission denied if we use delete=True for
     # auto-delete, and then try to open the file again ourselves
     # with f.name. So we manually delete in the finally block
@@ -134,7 +109,7 @@ def with_named_file_contents(filename, contents, func, dir=None):
     if dir is None:
         dir = local_tmp
 
-    with (TmpDir(prefix="test-")) as dirname:
+    with TemporaryDirectory(prefix="test-") as dirname:
         full = os.path.join(dirname, filename)
         with codecs.open(full, 'w', encoding='utf-8') as f:
             f.write(contents)

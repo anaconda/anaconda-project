@@ -29,6 +29,7 @@ requirements:
 
 test:
   requires:
+    - backports.tempfile # [py2k]
     - coverage
     - pytest<5
     - pytest-cov
