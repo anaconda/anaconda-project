@@ -5034,3 +5034,27 @@ def test_upload_cannot_walk_directory(monkeypatch):
         DEFAULT_PROJECT_FILENAME: "name: foo\n",
         "foo.py": "print('hello')\n"
     }, check)
+
+
+def test_download(monkeypatch):
+    def check(dirname):
+        with fake_server(monkeypatch, expected_basename='fake_project.zip'):
+            status = project_ops.download('fake_username/fake_project', unpack=False, site='unit_test')
+            assert status
+
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: "name: foo\n",
+        "foo.py": "print('hello')\n"
+    }, check)
+
+
+def test_download_missing(monkeypatch):
+    def check(dirname):
+        with fake_server(monkeypatch, expected_basename='fake_project.zip'):
+            status = project_ops.download('fake_username/missing_project', unpack=False, site='unit_test')
+            assert not status
+
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: "name: foo\n",
+        "foo.py": "print('hello')\n"
+    }, check)

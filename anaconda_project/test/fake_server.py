@@ -8,6 +8,7 @@
 from __future__ import absolute_import, print_function
 
 import json
+import os
 import socket
 import sys
 import threading
@@ -39,6 +40,19 @@ class ProjectViewHandler(RequestHandler):
         elif path == 'user/foobar':
             self.set_header('Content-Type', 'application/json')
             self.write('{"login":"foobar"}\n')
+        elif path == 'apps/fake_username/projects/fake_project':
+            self.write('{"name":"fake_project"}')
+            self.set_header('Content-Type', 'application/json')
+            self.set_status(200)
+        elif path == 'apps/fake_username/projects/fake_project/download':
+            dirname = os.path.dirname(__file__)
+            with open(os.path.join(dirname, 'fake_project.zip'), 'rb') as f:
+                self.write(f.read())
+
+            self.set_header('Content-Type', 'application/zip')
+            self.set_header('Content-Disposition',
+                            '''attachment; filename="fake_project.zip"; filename*=UTF-8\'\'fake_project.zip''')
+            self.set_status(200)
         else:
             self.set_status(status_code=404)
 

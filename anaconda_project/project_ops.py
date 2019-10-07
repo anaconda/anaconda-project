@@ -1762,3 +1762,18 @@ def upload(project, private=None, site=None, username=None, token=None, suffix='
         return status
     finally:
         os.remove(tmp_tarfile.name)
+
+
+def download(project, unpack=True, project_dir=None, parent_dir=None, site=None, username=None, token=None):
+    """Download project from Anaconda Server.
+
+    Args:
+        project: The project in format <username>/<project_name>
+    """
+    download_status = client._download(
+        project, project_dir=project_dir, parent_dir=parent_dir, site=site, username=username, token=token)
+    if unpack and download_status:
+        unpack_status = unarchive(download_status.filename, project_dir=project_dir, parent_dir=parent_dir)
+        if unpack_status:
+            print(unpack_status.status_description)
+    return download_status

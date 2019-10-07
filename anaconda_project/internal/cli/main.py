@@ -29,6 +29,7 @@ import anaconda_project.internal.cli.clean as clean
 import anaconda_project.internal.cli.archive as archive
 import anaconda_project.internal.cli.unarchive as unarchive
 import anaconda_project.internal.cli.upload as upload
+import anaconda_project.internal.cli.download as download
 import anaconda_project.internal.cli.activate as activate
 import anaconda_project.internal.cli.variable_commands as variable_commands
 import anaconda_project.internal.cli.download_commands as download_commands
@@ -150,6 +151,23 @@ def _parse_args_and_run_subcommand(argv):
         default='.tar.bz2',
         choices=['.tar.gz', '.tar.bz2', '.zip'])
     preset.set_defaults(main=upload.main)
+
+    preset = subparsers.add_parser('download', help="Download the project from Anaconda Cloud")
+    add_directory_arg(preset)
+    preset.add_argument(
+        'project',
+        help='The project to download as <username>/<projectname>. If <projectname>' +
+        'has spaces inclose everything in quotes "<username>/<project name>".' +
+        'If specified as <projectname> then the logged-in username is used.')
+    preset.add_argument('--no-unpack', action='store_true', help='Do not unpack the project archive.')
+    preset.add_argument(
+        '--parent_dir',
+        default=None,
+        help='Download archive to specific directory, otherwise downloaded to current working directory.')
+    preset.add_argument('-s', '--site', metavar='SITE', help='Select site to use')
+    preset.add_argument('-t', '--token', metavar='TOKEN', help='Auth token or a path to a file containing a token')
+    preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
+    preset.set_defaults(main=download.main)
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
     add_env_spec_arg(preset)
