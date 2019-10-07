@@ -41,13 +41,16 @@ def with_directory_contents(contents, func):
                     f.write(file_content)
         result = func(os.path.realpath(dirname))
     finally:
-        # Windows experiences PermissionError exceptions here
-        # but we can just let them pass. And we also see some
-        # FileNotFound error issues as well in Unix. But test
-        # passage really is not dependent on either.
+        # Windows experiences PermissionError exceptions here,
+        # and Unix sometimes experiences FileNotFound exceptions.
+        # The reasons are not 100% clear, but they should not be
+        # allowed to interrupt test passage, either.
         try:
             tempd.cleanup()
-        except (PermissionError, FileNotFoundError):
+        except Exception as exc:
+            print('Unexpected error cleaning temporary directory:')
+            print('  ' + dirname)
+            print('  ' + str(exc))
             pass
     return result
 
