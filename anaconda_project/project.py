@@ -863,6 +863,7 @@ class _ConfigCache(object):
                 default_spec = _anaconda_default_env_spec(self.global_base_env_spec)
                 project.project_file.set_value(['env_specs', default_spec.name], default_spec.to_json())
 
+
 #           problems.append(
 #               ProjectProblem(
 #                   text="The env_specs section is %s." % ("missing" if env_specs_is_missing else "empty"),
@@ -870,8 +871,9 @@ class _ConfigCache(object):
 #                   fix_prompt=("Add an environment spec to %s?" % os.path.basename(project_file.filename)),
 #                   fix_function=add_default_env_spec))
 
-        # this is only used for commands that don't specify anything
-        # (when/if we require all commands to specify, then remove this.)
+# this is only used for commands that don't specify anything
+# (when/if we require all commands to specify, then remove this.)
+
         if 'default' in self.env_specs:
             self.default_env_spec_name = 'default'
         else:

@@ -395,6 +395,29 @@ env_specs:
     }, check)
 
 
+def test_prepare_no_env_specs():
+    def check(dirname):
+        env_var = conda_api.conda_prefix_variable()
+
+        try:
+            _push_fake_env_creator()
+            project = Project(dirname)
+            environ = minimal_environ()
+            result = prepare_without_interaction(project, environ=environ, env_spec_name='default')
+            expected_path = project.env_specs['default'].path(project.directory_path)
+            assert result.environ[env_var] == expected_path
+        finally:
+            _pop_fake_env_creator()
+
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+name: blah
+platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+"""
+        }, check)
+
+
 def test_prepare_use_command_specified_env_spec():
     def check(dirname):
         env_var = conda_api.conda_prefix_variable()
@@ -424,6 +447,36 @@ env_specs:
 commands:
     hello:
        env_spec: foo
+       unix: echo hello
+       windows: echo hello
+"""
+    }, check)
+
+
+def test_prepare_use_command_no_env_specs():
+    def check(dirname):
+        env_var = conda_api.conda_prefix_variable()
+
+        try:
+            _push_fake_env_creator()
+            project = Project(dirname)
+            environ = minimal_environ()
+            # we specify the command name but not the
+            # env_spec_name but it should imply the proper env
+            # spec name.
+            result = prepare_without_interaction(project, environ=environ, command_name='hello')
+            expected_path = project.env_specs['default'].path(project.directory_path)
+            assert result.environ[env_var] == expected_path
+        finally:
+            _pop_fake_env_creator()
+
+    with_directory_contents({
+        DEFAULT_PROJECT_FILENAME:
+        """
+name: blah
+platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+commands:
+    hello:
        unix: echo hello
        windows: echo hello
 """
