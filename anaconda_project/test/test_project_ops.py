@@ -3220,18 +3220,6 @@ env_specs:
         }, check)
 
 
-def test_export_env_spec_broken_project(monkeypatch):
-    def check(dirname):
-        project = project_no_dedicated_env(dirname)
-        status = project_ops.export_env_spec(project, name='default', filename='foo')
-        assert not status
-        assert status.status_description == 'Unable to load the project.'
-
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
-name: broken
-"""}, check)
-
-
 def _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch):
     from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
 
