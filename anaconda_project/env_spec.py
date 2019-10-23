@@ -426,7 +426,7 @@ class EnvSpec(object):
         fname = os.path.join(conda_meta_path, 'pinned')
         if os.path.exists(fname):
             if os.path.exists(fname + '.__ap_orig'):
-                os.rename(fname, fname + '.__ap_orig')
+                os.rename(fname + '.__ap_orig', fname)
             else:
                 os.remove(fname)
 
