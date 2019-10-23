@@ -1543,10 +1543,11 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
 
             # ensure numpy <1.11.3 is present in both passes
             meta_path = os.path.join(dirname, 'envs', 'foo', 'conda-meta')
+            # pinned file no longer present between environment preparation steps
             assert os.path.isdir(meta_path)
             pinned = os.path.join(meta_path, 'pinned')
-            assert os.path.exists(pinned)
-            assert open(pinned, 'r').read() == specs[0]
+            assert not os.path.exists(pinned)
+            # assert open(pinned, 'r').read() == specs[0]
             files = glob.glob(os.path.join(meta_path, 'numpy-1.*-*'))
             assert len(files) == 1, files
             version = os.path.basename(files[0]).split('-', 2)[1]
