@@ -371,7 +371,7 @@ class DefaultCondaManager(CondaManager):
                         channels=spec.channels,
                         stdout_callback=self._on_stdout,
                         stderr_callback=self._on_stderr)
-                    spec.apply_pins(prefix)
+                    spec.remove_pins(prefix)
                 except conda_api.CondaError as e:
                     raise CondaManagerError("Failed to install packages: {}: {}".format(", ".join(specs), str(e)))
         elif create:
@@ -389,7 +389,6 @@ class DefaultCondaManager(CondaManager):
                     channels=spec.channels,
                     stdout_callback=self._on_stdout,
                     stderr_callback=self._on_stderr)
-                spec.apply_pins(prefix)
             except conda_api.CondaError as e:
                 raise CondaManagerError("Failed to create environment at %s: %s" % (prefix, str(e)))
         else:

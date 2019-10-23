@@ -418,6 +418,18 @@ class EnvSpec(object):
             if new_list:
                 os.rename(fname + '.__ap_new', fname)
 
+    def remove_pins(self, prefix):
+        """Remove the pinned file."""
+        conda_meta_path = os.path.join(prefix, 'conda-meta')
+        if not os.path.isdir(conda_meta_path):
+            raise RuntimeError('Expected path {} to exist'.format(conda_meta_path))
+        fname = os.path.join(conda_meta_path, 'pinned')
+        if os.path.exists(fname):
+            if os.path.exists(fname + '.__ap_orig'):
+                os.rename(fname, fname + '.__ap_orig')
+            else:
+                os.remove(fname)
+
     def save_environment_yml(self, filename):
         """Save as an environment.yml file."""
         # here we want to flatten the env spec to include all inherited stuff
