@@ -2,6 +2,20 @@
 
 We [keep a changelog.](http://keepachangelog.com/)
 
+## Version 0.8.4 (2019/10/24) - Public Release
+
+### Issues Closed
+
+* [Issue 201](https://github.com/Anaconda-Platform/anaconda-project/issues/201) Version pins were not respected in all cases. ([PR 203](https://github.com/Anaconda-Platform/anaconda-project/pull/203), [PR ], [PR 227](https://github.com/Anaconda-Platform/anaconda-project/pull/227), [PR 233](https://github.com/Anaconda-Platform/anaconda-project/pull/233))
+
+#### Enhancements
+
+* [Issue 222](https://github.com/Anaconda-Platform/anaconda-project/issues/222) Make `env_specs` optional ([PR 232](https://github.com/Anaconda-Platform/anaconda-project/pull/232))
+* [Issue 221](https://github.com/Anaconda-Platform/anaconda-project/issues/221) Allow for the specification of additional fields that may not affect operation but can be used to provide additional metadata about the project ([PR 228/224](https://github.com/Anaconda-Platform/anaconda-project/pull/228))
+* [Issue 204](https://github.com/Anaconda-Platform/anaconda-project/issues/204) Upload to Anaconda Cloud ([PR https://github.com/Anaconda-Platform/anaconda-project/pull/208])
+* [Issue 189](https://github.com/Anaconda-Platform/anaconda-project/issues/189) Add a `--all` flag to prepare all environments in a multi-environment project ([PR 213](https://github.com/Anaconda-Platform/anaconda-project/pull/213))
+* [Issue 173](https://github.com/Anaconda-Platform/anaconda-project/issues/173) Facilitate a "clean" rebuild of a project environment with a `--refresh` flag ([PR 223](https://github.com/Anaconda-Platform/anaconda-project/pull/223), [PR 229](https://github.com/Anaconda-Platform/anaconda-project/pull/229))
+
 ## Version 0.8.3 (2019/06/20) - Public Release
 
 ### Issues Closed
