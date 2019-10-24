@@ -11,7 +11,7 @@ We [keep a changelog.](http://keepachangelog.com/)
 #### Enhancements
 
 * [Issue 222](https://github.com/Anaconda-Platform/anaconda-project/issues/222) Make `env_specs` optional ([PR 232](https://github.com/Anaconda-Platform/anaconda-project/pull/232))
-* [Issue 221](https://github.com/Anaconda-Platform/anaconda-project/issues/221) Allow for the specification of additional fields that may not affect operation but can be used to provide additional metadata about the project ([PR 228](https://github.com/Anaconda-Platform/anaconda-project/pull/228)/[224](https://github.com/Anaconda-Platform/anaconda-project/pull/224))
+* [Issue 221](https://github.com/Anaconda-Platform/anaconda-project/issues/221) Accept additional user-defined fields without warnings ([PR 228](https://github.com/Anaconda-Platform/anaconda-project/pull/228)/[224](https://github.com/Anaconda-Platform/anaconda-project/pull/224))
 * [Issue 204](https://github.com/Anaconda-Platform/anaconda-project/issues/204) `anaconda-project upload` to upload projects to Anaconda Cloud ([PR 208](https://github.com/Anaconda-Platform/anaconda-project/pull/208))
 * [Issue 189](https://github.com/Anaconda-Platform/anaconda-project/issues/189) `anaconda-project prepare --all` will prepare all environments in a multi-environment project ([PR 213](https://github.com/Anaconda-Platform/anaconda-project/pull/213))
 * [Issue 173](https://github.com/Anaconda-Platform/anaconda-project/issues/173) `anaconda-project prepare --refresh` will perform a full rebuild of a project environment ([PR 223](https://github.com/Anaconda-Platform/anaconda-project/pull/223)/[229](https://github.com/Anaconda-Platform/anaconda-project/pull/229))

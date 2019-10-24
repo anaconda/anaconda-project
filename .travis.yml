@@ -3,7 +3,7 @@ language: c
 branches:
   only:
   - master
-  - "/^\\d+\\.\\d+.*$/"
+  - "/^v?\\d+\\.\\d+.*$/"
 
 env:
   # Build and test package on all supported python versions
