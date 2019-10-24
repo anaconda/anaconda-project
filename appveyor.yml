@@ -2,7 +2,6 @@
 branches:
   only:
     - master
-    - /\d+\.\d+.*/
 
 # Don't run the (redundant) branch build with a pull request
 skip_branch_with_pr: true
