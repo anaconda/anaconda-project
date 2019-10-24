@@ -28,6 +28,7 @@ from anaconda_project.archiver import _list_relative_paths_for_unignored_project
 from anaconda_project.version import version
 from anaconda_project.conda_manager import CondaLockSet
 from anaconda_project.frontend import _null_frontend, _new_error_recorder, Frontend
+from anaconda_project.yaml_file import CommentedMap
 
 from anaconda_project.internal.py2_compat import is_string, is_list, is_dict
 from anaconda_project.internal.simple_status import SimpleStatus
@@ -577,7 +578,10 @@ class _ConfigCache(object):
         (shared_deps, shared_pip_deps) = _parse_packages(project_file.root)
         shared_channels = _parse_channels(project_file.root)
         shared_platforms = _parse_platforms(project_file.root)
-        env_specs = project_file.get_value('env_specs', default=None)
+
+        _default_env_spec = CommentedMap([('default', CommentedMap([('packages', []), ('channels', [])]))])
+        env_specs = project_file.get_value('env_specs', default=_default_env_spec)
+
         first_env_spec_name = None
         env_specs_is_empty = False
         env_specs_is_missing = False
@@ -859,15 +863,13 @@ class _ConfigCache(object):
                 default_spec = _anaconda_default_env_spec(self.global_base_env_spec)
                 project.project_file.set_value(['env_specs', default_spec.name], default_spec.to_json())
 
-            problems.append(
-                ProjectProblem(
-                    text="The env_specs section is %s." % ("missing" if env_specs_is_missing else "empty"),
-                    filename=project_file.filename,
-                    fix_prompt=("Add an environment spec to %s?" % os.path.basename(project_file.filename)),
-                    fix_function=add_default_env_spec))
+            # This section should now be inaccessible
+            # since env_spec will be added at runtime if missing
 
-        # this is only used for commands that don't specify anything
-        # (when/if we require all commands to specify, then remove this.)
+
+# this is only used for commands that don't specify anything
+# (when/if we require all commands to specify, then remove this.)
+
         if 'default' in self.env_specs:
             self.default_env_spec_name = 'default'
         else:

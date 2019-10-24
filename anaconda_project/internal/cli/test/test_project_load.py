@@ -10,7 +10,6 @@ from __future__ import absolute_import, print_function
 import os
 import sys
 
-from anaconda_project.project import Project
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
 from anaconda_project.internal.cli.project_load import load_project
 
@@ -69,39 +68,3 @@ def test_interactively_no_fix_empty_project(monkeypatch, capsys):
         assert err == ""
 
     with_directory_contents({}, check)
-
-
-def test_interactively_fix_project(monkeypatch, capsys):
-    def check(dirname):
-        broken_project = Project(dirname)
-        assert len(broken_project.fixable_problems) == 1
-
-        _monkeypatch_input(monkeypatch, ["y"])
-
-        project = load_project(dirname)
-        assert project.problems == []
-
-        out, err = capsys.readouterr()
-        assert out == ("%s: The env_specs section is missing.\nAdd an environment spec to anaconda-project.yml? " %
-                       DEFAULT_PROJECT_FILENAME)
-        assert err == ""
-
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo"}, check)
-
-
-def test_interactively_no_fix_project(monkeypatch, capsys):
-    def check(dirname):
-        broken_project = Project(dirname)
-        assert len(broken_project.fixable_problems) == 1
-
-        _monkeypatch_input(monkeypatch, ["n"])
-
-        project = load_project(dirname)
-        first_line = "%s: The env_specs section is missing." % DEFAULT_PROJECT_FILENAME
-        assert project.problems == [first_line]
-
-        out, err = capsys.readouterr()
-        assert out == "%s\nAdd an environment spec to anaconda-project.yml? " % first_line
-        assert err == ""
-
-    with_directory_contents({DEFAULT_PROJECT_FILENAME: "name: foo\nplatforms: [linux-64,osx-64,win-64]\n"}, check)
