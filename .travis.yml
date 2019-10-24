@@ -3,6 +3,10 @@ language: c
 # Seems to be needed to prevent hanging in Python 2.7
 # https://github.com/travis-ci/travis-ci/issues/6861
 sudo: required
+branches:
+  only:
+  - master
+  - "/^\\d+\\.\\d+.*$/"
 
 env:
   # Build and test package on all supported python versions
