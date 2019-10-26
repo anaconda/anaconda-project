@@ -8,6 +8,7 @@
 
 import setuptools
 import versioneer
+import io
 
 setuptools.setup(
     name='anaconda-project',
@@ -21,7 +22,7 @@ setuptools.setup(
     maintainer='Anaconda, Inc',
     maintainer_email='info@anaconda.com',
     description='Tool for encapsulating, running, and reproducing data science projects',
-    long_description=open("README.md", 'r', encoding='utf-8').read(),
+    long_description=io.open("README.md", 'r', encoding='utf-8').read(),
     zip_safe=False,
     install_requires=['anaconda-client', 'requests', 'ruamel_yaml', 'tornado>=4.2'],
     entry_points={'console_scripts': [
