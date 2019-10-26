@@ -12,4 +12,4 @@ from anaconda_project import __version__ as version
 
 
 def test_version():
-    assert isinstance(version, str)
+    assert isinstance(version, (type('str'), type(u'str')))
