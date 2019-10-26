@@ -25,7 +25,7 @@ from anaconda_project.project_commands import (ProjectCommand, all_known_command
 from anaconda_project.project_file import ProjectFile
 from anaconda_project.project_lock_file import ProjectLockFile
 from anaconda_project.archiver import _list_relative_paths_for_unignored_project_files
-from anaconda_project.version import version
+from anaconda_project import __version__ as version
 from anaconda_project.conda_manager import CondaLockSet
 from anaconda_project.frontend import _null_frontend, _new_error_recorder, Frontend
 from anaconda_project.yaml_file import CommentedMap

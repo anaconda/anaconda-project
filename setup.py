@@ -1,7 +1,15 @@
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# Copyright (c) 2017, Anaconda, Inc. All rights reserved.
+#
+# Licensed under the terms of the BSD 3-Clause License.
+# (See LICENSE.txt for details)
+# -----------------------------------------------------------------------------
+
 import setuptools
 import versioneer
 
-setup(
+setuptools.setup(
     name='anaconda-project',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
@@ -13,14 +21,9 @@ setup(
     maintainer='Anaconda, Inc',
     maintainer_email='info@anaconda.com',
     description='Tool for encapsulating, running, and reproducing data science projects',
-    long_description=open("README.md").read(),
+    long_description=open("README.md", 'r', encoding='utf-8').read(),
     zip_safe=False,
-    install_requires=[
-        'anaconda-client',
-        'requests',
-        'ruamel_yaml',
-        'tornado>=4.2'
-    ],
+    install_requires=['anaconda-client', 'requests', 'ruamel_yaml', 'tornado>=4.2'],
     entry_points={'console_scripts': [
         'anaconda-project = anaconda_project.cli:main',
     ]},
