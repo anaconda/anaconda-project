@@ -14,3 +14,7 @@ def _enter_beta_test_mode():
     """Called by anaconda-project executable to do special things for beta."""
     global _beta_test_mode
     _beta_test_mode = True
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions

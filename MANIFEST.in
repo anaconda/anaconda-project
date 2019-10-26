@@ -2,3 +2,5 @@ include anaconda_project/test/fake_project.zip
 include setup_atomic_replace.py
 include setup_yapf_task.py
 include LICENSE.txt
+include versioneer.py
+include anaconda_project/_version.py

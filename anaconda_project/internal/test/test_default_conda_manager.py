@@ -17,7 +17,7 @@ from pprint import pprint
 
 from anaconda_project.env_spec import EnvSpec
 from anaconda_project.conda_manager import (CondaManagerError, CondaLockSet)
-from anaconda_project.version import version
+from anaconda_project import __version__ as version
 from anaconda_project.frontend import NullFrontend
 
 from anaconda_project.internal.default_conda_manager import (DefaultCondaManager, _extract_common)
