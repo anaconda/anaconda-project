@@ -6,6 +6,9 @@
 # The full license is in the file LICENSE.txt, distributed with this software.
 # -----------------------------------------------------------------------------
 """Library for working with projects."""
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
 
 _beta_test_mode = False
 

@@ -8,8 +8,8 @@
 
 from __future__ import absolute_import, print_function
 
-from anaconda_project.version import version
+from anaconda_project import __version__ as version
 
 
 def test_version():
-    assert isinstance(version, str)
+    assert isinstance(version, (type('str'), type(u'str')))

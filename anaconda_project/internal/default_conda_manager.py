@@ -18,7 +18,7 @@ import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
 import anaconda_project.internal.makedirs as makedirs
 
-from anaconda_project.version import version
+from anaconda_project import __version__ as version
 
 
 def _refactor_common_packages(existing_sets, include_predicate, factored_name):

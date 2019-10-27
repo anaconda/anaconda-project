@@ -19,7 +19,7 @@ import time
 import pytest
 
 from anaconda_project.env_spec import _load_environment_yml
-from anaconda_project.version import version
+from anaconda_project import __version__ as version
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents,
                                                           with_directory_contents_completing_project_file)
 from anaconda_project.internal import conda_api

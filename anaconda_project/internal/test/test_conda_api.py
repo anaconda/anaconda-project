@@ -69,9 +69,10 @@ def test_conda_create_and_install_and_remove(monkeypatch):
 
     def do_test(dirname):
         envdir = os.path.join(dirname, "myenv")
-        # don't specify a python version so we use the one we already have
-        # in the root env, otherwise this might take forever.
-        conda_api.create(prefix=envdir, pkgs=['python'])
+        # originally we did not specify a python version here, but we
+        # needed to add it with python 3.8 was released because a compatible
+        # version of ipython had not been created yet.
+        conda_api.create(prefix=envdir, pkgs=['python<3.8'])
 
         assert os.path.isdir(envdir)
         assert os.path.isdir(os.path.join(envdir, "conda-meta"))

@@ -15,7 +15,7 @@ from argparse import ArgumentParser, REMAINDER
 
 from anaconda_project.internal.cli.prepare_with_mode import (UI_MODE_TEXT_ASK_QUESTIONS,
                                                              UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK, _all_ui_modes)
-from anaconda_project.version import version
+from anaconda_project import __version__ as version
 from anaconda_project.verbose import push_verbose_logger, pop_verbose_logger
 from anaconda_project.project import ALL_COMMAND_TYPES
 from anaconda_project.requirements_registry.registry import RequirementsRegistry
