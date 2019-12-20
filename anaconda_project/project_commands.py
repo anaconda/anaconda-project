@@ -127,20 +127,20 @@ class _BokehArgsTransformer(_ArgsTransformer):
 
 
 class _TemplateArgsTransformer(_ArgsTransformer):
-    "ArgsTransformer that supports jinja2 templating"
+    """ArgsTransformer that supports jinja2 templating."""
 
     def add_args(self, results, args):
         return args
 
     def arg_to_identifier(self, arg):
-        "Turns a commandline argument into a Python identifier for jinja2"
+        """Turn a commandline argument into a Python identifier for jinja2."""
         return arg.replace('--','').replace('-','_')
 
     def parse_and_template(self, command, extra_args):
         results = {spec.option: [] for spec in self.specs}
         self._parse_args_removing_known(results, extra_args)
         extra_args = _TemplateArgsTransformer().transform_args(extra_args)
-        args = _append_extra_args_to_command_line(command, extra_args)
+        _append_extra_args_to_command_line(command, extra_args)
         items = {self.arg_to_identifier(k):(v[0] if v else True)
                  for k,v in results.items() if v}
         items.update({self.arg_to_identifier(k):v for k,v in
