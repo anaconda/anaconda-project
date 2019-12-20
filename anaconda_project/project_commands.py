@@ -16,7 +16,6 @@ import platform
 import sys
 from jinja2 import Template
 
-
 from anaconda_project.verbose import _verbose_logger
 from anaconda_project.internal import (conda_api, logged_subprocess, py2_compat)
 
@@ -134,17 +133,16 @@ class _TemplateArgsTransformer(_ArgsTransformer):
 
     def arg_to_identifier(self, arg):
         """Turn a commandline argument into a Python identifier for jinja2."""
-        return arg.replace('--','').replace('-','_')
+        return arg.replace('--', '').replace('-', '_')
 
     def parse_and_template(self, command, extra_args):
         results = {spec.option: [] for spec in self.specs}
         self._parse_args_removing_known(results, extra_args)
         extra_args = _TemplateArgsTransformer().transform_args(extra_args)
         _append_extra_args_to_command_line(command, extra_args)
-        items = {self.arg_to_identifier(k):(v[0] if v else True)
-                 for k,v in results.items() if v}
+        items = {self.arg_to_identifier(k): (v[0] if v else True) for k, v in results.items() if v}
         replacements = {}
-        for k,v in items.items():
+        for k, v in items.items():
             if k.startswith('anaconda_project_'):
                 replacement = k.replace('anaconda_project_', '')
                 if replacement not in items:
@@ -457,8 +455,8 @@ class ProjectCommand(object):
         shell = False
 
         if not self.supports_http_options and (self.notebook or self.bokeh_app):
-           # drop the http arguments
-           extra_args = _ArgsTransformer().transform_args(extra_args)
+            # drop the http arguments
+            extra_args = _ArgsTransformer().transform_args(extra_args)
 
         if self.notebook is not None:
             path = os.path.join(environ['PROJECT_DIR'], self.notebook)
@@ -480,7 +478,6 @@ class ProjectCommand(object):
                 args = args + extra_args
             return args, False
 
-
         command = self._attributes.get(self._shell_field(), None)
         if (command is not None) and self.supports_http_options:
             args = [_append_extra_args_to_command_line(command, extra_args)]
@@ -488,7 +485,6 @@ class ProjectCommand(object):
         elif command:
             shell = True
             args = _TemplateArgsTransformer().parse_and_template(command, extra_args)
-
 
         if args is None:
             # see conda.misc::launch for what we're copying

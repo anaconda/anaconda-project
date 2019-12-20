@@ -1396,8 +1396,7 @@ def test_template_command():
         assert command.conda_app_entry is None
 
         environ = minimal_environ(PROJECT_DIR=dirname)
-        cmd_exec = command.exec_info_for_environment(environ,
-                                extra_args=['--anaconda-project-port', '8888'])
+        cmd_exec = command.exec_info_for_environment(environ, extra_args=['--anaconda-project-port', '8888'])
         assert cmd_exec.args == ['test 8888']
         assert cmd_exec.shell is True
 
