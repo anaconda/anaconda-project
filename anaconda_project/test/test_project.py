@@ -1386,6 +1386,27 @@ def test_non_string_as_value_of_shell():
     }, check_shell_non_dict)
 
 
+def test_template_command():
+    def check_template_command(dirname):
+        project = project_no_dedicated_env(dirname)
+        command = project.default_command
+        assert command.supports_http_options == False
+        assert command.unix_shell_commandline == 'test {{port}}'
+        assert command.windows_cmd_commandline is None
+        assert command.conda_app_entry is None
+
+        environ = minimal_environ(PROJECT_DIR=dirname)
+        cmd_exec = command.exec_info_for_environment(environ,
+                                extra_args=['--anaconda-project-port', '8888'])
+        assert cmd_exec.args == ['test 8888']
+        assert cmd_exec.shell is True
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: test {{port}}\n    supports_http_options: false"
+        }, check_template_command)
+
+
 def test_notebook_command():
     def check_notebook_command(dirname):
         project = project_no_dedicated_env(dirname)
