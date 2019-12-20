@@ -145,6 +145,13 @@ class _TemplateArgsTransformer(_ArgsTransformer):
                  for k,v in results.items() if v}
         items.update({self.arg_to_identifier(k):v for k,v in
                       zip(extra_args[::2], extra_args[1::2])})
+        replacements = {}
+        for k,v in items.items():
+            if k.startswith('anaconda_project_'):
+                replacement = k.replace('anaconda_project_', '')
+                if replacement not in items:
+                    replacements[replacement] = v
+        items.update(replacements)
         return [Template(command).render(items)]
 
 
