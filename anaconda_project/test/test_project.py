@@ -1390,7 +1390,7 @@ def test_template_command():
     def check_template_command(dirname):
         project = project_no_dedicated_env(dirname)
         command = project.default_command
-        assert command.supports_http_options == False
+        assert command.supports_http_options is False
         assert command.unix_shell_commandline == 'test {{port}}'
         assert command.windows_cmd_commandline is None
         assert command.conda_app_entry is None
