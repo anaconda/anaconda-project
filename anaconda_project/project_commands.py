@@ -143,8 +143,6 @@ class _TemplateArgsTransformer(_ArgsTransformer):
         _append_extra_args_to_command_line(command, extra_args)
         items = {self.arg_to_identifier(k):(v[0] if v else True)
                  for k,v in results.items() if v}
-        items.update({self.arg_to_identifier(k):v for k,v in
-                      zip(extra_args[::2], extra_args[1::2])})
         replacements = {}
         for k,v in items.items():
             if k.startswith('anaconda_project_'):
@@ -152,7 +150,9 @@ class _TemplateArgsTransformer(_ArgsTransformer):
                 if replacement not in items:
                     replacements[replacement] = v
         items.update(replacements)
-        return [Template(command).render(items)]
+
+        templated_command = Template(command).render(items)
+        return [_append_extra_args_to_command_line(templated_command, extra_args)]
 
 
 class _NotebookArgsTransformer(_ArgsTransformer):
