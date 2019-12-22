@@ -500,6 +500,7 @@ icon: foo.png
         "bar.png": ""
     }, check_set_icon)
 
+
 def test_get_dependencies_requirements_from_project_file():
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
@@ -541,6 +542,7 @@ channels:
   - hbo
     """
     }, check_get_packages)
+
 
 def test_get_package_requirements_from_project_file():
     def check_get_packages(dirname):
