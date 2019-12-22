@@ -573,7 +573,8 @@ class _ConfigCache(object):
             return self._parse_platforms(problems, project_file, parent_dict)
 
         def _parse_packages(parent_dict):
-            return self._parse_packages(problems, project_file, 'packages', parent_dict)
+            pkg_key = 'dependencies' if project_file.get_value('dependencies') else 'packages'
+            return self._parse_packages(problems, project_file, pkg_key, parent_dict)
 
         (shared_deps, shared_pip_deps) = _parse_packages(project_file.root)
         shared_channels = _parse_channels(project_file.root)
