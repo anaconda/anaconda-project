@@ -10,12 +10,13 @@ from __future__ import absolute_import, print_function
 
 from anaconda_project.internal.cli.project_load import load_project
 from anaconda_project.internal.cli import console_utils
-import anaconda_project.project_ops as project_ops
+from anaconda_project import project_ops
 
 
 def dock_command(
         project_dir,
         tag,
+        command,
         dockerfile_path,
         condarc_path,
 ):
@@ -25,7 +26,8 @@ def dock_command(
         exit code
     """
     project = load_project(project_dir)
-    status = project_ops.dock(project, tag=tag, dockerfile_path=dockerfile_path,
+    status = project_ops.dock(project, tag=tag, command=command,
+                              dockerfile_path=dockerfile_path,
                               condarc_path=condarc_path)
     if status:
         print(status.status_description)
@@ -37,4 +39,5 @@ def dock_command(
 
 def main(args):
     """Start the docker build command and return exit status code."""
-    return dock_command(args.directory, args.tag, args.dockerfile_path, args.condarc_path)
+    return dock_command(args.directory, args.tag, args.command,
+                        args.dockerfile_path, args.condarc_path)

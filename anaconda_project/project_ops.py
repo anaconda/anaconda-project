@@ -1780,11 +1780,28 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
     return download_status
 
 
-def dock(project, tag='latest', dockerfile_path=None, condarc_path=None):
+def dock(project, tag='latest', command=None, dockerfile_path=None, condarc_path=None):
     name = project.name.replace(' ','').lower()
-    name_tag = f'{name}:{tag}'
-    
+
     dockerfile = get_dockerfile(dockerfile_path)
+    if command is not None:
+        if (command not in project.commands) and (command != 'default'):
+            msg = 'Error setting docker CMD.\n'
+            msg += 'The command {} is not one of the configured commands.\n'.format(command)
+            msg += 'Available commands are:'
+            for k,v in project.commands.items():
+                msg += '\n{:>15s}: {}'.format(k,v.description)
+            return SimpleStatus(success=False, description=msg)
+
+        name_tag = '{}/{}:{}'.format(name, command, tag)
+
+        if command == 'default':
+            dockerfile += '\nCMD anaconda-project run'
+        else:
+            dockerfile += '\nCMD anaconda-project run {}'.format(command)
+    else:
+        name_tag = '{}:{}'.format(name, tag)
+
     condarc = get_condarc(condarc_path)
 
     with tempfile.TemporaryDirectory() as tempdir:
@@ -1795,9 +1812,10 @@ def dock(project, tag='latest', dockerfile_path=None, condarc_path=None):
             f.write(condarc)
 
         print('Archiving project to temporary directory.')
-         
+
         archive(project, os.path.join(tempdir, 'project.tar.gz'))
 
         print('\nStarting image build. This may take several minutes.')
         build_status = build_image(tempdir, tag=name_tag)
+
     return build_status

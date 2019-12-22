@@ -170,13 +170,17 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
     preset.set_defaults(main=download.main)
 
-    preset = subparsers.add_parser('dock', help="Build a docker image.")
+    preset = subparsers.add_parser('dock', help="Build a docker image of the Anaconda Project.")
     add_directory_arg(preset)
-    preset.add_argument('-t', '--tag', default='latest')
-    preset.add_argument('--dockerfile_path', default=None)
-    preset.add_argument('--condarc_path', default=None)
+    preset.add_argument('-t', '--tag', default='latest',
+                        help='Version tag of the output docker image. Default: "latest"')
+    preset.add_argument('--command', default=None,
+                        help='Append a CMD step to the Dockerfile for the chosen anaconda-project command. If the value "default" is supplied the first command is run. The default behavior is to not provide a CMD step.')
+    preset.add_argument('--dockerfile_path', default=None,
+                        help='Path to Dockerfile. Default: use ~/.anaconda_project/Dockerfile')
+    preset.add_argument('--condarc_path', default=None,
+                        help='Path to CondaRC file. Default: use ~/.anaconda_project/condarc')
     preset.set_defaults(main=dock.main)
-    
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
     add_env_spec_arg(preset)

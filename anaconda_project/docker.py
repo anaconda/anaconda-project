@@ -78,7 +78,7 @@ def get_dockerfile(custom_path=None):
         if path.exists(custom_path):
             dockerfile = custom_path
         else:
-            msg = f'Custom Dockerfile {custom_path} was not found.'
+            msg = 'Custom Dockerfile {} was not found.'.format(custom_path)
             raise FileNotFoundError(msg)
 
     elif path.exists(user_file):
