@@ -30,6 +30,7 @@ import anaconda_project.internal.cli.archive as archive
 import anaconda_project.internal.cli.unarchive as unarchive
 import anaconda_project.internal.cli.upload as upload
 import anaconda_project.internal.cli.download as download
+import anaconda_project.internal.cli.dock as dock
 import anaconda_project.internal.cli.activate as activate
 import anaconda_project.internal.cli.variable_commands as variable_commands
 import anaconda_project.internal.cli.download_commands as download_commands
@@ -168,6 +169,14 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('-t', '--token', metavar='TOKEN', help='Auth token or a path to a file containing a token')
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
     preset.set_defaults(main=download.main)
+
+    preset = subparsers.add_parser('dock', help="Build a docker image.")
+    add_directory_arg(preset)
+    preset.add_argument('-t', '--tag', default='latest')
+    preset.add_argument('--dockerfile_path', default=None)
+    preset.add_argument('--condarc_path', default=None)
+    preset.set_defaults(main=dock.main)
+    
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
     add_env_spec_arg(preset)

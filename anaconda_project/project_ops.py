@@ -32,6 +32,7 @@ import anaconda_project.conda_manager as conda_manager
 from anaconda_project.internal.conda_api import (parse_spec, default_platforms_with_current)
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 from anaconda_project.internal.py2_compat import is_string
+from anaconda_project.docker import build_image, get_condarc, get_dockerfile
 
 _default_projectignore = """
 # project-local contains your personal configuration choices and state
@@ -1777,3 +1778,26 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
         if unpack_status:
             print(unpack_status.status_description)
     return download_status
+
+
+def dock(project, tag='latest', dockerfile_path=None, condarc_path=None):
+    name = project.name.replace(' ','').lower()
+    name_tag = f'{name}:{tag}'
+    
+    dockerfile = get_dockerfile(dockerfile_path)
+    condarc = get_condarc(condarc_path)
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        with open(os.path.join(tempdir, 'Dockerfile'), 'w') as f:
+            f.write(dockerfile)
+      
+        with open(os.path.join(tempdir, 'condarc'), 'w') as f:
+            f.write(condarc)
+
+        print('Archiving project to temporary directory.')
+         
+        archive(project, os.path.join(tempdir, 'project.tar.gz'))
+
+        print('\nStarting image build. This may take several minutes.')
+        build_status = build_image(tempdir, tag=name_tag)
+    return build_status
