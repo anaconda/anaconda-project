@@ -139,7 +139,6 @@ class _TemplateArgsTransformer(_ArgsTransformer):
         results = {spec.option: [] for spec in self.specs}
         self._parse_args_removing_known(results, extra_args)
         extra_args = _TemplateArgsTransformer().transform_args(extra_args)
-        _append_extra_args_to_command_line(command, extra_args)
         items = {self.arg_to_identifier(k): (v[0] if v else True) for k, v in results.items() if v}
         replacements = {}
         for k, v in items.items():
