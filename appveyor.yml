@@ -11,7 +11,7 @@ matrix:
 
 environment:
   PYTHONUNBUFFERED: 1
-  COVERAGE_DIR: ""
+  COVERAGE_DIR: "htmlcov"
   MINICONDA: C:\\Miniconda3-x64
   matrix:
     - PYTHON_VERSION: 3.7
