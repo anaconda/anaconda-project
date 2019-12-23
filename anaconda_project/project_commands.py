@@ -139,16 +139,18 @@ class _TemplateArgsTransformer(_ArgsTransformer):
         results = {spec.option: [] for spec in self.specs}
         self._parse_args_removing_known(results, extra_args)
         extra_args = _TemplateArgsTransformer().transform_args(extra_args)
-        items = {self.arg_to_identifier(k): (v[0] if v else True) for k, v in results.items() if v}
+        items = {k: (v[0] if v else True) for k, v in results.items() if v}
+        # Aliasing of HTTP options (e.g anaconda_project_port to port)
         replacements = {}
         for k, v in items.items():
-            if k.startswith('anaconda_project_'):
-                replacement = k.replace('anaconda_project_', '')
+            if k.startswith('--anaconda-project-'):
+                replacement = k.replace('--anaconda-project-', '')
                 if replacement not in items:
                     replacements[replacement] = v
         items.update(replacements)
 
-        templated_command = Template(command).render(items)
+        normalized = {self.arg_to_identifier(k): v for k, v in items.items()}
+        templated_command = Template(command).render(normalized)
         return [_append_extra_args_to_command_line(templated_command, extra_args)]
 
 
