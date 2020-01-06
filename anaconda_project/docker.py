@@ -98,7 +98,7 @@ Otherwise, please file a bug report.'''.format(user_file, dist_file)
         contents = f.read()
     return contents
 
-def build_image(path, tag, **build_args):
+def build_image(path, tag, build_args):
     cmd = ['docker', 'build', path, '-t', tag]
     for arg,value in build_args.items():
         cmd.append('--' + arg)

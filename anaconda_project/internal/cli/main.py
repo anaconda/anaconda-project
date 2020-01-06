@@ -180,6 +180,7 @@ def _parse_args_and_run_subcommand(argv):
                         help='Path to Dockerfile. Default: use ~/.anaconda_project/Dockerfile')
     preset.add_argument('--condarc_path', default=None,
                         help='Path to CondaRC file. Default: use ~/.anaconda_project/condarc')
+    preset.add_argument('build_args', default=None, nargs=REMAINDER, help="Extra arguments for docker build. Only keyword arguments accepted.")
     preset.set_defaults(main=dock.main)
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")

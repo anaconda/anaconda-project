@@ -19,6 +19,7 @@ def dock_command(
         command,
         dockerfile_path,
         condarc_path,
+        build_args
 ):
     """Build docker image
 
@@ -28,7 +29,7 @@ def dock_command(
     project = load_project(project_dir)
     status = project_ops.dock(project, tag=tag, command=command,
                               dockerfile_path=dockerfile_path,
-                              condarc_path=condarc_path)
+                              condarc_path=condarc_path, build_args=build_args)
     if status:
         print(status.status_description)
         return 0
@@ -40,4 +41,5 @@ def dock_command(
 def main(args):
     """Start the docker build command and return exit status code."""
     return dock_command(args.directory, args.tag, args.command,
-                        args.dockerfile_path, args.condarc_path)
+                        args.dockerfile_path, args.condarc_path,
+                        args.build_args)

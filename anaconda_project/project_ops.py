@@ -1780,7 +1780,8 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
     return download_status
 
 
-def dock(project, tag='latest', command=None, dockerfile_path=None, condarc_path=None):
+def dock(project, tag='latest', command=None, dockerfile_path=None, condarc_path=None,
+         build_args=None):
     name = project.name.replace(' ','').lower()
 
     dockerfile = get_dockerfile(dockerfile_path)
@@ -1816,6 +1817,6 @@ def dock(project, tag='latest', command=None, dockerfile_path=None, condarc_path
         archive(project, os.path.join(tempdir, 'project.tar.gz'))
 
         print('\nStarting image build. This may take several minutes.')
-        build_status = build_image(tempdir, tag=name_tag)
+        build_status = build_image(tempdir, tag=name_tag, build_args=build_args)
 
     return build_status
