@@ -573,6 +573,8 @@ class _ConfigCache(object):
             return self._parse_platforms(problems, project_file, parent_dict)
 
         def _parse_packages(parent_dict):
+            # dependencies allows environment.yml-like project files. It is not
+            # expected to have both dependencies and packages
             pkg_key = 'dependencies' if project_file.get_value('dependencies') else 'packages'
             return self._parse_packages(problems, project_file, pkg_key, parent_dict)
 
