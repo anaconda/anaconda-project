@@ -1397,8 +1397,9 @@ def test_template_command():
 
         environ = minimal_environ(PROJECT_DIR=dirname)
         cmd_exec = command.exec_info_for_environment(environ, extra_args=['--anaconda-project-port', '8888'])
-        assert cmd_exec.args == ['test 8888']
-        assert cmd_exec.shell is True
+        if cmd_exec is not None:
+            assert cmd_exec.args == ['test 8888']
+            assert cmd_exec.shell is True
 
     with_directory_contents_completing_project_file(
         {
