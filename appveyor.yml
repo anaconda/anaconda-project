@@ -19,18 +19,32 @@ environment:
     - PYTHON_VERSION: 2.7
 
 install:
-  # conda 4.5.11 seems to expect that this directory exists already
-  - mkdir C:\Users\appveyor\.conda
-  - call %MINICONDA%\Scripts\activate.bat
-  # The safety checks are simply intended to ensure that there is enough disk space
-  # and the user has the necessary permissions to make environment changes. In a CI
-  # environment these are not necessary and slow things down noticeably on Windows.
-  - conda config --set always_yes yes --set changeps1 no --set auto_update_conda no --set safety_checks disabled
-  - conda install -q conda=4.6 conda-build conda-verify
-  - conda info -a
+  - appveyor DownloadFile https://repo.anaconda.com/pkgs/misc/conda-execs/conda-latest-win-64.exe -FileName loner_conda.exe
+  - set "CONDA_PKGS_DIRS=C:\condacache\pkgs"
+  - set "CONDA_ALWAYS_YES=true"
+  - set "CONDA_AUTO_UPDATE_CONDA=false"
+  - if "%CONDA_CANARY%" == "" (
+      loner_conda.exe create -q -p C:\test_conda python=%PYTHON_VERSION% conda=%CONDA_VERSION%
+      ) else (
+      loner_conda.exe create -q -p C:\test_conda -c conda-canary conda python=%PYTHON_VERSION%
+      )
+  # Install run dependencies
+  - loner_conda.exe install -q -p C:\test_conda conda-build=3.18.10 conda-verify
+  # so that the tests see the standalone conda that they need
+  - mkdir C:\test_conda\standalone_conda
+  - copy loner_conda.exe C:\test_conda\standalone_conda\conda.exe
+  - call C:\test_conda\Scripts\activate
+  # Install this package
+  - python setup.py develop
+  # Install conda canary before running tests, ensure conda is updated
+  - conda info
+  - conda init
+  - call C:\test_conda\Scripts\activate
+  - conda list
 
 # Not a .NET project, we build in the install step instead
 build: false
 
 test_script:
+  - call C:\test_conda\Scripts\activate
   - conda build conda.recipe --python=%PYTHON_VERSION%
