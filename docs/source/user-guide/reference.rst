@@ -63,8 +63,8 @@ The file ``anaconda-project.yml`` tells conda how to run your project:
 
   commands:
     default:
-      unix: "python ${PROJECT_DIR}/analyze.py"
-      windows: "python %PROJECT_DIR%\analyze.py"
+      unix: "python analyze.py"
+      windows: "python analyze.py"
 
 There are separate command lines for Unix shells (Linux and
 macOS) and for Windows. You may target only one platform, and
@@ -137,8 +137,8 @@ add a ``description:`` field in ``anaconda-project.yml``, like this:
 
   commands:
     mycommand:
-      unix: "python ${PROJECT_DIR}/analyze.py"
-      windows: "python %PROJECT_DIR%\analyze.py"
+      unix: "python analyze.py"
+      windows: "python analyze.py"
       description: "This command runs the analysis"
 
 Special command types
