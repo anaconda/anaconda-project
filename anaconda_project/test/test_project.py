@@ -1409,6 +1409,7 @@ def test_unix_template_command():
             DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: test {{port}}\n    supports_http_options: false"
         }, check_template_command)
 
+
 def test_windows_template_command():
     def check_template_command(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1426,10 +1427,10 @@ def test_windows_template_command():
         else:
             raise SkipTest
 
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    windows: test {{port}}\n    supports_http_options: false"
-        }, check_template_command)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        "commands:\n default:\n    windows: test {{port}}\n    supports_http_options: false"
+    }, check_template_command)
 
 
 def test_notebook_command():
