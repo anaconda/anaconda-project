@@ -1415,7 +1415,7 @@ def test_windows_template_command():
         command = project.default_command
         assert command.supports_http_options is False
         assert command.unix_shell_commandline == None
-        assert command.windows_cmd_commandline is 'test {{port}}'
+        assert command.windows_cmd_commandline == 'test {{port}}'
         assert command.conda_app_entry is None
 
         environ = minimal_environ(PROJECT_DIR=dirname)
