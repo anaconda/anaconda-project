@@ -148,11 +148,7 @@ class _TemplateArgsTransformer(_ArgsTransformer):
                 if replacement not in items:
                     replacements[replacement] = v
         items.update(replacements)
-        items.update({'project_dir':environ['PROJECT_DIR'],
-                      'conda_default_env':environ['CONDA_DEFAULT_ENV'],
-                      'conda_prefix':environ['CONDA_PREFIX']})
-        if 'CONDA_ENV_PATH' in environ: # As of 4.1.5, conda no longer defines this
-            items.update({'conda_env_path':environ['CONDA_ENV_PATH']})
+        items.update(environ)
 
         normalized = {self.arg_to_identifier(k): v for k, v in items.items()}
         templated_command = Template(command).render(normalized)
