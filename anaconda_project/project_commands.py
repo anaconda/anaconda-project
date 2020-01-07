@@ -135,7 +135,7 @@ class _TemplateArgsTransformer(_ArgsTransformer):
         """Turn a commandline argument into a Python identifier for jinja2."""
         return arg.replace('--', '').replace('-', '_')
 
-    def parse_and_template(self, command, extra_args):
+    def parse_and_template(self, command, environ, extra_args):
         results = {spec.option: [] for spec in self.specs}
         self._parse_args_removing_known(results, extra_args)
         extra_args = _TemplateArgsTransformer().transform_args(extra_args)
@@ -148,6 +148,11 @@ class _TemplateArgsTransformer(_ArgsTransformer):
                 if replacement not in items:
                     replacements[replacement] = v
         items.update(replacements)
+        items.update({'project_dir':environ['PROJECT_DIR'],
+                      'conda_default_env':environ['CONDA_DEFAULT_ENV'],
+                      'conda_prefix':environ['CONDA_PREFIX']})
+        if 'CONDA_ENV_PATH' in environ: # As of 4.1.5, conda no longer defines this
+            items.update({'conda_env_path':environ['CONDA_ENV_PATH']})
 
         normalized = {self.arg_to_identifier(k): v for k, v in items.items()}
         templated_command = Template(command).render(normalized)
@@ -485,7 +490,7 @@ class ProjectCommand(object):
             shell = True
         elif command:
             shell = True
-            args = _TemplateArgsTransformer().parse_and_template(command, extra_args)
+            args = _TemplateArgsTransformer().parse_and_template(command, environ, extra_args)
 
         if args is None:
             # see conda.misc::launch for what we're copying
