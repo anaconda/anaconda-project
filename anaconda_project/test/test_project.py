@@ -17,6 +17,7 @@ import sys
 import time
 
 import pytest
+from unittest import SkipTest
 
 from anaconda_project.env_spec import _load_environment_yml
 from anaconda_project import __version__ as version
@@ -1386,7 +1387,7 @@ def test_non_string_as_value_of_shell():
     }, check_shell_non_dict)
 
 
-def test_template_command():
+def test_unix_template_command():
     def check_template_command(dirname):
         project = project_no_dedicated_env(dirname)
         command = project.default_command
@@ -1400,6 +1401,8 @@ def test_template_command():
         if cmd_exec is not None:
             assert cmd_exec.args == ['test 8888']
             assert cmd_exec.shell is True
+        else:
+            raise SkipTest
 
     with_directory_contents_completing_project_file(
         {
