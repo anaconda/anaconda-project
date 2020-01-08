@@ -139,7 +139,7 @@ class _TemplateArgsTransformer(_ArgsTransformer):
         results = {spec.option: [] for spec in self.specs}
         self._parse_args_removing_known(results, extra_args)
         extra_args = _TemplateArgsTransformer().transform_args(extra_args)
-        items = {k: (v[-1] if v else True) for k, v in results.items() if v}
+        items = {k: (v[-1] if len(v)==1 else v) for k, v in results.items() if v}
         # Aliasing of HTTP options (e.g anaconda_project_port to port)
         replacements = {}
         for k, v in items.items():
@@ -147,6 +147,12 @@ class _TemplateArgsTransformer(_ArgsTransformer):
                 replacement = k.replace('--anaconda-project-', '')
                 if replacement not in items:
                     replacements[replacement] = v
+
+        if 'host' in replacements:
+            host = replacements['host']
+            replacements['host'] = host[-1] if isinstance(host, list) else host
+            replacements['hosts'] = host if isinstance(host, list) else [host]
+
         items.update(replacements)
         items.update(environ)
 
