@@ -175,6 +175,8 @@ If your notebook contains ``@fusion.register`` when you
 ``registers_fusion_function: true`` will be added automatically.
 
 
+.. _http-commands:
+
 HTTP Commands
 =============
 
@@ -191,64 +193,92 @@ supports these options, because ``anaconda-project`` translates
 them into the native options supplied by the Bokeh and Jupyter
 command lines.
 
-Shell commands (those with ``unix:`` or ``windows:``) must
-implement the options themselves. If you've implemented support
-for these options in your shell command, add the
-``supports_http_options: true`` field:
+Shell commands (those with ``unix:`` or ``windows:``) must support the
+semantics of these command-line options appropriately. They do *not*
+have to support the exact command line syntax used by ``anaconda project
+run`` as shell commands support `jinja2
+<https://jinja.palletsprojects.com>`_ templating. For instance:
 
 .. code-block:: yaml
 
   commands:
     myapp:
-      unix: launch_flask_app.py
+      unix: launch_flask_app.py --port {{port}} --host {{host}} --address {{address}} 
       description: "Launches a Flask web app"
-      supports_http_options: true
 
-In the above example, you'd have a command line option parser in
-your script ``launch_flask_app.py`` to support the expected options.
-
-The options your command should handle before specifying
-``supports_http_options: true`` are:
+Here, ``{{port}}``, ``{{host}}`` and ``{{address}}`` are jinja2
+variables that are templated into the ``--port``, ``--host`` and
+``--address`` arguments of a hypothetical ``launch_flask_app.py``
+script. These arguments are just a few of the variables made available
+from the ``--anaconda-project-`` flags you can use when executing
+``anaconda-project run``:
 
  * ``--anaconda-project-host=HOST:PORT`` can be specified multiple
-   times and indicates a permitted value for the HTTP Host
-   header. The value may include a port as well. There will be one
-   ``--anaconda-project-host`` option for each host that browsers
-   can connect to. This option specifies the application's public
-   hostname:port and does not affect the address or port the
-   application listens on.
+   times and indicates a permitted value for the HTTP Host header. The
+   value may include a port as well. There will be one
+   ``--anaconda-project-host`` option for each host that browsers can
+   connect to. This option specifies the application's public
+   hostname:port and does not affect the address or port the application
+   listens on. The last host specified is made available as the ``host``
+   jinja2 variable while the full list of hosts is available as the
+   ``hosts`` variable.
  * ``--anaconda-project-port=PORT`` indicates the local port the
    application should listen on; unlike the port which may be
    included in the ``--anaconda-project-host`` option, this port
    will not always be the one that browsers connect to. In a
    typical deployment, applications listen on a local-only port
    while a reverse proxy such as nginx listens on a public port
-   and forwards traffic to the local port. In this scenario, the
-   public port is part of ``--anaconda-project-host`` and the
-   local port is provided as ``--anaconda-project-port``.
+   and forwards traffic to the local port. In this scenario, the public
+   port is part of ``--anaconda-project-host`` and the local port is
+   provided as ``--anaconda-project-port``. This setting is available
+   for templating as the ``port`` jinja2 variable.}
  * ``--anaconda-project-address=IP`` indicates the IP address the
    application should listen on. Unlike the host which may be
-   included in the ``--anaconda-project-host`` option, this
-   address may not be the one that browsers connect to.
+   included in the ``--anaconda-project-host`` option, this address may
+   not be the one that browsers connect to. This setting is available
+   for templating as the ``address`` jinja2 variable.
  * ``--anaconda-project-url-prefix=PREFIX`` gives a path prefix that
    should be the first part of the paths to all
    routes in your application. For example,
-   if you usually have a page ``/foo.html``, and the prefix is
-   ``/bar``, you would now have a page ``/bar/foo.html``.
+   if you usually have a page ``/foo.html``, and the prefix is ``/bar``,
+   you would now have a page ``/bar/foo.html``. This setting is
+   available for templating as the ``url_prefix`` jinja2 variable.
  * ``--anaconda-project-no-browser`` means "don't open a web
-   browser when the command is run." If your command never opens a web browser
-   anyway, you should accept but ignore this option.
+   browser when the command is run." If your command never opens a web
+   browser anyway, you should accept but ignore this option.  This
+   setting is available for templating as the ``no_browser`` jinja2
+   variable. When this switch is present, the value of ``no_browser`` is
+   ``True``.
  * ``--anaconda-project-iframe-hosts=HOST:PORT`` gives a value to
    be included in the ``Content-Security-Policy`` header
    as a value for ``frame-ancestors`` when you serve an HTTP
-   response. The effect of this is to allow the page to be
-   embedded in an iframe by the supplied HOST:PORT.
- * ``--anaconda-project-use-xheaders`` tells your application that
-   it's behind a reverse proxy and can trust "X-" headers, such
-   as ``X-Forwarded-For`` or ``X-Host``.
+   response. The effect of this is to allow the page to be embedded in
+   an iframe by the supplied HOST:PORT. This setting is available for
+   templating as the ``iframe-hosts`` jinja2 variable.
+ * ``--anaconda-project-use-xheaders`` tells your application that it's
+   behind a reverse proxy and can trust "X-" headers, such as
+   ``X-Forwarded-For`` or ``X-Host``.  This setting is available for
+   templating as the ``use_xheaders`` jinja2 variable.  When this switch
+   is present, the value of ``use_xheaders`` is ``True``.
 
-A deployment service based on ``anaconda-project`` can (in
-principle) deploy any application which supports these options.
+As an alternative to the templating approach, you may choose to write
+``launch_flask_app.py`` in such a way that it supports the above command
+line flags and switches directly. In this case, you need to specify
+``supports_http_options: true``:
+
+
+.. code-block:: yaml
+
+  commands:
+    myapp:
+      unix: {{PROJECT_DIR}}/launch_flask_app.py
+      supports_http_options: true
+      description: "Launches a Flask web app"
+
+This example illustrates that in addition to the jinja2 variables
+described above, all environment variables are also available for
+templating, including ``PROJECT_DIR`` and conda related environment
+variables such as ``CONDA_PREFIX`` and ``CONDA_DEFAULT_ENV``.
 
 
 Environments and Channels
