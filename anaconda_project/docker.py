@@ -1,13 +1,19 @@
-'''Docker utilities'''
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# Copyright (c) 2017, Anaconda, Inc. All rights reserved.
+#
+# Licensed under the terms of the BSD 3-Clause License.
+# (See LICENSE.txt for details)
+# -----------------------------------------------------------------------------
+"""Docker utilities."""
 
 import os
-import sys
-import json
 import shutil
 import subprocess
 from os import path
 
 from anaconda_project.internal.simple_status import SimpleStatus
+
 
 class _DockerBuildStatus(SimpleStatus):
     def __init__(self, image):
@@ -21,7 +27,7 @@ class _DockerBuildStatus(SimpleStatus):
 
 
 def get_condarc(custom_path):
-    '''return contents of condarc
+    """Return contents of condarc.
 
     The following locations are sanned in order
     for the condarc file
@@ -29,7 +35,7 @@ def get_condarc(custom_path):
     1. provided path
     2. ~/.anaconda-project/condarc
     3. <site-packages>/anaconda_project/condarc.dist (copied to #2)
-    '''
+    """
 
     _path = path.expanduser(os.getenv('ANACONDA_PROJECT_CONFIG_DIR') or '~/.anaconda-project')
     user_file = path.join(_path, 'condarc')
@@ -61,14 +67,14 @@ Otherwise, please file a bug report.'''.format(user_file, dist_file)
 
 
 def get_dockerfile(custom_path=None):
-    '''return contents of dockerfile
+    """Return contents of dockerfile.
 
     The following locations are scanned in order
     for the Dockerfile
     1. provided path
     2. ~/.anaconda-project/Dockerfile
     3. <site-packages>/anaconda_project/Dockerfile.dist (copied to #2)
-    '''
+    """
 
     _path = path.expanduser(os.getenv('ANACONDA_PROJECT_CONFIG_DIR') or '~/.anaconda-project')
     user_file = path.join(_path, 'Dockerfile')
@@ -98,9 +104,12 @@ Otherwise, please file a bug report.'''.format(user_file, dist_file)
         contents = f.read()
     return contents
 
+
 def build_image(path, tag, build_args):
+    """Run docker build."""
+
     cmd = ['docker', 'build', path, '-t', tag]
-    for arg,value in build_args.items():
+    for arg, value in build_args.items():
         cmd.append('--' + arg)
         cmd.append(value)
 

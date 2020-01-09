@@ -1780,9 +1780,17 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
     return download_status
 
 
-def dock(project, tag='latest', command=None, dockerfile_path=None, condarc_path=None,
-         build_args=None):
-    name = project.name.replace(' ','').lower()
+def dock(project, tag='latest', command=None, dockerfile_path=None, condarc_path=None, build_args=None):
+    """Build docker image from project.
+
+    Args:
+        tag: Version tag for the docker image (default: latest)
+        command: [Optional] Set an anaconda-project command to RUN
+        dockerfile_path: [Optional] Path to custom Dockerfile
+        condarc_path: [Optional] Path to custom condarc
+        build_args: [Optional] Additional arguments passed to docker build
+    """
+    name = project.name.replace(' ', '').lower()
 
     dockerfile = get_dockerfile(dockerfile_path)
     if command is not None:
@@ -1790,8 +1798,8 @@ def dock(project, tag='latest', command=None, dockerfile_path=None, condarc_path
             msg = 'Error setting docker CMD.\n'
             msg += 'The command {} is not one of the configured commands.\n'.format(command)
             msg += 'Available commands are:'
-            for k,v in project.commands.items():
-                msg += '\n{:>15s}: {}'.format(k,v.description)
+            for k, v in project.commands.items():
+                msg += '\n{:>15s}: {}'.format(k, v.description)
             return SimpleStatus(success=False, description=msg)
 
         name_tag = '{}/{}:{}'.format(name, command, tag)
@@ -1808,7 +1816,7 @@ def dock(project, tag='latest', command=None, dockerfile_path=None, condarc_path
     with tempfile.TemporaryDirectory() as tempdir:
         with open(os.path.join(tempdir, 'Dockerfile'), 'w') as f:
             f.write(dockerfile)
-      
+
         with open(os.path.join(tempdir, 'condarc'), 'w') as f:
             f.write(condarc)
 
