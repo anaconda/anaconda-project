@@ -199,7 +199,7 @@ def _parse_args_and_run_subcommand(argv):
         'build_args',
         default=None,
         nargs=REMAINDER,
-        help="Extra arguments for docker build. Only keyword arguments accepted.")
+        help="Extra arguments for docker build. Arguments must be provided as KEY=VALUE without '--'.")
     preset.set_defaults(main=dock.main)
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")

@@ -117,7 +117,8 @@ def build_image(path, tag, build_args):
     """Run docker build."""
 
     cmd = ['docker', 'build', path, '-t', tag]
-    cmd.extend(build_args)
+    for arg in build_args:
+        cmd.append('--{}'.format(arg))
 
     start_msg = '''*** {} image build starting.'''.format(tag)
     print(start_msg)
