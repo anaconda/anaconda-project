@@ -1780,15 +1780,22 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
     return download_status
 
 
-def dock(project, tag='latest', command=None, dockerfile_path=None, condarc_path=None, build_args=None):
+def dock(project,
+         tag='latest',
+         command=None,
+         command_args=None,
+         dockerfile_path=None,
+         condarc_path=None,
+         build_args=None):
     """Build docker image from project.
 
     Args:
-        tag: Version tag for the docker image (default: latest)
-        command: [Optional] Set an anaconda-project command to RUN
-        dockerfile_path: [Optional] Path to custom Dockerfile
-        condarc_path: [Optional] Path to custom condarc
-        build_args: [Optional] Additional arguments passed to docker build
+        tag: str Version tag for the docker image (default: latest)
+        command: str [Optional] Append the Dockerfile with a RUN statement for the chosen anaconda-project command
+        command_args: str [Optional] Additional arguments for anaconda-project run
+        dockerfile_path: str [Optional] str Path to custom Dockerfile
+        condarc_path: str [Optional] Path to custom condarc
+        build_args: dict [Optional] Additional arguments passed to docker build
     """
     name = project.name.replace(' ', '').lower()
 
@@ -1805,9 +1812,9 @@ def dock(project, tag='latest', command=None, dockerfile_path=None, condarc_path
         name_tag = '{}/{}:{}'.format(name, command, tag)
 
         if command == 'default':
-            dockerfile += '\nCMD anaconda-project run'
+            dockerfile += '\nCMD anaconda-project run {}'.format(command_args)
         else:
-            dockerfile += '\nCMD anaconda-project run {}'.format(command)
+            dockerfile += '\nCMD anaconda-project run {} {}'.format(command, command_args)
     else:
         name_tag = '{}:{}'.format(name, tag)
 

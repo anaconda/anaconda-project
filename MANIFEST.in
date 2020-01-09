@@ -4,3 +4,5 @@ include setup_yapf_task.py
 include LICENSE.txt
 include versioneer.py
 include anaconda_project/_version.py
+include dockerfiles/condarc.dist
+include dockerfiles/Dockerfile.dist

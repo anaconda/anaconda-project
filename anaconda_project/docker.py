@@ -10,9 +10,17 @@
 import os
 import shutil
 import subprocess
-from os import path
+from os import path, mkdir
+import sys
 
 from anaconda_project.internal.simple_status import SimpleStatus
+
+
+def _get_user_dir():
+    path_ = path.expanduser(os.getenv('ANACONDA_PROJECT_CONFIG_DIR') or '~/.anaconda-project')
+    if not path.exists(path_):
+        mkdir(path_)
+    return path_
 
 
 class _DockerBuildStatus(SimpleStatus):
@@ -34,12 +42,12 @@ def get_condarc(custom_path):
 
     1. provided path
     2. ~/.anaconda-project/condarc
-    3. <site-packages>/anaconda_project/condarc.dist (copied to #2)
+    3. copied from <prefix>/etc/anaconda_project/condarc.dist
     """
 
-    _path = path.expanduser(os.getenv('ANACONDA_PROJECT_CONFIG_DIR') or '~/.anaconda-project')
-    user_file = path.join(_path, 'condarc')
-    dist_file = path.join(path.dirname(__file__), 'condarc.dist')
+    user_dir = _get_user_dir()
+    user_file = path.join(user_dir, 'condarc')
+    dist_file = path.join(sys.prefix, 'etc/anaconda-project/condarc.dist')
 
     if custom_path:
         if path.exists(custom_path):
@@ -73,12 +81,12 @@ def get_dockerfile(custom_path=None):
     for the Dockerfile
     1. provided path
     2. ~/.anaconda-project/Dockerfile
-    3. <site-packages>/anaconda_project/Dockerfile.dist (copied to #2)
+    3. copied from <prefix>/etc/anaconda-project/Dockerfile.dist
     """
 
-    _path = path.expanduser(os.getenv('ANACONDA_PROJECT_CONFIG_DIR') or '~/.anaconda-project')
-    user_file = path.join(_path, 'Dockerfile')
-    dist_file = path.join(path.dirname(__file__), 'Dockerfile.dist')
+    user_dir = _get_user_dir()
+    user_file = path.join(user_dir, 'Dockerfile')
+    dist_file = path.join(sys.prefix, 'etc/anaconda-project/Dockerfile.dist')
 
     if custom_path:
         if path.exists(custom_path):
@@ -109,9 +117,7 @@ def build_image(path, tag, build_args):
     """Run docker build."""
 
     cmd = ['docker', 'build', path, '-t', tag]
-    for arg, value in build_args.items():
-        cmd.append('--' + arg)
-        cmd.append(value)
+    cmd.extend(build_args)
 
     start_msg = '''*** {} image build starting.'''.format(tag)
     print(start_msg)

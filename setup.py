@@ -6,9 +6,9 @@
 # (See LICENSE.txt for details)
 # -----------------------------------------------------------------------------
 
+import io
 import setuptools
 import versioneer
-import io
 
 setuptools.setup(
     name='anaconda-project',
@@ -30,6 +30,7 @@ setuptools.setup(
     ]},
     packages=setuptools.find_packages(exclude=['contrib', 'docs', 'tests*']),
     include_package_data=True,
+    data_files=[('etc/anaconda-project', ['dockerfiles/Dockerfile.dist', 'dockerfiles/condarc.dist'])],
     classifiers=[
         'Development Status :: 5 - Production/Stable', 'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent', 'Programming Language :: Python :: 2.7',

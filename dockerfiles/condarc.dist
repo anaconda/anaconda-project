@@ -1,0 +1,10 @@
+channel_alias: https://conda.anaconda.org/
+default_channels:
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/free
+  - https://repo.anaconda.com/pkgs/r
+
+channels:
+  - defaults
+
+ssl_verify: true

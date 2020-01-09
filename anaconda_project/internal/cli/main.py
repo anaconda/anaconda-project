@@ -181,9 +181,20 @@ def _parse_args_and_run_subcommand(argv):
         'command. If the value "default" is supplied the first command is run.' +
         'The default behavior is to not provide a CMD step.')
     preset.add_argument(
-        '--dockerfile_path', default=None, help='Path to Dockerfile. Default: use ~/.anaconda_project/Dockerfile')
+        '--command_args',
+        default=None,
+        help='Arguments for anaconda-project run as a string. For example, ' +
+        '"--anaconda-project-port 8086 --anaconda-project-address 127.0.0.1"')
     preset.add_argument(
-        '--condarc_path', default=None, help='Path to CondaRC file. Default: use ~/.anaconda_project/condarc')
+        '--dockerfile_path',
+        default=None,
+        help='Path to Dockerfile. Default: use ~/.anaconda-project/Dockerfile' + ' then {}'.format(
+            os.path.join(sys.prefix, 'etc/anaconda-project/Dockerfile.dist')))
+    preset.add_argument(
+        '--condarc_path',
+        default=None,
+        help='Path to CondaRC file. Default: Look for ~/.anaconda-project/condarc' + ' then {}'.format(
+            os.path.join(sys.prefix, 'etc/anaconda-project/condarc.dist')))
     preset.add_argument(
         'build_args',
         default=None,

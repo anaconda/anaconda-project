@@ -1,0 +1,30 @@
+# The base image is flexible; it simply needs to be able
+# to support Anaconda-built glibc binaries.
+FROM centos:7
+
+# Miniconda is a minimal Python environment, consisting only of Python
+# and the conda package manager. The only additional package
+# we install in the environment is anaconda-project.
+ADD https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh miniconda.sh
+
+ENV LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    PATH=/opt/conda/bin:$PATH
+
+COPY condarc .
+
+RUN yum install -y bzip2 && \
+    bash miniconda.sh -b -p /opt/conda && \
+    conda config --set auto_update_conda False --set notify_outdated_conda false --system && \
+    cp condarc /opt/conda/.condarc && \
+    conda install anaconda-project --yes && \
+    conda clean --all --yes && \
+    rm -f condarc miniconda.sh && \
+    useradd anaconda
+
+USER anaconda
+WORKDIR /home/anaconda
+COPY project.tar.gz .
+RUN tar xfz project.tar.gz --strip-components=1 && \
+    anaconda-project --verbose prepare && \
+    rm -rf ~/.conda project.tar.gz

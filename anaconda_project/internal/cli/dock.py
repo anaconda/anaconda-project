@@ -13,7 +13,7 @@ from anaconda_project.internal.cli import console_utils
 from anaconda_project import project_ops
 
 
-def dock_command(project_dir, tag, command, dockerfile_path, condarc_path, build_args):
+def dock_command(project_dir, tag, command, command_args, dockerfile_path, condarc_path, build_args):
     """Build docker image.
 
     Returns:
@@ -24,6 +24,7 @@ def dock_command(project_dir, tag, command, dockerfile_path, condarc_path, build
         project,
         tag=tag,
         command=command,
+        command_args=command_args,
         dockerfile_path=dockerfile_path,
         condarc_path=condarc_path,
         build_args=build_args)
@@ -37,5 +38,5 @@ def dock_command(project_dir, tag, command, dockerfile_path, condarc_path, build
 
 def main(args):
     """Start the docker build command and return exit status code."""
-    return dock_command(args.directory, args.tag, args.command, args.dockerfile_path, args.condarc_path,
-                        args.build_args)
+    return dock_command(args.directory, args.tag, args.command, args.command_args, args.dockerfile_path,
+                        args.condarc_path, args.build_args)
