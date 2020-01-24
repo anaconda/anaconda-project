@@ -84,6 +84,10 @@ The first time a user runs your project, they are prompted to
 provide a value for your custom variable. On subsequent runs,
 the user will not be prompted.
 
+All environment variables are available for `jinja2
+<https://jinja.palletsprojects.com/>`_ templating as shown
+in the :ref:`http-commands` section.
+
 
 .. _encrypted-vars:
 

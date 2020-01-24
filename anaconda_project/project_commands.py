@@ -14,6 +14,7 @@ from collections import namedtuple
 import os
 import platform
 import sys
+from jinja2 import Template
 
 from anaconda_project.verbose import _verbose_logger
 from anaconda_project.internal import (conda_api, logged_subprocess, py2_compat)
@@ -122,6 +123,42 @@ class _BokehArgsTransformer(_ArgsTransformer):
                 raise RuntimeError("unhandled http option for bokeh app")  # pragma: no cover
 
         return added + args
+
+
+class _TemplateArgsTransformer(_ArgsTransformer):
+    """ArgsTransformer that supports jinja2 templating."""
+
+    def add_args(self, results, args):
+        return args
+
+    def arg_to_identifier(self, arg):
+        """Turn a commandline argument into a Python identifier for jinja2."""
+        return arg.replace('--', '').replace('-', '_')
+
+    def parse_and_template(self, command, environ, extra_args):
+        results = {spec.option: [] for spec in self.specs}
+        self._parse_args_removing_known(results, extra_args)
+        extra_args = _TemplateArgsTransformer().transform_args(extra_args)
+        items = {k: (v[-1] if len(v) == 1 else v) for k, v in results.items() if v}
+        # Aliasing of HTTP options (e.g anaconda_project_port to port)
+        replacements = {}
+        for k, v in items.items():
+            if k.startswith('--anaconda-project-'):
+                replacement = k.replace('--anaconda-project-', '')
+                if replacement not in items:
+                    replacements[replacement] = v
+
+        if 'host' in replacements:
+            host = replacements['host']
+            replacements['host'] = host[-1] if isinstance(host, list) else host
+            replacements['hosts'] = host if isinstance(host, list) else [host]
+
+        items.update(replacements)
+        items.update(environ)
+
+        normalized = {self.arg_to_identifier(k): v for k, v in items.items()}
+        templated_command = Template(command).render(normalized)
+        return [_append_extra_args_to_command_line(templated_command, extra_args)]
 
 
 class _NotebookArgsTransformer(_ArgsTransformer):
@@ -425,7 +462,7 @@ class ProjectCommand(object):
         args = None
         shell = False
 
-        if not self.supports_http_options:
+        if not self.supports_http_options and (self.notebook or self.bokeh_app):
             # drop the http arguments
             extra_args = _ArgsTransformer().transform_args(extra_args)
 
@@ -450,9 +487,12 @@ class ProjectCommand(object):
             return args, False
 
         command = self._attributes.get(self._shell_field(), None)
-        if command is not None:
+        if (command is not None) and self.supports_http_options:
             args = [_append_extra_args_to_command_line(command, extra_args)]
             shell = True
+        elif command:
+            shell = True
+            args = _TemplateArgsTransformer().parse_and_template(command, environ, extra_args)
 
         if args is None:
             # see conda.misc::launch for what we're copying
