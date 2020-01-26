@@ -243,6 +243,16 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         assert deviations.missing_packages == ()
         assert deviations.wrong_version_packages == ()
 
+        # fix_environment_deviations should be a no-op on readonly envs
+        # with no deviations, in particular the time stamp file should
+        # not be changed and therefore not be up to date
+        is_readonly['readonly'] = True
+        manager.fix_environment_deviations(envdir, spec, deviations)
+        assert not manager._timestamp_file_up_to_date(envdir, spec)
+
+        # when the environment is readwrite, the timestamp file should
+        # be updated
+        is_readonly['readonly'] = False
         manager.fix_environment_deviations(envdir, spec, deviations)
         assert manager._timestamp_file_up_to_date(envdir, spec)
 
