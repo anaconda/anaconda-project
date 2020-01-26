@@ -187,7 +187,7 @@ class DefaultCondaManager(CondaManager):
                 # file to bump its mtime if it already exists...
                 f.write('{"anaconda_project_version": "%s"}\n' % version)
             return True
-        except (IOError, OSError) as exc:
+        except (IOError, OSError):
             # ignore errors because this is just an optimization, if we
             # fail we will survive
             return False
@@ -365,7 +365,8 @@ class DefaultCondaManager(CondaManager):
             wrong_version_packages=conda_wrong_version,
             missing_pip_packages=pip_missing,
             wrong_version_pip_packages=(),
-            broken=broken, unfixable=unfixable)
+            broken=broken,
+            unfixable=unfixable)
 
     def fix_environment_deviations(self, prefix, spec, deviations=None, create=True):
         if deviations is None:

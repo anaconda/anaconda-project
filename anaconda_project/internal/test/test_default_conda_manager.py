@@ -145,10 +145,12 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         manager = DefaultCondaManager(frontend=NullFrontend())
 
         is_readonly = dict(readonly=False)
+
         def mock_open(*args, **kwargs):
             if is_readonly['readonly']:
                 raise IOError("did not open")
             return real_open(*args, **kwargs)
+
         monkeypatch.setattr('codecs.open', mock_open)
 
         assert not os.path.isdir(envdir)
