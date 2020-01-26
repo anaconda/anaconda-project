@@ -138,9 +138,18 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     )
 
     def do_test(dirname):
+        from codecs import open as real_open
+
         envdir = os.path.join(dirname, spec.name)
 
         manager = DefaultCondaManager(frontend=NullFrontend())
+
+        is_readonly = dict(readonly=False)
+        def mock_open(*args, **kwargs):
+            if is_readonly['readonly']:
+                raise IOError("did not open")
+            return real_open(*args, **kwargs)
+        monkeypatch.setattr('codecs.open', mock_open)
 
         assert not os.path.isdir(envdir)
         assert not os.path.exists(os.path.join(envdir, IPYTHON_BINARY))
@@ -194,23 +203,28 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         assert 'Failed to install missing pip packages' in str(excinfo.value)
         assert not manager._timestamp_file_up_to_date(envdir, spec_with_bad_url_pip_package)
 
-        # test we notice wrong ipython version AND missing bokeh
+        # test we notice wrong ipython version AND missing bokeh AND readonly environment
+        is_readonly['readonly'] = True
         deviations = manager.find_environment_deviations(envdir, spec_with_bokeh_and_old_ipython)
 
         assert deviations.missing_packages == ('bokeh', )
         assert deviations.wrong_version_packages == ('ipython', )
+        assert deviations.unfixable
+        is_readonly['readonly'] = False
 
         # test we notice only missing bokeh
         deviations = manager.find_environment_deviations(envdir, spec_with_bokeh)
 
         assert deviations.missing_packages == ('bokeh', )
         assert deviations.wrong_version_packages == ()
+        assert not deviations.unfixable
 
         # test we notice wrong ipython version and can downgrade
         deviations = manager.find_environment_deviations(envdir, spec_with_old_ipython)
 
         assert deviations.missing_packages == ()
         assert deviations.wrong_version_packages == ('ipython', )
+        assert not deviations.unfixable
 
         manager.fix_environment_deviations(envdir, spec_with_old_ipython, deviations)
 
@@ -411,7 +425,7 @@ def test_timestamp_file_ignores_failed_write(monkeypatch):
         assert not os.path.exists(filename)
         manager._write_timestamp_file(envdir, spec)
         assert not os.path.exists(filename)
-        # the second time we really write it (this is to prove we
+        # the second time we really wsrite it (this is to prove we
         # are looking at the right filename)
         manager._write_timestamp_file(envdir, spec)
         assert os.path.exists(filename)

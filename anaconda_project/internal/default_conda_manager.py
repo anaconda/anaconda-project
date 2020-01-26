@@ -10,7 +10,6 @@ from __future__ import absolute_import
 
 import codecs
 import glob
-import json
 import os
 
 from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaLockSet, CondaManagerError)
@@ -116,8 +115,14 @@ class DefaultCondaManager(CondaManager):
         if self._frontend is not None:
             self._frontend.partial_error(data)
 
+    def _cache_directory(self, prefix):
+        return os.path.join(prefix, "var", "cache", "anaconda-project")
+
+    def _test_writable_file(self, prefix):
+        return os.path.join(self._cache_directory(prefix), "status")
+
     def _timestamp_file(self, prefix, spec):
-        return os.path.join(prefix, "var", "cache", "anaconda-project", "env-specs", spec.locked_hash)
+        return os.path.join(self._cache_directory(prefix), "env-specs", spec.locked_hash)
 
     def _timestamp_comparison_directories(self, prefix):
         # this is a little bit heuristic; we are trying to detect
@@ -172,17 +177,28 @@ class DefaultCondaManager(CondaManager):
 
         return True
 
-    def _write_timestamp_file(self, prefix, spec):
-        filename = self._timestamp_file(prefix, spec)
-        makedirs.makedirs_ok_if_exists(os.path.dirname(filename))
-
+    def _write_a_file(self, filename):
         try:
+            makedirs.makedirs_ok_if_exists(os.path.dirname(filename))
             with codecs.open(filename, 'w', encoding='utf-8') as f:
                 # we don't read the contents of the file for now, but
                 # recording the version in it in case in the future
                 # that is useful. We need to write something to the
                 # file to bump its mtime if it already exists...
-                f.write(json.dumps(dict(anaconda_project_version=version)) + "\n")
+                f.write('{"anaconda_project_version": "%s"}\n' % version)
+            return True
+        except (IOError, OSError) as exc:
+            # ignore errors because this is just an optimization, if we
+            # fail we will survive
+            return False
+
+    def _is_environment_writable(self, prefix):
+        filename = self._test_writable_file(prefix)
+        return self._write_a_file(filename)
+
+    def _write_timestamp_file(self, prefix, spec):
+        filename = self._timestamp_file(prefix, spec)
+        if self._write_a_file(filename):
             # set the timestamp 1s in the future, which guarantees
             # it doesn't have the same mtime as any files in the
             # environment changed by us; if another process
@@ -195,10 +211,6 @@ class DefaultCondaManager(CondaManager):
             actual_time = os.path.getmtime(filename)
             next_tick_time = actual_time + 1
             os.utime(filename, (next_tick_time, next_tick_time))
-        except (IOError, OSError):
-            # ignore errors because this is just an optimization, if we
-            # fail we will survive
-            pass
 
     def resolve_dependencies(self, package_specs, channels, platforms):
         by_platform = {}
@@ -318,16 +330,16 @@ class DefaultCondaManager(CondaManager):
                 wrong_version_pip_packages=(),
                 broken=True)
 
+        unfixable = False
         if self._timestamp_file_up_to_date(prefix, spec):
             conda_missing = []
             conda_wrong_version = []
             pip_missing = []
-            timestamp_ok = True
         else:
-
             (conda_missing, conda_wrong_version) = self._find_conda_deviations(prefix, spec)
             pip_missing = self._find_pip_missing(prefix, spec)
-            timestamp_ok = False
+            if conda_missing or conda_wrong_version or pip_missing:
+                unfixable = not self._is_environment_writable(prefix)
 
         all_missing_string = ", ".join(conda_missing + pip_missing)
         all_wrong_version_string = ", ".join(conda_wrong_version)
@@ -339,17 +351,17 @@ class DefaultCondaManager(CondaManager):
             summary = "Conda environment is missing packages: %s" % all_missing_string
         elif all_wrong_version_string != "":
             summary = "Conda environment has wrong versions of: %s" % all_wrong_version_string
-        elif not timestamp_ok:
-            summary = "Conda environment needs to be marked as up-to-date"
         else:
             summary = "OK"
+        if unfixable:
+            summary += " and the environment is read-only"
         return CondaEnvironmentDeviations(
             summary=summary,
             missing_packages=conda_missing,
             wrong_version_packages=conda_wrong_version,
             missing_pip_packages=pip_missing,
             wrong_version_pip_packages=(),
-            broken=(not timestamp_ok))
+            broken=False, unfixable=unfixable)
 
     def fix_environment_deviations(self, prefix, spec, deviations=None, create=True):
         if deviations is None:
