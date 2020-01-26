@@ -330,7 +330,7 @@ class DefaultCondaManager(CondaManager):
                 wrong_version_pip_packages=(),
                 broken=True)
 
-        unfixable = False
+        broken = unfixable = False
         if self._timestamp_file_up_to_date(prefix, spec):
             conda_missing = []
             conda_wrong_version = []
@@ -338,8 +338,10 @@ class DefaultCondaManager(CondaManager):
         else:
             (conda_missing, conda_wrong_version) = self._find_conda_deviations(prefix, spec)
             pip_missing = self._find_pip_missing(prefix, spec)
-            if conda_missing or conda_wrong_version or pip_missing:
-                unfixable = not self._is_environment_writable(prefix)
+            broken = self._is_environment_writable(prefix)
+            # For readonly environments, do not enforce the writing of the timestamp.
+            # But mark other deviations as unfixable
+            unfixable = not broken and (conda_missing or conda_wrong_version or pip_missing)
 
         all_missing_string = ", ".join(conda_missing + pip_missing)
         all_wrong_version_string = ", ".join(conda_wrong_version)
@@ -351,6 +353,8 @@ class DefaultCondaManager(CondaManager):
             summary = "Conda environment is missing packages: %s" % all_missing_string
         elif all_wrong_version_string != "":
             summary = "Conda environment has wrong versions of: %s" % all_wrong_version_string
+        elif broken:
+            summary = "Conda environment needs to be marked as up-to-date"
         else:
             summary = "OK"
         if unfixable:
@@ -361,7 +365,7 @@ class DefaultCondaManager(CondaManager):
             wrong_version_packages=conda_wrong_version,
             missing_pip_packages=pip_missing,
             wrong_version_pip_packages=(),
-            broken=False, unfixable=unfixable)
+            broken=broken, unfixable=unfixable)
 
     def fix_environment_deviations(self, prefix, spec, deviations=None, create=True):
         if deviations is None:
