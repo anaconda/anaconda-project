@@ -24,7 +24,7 @@ setuptools.setup(
     description='Tool for encapsulating, running, and reproducing data science projects',
     long_description=io.open("README.md", 'r', encoding='utf-8').read(),
     zip_safe=False,
-    install_requires=['anaconda-client', 'requests', 'ruamel_yaml', 'tornado>=4.2'],
+    install_requires=['anaconda-client', 'requests', 'ruamel_yaml', 'tornado>=4.2', 'jinja2'],
     entry_points={'console_scripts': [
         'anaconda-project = anaconda_project.cli:main',
     ]},
