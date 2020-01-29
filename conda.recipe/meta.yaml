@@ -26,6 +26,7 @@ requirements:
     - requests
     - ruamel_yaml
     - tornado >=4.2
+    - jinja2
 
 test:
   requires:
