@@ -354,6 +354,10 @@ def _parse_args_and_run_subcommand(argv):
     add_command_name_arg(preset)
     preset.set_defaults(main=command_commands.main_remove)
 
+    preset = subparsers.add_parser('list-default-command', help="List only the default command on the project")
+    add_directory_arg(preset)
+    preset.set_defaults(main=command_commands.main_default)
+
     preset = subparsers.add_parser('list-commands', help="List the commands on the project")
     add_directory_arg(preset)
     preset.set_defaults(main=command_commands.main_list)
