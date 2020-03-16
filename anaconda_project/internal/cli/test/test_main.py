@@ -18,7 +18,8 @@ all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'un
                    'add-download', 'remove-download', 'list-downloads', 'add-service', 'remove-service',
                    'list-services', 'add-env-spec', 'remove-env-spec', 'list-env-specs', 'export-env-spec', 'lock',
                    'unlock', 'update', 'add-packages', 'remove-packages', 'list-packages', 'add-platforms',
-                   'remove-platforms', 'list-platforms', 'add-command', 'remove-command', 'list-commands')
+                   'remove-platforms', 'list-platforms', 'add-command', 'remove-command', 'list-default-command',
+                   'list-commands')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -104,6 +105,8 @@ expected_usage_msg_format = (  # noqa
     '    list-platforms      List platforms for an environment on the project\n'
     '    add-command         Add a new command to the project\n'
     '    remove-command      Remove a command from the project\n'
+    '    list-default-command\n'
+    '                        List only the default command on the project\n'
     '    list-commands       List the commands on the project\n'
     '\n'
     'optional arguments:\n'

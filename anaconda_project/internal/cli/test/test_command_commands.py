@@ -412,3 +412,46 @@ run_notebook  Notebook test.ipynb
                                    " - bokeh\n"
                                    " - notebook\n")
     }, check_empty_project)
+
+
+def test_list_default_command(capsys):
+    def check_empty_project(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-default-command', '--directory', dirname])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert '' == err
+
+        expected_out = """
+app
+""".format(dirname=dirname).strip() + "\n"
+
+        assert expected_out == out
+
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME: ("commands:\n"
+                                   "  app:\n"
+                                   "    bokeh_app: test.py\n"
+                                   "  0second:\n"
+                                   "    notebook: test.ipynb\n"
+                                   "packages:\n"
+                                   " - bokeh\n"
+                                   " - notebook\n")
+    }, check_empty_project)
+
+
+def test_list_default_command_with_project_file_problems(capsys, monkeypatch):
+    _test_command_command_project_problem(
+        capsys, monkeypatch, ['anaconda-project', 'list-default-command'], append_dir=True)
+
+
+def test_list_default_command_empty_project(capsys):
+    def check_empty_project(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'list-default-command', '--directory', dirname])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert '' == err
+        assert ("No commands found for project: {}\n\n".format(dirname)) == out
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_empty_project)

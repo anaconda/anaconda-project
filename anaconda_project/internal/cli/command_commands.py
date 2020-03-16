@@ -105,6 +105,25 @@ def list_commands(project_dir):
     return 0
 
 
+def list_default_command(project_dir):
+    """List only the default command on the project.
+
+    Returns:
+        int exit code
+    """
+    project = load_project(project_dir)
+    if console_utils.print_project_problems(project):
+        return 1
+
+    if project.commands:
+        # print("Commands for project: {}\n".format(project_dir))
+        # console_utils.print_names_and_descriptions(project.commands.values())
+        print(project.default_command.name)
+    else:
+        print("No commands found for project: {}\n".format(project_dir))
+    return 0
+
+
 def main(args):
     """Submit the add command with args and returns exit code."""
     return add_command(args.directory, args.name, args.type, args.command, args.env_spec, args.supports_http_options)
@@ -118,3 +137,8 @@ def main_remove(args):
 def main_list(args):
     """Start the list command with args and return exit code."""
     return list_commands(args.directory)
+
+
+def main_default(args):
+    """Start the list default command with args and return exit code."""
+    return list_default_command(args.directory)
