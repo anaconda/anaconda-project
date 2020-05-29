@@ -1524,6 +1524,11 @@ class Project(object):
         Returns:
            a ProjectCommand instance or None
         """
+        commands = self._updated_cache().commands
+        has_default = 'default' in commands
+
+        if (command_name == 'default') and (not has_default):
+            command_name = self._updated_cache().default_command_name
         if command_name is None:
             command_name = self._updated_cache().default_command_name
         if command_name is None:

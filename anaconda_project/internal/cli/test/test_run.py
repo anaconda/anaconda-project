@@ -493,6 +493,67 @@ def test_run_command_omit_name_use_default(monkeypatch, capsys):
     assert args == ['--version', 'def']
 
 
+def _test_run_nodefault_command(command_line, monkeypatch, capsys, file_assertion=_is_python_exe):
+    executed = {}
+
+    def mock_execvpe(file, args, env):
+        executed['file'] = file
+        executed['args'] = args
+        executed['env'] = env
+
+    monkeypatch.setattr('os.execvpe', mock_execvpe)
+
+    def check_run_main(dirname):
+        from os.path import abspath as real_abspath
+
+        def mock_abspath(path):
+            if path == ".":
+                return dirname
+            else:
+                return real_abspath(path)
+
+        monkeypatch.setattr('os.path.abspath', mock_abspath)
+
+        project_dir_disable_dedicated_env(dirname)
+
+        for n, i in enumerate(command_line):
+            if i == '<DIRNAME>':
+                command_line[n] = dirname
+
+        result = _parse_args_and_run_subcommand(command_line)
+
+        assert 1 == result
+        assert 'file' in executed
+        assert 'args' in executed
+        assert 'env' in executed
+        file_assertion(executed['file'])
+
+        out, err = capsys.readouterr()
+        assert "" == out
+        assert "" == err
+
+        return executed['args'][1:]
+
+    return with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_FILENAME:
+        """
+commands:
+  nodefault:
+    conda_app_entry: python --version def
+  foo:
+    conda_app_entry: python --version foo
+  bar:
+    conda_app_entry: python --version bar
+"""
+    }, check_run_main)
+
+
+def test_run_command_use_default(monkeypatch, capsys):
+    args = _test_run_nodefault_command(['anaconda-project', 'run', '--directory', '<DIRNAME>', 'default'], monkeypatch,
+                                       capsys)
+    assert args == ['--version', 'def']
+
+
 # can't put an assert in a lambda so this makes us a "lambda" with
 # an assert in it
 def _func_asserting_contains(what):
