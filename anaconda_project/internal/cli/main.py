@@ -109,6 +109,7 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser('prepare', help="Set up the project requirements, but does not run the project")
     preset.add_argument('--all', action='store_true', help="Prepare all environments", default=None)
     preset.add_argument('--refresh', action='store_true', help='Remove and recreate the environment', default=None)
+    preset.add_argument('--python', type=str, help='Specify Python version if using requirements.txt', default=None)
     add_prepare_args(preset)
     preset.set_defaults(main=prepare.main)
 
