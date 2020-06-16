@@ -35,7 +35,7 @@ class CliFrontend(Frontend):
         sys.stderr.flush()
 
 
-def load_project(dirname):
+def load_project(dirname, save=True):
     """Load a Project, fixing it if needed and possible."""
     project = Project(dirname, frontend=CliFrontend(), must_exist=True)
 
@@ -65,6 +65,7 @@ def load_project(dirname):
             # this happen 3 times before we give up.
             regressions += (len(problems) >= len(o_problems))
         if not problems:
-            project.save()
+            if save:
+                project.save()
 
     return project
