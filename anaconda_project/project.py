@@ -180,10 +180,14 @@ class _ConfigCache(object):
         if not project_exists:
             problems.append("Project directory '%s' does not exist." % self.directory_path)
         elif self.must_exist and not os.path.isfile(project_file.filename):
-            problems.append(
-                ProjectProblem(text="Project file '%s' does not exist." % os.path.basename(project_file.filename),
-                               fix_prompt="Create file '%s'?" % project_file.filename,
-                               fix_function=accept_project_creation))
+            filenames = ("environment.yml", "environment.yaml", 'requirements.txt')
+            filenames = map(lambda f: os.path.isfile(os.path.join(self.directory_path, f)), filenames)
+            if not any(filenames):
+                problems.append(
+                    ProjectProblem(
+                        text="Project file '%s' does not exist." % os.path.basename(project_file.filename),
+                        fix_prompt="Create file '%s'?" % project_file.filename,
+                        fix_function=accept_project_creation))
 
         if project_file.corrupted:
             problems.append(
@@ -220,7 +224,6 @@ class _ConfigCache(object):
             # options in the variables section, and after _update_env_specs
             # since we use those
             self._update_conda_env_requirements(requirements, problems, project_file)
-
             # this MUST be after we update env reqs so we have the valid env spec names
             self._update_commands(problems, project_file, requirements)
 

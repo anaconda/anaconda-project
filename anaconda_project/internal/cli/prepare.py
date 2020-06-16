@@ -19,8 +19,7 @@ def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=F
     Returns:
         Prepare result (can be treated as True on success).
     """
-    project = load_project(project_dir)
-    project_dir = project.directory_path
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return False
     if all:
