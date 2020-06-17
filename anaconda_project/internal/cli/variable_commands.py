@@ -54,7 +54,7 @@ def remove_variables(project_dir, env_spec_name, vars_to_remove):
 
 def list_variables(project_dir, env_spec_name):
     """List variables present in project."""
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
     print("Variables for project: {}\n".format(project_dir))

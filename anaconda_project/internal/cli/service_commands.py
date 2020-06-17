@@ -53,7 +53,7 @@ def remove_service(project_dir, env_spec_name, variable_name):
 
 def list_services(project_dir, env_spec_name):
     """List the services listed on the project."""
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
 
