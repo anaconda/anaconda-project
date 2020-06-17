@@ -93,7 +93,7 @@ def list_commands(project_dir):
     Returns:
         int exit code
     """
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
 
@@ -111,7 +111,7 @@ def list_default_command(project_dir):
     Returns:
         int exit code
     """
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
 

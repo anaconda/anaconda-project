@@ -61,7 +61,7 @@ def remove_download(project_dir, env_spec_name, filename_variable):
 
 def list_downloads(project_dir, env_spec_name):
     """List the downloads present in project."""
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
 
