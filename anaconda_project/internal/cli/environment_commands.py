@@ -46,7 +46,7 @@ def remove_env_spec(project_dir, name):
 
 def export_env_spec(project_dir, name, filename):
     """Save an environment.yml file."""
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     status = project_ops.export_env_spec(project, name=name, filename=filename)
     return _handle_status(status)
 
@@ -101,7 +101,7 @@ def remove_platforms(project, environment, platforms):
 
 def list_env_specs(project_dir):
     """List environments in the project."""
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
     print("Environments for project: {}\n".format(project_dir))
@@ -111,7 +111,7 @@ def list_env_specs(project_dir):
 
 def list_packages(project_dir, environment):
     """List the packages for an environment in the project."""
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
     if environment is None:
@@ -132,7 +132,7 @@ def list_packages(project_dir, environment):
 
 def list_platforms(project_dir, environment):
     """List the platforms for an environment in the project."""
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
     if environment is None:
@@ -166,7 +166,7 @@ def update(project_dir, env_spec_name):
 
 def unlock(project_dir, env_spec_name):
     """Unlock dependency versions."""
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
     status = project_ops.unlock(project, env_spec_name=env_spec_name)
