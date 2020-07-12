@@ -35,7 +35,7 @@ def monkeypatch_conda_not_to_use_links(monkeypatch):
         return
 
     def mock_get_conda_command(extra_args):
-        cmd_list = ['conda']
+        cmd_list = [conda_api.CONDA_EXE]
         cmd_list.extend(extra_args)
         if 'create' in cmd_list:
             i = cmd_list.index('create')
