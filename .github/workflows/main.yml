@@ -71,6 +71,9 @@ jobs:
             cver: 4.7
           - pyver: 2.7
             cver: 4.8
+          # https://github.com/tornadoweb/tornado/issues/2804
+          - pyver: 3.8
+            os: windows-latest
     steps:
     - name: Retrieve the source code
       uses: actions/checkout@v2
