@@ -134,14 +134,17 @@ def test_default_to_system_environ():
         # result.environ inherits everything in os.environ
         for key, original in os_environ_copy.items():
             updated = result.environ.get(key)
-            if key == 'PATH' and updated != original:
-                if platform.system() == 'Windows':
+            if updated != original:
+                if original in ('root', 'base') and updated in ('root', 'base'):
+                    print("we have a root/base environment name issue here")
+                    continue
+                if key == 'PATH' and platform.system() == 'Windows':
                     print("prepare changed PATH on Windows and ideally it would not.")
                     continue
                 updated = updated.split(os.pathsep)
                 original = original.split(os.pathsep)
-                print("ORIGINAL PATH: " + repr(original))
-                print("UPDATED PATH: " + repr(updated))
+                print("ORIGINAL {}: {}".format(key, repr(original)))
+                print("UPDATED {}: {}".format(key, repr(updated)))
             assert updated == original
 
     with_directory_contents_completing_project_file({
