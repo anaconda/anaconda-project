@@ -48,6 +48,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: package
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest,ubuntu-latest,windows-latest]
         pyver: [2.7,3.6,3.7,3.8]
