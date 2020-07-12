@@ -78,10 +78,10 @@ jobs:
     - name: Build the test environment
       run: |
           source ./conda/etc/profile.d/conda.sh
-          sed 's@python=.*@python=${{ matrix.pyver }}@' environment.yml > environment2.yml
-          conda env create environment2.yml
           [ ${{ matrix.pyver }} == 2.7 ] && TEMPFILE=backports.tempfile
-          conda install -y -n anaconda-project-dev local::anaconda-project $TEMPFILE
+          conda create -y -n anaconda-project-dev python=${{ matrix.pyver }} \
+            $TEMPFILE coverage 'pytest<5' pytest-cov redis notebook bokeh \
+            keyring setuptools pip local::anaconda-project
     - name: Run the tests
       run: |
           source ./conda/etc/profile.d/conda.sh 

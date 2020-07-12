@@ -1,5 +1,8 @@
 # Use `conda env create environment.yml` to create a dev environment
 name: anaconda-project-dev
+channels:
+  - defaults
+  - conda-forge
 dependencies:
   - redis
   - notebook
