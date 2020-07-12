@@ -17,7 +17,6 @@ class ArgsTransformerTemplate(_ArgsTransformer):
     Plugins args transformers should subclass it and redefine add_class
     to implement custom arguments mapping.
     """
-
     def __init__(self, command):
         """Construct an ArgTransformer for the given command.
 

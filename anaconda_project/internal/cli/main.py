@@ -47,19 +47,17 @@ def _parse_args_and_run_subcommand(argv):
     parser.add_argument('--verbose', action='store_true', default=False, help="show verbose debugging details")
 
     def add_directory_arg(preset):
-        preset.add_argument(
-            '--directory',
-            metavar='PROJECT_DIR',
-            default='.',
-            help="Project directory containing anaconda-project.yml (defaults to current directory)")
+        preset.add_argument('--directory',
+                            metavar='PROJECT_DIR',
+                            default='.',
+                            help="Project directory containing anaconda-project.yml (defaults to current directory)")
 
     def add_env_spec_arg(preset):
-        preset.add_argument(
-            '--env-spec',
-            metavar='ENVIRONMENT_SPEC_NAME',
-            default=None,
-            action='store',
-            help="An environment spec name from anaconda-project.yml")
+        preset.add_argument('--env-spec',
+                            metavar='ENVIRONMENT_SPEC_NAME',
+                            default=None,
+                            action='store',
+                            help="An environment spec name from anaconda-project.yml")
 
     def add_prepare_args(preset, include_command=True):
         add_directory_arg(preset)
@@ -67,13 +65,12 @@ def _parse_args_and_run_subcommand(argv):
         all_supported_modes = list(_all_ui_modes)
         # we don't support "ask about every single thing" mode yet.
         all_supported_modes.remove(UI_MODE_TEXT_ASK_QUESTIONS)
-        preset.add_argument(
-            '--mode',
-            metavar='MODE',
-            default=UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK,
-            choices=_all_ui_modes,
-            action='store',
-            help="One of " + ", ".join(_all_ui_modes))
+        preset.add_argument('--mode',
+                            metavar='MODE',
+                            default=UI_MODE_TEXT_DEVELOPMENT_DEFAULTS_OR_ASK,
+                            choices=_all_ui_modes,
+                            action='store',
+                            help="One of " + ", ".join(_all_ui_modes))
         if include_command:
             preset.add_argument(
                 '--command',
@@ -83,28 +80,29 @@ def _parse_args_and_run_subcommand(argv):
                 help="A command name from anaconda-project.yml (env spec for this command will be used)")
 
     def add_env_spec_name_arg(preset, required):
-        preset.add_argument(
-            '-n',
-            '--name',
-            metavar='ENVIRONMENT_SPEC_NAME',
-            required=required,
-            action='store',
-            help="Name of the environment spec from anaconda-project.yml")
+        preset.add_argument('-n',
+                            '--name',
+                            metavar='ENVIRONMENT_SPEC_NAME',
+                            required=required,
+                            action='store',
+                            help="Name of the environment spec from anaconda-project.yml")
 
     preset = subparsers.add_parser('init', help="Initialize a directory with default project configuration")
     add_directory_arg(preset)
-    preset.add_argument(
-        '--empty-environment',
-        action='store_true',
-        help="Do not add the default package set to the environment.",
-        default=None)
+    preset.add_argument('--empty-environment',
+                        action='store_true',
+                        help="Do not add the default package set to the environment.",
+                        default=None)
     preset.add_argument('-y', '--yes', action='store_true', help="Assume yes to all confirmation prompts", default=None)
     preset.set_defaults(main=init.main)
 
     preset = subparsers.add_parser('run', help="Run the project, setting up requirements first")
     add_prepare_args(preset, include_command=False)
-    preset.add_argument(
-        'command', metavar='COMMAND_NAME', default=None, nargs='?', help="A command name from anaconda-project.yml")
+    preset.add_argument('command',
+                        metavar='COMMAND_NAME',
+                        default=None,
+                        nargs='?',
+                        help="A command name from anaconda-project.yml")
     preset.add_argument('extra_args_for_command', metavar='EXTRA_ARGS_FOR_COMMAND', default=None, nargs=REMAINDER)
     preset.set_defaults(main=run.main)
 
@@ -114,25 +112,25 @@ def _parse_args_and_run_subcommand(argv):
     add_prepare_args(preset)
     preset.set_defaults(main=prepare.main)
 
-    preset = subparsers.add_parser(
-        'clean', help="Removes generated state (stops services, deletes environment files, etc)")
+    preset = subparsers.add_parser('clean',
+                                   help="Removes generated state (stops services, deletes environment files, etc)")
     add_directory_arg(preset)
     preset.set_defaults(main=clean.main)
 
     if not anaconda_project._beta_test_mode:
-        preset = subparsers.add_parser(
-            'activate', help="Set up the project and output shell export commands reflecting the setup")
+        preset = subparsers.add_parser('activate',
+                                       help="Set up the project and output shell export commands reflecting the setup")
         add_prepare_args(preset)
         preset.set_defaults(main=activate.main)
 
-    preset = subparsers.add_parser(
-        'archive', help="Create a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
+    preset = subparsers.add_parser('archive',
+                                   help="Create a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
     add_directory_arg(preset)
     preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
     preset.set_defaults(main=archive.main)
 
-    preset = subparsers.add_parser(
-        'unarchive', help="Unpack a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
+    preset = subparsers.add_parser('unarchive',
+                                   help="Unpack a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
     preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
     preset.add_argument('directory', metavar='DESTINATION_DIRECTORY', default=None, nargs='?')
 
@@ -144,21 +142,19 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('-s', '--site', metavar='SITE', help='Select site to use')
     preset.add_argument('-t', '--token', metavar='TOKEN', help='Auth token or a path to a file containing a token')
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
-    preset.add_argument(
-        '--suffix',
-        metavar='SUFFIX',
-        help='Project archive suffix (.tar.gz, .tar.bz2, .zip)',
-        default='.tar.bz2',
-        choices=['.tar.gz', '.tar.bz2', '.zip'])
+    preset.add_argument('--suffix',
+                        metavar='SUFFIX',
+                        help='Project archive suffix (.tar.gz, .tar.bz2, .zip)',
+                        default='.tar.bz2',
+                        choices=['.tar.gz', '.tar.bz2', '.zip'])
     preset.set_defaults(main=upload.main)
 
     preset = subparsers.add_parser('download', help="Download the project from Anaconda Cloud")
     add_directory_arg(preset)
-    preset.add_argument(
-        'project',
-        help='The project to download as <username>/<projectname>. If <projectname>' +
-        'has spaces inclose everything in quotes "<username>/<project name>".' +
-        'If specified as <projectname> then the logged-in username is used.')
+    preset.add_argument('project',
+                        help='The project to download as <username>/<projectname>. If <projectname>' +
+                        'has spaces inclose everything in quotes "<username>/<project name>".' +
+                        'If specified as <projectname> then the logged-in username is used.')
     preset.add_argument('--no-unpack', action='store_true', help='Do not unpack the project archive.')
     preset.add_argument(
         '--parent_dir',
@@ -172,8 +168,10 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
     add_env_spec_arg(preset)
     preset.add_argument('vars_to_add', metavar='VARS_TO_ADD', default=None, nargs=REMAINDER)
-    preset.add_argument(
-        '--default', metavar='DEFAULT_VALUE', default=None, help='Default value if environment variable is unset')
+    preset.add_argument('--default',
+                        metavar='DEFAULT_VALUE',
+                        default=None,
+                        help='Default value if environment variable is unset')
     add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_add)
 
@@ -188,15 +186,15 @@ def _parse_args_and_run_subcommand(argv):
     add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_list)
 
-    preset = subparsers.add_parser(
-        'set-variable', help="Set an environment variable value in anaconda-project-local.yml")
+    preset = subparsers.add_parser('set-variable',
+                                   help="Set an environment variable value in anaconda-project-local.yml")
     add_env_spec_arg(preset)
     preset.add_argument('vars_and_values', metavar='VARS_AND_VALUES', default=None, nargs=REMAINDER)
     add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_set)
 
-    preset = subparsers.add_parser(
-        'unset-variable', help="Unset an environment variable value from anaconda-project-local.yml")
+    preset = subparsers.add_parser('unset-variable',
+                                   help="Unset an environment variable value from anaconda-project-local.yml")
     add_env_spec_arg(preset)
     add_directory_arg(preset)
     preset.add_argument('vars_to_unset', metavar='VARS_TO_UNSET', default=None, nargs=REMAINDER)
@@ -208,8 +206,10 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('filename_variable', metavar='ENV_VAR_FOR_FILENAME', default=None)
     preset.add_argument('download_url', metavar='DOWNLOAD_URL', default=None)
     preset.add_argument('--filename', help="The name to give the file/folder after downloading it", default=None)
-    preset.add_argument(
-        '--hash-algorithm', help="Defines which hash algorithm to use", default=None, choices=_hash_algorithms)
+    preset.add_argument('--hash-algorithm',
+                        help="Defines which hash algorithm to use",
+                        default=None,
+                        choices=_hash_algorithms)
     preset.add_argument('--hash-value', help="The expected checksum hash of the downloaded file", default=None)
     preset.set_defaults(main=download_commands.main_add)
 
@@ -249,8 +249,11 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=service_commands.main_list)
 
     def add_package_args(preset):
-        preset.add_argument(
-            '-c', '--channel', metavar='CHANNEL', action='append', help='Channel to search for packages')
+        preset.add_argument('-c',
+                            '--channel',
+                            metavar='CHANNEL',
+                            action='append',
+                            help='Channel to search for packages')
         preset.add_argument('packages', metavar='PACKAGES', default=None, nargs=REMAINDER)
 
     preset = subparsers.add_parser('add-env-spec', help="Add a new environment spec to the project")
@@ -336,16 +339,14 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('--type', action="store", choices=command_choices, help="Command type to add")
     add_command_name_arg(preset)
     add_env_spec_arg(preset)
-    preset.add_argument(
-        '--supports-http-options',
-        dest='supports_http_options',
-        action="store_true",
-        help="The command supports project's HTTP server options")
-    preset.add_argument(
-        '--no-supports-http-options',
-        dest='supports_http_options',
-        action="store_false",
-        help=" The command does not support project's HTTP server options")
+    preset.add_argument('--supports-http-options',
+                        dest='supports_http_options',
+                        action="store_true",
+                        help="The command supports project's HTTP server options")
+    preset.add_argument('--no-supports-http-options',
+                        dest='supports_http_options',
+                        action="store_false",
+                        help=" The command does not support project's HTTP server options")
     preset.add_argument('command', metavar="COMMAND", help="Command line or app filename to add")
     preset.set_defaults(main=command_commands.main, supports_http_options=None)
 

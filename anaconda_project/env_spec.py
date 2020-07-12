@@ -56,7 +56,6 @@ def _combine_conda_package_lists(first, second):
 
 class EnvSpec(object):
     """Represents a set of required conda packages we could potentially instantiate as a Conda environment."""
-
     def __init__(self,
                  name,
                  conda_packages,
@@ -370,9 +369,8 @@ class EnvSpec(object):
         # have ordering... OrderedDict doesn't work because the
         # yaml saver saves them as some "!!omap" nonsense. Other
         # than ordering, the formatting isn't even preserved here.
-        template_json = ryaml.load(
-            "something:\n    description: null\n" + "    packages: []\n" + "    channels: []\n",
-            Loader=ryaml.RoundTripLoader)
+        template_json = ryaml.load("something:\n    description: null\n" + "    packages: []\n" + "    channels: []\n",
+                                   Loader=ryaml.RoundTripLoader)
 
         if self._description is not None:
             template_json['something']['description'] = self._description
@@ -592,11 +590,10 @@ def _anaconda_default_env_spec(shared_base_spec):
         inherit_from = ()
     else:
         inherit_from = (shared_base_spec, )
-    return EnvSpec(
-        name="default",
-        conda_packages=_default_env_spec_packages(),
-        channels=[],
-        platforms=conda_api.default_platforms_with_current(),
-        description="Default environment spec for running commands",
-        inherit_from_names=(),
-        inherit_from=inherit_from)
+    return EnvSpec(name="default",
+                   conda_packages=_default_env_spec_packages(),
+                   channels=[],
+                   platforms=conda_api.default_platforms_with_current(),
+                   description="Default environment spec for running commands",
+                   inherit_from_names=(),
+                   inherit_from=inherit_from)

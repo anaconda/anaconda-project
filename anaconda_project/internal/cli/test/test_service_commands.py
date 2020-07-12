@@ -61,8 +61,8 @@ def test_add_service(capsys, monkeypatch):
         assert code == 0
 
         out, err = capsys.readouterr()
-        assert (
-            'Service added.\n' + 'Added service redis to the project file, its address will be in REDIS_URL.\n') == out
+        assert ('Service added.\n' +
+                'Added service redis to the project file, its address will be in REDIS_URL.\n') == out
         assert '' == err
 
     with_directory_contents_completing_project_file(dict(), check)
@@ -99,9 +99,8 @@ def test_remove_service(capsys, monkeypatch):
         expected_out = ("Removed service 'TEST' from the project file.\n")
         assert expected_out == out
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'
-    }, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
 
 
 def test_remove_service_shutdown_fails(capsys, monkeypatch):
@@ -161,9 +160,8 @@ def test_remove_service_duplicate(capsys, monkeypatch):
                         " to identify which service you want to remove\n")
         assert expected_err == err
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'
-    }, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
 
 
 def test_remove_service_running_redis(monkeypatch):
@@ -189,9 +187,8 @@ def test_remove_service_running_redis(monkeypatch):
         assert 'port' in state
         port = state['port']
 
-        assert dict(
-            REDIS_URL=("redis://localhost:" + str(port)),
-            PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
+        assert dict(REDIS_URL=("redis://localhost:" + str(port)),
+                    PROJECT_DIR=project.directory_path) == strip_environ(result.environ)
         assert len(can_connect_args_list) >= 2
 
         pidfile = os.path.join(dirname, "services/REDIS_URL/redis.pid")
@@ -226,9 +223,8 @@ def test_remove_service_running_redis(monkeypatch):
         local_state_file.load()
         assert dict() == local_state_file.get_service_run_state("REDIS_URL")
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis"
-    }, start_local_redis)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis"},
+                                                    start_local_redis)
 
 
 def test_remove_service_missing_variable(capsys, monkeypatch):
@@ -291,9 +287,8 @@ REDIS_URL  A running Redis server, located by a redis: URL set as REDIS_URL.
 """.format(dirname=dirname).strip() + "\n"
         assert out == expected_out
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis\n"
-    }, check_list)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "services:\n  REDIS_URL: redis\n"},
+                                                    check_list)
 
 
 def test_list_service_with_empty_project(capsys, monkeypatch):

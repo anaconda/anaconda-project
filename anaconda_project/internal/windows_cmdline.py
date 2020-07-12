@@ -41,8 +41,8 @@ def windows_split_command_line(command):
             try:
                 result.append(str(argv[i]))
             except UnicodeEncodeError as e:
-                message = (
-                    "Windows cannot represent this command line in its character encoding: " + command + ": " + str(e))
+                message = ("Windows cannot represent this command line in its character encoding: " + command + ": " +
+                           str(e))
                 raise WindowsCommandLineException(message)
             i += 1
     finally:

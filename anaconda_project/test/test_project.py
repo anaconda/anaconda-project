@@ -80,12 +80,10 @@ def test_single_env_var_requirement():
         conda_env_var = conda_api.conda_prefix_variable()
         assert conda_env_var == requirements[1].env_var
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
-"""
-    }, check_some_env_var)
+"""}, check_some_env_var)
 
 
 def test_single_env_var_requirement_with_description():
@@ -103,12 +101,10 @@ def test_single_env_var_requirement_with_description():
         assert conda_env_var == requirements[1].env_var
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: { description: "Set FOO to the value of your foo" }
-"""
-        }, check_some_env_var)
+"""}, check_some_env_var)
 
 
 def test_single_env_var_requirement_null_for_default():
@@ -126,13 +122,11 @@ def test_single_env_var_requirement_null_for_default():
         assert conda_env_var == requirements[2].env_var
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
   BAR: { default: null }
-"""
-        }, check_some_env_var)
+"""}, check_some_env_var)
 
 
 def test_single_env_var_requirement_string_for_default():
@@ -147,12 +141,10 @@ def test_single_env_var_requirement_string_for_default():
         conda_env_var = conda_api.conda_prefix_variable()
         assert conda_env_var == requirements[1].env_var
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: 'hello'
-"""
-    }, check_some_env_var)
+"""}, check_some_env_var)
 
 
 def test_single_env_var_requirement_number_for_default():
@@ -167,12 +159,10 @@ def test_single_env_var_requirement_number_for_default():
         conda_env_var = conda_api.conda_prefix_variable()
         assert conda_env_var == requirements[1].env_var
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: 42
-"""
-    }, check_some_env_var)
+"""}, check_some_env_var)
 
 
 def test_single_env_var_requirement_default_is_in_dict():
@@ -187,12 +177,11 @@ def test_single_env_var_requirement_default_is_in_dict():
         conda_env_var = conda_api.conda_prefix_variable()
         assert conda_env_var == requirements[1].env_var
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: { default: 42 }
-"""
-    }, check_some_env_var)
+"""}, check_some_env_var)
 
 
 def test_requirement_inheritance():
@@ -218,9 +207,10 @@ def test_requirement_inheritance():
         requirements = var_reqs('bar')
         assert (['DOWNLOAD', 'FOO'], [None, 'global']) == requirements
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 variables:
   FOO: { default: "global" }
 downloads:
@@ -236,7 +226,7 @@ env_specs:
     downloads:
       DOWNLOAD: "http://example.com/bar"
 """
-    }, check)
+        }, check)
 
 
 def test_problem_in_project_file():
@@ -265,9 +255,10 @@ def test_problem_empty_names():
         assert _fn("Environment spec name cannot be empty string, found: ' ' as name") in project.problems
         assert _fn("Command variable name cannot be empty string, found: ' ' as name") in project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 variables:
   ' ': 'thing'
 downloads:
@@ -282,7 +273,7 @@ commands:
   ' ':
     shell: echo 'foo'
 """
-    }, check_problem)
+        }, check_problem)
 
 
 def test_problem_empty_names_var_list():
@@ -291,12 +282,10 @@ def test_problem_empty_names_var_list():
         assert ("%s: Variable name cannot be empty string, found: ' ' as name" %
                 project.project_file.basename) in project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   - ' '
-"""
-    }, check_problem)
+"""}, check_problem)
 
 
 def test_project_dir_does_not_exist():
@@ -341,12 +330,10 @@ def test_single_env_var_requirement_with_options():
         assert conda_env_var == requirements[1].env_var
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
     FOO: { default: "hello" }
-"""
-        }, check_some_env_var)
+"""}, check_some_env_var)
 
 
 def test_override_plugin_registry():
@@ -355,12 +342,10 @@ def test_override_plugin_registry():
         project = project_no_dedicated_env(dirname, registry)
         assert project._config_cache.registry is registry
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: {}
-"""
-    }, check_override_plugin_registry)
+"""}, check_override_plugin_registry)
 
 
 def test_get_name_from_project_file():
@@ -368,11 +353,9 @@ def test_get_name_from_project_file():
         project = project_no_dedicated_env(dirname)
         assert project.name == "foo"
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 name: foo
-    """
-    }, check_name_from_project_file)
+    """}, check_name_from_project_file)
 
 
 def test_broken_name_in_project_file():
@@ -380,11 +363,9 @@ def test_broken_name_in_project_file():
         project = project_no_dedicated_env(dirname)
         assert [(DEFAULT_PROJECT_FILENAME + ": name: field should have a string value not []")] == project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 name: []
-    """
-    }, check_name_from_project_file)
+    """}, check_name_from_project_file)
 
 
 def test_get_name_from_directory_name():
@@ -392,11 +373,9 @@ def test_get_name_from_directory_name():
         project = project_no_dedicated_env(dirname)
         assert project.name == os.path.basename(dirname)
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 name: null
-"""
-    }, check_name_from_directory_name)
+"""}, check_name_from_directory_name)
 
 
 def test_set_name_in_project_file():
@@ -422,11 +401,9 @@ def test_get_description_from_project_file():
         project = project_no_dedicated_env(dirname)
         assert project.description == "foo"
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 description: foo
-    """
-    }, check_description_from_project_file)
+    """}, check_description_from_project_file)
 
 
 def test_broken_description_in_project_file():
@@ -435,11 +412,9 @@ def test_broken_description_in_project_file():
         assert [(DEFAULT_PROJECT_FILENAME + ": description: field should have a string value not []")
                 ] == project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 description: []
-    """
-    }, check_description_from_project_file)
+    """}, check_description_from_project_file)
 
 
 def test_get_icon_from_project_file():
@@ -447,12 +422,13 @@ def test_get_icon_from_project_file():
         project = project_no_dedicated_env(dirname)
         assert project.icon == os.path.join(dirname, "foo.png")
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
 icon: foo.png
         """,
-        "foo.png": ""
-    }, check_icon_from_project_file)
+            "foo.png": ""
+        }, check_icon_from_project_file)
 
 
 def test_broken_icon_in_project_file():
@@ -460,11 +436,9 @@ def test_broken_icon_in_project_file():
         project = project_no_dedicated_env(dirname)
         assert [(DEFAULT_PROJECT_FILENAME + ": icon: field should have a string value not []")] == project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 icon: []
-    """
-    }, check_icon_from_project_file)
+    """}, check_icon_from_project_file)
 
 
 def test_nonexistent_icon_in_project_file():
@@ -473,11 +447,9 @@ def test_nonexistent_icon_in_project_file():
         assert project.icon is None
         assert ["Icon file %s does not exist." % (os.path.join(dirname, "foo.png"))] == project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 icon: foo.png
-    """
-    }, check_icon_from_project_file)
+    """}, check_icon_from_project_file)
 
 
 def test_set_icon_in_project_file():
@@ -493,13 +465,14 @@ def test_set_icon_in_project_file():
         project2 = project_no_dedicated_env(dirname)
         assert project2.icon == os.path.join(dirname, "bar.png")
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
 icon: foo.png
 """,
-        "foo.png": "",
-        "bar.png": ""
-    }, check_set_icon)
+            "foo.png": "",
+            "bar.png": ""
+        }, check_set_icon)
 
 
 def test_get_dependencies_requirements_from_project_file():
@@ -525,9 +498,10 @@ def test_get_dependencies_requirements_from_project_file():
         assert 'default' in conda_env_req.env_specs
         assert conda_env_req.env_specs['default'] is env
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 dependencies:
   - foo
   - hello >= 1.0
@@ -542,7 +516,7 @@ channels:
   - mtv
   - hbo
     """
-    }, check_get_packages)
+        }, check_get_packages)
 
 
 def test_get_package_requirements_from_project_file():
@@ -568,9 +542,10 @@ def test_get_package_requirements_from_project_file():
         assert 'default' in conda_env_req.env_specs
         assert conda_env_req.env_specs['default'] is env
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 packages:
   - foo
   - hello >= 1.0
@@ -585,7 +560,7 @@ channels:
   - mtv
   - hbo
     """
-    }, check_get_packages)
+        }, check_get_packages)
 
 
 def test_get_package_requirements_from_empty_project():
@@ -602,12 +577,10 @@ def test_complain_about_packages_not_a_list():
         assert 1 == len(project.problems)
         "should be a list of strings not" in project.problems[0]
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 packages:
     foo: bar
-    """
-    }, check_get_packages)
+    """}, check_get_packages)
 
 
 def test_complain_about_pip_deps_not_a_list():
@@ -616,12 +589,10 @@ def test_complain_about_pip_deps_not_a_list():
         assert 1 == len(project.problems)
         "should be a list of strings not" in project.problems[0]
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 packages:
     - pip: bar
-    """
-    }, check)
+    """}, check)
 
 
 def test_complain_about_pip_deps_not_a_string():
@@ -631,13 +602,11 @@ def test_complain_about_pip_deps_not_a_string():
         "should be a list of pip package names" in project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 packages:
     - pip:
       - {}
-    """
-        }, check)
+    """}, check)
 
 
 def test_complain_about_packages_bad_spec():
@@ -651,15 +620,13 @@ def test_complain_about_packages_bad_spec():
         ] == project.problems
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 packages:
     - "="
     - foo bar
     - pip:
       - "%"
-    """
-        }, check_get_packages)
+    """}, check_get_packages)
 
 
 def test_complain_about_conda_env_in_variables_list():
@@ -671,14 +638,12 @@ def test_complain_about_conda_env_in_variables_list():
                 template % 'CONDA_PREFIX'] == project.problems
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   - CONDA_ENV_PATH
   - CONDA_DEFAULT_ENV
   - CONDA_PREFIX
-    """
-        }, check_complain_about_conda_env_var)
+    """}, check_complain_about_conda_env_var)
 
 
 def test_complain_about_conda_env_in_variables_dict():
@@ -766,9 +731,10 @@ def test_load_environments():
             assert loaded.pip_packages == spec.pip_packages
             assert loaded.channels == spec.channels
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 packages:
   - global1=1.0
   - global2=1.0
@@ -813,7 +779,7 @@ env_specs:
     channels:
        - nbc
     """
-    }, check_environments)
+        }, check_environments)
 
 
 def test_load_environments_merging_in_global():
@@ -835,9 +801,10 @@ def test_load_environments_merging_in_global():
         assert foo.channels == ('mtv', 'hbo')
         assert bar.channels == ('mtv', )
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 packages:
   - dead-parrot
   - elephant
@@ -861,7 +828,7 @@ env_specs:
     channels:
       - cartoons
     """
-    }, check_environments)
+        }, check_environments)
 
 
 def test_load_environments_default_always_default_even_if_not_first():
@@ -881,14 +848,12 @@ def test_load_environments_default_always_default_even_if_not_first():
         assert default.conda_packages == ()
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo: {}
   bar: {}
   default: {}
-    """
-        }, check_environments)
+    """}, check_environments)
 
 
 def test_complain_about_environments_not_a_dict():
@@ -897,11 +862,9 @@ def test_complain_about_environments_not_a_dict():
         assert 1 == len(project.problems)
         "should be a directory from environment name to environment attributes" in project.problems[0]
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 env_specs: 42
-    """
-    }, check_environments)
+    """}, check_environments)
 
 
 def test_complain_about_non_string_environment_description():
@@ -911,13 +874,11 @@ def test_complain_about_non_string_environment_description():
                 ] == project.problems
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 env_specs:
    foo:
      description: []
-    """
-        }, check_environments)
+    """}, check_environments)
 
 
 def test_complain_about_non_string_inherit_from():
@@ -927,13 +888,11 @@ def test_complain_about_non_string_inherit_from():
         assert "inherit_from: value should be a list of env spec names" in project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 env_specs:
    foo:
      inherit_from: {}
-    """
-        }, check_environments)
+    """}, check_environments)
 
 
 def test_complain_about_packages_list_of_wrong_thing():
@@ -942,12 +901,10 @@ def test_complain_about_packages_list_of_wrong_thing():
         assert 1 == len(project.problems)
         "should be a string not '42'" in project.problems[0]
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 packages:
     - 42
-    """
-    }, check_get_packages)
+    """}, check_get_packages)
 
 
 def test_complain_about_env_spec_inherits_from_nonexistent():
@@ -959,13 +916,11 @@ def test_complain_about_env_spec_inherits_from_nonexistent():
         ] == project.problems
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 env_specs:
    foo:
       inherit_from: bar
-    """
-        }, check_environments)
+    """}, check_environments)
 
 
 def test_complain_about_cycle_of_two_env_specs():
@@ -996,9 +951,10 @@ def test_complain_about_cycle_of_many_env_specs():
             (project.project_file.basename)
         ] == project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
    a:
       inherit_from: b
@@ -1012,7 +968,7 @@ env_specs:
       inherit_from: a
 
     """
-    }, check_environments)
+        }, check_environments)
 
 
 def test_load_list_of_variables_requirements():
@@ -1035,9 +991,8 @@ def test_load_list_of_variables_requirements():
         assert dict() == requirements[2].options
         assert len(project.problems) == 0
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: "variables:\n  - FOO\n  - BAR\n"
-    }, check_file)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  - FOO\n  - BAR\n"},
+                                                    check_file)
 
 
 def test_load_dict_of_variables_requirements():
@@ -1063,9 +1018,7 @@ def test_load_dict_of_variables_requirements():
         assert len(project.problems) == 0
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "variables:\n  FOO: { a: 1 }\n  BAR: { b: 2 }\n"
-        }, check_file)
+        {DEFAULT_PROJECT_FILENAME: "variables:\n  FOO: { a: 1 }\n  BAR: { b: 2 }\n"}, check_file)
 
 
 def test_non_string_variables_requirements():
@@ -1079,9 +1032,8 @@ def test_non_string_variables_requirements():
         assert "42 is not a string" in project.problems[0]
         assert "43 is not a string" in project.problems[1]
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: "variables:\n  - 42\n  - 43\n"
-    }, check_file)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "variables:\n  - 42\n  - 43\n"},
+                                                    check_file)
 
 
 def test_variable_default_cannot_be_bool():
@@ -1121,13 +1073,11 @@ def test_variable_default_missing_key_field():
         assert "default value for variable FOO must be null, a string, or a number" in project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO:
     default: { encrypted: 'abcdefg' }
-"""
-        }, check)
+"""}, check)
 
 
 def test_variables_requirements_not_a_collection():
@@ -1178,13 +1128,11 @@ def test_corrupted_project_lock_file():
         assert problem1.maybe_filename == project.lock_file.filename
         assert problem1.text_without_filename.startswith("Syntax error:")
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_LOCK_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: """
 ^
 stuff:
   FOO
-"""
-    }, check_problem)
+"""}, check_problem)
 
 
 def test_non_dict_commands_section():
@@ -1217,9 +1165,8 @@ def test_non_string_as_value_of_command():
             project.project_file.basename, 'default', 42)
         assert expected_error == project.problems[0]
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: "commands:\n default: 42\n"
-    }, check_app_entry)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "commands:\n default: 42\n"},
+                                                    check_app_entry)
 
 
 def test_empty_command():
@@ -1230,9 +1177,8 @@ def test_empty_command():
                                                                                   'default')
         assert expected_error == project.problems[0]
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: "commands:\n default: {}\n"
-    }, check_app_entry)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "commands:\n default: {}\n"},
+                                                    check_app_entry)
 
 
 def test_command_with_bogus_key():
@@ -1244,9 +1190,7 @@ def test_command_with_bogus_key():
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n"
-        }, check_app_entry)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n"}, check_app_entry)
 
 
 def test_command_with_non_string_description():
@@ -1258,9 +1202,7 @@ def test_command_with_non_string_description():
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     description: []\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     description: []\n"}, check)
 
 
 def test_command_with_non_boolean_supports_http_options():
@@ -1272,9 +1214,8 @@ def test_command_with_non_boolean_supports_http_options():
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     supports_http_options: 'blah'\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     supports_http_options: 'blah'\n"},
+        check)
 
 
 def test_command_with_non_boolean_registers_fusion_function():
@@ -1286,9 +1227,8 @@ def test_command_with_non_boolean_registers_fusion_function():
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     registers_fusion_function: 'blah'\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     registers_fusion_function: 'blah'\n"},
+        check)
 
 
 def test_command_with_extras():
@@ -1301,9 +1241,8 @@ def test_command_with_extras():
         assert command.extras == {"registers_fusion_function": True}
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     registers_fusion_function: true\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     registers_fusion_function: true\n"},
+        check)
 
 
 def test_command_with_custom_description():
@@ -1314,10 +1253,11 @@ def test_command_with_custom_description():
         assert command.bokeh_app == 'test.py'
         assert command.description == 'hi'
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        "commands:\n default:\n    bokeh_app: test.py\n    description: hi\npackages:\n - bokeh\n"
-    }, check)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    bokeh_app: test.py\n    description: hi\npackages:\n - bokeh\n"
+        }, check)
 
 
 def test_command_with_non_string_env_spec():
@@ -1328,9 +1268,7 @@ def test_command_with_non_string_env_spec():
         assert [expected_error] == project.problems
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     env_spec: []\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     env_spec: []\n"}, check)
 
 
 def test_command_with_nonexistent_env_spec():
@@ -1341,9 +1279,7 @@ def test_command_with_nonexistent_env_spec():
         assert [expected_error] == project.problems
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     env_spec: boo\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n     unix: 'boo'\n     env_spec: boo\n"}, check)
 
 
 def test_command_with_many_problems_at_once():
@@ -1357,9 +1293,10 @@ def test_command_with_many_problems_at_once():
         expected_errors = list(map(lambda e: e % project.project_file.basename, expected_errors))
         assert expected_errors == project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 commands:
   default:
      unix: bar
@@ -1367,7 +1304,7 @@ commands:
      env_spec: nonexistent
      description: []
         """
-    }, check)
+        }, check)
 
 
 def test_command_with_bogus_key_and_ok_key():
@@ -1382,9 +1319,7 @@ def test_command_with_bogus_key_and_ok_key():
         assert command.conda_app_entry is None
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n\n    unix: 'bar'\n"
-        }, check_app_entry)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    foobar: 'boo'\n\n    unix: 'bar'\n"}, check_app_entry)
 
 
 def test_two_empty_commands():
@@ -1398,9 +1333,8 @@ def test_two_empty_commands():
         assert expected_error_1 == project.problems[0]
         assert expected_error_2 == project.problems[1]
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: "commands:\n foo: {}\n bar: {}\n"
-    }, check_app_entry)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "commands:\n foo: {}\n bar: {}\n"},
+                                                    check_app_entry)
 
 
 def test_non_string_as_value_of_conda_app_entry():
@@ -1412,9 +1346,7 @@ def test_non_string_as_value_of_conda_app_entry():
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    conda_app_entry: 42\n"
-        }, check_app_entry)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    conda_app_entry: 42\n"}, check_app_entry)
 
 
 def test_non_string_as_value_of_shell():
@@ -1425,9 +1357,8 @@ def test_non_string_as_value_of_shell():
                                                                                           'default', 'unix', 42)
         assert expected_error == project.problems[0]
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: 42\n"
-    }, check_shell_non_dict)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: 42\n"},
+                                                    check_shell_non_dict)
 
 
 def test_unix_template_command():
@@ -1448,9 +1379,8 @@ def test_unix_template_command():
             raise SkipTest
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: test {{port}}\n    supports_http_options: false"
-        }, check_template_command)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: test {{port}}\n    supports_http_options: false"},
+        check_template_command)
 
 
 def test_unix_template_command_with_extra_args():
@@ -1472,9 +1402,8 @@ def test_unix_template_command_with_extra_args():
             raise SkipTest
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: test {{port}}\n    supports_http_options: false"
-        }, check_template_command)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    unix: test {{port}}\n    supports_http_options: false"},
+        check_template_command)
 
 
 def test_windows_template_command():
@@ -1494,10 +1423,11 @@ def test_windows_template_command():
         else:
             raise SkipTest
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        "commands:\n default:\n    windows: test {{port}}\n    supports_http_options: false"
-    }, check_template_command)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    windows: test {{port}}\n    supports_http_options: false"
+        }, check_template_command)
 
 
 def test_windows_template_command_with_extra_args():
@@ -1518,10 +1448,11 @@ def test_windows_template_command_with_extra_args():
         else:
             raise SkipTest
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        "commands:\n default:\n    windows: test {{port}}\n    supports_http_options: false"
-    }, check_template_command)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    windows: test {{port}}\n    supports_http_options: false"
+        }, check_template_command)
 
 
 def test_notebook_command():
@@ -1544,9 +1475,7 @@ def test_notebook_command():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"
-        }, check_notebook_command)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check_notebook_command)
 
 
 def test_notebook_command_extra_args():
@@ -1569,9 +1498,8 @@ def test_notebook_command_extra_args():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"
-        }, check_notebook_command_extra_args)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"},
+        check_notebook_command_extra_args)
 
 
 def test_notebook_command_with_project_http_args():
@@ -1586,14 +1514,15 @@ def test_notebook_command_with_project_http_args():
         assert command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
-        cmd_exec = command.exec_info_for_environment(
-            environ,
-            extra_args=[
-                'foo', 'bar', '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port', '1234',
-                '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
-                '--anaconda-project-iframe-hosts=foo1.com *.foo2.com', '--anaconda-project-use-xheaders',
-                '--anaconda-project-address', '1.2.3.4'
-            ])
+        cmd_exec = command.exec_info_for_environment(environ,
+                                                     extra_args=[
+                                                         'foo', 'bar', '--anaconda-project-url-prefix', 'blah',
+                                                         '--anaconda-project-port', '1234', '--anaconda-project-host',
+                                                         'example.com', '--anaconda-project-no-browser',
+                                                         '--anaconda-project-iframe-hosts=foo1.com *.foo2.com',
+                                                         '--anaconda-project-use-xheaders',
+                                                         '--anaconda-project-address', '1.2.3.4'
+                                                     ])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [
@@ -1607,9 +1536,7 @@ def test_notebook_command_with_project_http_args():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check)
 
 
 def test_notebook_command_disabled_project_http_args():
@@ -1624,22 +1551,24 @@ def test_notebook_command_disabled_project_http_args():
         assert not command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
-        cmd_exec = command.exec_info_for_environment(
-            environ,
-            extra_args=[
-                'foo', 'bar', '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port', '1234',
-                '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
-                '--anaconda-project-use-xheaders', '--anaconda-project-address', '1.2.3.4'
-            ])
+        cmd_exec = command.exec_info_for_environment(environ,
+                                                     extra_args=[
+                                                         'foo', 'bar', '--anaconda-project-url-prefix', 'blah',
+                                                         '--anaconda-project-port', '1234', '--anaconda-project-host',
+                                                         'example.com', '--anaconda-project-no-browser',
+                                                         '--anaconda-project-use-xheaders',
+                                                         '--anaconda-project-address', '1.2.3.4'
+                                                     ])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [jupyter_notebook, os.path.join(dirname, 'test.ipynb'), 'foo', 'bar']
         assert cmd_exec.shell is False
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        "commands:\n default:\n    notebook: test.ipynb\n    supports_http_options: false\n"
-    }, check)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    notebook: test.ipynb\n    supports_http_options: false\n"
+        }, check)
 
 
 def test_notebook_command_project_http_args_after_double_hyphen():
@@ -1654,13 +1583,13 @@ def test_notebook_command_project_http_args_after_double_hyphen():
         assert command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
-        cmd_exec = command.exec_info_for_environment(
-            environ,
-            extra_args=[
-                '--', 'foo', 'bar', '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port', '1234',
-                '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
-                '--anaconda-project-use-xheaders'
-            ])
+        cmd_exec = command.exec_info_for_environment(environ,
+                                                     extra_args=[
+                                                         '--', 'foo', 'bar', '--anaconda-project-url-prefix', 'blah',
+                                                         '--anaconda-project-port', '1234', '--anaconda-project-host',
+                                                         'example.com', '--anaconda-project-no-browser',
+                                                         '--anaconda-project-use-xheaders'
+                                                     ])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [
@@ -1672,9 +1601,7 @@ def test_notebook_command_project_http_args_after_double_hyphen():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check)
 
 
 def test_notebook_command_with_project_http_args_separated_by_equals():
@@ -1687,13 +1614,14 @@ def test_notebook_command_with_project_http_args_separated_by_equals():
         assert command.conda_app_entry is None
 
         environ = minimal_environ(PROJECT_DIR=dirname)
-        cmd_exec = command.exec_info_for_environment(
-            environ,
-            extra_args=[
-                'foo', 'bar', '--anaconda-project-url-prefix=blah', '--anaconda-project-port=1234',
-                '--anaconda-project-host=example.com', '--anaconda-project-no-browser',
-                '--anaconda-project-address=1.2.3.4'
-            ])
+        cmd_exec = command.exec_info_for_environment(environ,
+                                                     extra_args=[
+                                                         'foo', 'bar', '--anaconda-project-url-prefix=blah',
+                                                         '--anaconda-project-port=1234',
+                                                         '--anaconda-project-host=example.com',
+                                                         '--anaconda-project-no-browser',
+                                                         '--anaconda-project-address=1.2.3.4'
+                                                     ])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter_notebook = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [
@@ -1704,9 +1632,7 @@ def test_notebook_command_with_project_http_args_separated_by_equals():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check)
 
 
 def test_notebook_guess_command():
@@ -1737,20 +1663,16 @@ def test_notebook_guess_command():
         assert cmd_exec.args == [jupyter_notebook, expected_nb_path, '--NotebookApp.default_url=/notebooks/test.ipynb']
         assert cmd_exec.shell is False
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
-        'test.ipynb':
-        '{}',
-        'envs/should_ignore_this.ipynb':
-        '{}',
-        'services/should_ignore_this.ipynb':
-        '{}',
-        '.should_ignore_dotfile.ipynb':
-        '{}',
-        '.should_ignore_dotdir/foo.ipynb':
-        '{}'
-    }, check_notebook_guess_command)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': '{}',
+            'envs/should_ignore_this.ipynb': '{}',
+            'services/should_ignore_this.ipynb': '{}',
+            '.should_ignore_dotfile.ipynb': '{}',
+            '.should_ignore_dotdir/foo.ipynb': '{}'
+        }, check_notebook_guess_command)
 
     # anaconda-project run data.ipynb
 
@@ -1810,9 +1732,7 @@ def test_notebook_command_jupyter_not_on_path(monkeypatch):
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"
-        }, check_notebook_command)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check_notebook_command)
 
 
 def test_multiple_notebooks_suggestion_rejected():
@@ -1836,22 +1756,17 @@ def test_multiple_notebooks_suggestion_rejected():
 
         assert ['foo/test2.ipynb', 'test.ipynb'] == project.project_file.get_value(['skip_imports', 'notebooks'])
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
-        'test.ipynb':
-        '{}',
-        'foo/test2.ipynb':
-        '{}',
-        'envs/should_ignore_this.ipynb':
-        'pretend this is more notebook data',
-        'services/should_ignore_this.ipynb':
-        'pretend this is more notebook data',
-        '.should_ignore_dotfile.ipynb':
-        'moar fake notebook',
-        '.should_ignore_dotdir/foo.ipynb':
-        'still moar fake notebook'
-    }, check)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': '{}',
+            'foo/test2.ipynb': '{}',
+            'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            '.should_ignore_dotfile.ipynb': 'moar fake notebook',
+            '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
+        }, check)
 
 
 def test_skip_all_notebook_imports():
@@ -1867,12 +1782,12 @@ def test_skip_all_notebook_imports():
         assert [] == project.suggestions
         assert [] == project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
-        'test.ipynb':
-        '{}'
-    }, check)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': '{}'
+        }, check)
 
 
 def test_invalid_skip_imports_notebooks():
@@ -1882,10 +1797,11 @@ def test_invalid_skip_imports_notebooks():
         assert "'skip_imports: notebooks:' value should be a list" in project.problems[0]
         assert [] == project.suggestions
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: ("commands:\n default:\n    unix: echo 'pass'\nservices:\n" +
-                                   "  REDIS_URL: redis\npackages: ['notebook']\nskip_imports:\n  notebooks: {}\n")
-    }, check)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: ("commands:\n default:\n    unix: echo 'pass'\nservices:\n" +
+                                       "  REDIS_URL: redis\npackages: ['notebook']\nskip_imports:\n  notebooks: {}\n")
+        }, check)
 
 
 def test_single_notebook_suggestion_rejected():
@@ -1907,20 +1823,16 @@ def test_single_notebook_suggestion_rejected():
 
         assert ['test.ipynb'] == project.project_file.get_value(['skip_imports', 'notebooks'])
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
-        'test.ipynb':
-        '{}',
-        'envs/should_ignore_this.ipynb':
-        'pretend this is more notebook data',
-        'services/should_ignore_this.ipynb':
-        'pretend this is more notebook data',
-        '.should_ignore_dotfile.ipynb':
-        'moar fake notebook',
-        '.should_ignore_dotdir/foo.ipynb':
-        'still moar fake notebook'
-    }, check)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            'test.ipynb': '{}',
+            'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
+            '.should_ignore_dotfile.ipynb': 'moar fake notebook',
+            '.should_ignore_dotdir/foo.ipynb': 'still moar fake notebook'
+        }, check)
 
 
 def test_notebook_command_conflict():
@@ -1932,9 +1844,8 @@ def test_notebook_command_conflict():
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n    unix: echo 'pass'"
-        }, check_notebook_conflict_command)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n    unix: echo 'pass'"},
+        check_notebook_conflict_command)
 
 
 def test_bokeh_command_conflict():
@@ -1946,9 +1857,8 @@ def test_bokeh_command_conflict():
         assert expected_error == project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: app.py\n    unix: echo 'pass'"
-        }, check_bokeh_conflict_command)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: app.py\n    unix: echo 'pass'"},
+        check_bokeh_conflict_command)
 
 
 def test_bokeh_command():
@@ -1969,9 +1879,7 @@ def test_bokeh_command():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"
-        }, check_bokeh_command)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check_bokeh_command)
 
 
 def test_bokeh_command_with_extra_args():
@@ -1992,9 +1900,7 @@ def test_bokeh_command_with_extra_args():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"
-        }, check_bokeh_command_extra_args)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check_bokeh_command_extra_args)
 
 
 def test_bokeh_command_with_project_http_args():
@@ -2009,14 +1915,15 @@ def test_bokeh_command_with_project_http_args():
         assert command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
-        cmd_exec = command.exec_info_for_environment(
-            environ,
-            extra_args=[
-                '--foo', '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port', '1234',
-                '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
-                '--anaconda-project-iframe-hosts=foo1.com *.foo2.com', '--anaconda-project-use-xheaders',
-                '--anaconda-project-address', '1.2.3.4'
-            ])
+        cmd_exec = command.exec_info_for_environment(environ,
+                                                     extra_args=[
+                                                         '--foo', '--anaconda-project-url-prefix', 'blah',
+                                                         '--anaconda-project-port', '1234', '--anaconda-project-host',
+                                                         'example.com', '--anaconda-project-no-browser',
+                                                         '--anaconda-project-iframe-hosts=foo1.com *.foo2.com',
+                                                         '--anaconda-project-use-xheaders',
+                                                         '--anaconda-project-address', '1.2.3.4'
+                                                     ])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         bokeh = _assert_find_executable('bokeh', path)
         assert cmd_exec.args == [
@@ -2027,9 +1934,7 @@ def test_bokeh_command_with_project_http_args():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check)
 
 
 def test_bokeh_command_with_multiple_host_args():
@@ -2055,9 +1960,7 @@ def test_bokeh_command_with_multiple_host_args():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check)
 
 
 def test_bokeh_command_with_multiple_iframe_hosts_args():
@@ -2072,12 +1975,11 @@ def test_bokeh_command_with_multiple_iframe_hosts_args():
         assert command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
-        cmd_exec = command.exec_info_for_environment(
-            environ,
-            extra_args=[
-                '--anaconda-project-iframe-hosts', 'example.com', '--anaconda-project-iframe-hosts',
-                'foo1.com *.foo2.com'
-            ])
+        cmd_exec = command.exec_info_for_environment(environ,
+                                                     extra_args=[
+                                                         '--anaconda-project-iframe-hosts', 'example.com',
+                                                         '--anaconda-project-iframe-hosts', 'foo1.com *.foo2.com'
+                                                     ])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         jupyter = _assert_find_executable('jupyter-notebook', path)
         assert cmd_exec.args == [
@@ -2089,9 +1991,7 @@ def test_bokeh_command_with_multiple_iframe_hosts_args():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check)
 
 
 def test_bokeh_command_with_value_missing_for_project_http_args():
@@ -2106,12 +2006,12 @@ def test_bokeh_command_with_value_missing_for_project_http_args():
         assert command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
-        cmd_exec = command.exec_info_for_environment(
-            environ,
-            extra_args=[
-                '--foo', '--anaconda-project-url-prefix', '--anaconda-project-port', '--anaconda-project-host',
-                '--anaconda-project-address'
-            ])
+        cmd_exec = command.exec_info_for_environment(environ,
+                                                     extra_args=[
+                                                         '--foo', '--anaconda-project-url-prefix',
+                                                         '--anaconda-project-port', '--anaconda-project-host',
+                                                         '--anaconda-project-address'
+                                                     ])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         bokeh = _assert_find_executable('bokeh', path)
         assert cmd_exec.args == [
@@ -2122,9 +2022,7 @@ def test_bokeh_command_with_value_missing_for_project_http_args():
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n"}, check)
 
 
 def test_bokeh_command_with_disabled_project_http_args():
@@ -2139,22 +2037,21 @@ def test_bokeh_command_with_disabled_project_http_args():
         assert not command.supports_http_options
 
         environ = minimal_environ(PROJECT_DIR=dirname)
-        cmd_exec = command.exec_info_for_environment(
-            environ,
-            extra_args=[
-                '--foo', '--anaconda-project-url-prefix', 'blah', '--anaconda-project-port', '1234',
-                '--anaconda-project-host', 'example.com', '--anaconda-project-no-browser',
-                '--anaconda-project-use-xheaders'
-            ])
+        cmd_exec = command.exec_info_for_environment(environ,
+                                                     extra_args=[
+                                                         '--foo', '--anaconda-project-url-prefix', 'blah',
+                                                         '--anaconda-project-port', '1234', '--anaconda-project-host',
+                                                         'example.com', '--anaconda-project-no-browser',
+                                                         '--anaconda-project-use-xheaders'
+                                                     ])
         path = os.pathsep.join([environ['PROJECT_DIR'], environ['PATH']])
         bokeh = _assert_find_executable('bokeh', path)
         assert cmd_exec.args == [bokeh, 'serve', os.path.join(dirname, 'test.py'), '--foo']
         assert cmd_exec.shell is False
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n    supports_http_options: false\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    bokeh_app: test.py\n    supports_http_options: false\n"},
+        check)
 
 
 def test_run_argv_from_project_file_app_entry():
@@ -2170,13 +2067,11 @@ def test_run_argv_from_project_file_app_entry():
         assert project.commands['foo'] is command
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   foo:
     conda_app_entry: foo bar ${PREFIX}
-"""
-        }, check_run_argv)
+"""}, check_run_argv)
 
 
 def test_run_argv_from_project_file_shell():
@@ -2192,13 +2087,11 @@ def test_run_argv_from_project_file_shell():
         assert project.commands['foo'] is command
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   foo:
     unix: foo bar ${PREFIX}
-"""
-        }, check_run_argv)
+"""}, check_run_argv)
 
 
 def test_run_argv_from_project_file_windows(monkeypatch):
@@ -2225,13 +2118,11 @@ def test_run_argv_from_project_file_windows(monkeypatch):
         assert exec_info.shell
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   foo:
     windows: foo bar %CONDA_DEFAULT_ENV%
-"""
-        }, check_run_argv)
+"""}, check_run_argv)
 
 
 def test_exec_info_is_none_when_no_commands():
@@ -2268,13 +2159,11 @@ def test_exec_info_is_none_when_command_not_for_our_platform():
     if platform.system() == 'Windows':
         not_us = 'unix'
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   foo:
     %s: foo
-""" % not_us
-        }, check_exec_info)
+""" % not_us}, check_exec_info)
 
 
 def _run_argv_for_environment(environ=None, expected_output=None, chdir=False, os_specific=False, extra_args=None):
@@ -2347,9 +2236,8 @@ def _run_argv_for_environment(environ=None, expected_output=None, chdir=False, o
                     attempts = attempts - 1
                 else:
                     print("os.remove did not throw removing %s" % (batscript), file=sys.stderr)
-                    print(
-                        "after remove, os.path.exists(%s) = %s" % (batscript, repr(os.path.exists(batscript))),
-                        file=sys.stderr)
+                    print("after remove, os.path.exists(%s) = %s" % (batscript, repr(os.path.exists(batscript))),
+                          file=sys.stderr)
                     try:
                         print("after remove, os.stat(%s) = %r" % (batscript, os.stat(batscript)))
                     except Exception:
@@ -2403,10 +2291,11 @@ def test_run_command_in_project_dir_os_specific_and_cwd_is_project_dir():
 
 
 def test_run_command_in_project_dir_os_specific_with_conda_env():
-    _run_argv_for_environment(
-        dict(CONDA_PREFIX='/someplace', CONDA_ENV_PATH='/someplace', CONDA_DEFAULT_ENV='/someplace'),
-        "/someplace foo bar",
-        os_specific=True)
+    _run_argv_for_environment(dict(CONDA_PREFIX='/someplace',
+                                   CONDA_ENV_PATH='/someplace',
+                                   CONDA_DEFAULT_ENV='/someplace'),
+                              "/someplace foo bar",
+                              os_specific=True)
 
 
 def test_run_command_is_on_system_path():
@@ -2419,13 +2308,11 @@ def test_run_command_is_on_system_path():
         assert output.startswith("Python")
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
-"""
-        }, check_python_version_output)
+"""}, check_python_version_output)
 
 
 def test_run_command_does_not_exist():
@@ -2446,13 +2333,11 @@ def test_run_command_does_not_exist():
         assert excinfo.value.errno == errno.ENOENT
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: this-command-does-not-exist
-"""
-        }, check_error_on_nonexistent_path)
+"""}, check_error_on_nonexistent_path)
 
 
 def test_run_command_stuff_missing_from_environment():
@@ -2469,13 +2354,11 @@ def test_run_command_stuff_missing_from_environment():
             assert ('%s must be set' % key) in repr(excinfo.value)
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: foo
-"""
-        }, check_run_with_stuff_missing)
+"""}, check_run_with_stuff_missing)
 
 
 def test_get_publication_info_from_empty_project():
@@ -2502,13 +2385,11 @@ def test_get_publication_info_from_empty_project():
         }
         assert expected == project.publication_info()
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents({DEFAULT_PROJECT_FILENAME: """
 env_specs:
   default:
     description: "Default"
-    """
-    }, check_publication_info_from_empty)
+    """}, check_publication_info_from_empty)
 
 
 _complicated_project_contents = """
@@ -2762,11 +2643,12 @@ def test_get_publication_info_from_complex_project():
         assert expected == project.publication_info()
         assert len(project.suggestions) == 0
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
-        "main.py": "",
-        "foo.ipynb": ""
-    }, check_publication_info_from_complex)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+            "main.py": "",
+            "foo.ipynb": ""
+        }, check_publication_info_from_complex)
 
 
 def test_find_requirements():
@@ -2796,11 +2678,12 @@ def test_find_requirements():
         reqs = project.find_requirements(spec_name, klass=CondaEnvRequirement, env_var='SOMETHING')
         assert [] == reqs
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
-        "main.py": "",
-        "foo.ipynb": ""
-    }, check_find_requirements)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+            "main.py": "",
+            "foo.ipynb": ""
+        }, check_find_requirements)
 
 
 def test_requirements_subsets():
@@ -2827,11 +2710,12 @@ def test_requirements_subsets():
         plain_names = [req.env_var for req in plain]
         assert ['SOMETHING', 'SOMETHING_ELSE'] == sorted(plain_names)
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
-        "main.py": "",
-        "foo.ipynb": ""
-    }, check_requirements_subsets)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+            "main.py": "",
+            "foo.ipynb": ""
+        }, check_requirements_subsets)
 
 
 def test_env_var_name_list_properties():
@@ -2852,11 +2736,12 @@ def test_env_var_name_list_properties():
         plain = project.plain_variables(project.default_env_spec_name)
         assert ['SOMETHING', 'SOMETHING_ELSE'] == sorted(plain)
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
-        "main.py": "",
-        "foo.ipynb": ""
-    }, check_env_var_name_list_properties)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+            "main.py": "",
+            "foo.ipynb": ""
+        }, check_env_var_name_list_properties)
 
 
 def test_project_problem():
@@ -2891,9 +2776,8 @@ def test_auto_fix_missing_name():
         assert 'name' in project.project_file.root
 
     with_directory_contents(
-        {
-            DEFAULT_PROJECT_FILENAME: "env_specs:\n  default: {}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "env_specs:\n  default: {}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n"},
+        check)
 
 
 def test_auto_fix_env_spec_import():
@@ -2984,11 +2868,11 @@ def test_auto_fix_env_spec_out_of_sync():
         assert spec.pip_packages == ('foo', )
         assert spec.channels == ('bar', )
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME:
-        "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
-        "environment.yml":
-        """
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
+            "environment.yml": """
 name: stuff
 dependencies:
  - a
@@ -2998,7 +2882,7 @@ dependencies:
 channels:
  - bar
 """
-    }, check)
+        }, check)
 
 
 def test_auto_fix_env_spec_import_saying_no():
@@ -3021,11 +2905,11 @@ def test_auto_fix_env_spec_import_saying_no():
         assert skip_importing_hash is not None
         assert skip_importing_hash != ''
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME:
-        "name: foo\nenv_specs: {'default':{'packages':[]}}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
-        "environment.yml":
-        """
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "name: foo\nenv_specs: {'default':{'packages':[]}}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
+            "environment.yml": """
 name: stuff
 dependencies:
  - a
@@ -3035,7 +2919,7 @@ dependencies:
 channels:
  - bar
 """
-    }, check)
+        }, check)
 
 
 def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
@@ -3118,11 +3002,11 @@ def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
         spec = project.env_specs['stuff']
         assert spec.pip_packages == ('foo', 'someother')
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME:
-        "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
-        "environment.yml":
-        """
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
+            "environment.yml": """
 name: stuff
 dependencies:
  - a
@@ -3132,7 +3016,7 @@ dependencies:
 channels:
  - bar
 """
-    }, check)
+        }, check)
 
 
 def test_auto_fix_notebook_dep():
@@ -3175,15 +3059,16 @@ def test_no_auto_fix_notebook_dep_if_we_have_anaconda():
         assert project.suggestions == []
         assert project.env_specs['default'].conda_package_names_set == set(['anaconda'])
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: ('packages:\n'
-                                   ' - anaconda\n'
-                                   'commands:\n'
-                                   '  foo.ipynb:\n'
-                                   '    notebook: foo.ipynb\n'),
-        'foo.ipynb':
-        'not a real notebook'
-    }, check)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: ('packages:\n'
+                                       ' - anaconda\n'
+                                       'commands:\n'
+                                       '  foo.ipynb:\n'
+                                       '    notebook: foo.ipynb\n'),
+            'foo.ipynb':
+            'not a real notebook'
+        }, check)
 
 
 def test_no_auto_fix_notebook_dep_if_we_have_notebook():
@@ -3193,15 +3078,16 @@ def test_no_auto_fix_notebook_dep_if_we_have_notebook():
         assert project.problems == []
         assert project.env_specs['default'].conda_package_names_set == set(['notebook'])
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: ('packages:\n'
-                                   ' - notebook\n'
-                                   'commands:\n'
-                                   '  foo.ipynb:\n'
-                                   '    notebook: foo.ipynb\n'),
-        'foo.ipynb':
-        'not a real notebook'
-    }, check)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: ('packages:\n'
+                                       ' - notebook\n'
+                                       'commands:\n'
+                                       '  foo.ipynb:\n'
+                                       '    notebook: foo.ipynb\n'),
+            'foo.ipynb':
+            'not a real notebook'
+        }, check)
 
 
 def test_auto_fix_bokeh_dep():
@@ -3253,9 +3139,7 @@ def test_unknown_field_in_command():
         assert [expected_suggestion] == project.suggestions
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "commands:\n  foo:\n    unix: something\n    somejunk: True\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "commands:\n  foo:\n    unix: something\n    somejunk: True\n"}, check)
 
 
 def test_unknown_field_in_env_spec():
@@ -3266,9 +3150,7 @@ def test_unknown_field_in_env_spec():
         assert [expected_suggestion] == project.suggestions
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: "env_specs:\n  foo:\n    packages: [something]\n    somejunk: True\n"
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: "env_specs:\n  foo:\n    packages: [something]\n    somejunk: True\n"}, check)
 
 
 def test_unknown_field_in_env_spec_allowed():
@@ -3277,10 +3159,11 @@ def test_unknown_field_in_env_spec_allowed():
         assert [] == project.problems
         assert [] == project.suggestions
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        "env_specs:\n  foo:\n    packages: [something]\n    somejunk: True\n    user_fields: [somejunk]\n"
-    }, check)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            "env_specs:\n  foo:\n    packages: [something]\n    somejunk: True\n    user_fields: [somejunk]\n"
+        }, check)
 
 
 def test_unknown_field_in_root_of_lock_file():
@@ -3291,9 +3174,7 @@ def test_unknown_field_in_root_of_lock_file():
         assert [expected_suggestion] == project.suggestions
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: false\nsomejunk: False\n"
-        }, check)
+        {DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: false\nsomejunk: False\n"}, check)
 
 
 def test_unknown_field_in_lock_set_of_lock_file():
@@ -3303,15 +3184,16 @@ def test_unknown_field_in_lock_set_of_lock_file():
         expected_suggestion = ("%s: Unknown field name 'somejunk'" % project.lock_file.basename)
         assert [expected_suggestion] == project.suggestions
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_LOCK_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            """
 env_specs:
   default:
      platforms: [linux-64,osx-64,win-64]
      somejunk: True
     """
-    }, check)
+        }, check)
 
 
 def test_empty_file_has_problems():
@@ -3330,14 +3212,15 @@ def test_with_one_locked_env_spec_has_problems():
             "anaconda-project.yml: The 'platforms:' field should list platforms the project supports."
         ] == project.problems
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
      packages: []
 """,
-        DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
-    }, check)
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
 
 
 def test_with_locking_enabled_no_env_specs_has_problems():
@@ -3359,10 +3242,11 @@ def test_with_locking_disabled_no_platforms_required():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs:\n  default:\n    packages: []\n",
-        DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: false\n"
-    }, check)
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs:\n  default:\n    packages: []\n",
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: false\n"
+        }, check)
 
 
 def test_load_weird_platform():
@@ -3381,16 +3265,17 @@ def test_load_weird_platform():
         spec = project.env_specs['default']
         assert spec.platforms == ('linux-64', 'weird-valid')
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 name: foo
 platforms: [linux-64, weird-valid, weirdinvalid]
 env_specs:
   default:
     packages: [foo]
 """
-    }, check)
+        }, check)
 
 
 def test_only_some_env_specs_have_platforms_locking_disabled():
@@ -3398,9 +3283,10 @@ def test_only_some_env_specs_have_platforms_locking_disabled():
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 name: foo
 
 env_specs:
@@ -3410,7 +3296,7 @@ env_specs:
   no_platforms:
     packages: [bar]
 """
-    }, check)
+        }, check)
 
 
 def test_only_some_env_specs_have_platforms_locking_enabled():
@@ -3419,9 +3305,9 @@ def test_only_some_env_specs_have_platforms_locking_enabled():
         assert [("anaconda-project.yml: Env spec no_platforms does not have anything in its " + "'platforms:' field.")
                 ] == project.problems
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: """
 name: foo
 
 env_specs:
@@ -3431,9 +3317,8 @@ env_specs:
   no_platforms:
     packages: [bar]
         """,
-        DEFAULT_PROJECT_LOCK_FILENAME:
-        "locking_enabled: true\n"
-    }, check)
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
 
 
 def test_empty_lock_file_enables_locking():
@@ -3476,50 +3361,44 @@ def test_lock_file_non_dict_env_specs():
 def test_lock_file_non_dict_lock_set():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        expected_error = ("%s: Field 'default' in env_specs in lock file should be a dictionary, " + "found %r") % (
-            project.lock_file.basename, 42)
+        expected_error = ("%s: Field 'default' in env_specs in lock file should be a dictionary, " +
+                          "found %r") % (project.lock_file.basename, 42)
         assert [expected_error] == project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_LOCK_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default: 42
-"""
-    }, check)
+"""}, check)
 
 
 def test_lock_file_non_bool_lock_set_locked():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        expected_error = ("%s: Value for locked for env spec 'default' should be true or false, " + "found %r") % (
-            project.lock_file.basename, 42)
+        expected_error = ("%s: Value for locked for env spec 'default' should be true or false, " +
+                          "found %r") % (project.lock_file.basename, 42)
         assert [expected_error] == project.problems
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_LOCK_FILENAME: """
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
     locked: 42
-"""
-        }, check)
+"""}, check)
 
 
 def test_lock_file_non_string_lock_set_hash():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        expected_error = ("%s: Value for env_spec_hash for env spec 'default' should be a string, " + "found %r") % (
-            project.lock_file.basename, 42)
+        expected_error = ("%s: Value for env_spec_hash for env spec 'default' should be a string, " +
+                          "found %r") % (project.lock_file.basename, 42)
         assert [expected_error] == project.problems
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_LOCK_FILENAME: """
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
     env_spec_hash: 42
-"""
-        }, check)
+"""}, check)
 
 
 def test_lock_file_non_dict_lock_set_packages():
@@ -3530,13 +3409,11 @@ def test_lock_file_non_dict_lock_set_packages():
         assert [expected_error] == project.problems
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_LOCK_FILENAME: """
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
     packages: 42
-"""
-        }, check)
+"""}, check)
 
 
 def test_lock_file_has_pip_packages():
@@ -3548,9 +3425,10 @@ def test_lock_file_has_pip_packages():
             project.lock_file.basename, )
         assert [expected_warning] == project.suggestions
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_LOCK_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            """
 env_specs:
   default:
     platforms: [linux-64,osx-64,win-64]
@@ -3559,7 +3437,7 @@ env_specs:
         - pip:
           - foobar
 """
-    }, check)
+        }, check)
 
 
 def test_lock_file_has_invalid_packages():
@@ -3573,9 +3451,10 @@ def test_lock_file_has_invalid_packages():
             "%s: invalid pip package specifier: %%" % filename
         ] == project.problems
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_LOCK_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            """
 env_specs:
   default:
     packages:
@@ -3585,7 +3464,7 @@ env_specs:
         - pip:
           - "%"
 """
-    }, check)
+        }, check)
 
 
 def test_lock_file_has_wrong_platforms():
@@ -3599,16 +3478,17 @@ def test_lock_file_has_wrong_platforms():
             "versions for platforms 'win-64'"
         ] == project.suggestions
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_LOCK_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            """
 env_specs:
   default:
     platforms: ["win-64"]
     packages:
       all: [foo]
 """
-    }, check)
+        }, check)
 
 
 def test_lock_file_has_zero_platforms():
@@ -3622,15 +3502,13 @@ def test_lock_file_has_zero_platforms():
         ] == project.suggestions
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_LOCK_FILENAME: """
+        {DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
     platforms: []
     packages:
       all: [foo]
-"""
-        }, check)
+"""}, check)
 
 
 def test_lock_file_has_wrong_hash():
@@ -3644,9 +3522,10 @@ def test_lock_file_has_wrong_hash():
             'a30f02c961ef4f3fe07ceb09e0906394c3885a79)'
         ] == project.suggestions
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_LOCK_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            """
 env_specs:
   default:
     env_spec_hash: wrong
@@ -3654,7 +3533,7 @@ env_specs:
     packages:
       all: [foo]
 """
-    }, check)
+        }, check)
 
 
 def test_lock_file_has_empty_and_wrong_package_lists():
@@ -3673,16 +3552,17 @@ def test_lock_file_has_empty_and_wrong_package_lists():
         ] == project.suggestions
         # yapf: enable
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
    default:
       packages:
          - hello
 """,
-        DEFAULT_PROJECT_LOCK_FILENAME:
-        """
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            """
 env_specs:
   default:
     platforms: [linux-64,osx-64,win-64]
@@ -3693,7 +3573,7 @@ env_specs:
       osx-64: [bar]
       linux-32: [baz]
 """
-    }, check)
+        }, check)
 
 
 def test_lock_file_has_orphan_env_spec():
@@ -3704,16 +3584,17 @@ def test_lock_file_has_orphan_env_spec():
         assert ["anaconda-project-lock.yml: Lock file lists env spec 'orphan' which is not in anaconda-project.yml"
                 ] == project.suggestions
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
    default:
       packages:
          - hello
 """,
-        DEFAULT_PROJECT_LOCK_FILENAME:
-        """
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            """
 env_specs:
   default:
     platforms: [linux-64,osx-64,win-64]
@@ -3723,7 +3604,7 @@ env_specs:
     platforms: [linux-64,osx-64,win-64]
     packages: {}
 """
-    }, check)
+        }, check)
 
 
 def test_fix_project_file_with_no_platforms():
@@ -3777,9 +3658,9 @@ def test_fix_env_spec_with_no_platforms():
         assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['foo'].platforms
         assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['bar'].platforms
 
-    with_directory_contents({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents(
+        {
+            DEFAULT_PROJECT_FILENAME: """
 name: foo
 env_specs:
    default:
@@ -3795,8 +3676,7 @@ env_specs:
       packages:
          - package2
 """,
-        DEFAULT_PROJECT_LOCK_FILENAME:
-        """
+            DEFAULT_PROJECT_LOCK_FILENAME: """
 locking_enabled: true
 """
-    }, check)
+        }, check)

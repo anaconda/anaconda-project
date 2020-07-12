@@ -21,7 +21,6 @@ _hash_algorithms = ('md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512')
 
 class DownloadRequirement(EnvVarRequirement):
     """A requirement for ``env_var`` to point to a downloaded file."""
-
     @classmethod
     def _parse(cls, varname, item, problems):
         """Parse an item from the downloads: section."""
@@ -104,14 +103,13 @@ class DownloadRequirement(EnvVarRequirement):
         if unzip is None:
             unzip = False
 
-        return dict(
-            env_var=varname,
-            url=url,
-            filename=filename,
-            hash_algorithm=hash_algorithm,
-            hash_value=hash_value,
-            unzip=unzip,
-            description=description)
+        return dict(env_var=varname,
+                    url=url,
+                    filename=filename,
+                    hash_algorithm=hash_algorithm,
+                    hash_value=hash_value,
+                    unzip=unzip,
+                    description=description)
 
     def __init__(self,
                  registry,
@@ -164,12 +162,11 @@ class DownloadRequirement(EnvVarRequirement):
             status_description = ("File downloaded to {}".format(self._get_value_of_env_var(environ)))
         else:
             status_description = why_not_provided
-        return self._create_status(
-            environ,
-            local_state_file,
-            default_env_spec_name,
-            overrides=overrides,
-            has_been_provided=has_been_provided,
-            status_description=status_description,
-            provider_class_name='DownloadProvider',
-            latest_provide_result=latest_provide_result)
+        return self._create_status(environ,
+                                   local_state_file,
+                                   default_env_spec_name,
+                                   overrides=overrides,
+                                   has_been_provided=has_been_provided,
+                                   status_description=status_description,
+                                   provider_class_name='DownloadProvider',
+                                   latest_provide_result=latest_provide_result)

@@ -24,7 +24,6 @@ class Status(with_metaclass(ABCMeta)):
     Values of this class are immutable.
 
     """
-
     def __init__(self):
         """Construct an abstract Status."""
 

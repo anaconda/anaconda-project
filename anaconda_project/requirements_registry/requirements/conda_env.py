@@ -84,14 +84,13 @@ class CondaEnvRequirement(EnvVarRequirement):
 
     def check_status(self, environ, local_state_file, default_env_spec_name, overrides, latest_provide_result=None):
         """Override superclass to get our status."""
-        return self._create_status_from_analysis(
-            environ,
-            local_state_file,
-            default_env_spec_name,
-            overrides=overrides,
-            provider_class_name=self._provider_class_name,
-            status_getter=self._status_from_analysis,
-            latest_provide_result=latest_provide_result)
+        return self._create_status_from_analysis(environ,
+                                                 local_state_file,
+                                                 default_env_spec_name,
+                                                 overrides=overrides,
+                                                 provider_class_name=self._provider_class_name,
+                                                 status_getter=self._status_from_analysis,
+                                                 latest_provide_result=latest_provide_result)
 
 
 class CondaBootstrapEnvRequirement(CondaEnvRequirement):
@@ -161,11 +160,10 @@ class CondaBootstrapEnvRequirement(CondaEnvRequirement):
         # hardcode bootstrap env name since it's a very especial case
         env_spec_name = 'bootstrap-env'
 
-        return RequirementStatus(
-            self,
-            has_been_provided=has_been_provided,
-            status_description=status_description,
-            provider=provider,
-            analysis=analysis,
-            latest_provide_result=latest_provide_result,
-            env_spec_name=env_spec_name)
+        return RequirementStatus(self,
+                                 has_been_provided=has_been_provided,
+                                 status_description=status_description,
+                                 provider=provider,
+                                 analysis=analysis,
+                                 latest_provide_result=latest_provide_result,
+                                 env_spec_name=env_spec_name)

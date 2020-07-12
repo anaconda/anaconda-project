@@ -43,10 +43,10 @@ def _is_windows():
 
 _ArgSpec = namedtuple('_ArgSpec', ['option', 'has_value'])
 
-HTTP_SPECS = (_ArgSpec('--anaconda-project-host', True), _ArgSpec('--anaconda-project-address', True),
-              _ArgSpec('--anaconda-project-port', True), _ArgSpec('--anaconda-project-url-prefix', True),
-              _ArgSpec('--anaconda-project-no-browser', False), _ArgSpec('--anaconda-project-iframe-hosts', True),
-              _ArgSpec('--anaconda-project-use-xheaders', False))
+HTTP_SPECS = (_ArgSpec('--anaconda-project-host', True), _ArgSpec('--anaconda-project-address',
+                                                                  True), _ArgSpec('--anaconda-project-port', True),
+              _ArgSpec('--anaconda-project-url-prefix', True), _ArgSpec('--anaconda-project-no-browser', False),
+              _ArgSpec('--anaconda-project-iframe-hosts', True), _ArgSpec('--anaconda-project-use-xheaders', False))
 
 
 class _ArgsTransformer(object):
@@ -127,7 +127,6 @@ class _BokehArgsTransformer(_ArgsTransformer):
 
 class _TemplateArgsTransformer(_ArgsTransformer):
     """ArgsTransformer that supports jinja2 templating."""
-
     def add_args(self, results, args):
         return args
 
@@ -222,7 +221,6 @@ class _NotebookArgsTransformer(_ArgsTransformer):
 
 class CommandExecInfo(object):
     """Class describing an executable command."""
-
     def __init__(self, cwd, args, shell, env, notebook=None, bokeh_app=None):
         """Construct a CommandExecInfo."""
         self._cwd = cwd
@@ -279,8 +277,11 @@ class CommandExecInfo(object):
         else:
 
             args = self._args
-        return logged_subprocess.Popen(
-            args=args, env=py2_compat.env_without_unicode(self._env), cwd=self._cwd, shell=self._shell, **kwargs)
+        return logged_subprocess.Popen(args=args,
+                                       env=py2_compat.env_without_unicode(self._env),
+                                       cwd=self._cwd,
+                                       shell=self._shell,
+                                       **kwargs)
 
     def execvpe(self):
         """Convenience method exec's the command replacing the current process.
@@ -333,7 +334,6 @@ def _append_extra_args_to_command_line(command, extra_args):
 
 class ProjectCommand(object):
     """Represents a command from the project file."""
-
     def __init__(self, name, attributes):
         """Construct a command with the given attributes.
 

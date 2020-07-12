@@ -28,9 +28,10 @@ def test_parse_ignore_file():
             '#patternwithhash', 'hello'
         ]
 
-    with_directory_contents({
-        ".projectignore":
-        """
+    with_directory_contents(
+        {
+            ".projectignore":
+            """
 # this is a sample .projectignore
    # there can be whitespace before the comment
 bar
@@ -44,7 +45,7 @@ foo # this comment will be part of the pattern
 hello
 
         """ % ("   ")
-    }, check)
+        }, check)
 
 
 def test_parse_missing_ignore_file():

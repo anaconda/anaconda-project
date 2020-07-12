@@ -15,7 +15,6 @@ from anaconda_project.internal.metaclass import with_metaclass
 
 class Frontend(with_metaclass(ABCMeta)):
     """A UX (CLI, GUI, etc.) for project operations."""
-
     def __init__(self):
         """Construct a Frontend."""
         self._info_buf = ''
@@ -81,7 +80,6 @@ class Frontend(with_metaclass(ABCMeta)):
 
 class NullFrontend(Frontend):
     """A frontend that doesn't do anything."""
-
     def __init__(self):
         """Construct a null frontend."""
         super(NullFrontend, self).__init__()

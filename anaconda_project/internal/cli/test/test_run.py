@@ -56,12 +56,11 @@ def test_run_command(monkeypatch):
     def check_run(dirname):
         project_dir_disable_dedicated_env(dirname)
 
-        result = run_command(
-            dirname,
-            UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
-            conda_environment=None,
-            command_name=None,
-            extra_command_args=None)
+        result = run_command(dirname,
+                             UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                             conda_environment=None,
+                             command_name=None,
+                             extra_command_args=None)
         assert result is None
         assert 'file' in executed
         assert 'args' in executed
@@ -71,9 +70,10 @@ def test_run_command(monkeypatch):
         assert '--version' == executed['args'][1]
         assert 'bar' == executed['env']['FOO']
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 variables:
   FOO: {}
 
@@ -82,18 +82,17 @@ commands:
     conda_app_entry: python --version
 
 """
-    }, check_run)
+        }, check_run)
 
 
 def test_run_command_no_app_entry(capsys):
     def check_run_no_app_entry(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = run_command(
-            dirname,
-            UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
-            conda_environment=None,
-            command_name=None,
-            extra_command_args=None)
+        result = run_command(dirname,
+                             UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                             conda_environment=None,
+                             command_name=None,
+                             extra_command_args=None)
         assert result is None
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
@@ -122,20 +121,17 @@ def test_run_command_nonexistent_project(capsys):
 def test_run_command_failed_prepare(capsys):
     def check_run_failed_prepare(dirname):
         project_dir_disable_dedicated_env(dirname)
-        result = run_command(
-            dirname,
-            UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
-            conda_environment=None,
-            command_name=None,
-            extra_command_args=None)
+        result = run_command(dirname,
+                             UI_MODE_TEXT_ASSUME_YES_DEVELOPMENT,
+                             conda_environment=None,
+                             command_name=None,
+                             extra_command_args=None)
         assert result is None
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   - WILL_NOT_BE_SET
-"""
-    }, check_run_failed_prepare)
+"""}, check_run_failed_prepare)
 
     out, err = capsys.readouterr()
     assert out == ""
@@ -170,14 +166,12 @@ def test_main(monkeypatch, capsys):
         assert '--version' == executed['args'][1]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
 
-"""
-        }, check_run_main)
+"""}, check_run_main)
 
     out, err = capsys.readouterr()
     assert "" == out
@@ -197,14 +191,12 @@ def test_main_failed_exec(monkeypatch, capsys):
         assert 1 == result
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
 
-"""
-        }, check_run_main)
+"""}, check_run_main)
 
     out, err = capsys.readouterr()
     assert "" == out
@@ -245,14 +237,12 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
         assert '--version' == executed['args'][1]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
 
-"""
-        }, check_run_main)
+"""}, check_run_main)
 
     out, err = capsys.readouterr()
     assert "" == out
@@ -297,14 +287,12 @@ def test_run_command_extra_args(monkeypatch, capsys):
         assert '--something' == executed['args'][4]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
 
-"""
-        }, check_run_main)
+"""}, check_run_main)
 
     out, err = capsys.readouterr()
     assert "" == out
@@ -358,14 +346,12 @@ def test_run_command_verbose(monkeypatch, capsys):
         assert nl(log_lines) == err or nl(log_lines_without_conda_info) == err
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   default:
     conda_app_entry: python --version
 
-"""
-        }, check_run_main)
+"""}, check_run_main)
 
 
 def test_run_command_extra_args_with_double_hyphen(monkeypatch, capsys):
@@ -405,13 +391,11 @@ def test_run_command_extra_args_with_double_hyphen(monkeypatch, capsys):
         assert '--bar' == executed['args'][2]
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 commands:
   "--foo":
     conda_app_entry: python --version
-"""
-        }, check_run_main)
+"""}, check_run_main)
 
     out, err = capsys.readouterr()
     assert "" == out
@@ -463,9 +447,10 @@ def _test_run_command_foo(command_line, monkeypatch, capsys, file_assertion=_is_
 
         return executed['args'][1:]
 
-    return with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    return with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 commands:
   default:
     conda_app_entry: python --version def
@@ -474,7 +459,7 @@ commands:
   bar:
     conda_app_entry: python --version bar
 """
-    }, check_run_main)
+        }, check_run_main)
 
 
 def test_run_command_specify_name_after_options(monkeypatch, capsys):
@@ -534,9 +519,10 @@ def _test_run_nodefault_command(command_line, monkeypatch, capsys, file_assertio
 
         return executed['args'][1:]
 
-    return with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    return with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 commands:
   nodefault:
     conda_app_entry: python --version def
@@ -545,7 +531,7 @@ commands:
   bar:
     conda_app_entry: python --version bar
 """
-    }, check_run_main)
+        }, check_run_main)
 
 
 def test_run_command_use_default(monkeypatch, capsys):
@@ -605,9 +591,10 @@ def test_run_command_nonexistent_name(monkeypatch, capsys):
         assert "" == out
         assert "Failed to execute 'nope'" in err
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME:
-        """
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 commands:
   default:
     conda_app_entry: python --version
@@ -616,4 +603,4 @@ commands:
   bar:
     conda_app_entry: python --version bar
 """
-    }, check_run_main)
+        }, check_run_main)

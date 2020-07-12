@@ -26,7 +26,6 @@ CONDA_EXE = os.environ.get("CONDA_EXE", "conda")
 
 class CondaError(Exception):
     """General Conda error."""
-
     def __init__(self, message, json=None):
         super(CondaError, self).__init__(message)
         self.json = json
@@ -99,8 +98,7 @@ import sys
 
 sys.argv[0] = "conda"
 sys.exit(conda.cli.main())
-""".format(
-        platform=platform, bits=bits).strip() + "\n"
+""".format(platform=platform, bits=bits).strip() + "\n"
 
 
 def _get_platform_hacked_conda_command(extra_args, platform):
@@ -136,8 +134,9 @@ def _call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None
     (cmd_list, command_in_errors) = _get_platform_hacked_conda_command(extra_args, platform=platform)
 
     try:
-        (p, stdout_lines, stderr_lines) = streaming_popen.popen(
-            cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
+        (p, stdout_lines, stderr_lines) = streaming_popen.popen(cmd_list,
+                                                                stdout_callback=stdout_callback,
+                                                                stderr_callback=stderr_callback)
     except OSError as e:
         raise CondaError("failed to run: %r: %r" % (command_in_errors, repr(e)))
     errstr = "".join(stderr_lines)
@@ -355,8 +354,8 @@ def resolve_dependencies(pkgs, channels=(), platform=None):
                     results.append(found)
 
     if len(results) == 0:
-        raise CondaError(
-            "Could not understand JSON from Conda, could be a problem with this Conda version.", json=parsed)
+        raise CondaError("Could not understand JSON from Conda, could be a problem with this Conda version.",
+                         json=parsed)
 
     return results
 
@@ -505,12 +504,11 @@ def parse_spec(spec):
                 assert exact_build_string[0] == '='
                 exact_build_string = exact_build_string[1:]
 
-    return ParsedSpec(
-        name=name,
-        conda_constraint=conda_constraint,
-        pip_constraint=pip_constraint,
-        exact_version=exact_version,
-        exact_build_string=exact_build_string)
+    return ParsedSpec(name=name,
+                      conda_constraint=conda_constraint,
+                      pip_constraint=pip_constraint,
+                      exact_version=exact_version,
+                      exact_build_string=exact_build_string)
 
 
 # these are in order of preference. On pre-4.1.4 Windows,

@@ -15,7 +15,6 @@ ServiceType = namedtuple('ServiceType', ['name', 'default_variable', 'descriptio
 
 class RequirementsRegistry(object):
     """Allows creating Requirement and Provider instances."""
-
     def find_requirement_by_env_var(self, env_var, options):
         """Create a requirement instance given an environment variable name.
 

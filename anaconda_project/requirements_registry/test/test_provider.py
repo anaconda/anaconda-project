@@ -67,13 +67,12 @@ def test_provider_default_method_implementations():
     provider = UselessProvider()
     # this method is supposed to do nothing by default (ignore
     # unknown names, in particular)
-    provider.set_config_values_as_strings(
-        requirement=None,
-        environ=None,
-        local_state_file=None,
-        default_env_spec_name='default',
-        overrides=None,
-        values=dict())
+    provider.set_config_values_as_strings(requirement=None,
+                                          environ=None,
+                                          local_state_file=None,
+                                          default_env_spec_name='default',
+                                          overrides=None,
+                                          values=dict())
 
 
 def _load_env_var_requirement(dirname, env_var):
@@ -92,23 +91,20 @@ def test_env_var_provider_with_no_value():
         requirement = _load_env_var_requirement(dirname, "FOO")
         local_state_file = LocalStateFile.load_for_directory(dirname)
         status = requirement.check_status(dict(), local_state_file, 'default', UserConfigOverrides())
-        context = ProvideContext(
-            environ=dict(),
-            local_state_file=local_state_file,
-            default_env_spec_name='default',
-            status=status,
-            mode=PROVIDE_MODE_DEVELOPMENT,
-            frontend=NullFrontend())
+        context = ProvideContext(environ=dict(),
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
 
         provider.provide(requirement, context=context)
         assert 'FOO' not in context.environ
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   - FOO
-"""
-    }, check_env_var_provider)
+"""}, check_env_var_provider)
 
 
 def test_env_var_provider_with_default_value_in_project_file():
@@ -118,26 +114,23 @@ def test_env_var_provider_with_default_value_in_project_file():
         assert dict(default='from_default') == requirement.options
         local_state_file = LocalStateFile.load_for_directory(dirname)
         status = requirement.check_status(dict(), local_state_file, 'default', UserConfigOverrides())
-        context = ProvideContext(
-            environ=dict(),
-            local_state_file=local_state_file,
-            default_env_spec_name='default',
-            status=status,
-            mode=PROVIDE_MODE_DEVELOPMENT,
-            frontend=NullFrontend())
+        context = ProvideContext(environ=dict(),
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         result = provider.provide(requirement, context=context)
         assert [] == result.errors
         assert 'FOO' in context.environ
         assert 'from_default' == context.environ['FOO']
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO:
     default: from_default
-"""
-        }, check_env_var_provider)
+"""}, check_env_var_provider)
 
 
 def test_env_var_provider_with_unencrypted_default_value_in_project_file_for_encrypted_requirement():
@@ -152,26 +145,23 @@ def test_env_var_provider_with_unencrypted_default_value_in_project_file_for_enc
         local_state_file = LocalStateFile.load_for_directory(dirname)
         environ = dict()
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        context = ProvideContext(
-            environ=environ,
-            local_state_file=local_state_file,
-            default_env_spec_name='default',
-            status=status,
-            mode=PROVIDE_MODE_DEVELOPMENT,
-            frontend=NullFrontend())
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         result = provider.provide(requirement, context=context)
         assert [] == result.errors
         assert 'FOO_SECRET' in context.environ
         assert 'from_default' == context.environ['FOO_SECRET']
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO_SECRET:
     default: from_default
-"""
-        }, check_env_var_provider)
+"""}, check_env_var_provider)
 
 
 def test_env_var_provider_with_value_set_in_environment():
@@ -182,13 +172,12 @@ def test_env_var_provider_with_value_set_in_environment():
         environ = dict(FOO='from_environ')
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         assert dict(source='environ', value='from_environ') == status.analysis.config
-        context = ProvideContext(
-            environ=environ,
-            local_state_file=local_state_file,
-            default_env_spec_name='default',
-            status=status,
-            mode=PROVIDE_MODE_DEVELOPMENT,
-            frontend=NullFrontend())
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         result = provider.provide(requirement, context=context)
         assert [] == result.errors
         assert 'FOO' in context.environ
@@ -196,13 +185,11 @@ def test_env_var_provider_with_value_set_in_environment():
 
     # set a default to be sure we prefer 'environ' instead
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO:
     default: from_default
-"""
-        }, check_env_var_provider)
+"""}, check_env_var_provider)
 
 
 def test_env_var_provider_with_value_set_in_local_state():
@@ -214,13 +201,12 @@ def test_env_var_provider_with_value_set_in_local_state():
         environ = dict(FOO='from_environ')
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         assert dict(value="from_local_state", source="variables") == status.analysis.config
-        context = ProvideContext(
-            environ=environ,
-            local_state_file=local_state_file,
-            default_env_spec_name='default',
-            status=status,
-            mode=PROVIDE_MODE_DEVELOPMENT,
-            frontend=NullFrontend())
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         result = provider.provide(requirement, context=context)
         assert [] == result.errors
         assert 'FOO' in context.environ
@@ -250,13 +236,12 @@ def test_env_var_provider_with_encrypted_value_set_in_local_state():
         environ = dict(FOO_PASSWORD='from_environ')
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
         assert dict(value="from_local_state", source="variables") == status.analysis.config
-        context = ProvideContext(
-            environ=environ,
-            local_state_file=local_state_file,
-            default_env_spec_name='default',
-            status=status,
-            mode=PROVIDE_MODE_DEVELOPMENT,
-            frontend=NullFrontend())
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         result = provider.provide(requirement, context=context)
         assert [] == result.errors
         assert 'FOO_PASSWORD' in context.environ
@@ -307,12 +292,10 @@ def test_env_var_provider_configure_local_state_value():
         local_state_file_3 = LocalStateFile.load_for_directory(dirname)
         assert local_state_file_3.get_value(['variables', 'FOO']) is None
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   - FOO
-"""
-    }, check_env_var_provider_config_local_state)
+"""}, check_env_var_provider_config_local_state)
 
 
 def test_env_var_provider_configure_encrypted_value():
@@ -344,12 +327,10 @@ def test_env_var_provider_configure_encrypted_value():
 
     keyring.enable_fallback_keyring()
     try:
-        with_directory_contents_completing_project_file({
-            DEFAULT_PROJECT_FILENAME: """
+        with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   - FOO_PASSWORD
-"""
-        }, check_env_var_provider_config_local_state)
+"""}, check_env_var_provider_config_local_state)
     finally:
         keyring.disable_fallback_keyring()
 
@@ -377,12 +358,10 @@ def test_env_var_provider_configure_disabled_local_state_value():
         config = provider.read_config(requirement, environ, local_state_file, 'default', UserConfigOverrides())
         assert config == dict(source='unset', value='bar')
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   - FOO
-"""
-    }, check_env_var_provider_config_disabled_local_state)
+"""}, check_env_var_provider_config_disabled_local_state)
 
 
 def test_env_var_provider_prepare_unprepare():
@@ -397,12 +376,10 @@ def test_env_var_provider_prepare_unprepare():
             "Nothing to clean up for FOO.", ("Current environment is not in %s, no need to delete it." % dirname)
         ]
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   FOO: null
-"""
-    }, check_env_var_provider_prepare)
+"""}, check_env_var_provider_prepare)
 
 
 def test_provide_context_properties():
@@ -411,13 +388,12 @@ def test_provide_context_properties():
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = EnvVarRequirement(RequirementsRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        context = ProvideContext(
-            environ=environ,
-            local_state_file=local_state_file,
-            default_env_spec_name='default',
-            status=status,
-            mode=PROVIDE_MODE_DEVELOPMENT,
-            frontend=NullFrontend())
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         assert dict(foo='bar') == context.environ
         assert context.status is status
 
@@ -447,13 +423,12 @@ def test_provide_context_ensure_service_directory():
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = EnvVarRequirement(RequirementsRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        context = ProvideContext(
-            environ=environ,
-            local_state_file=local_state_file,
-            default_env_spec_name='default',
-            status=status,
-            mode=PROVIDE_MODE_DEVELOPMENT,
-            frontend=NullFrontend())
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         workpath = context.ensure_service_directory("foo")
         assert os.path.isdir(workpath)
         assert workpath.endswith("foo")
@@ -481,13 +456,12 @@ def test_provide_context_ensure_service_directory_cannot_create(monkeypatch):
         local_state_file = LocalStateFile.load_for_directory(dirname)
         requirement = EnvVarRequirement(RequirementsRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        context = ProvideContext(
-            environ=environ,
-            local_state_file=local_state_file,
-            default_env_spec_name='default',
-            status=status,
-            mode=PROVIDE_MODE_DEVELOPMENT,
-            frontend=NullFrontend())
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
         with pytest.raises(IOError) as excinfo:
             context.ensure_service_directory("foo")
         assert "this is not EEXIST" in repr(excinfo.value)
@@ -502,13 +476,12 @@ def test_provide_context_transform_service_run_state():
         local_state_file.set_service_run_state("myservice", dict(port=42))
         requirement = EnvVarRequirement(RequirementsRegistry(), env_var="FOO")
         status = requirement.check_status(environ, local_state_file, 'default', UserConfigOverrides())
-        context = ProvideContext(
-            environ=environ,
-            local_state_file=local_state_file,
-            default_env_spec_name='default',
-            status=status,
-            mode=PROVIDE_MODE_DEVELOPMENT,
-            frontend=NullFrontend())
+        context = ProvideContext(environ=environ,
+                                 local_state_file=local_state_file,
+                                 default_env_spec_name='default',
+                                 status=status,
+                                 mode=PROVIDE_MODE_DEVELOPMENT,
+                                 frontend=NullFrontend())
 
         def transform_it(state):
             assert 42 == state['port']

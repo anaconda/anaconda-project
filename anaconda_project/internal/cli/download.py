@@ -13,20 +13,24 @@ import anaconda_project.project_ops as project_ops
 
 
 def download_command(
-        project,
-        unpack,
-        parent_dir,
-        site,
-        username,
-        token,
+    project,
+    unpack,
+    parent_dir,
+    site,
+    username,
+    token,
 ):
     """Download project from Anaconda Cloud.
 
     Returns:
         exit code
     """
-    status = project_ops.download(
-        project, unpack=unpack, parent_dir=parent_dir, site=site, username=username, token=token)
+    status = project_ops.download(project,
+                                  unpack=unpack,
+                                  parent_dir=parent_dir,
+                                  site=site,
+                                  username=username,
+                                  token=token)
     if status:
         print(status.status_description)
         return 0

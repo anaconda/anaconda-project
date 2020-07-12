@@ -199,7 +199,7 @@ def test_read_missing_yaml_file_and_set_value():
 # yaml file
 a:
   b: 42
-""" [1:]
+"""[1:]
 
             assert expected == changed
 
@@ -227,7 +227,7 @@ def test_read_empty_yaml_file_and_set_value():
             expected = """
 a:
   b: 42
-""" [1:]
+"""[1:]
 
             assert expected == changed
 

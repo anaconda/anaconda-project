@@ -15,9 +15,11 @@ jobs:
       with:
         fetch-depth: 0
     - name: Install build dependencies
-      run: conda install -y -c defaults -c conda-forge conda-build conda-verify codecov flake8 pep257 yapf==0.25.0
+      run: conda install -y conda-build flake8 pep257 yapf==0.30.0
     - name: Verify formatting compliance
-      run: /usr/share/miniconda/bin/python scripts/run_tests.py --format-only
+      run: |
+        source /usr/share/miniconda/bin/activate
+        yapf -p -i -r anaconda_project && flake8 anaconda_project && pep257 anaconda_project
     - name: Build the package
       run: /usr/share/miniconda/bin/conda build conda.recipe --no-test
     - name: Reduce the size of the build artifact

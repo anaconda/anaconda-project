@@ -30,7 +30,6 @@ _DEFAULT_SYSTEM_REDIS_URL = "redis://%s:%d" % (_DEFAULT_SYSTEM_REDIS_HOST, _DEFA
 
 class _RedisProviderAnalysis(ProviderAnalysis):
     """Subtype of ProviderAnalysis with extra fields RedisProvider needs to track."""
-
     def __init__(self, config, missing_to_configure, missing_to_provide, existing_scoped_instance_url,
                  default_system_exists):
         super(_RedisProviderAnalysis, self).__init__(config, missing_to_configure, missing_to_provide)
@@ -41,7 +40,6 @@ class _RedisProviderAnalysis(ProviderAnalysis):
 # future: this should introduce a requirement that redis-server is on path
 class RedisProvider(EnvVarProvider):
     """Runs a project-scoped Redis process (each project needing Redis gets its own)."""
-
     @classmethod
     def _parse_port_range(cls, s):
         pieces = s.split("-")
@@ -80,9 +78,8 @@ class RedisProvider(EnvVarProvider):
         port_range_string = local_state_file.get_value(section + ['port_range'], default=default_port_range)
         parsed_port_range = self._parse_port_range(port_range_string)
         if parsed_port_range is None:
-            print(
-                "Invalid port_range '%s', should be like '%s'" % (port_range_string, default_port_range),
-                file=sys.stderr)
+            print("Invalid port_range '%s', should be like '%s'" % (port_range_string, default_port_range),
+                  file=sys.stderr)
             config['lower_port'] = default_lower_port
             config['upper_port'] = default_upper_port
         else:
@@ -148,12 +145,11 @@ class RedisProvider(EnvVarProvider):
         previous = self._previously_run_redis_url_if_alive(run_state)
         systemwide = self._can_connect_to_system_default()
 
-        return _RedisProviderAnalysis(
-            analysis.config,
-            analysis.missing_env_vars_to_configure,
-            analysis.missing_env_vars_to_provide,
-            existing_scoped_instance_url=previous,
-            default_system_exists=systemwide)
+        return _RedisProviderAnalysis(analysis.config,
+                                      analysis.missing_env_vars_to_configure,
+                                      analysis.missing_env_vars_to_provide,
+                                      existing_scoped_instance_url=previous,
+                                      default_system_exists=systemwide)
 
     def _provide_system(self, requirement, context, frontend):
         if context.status.analysis.default_system_exists:
@@ -196,8 +192,8 @@ class RedisProvider(EnvVarProvider):
                 port += 1
             if port > UPPER_PORT:
                 frontend.error(("All ports from {lower} to {upper} were in use, " +
-                                "could not start redis-server on one of them.").format(
-                                    lower=LOWER_PORT, upper=UPPER_PORT))
+                                "could not start redis-server on one of them.").format(lower=LOWER_PORT,
+                                                                                       upper=UPPER_PORT))
                 return None
 
             # be sure we don't get confused by an old log file
@@ -218,8 +214,9 @@ class RedisProvider(EnvVarProvider):
             # keep us from collected stderr. But on Unix it's kinda broken not
             # to close_fds. Hmm.
             try:
-                popen = logged_subprocess.Popen(
-                    args=command, stderr=subprocess.PIPE, env=py2_compat.env_without_unicode(context.environ))
+                popen = logged_subprocess.Popen(args=command,
+                                                stderr=subprocess.PIPE,
+                                                env=py2_compat.env_without_unicode(context.environ))
             except Exception as e:
                 frontend.error("Error executing redis-server: %s" % (str(e)))
                 return None

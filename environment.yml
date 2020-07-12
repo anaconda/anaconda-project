@@ -1,12 +1,6 @@
 # Use `conda env create environment.yml` to create a dev environment
 name: anaconda-project-dev
-channels:
-  # conda-forge is needed for pep257, but we prefer to pull
-  # from Anaconda defaults whenever possible.
-  - defaults
-  - conda-forge
 dependencies:
-  - python=3.7
   - redis
   - notebook
   - ruamel_yaml
@@ -19,10 +13,8 @@ dependencies:
   - pytest
   - pytest-cov
   - coverage
-  # Pinned just to help ensure that devs see consistent behavior
-  # when reformatting the source. We have observed that the python
-  # version can affect python behavior as well.
-  - yapf==0.25.0
+  # Pinned to ensure consistency between local and CI
+  - yapf==0.30.0
   - flake8
   - pep257
   # Optional; for multiprocessing tests
