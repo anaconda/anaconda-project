@@ -421,12 +421,7 @@ def test_list_default_command(capsys):
 
         out, err = capsys.readouterr()
         assert '' == err
-
-        expected_out = """
-app
-""".format(dirname=dirname).strip() + "\n"
-
-        assert expected_out == out
+        assert out.strip() == 'app'
 
     with_directory_contents_completing_project_file({
         DEFAULT_PROJECT_FILENAME: ("commands:\n"

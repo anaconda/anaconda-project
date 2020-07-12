@@ -33,7 +33,7 @@ class RedisRequirement(ServiceRequirement):
         if network_util.can_connect_to_socket(split.hostname, port):
             return None
         else:
-            return "Cannot connect to Redis at {url}.".format(url=url, env_var=self.env_var)
+            return "Cannot connect to Redis at {url}.".format(url=url)
 
     def check_status(self, environ, local_state_file, default_env_spec_name, overrides, latest_provide_result=None):
         """Override superclass to get our status."""
