@@ -19,7 +19,14 @@ jobs:
     - name: Verify formatting compliance
       run: |
         source /usr/share/miniconda/bin/activate
-        yapf -p -i -r anaconda_project && flake8 anaconda_project && pep257 anaconda_project
+        if ! yapf --diff --recursive anaconda_project; then
+            echo "----"
+            echo "Please run 'yapf --in-place --recursive anaconda_project'"
+            echo "locally and commit the resulting changes."
+            exit -1
+        fi
+        flake8 anaconda_project
+        pep257 anaconda_project
     - name: Build the package
       run: /usr/share/miniconda/bin/conda build conda.recipe --no-test
     - name: Reduce the size of the build artifact
