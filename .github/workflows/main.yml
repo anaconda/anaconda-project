@@ -21,7 +21,7 @@ jobs:
     - name: Build the package
       run: /usr/share/miniconda/bin/conda build conda.recipe --no-test
     - name: Reduce the size of the build artifact
-      run: rm -rf /usr/share/miniconda/conda-bld/{git_cache,work,anaconda-project*,*/.cache}
+      run: /usr/share/miniconda/bin/conda build purge all
     - name: Upload the build artifact
       uses: actions/upload-artifact@v2
       with:
@@ -53,9 +53,11 @@ jobs:
             cver: 4.6
           - pyver: 3.6
             cver: 4.8
+          - pyver: 3.6
+            cver: 4.7
           # Aggressive test backoff for Python 2
           - pyver: 2.7
-            cver: 4.6
+            cver: 4.7
           - pyver: 2.7
             cver: 4.8
     steps:
@@ -65,22 +67,25 @@ jobs:
       run: |
           [ $RUNNER_OS == Windows ] && CONDA_EXE=$CONDA/Scripts/conda.exe
           [ $RUNNER_OS == macOS ] && export CONDA_PKGS_DIRS=~/.pkgs
-          [ ${{ matrix.pyver }} == 2.7 ] && TEMPFILE=backports.tempfile
-          ${CONDA_EXE:-conda} create -y -p ./conda \
-            python=${{ matrix.pyver }} conda=${{ matrix.cver }} \
-            $TEMPFILE --file requirements.txt
+          ${CONDA_EXE:-conda} create -y -p ./conda conda=${{ matrix.cver }}
     - name: Download the build artifact
       uses: actions/download-artifact@v2
       with:
         name: package-${{ github.sha }}
         path: ./conda/conda-bld
-    - name: Install the package and run the tests
+    - name: Build the test environment
       run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then COVERAGE=98; else COVERAGE=99; fi
+          source ./conda/etc/profile.d/conda.sh
+          sed 's@python=.*@python=${{ matrix.pyver }}@' environment.yml > environment2.yml
+          conda env create environment2.yml
+          [ ${{ matrix.pyver }} == 2.7 ] && TEMPFILE=backports.tempfile
+          conda install -y -n anaconda-project-dev local::anaconda-project $TEMPFILE
+    - name: Run the tests
+      run: |
           source ./conda/etc/profile.d/conda.sh 
-          conda activate base
-          conda install -y local::anaconda-project 
+          conda activate anaconda-project-dev
+          if [ "$RUNNER_OS" == "Windows" ]; then COVERAGE=98; else COVERAGE=99; fi
           python -m pytest --pyargs -v -rfe --durations=10 \
             --cov-config .coveragerc --cov-report term-missing --no-cov-on-fail \
-            --cov-fail-under=$COVERAGE --cov-report html$COVERAGE_DIR \
+            --cov-fail-under=$COVERAGE --cov-report html:$GITHUB_WORKSPACE/htmlcov \
             --cov anaconda_project anaconda_project
