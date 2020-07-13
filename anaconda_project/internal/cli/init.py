@@ -34,8 +34,10 @@ def init_command(project_dir, assume_yes, empty_environment):
     else:
         make_directory = False
 
-    project = project_ops.create(
-        project_dir, make_directory=make_directory, fix_problems=assume_yes, empty_environment=empty_environment)
+    project = project_ops.create(project_dir,
+                                 make_directory=make_directory,
+                                 fix_problems=assume_yes,
+                                 empty_environment=empty_environment)
     if print_project_problems(project):
         return 1
     else:

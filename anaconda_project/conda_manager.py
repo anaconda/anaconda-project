@@ -61,7 +61,6 @@ class CondaManager(with_metaclass(ABCMeta)):
     ``CondaManager`` instances.
 
     """
-
     @abstractmethod
     def resolve_dependencies(self, package_specs, channels, platforms):
         """Compute the full transitive graph to install to satisfy package_specs.
@@ -151,7 +150,6 @@ class CondaManager(with_metaclass(ABCMeta)):
 
 class CondaEnvironmentDeviations(object):
     """Represents differences between actual and desired environment state."""
-
     def __init__(self,
                  summary,
                  missing_packages,
@@ -256,7 +254,6 @@ def _pretty_diff(old_list, new_list, indent):
 
 class CondaLockSet(object):
     """Represents a locked set of package versions."""
-
     def __init__(self, package_specs_by_platform, platforms, enabled=True, env_spec_hash=None, missing=False):
         """Construct a ``CondaLockSet``.
 

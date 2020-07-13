@@ -179,8 +179,9 @@ def set_properties(project, name=None, icon=None, description=None):
         return SimpleStatus(success=True, description="Project properties updated.")
     else:
         # revert to previous state (after extracting project.problems)
-        status = SimpleStatus(
-            success=False, description="Failed to set project properties.", errors=list(project.problems))
+        status = SimpleStatus(success=False,
+                              description="Failed to set project properties.",
+                              errors=list(project.problems))
         project.project_file.load()
         return status
 
@@ -191,8 +192,9 @@ def _try_requirement_without_commit(project, env_var_or_class, env_spec_name=Non
     provide_whitelist = (CondaEnvRequirement, )
     if env_var_or_class not in provide_whitelist:
         provide_whitelist = provide_whitelist + (env_var_or_class, )
-    result = prepare.prepare_without_interaction(
-        project, provide_whitelist=provide_whitelist, env_spec_name=env_spec_name)
+    result = prepare.prepare_without_interaction(project,
+                                                 provide_whitelist=provide_whitelist,
+                                                 env_spec_name=env_spec_name)
 
     status = result.status_for(env_var_or_class)
     if status is None:
@@ -221,8 +223,9 @@ def _commit_requirement_if_it_works(project, env_var_or_class, env_spec_name):
 def _apply_lock_file_then_revert(project, env_spec_name):
     project.lock_file.use_changes_without_saving()
 
-    result = prepare.prepare_without_interaction(
-        project, provide_whitelist=(CondaEnvRequirement, ), env_spec_name=env_spec_name)
+    result = prepare.prepare_without_interaction(project,
+                                                 provide_whitelist=(CondaEnvRequirement, ),
+                                                 env_spec_name=env_spec_name)
 
     status = result.status_for(CondaEnvRequirement)
     if status is None:
@@ -312,8 +315,10 @@ def remove_download(project, env_spec_name, env_var, prepare_result=None):
     requirement = requirement[0]
 
     if prepare_result is None:
-        prepare_result = prepare.prepare_without_interaction(
-            project, provide_whitelist=(requirement, ), env_spec_name=env_spec_name, mode=provide.PROVIDE_MODE_CHECK)
+        prepare_result = prepare.prepare_without_interaction(project,
+                                                             provide_whitelist=(requirement, ),
+                                                             env_spec_name=env_spec_name,
+                                                             mode=provide.PROVIDE_MODE_CHECK)
 
     assert env_spec_name is None or prepare_result.env_spec_name == env_spec_name
 
@@ -394,8 +399,9 @@ def _updating_project_lock_file(project):
                 lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)
                 lock_set.env_spec_hash = env.logical_hash
             except conda_manager.CondaManagerError as e:
-                status_holder.status = SimpleStatus(
-                    success=False, description="Error resolving dependencies for %s: %s." % (env.name, str(e)))
+                status_holder.status = SimpleStatus(success=False,
+                                                    description="Error resolving dependencies for %s: %s." %
+                                                    (env.name, str(e)))
                 return
 
             project.lock_file._set_lock_set(env.name, lock_set, all_env_names)
@@ -463,10 +469,9 @@ def _update_env_spec(project, name, packages, channels, create):
 
         if len(bad_specs) > 0:
             bad_specs_string = ", ".join(bad_specs)
-            return SimpleStatus(
-                success=False,
-                description="Could not add packages.",
-                errors=[("Bad package specifications: %s." % bad_specs_string)])
+            return SimpleStatus(success=False,
+                                description="Could not add packages.",
+                                errors=[("Bad package specifications: %s." % bad_specs_string)])
 
         # remove everything that we are changing the spec for
         def replace_spec(old):
@@ -826,8 +831,8 @@ def _update_and_lock(project, env_spec_name, update):
                 lock_set = conda.resolve_dependencies(env.conda_packages, env.channels, env.platforms)
                 lock_set.env_spec_hash = env.logical_hash
             except conda_manager.CondaManagerError as e:
-                return SimpleStatus(
-                    success=False, description="Error resolving dependencies for %s: %s." % (env.name, str(e)))
+                return SimpleStatus(success=False,
+                                    description="Error resolving dependencies for %s: %s." % (env.name, str(e)))
 
             lock_set_changed = not env.lock_set.equivalent_to(lock_set)
             hash_changed = env.lock_set.env_spec_hash is not None and \
@@ -872,8 +877,8 @@ def _update_and_lock(project, env_spec_name, update):
             elif hash_changed:
                 assert lock_set.env_spec_hash is not None
                 project.lock_file._set_lock_set_hash(env.name, lock_set.env_spec_hash)
-                project.frontend.info("Updated hash for env spec %s to %s in %s." % (env.name, lock_set.env_spec_hash,
-                                                                                     project.lock_file.basename))
+                project.frontend.info("Updated hash for env spec %s to %s in %s." %
+                                      (env.name, lock_set.env_spec_hash, project.lock_file.basename))
                 need_save = True
             else:
                 project.frontend.info("Locked dependencies for env spec %s are already up to date." % env.name)
@@ -1096,8 +1101,10 @@ def _prepare_env_prefix(project, env_spec_name, prepare_result, mode):
         env_prefix = prepare_result.env_prefix
 
     if env_prefix is None:
-        result = prepare.prepare_without_interaction(
-            project, provide_whitelist=(CondaEnvRequirement, ), env_spec_name=env_spec_name, mode=mode)
+        result = prepare.prepare_without_interaction(project,
+                                                     provide_whitelist=(CondaEnvRequirement, ),
+                                                     env_spec_name=env_spec_name,
+                                                     mode=mode)
         status = result.status_for(CondaEnvRequirement)
         assert status is not None
         if status:
@@ -1245,8 +1252,10 @@ def set_variables(project, env_spec_name, vars_and_values, prepare_result=None):
     Returns:
         ``Status`` instance
     """
-    (env_prefix, status) = _prepare_env_prefix(
-        project, env_spec_name, prepare_result, mode=provide.PROVIDE_MODE_DEVELOPMENT)
+    (env_prefix, status) = _prepare_env_prefix(project,
+                                               env_spec_name,
+                                               prepare_result,
+                                               mode=provide.PROVIDE_MODE_DEVELOPMENT)
     if env_prefix is None:
         return status
 
@@ -1423,8 +1432,9 @@ def update_command(project, name, command_type=None, command=None, new_name=None
         return failed
 
     if name not in project.commands:
-        return SimpleStatus(
-            success=False, description="Failed to update command.", errors=[("No command '%s' found." % name)])
+        return SimpleStatus(success=False,
+                            description="Failed to update command.",
+                            errors=[("No command '%s' found." % name)])
 
     command_dict = project.project_file.get_value(['commands', name])
     assert command_dict is not None
@@ -1530,14 +1540,13 @@ def add_service(project, env_spec_name, service_type, variable_name=None):
             break
 
     if found is None:
-        return SimpleStatus(
-            success=False,
-            description="Unable to add service.",
-            logs=[],
-            errors=[
-                "Unknown service type '%s', we know about: %s" % (service_type, ", ".join(
-                    map(lambda s: s.name, known_types)))
-            ])
+        return SimpleStatus(success=False,
+                            description="Unable to add service.",
+                            logs=[],
+                            errors=[
+                                "Unknown service type '%s', we know about: %s" %
+                                (service_type, ", ".join(map(lambda s: s.name, known_types)))
+                            ])
 
     if variable_name is None:
         variable_name = found.default_variable
@@ -1560,11 +1569,10 @@ def add_service(project, env_spec_name, service_type, variable_name=None):
             # else:
             requirement_already_exists = True
         else:
-            return SimpleStatus(
-                success=False,
-                description="Unable to add service.",
-                logs=[],
-                errors=["Variable %s is already in use." % variable_name])
+            return SimpleStatus(success=False,
+                                description="Unable to add service.",
+                                logs=[],
+                                errors=["Variable %s is already in use." % variable_name])
 
     if not requirement_already_exists:
         project.project_file.set_value(_path_to_service(env_spec_name, variable_name), service_type)
@@ -1598,21 +1606,19 @@ def remove_service(project, env_spec_name, variable_name, prepare_result=None):
         if req.service_type == variable_name or req.env_var == variable_name
     ]
     if not requirements:
-        return SimpleStatus(
-            success=False, description="Service '{}' not found in the project file.".format(variable_name))
+        return SimpleStatus(success=False,
+                            description="Service '{}' not found in the project file.".format(variable_name))
 
     if len(requirements) > 1:
-        return SimpleStatus(
-            success=False,
-            description=("Conflicting results, found {} matches, use list-services"
-                         " to identify which service you want to remove").format(len(requirements)))
+        return SimpleStatus(success=False,
+                            description=("Conflicting results, found {} matches, use list-services"
+                                         " to identify which service you want to remove").format(len(requirements)))
 
     if prepare_result is None:
-        prepare_result = prepare.prepare_without_interaction(
-            project,
-            provide_whitelist=(requirements[0], ),
-            env_spec_name=env_spec_name,
-            mode=provide.PROVIDE_MODE_CHECK)
+        prepare_result = prepare.prepare_without_interaction(project,
+                                                             provide_whitelist=(requirements[0], ),
+                                                             env_spec_name=env_spec_name,
+                                                             mode=provide.PROVIDE_MODE_CHECK)
 
     assert env_spec_name is None or prepare_result.env_spec_name == env_spec_name
 
@@ -1750,15 +1756,14 @@ def upload(project, private=None, site=None, username=None, token=None, suffix='
         status = archive(project, tmp_tarfile.name)
         if not status:
             return status
-        status = client._upload(
-            project,
-            tmp_tarfile.name,
-            uploaded_basename=(project.name + suffix),
-            private=private,
-            site=site,
-            username=username,
-            token=token,
-            log_level=log_level)
+        status = client._upload(project,
+                                tmp_tarfile.name,
+                                uploaded_basename=(project.name + suffix),
+                                private=private,
+                                site=site,
+                                username=username,
+                                token=token,
+                                log_level=log_level)
         return status
     finally:
         os.remove(tmp_tarfile.name)
@@ -1770,8 +1775,12 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
     Args:
         project: The project in format <username>/<project_name>
     """
-    download_status = client._download(
-        project, project_dir=project_dir, parent_dir=parent_dir, site=site, username=username, token=token)
+    download_status = client._download(project,
+                                       project_dir=project_dir,
+                                       parent_dir=parent_dir,
+                                       site=site,
+                                       username=username,
+                                       token=token)
     if unpack and download_status:
         unpack_status = unarchive(download_status.filename, project_dir=project_dir, parent_dir=parent_dir)
         if unpack_status:

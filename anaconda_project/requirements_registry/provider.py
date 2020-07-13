@@ -26,7 +26,6 @@ def _service_directory(local_state_file, relative_name):
 
 class ProvideContext(object):
     """A context passed to ``Provider.provide()`` representing state that can be modified."""
-
     def __init__(self, environ, local_state_file, default_env_spec_name, status, mode, frontend):
         """Create a ProvideContext.
 
@@ -138,8 +137,9 @@ def shutdown_service_run_state(local_state_file, service_name):
     local_state_file.save()
 
     if errors:
-        return SimpleStatus(
-            success=False, description=("Shutdown commands failed for %s." % service_name), errors=errors)
+        return SimpleStatus(success=False,
+                            description=("Shutdown commands failed for %s." % service_name),
+                            errors=errors)
     else:
         return SimpleStatus(success=True, description=("Successfully shut down %s." % service_name))
 
@@ -177,7 +177,6 @@ class ProviderAnalysis(object):
     Instances of this class are immutable, and are usually created as part of a
     ``RequirementStatus``.
     """
-
     def __init__(self, config, missing_env_vars_to_configure, missing_env_vars_to_provide):
         """Create a ProviderAnalysis."""
         self._config = deepcopy(config)  # defensive copy so we don't modify the original
@@ -205,7 +204,6 @@ class ProvideResult(object):
 
     Instances of this class are immutable, and are returned from ``provide()``.
     """
-
     def __init__(self, errors=None):
         """Create a ProvideResult."""
         if errors is None:
@@ -239,7 +237,6 @@ _empty_provide_result = ProvideResult()
 
 class Provider(with_metaclass(ABCMeta)):
     """A Provider can take some action to meet a Requirement."""
-
     @abstractmethod
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
         """Get a list of unset environment variable names that must be set before configuring this provider.
@@ -322,10 +319,9 @@ class Provider(with_metaclass(ABCMeta)):
         config = self.read_config(requirement, environ, local_state_file, default_env_spec_name, overrides)
         missing_to_configure = self.missing_env_vars_to_configure(requirement, environ, local_state_file)
         missing_to_provide = self.missing_env_vars_to_provide(requirement, environ, local_state_file)
-        return ProviderAnalysis(
-            config=config,
-            missing_env_vars_to_configure=missing_to_configure,
-            missing_env_vars_to_provide=missing_to_provide)
+        return ProviderAnalysis(config=config,
+                                missing_env_vars_to_configure=missing_to_configure,
+                                missing_env_vars_to_provide=missing_to_provide)
 
     @abstractmethod
     def provide(self, requirement, context):
@@ -367,7 +363,6 @@ class Provider(with_metaclass(ABCMeta)):
 
 class EnvVarProvider(Provider):
     """Meets a requirement for an env var by letting people set it manually."""
-
     def _local_state_override(self, requirement, local_state_file):
         return local_state_file.get_value(["variables", requirement.env_var], default=None)
 

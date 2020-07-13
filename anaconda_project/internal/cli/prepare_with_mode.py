@@ -53,8 +53,8 @@ def _interactively_fix_missing_variables(project, result):
     start_over = False
     values = dict()
     for status in can_ask_about:
-        reply = console_utils.console_input(
-            "Value for " + status.requirement.env_var + ": ", encrypted=status.requirement.encrypted)
+        reply = console_utils.console_input("Value for " + status.requirement.env_var + ": ",
+                                            encrypted=status.requirement.encrypted)
         if reply is None:
             return False  # EOF
         reply = reply.strip()
@@ -134,14 +134,13 @@ def prepare_with_ui_mode_printing_errors(project,
 
     environ = None
     while True:
-        result = prepare.prepare_without_interaction(
-            project,
-            environ,
-            mode=provide_mode,
-            env_spec_name=env_spec_name,
-            command_name=command_name,
-            command=command,
-            extra_command_args=extra_command_args)
+        result = prepare.prepare_without_interaction(project,
+                                                     environ,
+                                                     mode=provide_mode,
+                                                     env_spec_name=env_spec_name,
+                                                     command_name=command_name,
+                                                     command=command,
+                                                     extra_command_args=extra_command_args)
 
         if result.failed:
             if ask and _interactively_fix_missing_variables(project, result):

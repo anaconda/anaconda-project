@@ -45,13 +45,12 @@ test_spec = EnvSpec(name='myenv', conda_packages=['ipython', 'python=3.6'], pip_
 
 def test_current_platform_unsupported_by_env_spec(monkeypatch):
     lock_set = CondaLockSet(package_specs_by_platform={'all': []}, platforms=conda_api.default_platforms)
-    spec = EnvSpec(
-        name='myenv',
-        conda_packages=['ipython'],
-        pip_packages=['flake8'],
-        channels=[],
-        platforms=['commodore-64', 'apple-2'],
-        lock_set=lock_set)
+    spec = EnvSpec(name='myenv',
+                   conda_packages=['ipython'],
+                   pip_packages=['flake8'],
+                   channels=[],
+                   platforms=['commodore-64', 'apple-2'],
+                   lock_set=lock_set)
 
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
@@ -73,13 +72,12 @@ def test_current_platform_unsupported_by_env_spec(monkeypatch):
 
 def test_current_platform_unsupported_by_lock_set(monkeypatch):
     lock_set = CondaLockSet(package_specs_by_platform={'all': []}, platforms=[])
-    spec = EnvSpec(
-        name='myenv',
-        conda_packages=['ipython'],
-        pip_packages=['flake8'],
-        channels=[],
-        platforms=conda_api.default_platforms,
-        lock_set=lock_set)
+    spec = EnvSpec(name='myenv',
+                   conda_packages=['ipython'],
+                   pip_packages=['flake8'],
+                   channels=[],
+                   platforms=conda_api.default_platforms,
+                   lock_set=lock_set)
 
     def do_test(dirname):
         envdir = os.path.join(dirname, spec.name)
@@ -106,32 +104,37 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     assert spec.conda_packages == ('ipython', 'python=3.6')
     assert spec.pip_packages == ('pyinstrument', )
 
-    spec_with_phony_pip_package = EnvSpec(
-        name='myenv', conda_packages=['ipython'], pip_packages=['pyinstrument', 'nope_not_a_thing'], channels=[])
+    spec_with_phony_pip_package = EnvSpec(name='myenv',
+                                          conda_packages=['ipython'],
+                                          pip_packages=['pyinstrument', 'nope_not_a_thing'],
+                                          channels=[])
     assert spec_with_phony_pip_package.conda_packages == ('ipython', )
     assert spec_with_phony_pip_package.pip_packages == ('pyinstrument', 'nope_not_a_thing')
     assert spec_with_phony_pip_package.pip_package_names_set == set(('pyinstrument', 'nope_not_a_thing'))
 
     # package url is supposed to be on a nonexistent port, if it
     # causes a problem we need to mock
-    spec_with_bad_url_pip_package = EnvSpec(
-        name='myenv',
-        conda_packages=['ipython'],
-        pip_packages=['pyinstrument', 'https://127.0.0.1:24729/nope#egg=phony'],
-        channels=[])
+    spec_with_bad_url_pip_package = EnvSpec(name='myenv',
+                                            conda_packages=['ipython'],
+                                            pip_packages=['pyinstrument', 'https://127.0.0.1:24729/nope#egg=phony'],
+                                            channels=[])
     assert spec_with_bad_url_pip_package.conda_packages == ('ipython', )
     assert spec_with_bad_url_pip_package.pip_packages == ('pyinstrument', 'https://127.0.0.1:24729/nope#egg=phony')
     assert spec_with_bad_url_pip_package.pip_package_names_set == set(('pyinstrument', 'phony'))
 
-    spec_with_old_ipython = EnvSpec(
-        name='myenv', conda_packages=['ipython=5.4.1'], pip_packages=['pyinstrument'], channels=[])
+    spec_with_old_ipython = EnvSpec(name='myenv',
+                                    conda_packages=['ipython=5.4.1'],
+                                    pip_packages=['pyinstrument'],
+                                    channels=[])
     assert spec_with_old_ipython.conda_packages == ('ipython=5.4.1', )
 
     spec_with_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=['pyinstrument'], channels=[])
     assert spec_with_bokeh.conda_packages == ('bokeh', )
 
-    spec_with_bokeh_and_old_ipython = EnvSpec(
-        name='myenv', conda_packages=['bokeh', 'ipython=5.4.1'], pip_packages=['pyinstrument'], channels=[])
+    spec_with_bokeh_and_old_ipython = EnvSpec(name='myenv',
+                                              conda_packages=['bokeh', 'ipython=5.4.1'],
+                                              pip_packages=['pyinstrument'],
+                                              channels=[])
     assert spec_with_bokeh_and_old_ipython.conda_packages == (
         'bokeh',
         'ipython=5.4.1',
@@ -317,8 +320,8 @@ def test_timestamp_file_works(monkeypatch):
                 timestamp_file = os.path.getmtime(timestamp_fname)
             except Exception:
                 timestamp_file = 0
-            print("%s: timestamp file %d prefix %d diff %g" % (when, timestamp_file, newest_in_prefix,
-                                                               newest_in_prefix - timestamp_file))
+            print("%s: timestamp file %d prefix %d diff %g" %
+                  (when, timestamp_file, newest_in_prefix, newest_in_prefix - timestamp_file))
 
         print_timestamps("before env creation")
 
@@ -377,8 +380,8 @@ def test_timestamp_file_works(monkeypatch):
         inside_conda_meta = os.path.join(conda_meta_dir, "thing.txt")
         with codecs.open(inside_conda_meta, 'w', encoding='utf-8') as f:
             f.write(u"This file should change the mtime on conda-meta\n")
-        print("file inside conda-meta %d and conda-meta itself %d" % (os.path.getmtime(inside_conda_meta),
-                                                                      os.path.getmtime(conda_meta_dir)))
+        print("file inside conda-meta %d and conda-meta itself %d" %
+              (os.path.getmtime(inside_conda_meta), os.path.getmtime(conda_meta_dir)))
         os.remove(inside_conda_meta)
 
         print_timestamps("after touching conda-meta")
@@ -498,14 +501,20 @@ def test_installed_version_comparison(monkeypatch):
 
         monkeypatch.setattr('anaconda_project.internal.conda_api.installed', mock_installed)
 
-        spec_with_matching_bokeh = EnvSpec(
-            name='myenv', conda_packages=['bokeh=0.12.4=1'], pip_packages=[], channels=[])
+        spec_with_matching_bokeh = EnvSpec(name='myenv',
+                                           conda_packages=['bokeh=0.12.4=1'],
+                                           pip_packages=[],
+                                           channels=[])
         spec_with_more_vague_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh=0.12'], pip_packages=[], channels=[])
         spec_with_unspecified_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=[], channels=[])
-        spec_with_wrong_version_bokeh = EnvSpec(
-            name='myenv', conda_packages=['bokeh=0.12.3'], pip_packages=[], channels=[])
-        spec_with_wrong_build_bokeh = EnvSpec(
-            name='myenv', conda_packages=['bokeh=0.12.4=0'], pip_packages=[], channels=[])
+        spec_with_wrong_version_bokeh = EnvSpec(name='myenv',
+                                                conda_packages=['bokeh=0.12.3'],
+                                                pip_packages=[],
+                                                channels=[])
+        spec_with_wrong_build_bokeh = EnvSpec(name='myenv',
+                                              conda_packages=['bokeh=0.12.4=0'],
+                                              pip_packages=[],
+                                              channels=[])
 
         manager = DefaultCondaManager(frontend=NullFrontend())
 

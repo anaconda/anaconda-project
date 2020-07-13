@@ -23,7 +23,6 @@ from anaconda_project.frontend import _new_error_recorder
 
 class _DownloadProviderAnalysis(ProviderAnalysis):
     """Subtype of ProviderAnalysis showing if a filename exists."""
-
     def __init__(self, config, missing_to_configure, missing_to_provide, existing_filename):
         super(_DownloadProviderAnalysis, self).__init__(config, missing_to_configure, missing_to_provide)
         self.existing_filename = existing_filename
@@ -31,7 +30,6 @@ class _DownloadProviderAnalysis(ProviderAnalysis):
 
 class DownloadProvider(EnvVarProvider):
     """Downloads a file according to the specified requirement."""
-
     def read_config(self, requirement, environ, local_state_file, default_env_spec_name, overrides):
         """Override superclass to return our config."""
         config = super(DownloadProvider, self).read_config(requirement, environ, local_state_file,
@@ -70,11 +68,10 @@ class DownloadProvider(EnvVarProvider):
             existing_filename = filename
         else:
             existing_filename = None
-        return _DownloadProviderAnalysis(
-            analysis.config,
-            analysis.missing_env_vars_to_configure,
-            analysis.missing_env_vars_to_provide,
-            existing_filename=existing_filename)
+        return _DownloadProviderAnalysis(analysis.config,
+                                         analysis.missing_env_vars_to_configure,
+                                         analysis.missing_env_vars_to_provide,
+                                         existing_filename=existing_filename)
 
     def _provide_download(self, requirement, context, frontend):
         filename = context.status.analysis.existing_filename
@@ -87,8 +84,9 @@ class DownloadProvider(EnvVarProvider):
             download_filename = filename + ".zip"
         else:
             download_filename = filename
-        download = FileDownloader(
-            url=requirement.url, filename=download_filename, hash_algorithm=requirement.hash_algorithm)
+        download = FileDownloader(url=requirement.url,
+                                  filename=download_filename,
+                                  hash_algorithm=requirement.hash_algorithm)
 
         try:
             _ioloop = IOLoop(make_current=False)
@@ -152,8 +150,8 @@ class DownloadProvider(EnvVarProvider):
             elif os.path.isfile(filename):
                 os.remove(filename)
             else:
-                return SimpleStatus(
-                    success=True, description=("No need to remove %s which wasn't downloaded." % filename))
+                return SimpleStatus(success=True,
+                                    description=("No need to remove %s which wasn't downloaded." % filename))
             return SimpleStatus(success=True, description=("Removed downloaded file %s." % filename))
         except Exception as e:
             return SimpleStatus(success=False, description=("Failed to remove %s: %s." % (filename, str(e))))

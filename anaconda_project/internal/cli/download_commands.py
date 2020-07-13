@@ -23,14 +23,13 @@ def add_download(project_dir, env_spec_name, filename_variable, download_url, fi
     if (hash_algorithm or hash_value) and not bool(hash_algorithm and hash_value):
         print("Error: mutually dependant parameters: --hash-algorithm and --hash-value.", file=sys.stderr)
         return 1
-    status = project_ops.add_download(
-        project,
-        env_spec_name=env_spec_name,
-        env_var=filename_variable,
-        url=download_url,
-        filename=filename,
-        hash_algorithm=hash_algorithm,
-        hash_value=hash_value)
+    status = project_ops.add_download(project,
+                                      env_spec_name=env_spec_name,
+                                      env_var=filename_variable,
+                                      url=download_url,
+                                      filename=filename,
+                                      hash_algorithm=hash_algorithm,
+                                      hash_value=hash_value)
     if status:
         print(status.status_description)
         print("Added %s to the project file." % download_url)
@@ -47,8 +46,10 @@ def remove_download(project_dir, env_spec_name, filename_variable):
     # printing errors in the frontend.
     with project.null_frontend():
         result = prepare_without_interaction(project, env_spec_name=env_spec_name, mode=PROVIDE_MODE_CHECK)
-    status = project_ops.remove_download(
-        project, env_spec_name=env_spec_name, env_var=filename_variable, prepare_result=result)
+    status = project_ops.remove_download(project,
+                                         env_spec_name=env_spec_name,
+                                         env_var=filename_variable,
+                                         prepare_result=result)
     if status:
         print(status.status_description)
         print("Removed {} from the project file.".format(filename_variable))

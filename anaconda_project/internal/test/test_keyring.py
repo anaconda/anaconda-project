@@ -106,8 +106,8 @@ def test_unset_using_mock(monkeypatch):
     keyring.reset_keyring_module()
 
 
-expected_broken_message = (
-    "Unable to use system keyring to store passwords.\n" + "  (Exception %s a password: keyring system is busted)\n")
+expected_broken_message = ("Unable to use system keyring to store passwords.\n" +
+                           "  (Exception %s a password: keyring system is busted)\n")
 
 
 def test_set_get_using_broken(monkeypatch, capsys):

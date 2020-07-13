@@ -39,7 +39,6 @@ def _update_environ(dest, src):
 
 class PrepareResult(with_metaclass(ABCMeta)):
     """Abstract class describing the result of preparing the project to run."""
-
     def __init__(self, statuses, environ, overrides, env_spec_name):
         """Construct an abstract PrepareResult."""
         self._statuses = tuple(statuses)
@@ -128,7 +127,6 @@ class PrepareResult(with_metaclass(ABCMeta)):
 
 class PrepareSuccess(PrepareResult):
     """Class describing the successful result of preparing the project to run."""
-
     def __init__(self, statuses, command_exec_info, environ, overrides, env_spec_name):
         """Construct a PrepareSuccess indicating a successful prepare stage."""
         super(PrepareSuccess, self).__init__(statuses, environ, overrides, env_spec_name)
@@ -160,7 +158,6 @@ class PrepareSuccess(PrepareResult):
 
 class PrepareFailure(PrepareResult):
     """Class describing the failed result of preparing the project to run."""
-
     def __init__(self, statuses, errors, environ, overrides, env_spec_name=None):
         """Construct a PrepareFailure indicating a failed prepare stage."""
         super(PrepareFailure, self).__init__(statuses, environ, overrides, env_spec_name)
@@ -179,7 +176,6 @@ class PrepareFailure(PrepareResult):
 
 class ConfigurePrepareContext(object):
     """Information needed to configure a stage."""
-
     def __init__(self, environ, local_state_file, default_env_spec_name, overrides, statuses):
         """Construct a ConfigurePrepareContext."""
         self.environ = environ
@@ -194,7 +190,6 @@ class ConfigurePrepareContext(object):
 
 class PrepareStage(with_metaclass(ABCMeta)):
     """A step in the project preparation process."""
-
     @property
     @abstractmethod
     def description_of_action(self):
@@ -279,7 +274,6 @@ def _refresh_status_list(old_statuses, rechecked_statuses):
 
 class _FunctionPrepareStage(PrepareStage):
     """A stage chain where the description and the execute function are passed in to the constructor."""
-
     def __init__(self, environ, overrides, description, statuses, execute, config_context=None):
         assert isinstance(environ, dict)
         assert config_context is None or isinstance(config_context, ConfigurePrepareContext)
@@ -346,7 +340,6 @@ class _FunctionPrepareStage(PrepareStage):
 
 class _AndThenPrepareStage(PrepareStage):
     """A stage chain which runs an ``and_then`` function after it executes successfully."""
-
     def __init__(self, stage, and_then):
         self._stage = stage
         self._and_then = and_then
@@ -484,12 +477,11 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             rechecked = []
             for status in old:
                 rechecked.append(
-                    status.recheck(
-                        environ,
-                        local_state,
-                        default_env_spec_name,
-                        overrides,
-                        latest_provide_result=results_by_status.get(status)))
+                    status.recheck(environ,
+                                   local_state,
+                                   default_env_spec_name,
+                                   overrides,
+                                   latest_provide_result=results_by_status.get(status)))
 
         failed = False
         for status in rechecked:
@@ -517,12 +509,11 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
 
         if failed:
             stage.set_result(
-                PrepareFailure(
-                    statuses=result_statuses,
-                    errors=errors,
-                    environ=environ,
-                    overrides=overrides,
-                    env_spec_name=current_env_spec_name), rechecked)
+                PrepareFailure(statuses=result_statuses,
+                               errors=errors,
+                               environ=environ,
+                               overrides=overrides,
+                               env_spec_name=current_env_spec_name), rechecked)
             if keep_going_until_success:
                 return _start_over(stage.statuses_after_execute, rechecked)
             else:
@@ -533,21 +524,19 @@ def _configure_and_provide(project, environ, local_state, statuses, all_statuses
             else:
                 exec_info = command.exec_info_for_environment(environ, extra_args=extra_command_args)
             stage.set_result(
-                PrepareSuccess(
-                    statuses=result_statuses,
-                    command_exec_info=exec_info,
-                    environ=environ,
-                    overrides=overrides,
-                    env_spec_name=current_env_spec_name), rechecked)
+                PrepareSuccess(statuses=result_statuses,
+                               command_exec_info=exec_info,
+                               environ=environ,
+                               overrides=overrides,
+                               env_spec_name=current_env_spec_name), rechecked)
             return None
 
     def _start_over(updated_all_statuses, updated_statuses):
-        configure_context = ConfigurePrepareContext(
-            environ=environ,
-            local_state_file=local_state,
-            default_env_spec_name=default_env_spec_name,
-            overrides=overrides,
-            statuses=updated_statuses)
+        configure_context = ConfigurePrepareContext(environ=environ,
+                                                    local_state_file=local_state,
+                                                    default_env_spec_name=default_env_spec_name,
+                                                    overrides=overrides,
+                                                    statuses=updated_statuses)
         return _FunctionPrepareStage(environ, overrides, "Set up project.", updated_all_statuses, provide_stage,
                                      configure_context)
 
@@ -731,12 +720,11 @@ def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_unt
 
     statuses = []
     for requirement in project.requirements(overrides.env_spec_name):
-        status = requirement.check_status(
-            environ_copy,
-            local_state,
-            project.default_env_spec_name_for_command(command),
-            overrides,
-            latest_provide_result=None)
+        status = requirement.check_status(environ_copy,
+                                          local_state,
+                                          project.default_env_spec_name_for_command(command),
+                                          overrides,
+                                          latest_provide_result=None)
         statuses.append(status)
 
     return _first_stage(project, environ_copy, local_state, statuses, keep_going_until_success, mode, provide_whitelist,
@@ -785,16 +773,15 @@ def prepare_in_stages(project,
     """
     (environ_copy, overrides) = _prepare_environ_and_overrides(project, environ, env_spec_name)
 
-    return _internal_prepare_in_stages(
-        project,
-        environ_copy=environ_copy,
-        overrides=overrides,
-        keep_going_until_success=keep_going_until_success,
-        mode=mode,
-        provide_whitelist=provide_whitelist,
-        command_name=command_name,
-        command=command,
-        extra_command_args=extra_command_args)
+    return _internal_prepare_in_stages(project,
+                                       environ_copy=environ_copy,
+                                       overrides=overrides,
+                                       keep_going_until_success=keep_going_until_success,
+                                       mode=mode,
+                                       provide_whitelist=provide_whitelist,
+                                       command_name=command_name,
+                                       command=command,
+                                       extra_command_args=extra_command_args)
 
 
 def _project_problems_to_prepare_failure(project, environ, overrides, would_have_used_env_spec):
@@ -807,8 +794,11 @@ def _project_problems_to_prepare_failure(project, environ, overrides, would_have
         errors.append(error)
         project.frontend.error(error)
 
-        return PrepareFailure(
-            statuses=(), errors=errors, environ=environ, overrides=overrides, env_spec_name=would_have_used_env_spec)
+        return PrepareFailure(statuses=(),
+                              errors=errors,
+                              environ=environ,
+                              overrides=overrides,
+                              env_spec_name=would_have_used_env_spec)
     else:
         return None
 
@@ -818,8 +808,11 @@ def _prepare_failure_on_bad_command_name(project, command_name, environ, overrid
         error = ("Command name '%s' is not in %s, these names were found: %s" %
                  (command_name, project.project_file.filename, ", ".join(sorted(project.commands.keys()))))
         project.frontend.error(error)
-        return PrepareFailure(
-            statuses=(), errors=[error], environ=environ, overrides=overrides, env_spec_name=would_have_used_env_spec)
+        return PrepareFailure(statuses=(),
+                              errors=[error],
+                              environ=environ,
+                              overrides=overrides,
+                              env_spec_name=would_have_used_env_spec)
     else:
         return None
 
@@ -829,8 +822,11 @@ def _prepare_failure_on_bad_env_spec_name(project, env_spec_name, environ, overr
         error = ("Environment name '%s' is not in %s, these names were found: %s" %
                  (env_spec_name, project.project_file.filename, ", ".join(sorted(project.env_specs.keys()))))
         project.frontend.error(error)
-        return PrepareFailure(
-            statuses=(), errors=[error], environ=environ, overrides=overrides, env_spec_name=would_have_used_env_spec)
+        return PrepareFailure(statuses=(),
+                              errors=[error],
+                              environ=environ,
+                              overrides=overrides,
+                              env_spec_name=would_have_used_env_spec)
     else:
         return None
 
@@ -926,16 +922,15 @@ def prepare_without_interaction(project,
     if failure is not None:
         return failure
 
-    stage = _internal_prepare_in_stages(
-        project,
-        environ_copy=environ_copy,
-        overrides=overrides,
-        keep_going_until_success=False,
-        mode=mode,
-        provide_whitelist=provide_whitelist,
-        command_name=command_name,
-        command=command,
-        extra_command_args=extra_command_args)
+    stage = _internal_prepare_in_stages(project,
+                                        environ_copy=environ_copy,
+                                        overrides=overrides,
+                                        keep_going_until_success=False,
+                                        mode=mode,
+                                        provide_whitelist=provide_whitelist,
+                                        command_name=command_name,
+                                        command=command,
+                                        extra_command_args=extra_command_args)
 
     return prepare_execute_without_interaction(stage)
 
@@ -1021,5 +1016,6 @@ def unprepare(project, prepare_result, whitelist=None):
         for error in all_errors:
             project.frontend.error(error)
 
-        return SimpleStatus(
-            success=False, description=("Failed to clean up %s." % ", ".join(all_names)), errors=all_errors)
+        return SimpleStatus(success=False,
+                            description=("Failed to clean up %s." % ", ".join(all_names)),
+                            errors=all_errors)

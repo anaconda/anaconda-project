@@ -14,7 +14,6 @@ import anaconda_project.requirements_registry.network_util as network_util
 
 class RedisRequirement(ServiceRequirement):
     """A requirement for REDIS_URL (or another specified env var) to point to a running Redis."""
-
     @property
     def description(self):
         """Override superclass to supply our description."""
@@ -33,7 +32,7 @@ class RedisRequirement(ServiceRequirement):
         if network_util.can_connect_to_socket(split.hostname, port):
             return None
         else:
-            return "Cannot connect to Redis at {url}.".format(url=url, env_var=self.env_var)
+            return "Cannot connect to Redis at {url}.".format(url=url)
 
     def check_status(self, environ, local_state_file, default_env_spec_name, overrides, latest_provide_result=None):
         """Override superclass to get our status."""
@@ -45,12 +44,11 @@ class RedisRequirement(ServiceRequirement):
         else:
             status_description = why_not_provided
 
-        return self._create_status(
-            environ,
-            local_state_file,
-            default_env_spec_name,
-            overrides=overrides,
-            has_been_provided=has_been_provided,
-            status_description=status_description,
-            provider_class_name='RedisProvider',
-            latest_provide_result=latest_provide_result)
+        return self._create_status(environ,
+                                   local_state_file,
+                                   default_env_spec_name,
+                                   overrides=overrides,
+                                   has_been_provided=has_been_provided,
+                                   status_description=status_description,
+                                   provider_class_name='RedisProvider',
+                                   latest_provide_result=latest_provide_result)

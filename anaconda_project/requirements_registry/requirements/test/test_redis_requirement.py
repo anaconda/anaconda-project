@@ -37,8 +37,8 @@ def test_redis_url_bad_scheme():
     def check_bad_scheme(dirname):
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = RedisRequirement(registry=RequirementsRegistry(), env_var="REDIS_URL")
-        status = requirement.check_status(
-            dict(REDIS_URL="http://example.com/"), local_state, 'default', UserConfigOverrides())
+        status = requirement.check_status(dict(REDIS_URL="http://example.com/"), local_state, 'default',
+                                          UserConfigOverrides())
         assert not status
         assert "REDIS_URL value 'http://example.com/' does not have 'redis:' scheme." == status.status_description
 
@@ -64,8 +64,8 @@ def test_redis_url_cannot_connect(monkeypatch):
         local_state = LocalStateFile.load_for_directory(dirname)
         requirement = RedisRequirement(registry=RequirementsRegistry(), env_var="REDIS_URL")
         can_connect_args_list = _monkeypatch_can_connect_to_socket_fails(monkeypatch)
-        status = requirement.check_status(
-            dict(REDIS_URL="redis://example.com:1234/"), local_state, 'default', UserConfigOverrides())
+        status = requirement.check_status(dict(REDIS_URL="redis://example.com:1234/"), local_state, 'default',
+                                          UserConfigOverrides())
         assert dict(host='example.com', port=1234, timeout_seconds=0.5) == can_connect_args_list[0]
         assert dict(host='localhost', port=6379, timeout_seconds=0.5) == can_connect_args_list[1]
 

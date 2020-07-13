@@ -41,8 +41,8 @@ def unpack_zip(zip_path, target_path, errors):
                 target_is_dir = os.path.isdir(target_path)
                 if os.path.exists(target_path) and (src_is_dir != target_is_dir):
                     if src_is_dir:
-                        errors.append(
-                            "%s exists and isn't a directory, not unzipping a directory over it." % target_path)
+                        errors.append("%s exists and isn't a directory, not unzipping a directory over it." %
+                                      target_path)
                     else:
                         errors.append("%s exists and is a directory, not unzipping a plain file over it." % target_path)
                     return False

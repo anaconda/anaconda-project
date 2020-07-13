@@ -91,8 +91,9 @@ class FileDownloader(object):
 
         try:
             timeout_in_seconds = 60 * 10  # pretty long because we could be dealing with huge files
-            request = httpclient.HTTPRequest(
-                url=self._url, streaming_callback=writer, request_timeout=timeout_in_seconds)
+            request = httpclient.HTTPRequest(url=self._url,
+                                             streaming_callback=writer,
+                                             request_timeout=timeout_in_seconds)
             try:
                 response = yield self._client.fetch(request)
             except Exception as e:

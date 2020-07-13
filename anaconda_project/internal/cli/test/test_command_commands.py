@@ -206,9 +206,8 @@ def test_add_command_specifying_notebook(monkeypatch, capsys):
         assert command['env_spec'] == 'default'
         assert len(command.keys()) == 2
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n'
-    }, check_specifying_notebook)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n'},
+                                                    check_specifying_notebook)
 
 
 def test_add_command_guessing_notebook(monkeypatch, capsys):
@@ -224,10 +223,11 @@ def test_add_command_guessing_notebook(monkeypatch, capsys):
         assert command['env_spec'] == 'default'
         assert len(command.keys()) == 2
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n',
-        'file.ipynb': "{}"
-    }, check_guessing_notebook)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n',
+            'file.ipynb': "{}"
+        }, check_guessing_notebook)
 
 
 def test_add_command_with_env_spec(monkeypatch, capsys):
@@ -245,9 +245,8 @@ def test_add_command_with_env_spec(monkeypatch, capsys):
         assert command['env_spec'] == 'foo'
         assert len(command.keys()) == 2
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'
-    }, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
 
 
 def test_add_command_with_supports_http_options(monkeypatch, capsys):
@@ -266,9 +265,8 @@ def test_add_command_with_supports_http_options(monkeypatch, capsys):
         assert command['supports_http_options'] is True
         assert len(command.keys()) == 3
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'
-    }, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
 
 
 def test_add_command_with_no_supports_http_options(monkeypatch, capsys):
@@ -287,9 +285,8 @@ def test_add_command_with_no_supports_http_options(monkeypatch, capsys):
         assert command['supports_http_options'] is False
         assert len(command.keys()) == 3
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'
-    }, check)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: 'env_specs:\n  default: {}\n  foo: {}\n'}, check)
 
 
 def _test_command_command_project_problem(capsys, monkeypatch, command, append_dir=False):
@@ -325,14 +322,14 @@ def test_add_command_breaks_project(capsys, monkeypatch):
         assert (("%s: command 'test' has multiple commands in it, 'notebook' can't go with 'unix'\n" %
                  DEFAULT_PROJECT_FILENAME) + "Unable to add the command.\n") == err
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    unix: foo\n")
-    }, check_problem_add_cmd)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ("commands:\n  test:\n    unix: foo\n")},
+                                                    check_problem_add_cmd)
 
 
 def test_remove_command_with_project_file_problems(capsys, monkeypatch):
-    _test_command_command_project_problem(
-        capsys, monkeypatch, ['anaconda-project', 'remove-command', 'test'], append_dir=True)
+    _test_command_command_project_problem(capsys,
+                                          monkeypatch, ['anaconda-project', 'remove-command', 'test'],
+                                          append_dir=True)
 
 
 def test_remove_command(monkeypatch, capsys):
@@ -350,9 +347,7 @@ def test_remove_command(monkeypatch, capsys):
         assert err == ''
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: 'packages: ["notebook"]\ncommands:\n  test:\n    notebook: file.ipynb\n'
-        }, check)
+        {DEFAULT_PROJECT_FILENAME: 'packages: ["notebook"]\ncommands:\n  test:\n    notebook: file.ipynb\n'}, check)
 
 
 def test_remove_command_missing(monkeypatch, capsys):
@@ -402,16 +397,17 @@ run_notebook  Notebook test.ipynb
 
         assert expected_out == out
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: ("commands:\n"
-                                   "  default:\n"
-                                   "    bokeh_app: test.py\n"
-                                   "  run_notebook:\n"
-                                   "    notebook: test.ipynb\n"
-                                   "packages:\n"
-                                   " - bokeh\n"
-                                   " - notebook\n")
-    }, check_empty_project)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: ("commands:\n"
+                                       "  default:\n"
+                                       "    bokeh_app: test.py\n"
+                                       "  run_notebook:\n"
+                                       "    notebook: test.ipynb\n"
+                                       "packages:\n"
+                                       " - bokeh\n"
+                                       " - notebook\n")
+        }, check_empty_project)
 
 
 def test_list_default_command(capsys):
@@ -421,28 +417,25 @@ def test_list_default_command(capsys):
 
         out, err = capsys.readouterr()
         assert '' == err
+        assert out.strip() == 'app'
 
-        expected_out = """
-app
-""".format(dirname=dirname).strip() + "\n"
-
-        assert expected_out == out
-
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: ("commands:\n"
-                                   "  app:\n"
-                                   "    bokeh_app: test.py\n"
-                                   "  0second:\n"
-                                   "    notebook: test.ipynb\n"
-                                   "packages:\n"
-                                   " - bokeh\n"
-                                   " - notebook\n")
-    }, check_empty_project)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: ("commands:\n"
+                                       "  app:\n"
+                                       "    bokeh_app: test.py\n"
+                                       "  0second:\n"
+                                       "    notebook: test.ipynb\n"
+                                       "packages:\n"
+                                       " - bokeh\n"
+                                       " - notebook\n")
+        }, check_empty_project)
 
 
 def test_list_default_command_with_project_file_problems(capsys, monkeypatch):
-    _test_command_command_project_problem(
-        capsys, monkeypatch, ['anaconda-project', 'list-default-command'], append_dir=True)
+    _test_command_command_project_problem(capsys,
+                                          monkeypatch, ['anaconda-project', 'list-default-command'],
+                                          append_dir=True)
 
 
 def test_list_default_command_empty_project(capsys):

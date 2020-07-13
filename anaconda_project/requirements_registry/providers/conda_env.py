@@ -28,13 +28,12 @@ def _remove_env_path(env_path):
             problem = "Failed to remove environment files in {}: {}.".format(env_path, str(e))
             return SimpleStatus(success=False, description=problem)
     else:
-        return SimpleStatus(
-            success=True, description=("Nothing to clean up for environment '%s'." % os.path.basename(env_path)))
+        return SimpleStatus(success=True,
+                            description=("Nothing to clean up for environment '%s'." % os.path.basename(env_path)))
 
 
 class CondaEnvProvider(EnvVarProvider):
     """Provides a Conda environment."""
-
     def __init__(self):
         """Override to create our CondaManager."""
         super(CondaEnvProvider, self).__init__()
@@ -228,15 +227,14 @@ class CondaEnvProvider(EnvVarProvider):
         assert env_path is not None
         project_dir = environ['PROJECT_DIR']
         if not env_path.startswith(project_dir):
-            return SimpleStatus(
-                success=True, description=("Current environment is not in %s, no need to delete it." % project_dir))
+            return SimpleStatus(success=True,
+                                description=("Current environment is not in %s, no need to delete it." % project_dir))
 
         return _remove_env_path(env_path)
 
 
 class CondaBootstrapEnvProvider(EnvVarProvider):
     """Provides a Conda environment."""
-
     def __init__(self):
         """Override to create our CondaManager."""
         super(CondaBootstrapEnvProvider, self).__init__()
@@ -411,7 +409,7 @@ class CondaBootstrapEnvProvider(EnvVarProvider):
         assert env_path is not None
         project_dir = environ['PROJECT_DIR']
         if not env_path.startswith(project_dir):
-            return SimpleStatus(
-                success=True, description=("Current environment is not in %s, no need to delete it." % project_dir))
+            return SimpleStatus(success=True,
+                                description=("Current environment is not in %s, no need to delete it." % project_dir))
 
         return _remove_env_path(env_path)

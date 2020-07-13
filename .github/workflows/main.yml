@@ -1,0 +1,116 @@
+name: Build and test
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Retrieve the source code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install build dependencies
+      run: conda install -y -c defaults -c conda-forge conda-build flake8 pep257 yapf==0.30.0 sphinx sphinx_rtd_theme
+    - name: Verify formatting compliance
+      run: |
+        source /usr/share/miniconda/bin/activate
+        if ! yapf --diff --recursive anaconda_project; then
+            echo "----"
+            echo "Please run 'yapf --in-place --recursive anaconda_project'"
+            echo "locally and commit the resulting changes."
+            exit -1
+        fi
+        flake8 anaconda_project
+        pep257 anaconda_project
+    - name: Build the documentation
+      run: |
+        source /usr/share/miniconda/bin/activate
+        cd docs
+        make html
+    - name: Build the package
+      run: /usr/share/miniconda/bin/conda build conda.recipe --no-test
+    - name: Reduce the size of the build artifact
+      run: /usr/share/miniconda/bin/conda build purge all
+    - name: Upload the build artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: package-${{ github.sha }}
+        path: /usr/share/miniconda/conda-bld
+    - name: Clean up older artifacts
+      if: github.event_name == 'push'
+      uses: glassechidna/artifact-cleaner@master
+      with:
+        minimumAge: 86400
+  tests:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ${{ matrix.os }}
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest,ubuntu-latest,windows-latest]
+        pyver: [2.7,3.6,3.7,3.8]
+        cver: [4.6,4.7,4.8]
+        exclude:
+          # Cannot instantiate these environment for these yet
+          - pyver: 3.8
+            cver: 4.6
+          - pyver: 3.8
+            cver: 4.7
+          # Minor test back off to save build time
+          - pyver: 3.7
+            cver: 4.6
+          - pyver: 3.6
+            cver: 4.8
+          - pyver: 3.6
+            cver: 4.7
+          # Aggressive test backoff for Python 2
+          - pyver: 2.7
+            cver: 4.7
+          - pyver: 2.7
+            cver: 4.8
+          # Unexplained failures in test_download
+          - pyver: 2.7
+            os: macos-latest
+          # https://github.com/tornadoweb/tornado/issues/2804
+          - pyver: 3.8
+            os: windows-latest
+    steps:
+    - name: Retrieve the source code
+      uses: actions/checkout@v2
+    - name: Build the conda environment
+      run: |
+          [ $RUNNER_OS == Windows ] && CONDA_EXE=$CONDA/Scripts/conda.exe
+          [ $RUNNER_OS == macOS ] && export CONDA_PKGS_DIRS=~/.pkgs
+          ${CONDA_EXE:-conda} create -y -p ./conda conda=${{ matrix.cver }}
+    - name: Download the build artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: package-${{ github.sha }}
+        path: ./conda/conda-bld
+    - name: Build the test environment
+      run: |
+          source ./conda/etc/profile.d/conda.sh
+          [ ${{ matrix.pyver }} == 2.7 ] && BACKPORTS="backports.tempfile backports.functools_lru_cache"
+          conda create -y -n anaconda-project-dev python=${{ matrix.pyver }} \
+            $BACKPORTS coverage 'pytest<5' pytest-cov redis notebook bokeh \
+            keyring setuptools pip local::anaconda-project
+    - name: Run the tests
+      run: |
+          source ./conda/etc/profile.d/conda.sh 
+          conda activate anaconda-project-dev
+          if [ "$RUNNER_OS" == "Windows" ]; then COVERAGE=98; else COVERAGE=99; fi
+          pytest -vrfe --durations=10 \
+            --cov-config=.coveragerc --cov-report=term-missing \
+            --cov-fail-under=$COVERAGE --cov-report=xml:./coverage.xml \
+            --cov=anaconda_project anaconda_project
+    - uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml

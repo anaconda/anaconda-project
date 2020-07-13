@@ -28,14 +28,18 @@ def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=F
         for k, v in project.env_specs.items():
             if refresh:
                 _remove_env_path(v.path(project.directory_path))
-            result = prepare_with_ui_mode_printing_errors(
-                project, env_spec_name=k, ui_mode=ui_mode, command_name=command_name)
+            result = prepare_with_ui_mode_printing_errors(project,
+                                                          env_spec_name=k,
+                                                          ui_mode=ui_mode,
+                                                          command_name=command_name)
     else:
         if refresh:
             conda_environment = 'default' if conda_environment is None else conda_environment
             _remove_env_path(project.env_specs[conda_environment].path(project.directory_path))
-        result = prepare_with_ui_mode_printing_errors(
-            project, env_spec_name=conda_environment, ui_mode=ui_mode, command_name=command_name)
+        result = prepare_with_ui_mode_printing_errors(project,
+                                                      env_spec_name=conda_environment,
+                                                      ui_mode=ui_mode,
+                                                      command_name=command_name)
 
     return result
 

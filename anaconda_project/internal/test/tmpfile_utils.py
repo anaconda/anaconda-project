@@ -162,7 +162,6 @@ def tmp_local_state_file():
 
 def with_tmp_zipfile(contents, f):
     """Call 'f' with a zip of 'contents' and an empty working directory name."""
-
     def using_temporary_file(handle):
         with zipfile.ZipFile(handle.name, 'w') as zf:
             for key, value in contents.items():

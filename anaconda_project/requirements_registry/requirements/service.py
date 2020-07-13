@@ -15,7 +15,6 @@ from anaconda_project.internal.py2_compat import is_string
 
 class ServiceRequirement(EnvVarRequirement):
     """Abstract base class for a requirement from the services section of the project file."""
-
     @classmethod
     def _parse(cls, varname, item, problems):
         """Parse an item from the services: section."""

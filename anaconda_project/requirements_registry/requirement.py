@@ -18,7 +18,6 @@ from anaconda_project.status import Status
 
 class UserConfigOverrides(object):
     """Class containing user-forced configuration for the prepare process."""
-
     def __init__(self, inherited_env=None, env_spec_name=None):
         """Construct a set of user overrides for the prepare process."""
         self._inherited_env = inherited_env
@@ -47,7 +46,6 @@ class RequirementStatus(Status):
     would call ``recheck()`` to get a new status.
 
     """
-
     def __init__(self, requirement, has_been_provided, status_description, provider, analysis, latest_provide_result,
                  env_spec_name):
         """Construct an abstract RequirementStatus."""
@@ -136,7 +134,6 @@ class Requirement(with_metaclass(ABCMeta)):
     think of).
 
     """
-
     def __init__(self, registry, options):
         """Construct a Requirement.
 
@@ -186,14 +183,13 @@ class Requirement(with_metaclass(ABCMeta)):
         provider = self.registry.find_provider_by_class_name(provider_class_name)
         analysis = provider.analyze(self, environ, local_state_file, default_env_spec_name, overrides)
         env_spec_name = analysis.config.get('env_name', None)
-        return RequirementStatus(
-            self,
-            has_been_provided=has_been_provided,
-            status_description=status_description,
-            provider=provider,
-            analysis=analysis,
-            latest_provide_result=latest_provide_result,
-            env_spec_name=env_spec_name)
+        return RequirementStatus(self,
+                                 has_been_provided=has_been_provided,
+                                 status_description=status_description,
+                                 provider=provider,
+                                 analysis=analysis,
+                                 latest_provide_result=latest_provide_result,
+                                 env_spec_name=env_spec_name)
 
     def _create_status_from_analysis(self, environ, local_state_file, default_env_spec_name, overrides,
                                      latest_provide_result, provider_class_name, status_getter):
@@ -202,14 +198,13 @@ class Requirement(with_metaclass(ABCMeta)):
         (has_been_provided, status_description) = status_getter(environ, local_state_file, analysis)
         env_spec_name = analysis.config.get('env_name', None)
 
-        return RequirementStatus(
-            self,
-            has_been_provided=has_been_provided,
-            status_description=status_description,
-            provider=provider,
-            analysis=analysis,
-            latest_provide_result=latest_provide_result,
-            env_spec_name=env_spec_name)
+        return RequirementStatus(self,
+                                 has_been_provided=has_been_provided,
+                                 status_description=status_description,
+                                 provider=provider,
+                                 analysis=analysis,
+                                 latest_provide_result=latest_provide_result,
+                                 env_spec_name=env_spec_name)
 
     @abstractmethod
     def check_status(self, environ, local_state_file, default_env_spec_name, overrides, latest_provide_result=None):
@@ -240,7 +235,6 @@ _secret_suffixes = ('_PASSWORD', '_SECRET_KEY', '_SECRET')
 
 class EnvVarRequirement(Requirement):
     """A requirement that a certain environment variable be set."""
-
     @classmethod
     def _parse_default(self, options, env_var, problems):
         assert (isinstance(options, dict))
@@ -325,8 +319,8 @@ class EnvVarRequirement(Requirement):
             # don't include the value if it's an encrypted variable.
             return "Environment variable {env_var} is set.".format(env_var=self.env_var)
         else:
-            return "Environment variable {env_var} set to '{value}'".format(
-                env_var=self.env_var, value=self._get_value_of_env_var(environ))
+            return "Environment variable {env_var} set to '{value}'".format(env_var=self.env_var,
+                                                                            value=self._get_value_of_env_var(environ))
 
     def check_status(self, environ, local_state_file, default_env_spec_name, overrides, latest_provide_result=None):
         """Override superclass to get our status."""
@@ -338,12 +332,11 @@ class EnvVarRequirement(Requirement):
         else:
             status_description = self._unset_message()
 
-        return self._create_status(
-            environ,
-            local_state_file,
-            default_env_spec_name=default_env_spec_name,
-            overrides=overrides,
-            has_been_provided=has_been_provided,
-            status_description=status_description,
-            provider_class_name='EnvVarProvider',
-            latest_provide_result=latest_provide_result)
+        return self._create_status(environ,
+                                   local_state_file,
+                                   default_env_spec_name=default_env_spec_name,
+                                   overrides=overrides,
+                                   has_been_provided=has_been_provided,
+                                   status_description=status_description,
+                                   provider_class_name='EnvVarProvider',
+                                   latest_provide_result=latest_provide_result)

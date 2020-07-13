@@ -128,8 +128,11 @@ class _Client(object):
             data_stream, headers = binstar_requests_ext.stream_multipart(
                 s3data, files={'file': (uploaded_basename, archive_file_object)})
 
-            res = requests.post(
-                url, data=data_stream, verify=self._api.session.verify, timeout=10 * 60 * 60, headers=headers)
+            res = requests.post(url,
+                                data=data_stream,
+                                verify=self._api.session.verify,
+                                timeout=10 * 60 * 60,
+                                headers=headers)
             self._check_response(res)
         return res
 
@@ -139,11 +142,10 @@ class _Client(object):
             res = self.create(project_info=project_info, private=private)
             assert res.status_code in (200, 201)
 
-        res = self.stage(
-            project_info=project_info,
-            archive_filename=archive_filename,
-            uploaded_basename=uploaded_basename,
-            private=private)
+        res = self.stage(project_info=project_info,
+                         archive_filename=archive_filename,
+                         uploaded_basename=uploaded_basename,
+                         private=private)
         assert res.status_code in (200, 201)
         stage_info = res.json()
 
@@ -151,8 +153,10 @@ class _Client(object):
         assert 'form_data' in stage_info
         assert 'dist_id' in stage_info
 
-        res = self._put_on_s3(
-            archive_filename, uploaded_basename, url=stage_info['post_url'], s3data=stage_info['form_data'])
+        res = self._put_on_s3(archive_filename,
+                              uploaded_basename,
+                              url=stage_info['post_url'],
+                              s3data=stage_info['form_data'])
         assert res.status_code in (200, 201)
 
         res = self.commit(project_info['name'], stage_info['dist_id'])
@@ -228,8 +232,9 @@ def _upload(project,
         json = client.upload(project.publication_info(), archive_filename, uploaded_basename, private)
         return _UploadedStatus(json)
     except Unauthorized:
-        return SimpleStatus(
-            success=False, description='Please log in with the "anaconda login" command.', errors=["Not logged in."])
+        return SimpleStatus(success=False,
+                            description='Please log in with the "anaconda login" command.',
+                            errors=["Not logged in."])
     except BinstarError as e:
         return SimpleStatus(success=False, description="Upload failed.", errors=[str(e)])
 

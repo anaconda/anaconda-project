@@ -122,11 +122,10 @@ def test_remove_variable_command(monkeypatch):
         assert res == 0
         assert len(params) == 2
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: ("variables:\n"
-                                   "  foo: {default: test}\n"
-                                   "  baz: {default: bar}")
-    }, check_remove_variable)
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: ("variables:\n"
+                                    "  foo: {default: test}\n"
+                                    "  baz: {default: bar}")}, check_remove_variable)
 
 
 def test_remove_variable_project_problem(monkeypatch):
@@ -135,10 +134,8 @@ def test_remove_variable_project_problem(monkeypatch):
         res = main_remove(args)
         assert res == 1
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: ("variables:\n"
-                                   "  foo: true")
-    }, check_problem_remove)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ("variables:\n"
+                                                                                "  foo: true")}, check_problem_remove)
 
 
 def test_list_variables(capsys):
@@ -158,11 +155,12 @@ test{space}A downloaded file which is referenced by test.
 """.format(dirname=dirname, varname=PLATFORM_ENV_VAR, space="".ljust(len(PLATFORM_ENV_VAR) - 2)).strip() + "\n"
         assert out == expected_out
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: ('downloads:\n'
-                                   '  test: http://localhost:8000/test.tgz\n'
-                                   '  tes2: http://localhost:8000/train.tgz\n')
-    }, check_list_not_empty)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: ('downloads:\n'
+                                       '  test: http://localhost:8000/test.tgz\n'
+                                       '  tes2: http://localhost:8000/train.tgz\n')
+        }, check_list_not_empty)
 
 
 def test_list_variables_with_no_variables(capsys):
@@ -249,14 +247,12 @@ def test_set_variable_command(monkeypatch):
         assert res == 0
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   - foo
   - baz
   - has_two_equals
-    """
-        }, check)
+    """}, check)
 
     assert [('foo', 'bar'), ('baz', 'qux'), ('has_two_equals', 'foo=bar')] == params[1]
 
@@ -273,14 +269,12 @@ def test_set_variable_command_with_env_spec(monkeypatch):
         assert res == 0
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 variables:
   - foo
   - baz
   - has_two_equals
-    """
-        }, check)
+    """}, check)
 
     assert 'somespec' == params[0]
     assert [('foo', 'bar'), ('baz', 'qux'), ('has_two_equals', 'foo=bar')] == params[1]
@@ -320,13 +314,11 @@ def test_unset_variable_command(monkeypatch):
             ['anaconda-project', 'unset-variable', '--directory', dirname, 'foo', 'baz'])
         assert res == 0
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
 variables:
   - foo
   - baz
-    """
-    }, check)
+    """}, check)
 
     assert params[0] is None
     assert ['foo', 'baz'] == params[1]

@@ -92,7 +92,6 @@ class MultipartEncoder(object):
         https://github.com/sigmavirus24/requests-toolbelt/issues/75
 
     """
-
     def __init__(self, fields, boundary=None, encoding='utf-8'):
         #: Boundary value either passed in by the user or created
         self.boundary_value = boundary or uuid4().hex
@@ -353,7 +352,6 @@ class MultipartEncoderMonitor(object):
                           headers=headers)
 
     """
-
     def __init__(self, encoder, callback=None):
         #: Instance of the :class:`MultipartEncoder` being monitored
         self.encoder = encoder

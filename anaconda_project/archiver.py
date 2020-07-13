@@ -58,8 +58,9 @@ def _list_project(project_directory, ignore_filter, frontend):
             dirs[:] = filtered_dirs
 
             for f in files:
-                info = _FileInfo(
-                    project_directory=project_directory, filename=os.path.join(root, f), is_directory=False)
+                info = _FileInfo(project_directory=project_directory,
+                                 filename=os.path.join(root, f),
+                                 is_directory=False)
                 if not ignore_filter(info):
                     file_infos.append(info)
 
@@ -307,11 +308,13 @@ def _archive_project(project, filename):
         frontend.error("%s has been modified but not saved." % project.project_file.basename)
         return SimpleStatus(success=False, description="Can't create an archive.", errors=frontend.pop_errors())
 
-    infos = _enumerate_archive_files(
-        project.directory_path, frontend, requirements=project.union_of_requirements_for_all_envs)
+    infos = _enumerate_archive_files(project.directory_path,
+                                     frontend,
+                                     requirements=project.union_of_requirements_for_all_envs)
     if infos is None:
-        return SimpleStatus(
-            success=False, description="Failed to list files in the project.", errors=frontend.pop_errors())
+        return SimpleStatus(success=False,
+                            description="Failed to list files in the project.",
+                            errors=frontend.pop_errors())
 
     # don't put the destination zip into itself, since it's fairly natural to
     # create a archive right in the project directory
@@ -331,17 +334,15 @@ def _archive_project(project, filename):
             _write_tar(project.name, infos, tmp_filename, compression=None, frontend=frontend)
         else:
             frontend.error("Unsupported archive filename %s." % (filename))
-            return SimpleStatus(
-                success=False,
-                description="Project archive filename must be a .zip, .tar.gz, or .tar.bz2.",
-                errors=frontend.pop_errors())
+            return SimpleStatus(success=False,
+                                description="Project archive filename must be a .zip, .tar.gz, or .tar.bz2.",
+                                errors=frontend.pop_errors())
         rename_over_existing(tmp_filename, filename)
     except IOError as e:
         frontend.error(str(e))
-        return SimpleStatus(
-            success=False,
-            description=("Failed to write project archive %s." % (filename)),
-            errors=frontend.pop_errors())
+        return SimpleStatus(success=False,
+                            description=("Failed to write project archive %s." % (filename)),
+                            errors=frontend.pop_errors())
     finally:
         try:
             os.remove(tmp_filename)
@@ -490,8 +491,8 @@ def _get_source_and_dest_files(archive_path, list_files, project_dir, parent_dir
         dest = os.path.realpath(os.path.abspath(os.path.join(canonical_project_dir, remainder)))
         # this check deals with ".." in the name for example
         if not dest.startswith(canonical_project_dir):
-            frontend.error(
-                "Archive entry '%s' would end up at '%s' which is outside '%s'." % (name, dest, canonical_project_dir))
+            frontend.error("Archive entry '%s' would end up at '%s' which is outside '%s'." %
+                           (name, dest, canonical_project_dir))
             return None
         src_and_dest.append((name, dest))
 
@@ -542,24 +543,23 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None)
         extract_files = _extract_files_tar
     else:
         frontend.error("Unsupported archive filename %s, must be a .zip, .tar.gz, or .tar.bz2" % (archive_filename))
-        return SimpleStatus(
-            success=False, description=("Could not unpack archive %s" % archive_filename), errors=frontend.pop_errors())
+        return SimpleStatus(success=False,
+                            description=("Could not unpack archive %s" % archive_filename),
+                            errors=frontend.pop_errors())
 
     try:
         result = _get_source_and_dest_files(archive_filename, list_files, project_dir, parent_dir, frontend)
         if result is None:
-            return SimpleStatus(
-                success=False,
-                description=("Could not unpack archive %s" % archive_filename),
-                errors=frontend.pop_errors())
+            return SimpleStatus(success=False,
+                                description=("Could not unpack archive %s" % archive_filename),
+                                errors=frontend.pop_errors())
         (canonical_project_dir, src_and_dest) = result
 
         if len(src_and_dest) == 0:
             frontend.error("Archive does not contain a project directory or is empty.")
-            return SimpleStatus(
-                success=False,
-                description=("Could not unpack archive %s" % archive_filename),
-                errors=frontend.pop_errors())
+            return SimpleStatus(success=False,
+                                description=("Could not unpack archive %s" % archive_filename),
+                                errors=frontend.pop_errors())
 
         assert not os.path.exists(canonical_project_dir)
         os.makedirs(canonical_project_dir)
@@ -573,10 +573,9 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None)
                 pass
             raise e
 
-        return _UnarchiveStatus(
-            success=True,
-            description=("Project archive unpacked to %s." % canonical_project_dir),
-            project_dir=canonical_project_dir)
+        return _UnarchiveStatus(success=True,
+                                description=("Project archive unpacked to %s." % canonical_project_dir),
+                                project_dir=canonical_project_dir)
     except (IOError, OSError, zipfile.error, tarfile.TarError) as e:
         frontend.error(str(e))
         return SimpleStatus(success=False, description="Failed to read project archive.", errors=frontend.pop_errors())

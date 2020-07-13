@@ -51,8 +51,10 @@ ZIPPED_DATAFILE_CONTENT_NO_ZIP_SUFFIX = ("downloads:\n"
 
 
 def _download_requirement():
-    return DownloadRequirement(
-        registry=RequirementsRegistry(), env_var="DATAFILE", url='http://localhost/data.csv', filename='data.csv')
+    return DownloadRequirement(registry=RequirementsRegistry(),
+                               env_var="DATAFILE",
+                               url='http://localhost/data.csv',
+                               filename='data.csv')
 
 
 def test_prepare_and_unprepare_download(monkeypatch):
@@ -215,8 +217,9 @@ def test_provide_no_download_in_check_mode(monkeypatch):
         monkeypatch.setattr("anaconda_project.internal.http_client.FileDownloader.run", mock_downloader_run)
 
         project = project_no_dedicated_env(dirname)
-        result = prepare_without_interaction(
-            project, environ=minimal_environ(PROJECT_DIR=dirname), mode=provide.PROVIDE_MODE_CHECK)
+        result = prepare_without_interaction(project,
+                                             environ=minimal_environ(PROJECT_DIR=dirname),
+                                             mode=provide.PROVIDE_MODE_CHECK)
         assert not result
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: MIN_DATAFILE_CONTENT}, provide_download)
@@ -328,10 +331,11 @@ def test_file_exists(monkeypatch):
 
     LOCAL_STATE = ("DATAFILE:\n" "  filename: data.csv")
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT,
-        DEFAULT_LOCAL_STATE_FILENAME: LOCAL_STATE
-    }, provide_download)
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: DATAFILE_CONTENT,
+            DEFAULT_LOCAL_STATE_FILENAME: LOCAL_STATE
+        }, provide_download)
 
 
 def test_prepare_download_of_zip_file(monkeypatch):
@@ -568,9 +572,7 @@ def test_configure(monkeypatch):
         assert dict(source='variables', value='qrs.txt') == config
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 downloads:
   FOO: http://example.com/data.csv
-    """
-        }, check)
+    """}, check)
