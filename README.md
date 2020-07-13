@@ -4,14 +4,12 @@
 
 ## Build status
 
-[![Travis Build Status](https://travis-ci.org/Anaconda-Platform/anaconda-project.svg?branch=master)](https://travis-ci.org/Anaconda-Platform/anaconda-project)
-[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/ndns3i0o0xkfd1ph?svg=true)](https://ci.appveyor.com/project/mcg1969/anaconda-project-88c2h)
+[![Build status](https://github.com/Anaconda-Platform/anaconda-project/workflows/Build%20and%20test/badge.svg)](https://github.com/Anaconda-Platform/anaconda-project/actions)
 [![codecov](https://codecov.io/gh/Anaconda-Platform/anaconda-project/branch/master/graph/badge.svg)](https://codecov.io/gh/Anaconda-Platform/anaconda-project)
 
 ## Project information
 
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-
 
 ## Description
 

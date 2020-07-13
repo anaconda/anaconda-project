@@ -1,4 +1,4 @@
-name: Build and test the package
+name: Build and test
 on:
   push:
     branches:
