@@ -39,7 +39,7 @@ import anaconda_project.internal.cli.command_commands as command_commands
 
 
 def _parse_args_and_run_subcommand(argv):
-    parser = ArgumentParser(prog="anaconda-project", description="Actions on projects (runnable projects).")
+    parser = ArgumentParser(prog="conda-project", description="Actions on projects (runnable projects).")
 
     subparsers = parser.add_subparsers(help="Sub-commands")
 
@@ -57,7 +57,7 @@ def _parse_args_and_run_subcommand(argv):
                             metavar='ENVIRONMENT_SPEC_NAME',
                             default=None,
                             action='store',
-                            help="An environment spec name from anaconda-project.yml")
+                            help="An environment spec name from conda-project.yml")
 
     def add_prepare_args(preset, include_command=True):
         add_directory_arg(preset)
@@ -77,7 +77,7 @@ def _parse_args_and_run_subcommand(argv):
                 metavar='COMMAND_NAME',
                 default=None,
                 action='store',
-                help="A command name from anaconda-project.yml (env spec for this command will be used)")
+                help="A command name from conda-project.yml (env spec for this command will be used)")
 
     def add_env_spec_name_arg(preset, required):
         preset.add_argument('-n',
@@ -85,7 +85,7 @@ def _parse_args_and_run_subcommand(argv):
                             metavar='ENVIRONMENT_SPEC_NAME',
                             required=required,
                             action='store',
-                            help="Name of the environment spec from anaconda-project.yml")
+                            help="Name of the environment spec from conda-project.yml")
 
     preset = subparsers.add_parser('init', help="Initialize a directory with default project configuration")
     add_directory_arg(preset)
@@ -102,7 +102,7 @@ def _parse_args_and_run_subcommand(argv):
                         metavar='COMMAND_NAME',
                         default=None,
                         nargs='?',
-                        help="A command name from anaconda-project.yml")
+                        help="A command name from conda-project.yml")
     preset.add_argument('extra_args_for_command', metavar='EXTRA_ARGS_FOR_COMMAND', default=None, nargs=REMAINDER)
     preset.set_defaults(main=run.main)
 
@@ -187,14 +187,14 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=variable_commands.main_list)
 
     preset = subparsers.add_parser('set-variable',
-                                   help="Set an environment variable value in anaconda-project-local.yml")
+                                   help="Set an environment variable value in conda-project-local.yml")
     add_env_spec_arg(preset)
     preset.add_argument('vars_and_values', metavar='VARS_AND_VALUES', default=None, nargs=REMAINDER)
     add_directory_arg(preset)
     preset.set_defaults(main=variable_commands.main_set)
 
     preset = subparsers.add_parser('unset-variable',
-                                   help="Unset an environment variable value from anaconda-project-local.yml")
+                                   help="Unset an environment variable value from conda-project-local.yml")
     add_env_spec_arg(preset)
     add_directory_arg(preset)
     preset.add_argument('vars_to_unset', metavar='VARS_TO_UNSET', default=None, nargs=REMAINDER)
@@ -403,4 +403,4 @@ def main():
     Conda expects us to take no args and return an exit code.
     """
     details = {'version': version}
-    return handle_bugs(_main_without_bug_handler, program_name='anaconda-project', details_dict=details)
+    return handle_bugs(_main_without_bug_handler, program_name='conda-project', details_dict=details)

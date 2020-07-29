@@ -1,7 +1,7 @@
 {% set data = load_setup_py_data() %}
 
 package:
-  name: anaconda-project
+  name: conda-project
   version: {{ data.get('version') }}
 
 source:
@@ -12,7 +12,7 @@ build:
   noarch: python
   script: pip install . --no-deps --ignore-installed --no-cache-dir
   entry_points:
-    - anaconda-project = anaconda_project.cli:main
+    - conda-project = anaconda_project.cli:main
   script_env:
     - COVERAGE_DIR
 
