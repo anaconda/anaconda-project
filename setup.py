@@ -11,7 +11,7 @@ import versioneer
 import io
 
 setuptools.setup(
-    name='anaconda-project',
+    name='conda-project',
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     keywords=["conda anaconda project reproducible data science"],
@@ -34,7 +34,7 @@ setuptools.setup(
         "tqdm",
     ],
     entry_points={"console_scripts": [
-        "anaconda-project = anaconda_project.cli:main",
+        "conda-project = anaconda_project.cli:main",
     ]},
     packages=setuptools.find_packages(exclude=['contrib', 'docs', 'tests*']),
     include_package_data=True,

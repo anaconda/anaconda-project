@@ -15,7 +15,9 @@ from anaconda_project.env_spec import EnvSpec
 import anaconda_project.internal.conda_api as conda_api
 
 # these are in the order we'll use them if multiple are present
-possible_project_file_names = ("anaconda-project.yml", "anaconda-project.yaml", "kapsel.yml", "kapsel.yaml")
+possible_project_file_names = ("conda-project.yml", "conda-project.yaml",
+                               "anaconda-project.yml", "anaconda-project.yaml",
+                               "kapsel.yml", "kapsel.yaml")
 
 DEFAULT_PROJECT_FILENAME = possible_project_file_names[0]
 

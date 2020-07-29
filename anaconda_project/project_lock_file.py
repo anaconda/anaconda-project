@@ -13,7 +13,8 @@ import os
 from anaconda_project.yaml_file import YamlFile, _CommentedMap, _block_style_all_nodes
 
 # these are in the order we'll use them if multiple are present
-possible_project_lock_file_names = ("anaconda-project-lock.yml", "anaconda-project-lock.yaml")
+possible_project_lock_file_names = ("conda-project-lock.yml", "conda-project-lock.yaml",
+                                    "anaconda-project-lock.yml", "anaconda-project-lock.yaml")
 
 DEFAULT_PROJECT_LOCK_FILENAME = possible_project_lock_file_names[0]
 
