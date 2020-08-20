@@ -289,6 +289,15 @@ class CommandExecInfo(object):
         Returns:
             Does not return. May raise an OSError though.
         """
+        # make sure to add any Conda Environment variables to the environ
+        extra_variables = conda_api.get_env_vars(self._env['CONDA_PREFIX'])
+        for k, v in extra_variables.items():
+            # by only updating non-existant variables
+            # the variables in anaconda-project.yml take
+            # precedence over any that were set in the env itself.
+            if k not in self._env:
+                self._env[k] = v
+
         args = copy(self._args)
         if self._shell:
             assert len(args) == 1
@@ -522,6 +531,7 @@ class ProjectCommand(object):
         Returns:
             argv as list of strings
         """
+        print('where am i?')
         conda_var = conda_api.conda_prefix_variable()
         for name in (conda_var, 'PATH', 'PROJECT_DIR'):
             if name not in environ:
