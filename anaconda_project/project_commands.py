@@ -30,7 +30,7 @@ except ImportError:  # pragma: no cover (py2 only)
     from urllib import quote as url_quote  # pragma: no cover (py2 only)
 
 standard_command_attributes = ('description', 'env_spec', 'supports_http_options', 'bokeh_app', 'notebook', 'unix',
-                               'windows', 'conda_app_entry')
+                               'windows', 'conda_app_entry', 'variables')
 extra_command_attributes = ('registers_fusion_function', )
 all_known_command_attributes = standard_command_attributes + extra_command_attributes
 
@@ -289,14 +289,15 @@ class CommandExecInfo(object):
         Returns:
             Does not return. May raise an OSError though.
         """
+
         # make sure to add any Conda Environment variables to the environ
-        extra_variables = conda_api.get_env_vars(self._env['CONDA_PREFIX'])
-        for k, v in extra_variables.items():
+        conda_env_vars = conda_api.get_env_vars(self.env['CONDA_PREFIX'])
+        for k, v in conda_env_vars.items():
             # by only updating non-existant variables
             # the variables in anaconda-project.yml take
             # precedence over any that were set in the env itself.
-            if k not in self._env:
-                self._env[k] = v
+            if k not in self.env:
+                self.env[k] = v
 
         args = copy(self._args)
         if self._shell:
@@ -531,7 +532,6 @@ class ProjectCommand(object):
         Returns:
             argv as list of strings
         """
-        print('where am i?')
         conda_var = conda_api.conda_prefix_variable()
         for name in (conda_var, 'PATH', 'PROJECT_DIR'):
             if name not in environ:
@@ -578,6 +578,13 @@ class ProjectCommand(object):
         # more useful. This way apps can for example find
         # sample data files relative to the project
         # directory.
+
+        # add/update env vars from the command
+        cmd_vars = self._attributes.get('variables', {})
+        for k, v in cmd_vars.items():
+            if k not in environ:
+                environ[k] = v
+
         return CommandExecInfo(cwd=environ['PROJECT_DIR'], args=args, env=environ, shell=shell)
 
     def missing_packages(self, env_spec):
