@@ -290,14 +290,16 @@ class CommandExecInfo(object):
             Does not return. May raise an OSError though.
         """
 
-        # make sure to add any Conda Environment variables to the environ
-        conda_env_vars = conda_api.get_env_vars(self.env['CONDA_PREFIX'])
-        for k, v in conda_env_vars.items():
-            # by only updating non-existant variables
-            # the variables in anaconda-project.yml take
-            # precedence over any that were set in the env itself.
-            if k not in self.env:
-                self.env[k] = v
+        conda_prefix = self.env.get('CONDA_PREFIX', False)
+        if conda_prefix:
+            # make sure to add any Conda Environment variables to the environ
+            conda_env_vars = conda_api.get_env_vars(self.env['CONDA_PREFIX'])
+            for k, v in conda_env_vars.items():
+                # by only updating non-existant variables
+                # the variables in anaconda-project.yml take
+                # precedence over any that were set in the env itself.
+                if k not in self.env:
+                    self.env[k] = v
 
         args = copy(self._args)
         if self._shell:
