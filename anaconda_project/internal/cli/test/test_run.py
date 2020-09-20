@@ -335,7 +335,10 @@ def test_run_command_verbose(monkeypatch, capsys):
 
         # conda info is cached so may not be here depending on
         # which other tests run
-        log_lines = ["$ conda info --json", "$ %s --version" % executed['args'][0]]
+        log_lines = [
+            "$ %s info --json" % executed['env']['CONDA_EXE'],
+            "$ %s env config vars list -p %s --json" % (executed['env']['CONDA_EXE'], executed['env']['CONDA_PREFIX']),
+            "$ %s --version" % executed['args'][0]]
         log_lines_without_conda_info = log_lines[1:]
 
         def nl(lines):
