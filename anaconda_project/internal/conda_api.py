@@ -192,7 +192,14 @@ def get_env_vars(env_prefix):
     set using `conda env config vars`.
     """
 
-    return _call_and_parse_json(['env', 'config', 'vars', 'list', '-p', env_prefix, '--json'])
+    try:
+        return _call_and_parse_json(['env', 'config', 'vars', 'list', '-p', env_prefix, '--json'])
+    except CondaError as e:
+        # conda env config was introduced in version 4.8
+        if 'invalid choice' not in str(e).lower():
+            raise
+        else:
+            return {}
 
 
 def resolve_env_to_prefix(name_or_prefix):
