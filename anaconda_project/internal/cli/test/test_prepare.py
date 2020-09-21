@@ -258,6 +258,45 @@ env_specs:
     assert err == ""
 
 
+def test_prepare_command_default_environment_refresh(capsys, monkeypatch):
+    def mock_conda_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
+        from anaconda_project.internal.makedirs import makedirs_ok_if_exists
+        metadir = os.path.join(prefix, "conda-meta")
+        makedirs_ok_if_exists(metadir)
+        for p in pkgs:
+            pkgmeta = os.path.join(metadir, "%s-0.1-pyNN.json" % p)
+            open(pkgmeta, 'a').close()
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api.create', mock_conda_create)
+
+    def check_prepare_choose_environment(dirname):
+        default_envdir = os.path.join(dirname, "envs", "default")
+        result = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'prepare', '--directory', dirname, '--env-spec', 'default'])
+        assert result == 0
+
+        result = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'prepare', '--directory', dirname, '--env-spec', 'default', '--refresh'])
+        assert result == 0
+
+        assert os.path.isdir(default_envdir)
+
+        foo_package_json = os.path.join(default_envdir, "conda-meta", "nonexistent_foo-0.1-pyNN.json")
+        assert os.path.isfile(foo_package_json)
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
+packages:
+    - nonexistent_foo
+"""}, check_prepare_choose_environment)
+
+    out, err = capsys.readouterr()
+    assert out == ("The project is ready to run commands.\n" +
+                   "Use `anaconda-project list-commands` to see what's available.\n" +
+                   "The project is ready to run commands.\n" +
+                   "Use `anaconda-project list-commands` to see what's available.\n")
+    assert err == ""
+
+
 def test_prepare_command_choose_environment_does_not_exist(capsys):
     def check_prepare_choose_environment_does_not_exist(dirname):
         project_dir_disable_dedicated_env(dirname)

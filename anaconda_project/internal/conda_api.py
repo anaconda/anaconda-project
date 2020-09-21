@@ -189,7 +189,8 @@ def get_env_vars(env_prefix):
     """Return a dictionary of environment variables.
 
     These are Conda Environment variables that have been
-    set using `conda env config vars`."""
+    set using `conda env config vars`.
+    """
 
     return _call_and_parse_json(['env', 'config', 'vars', 'list', '-p', env_prefix, '--json'])
 
