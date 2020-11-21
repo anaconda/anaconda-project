@@ -44,13 +44,12 @@ def test_archive_command_on_simple_project(capsys):
 
         out, err = capsys.readouterr()
         assert ('  added %s\n  added %s\n  added %s\n%s\nCreated project archive %s\n' %
-                (os.path.join('some_name', '.projectignore'),
-                 os.path.join("some_name", DEFAULT_PROJECT_FILENAME),
-                 os.path.join("some_name", "foo.py"),
-                 unlocked_warning, archivefile)) == out
+                (os.path.join('some_name', '.projectignore'), os.path.join("some_name", DEFAULT_PROJECT_FILENAME),
+                 os.path.join("some_name", "foo.py"), unlocked_warning, archivefile)) == out
 
         with zipfile.ZipFile(archivefile, mode='r') as zf:
-            assert [os.path.basename(x) for x in sorted(zf.namelist())] == ['.projectignore', DEFAULT_PROJECT_FILENAME, "foo.py"]
+            assert [os.path.basename(x)
+                    for x in sorted(zf.namelist())] == ['.projectignore', DEFAULT_PROJECT_FILENAME, "foo.py"]
 
         assert os.path.exists(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))
 
