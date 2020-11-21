@@ -147,6 +147,23 @@ def test_use_existing_project_file_all_names():
         _use_existing_project_file(name)
 
 
+def _use_existing_project_file_from_subdir(relative_name):
+    def check_file(dirname):
+        filename = os.path.join(dirname, relative_name)
+        assert os.path.exists(filename)
+        subdir = os.path.join(dirname, 'subdir')
+        os.makedirs(subdir)
+        project_file = ProjectFile.load_for_directory(subdir)
+        value = project_file.get_value(["a", "b"])
+        assert "c" == value
+
+    with_directory_contents({relative_name: "a:\n  b: c"}, check_file)
+
+
+def test_use_existing_project_file_from_subdir():
+    _use_existing_project_file_from_subdir(DEFAULT_PROJECT_FILENAME)
+
+
 def test_load_directory_without_project_file():
     def read_missing_file(dirname):
         filename = os.path.join(dirname, DEFAULT_PROJECT_FILENAME)
