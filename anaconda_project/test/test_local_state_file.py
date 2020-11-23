@@ -55,6 +55,29 @@ def test_use_existing_local_state_file_all_names():
         _use_existing_local_state_file(name)
 
 
+def _use_existing_local_state_file_from_subdir(relative_name):
+    def check_file(dirname):
+        filename = os.path.join(dirname, relative_name)
+        assert os.path.exists(filename)
+        subdir = os.path.join(dirname, 'subdir')
+        os.makedirs(subdir)
+        local_state_file = LocalStateFile.load_for_directory(subdir)
+        state = local_state_file.get_service_run_state("foobar")
+        assert dict(port=42, shutdown_commands=[["foo"]]) == state
+
+    sample_run_states = SERVICE_RUN_STATES_SECTION + ":\n  foobar: { port: 42, shutdown_commands: [[\"foo\"]] }\n"
+    with_directory_contents({relative_name: sample_run_states}, check_file)
+
+
+def test_use_existing_local_state_file_default_name_from_subdir():
+    _use_existing_local_state_file(DEFAULT_LOCAL_STATE_FILENAME)
+
+
+def test_use_existing_local_state_file_all_names_from_subdir():
+    for name in possible_local_state_file_names:
+        _use_existing_local_state_file(name)
+
+
 def test_use_empty_existing_local_state_file():
     def check_file(dirname):
         filename = os.path.join(dirname, DEFAULT_LOCAL_STATE_FILENAME)

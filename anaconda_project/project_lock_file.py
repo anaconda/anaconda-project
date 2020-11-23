@@ -42,7 +42,7 @@ env_specs: {}
 '''
 
     @classmethod
-    def load_for_directory(cls, directory):
+    def load_for_directory(cls, directory, scan_parents=True):
         """Load the project lock file from the given directory, even if it doesn't exist.
 
         If the directory has no project file, the loaded
@@ -63,10 +63,20 @@ env_specs: {}
             a new ``ProjectLockFile``
 
         """
-        for name in possible_project_lock_file_names:
-            path = os.path.join(directory, name)
-            if os.path.isfile(path):
-                return ProjectLockFile(path)
+        current_dir = directory
+        while current_dir != os.path.realpath(os.path.dirname(current_dir)):
+            for name in possible_project_lock_file_names:
+                path = os.path.join(current_dir, name)
+                if os.path.isfile(path):
+                    return ProjectLockFile(path)
+
+            if scan_parents:
+                current_dir = os.path.dirname(os.path.abspath(current_dir))
+                continue
+            else:
+                break
+
+        # No file was found, create a new one
         return ProjectLockFile(os.path.join(directory, DEFAULT_PROJECT_LOCK_FILENAME))
 
     def __init__(self, filename):

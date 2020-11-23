@@ -122,10 +122,11 @@ env_specs: {}
 '''
 
     @classmethod
-    def load_for_directory(cls, directory, default_env_specs_func=_empty_default_env_spec):
+    def load_for_directory(cls, directory, default_env_specs_func=_empty_default_env_spec, scan_parents=True):
         """Load the project file from the given directory, even if it doesn't exist.
 
-        If the directory has no project file, the loaded
+        If the directory has no project file, and the project file
+        cannot be found in any parent directory, the loaded
         ``ProjectFile`` will be empty. It won't actually be
         created on disk unless you call ``save()``.
 
@@ -139,15 +140,27 @@ env_specs: {}
         Args:
             directory (str): path to the project directory
             default_env_specs_func (function makes list of EnvSpec): if file is created, use these
+            scan_parents (bool): if True search for anaconda-project.yml file in parent directories
+                                 If one is found change the directory_path to its location.
 
         Returns:
             a new ``ProjectFile``
 
         """
-        for name in possible_project_file_names:
-            path = os.path.join(directory, name)
-            if os.path.isfile(path):
-                return ProjectFile(path)
+        current_dir = directory
+        while current_dir != os.path.realpath(os.path.dirname(current_dir)):
+            for name in possible_project_file_names:
+                path = os.path.join(current_dir, name)
+                if os.path.isfile(path):
+                    return ProjectFile(path)
+
+            if scan_parents:
+                current_dir = os.path.dirname(os.path.abspath(current_dir))
+                continue
+            else:
+                break
+
+        # No file was found, create a new one
         return ProjectFile(os.path.join(directory, DEFAULT_PROJECT_FILENAME), default_env_specs_func)
 
     def __init__(self, filename, default_env_specs_func=_empty_default_env_spec):
@@ -166,6 +179,7 @@ env_specs: {}
             filename (str): path to the project file
         """
         self._default_env_specs_func = default_env_specs_func
+        self.project_dir = os.path.dirname(filename)
         super(ProjectFile, self).__init__(filename)
 
     def _fill_default_content(self, as_json):

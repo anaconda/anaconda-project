@@ -37,6 +37,7 @@ import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
 from anaconda_project.internal import plugins as plugins_api
+from anaconda_project.projectignore import add_projectignore_if_none
 
 # These strings are used in the command line options to anaconda-project,
 # so changing them has back-compat consequences.
@@ -1162,7 +1163,7 @@ class Project(object):
     file, and also anything else we've guessed by snooping around in
     the project directory or global user configuration.
     """
-    def __init__(self, directory_path, plugin_registry=None, frontend=None, must_exist=False):
+    def __init__(self, directory_path, plugin_registry=None, frontend=None, must_exist=False, scan_parents=True):
         """Construct a Project with the given directory and plugin registry.
 
         Args:
@@ -1171,6 +1172,8 @@ class Project(object):
                                                     None for default
             frontend (Frontend): the UX using this Project instance
             must_exist (bool): if True, the absence of a project file is a problem
+            scan_parents (bool): if True search for anaconda-project.yml file in parent directories
+                                 If one is found change the directory_path to its location.
         """
         self._directory_path = os.path.realpath(directory_path).rstrip(os.sep)
 
@@ -1181,8 +1184,13 @@ class Project(object):
             else:
                 return [_anaconda_default_env_spec(shared_base_spec=None)]
 
-        self._project_file = ProjectFile.load_for_directory(directory_path, default_env_specs_func=load_default_specs)
-        self._lock_file = ProjectLockFile.load_for_directory(directory_path)
+        self._project_file = ProjectFile.load_for_directory(directory_path,
+                                                            default_env_specs_func=load_default_specs,
+                                                            scan_parents=scan_parents)
+        self._directory_path = self._project_file.project_dir
+        add_projectignore_if_none(self._directory_path)
+
+        self._lock_file = ProjectLockFile.load_for_directory(self._directory_path)
         self._directory_basename = os.path.basename(self._directory_path)
         self._config_cache = _ConfigCache(self._directory_path, plugin_registry, must_exist)
         if frontend is None:

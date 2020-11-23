@@ -14,8 +14,8 @@
 .sw[nop]
 *.tmp
 *.coverage.*
-/.idea
-/.vscode
+.idea/
+.vscode/
 
 # Compiled source #
 ###################

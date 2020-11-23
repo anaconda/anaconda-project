@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function
 import os
 
 from anaconda_project import archiver
-from anaconda_project import project_ops
+from anaconda_project import projectignore
 from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.test.fake_frontend import FakeFrontend
 
@@ -88,7 +88,7 @@ def test_parse_ignore_file_with_io_error(monkeypatch):
 
 def test_parse_default_ignore_file():
     def check(dirname):
-        project_ops._add_projectignore_if_none(dirname)
+        projectignore.add_projectignore_if_none(dirname)
         ignorefile = os.path.join(dirname, ".projectignore")
         assert os.path.isfile(ignorefile)
 
