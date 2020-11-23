@@ -335,7 +335,11 @@ def test_run_command_verbose(monkeypatch, capsys):
 
         # conda info is cached so may not be here depending on
         # which other tests run
-        log_lines = ["$ conda info --json", "$ %s --version" % executed['args'][0]]
+        log_lines = [
+            "$ %s info --json" % executed['env']['CONDA_EXE'],
+            "$ %s env config vars list -p %s --json" % (executed['env']['CONDA_EXE'], executed['env']['CONDA_PREFIX']),
+            "$ %s --version" % executed['args'][0]
+        ]
         log_lines_without_conda_info = log_lines[1:]
 
         def nl(lines):
@@ -604,3 +608,236 @@ commands:
     conda_app_entry: python --version bar
 """
         }, check_run_main)
+
+
+def _test_run_with_env_vars(command_line, monkeypatch, capsys, file_assertion=_is_python_exe):
+    executed = {}
+
+    def mock_execvpe(file, args, env):
+        executed['file'] = file
+        executed['args'] = args
+        executed['env'] = env
+
+    monkeypatch.setattr('os.execvpe', mock_execvpe)
+
+    def check_run_main(dirname):
+        from os.path import abspath as real_abspath
+
+        def mock_abspath(path):
+            if path == ".":
+                return dirname
+            else:
+                return real_abspath(path)
+
+        monkeypatch.setattr('os.path.abspath', mock_abspath)
+
+        project_dir_disable_dedicated_env(dirname)
+
+        for n, i in enumerate(command_line):
+            if i == '<DIRNAME>':
+                command_line[n] = dirname
+
+        result = _parse_args_and_run_subcommand(command_line)
+
+        assert 1 == result
+        assert 'file' in executed
+        assert 'args' in executed
+        assert 'env' in executed
+        file_assertion(executed['file'])
+
+        out, err = capsys.readouterr()
+        assert "" == out
+        assert "" == err
+
+        return executed['env']
+
+    return with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
+variables:
+  MY_VARIABLE: "project"
+commands:
+  default:
+    conda_app_entry: python --version
+  foo:
+    variables:
+      MY_VARIABLE: "command"
+    conda_app_entry: python --version foo
+  bar:
+    conda_app_entry: python --version bar
+"""
+        }, check_run_main)
+
+
+def test_run_command_vars_project(monkeypatch, capsys):
+    env = _test_run_with_env_vars(['anaconda-project', 'run', '--directory', '<DIRNAME>', 'default'], monkeypatch,
+                                  capsys)
+    assert "MY_VARIABLE" in env
+    assert env['MY_VARIABLE'] == 'project'
+
+
+def test_run_command_vars_command_override_project(monkeypatch, capsys):
+    env = _test_run_with_env_vars(['anaconda-project', 'run', '--directory', '<DIRNAME>', 'foo'], monkeypatch, capsys)
+    assert "MY_VARIABLE" in env
+    assert env['MY_VARIABLE'] == 'command'
+
+
+def _test_run_with_conda_vars(command_line, monkeypatch, capsys, file_assertion=_is_python_exe, conda_env_var=False):
+    executed = {}
+
+    def mock_get_env_vars(prefix):
+        return {'MY_VARIABLE': 'conda'}
+
+    def mock_execvpe(file, args, env):
+        executed['file'] = file
+        executed['args'] = args
+        executed['env'] = env
+
+    mock_environ = deepcopy(os.environ)
+    mock_environ['CONDA_PREFIX'] = os.environ['CONDA_PREFIX']
+
+    monkeypatch.setattr('os.environ', mock_environ)
+    monkeypatch.setattr('anaconda_project.internal.conda_api.get_env_vars', mock_get_env_vars)
+    monkeypatch.setattr('os.execvpe', mock_execvpe)
+
+    def check_run_main(dirname):
+        from os.path import abspath as real_abspath
+
+        def mock_abspath(path):
+            if path == ".":
+                return dirname
+            else:
+                return real_abspath(path)
+
+        monkeypatch.setattr('os.path.abspath', mock_abspath)
+
+        project_dir_disable_dedicated_env(dirname)
+
+        for n, i in enumerate(command_line):
+            if i == '<DIRNAME>':
+                command_line[n] = dirname
+
+        result = _parse_args_and_run_subcommand(command_line)
+
+        assert 1 == result
+        assert 'file' in executed
+        assert 'args' in executed
+        assert 'env' in executed
+        file_assertion(executed['file'])
+
+        out, err = capsys.readouterr()
+        assert "" == out
+        assert "" == err
+
+        return executed['env']
+
+    return with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
+commands:
+  default:
+    conda_app_entry: python --version
+  foo:
+    variables:
+      MY_VARIABLE: "command"
+    conda_app_entry: python --version foo
+  bar:
+    conda_app_entry: python --version bar
+"""
+        }, check_run_main)
+
+
+def test_run_command_vars_conda(monkeypatch, capsys):
+    env = _test_run_with_conda_vars(['anaconda-project', 'run', '--directory', '<DIRNAME>', 'default'], monkeypatch,
+                                    capsys)
+    assert "MY_VARIABLE" in env
+    assert env['MY_VARIABLE'] == 'conda'
+
+
+def test_run_command_vars_cmd_override_conda(monkeypatch, capsys):
+    env = _test_run_with_conda_vars(['anaconda-project', 'run', '--directory', '<DIRNAME>', 'foo'], monkeypatch, capsys)
+    assert "MY_VARIABLE" in env
+    assert env['MY_VARIABLE'] == 'command'
+
+
+def _test_run_with_environ_vars(command_line, monkeypatch, capsys, file_assertion=_is_python_exe, conda_env_var=False):
+    executed = {}
+
+    def mock_get_env_vars(prefix):
+        return {'MY_VARIABLE': 'conda'}
+
+    def mock_execvpe(file, args, env):
+        executed['file'] = file
+        executed['args'] = args
+        executed['env'] = env
+
+    mock_environ = deepcopy(os.environ)
+    mock_environ['CONDA_PREFIX'] = os.environ['CONDA_PREFIX']
+    mock_environ['MY_VARIABLE'] = 'environ'
+
+    monkeypatch.setattr('os.environ', mock_environ)
+    monkeypatch.setattr('anaconda_project.internal.conda_api.get_env_vars', mock_get_env_vars)
+    monkeypatch.setattr('os.execvpe', mock_execvpe)
+
+    def check_run_main(dirname):
+        from os.path import abspath as real_abspath
+
+        def mock_abspath(path):
+            if path == ".":
+                return dirname
+            else:
+                return real_abspath(path)
+
+        monkeypatch.setattr('os.path.abspath', mock_abspath)
+
+        project_dir_disable_dedicated_env(dirname)
+
+        for n, i in enumerate(command_line):
+            if i == '<DIRNAME>':
+                command_line[n] = dirname
+
+        result = _parse_args_and_run_subcommand(command_line)
+
+        assert 1 == result
+        assert 'file' in executed
+        assert 'args' in executed
+        assert 'env' in executed
+        file_assertion(executed['file'])
+
+        out, err = capsys.readouterr()
+        assert "" == out
+        assert "" == err
+
+        return executed['env']
+
+    return with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
+commands:
+  default:
+    conda_app_entry: python --version
+  foo:
+    variables:
+      MY_VARIABLE: "command"
+    conda_app_entry: python --version foo
+  bar:
+    conda_app_entry: python --version bar
+"""
+        }, check_run_main)
+
+
+def test_run_command_vars_environ(monkeypatch, capsys):
+    env = _test_run_with_environ_vars(['anaconda-project', 'run', '--directory', '<DIRNAME>', 'default'], monkeypatch,
+                                      capsys)
+    assert "MY_VARIABLE" in env
+    assert env['MY_VARIABLE'] == 'environ'
+
+
+def test_run_command_vars_environ_override_cmd(monkeypatch, capsys):
+    env = _test_run_with_environ_vars(['anaconda-project', 'run', '--directory', '<DIRNAME>', 'foo'], monkeypatch,
+                                      capsys)
+    assert "MY_VARIABLE" in env
+    assert env['MY_VARIABLE'] == 'environ'
