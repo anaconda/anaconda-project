@@ -148,7 +148,7 @@ env_specs: {}
 
         """
         current_dir = directory
-        while not os.path.samefile(current_dir, '/'):
+        while current_dir != os.path.realpath(os.path.dirname(current_dir)):
             for name in possible_project_file_names:
                 path = os.path.join(current_dir, name)
                 if os.path.isfile(path):

@@ -39,7 +39,7 @@ __dummy__: dummy
 '''
 
     @classmethod
-    def load_for_directory(cls, directory):
+    def load_for_directory(cls, directory, scan_parents=True):
         """Load the project local state file from the given directory, even if it doesn't exist.
 
         If the directory has no project file, the loaded
@@ -58,10 +58,20 @@ __dummy__: dummy
             a new ``LocalStateFile``
 
         """
-        for name in possible_local_state_file_names:
-            path = os.path.join(directory, name)
-            if os.path.isfile(path):
-                return LocalStateFile(path)
+        current_dir = directory
+        while current_dir != os.path.realpath(os.path.dirname(current_dir)):
+            for name in possible_local_state_file_names:
+                path = os.path.join(current_dir, name)
+                if os.path.isfile(path):
+                    return LocalStateFile(path)
+
+            if scan_parents:
+                current_dir = os.path.dirname(os.path.abspath(current_dir))
+                continue
+            else:
+                break
+
+        # No file was found, create a new one
         return LocalStateFile(os.path.join(directory, DEFAULT_LOCAL_STATE_FILENAME))
 
     def set_service_run_state(self, service_name, state):

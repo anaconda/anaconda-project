@@ -127,6 +127,47 @@ def test_use_existing_lock_file_all_names():
         _use_existing_lock_file(name)
 
 
+def _use_existing_lock_file_from_subdir(relative_name):
+    def check_file(dirname):
+        filename = os.path.join(dirname, relative_name)
+        assert os.path.exists(filename)
+        subdir = os.path.join(dirname, 'subdir')
+        os.makedirs(subdir)
+        lock_file = ProjectLockFile.load_for_directory(subdir)
+        assert lock_file.get_value(['env_specs', 'foo']) is not None
+        assert lock_file.get_value(['locking_enabled']) is True
+
+    with_directory_contents(
+        {
+            relative_name:
+            """
+locking_enabled: true
+env_specs:
+  foo:
+    locked: true
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    packages:
+      all:
+        - foo=1.0=1
+  bar:
+    locked: false
+    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    packages:
+      all:
+        - bar=2.0=2
+"""
+        }, check_file)
+
+
+def test_use_existing_lock_file_default_name_from_subdir():
+    _use_existing_lock_file_from_subdir(DEFAULT_PROJECT_LOCK_FILENAME)
+
+
+def test_use_existing_lock_file_all_names_from_subdir():
+    for name in possible_project_lock_file_names:
+        _use_existing_lock_file_from_subdir(name)
+
+
 def test_get_lock_set():
     def check_file(dirname):
         filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
