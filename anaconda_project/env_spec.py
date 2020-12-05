@@ -82,6 +82,7 @@ class EnvSpec(object):
         assert inherit_from is not None
 
         self._name = name
+        self._path = None
         self._conda_packages = tuple(conda_packages)
         self._channels = tuple(channels)
         self._pip_packages = tuple(pip_packages)
@@ -308,14 +309,15 @@ class EnvSpec(object):
 
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""
-        paths = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(':')
-        paths = [path or os.path.join(project_dir, "envs") for path in paths]
-        for path in paths:
-            if os.path.isdir(os.path.join(path, 'conda-meta')):
-                break
-        else:
-            path = paths[0]
-        return os.path.join(path, self.name)
+        if self._path is None:
+            for base in os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(':'):
+                path = os.path.abspath(os.path.join(project_dir, base or "envs", self.name))
+                found = os.path.isdir(os.path.join(path, 'conda-meta'))
+                if found or self._path is None:
+                    self._path = path
+                    if found:
+                        break
+        return self._path
 
     def diff_from(self, old):
         """A string showing the comparison between this env spec and another one."""

@@ -1,0 +1,17 @@
+name: Simple Project
+description: A simple example project
+commands:
+  default:
+    unix: echo hello
+env_specs:
+  # Replace this key with the name of an environment that
+  # already exists, and set ANACONDA_PROJECT_ENVS_PATH to
+  # the parent directory of that environment. This should
+  # allow anaconda-project prepare to exit immediately.
+  nbck:
+    channels: []
+    packages: []
+platforms:
+- linux-64
+- osx-64
+- win-64
