@@ -8,8 +8,6 @@
 """The SimpleStatus type, a status with no extra info."""
 from __future__ import absolute_import
 
-import warnings
-
 from anaconda_project.status import Status
 
 
