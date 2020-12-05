@@ -1511,7 +1511,6 @@ def add_service(project, env_spec_name, service_type, variable_name=None):
     if found is None:
         return SimpleStatus(success=False,
                             description="Unable to add service.",
-                            logs=[],
                             errors=[
                                 "Unknown service type '%s', we know about: %s" %
                                 (service_type, ", ".join(map(lambda s: s.name, known_types)))
@@ -1532,7 +1531,7 @@ def add_service(project, env_spec_name, service_type, variable_name=None):
             # redis in test_project_ops.py::test_add_service_already_exists_with_different_type
             # and then uncomment the below code.
             # if requirement.service_type != service_type:
-            #    return SimpleStatus(success=False, description="Unable to add service.", logs=[],
+            #    return SimpleStatus(success=False, description="Unable to add service.",
             #                            errors=["Service %s already exists but with type '%s'" %
             #                              (variable_name, requirement.service_type)])
             # else:
@@ -1540,7 +1539,6 @@ def add_service(project, env_spec_name, service_type, variable_name=None):
         else:
             return SimpleStatus(success=False,
                                 description="Unable to add service.",
-                                logs=[],
                                 errors=["Variable %s is already in use." % variable_name])
 
     if not requirement_already_exists:

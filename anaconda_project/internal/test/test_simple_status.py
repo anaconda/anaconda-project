@@ -11,14 +11,12 @@ from anaconda_project.internal.simple_status import SimpleStatus
 
 
 def test_simple_status_properties():
-    good_status = SimpleStatus(success=True, description="quick brown fox", logs=["foo"], errors=["bar"])
+    good_status = SimpleStatus(success=True, description="quick brown fox", errors=["bar"])
     assert good_status
     assert good_status.status_description == "quick brown fox"
-    assert good_status.logs == ()
     assert good_status.errors == ["bar"]
 
-    bad_status = SimpleStatus(success=False, description="quick brown fox", logs=["foo"], errors=["bar"])
+    bad_status = SimpleStatus(success=False, description="quick brown fox", errors=["bar"])
     assert not bad_status
     assert bad_status.status_description == "quick brown fox"
-    assert bad_status.logs == ()
     assert bad_status.errors == ["bar"]
