@@ -1646,8 +1646,17 @@ def clean(project, prepare_result):
 
     cleanup_dir(os.path.join(project.directory_path, "services"))
 
-    envs_path = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', os.path.join(project.directory_path, "envs"))
-    cleanup_dir(envs_path)
+    # Clean up the environments only if they are inside the project
+    our_root = project.directory_path
+    default_path = os.path.abspath(os.path.join(our_root, "envs"))
+    for path in os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(':'):
+        apath = os.path.abspath(path) if path else default_path
+        if apath == our_root:
+            errors.append('Not removing the project directory itself.')
+        elif os.path.commonpath([apath, our_root]) == our_root:
+            cleanup_dir(apath)
+        else:
+            errors.append('Not removing external environment directory: %s' % path)
 
     if status and len(errors) == 0:
         return SimpleStatus(success=True, description="Cleaned.", errors=errors)

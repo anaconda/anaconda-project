@@ -308,9 +308,14 @@ class EnvSpec(object):
 
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""
-        envs_path = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', os.path.join(project_dir, "envs"))
-
-        return os.path.join(envs_path, self.name)
+        paths = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(':')
+        paths = [path or os.path.join(project_dir, "envs") for path in paths]
+        for path in paths:
+            if os.path.isdir(os.path.join(path, 'conda-meta')):
+                break
+        else:
+            path = paths[0]
+        return os.path.join(path, self.name)
 
     def diff_from(self, old):
         """A string showing the comparison between this env spec and another one."""
