@@ -1652,7 +1652,7 @@ def clean(project, prepare_result):
         apath = os.path.abspath(os.path.join(our_root, path or "envs"))
         if apath == our_root:
             errors.append('Not removing the project directory itself.')
-        elif os.path.commonpath([apath, our_root]) == our_root:
+        elif apath.startswith(our_root + os.sep):
             cleanup_dir(apath)
         else:
             errors.append('Not removing external environment directory: %s' % path)
