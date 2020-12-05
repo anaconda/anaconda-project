@@ -310,7 +310,7 @@ class EnvSpec(object):
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""
         if self._path is None:
-            for base in os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(':'):
+            for base in os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep):
                 path = os.path.abspath(os.path.join(project_dir, base or "envs", self.name))
                 found = os.path.isdir(os.path.join(path, 'conda-meta'))
                 if found or self._path is None:

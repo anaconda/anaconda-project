@@ -1649,8 +1649,8 @@ def clean(project, prepare_result):
     # Clean up the environments only if they are inside the project
     our_root = project.directory_path
     default_path = os.path.abspath(os.path.join(our_root, "envs"))
-    for path in os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(':'):
-        apath = os.path.abspath(path) if path else default_path
+    for path in os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep):
+        apath = os.path.abspath(os.path.join(our_root, path or "envs"))
         if apath == our_root:
             errors.append('Not removing the project directory itself.')
         elif os.path.commonpath([apath, our_root]) == our_root:
