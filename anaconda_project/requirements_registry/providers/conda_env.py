@@ -39,9 +39,8 @@ def _remove_env_path(env_path, project_dir):
 
 class CondaEnvProvider(EnvVarProvider):
     """Provides a Conda environment."""
-    def __init__(self, bootstrap=False):
+    def __init__(self):
         """Override to create our CondaManager."""
-        self._bootstrap = bootstrap
         super(CondaEnvProvider, self).__init__()
 
     def missing_env_vars_to_configure(self, requirement, environ, local_state_file):
@@ -74,7 +73,7 @@ class CondaEnvProvider(EnvVarProvider):
         # it would need a hardcoded path which the anaconda-project.yml author
         # would have no way of providing. Fortunately there's no syntax in
         # anaconda-project.yml that should result in setting a default.
-        if not self._bootstrap:
+        if default_env_spec_name == 'bootstrap-env':
             assert config['source'] != 'default'
 
         if config['source'] == 'unset':
@@ -175,7 +174,9 @@ class CondaEnvProvider(EnvVarProvider):
         env_name = context.status.analysis.config.get('env_name', context.default_env_spec_name)
         env_spec = requirement.env_specs.get(env_name)
 
-        if self._bootstrap:
+        if env_name == 'bootstrap-env':
+            # The bootstrap environment is always stored in the project directory
+            # TODO: have this respect ANACONDA_PROJECT_ENVS_PATH
             prefix = os.path.join(project_dir, 'envs', 'bootstrap-env')
         elif context.status.analysis.config['source'] == 'inherited':
             prefix = context.environ.get(requirement.env_var, None)
