@@ -8,8 +8,6 @@
 """The Status type."""
 from __future__ import absolute_import
 
-import warnings
-
 from abc import ABCMeta, abstractmethod
 
 from anaconda_project.internal.metaclass import with_metaclass
