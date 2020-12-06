@@ -537,7 +537,7 @@ def remove_env_spec(project, name):
     # that was prepared. So instead we share some code with the
     # CondaEnvProvider but don't try to go through the unprepare
     # machinery.
-    status = _remove_env_path(env_path)
+    status = _remove_env_path(env_path, project.directory_path)
     if status:
         with _updating_project_lock_file(project) as status_holder:
             project.project_file.unset_value(['env_specs', name])

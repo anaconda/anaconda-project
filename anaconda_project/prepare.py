@@ -23,6 +23,7 @@ from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPME
 from anaconda_project.requirements_registry.provider import ProvideContext
 from anaconda_project.requirements_registry.requirement import Requirement, EnvVarRequirement, UserConfigOverrides
 from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.providers.conda_env import _remove_env_path
 
 
 def _update_environ(dest, src):
@@ -702,7 +703,7 @@ def _prepare_environ_and_overrides(project, environ=None, env_spec_name=None):
 
 
 def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_until_success, mode, provide_whitelist,
-                                command_name, command, extra_command_args):
+                                command_name, command, extra_command_args, refresh):
     assert not project.problems
     if mode not in _all_provide_modes:
         raise ValueError("invalid provide mode " + mode)
@@ -715,14 +716,23 @@ def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_unt
         command = project.command_for_name(command_name)
         # at this point, "command" is only None if there are no
         # commands for this project.
+    default_env_name = project.default_env_spec_name_for_command(command)
 
-    local_state = LocalStateFile.load_for_directory(project.directory_path)
+    our_root = project.directory_path
+    local_state = LocalStateFile.load_for_directory(our_root)
+
+    if refresh:
+        # To do: move the refresh flag into the provider somehow. Thought: add
+        # the refresh flag to overrides, and have the conda env requirements
+        # engine interpret that and schedule a refresh and create.
+        env_name = overrides.env_spec_name or default_env_name
+        _remove_env_path(project.env_specs[env_name].path(our_root), our_root)
 
     statuses = []
     for requirement in project.requirements(overrides.env_spec_name):
         status = requirement.check_status(environ_copy,
                                           local_state,
-                                          project.default_env_spec_name_for_command(command),
+                                          default_env_name,
                                           overrides,
                                           latest_provide_result=None)
         statuses.append(status)
@@ -739,7 +749,8 @@ def prepare_in_stages(project,
                       env_spec_name=None,
                       command_name=None,
                       command=None,
-                      extra_command_args=None):
+                      extra_command_args=None,
+                      refresh=False):
     """Get a chain of all steps needed to get a project ready to execute.
 
     This function does not immediately do anything; it returns a
@@ -766,6 +777,7 @@ def prepare_in_stages(project,
         command_name (str): which named command to choose from the project, None for default
         command (ProjectCommand): command object, None for default
         extra_command_args (list of str): extra args for the command we prepare
+        refresh (bool): do a full reinstall of the environment
 
     Returns:
         The first ``PrepareStage`` in the chain of steps.
@@ -781,7 +793,8 @@ def prepare_in_stages(project,
                                        provide_whitelist=provide_whitelist,
                                        command_name=command_name,
                                        command=command,
-                                       extra_command_args=extra_command_args)
+                                       extra_command_args=extra_command_args,
+                                       refresh=refresh)
 
 
 def _project_problems_to_prepare_failure(project, environ, overrides, would_have_used_env_spec):
@@ -870,7 +883,8 @@ def prepare_without_interaction(project,
                                 env_spec_name=None,
                                 command_name=None,
                                 command=None,
-                                extra_command_args=None):
+                                extra_command_args=None,
+                                refresh=False):
     """Prepare a project to run one of its commands.
 
     This method doesn't ask the user any questions, so the
@@ -930,7 +944,8 @@ def prepare_without_interaction(project,
                                         provide_whitelist=provide_whitelist,
                                         command_name=command_name,
                                         command=command,
-                                        extra_command_args=extra_command_args)
+                                        extra_command_args=extra_command_args,
+                                        refresh=refresh)
 
     return prepare_execute_without_interaction(stage)
 
