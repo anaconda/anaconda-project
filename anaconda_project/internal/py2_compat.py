@@ -10,7 +10,7 @@ from __future__ import absolute_import, print_function
 import platform
 import sys
 
-try:
+try:  # pragma: no cover
     from collections.abc import Mapping, Sequence
 except ImportError:
     from collections import Mapping, Sequence

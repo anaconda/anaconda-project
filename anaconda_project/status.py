@@ -34,12 +34,6 @@ class Status(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @property
-    def logs(self):
-        """Get logs relevant to the status."""
-        warnings.warn("Provide a Frontend object instead of using status.logs", DeprecationWarning)
-        return ()
-
-    @property
     @abstractmethod
     def errors(self):
         """Get error logs relevant to the status.
