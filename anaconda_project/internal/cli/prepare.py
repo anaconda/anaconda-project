@@ -21,26 +21,22 @@ def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=F
         Prepare result (can be treated as True on success).
     """
     project = load_project(project_dir)
+    project_dir = project.directory_path
     if console_utils.print_project_problems(project):
         return False
     if all:
-        result = []
-        for k, v in project.env_specs.items():
-            if refresh:
-                _remove_env_path(v.path(project.directory_path))
-            result = prepare_with_ui_mode_printing_errors(project,
-                                                          env_spec_name=k,
-                                                          ui_mode=ui_mode,
-                                                          command_name=command_name)
+        specs = project.env_specs
     else:
+        envname = 'default' if conda_environment is None else conda_environment
+        specs = {envname: project.env_specs[envname]}
+    result = []
+    for k, v in specs.items():
         if refresh:
-            conda_environment = 'default' if conda_environment is None else conda_environment
-            _remove_env_path(project.env_specs[conda_environment].path(project.directory_path))
+            _remove_env_path(v.path(project_dir), project_dir)
         result = prepare_with_ui_mode_printing_errors(project,
-                                                      env_spec_name=conda_environment,
+                                                      env_spec_name=k,
                                                       ui_mode=ui_mode,
                                                       command_name=command_name)
-
     return result
 
 

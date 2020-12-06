@@ -537,7 +537,7 @@ def remove_env_spec(project, name):
     # that was prepared. So instead we share some code with the
     # CondaEnvProvider but don't try to go through the unprepare
     # machinery.
-    status = _remove_env_path(env_path)
+    status = _remove_env_path(env_path, project.directory_path)
     if status:
         with _updating_project_lock_file(project) as status_holder:
             project.project_file.unset_value(['env_specs', name])
@@ -1634,29 +1634,27 @@ def clean(project, prepare_result):
         errors.extend([status.status_description])
         project.frontend.error(status.status_description)
 
+    our_root = project.directory_path
+
     # we also nuke any "debris" from non-current choices, like old
     # environments or services
     def cleanup_dir(dirname):
-        if os.path.isdir(dirname):
-            project.frontend.info("Removing %s." % dirname)
+        dirname = os.path.expanduser(dirname)
+        dirname = os.path.abspath(os.path.join(our_root, dirname))
+        if dirname.startswith(our_root + os.sep) and os.path.isdir(dirname):
+            shortname = dirname[len(our_root)+1:]
+            project.frontend.info("Removing %s" % shortname)
             try:
                 shutil.rmtree(dirname)
             except Exception as e:
-                errors.append("Error removing %s: %s." % (dirname, str(e)))
+                errors.append("Error removing %s: %s" % (shortname, str(e)))
 
-    cleanup_dir(os.path.join(project.directory_path, "services"))
-
-    # Clean up the environments only if they are inside the project
-    our_root = project.directory_path
+    cleanup_dir('services')
+    cleanup_dir('envs')
+    # Clean up the custom environment directories only if they are inside the project
     for base in os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep):
-        base = os.path.expanduser(base) if base else 'envs'
-        apath = os.path.abspath(os.path.join(our_root, base))
-        if apath == our_root:
-            errors.append('Not removing the project directory itself.')
-        elif apath.startswith(our_root + os.sep):
-            cleanup_dir(apath)
-        else:
-            errors.append('Not removing external environment directory: %s' % base)
+        if base and base != 'envs':
+            cleanup_dir(base)
 
     if status and len(errors) == 0:
         return SimpleStatus(success=True, description="Cleaned.", errors=errors)

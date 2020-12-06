@@ -188,7 +188,7 @@ def test_remove_env_spec_fails(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == out
-        assert ("Failed to remove environment files in %s: Error.\n" % os.path.join(dirname, "envs", "foo")) == err
+        assert ('Failed to remove conda environment "%s": Error\n' % os.path.join("envs", "foo")) == err
 
     with_directory_contents_completing_project_file(
         {
@@ -207,8 +207,8 @@ def test_remove_env_spec(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert '' == err
-        assert ('Deleted environment files in %s.\nRemoved environment foo from the project file.\n' %
-                os.path.join(dirname, "envs", "foo")) == out
+        assert ('Deleted conda environment "%s"\nRemoved environment foo from the project file.\n' %
+                os.path.join("envs", "foo")) == out
 
     with_directory_contents_completing_project_file(
         {
