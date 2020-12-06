@@ -17,8 +17,7 @@ from anaconda_project.env_spec import (EnvSpec, _anaconda_default_env_spec, _fin
                                        _find_out_of_sync_importable_spec)
 from anaconda_project.requirements_registry.registry import RequirementsRegistry
 from anaconda_project.requirements_registry.requirement import EnvVarRequirement
-from anaconda_project.requirements_registry.requirements.conda_env import (CondaEnvRequirement,
-                                                                           CondaBootstrapEnvRequirement)
+from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
 from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
 from anaconda_project.project_commands import (ProjectCommand, all_known_command_attributes)
@@ -879,7 +878,8 @@ class _ConfigCache(object):
             return
 
         if self.has_bootstrap_env_spec():
-            requirement = CondaBootstrapEnvRequirement(registry=self.registry, env_specs=self.env_specs)
+            requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs,
+                                              env_var='BOOTSTRAP_ENV_PREFIX')
             self._add_requirement(requirements, self.global_base_env_spec, requirement)
 
         requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs)

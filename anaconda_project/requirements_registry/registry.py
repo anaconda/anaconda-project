@@ -87,9 +87,6 @@ class RequirementsRegistry(object):
         if class_name == 'CondaEnvProvider':
             from .providers.conda_env import CondaEnvProvider
             return CondaEnvProvider()
-        if class_name == 'CondaBootstrapEnvProvider':
-            from .providers.conda_env import CondaBootstrapEnvProvider
-            return CondaBootstrapEnvProvider()
         elif class_name == 'RedisProvider':
             from .providers.redis import RedisProvider
             return RedisProvider()

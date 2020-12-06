@@ -23,6 +23,7 @@ from anaconda_project.provide import (_all_provide_modes, PROVIDE_MODE_DEVELOPME
 from anaconda_project.requirements_registry.provider import ProvideContext
 from anaconda_project.requirements_registry.requirement import Requirement, EnvVarRequirement, UserConfigOverrides
 from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.providers.conda_env import _remove_env_path
 
 
 def _update_environ(dest, src):
@@ -702,7 +703,7 @@ def _prepare_environ_and_overrides(project, environ=None, env_spec_name=None):
 
 
 def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_until_success, mode, provide_whitelist,
-                                command_name, command, extra_command_args):
+                                command_name, command, extra_command_args, refresh):
     assert not project.problems
     if mode not in _all_provide_modes:
         raise ValueError("invalid provide mode " + mode)
@@ -720,9 +721,14 @@ def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_unt
 
     statuses = []
     for requirement in project.requirements(overrides.env_spec_name):
+        default_env_name = project.default_env_spec_name_for_command(command)
+        env_name = overrides.env_spec_name or default_env_name
+        if refresh:
+            our_root = project.directory_path
+            _remove_env_path(project.env_specs[env_name].path(our_root), our_root)
         status = requirement.check_status(environ_copy,
                                           local_state,
-                                          project.default_env_spec_name_for_command(command),
+                                          default_env_name,
                                           overrides,
                                           latest_provide_result=None)
         statuses.append(status)
@@ -870,7 +876,8 @@ def prepare_without_interaction(project,
                                 env_spec_name=None,
                                 command_name=None,
                                 command=None,
-                                extra_command_args=None):
+                                extra_command_args=None,
+                                refresh=False):
     """Prepare a project to run one of its commands.
 
     This method doesn't ask the user any questions, so the
@@ -930,7 +937,8 @@ def prepare_without_interaction(project,
                                         provide_whitelist=provide_whitelist,
                                         command_name=command_name,
                                         command=command,
-                                        extra_command_args=extra_command_args)
+                                        extra_command_args=extra_command_args,
+                                        refresh=refresh)
 
     return prepare_execute_without_interaction(stage)
 

@@ -80,7 +80,8 @@ def prepare_with_ui_mode_printing_errors(project,
                                          env_spec_name=None,
                                          command_name=None,
                                          command=None,
-                                         extra_command_args=None):
+                                         extra_command_args=None,
+                                         refresh=False):
     """Perform all steps needed to get a project ready to execute.
 
     This may need to ask the user questions, may start services,
@@ -140,7 +141,8 @@ def prepare_with_ui_mode_printing_errors(project,
                                                      env_spec_name=env_spec_name,
                                                      command_name=command_name,
                                                      command=command,
-                                                     extra_command_args=extra_command_args)
+                                                     extra_command_args=extra_command_args,
+                                                     refresh=refresh)
 
         if result.failed:
             if ask and _interactively_fix_missing_variables(project, result):

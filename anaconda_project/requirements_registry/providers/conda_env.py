@@ -234,10 +234,3 @@ class CondaEnvProvider(EnvVarProvider):
         env_path = config.get('value', None)
         assert env_path is not None
         return _remove_env_path(env_path, environ['PROJECT_DIR'])
-
-
-class CondaBootstrapEnvProvider(CondaEnvProvider):
-    """Provides a Conda environment."""
-    def __init__(self):
-        """Override to create our CondaManager."""
-        super(CondaBootstrapEnvProvider, self).__init__(bootstrap=True)

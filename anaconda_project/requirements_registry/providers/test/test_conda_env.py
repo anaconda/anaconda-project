@@ -82,7 +82,7 @@ def test_prepare_and_unprepare_project_scoped_env(monkeypatch):
         # Now unprepare
         status = unprepare(project, result)
         assert status, status.errors
-        assert status.status_description == ('Deleted environment files in %s.' % (expected_env))
+        assert status.status_description == 'Deleted conda environment "envs/default"'
         assert status.errors == []
         assert not os.path.exists(expected_env)
 
@@ -108,7 +108,7 @@ def test_prepare_project_scoped_env_conda_create_fails(monkeypatch):
         status = unprepare(project, result)
         assert status
         assert status.errors == []
-        assert status.status_description == "Nothing to clean up for environment 'default'."
+        assert status.status_description == 'Conda environment "default" not present; nothing to delete'
 
     with_directory_contents_completing_project_file(dict(), prepare_project_scoped_env_fails)
 
@@ -134,8 +134,7 @@ def test_unprepare_gets_error_on_delete(monkeypatch):
         monkeypatch.setattr('shutil.rmtree', mock_rmtree)
 
         status = unprepare(project, result)
-        assert status.status_description == ('Failed to remove environment files in %s: I will never rm the tree!.' %
-                                             (expected_env))
+        assert status.status_description == 'Failed to remove conda environment "envs/default": I will never rm the tree!.'
         assert not status
 
         assert os.path.exists(expected_env)
@@ -166,7 +165,7 @@ def test_prepare_project_scoped_env_not_attempted_in_check_mode(monkeypatch):
         status = unprepare(project, result)
         assert status
         assert status.errors == []
-        assert status.status_description == ("Nothing to clean up for environment 'default'.")
+        assert status.status_description == 'Conda environment "default" not present; nothing to delete'
 
     with_directory_contents_completing_project_file(dict(), prepare_project_scoped_env_not_attempted)
 
