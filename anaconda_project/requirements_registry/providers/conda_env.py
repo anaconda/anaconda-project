@@ -27,7 +27,7 @@ def _remove_env_path(env_path, project_dir):
     if not env_path.startswith(project_dir + os.sep):
         msg = 'Conda environment "%s" outside of the project directory; not deleting.' % shortname
         return SimpleStatus(success=True, description=msg)
-    shortname = env_path[len(project_dir)+1:]
+    shortname = env_path[len(project_dir) + 1:]
     try:
         shutil.rmtree(env_path)
         msg = 'Deleted conda environment "%s"' % shortname

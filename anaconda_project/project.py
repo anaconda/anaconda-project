@@ -878,7 +878,8 @@ class _ConfigCache(object):
             return
 
         if self.has_bootstrap_env_spec():
-            requirement = CondaEnvRequirement(registry=self.registry, env_specs=self.env_specs,
+            requirement = CondaEnvRequirement(registry=self.registry,
+                                              env_specs=self.env_specs,
                                               env_var='BOOTSTRAP_ENV_PREFIX')
             self._add_requirement(requirements, self.global_base_env_spec, requirement)
 

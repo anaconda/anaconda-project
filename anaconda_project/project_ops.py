@@ -1642,7 +1642,7 @@ def clean(project, prepare_result):
         dirname = os.path.expanduser(dirname)
         dirname = os.path.abspath(os.path.join(our_root, dirname))
         if dirname.startswith(our_root + os.sep) and os.path.isdir(dirname):
-            shortname = dirname[len(our_root)+1:]
+            shortname = dirname[len(our_root) + 1:]
             project.frontend.info("Removing %s" % shortname)
             try:
                 shutil.rmtree(dirname)

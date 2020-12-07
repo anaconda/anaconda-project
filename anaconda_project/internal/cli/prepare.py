@@ -29,11 +29,8 @@ def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=F
         specs = {conda_environment: project.env_specs.get(conda_environment)}
     result = True
     for k, v in specs.items():
-        if not prepare_with_ui_mode_printing_errors(project,
-                                                    env_spec_name=k,
-                                                    ui_mode=ui_mode,
-                                                    command_name=command_name,
-                                                    refresh=refresh):
+        if not prepare_with_ui_mode_printing_errors(
+                project, env_spec_name=k, ui_mode=ui_mode, command_name=command_name, refresh=refresh):
             result = False
     return result
 
