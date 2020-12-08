@@ -197,20 +197,15 @@ class _Client(object):
 class _UploadedStatus(SimpleStatus):
     def __init__(self, json):
         self.url = json.get('url', None)
-        logs = []
-        if self.url is not None:
-            logs.append("Project is at %s" % self.url)
-        super(_UploadedStatus, self).__init__(success=True, description="Upload successful.", logs=logs)
+        msg = 'Upload successful' + ('.' if self.url is None else ': ' + self.url)
+        super(_UploadedStatus, self).__init__(success=True, description=msg)
 
 
 class _DownloadedStatus(SimpleStatus):
     def __init__(self, filename):
         self.filename = filename
-        logs = []
-        if self.filename is not None:
-            logs.append("Project is at %s" % self.filename)
-
-        super(_DownloadedStatus, self).__init__(success=True, description="Download successful.", logs=logs)
+        msg = 'Download successful' + ('.' if filename is None else ': ' + filename)
+        super(_DownloadedStatus, self).__init__(success=True, description=msg)
 
 
 # This function is supposed to encapsulate the binstar API (don't

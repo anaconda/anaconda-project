@@ -8,8 +8,6 @@
 """The Status type."""
 from __future__ import absolute_import
 
-import warnings
-
 from abc import ABCMeta, abstractmethod
 
 from anaconda_project.internal.metaclass import with_metaclass
@@ -32,12 +30,6 @@ class Status(with_metaclass(ABCMeta)):
     def status_description(self):
         """Get a one-line-ish description of the status."""
         pass  # pragma: no cover
-
-    @property
-    def logs(self):
-        """Get logs relevant to the status."""
-        warnings.warn("Provide a Frontend object instead of using status.logs", DeprecationWarning)
-        return ()
 
     @property
     @abstractmethod

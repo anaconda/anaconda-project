@@ -97,9 +97,13 @@ class _TestServer(object):
     def start(self):
         self._http.start(1)
 
+    @gen.coroutine
+    def close_all(self):
+        self._http.close_all_connections()
+
     def unlisten(self):
         self._http.close_all_connections()
-        self._http.stop()
+        yield self.close_all()
 
     @property
     def error_url(self):

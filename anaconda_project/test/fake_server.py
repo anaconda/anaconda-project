@@ -17,6 +17,7 @@ from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
 from tornado.netutil import bind_sockets
 from tornado.web import Application, RequestHandler
+from tornado import gen
 
 
 class ProjectViewHandler(RequestHandler):
@@ -141,10 +142,14 @@ class FakeAnacondaServer(object):
     def url(self):
         return "http://localhost:%d/" % self.port
 
+    @gen.coroutine
+    def close_all(self):
+        self._http.close_all_connections()
+
     def unlisten(self):
         """Permanently close down the HTTP server, no longer listen on any sockets."""
-        self._http.close_all_connections()
         self._http.stop()
+        yield self.close_all()
 
 
 def _monkeypatch_client_config(monkeypatch, url):

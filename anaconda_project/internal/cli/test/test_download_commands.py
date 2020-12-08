@@ -19,7 +19,6 @@ class FakeRequirementStatus(object):
     def __init__(self, success, status_description):
         self.status_description = status_description
         self.success = success
-        self.logs = ["This is a log message."]
         self.errors = []
         if not success:
             self.errors.append("This is an error message.")

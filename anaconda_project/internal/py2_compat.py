@@ -7,9 +7,13 @@
 # -----------------------------------------------------------------------------
 from __future__ import absolute_import, print_function
 
-import collections
 import platform
 import sys
+
+try:  # pragma: no cover
+    from collections.abc import Mapping, Sequence
+except ImportError:
+    from collections import Mapping, Sequence
 
 _PY2 = sys.version_info[0] == 2
 
@@ -29,11 +33,11 @@ def is_string(s):
 
 
 def is_list(v):
-    return isinstance(v, collections.Sequence) and not is_string(v)
+    return isinstance(v, Sequence) and not is_string(v)
 
 
 def is_dict(v):
-    return isinstance(v, collections.Mapping)
+    return isinstance(v, Mapping)
 
 
 def env_without_unicode(environ):
