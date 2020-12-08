@@ -16,6 +16,7 @@ import re
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
 from anaconda_project.internal.py2_compat import is_string
+from anaconda_project import conda_manager
 
 from anaconda_project.yaml_file import _load_string, _save_file, _YAMLError, ryaml
 
@@ -132,6 +133,8 @@ class EnvSpec(object):
             if parsed is not None:
                 pip_specs_by_name[parsed.name] = spec
         self._pip_specs_by_name = pip_specs_by_name
+
+        self._conda = conda_manager.new_conda_manager()
 
     @property
     def name(self):
@@ -310,14 +313,22 @@ class EnvSpec(object):
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""
         if self._path is None:
-            for base in os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep):
+            env_paths = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep)
+            for base in reversed(env_paths):
                 base = os.path.expanduser(base) if base else 'envs'
                 path = os.path.abspath(os.path.join(project_dir, base, self.name))
                 found = os.path.isdir(os.path.join(path, 'conda-meta'))
-                if found or self._path is None:
-                    self._path = path
-                    if found:
+                deviations = self._conda.find_environment_deviations(path, self)
+
+                if found:
+                    if deviations.unfixable:
+                        continue
+                    elif self._path is None:
+                        self._path = path
                         break
+                elif self._path is None:
+                    self._path = path
+                    break
         return self._path
 
     def diff_from(self, old):
