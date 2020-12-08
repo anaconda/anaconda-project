@@ -106,10 +106,9 @@ jobs:
       run: |
           source ./conda/etc/profile.d/conda.sh 
           conda activate anaconda-project-dev
-          if [ "$RUNNER_OS" == "Windows" ]; then COVERAGE=98; else COVERAGE=99; fi
           pytest -vrfe --durations=10 \
             --cov-config=.coveragerc --cov-report=term-missing \
-            --cov-fail-under=$COVERAGE --cov-report=xml:./coverage.xml \
+            --cov-fail-under=98 --cov-report=xml:./coverage.xml \
             --cov=anaconda_project anaconda_project
     - uses: codecov/codecov-action@v1
       with:
