@@ -18,18 +18,20 @@ from anaconda_project.requirements_registry.provider import EnvVarProvider
 from anaconda_project.provide import PROVIDE_MODE_CHECK
 
 
-def _remove_env_path(env_path):
+def _remove_env_path(env_path, project_dir):
     """Also used by project_ops.py to delete environment files."""
-    if os.path.exists(env_path):
-        try:
-            shutil.rmtree(env_path)
-            return SimpleStatus(success=True, description=("Deleted environment files in %s." % env_path))
-        except Exception as e:
-            problem = "Failed to remove environment files in {}: {}.".format(env_path, str(e))
-            return SimpleStatus(success=False, description=problem)
-    else:
+    if not os.path.isdir(env_path):
         return SimpleStatus(success=True,
                             description=("Nothing to clean up for environment '%s'." % os.path.basename(env_path)))
+    if not env_path.startswith(project_dir + os.sep):
+        return SimpleStatus(success=True,
+                            description=("Current environment is not in %s, no need to delete it." % project_dir))
+    try:
+        shutil.rmtree(env_path)
+        return SimpleStatus(success=True, description=("Deleted environment files in %s." % env_path))
+    except Exception as e:
+        problem = "Failed to remove environment files in {}: {}.".format(env_path, str(e))
+        return SimpleStatus(success=False, description=problem)
 
 
 class CondaEnvProvider(EnvVarProvider):
@@ -229,9 +231,4 @@ class CondaEnvProvider(EnvVarProvider):
 
         env_path = config.get('value', None)
         assert env_path is not None
-        project_dir = environ['PROJECT_DIR']
-        if not env_path.startswith(project_dir):
-            return SimpleStatus(success=True,
-                                description=("Current environment is not in %s, no need to delete it." % project_dir))
-
-        return _remove_env_path(env_path)
+        return _remove_env_path(env_path, environ['PROJECT_DIR'])

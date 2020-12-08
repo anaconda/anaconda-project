@@ -84,7 +84,7 @@ def _test_prepare_without_interaction(monkeypatch, api_method, provide_mode):
     from anaconda_project.prepare import prepare_without_interaction
     _verify_args_match(getattr(api.AnacondaProject, api_method),
                        prepare_without_interaction,
-                       ignored=['self', 'mode', 'provide_whitelist'])
+                       ignored=['self', 'mode', 'provide_whitelist', 'refresh'])
 
     params = _monkeypatch_prepare_without_interaction(monkeypatch)
     p = api.AnacondaProject()
