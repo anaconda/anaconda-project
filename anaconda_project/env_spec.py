@@ -312,23 +312,46 @@ class EnvSpec(object):
 
     def path(self, project_dir):
         """The filesystem path to the default conda env containing our packages."""
+        def _prefix(base_path):
+            base_path = os.path.expanduser(base_path) if base_path else 'envs'
+            path = os.path.abspath(os.path.join(project_dir, base_path, self.name))
+            return path
+
+        def _found(env_prefix):
+            return os.path.isdir(os.path.join(env_prefix, 'conda-meta'))
+
         if self._path is None:
             env_paths = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep)
-            for base in reversed(env_paths):
-                base = os.path.expanduser(base) if base else 'envs'
-                path = os.path.abspath(os.path.join(project_dir, base, self.name))
-                found = os.path.isdir(os.path.join(path, 'conda-meta'))
-                deviations = self._conda.find_environment_deviations(path, self)
 
-                if found:
-                    if deviations.unfixable:
-                        continue
-                    elif self._path is None:
-                        self._path = path
-                        break
-                elif self._path is None:
-                    self._path = path
+            # Scan for an existing env with the
+            # same name
+            existing_env = None
+            for base in env_paths:
+                prefix = _prefix(base)
+                if _found(prefix):
+                    existing_env = prefix
                     break
+
+            # The existing env may be in a read-only directory
+            # which means that we cannot make changes (add/remove packages)
+            if existing_env is not None:
+                deviations = self._conda.find_environment_deviations(existing_env, self)
+                # unfixable means the environment is read-only
+                if deviations.unfixable:
+                    for base in env_paths:
+                        dest = _prefix(base)
+                        if self._conda._is_environment_writable(dest):
+                            # the _is_environment_writable leaves behind a file
+                            # that causes the clone to fail
+                            shutil.rmtree(dest)
+                            conda_api.clone(dest, existing_env)
+                            self._path = dest
+                            break
+                else:
+                    self._path = existing_env
+            else:
+                self._path = _prefix(env_paths[0])
+
         return self._path
 
     def diff_from(self, old):

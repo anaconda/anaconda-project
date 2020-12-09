@@ -251,6 +251,15 @@ def create(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback
     _call_conda(cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
 
 
+def clone(prefix, source=None, stdout_callback=None, stderr_callback=None):
+    """Clone a pre-existing env."""
+    if not source:
+        raise TypeError('You must specify the full path to the pre-existing source env.')
+
+    cmd_list = ['create', '-p', prefix, '--clone', source]
+    _call_conda(cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
+
+
 def install(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback=None):
     """Install packages into an environment either by name or path with a specified set of packages."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
