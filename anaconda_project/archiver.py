@@ -473,10 +473,10 @@ def _get_source_and_dest_files(archive_path, list_files, project_dir, parent_dir
     assert canonical_project_dir.startswith(canonical_parent_dir)
 
     if os.path.exists(canonical_project_dir):
-        if os.listdir(canonical_project_dir):
+        if not os.path.isdir(canonical_project_dir) or os.listdir(canonical_project_dir):
             # This is an error to ensure we always do a "fresh" unpack
             # without worrying about overwriting stuff.
-            frontend.error("Directory '%s' already exists and is not empty." % canonical_project_dir)
+            frontend.error("Destination '%s' already exists and is not an empty directory." % canonical_project_dir)
             return None
 
     src_and_dest = []
