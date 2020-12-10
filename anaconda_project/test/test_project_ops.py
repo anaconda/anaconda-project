@@ -4533,8 +4533,9 @@ def test_unarchive_error_on_dest_dir_exists():
             unpacked = os.path.join(dirname, "foo")
             os.mkdir(unpacked)
             status = project_ops.unarchive(archivefile, unpacked)
+            status = project_ops.unarchive(archivefile, unpacked)
 
-            message = "Directory '%s' already exists." % unpacked
+            message = "Destination '%s' already exists and is not an empty directory." % unpacked
             assert status.errors == [message]
             assert not status
 
