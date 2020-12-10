@@ -473,10 +473,11 @@ def _get_source_and_dest_files(archive_path, list_files, project_dir, parent_dir
     assert canonical_project_dir.startswith(canonical_parent_dir)
 
     if os.path.exists(canonical_project_dir):
-        # This is an error to ensure we always do a "fresh" unpack
-        # without worrying about overwriting stuff.
-        frontend.error("Directory '%s' already exists." % canonical_project_dir)
-        return None
+        if os.listdir(canonical_project_dir):
+            # This is an error to ensure we always do a "fresh" unpack
+            # without worrying about overwriting stuff.
+            frontend.error("Directory '%s' already exists and is not empty." % canonical_project_dir)
+            return None
 
     src_and_dest = []
     for (name, prefix, remainder) in items:
@@ -561,8 +562,8 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None)
                                 description=("Could not unpack archive %s" % archive_filename),
                                 errors=frontend.pop_errors())
 
-        assert not os.path.exists(canonical_project_dir)
-        os.makedirs(canonical_project_dir)
+        if not os.path.exists(canonical_project_dir):
+            os.makedirs(canonical_project_dir)
 
         try:
             extract_files(archive_filename, src_and_dest, frontend)
