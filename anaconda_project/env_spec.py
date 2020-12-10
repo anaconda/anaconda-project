@@ -22,40 +22,6 @@ from anaconda_project import conda_manager
 from anaconda_project.yaml_file import _load_string, _save_file, _YAMLError, ryaml
 
 
-def _combine_keeping_last_duplicate(items1, items2, key_func=None):
-    def default_key(item):
-        return item
-
-    if key_func is None:
-        key_func = default_key
-    items2_keys = set([key_func(item) for item in items2])
-    combined = list([item for item in items1 if key_func(item) not in items2_keys])
-    combined = combined + list(items2)
-    return tuple(combined)
-
-
-def _conda_combine_key(spec):
-    parsed = conda_api.parse_spec(spec)
-    if parsed is None:
-        # this is broken but we complain about it in project.py, carry on here
-        return spec
-    else:
-        return parsed.name
-
-
-def _pip_combine_key(spec):
-    parsed = pip_api.parse_spec(spec)
-    if parsed is None:
-        # this is broken but we complain about it in project.py, carry on here
-        return spec
-    else:
-        return parsed.name
-
-
-def _combine_conda_package_lists(first, second):
-    return _combine_keeping_last_duplicate(first, second, key_func=_conda_combine_key)
-
-
 class EnvSpec(object):
     """Represents a set of required conda packages we could potentially instantiate as a Conda environment."""
     def __init__(self,
@@ -229,13 +195,13 @@ class EnvSpec(object):
             to_combine.append(getter(spec))
         combined = []
         for item in to_combine:
-            combined = _combine_keeping_last_duplicate(combined, item, key_func=key_func)
+            combined = conda_manager._combine_keeping_last_duplicate(combined, item, key_func=key_func)
         return combined
 
     @property
     def conda_packages(self):
         """Get the conda packages to install in the environment as an iterable."""
-        return self._get_inherited('conda_packages', _conda_combine_key)
+        return self._get_inherited('conda_packages', conda_manager._conda_combine_key)
 
     @property
     def channels(self):
@@ -250,7 +216,7 @@ class EnvSpec(object):
     @property
     def pip_packages(self):
         """Get the pip packages to install in the environment as an iterable."""
-        return self._get_inherited('pip_packages', _pip_combine_key)
+        return self._get_inherited('pip_packages', conda_manager._pip_combine_key)
 
     @property
     def conda_package_names_set(self):

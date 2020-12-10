@@ -15,9 +15,43 @@ import difflib
 from anaconda_project.yaml_file import (_CommentedMap, _CommentedSeq, _block_style_all_nodes)
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal import conda_api
-from anaconda_project.env_spec import _combine_conda_package_lists
+from anaconda_project.internal import pip_api
 
 _conda_manager_classes = []
+
+
+def _combine_keeping_last_duplicate(items1, items2, key_func=None):
+    def default_key(item):
+        return item
+
+    if key_func is None:
+        key_func = default_key
+    items2_keys = set([key_func(item) for item in items2])
+    combined = list([item for item in items1 if key_func(item) not in items2_keys])
+    combined = combined + list(items2)
+    return tuple(combined)
+
+
+def _conda_combine_key(spec):
+    parsed = conda_api.parse_spec(spec)
+    if parsed is None:
+        # this is broken but we complain about it in project.py, carry on here
+        return spec
+    else:
+        return parsed.name
+
+
+def _pip_combine_key(spec):
+    parsed = pip_api.parse_spec(spec)
+    if parsed is None:
+        # this is broken but we complain about it in project.py, carry on here
+        return spec
+    else:
+        return parsed.name
+
+
+def _combine_conda_package_lists(first, second):
+    return _combine_keeping_last_duplicate(first, second, key_func=_conda_combine_key)
 
 
 def push_conda_manager_class(klass):
