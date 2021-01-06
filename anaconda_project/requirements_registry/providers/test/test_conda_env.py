@@ -371,7 +371,7 @@ def _readonly_env(env_name, packages):
 
         yield ro_prefix
 
-        write_mode = stat.S_IWUSR ^ readonly_mode
+        write_mode = (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH) ^ readonly_mode
         os.chmod(ro_prefix, write_mode)
         os.chmod(conda_meta, write_mode)
 

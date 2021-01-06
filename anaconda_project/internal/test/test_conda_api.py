@@ -1200,7 +1200,7 @@ def test_conda_clone_readonly():
         assert os.path.isdir(os.path.join(cloned, "conda-meta"))
         assert os.path.exists(os.path.join(cloned, PYTHON_BINARY))
 
-        write_mode = stat.S_IWUSR ^ readonly_mode
+        write_mode = (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH) ^ readonly_mode
         os.chmod(readonly, write_mode)
         os.chmod(os.path.join(readonly, 'conda-meta'), write_mode)
 
