@@ -37,6 +37,12 @@ class CondaEnvExistsError(CondaError):
     pass
 
 
+class CondaEnvMissingError(CondaError):
+    """Conda environment missing."""
+
+    pass
+
+
 # this function exists so we can monkeypatch it in tests
 def _get_conda_command(extra_args):
     # just use whatever conda is on the path
@@ -251,10 +257,10 @@ def create(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback
     _call_conda(cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
 
 
-def clone(prefix, source=None, stdout_callback=None, stderr_callback=None):
+def clone(prefix, source, stdout_callback=None, stderr_callback=None):
     """Clone a pre-existing env."""
-    if not source:
-        raise TypeError('You must specify the full path to the pre-existing source env.')
+    if not os.path.exists(source):
+        raise CondaEnvMissingError('Conda environment [%s] does not exist to clone.' % source)
 
     cmd_list = ['create', '-p', prefix, '--clone', source]
     _call_conda(cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
