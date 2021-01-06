@@ -29,3 +29,7 @@ def build_image(path, tag, command, builder_image='adefusco/anaconda-project-ubi
     except subprocess.CalledProcessError as e:
         error_msg = '''\nAn error was encountered building this docker image.'''
         return SimpleStatus(success=False, description=error_msg, errors=[str(e)])
+    except FileNotFoundError as e:
+        error_msg = """\nERROR: The source-to-image (s2i) executable was not found. It can be installed using
+    conda install -c defusco source-to-image"""
+        return SimpleStatus(success=False, description=error_msg, errors=[str(e)])
