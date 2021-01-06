@@ -12,7 +12,6 @@ import codecs
 import difflib
 import os
 import re
-import shutil
 
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
