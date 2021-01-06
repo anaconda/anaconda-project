@@ -198,10 +198,28 @@ class CondaEnvProvider(EnvVarProvider):
 
         if context.mode != PROVIDE_MODE_CHECK:
             # we update the environment in both prod and dev mode
-
             # TODO if not creating a named env, we could use the
             # shared packages, but for now we leave it alone
             assert env_spec is not None
+
+            deviations = conda.find_environment_deviations(prefix, env_spec)
+
+            readonly_policy = os.environ.get('ANACONDA_PROJECT_READONLY_ENVS_POLICY', 'fail').lower()
+
+            if deviations.unfixable and readonly_policy == 'clone':
+                # scan for writable path
+                env_paths = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep)
+                for base_path in env_paths:
+                    base_path = os.path.expanduser(base_path) if base_path else 'envs'
+                    destination = os.path.abspath(os.path.join(project_dir, base_path, env_spec.name))
+                    if conda._is_environment_writable(destination):
+                        # _is_environment_writable leaves behind a file
+                        # that causes the clone to fail
+                        shutil.rmtree(destination)
+                        conda_api.clone(destination, prefix)
+                        prefix = env_spec.path(project_dir, reset=True)
+                        break
+
             try:
                 conda.fix_environment_deviations(prefix, env_spec, create=(not inherited))
             except CondaManagerError as e:
