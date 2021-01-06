@@ -12,6 +12,7 @@ import os
 import platform
 import pytest
 import random
+import stat
 
 from pprint import pprint
 
@@ -1188,8 +1189,9 @@ def test_conda_clone_readonly():
         assert os.path.isdir(os.path.join(readonly, "conda-meta"))
         assert os.path.exists(os.path.join(readonly, PYTHON_BINARY))
 
-        os.chmod(readonly, 0o555)
-        os.chmod(os.path.join(readonly, 'conda-meta'), 0o555)
+        readonly_mode = stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
+        os.chmod(readonly, readonly_mode)
+        os.chmod(os.path.join(readonly, 'conda-meta'), readonly_mode)
 
         cloned = os.path.join(dirname, 'cloned')
         conda_api.clone(cloned, readonly)
@@ -1198,8 +1200,9 @@ def test_conda_clone_readonly():
         assert os.path.isdir(os.path.join(cloned, "conda-meta"))
         assert os.path.exists(os.path.join(cloned, PYTHON_BINARY))
 
-        os.chmod(readonly, 0o755)
-        os.chmod(os.path.join(readonly, 'conda-meta'), 0o755)
+        write_mode = stat.S_IWUSR ^ readonly_mode
+        os.chmod(readonly, write_mode)
+        os.chmod(os.path.join(readonly, 'conda-meta'), write_mode)
 
     with_directory_contents(dict(), do_test)
 

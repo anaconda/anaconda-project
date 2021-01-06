@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import os
 import platform
 import pytest
+import stat
 from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 
@@ -361,11 +362,15 @@ def _readonly_env(env_name, packages):
         conda_meta = os.path.join(ro_prefix, 'conda-meta')
         conda_api.create(prefix=ro_prefix, pkgs=packages)
 
-        os.chmod(ro_prefix, 0o555)
-        os.chmod(conda_meta, 0o555)
+        readonly_mode = stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
+        os.chmod(ro_prefix, readonly_mode)
+        os.chmod(conda_meta, readonly_mode)
+
         yield ro_prefix
-        os.chmod(ro_prefix, 0o755)
-        os.chmod(conda_meta, 0o755)
+
+        write_mode = stat.S_IWUSR ^ readonly_mode
+        os.chmod(ro_prefix, write_mode)
+        os.chmod(conda_meta, write_mode)
 
 
 @pytest.mark.slow
@@ -403,7 +408,7 @@ env_specs:
 
 
 @pytest.mark.slow
-def test_fail_readonly_environment_with_deviations_unset(monkeypatch):
+def test_fail_readonly_environment_with_deviations_unset_policy(monkeypatch):
     def clone_readonly_and_prepare(dirname):
         with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
             readonly = conda_api.installed(ro_prefix)
@@ -430,7 +435,7 @@ env_specs:
 
 
 @pytest.mark.slow
-def test_fail_readonly_environment_with_deviations_set(monkeypatch):
+def test_fail_readonly_environment_with_deviations_set_policy(monkeypatch):
     def clone_readonly_and_prepare(dirname):
         with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
             readonly = conda_api.installed(ro_prefix)
