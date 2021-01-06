@@ -377,8 +377,7 @@ def _readonly_env(env_name, packages):
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(platform.system() == 'Windows',
-                    reason='Windows has a hard time with read-only directories')
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
 def test_clone_readonly_environment_with_deviations(monkeypatch):
     def clone_readonly_and_prepare(dirname):
         with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
@@ -413,8 +412,7 @@ env_specs:
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(platform.system() == 'Windows',
-                    reason='Windows has a hard time with read-only directories')
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
 def test_fail_readonly_environment_with_deviations_unset_policy(monkeypatch):
     def clone_readonly_and_prepare(dirname):
         with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
@@ -442,8 +440,7 @@ env_specs:
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(platform.system() == 'Windows',
-                    reason='Windows has a hard time with read-only directories')
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
 def test_fail_readonly_environment_with_deviations_set_policy(monkeypatch):
     def clone_readonly_and_prepare(dirname):
         with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
