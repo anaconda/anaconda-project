@@ -31,6 +31,7 @@ import anaconda_project.conda_manager as conda_manager
 from anaconda_project.internal.conda_api import (parse_spec, default_platforms_with_current)
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 from anaconda_project.internal.py2_compat import is_string
+from anaconda_project.docker import build_image
 
 
 def create(directory_path,
@@ -1762,3 +1763,43 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
         if unpack_status:
             print(unpack_status.status_description)
     return download_status
+
+
+def dock(project,
+         tag='latest',
+         command='default',
+         builder_image='adefusco/anaconda-project-ubi7:latest',
+         build_args=None):
+    """Build docker image from project.
+    Args:
+        tag: str Version tag for the docker image (default: latest)
+        command: str [Optional] Append the Dockerfile with a RUN statement for the chosen anaconda-project command
+        build_args: dict [Optional] Additional arguments passed to docker build
+    """
+
+    if (command not in project.commands) and (command != 'default'):
+        msg = 'Error setting docker CMD.\n'
+        msg += 'The command {} is not one of the configured commands.\n'.format(command)
+        msg += 'Available commands are:'
+        for k, v in project.commands.items():
+            msg += '\n{:>15s}: {}'.format(k, v.description)
+        return SimpleStatus(success=False, description=msg)
+
+    if tag is None:
+        name = project.name.replace(' ', '').lower()
+        tag = '{}:latest'.format(name)
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        print('Archiving project to temporary directory.')
+
+        project_archive = os.path.join(tempdir, 'project.tar.gz')
+        archive(project, project_archive)
+
+        project_dir = os.path.join(tempdir, 'project')
+        unarchive(project_archive, project_dir)
+
+        print('\nStarting image build. This may take several minutes.')
+        build_status = build_image(project_dir, tag=tag, command=command,
+                                   builder_image=builder_image, build_args=build_args)
+
+    return build_status
