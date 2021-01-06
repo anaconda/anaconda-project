@@ -10,6 +10,8 @@ from __future__ import absolute_import
 import os
 import platform
 import pytest
+from contextlib import contextmanager
+from tempfile import TemporaryDirectory
 
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
@@ -350,3 +352,108 @@ env_specs:
     channels: []
 """
         }, check)
+
+
+@contextmanager
+def _readonly_env(env_name, packages):
+    with TemporaryDirectory(prefix="ro-envs-") as ro_envs:
+        ro_prefix = os.path.join(ro_envs, env_name)
+        conda_meta = os.path.join(ro_prefix, 'conda-meta')
+        conda_api.create(prefix=ro_prefix, pkgs=packages)
+
+        os.chmod(ro_prefix, 0o555)
+        os.chmod(conda_meta, 0o555)
+        yield ro_prefix
+        os.chmod(ro_prefix, 0o755)
+        os.chmod(conda_meta, 0o755)
+
+
+@pytest.mark.slow
+def test_clone_readonly_environment_with_deviations(monkeypatch):
+    def clone_readonly_and_prepare(dirname):
+        with _readonly_env(env_name='default', packages=('python=3.7',)) as ro_prefix:
+            readonly = conda_api.installed(ro_prefix)
+            assert 'python' in readonly
+            assert 'requests' not in readonly
+
+            ro_envs = os.path.dirname(ro_prefix)
+            environ = minimal_environ(PROJECT_DIR=dirname,
+                                      ANACONDA_PROJECT_ENVS_PATH=':{}'.format(ro_envs),
+                                      ANACONDA_PROJECT_READONLY_ENVS_POLICY='clone')
+            monkeypatch.setattr('os.environ', environ)
+
+            project = Project(dirname)
+            result = prepare_without_interaction(project)
+            assert result
+            assert result.env_prefix == os.path.join(dirname, 'envs', 'default')
+
+            cloned = conda_api.installed(result.env_prefix)
+
+            assert 'python' in cloned
+            assert 'requests' in cloned
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+packages:
+  - python=3.7
+  - requests
+env_specs:
+  default: {}
+"""}, clone_readonly_and_prepare)
+
+
+@pytest.mark.slow
+def test_fail_readonly_environment_with_deviations_unset(monkeypatch):
+    def clone_readonly_and_prepare(dirname):
+        with _readonly_env(env_name='default', packages=('python=3.7',)) as ro_prefix:
+            readonly = conda_api.installed(ro_prefix)
+            assert 'python' in readonly
+            assert 'requests' not in readonly
+
+            ro_envs = os.path.dirname(ro_prefix)
+            environ = minimal_environ(PROJECT_DIR=dirname,
+                                      ANACONDA_PROJECT_ENVS_PATH=':{}'.format(ro_envs))
+            monkeypatch.setattr('os.environ', environ)
+
+            project = Project(dirname)
+            result = prepare_without_interaction(project)
+            assert result.failed
+            assert '  Conda environment is missing packages: requests and the environment is read-only' in result.errors
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+packages:
+  - python=3.7
+  - requests
+env_specs:
+  default: {}
+"""}, clone_readonly_and_prepare)
+
+
+@pytest.mark.slow
+def test_fail_readonly_environment_with_deviations_set(monkeypatch):
+    def clone_readonly_and_prepare(dirname):
+        with _readonly_env(env_name='default', packages=('python=3.7',)) as ro_prefix:
+            readonly = conda_api.installed(ro_prefix)
+            assert 'python' in readonly
+            assert 'requests' not in readonly
+
+            ro_envs = os.path.dirname(ro_prefix)
+            environ = minimal_environ(PROJECT_DIR=dirname,
+                                      ANACONDA_PROJECT_ENVS_PATH=':{}'.format(ro_envs),
+                                      ANACONDA_PROJECT_READONLY_ENVS_POLICY='fail')
+            monkeypatch.setattr('os.environ', environ)
+
+            project = Project(dirname)
+            result = prepare_without_interaction(project)
+            assert result.failed
+            assert '  Conda environment is missing packages: requests and the environment is read-only' in result.errors
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+packages:
+  - python=3.7
+  - requests
+env_specs:
+  default: {}
+"""}, clone_readonly_and_prepare)
