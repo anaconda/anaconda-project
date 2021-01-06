@@ -371,7 +371,7 @@ def _readonly_env(env_name, packages):
 @pytest.mark.slow
 def test_clone_readonly_environment_with_deviations(monkeypatch):
     def clone_readonly_and_prepare(dirname):
-        with _readonly_env(env_name='default', packages=('python=3.7',)) as ro_prefix:
+        with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
             readonly = conda_api.installed(ro_prefix)
             assert 'python' in readonly
             assert 'requests' not in readonly
@@ -405,14 +405,13 @@ env_specs:
 @pytest.mark.slow
 def test_fail_readonly_environment_with_deviations_unset(monkeypatch):
     def clone_readonly_and_prepare(dirname):
-        with _readonly_env(env_name='default', packages=('python=3.7',)) as ro_prefix:
+        with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
             readonly = conda_api.installed(ro_prefix)
             assert 'python' in readonly
             assert 'requests' not in readonly
 
             ro_envs = os.path.dirname(ro_prefix)
-            environ = minimal_environ(PROJECT_DIR=dirname,
-                                      ANACONDA_PROJECT_ENVS_PATH=':{}'.format(ro_envs))
+            environ = minimal_environ(PROJECT_DIR=dirname, ANACONDA_PROJECT_ENVS_PATH=':{}'.format(ro_envs))
             monkeypatch.setattr('os.environ', environ)
 
             project = Project(dirname)
@@ -433,7 +432,7 @@ env_specs:
 @pytest.mark.slow
 def test_fail_readonly_environment_with_deviations_set(monkeypatch):
     def clone_readonly_and_prepare(dirname):
-        with _readonly_env(env_name='default', packages=('python=3.7',)) as ro_prefix:
+        with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
             readonly = conda_api.installed(ro_prefix)
             assert 'python' in readonly
             assert 'requests' not in readonly

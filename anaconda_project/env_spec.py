@@ -287,6 +287,7 @@ class EnvSpec(object):
             self._path = None
 
         if self._path is None:
+
             def _prefix(base_path):
                 base_path = os.path.expanduser(base_path) if base_path else 'envs'
                 path = os.path.abspath(os.path.join(project_dir, base_path, self.name))
