@@ -12,7 +12,10 @@ import platform
 import pytest
 import stat
 from contextlib import contextmanager
-from tempfile import TemporaryDirectory
+try:
+    from backports.tempfile import TemporaryDirectory
+except ImportError:
+    from tempfile import TemporaryDirectory
 
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
