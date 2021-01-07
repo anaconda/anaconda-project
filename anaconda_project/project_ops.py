@@ -1771,6 +1771,7 @@ def dock(project,
          builder_image='anacondainc/s2i-anaconda-project-ubi7:latest',
          build_args=None):
     """Build docker image from project.
+
     Args:
         tag: str Version tag for the docker image (default: latest)
         command: str [Optional] Append the Dockerfile with a RUN statement for the chosen anaconda-project command
