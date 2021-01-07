@@ -12,6 +12,7 @@ import os
 import platform
 import pytest
 import random
+import stat
 
 from pprint import pprint
 
@@ -1172,3 +1173,48 @@ def test_validate_platform_list():
     assert ['linux-64', 'foo-64'] == platforms
     assert ['foo-64'] == unknown
     assert ['something', 'wtf'] == invalid
+
+
+@pytest.mark.slow
+def test_conda_clone_readonly():
+    def do_test(dirname):
+        readonly = os.path.join(dirname, "readonly")
+        print('CONDA_EXE: {}'.format(os.environ.get('CONDA_EXE')))
+        # originally we did not specify a python version here, but we
+        # needed to add it with python 3.8 was released because a compatible
+        # version of ipython had not been created yet.
+        conda_api.create(prefix=readonly, pkgs=['python<3.8'])
+
+        assert os.path.isdir(readonly)
+        assert os.path.isdir(os.path.join(readonly, "conda-meta"))
+        assert os.path.exists(os.path.join(readonly, PYTHON_BINARY))
+
+        readonly_mode = stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
+        os.chmod(readonly, readonly_mode)
+        os.chmod(os.path.join(readonly, 'conda-meta'), readonly_mode)
+
+        cloned = os.path.join(dirname, 'cloned')
+        conda_api.clone(cloned, readonly)
+
+        assert os.path.isdir(cloned)
+        assert os.path.isdir(os.path.join(cloned, "conda-meta"))
+        assert os.path.exists(os.path.join(cloned, PYTHON_BINARY))
+
+        write_mode = (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH) ^ readonly_mode
+        os.chmod(readonly, write_mode)
+        os.chmod(os.path.join(readonly, 'conda-meta'), write_mode)
+
+    with_directory_contents(dict(), do_test)
+
+
+def test_conda_clone_missing_source():
+    def do_test(dirname):
+        missing = os.path.join(dirname, "missing")
+        print('CONDA_EXE: {}'.format(os.environ.get('CONDA_EXE')))
+
+        with pytest.raises(conda_api.CondaEnvMissingError) as excinfo:
+            cloned = os.path.join(dirname, 'cloned')
+            conda_api.clone(cloned, missing)
+        assert 'missing' in repr(excinfo.value)
+
+    with_directory_contents(dict(), do_test)

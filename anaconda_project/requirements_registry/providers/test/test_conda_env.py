@@ -10,6 +10,12 @@ from __future__ import absolute_import
 import os
 import platform
 import pytest
+import stat
+from contextlib import contextmanager
+try:
+    from backports.tempfile import TemporaryDirectory
+except ImportError:
+    from tempfile import TemporaryDirectory
 
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
@@ -350,3 +356,114 @@ env_specs:
     channels: []
 """
         }, check)
+
+
+@contextmanager
+def _readonly_env(env_name, packages):
+    with TemporaryDirectory(prefix="ro-envs-") as ro_envs:
+        ro_prefix = os.path.join(ro_envs, env_name)
+        conda_meta = os.path.join(ro_prefix, 'conda-meta')
+        conda_api.create(prefix=ro_prefix, pkgs=packages)
+
+        readonly_mode = stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH
+        os.chmod(ro_prefix, readonly_mode)
+        os.chmod(conda_meta, readonly_mode)
+
+        yield ro_prefix
+
+        write_mode = (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH) ^ readonly_mode
+        os.chmod(ro_prefix, write_mode)
+        os.chmod(conda_meta, write_mode)
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
+def test_clone_readonly_environment_with_deviations(monkeypatch):
+    def clone_readonly_and_prepare(dirname):
+        with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
+            readonly = conda_api.installed(ro_prefix)
+            assert 'python' in readonly
+            assert 'requests' not in readonly
+
+            ro_envs = os.path.dirname(ro_prefix)
+            environ = minimal_environ(PROJECT_DIR=dirname,
+                                      ANACONDA_PROJECT_ENVS_PATH=':{}'.format(ro_envs),
+                                      ANACONDA_PROJECT_READONLY_ENVS_POLICY='clone')
+            monkeypatch.setattr('os.environ', environ)
+
+            project = Project(dirname)
+            result = prepare_without_interaction(project)
+            assert result
+            assert result.env_prefix == os.path.join(dirname, 'envs', 'default')
+
+            cloned = conda_api.installed(result.env_prefix)
+
+            assert 'python' in cloned
+            assert 'requests' in cloned
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+packages:
+  - python=3.7
+  - requests
+env_specs:
+  default: {}
+"""}, clone_readonly_and_prepare)
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
+def test_fail_readonly_environment_with_deviations_unset_policy(monkeypatch):
+    def clone_readonly_and_prepare(dirname):
+        with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
+            readonly = conda_api.installed(ro_prefix)
+            assert 'python' in readonly
+            assert 'requests' not in readonly
+
+            ro_envs = os.path.dirname(ro_prefix)
+            environ = minimal_environ(PROJECT_DIR=dirname, ANACONDA_PROJECT_ENVS_PATH=':{}'.format(ro_envs))
+            monkeypatch.setattr('os.environ', environ)
+
+            project = Project(dirname)
+            result = prepare_without_interaction(project)
+            assert result.failed
+            assert '  Conda environment is missing packages: requests and the environment is read-only' in result.errors
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+packages:
+  - python=3.7
+  - requests
+env_specs:
+  default: {}
+"""}, clone_readonly_and_prepare)
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
+def test_fail_readonly_environment_with_deviations_set_policy(monkeypatch):
+    def clone_readonly_and_prepare(dirname):
+        with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
+            readonly = conda_api.installed(ro_prefix)
+            assert 'python' in readonly
+            assert 'requests' not in readonly
+
+            ro_envs = os.path.dirname(ro_prefix)
+            environ = minimal_environ(PROJECT_DIR=dirname,
+                                      ANACONDA_PROJECT_ENVS_PATH=':{}'.format(ro_envs),
+                                      ANACONDA_PROJECT_READONLY_ENVS_POLICY='fail')
+            monkeypatch.setattr('os.environ', environ)
+
+            project = Project(dirname)
+            result = prepare_without_interaction(project)
+            assert result.failed
+            assert '  Conda environment is missing packages: requests and the environment is read-only' in result.errors
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+packages:
+  - python=3.7
+  - requests
+env_specs:
+  default: {}
+"""}, clone_readonly_and_prepare)

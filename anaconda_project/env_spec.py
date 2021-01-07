@@ -16,42 +16,9 @@ import re
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
 from anaconda_project.internal.py2_compat import is_string
+from anaconda_project import conda_manager
 
 from anaconda_project.yaml_file import _load_string, _save_file, _YAMLError, ryaml
-
-
-def _combine_keeping_last_duplicate(items1, items2, key_func=None):
-    def default_key(item):
-        return item
-
-    if key_func is None:
-        key_func = default_key
-    items2_keys = set([key_func(item) for item in items2])
-    combined = list([item for item in items1 if key_func(item) not in items2_keys])
-    combined = combined + list(items2)
-    return tuple(combined)
-
-
-def _conda_combine_key(spec):
-    parsed = conda_api.parse_spec(spec)
-    if parsed is None:
-        # this is broken but we complain about it in project.py, carry on here
-        return spec
-    else:
-        return parsed.name
-
-
-def _pip_combine_key(spec):
-    parsed = pip_api.parse_spec(spec)
-    if parsed is None:
-        # this is broken but we complain about it in project.py, carry on here
-        return spec
-    else:
-        return parsed.name
-
-
-def _combine_conda_package_lists(first, second):
-    return _combine_keeping_last_duplicate(first, second, key_func=_conda_combine_key)
 
 
 class EnvSpec(object):
@@ -132,6 +99,8 @@ class EnvSpec(object):
             if parsed is not None:
                 pip_specs_by_name[parsed.name] = spec
         self._pip_specs_by_name = pip_specs_by_name
+
+        self._conda = conda_manager.new_conda_manager()
 
     @property
     def name(self):
@@ -225,13 +194,13 @@ class EnvSpec(object):
             to_combine.append(getter(spec))
         combined = []
         for item in to_combine:
-            combined = _combine_keeping_last_duplicate(combined, item, key_func=key_func)
+            combined = conda_manager._combine_keeping_last_duplicate(combined, item, key_func=key_func)
         return combined
 
     @property
     def conda_packages(self):
         """Get the conda packages to install in the environment as an iterable."""
-        return self._get_inherited('conda_packages', _conda_combine_key)
+        return self._get_inherited('conda_packages', conda_manager._conda_combine_key)
 
     @property
     def channels(self):
@@ -246,7 +215,7 @@ class EnvSpec(object):
     @property
     def pip_packages(self):
         """Get the pip packages to install in the environment as an iterable."""
-        return self._get_inherited('pip_packages', _pip_combine_key)
+        return self._get_inherited('pip_packages', conda_manager._pip_combine_key)
 
     @property
     def conda_package_names_set(self):
@@ -307,17 +276,40 @@ class EnvSpec(object):
         """Env spec names that we inherit stuff from."""
         return self._inherit_from_names
 
-    def path(self, project_dir):
+    def path(self, project_dir, reset=False):
         """The filesystem path to the default conda env containing our packages."""
+
+        if reset:
+            # Reset is used after a readonly env is cloned to identify
+            # the new writeable env prefix, otherwise the readonly prefix
+            # would remain chached
+            self._path = None
+
         if self._path is None:
-            for base in os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep):
-                base = os.path.expanduser(base) if base else 'envs'
-                path = os.path.abspath(os.path.join(project_dir, base, self.name))
-                found = os.path.isdir(os.path.join(path, 'conda-meta'))
-                if found or self._path is None:
-                    self._path = path
-                    if found:
-                        break
+
+            def _prefix(base_path):
+                base_path = os.path.expanduser(base_path) if base_path else 'envs'
+                path = os.path.abspath(os.path.join(project_dir, base_path, self.name))
+                return path
+
+            def _found(env_prefix):
+                return os.path.isdir(os.path.join(env_prefix, 'conda-meta'))
+
+            env_paths = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep)
+
+            # Scan for an existing env with the same name
+            existing_env = None
+            for base in env_paths:
+                prefix = _prefix(base)
+                if _found(prefix):
+                    existing_env = prefix
+                    break
+
+            if existing_env is not None:
+                self._path = existing_env
+            else:
+                self._path = _prefix(env_paths[0])
+
         return self._path
 
     def diff_from(self, old):
