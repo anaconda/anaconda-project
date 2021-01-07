@@ -1768,7 +1768,7 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
 def dock(project,
          tag='latest',
          command='default',
-         builder_image='adefusco/anaconda-project-ubi7:latest',
+         builder_image='anacondainc/s2i-anaconda-project-ubi7:latest',
          build_args=None):
     """Build docker image from project.
     Args:

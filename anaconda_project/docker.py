@@ -12,15 +12,16 @@ import subprocess
 from anaconda_project.internal.simple_status import SimpleStatus
 
 
-def build_image(path, tag, command, builder_image='adefusco/anaconda-project-ubi7', build_args=()):
+def build_image(path, tag, command, builder_image='anacondainc/s2i-anaconda-project-ubi7', build_args=()):
     """Run s2i build."""
 
     cmd = ['s2i', 'build', '--copy', path, builder_image, tag, '-e', 'CMD={}'.format(command)]
-    for arg in build_args:
-        cmd.append('--{}'.format(arg))
+    if build_args is not None:
+        cmd.extend(build_args)
 
     start_msg = '''*** {} image build starting.'''.format(tag)
     print(start_msg)
+    print(' '.join(cmd))
 
     try:
         _ = subprocess.check_call(cmd)

@@ -180,14 +180,16 @@ def _parse_args_and_run_subcommand(argv):
              'anaconda-project.yml file.')
     preset.add_argument(
         '--builder-image',
-        default='adefusco/anaconda-project-ubi7:latest',
+        default='anacondainc/s2i-anaconda-project-ubi7:latest',
         help='The s2i builder image'
     )
     preset.add_argument(
         'build_args',
         default=None,
-        nargs=REMAINDER,
-        help="Extra arguments for s2i build. Arguments must be provided as KEY=VALUE without '--'.")
+        nargs="*",
+        help='Optional arguments for the s2i build command. '
+             'See the output of "s2i build --help" for the available arguments. '
+             'It is recommended to include a -- separator before supplying these arguments.')
     preset.set_defaults(main=dock.main)
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
