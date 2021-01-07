@@ -20,12 +20,7 @@ def dock_command(project_dir, tag, command, builder_image, build_args):
         exit code
     """
     project = load_project(project_dir)
-    status = project_ops.dock(
-        project,
-        tag=tag,
-        command=command,
-        builder_image=builder_image,
-        build_args=build_args)
+    status = project_ops.dock(project, tag=tag, command=command, builder_image=builder_image, build_args=build_args)
     if status:
         print(status.status_description)
         return 0

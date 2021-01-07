@@ -1799,7 +1799,10 @@ def dock(project,
         unarchive(project_archive, project_dir)
 
         print('\nStarting image build. This may take several minutes.')
-        build_status = build_image(project_dir, tag=tag, command=command,
-                                   builder_image=builder_image, build_args=build_args)
+        build_status = build_image(project_dir,
+                                   tag=tag,
+                                   command=command,
+                                   builder_image=builder_image,
+                                   build_args=build_args)
 
     return build_status

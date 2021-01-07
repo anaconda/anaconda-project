@@ -168,28 +168,27 @@ def _parse_args_and_run_subcommand(argv):
 
     preset = subparsers.add_parser('dock', help="Build a docker image of the Anaconda Project.")
     add_directory_arg(preset)
-    preset.add_argument(
-        '-t', '--tag', default=None, help='Tag of the output docker image in the format name:tag. '
-                                          'Default: "<project-name>:latest", where <project-name> is taken from '
-                                          'the name tag in the anaconda-project.yml file.')
+    preset.add_argument('-t',
+                        '--tag',
+                        default=None,
+                        help='Tag of the output docker image in the format name:tag. '
+                        'Default: "<project-name>:latest", where <project-name> is taken from '
+                        'the name tag in the anaconda-project.yml file.')
     preset.add_argument(
         '--command',
         default='default',
         help='Select the command to run. If unspecified the "default" command is run.\nThe default command '
-             'is defined as either the command named "default" or the first command specified in the '
-             'anaconda-project.yml file.')
-    preset.add_argument(
-        '--builder-image',
-        default='anacondainc/s2i-anaconda-project-ubi7:latest',
-        help='The s2i builder image'
-    )
-    preset.add_argument(
-        'build_args',
-        default=None,
-        nargs="*",
-        help='Optional arguments for the s2i build command. '
-             'See the output of "s2i build --help" for the available arguments. '
-             'It is recommended to include a -- separator before supplying these arguments.')
+        'is defined as either the command named "default" or the first command specified in the '
+        'anaconda-project.yml file.')
+    preset.add_argument('--builder-image',
+                        default='anacondainc/s2i-anaconda-project-ubi7:latest',
+                        help='The s2i builder image')
+    preset.add_argument('build_args',
+                        default=None,
+                        nargs="*",
+                        help='Optional arguments for the s2i build command. '
+                        'See the output of "s2i build --help" for the available arguments. '
+                        'It is recommended to include a -- separator before supplying these arguments.')
     preset.set_defaults(main=dock.main)
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
