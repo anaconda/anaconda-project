@@ -34,5 +34,5 @@ def build_image(path, tag, command, builder_image=DEFAULT_BUILDER_IMAGE, build_a
         return SimpleStatus(success=False, description=error_msg, errors=[str(e)])
     except FileNotFoundError as e:
         error_msg = """\nERROR: The source-to-image (s2i) executable was not found. It can be installed using
-    conda install -c defusco source-to-image"""
+    conda install -c ctools source-to-image"""
         return SimpleStatus(success=False, description=error_msg, errors=[str(e)])

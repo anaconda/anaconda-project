@@ -30,7 +30,7 @@ You can install s2i using Conda
 
 .. code-block:: text
 
-  conda install -c defusco source-to-image
+  conda install -c ctools source-to-image
 
 
 Quickstart
