@@ -216,7 +216,11 @@ class CondaEnvProvider(EnvVarProvider):
                         # _is_environment_writable leaves behind a file
                         # that causes the clone to fail
                         shutil.rmtree(destination)
-                        conda_api.clone(destination, prefix)
+                        print('Cloning the readonly environment {}'.format(prefix))
+                        conda_api.clone(destination,
+                                        prefix,
+                                        stdout_callback=context.frontend.partial_info,
+                                        stderr_callback=context.frontend.partial_error)
                         prefix = env_spec.path(project_dir, reset=True)
                         break
 
