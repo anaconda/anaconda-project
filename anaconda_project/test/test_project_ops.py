@@ -5066,7 +5066,8 @@ def test_dock_default_args(monkeypatch):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """name: dock-me
+            DEFAULT_PROJECT_FILENAME:
+            """name: dock-me
 commands:
   default:
     unix: /usr/bin/true
@@ -5086,7 +5087,8 @@ def test_dock_name_with_spaces(monkeypatch):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """name: Dock Me
+            DEFAULT_PROJECT_FILENAME:
+            """name: Dock Me
 commands:
   default:
     unix: /usr/bin/true
@@ -5106,7 +5108,8 @@ def test_dock_missing_command(monkeypatch):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """name: Dock Me
+            DEFAULT_PROJECT_FILENAME:
+            """name: Dock Me
 commands:
   default:
     unix: /usr/bin/true

@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 # -----------------------------------------------------------------------------
 # Copyright (c) 2020, Anaconda, Inc. All rights reserved.
@@ -87,9 +86,7 @@ def test_dock_build_args(capsys, monkeypatch):
         assert 'Yay\n' == out
         assert '' == err
 
-        assert params['kwargs']['build_args'] == [
-            '-e', 'CMD=other', '--run'
-        ]
+        assert params['kwargs']['build_args'] == ['-e', 'CMD=other', '--run']
 
     with_directory_contents_completing_project_file(dict(), check)
 
