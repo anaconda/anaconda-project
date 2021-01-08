@@ -121,7 +121,9 @@ class DefaultCondaManager(CondaManager):
     def _test_writable_file(self, prefix):
         return os.path.join(self._cache_directory(prefix), "status")
 
-    def _force_readonly_file(self, prefix):
+    def _force_readonly_file(self, prefix, parent=False):
+        if parent:
+            prefix = os.path.dirname(prefix)
         return os.path.join(prefix, '.readonly')
 
     def _timestamp_file(self, prefix, spec):
@@ -196,8 +198,8 @@ class DefaultCondaManager(CondaManager):
             return False
 
     def _is_environment_writable(self, prefix):
-        filename = self._force_readonly_file(prefix)
-        if os.path.exists(filename):
+        if (os.path.exists(self._force_readonly_file(prefix))
+                or os.path.exists(self._force_readonly_file(prefix, parent=True))):
             return False
         filename = self._test_writable_file(prefix)
         return self._write_a_file(filename)
