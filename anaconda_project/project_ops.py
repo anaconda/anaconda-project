@@ -11,7 +11,11 @@ from __future__ import absolute_import
 import contextlib
 import os
 import shutil
-import tempfile
+from tempfile import NamedTemporaryFile
+try:
+    from backports.tempfile import TemporaryDirectory
+except ImportError:
+    from tempfile import TemporaryDirectory
 
 from anaconda_project.project import Project, ALL_COMMAND_TYPES
 from anaconda_project import archiver
@@ -1727,7 +1731,7 @@ def upload(project, private=None, site=None, username=None, token=None, suffix='
 
     # delete=True breaks on windows if you use tmp_tarfile.name to re-open the file,
     # so don't use delete=True.
-    tmp_tarfile = tempfile.NamedTemporaryFile(delete=False, prefix="anaconda_upload_", suffix=suffix)
+    tmp_tarfile = NamedTemporaryFile(delete=False, prefix="anaconda_upload_", suffix=suffix)
     tmp_tarfile.close()  # immediately un-use it to avoid file-in-use errors on Windows
     try:
         status = archive(project, tmp_tarfile.name)
@@ -1794,7 +1798,7 @@ def dock(project,
         name = project.name.replace(' ', '').lower()
         tag = '{}:latest'.format(name)
 
-    with tempfile.TemporaryDirectory() as tempdir:
+    with TemporaryDirectory() as tempdir:
         print('Archiving project to temporary directory.')
 
         project_archive = os.path.join(tempdir, 'project.tar.gz')
