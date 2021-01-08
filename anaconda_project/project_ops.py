@@ -1766,7 +1766,7 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
 
 
 def dock(project,
-         tag='latest',
+         tag=None,
          command='default',
          builder_image='{}:latest'.format(DEFAULT_BUILDER_IMAGE),
          build_args=None):
@@ -1783,7 +1783,7 @@ def dock(project,
         return SimpleStatus(success=False, description=msg)
 
     if (command not in project.commands) and (command != 'default'):
-        msg = 'Error setting docker CMD.\n'
+        msg = 'Error setting Docker run command.\n'
         msg += 'The command {} is not one of the configured commands.\n'.format(command)
         msg += 'Available commands are:'
         for k, v in project.commands.items():
