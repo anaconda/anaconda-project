@@ -36,17 +36,17 @@ You can install s2i using Conda
 Quickstart
 ----------
 
-#. Build a docker image to run a supplied command 
+#. Build a docker image to run a supplied command
 
-  .. code-block:: text
-    
-    anaconda-project dock --command <command-name> -t <image name>
+   .. code-block:: text
+
+     anaconda-project dock --command <command-name> -t <image name>
 
 #. Run the Docker image and proxy port 8086
 
-  .. code-block:: text
+   .. code-block:: text
 
-    docker run -p 8086:8086 <image name>
+     docker run -p 8086:8086 <image name>
 
 
 Build docker images
@@ -91,7 +91,7 @@ The ``dock`` command accepts several optional arguments
 
 ``--builder-image``
   The s2i builder image name to use.
-  Default: ``anacondainc/s2i-anaconda-project-ubi7``
+  Default: ``conda/s2i-anaconda-project-ubi7``
   By default this is image is pulled from DockerHub when ``dock`` is run.
   See the Custom Builder Image section below to construct your own builder images.
 
