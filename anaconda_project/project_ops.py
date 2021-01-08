@@ -1778,6 +1778,10 @@ def dock(project,
         build_args: dict [Optional] Additional arguments passed to docker build
     """
 
+    if not project.commands:
+        msg = "No known run command for this project try adding a 'commands:' section to anaconda-project.yml"
+        return SimpleStatus(success=False, description=msg)
+
     if (command not in project.commands) and (command != 'default'):
         msg = 'Error setting docker CMD.\n'
         msg += 'The command {} is not one of the configured commands.\n'.format(command)
