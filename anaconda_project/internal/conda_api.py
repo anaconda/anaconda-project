@@ -264,6 +264,11 @@ def clone(prefix, source, stdout_callback=None, stderr_callback=None):
 
     cmd_list = ['create', '-p', prefix, '--clone', source]
     _call_conda(cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
+    # If someone is using the .readonly flag-file approach, the clone command is going to copy
+    # that. So we need to remove it if we find it in the new, copied environment.
+    readonly_file = os.path.join(prefix, '.readonly')
+    if os.path.exists(readonly_file):
+        os.unlink(readonly_file)
 
 
 def install(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback=None):
