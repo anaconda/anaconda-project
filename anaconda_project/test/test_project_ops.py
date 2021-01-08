@@ -5049,9 +5049,9 @@ def test_download_missing(monkeypatch):
         }, check)
 
 
-def _mock_build_image(path, tag, command, builder_image, build_args=()):
-    '\nDocker image {} build successful.'.format(tag)
-    return SimpleStatus(True, description=tag)
+def _mock_build_image(path, tag, command, builder_image, build_args):
+    msg = '\nDocker image {} build successful.'.format(tag)
+    return SimpleStatus(True, description=msg)
 
 
 def test_dock_default_args(monkeypatch):
@@ -5059,7 +5059,7 @@ def test_dock_default_args(monkeypatch):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
-        monkeypatch.setattr('anaconda_project.docker.build_image', _mock_build_image)
+        monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
         status = project_ops.dock(project)
         assert status
         assert 'Docker image dock-me:latest build successful.' in status.status_description
@@ -5080,7 +5080,7 @@ def test_dock_name_with_spaces(monkeypatch):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
-        monkeypatch.setattr('anaconda_project.docker.build_image', _mock_build_image)
+        monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
         status = project_ops.dock(project)
         assert status
         assert 'Docker image dockme:latest build successful.' in status.status_description
@@ -5101,7 +5101,7 @@ def test_dock_missing_command(monkeypatch):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
-        monkeypatch.setattr('anaconda_project.docker.build_image', _mock_build_image)
+        monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
         status = project_ops.dock(project, command='missing')
         assert not status
         assert 'The command missing is not one of the configured commands' in status.status_description
