@@ -18,6 +18,7 @@ from anaconda_project.internal.cli.prepare_with_mode import (UI_MODE_TEXT_ASK_QU
 from anaconda_project import __version__ as version
 from anaconda_project.verbose import push_verbose_logger, pop_verbose_logger
 from anaconda_project.project import ALL_COMMAND_TYPES
+from anaconda_project.docker import DEFAULT_BUILDER_IMAGE
 from anaconda_project.requirements_registry.registry import RequirementsRegistry
 from anaconda_project.requirements_registry.requirements.download import _hash_algorithms
 import anaconda_project
@@ -181,7 +182,7 @@ def _parse_args_and_run_subcommand(argv):
         'is defined as either the command named "default" or the first command specified in the '
         'anaconda-project.yml file.')
     preset.add_argument('--builder-image',
-                        default='anacondainc/s2i-anaconda-project-ubi7:latest',
+                        default='{}:latest'.format(DEFAULT_BUILDER_IMAGE),
                         help='The s2i builder image')
     preset.add_argument('build_args',
                         default=None,

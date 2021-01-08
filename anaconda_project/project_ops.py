@@ -31,7 +31,7 @@ import anaconda_project.conda_manager as conda_manager
 from anaconda_project.internal.conda_api import (parse_spec, default_platforms_with_current)
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 from anaconda_project.internal.py2_compat import is_string
-from anaconda_project.docker import build_image
+from anaconda_project.docker import build_image, DEFAULT_BUILDER_IMAGE
 
 
 def create(directory_path,
@@ -1768,7 +1768,7 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
 def dock(project,
          tag='latest',
          command='default',
-         builder_image='anacondainc/s2i-anaconda-project-ubi7:latest',
+         builder_image='{}:latest'.format(DEFAULT_BUILDER_IMAGE),
          build_args=None):
     """Build docker image from project.
 

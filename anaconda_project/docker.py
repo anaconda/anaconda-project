@@ -11,8 +11,10 @@ import subprocess
 
 from anaconda_project.internal.simple_status import SimpleStatus
 
+DEFAULT_BUILDER_IMAGE = 'conda/s2i-anaconda-project-ubi7'
 
-def build_image(path, tag, command, builder_image='anacondainc/s2i-anaconda-project-ubi7', build_args=()):
+
+def build_image(path, tag, command, builder_image=DEFAULT_BUILDER_IMAGE, build_args=()):
     """Run s2i build."""
 
     cmd = ['s2i', 'build', '--copy', path, builder_image, tag, '-e', 'CMD={}'.format(command)]
