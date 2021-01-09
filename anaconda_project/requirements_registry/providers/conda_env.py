@@ -208,7 +208,6 @@ class CondaEnvProvider(EnvVarProvider):
 
             if deviations.unfixable and readonly_policy in ('clone', 'replace'):
                 # scan for writable path
-                env_paths = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep)
                 destination = env_spec.path(project_dir, reset=True, force_writable=True)
                 if destination != prefix:
                     if readonly_policy == 'replace':
