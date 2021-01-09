@@ -206,23 +206,21 @@ class CondaEnvProvider(EnvVarProvider):
 
             readonly_policy = os.environ.get('ANACONDA_PROJECT_READONLY_ENVS_POLICY', 'fail').lower()
 
-            if deviations.unfixable and readonly_policy == 'clone':
+            if deviations.unfixable and readonly_policy in ('clone', 'replace'):
                 # scan for writable path
                 env_paths = os.environ.get('ANACONDA_PROJECT_ENVS_PATH', '').split(os.pathsep)
-                for base_path in env_paths:
-                    base_path = os.path.expanduser(base_path) if base_path else 'envs'
-                    destination = os.path.abspath(os.path.join(project_dir, base_path, env_spec.name))
-                    if conda._is_environment_writable(destination):
-                        # _is_environment_writable leaves behind a file
-                        # that causes the clone to fail
-                        shutil.rmtree(destination)
+                destination = env_spec.path(project_dir, reset=True, force_writable=True)
+                if destination != prefix:
+                    if readonly_policy == 'replace':
+                        print('Replacing the readonly environment {}'.format(prefix))
+                        deviations = conda.find_environment_deviations(destination, env_spec)
+                    else:
                         print('Cloning the readonly environment {}'.format(prefix))
                         conda_api.clone(destination,
                                         prefix,
                                         stdout_callback=context.frontend.partial_info,
                                         stderr_callback=context.frontend.partial_error)
-                        prefix = env_spec.path(project_dir, reset=True)
-                        break
+                    prefix = destination
 
             try:
                 conda.fix_environment_deviations(prefix, env_spec, create=(not inherited))

@@ -10,6 +10,7 @@ from __future__ import absolute_import
 
 import codecs
 import difflib
+import shutil
 import os
 import re
 
@@ -50,6 +51,7 @@ class EnvSpec(object):
 
         self._name = name
         self._path = None
+        self._readonly = None
         self._conda_packages = tuple(conda_packages)
         self._channels = tuple(channels)
         self._pip_packages = tuple(pip_packages)
@@ -276,7 +278,7 @@ class EnvSpec(object):
         """Env spec names that we inherit stuff from."""
         return self._inherit_from_names
 
-    def path(self, project_dir, reset=False):
+    def path(self, project_dir, reset=False, force_writable=False):
         """The filesystem path to the default conda env containing our packages."""
 
         if reset:
@@ -301,9 +303,18 @@ class EnvSpec(object):
             existing_env = None
             for base in env_paths:
                 prefix = _prefix(base)
-                if _found(prefix):
+                if _found(prefix) and (not force_writable or self._conda._is_environment_writable(prefix)):
                     existing_env = prefix
                     break
+
+            # If we need a writable environment, find the first writable location
+            if existing_env is None and force_writable:
+                for base in env_paths:
+                    prefix = _prefix(base)
+                    if not _found(prefix) and self._conda._is_environment_writable(prefix):
+                        shutil.rmtree(prefix)
+                        existing_env = prefix
+                        break
 
             if existing_env is not None:
                 self._path = existing_env
