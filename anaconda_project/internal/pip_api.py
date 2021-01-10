@@ -89,7 +89,7 @@ def installed(prefix):
     try:
         # Use freeze instead of list so we get a consistent format across
         # different versions of pip
-        out = _call_pip(prefix, extra_args=['freeze']).decode('utf-8')
+        out = _call_pip(prefix, extra_args=['freeze'])
         # on Windows, $ in a regex doesn't match \r\n, we need to get rid of \r
         out = out.replace("\r\n", "\n")
     except PipNotInstalledError:
