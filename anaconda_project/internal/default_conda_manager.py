@@ -454,7 +454,7 @@ class DefaultCondaManager(CondaManager):
             specs = spec.specs_for_pip_package_names(missing)
             assert len(specs) == len(missing)
             try:
-                pip_api.install(prefix=prefix, pkgs=specs)
+                pip_api.install(prefix=prefix, pkgs=specs, stdout_callback=self._on_stdout, stderr_callback=self._on_stderr)
             except pip_api.PipError as e:
                 raise CondaManagerError("Failed to install missing pip packages: {}: {}".format(
                     ", ".join(missing), str(e)))
