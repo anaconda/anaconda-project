@@ -392,7 +392,7 @@ def _updating_project_lock_file(project):
         status_holder.status = failed  # pragma: no cover # should not happen
 
 
-def _update_env_spec(project, name, packages, channels, create):
+def _update_env_spec(project, name, packages, channels, create, pip=False):
     failed = _check_problems(project)
     if failed is not None:
         return failed
@@ -424,7 +424,9 @@ def _update_env_spec(project, name, packages, channels, create):
         # packages may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
         old_packages = env_dict.get('packages', [])
-        old_packages_set = set(parse_spec(dep).name for dep in old_packages if is_string(dep))
+        # old_packages_set = set(parse_spec(dep).name for dep in old_packages if is_string(dep))
+        conda_packages_set = project.env_specs[name].conda_package_names_set
+        pip_packages_set = project.env_specs[name].pip_package_names_set
         bad_specs = []
         updated_specs = []
         new_specs = []
@@ -594,7 +596,7 @@ def export_env_spec(project, name, filename):
     return SimpleStatus(success=True, description="Exported environment spec {} to {}.".format(name, filename))
 
 
-def add_packages(project, env_spec_name, packages, channels):
+def add_packages(project, env_spec_name, packages, channels, pip=False):
     """Attempt to install packages then add them to anaconda-project.yml.
 
     If the env_spec_name is None rather than an env name,
@@ -616,7 +618,7 @@ def add_packages(project, env_spec_name, packages, channels):
     Returns:
         ``Status`` instance
     """
-    return _update_env_spec(project, env_spec_name, packages, channels, create=False)
+    return _update_env_spec(project, env_spec_name, packages, channels, create=False, pip=pip)
 
 
 def remove_packages(project, env_spec_name, packages):

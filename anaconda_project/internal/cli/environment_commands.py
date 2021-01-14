@@ -51,10 +51,10 @@ def export_env_spec(project_dir, name, filename):
     return _handle_status(status)
 
 
-def add_packages(project, environment, packages, channels):
+def add_packages(project, environment, packages, channels, pip=False):
     """Add packages to the project."""
     project = load_project(project)
-    status = project_ops.add_packages(project, env_spec_name=environment, packages=packages, channels=channels)
+    status = project_ops.add_packages(project, env_spec_name=environment, packages=packages, channels=channels, pip=pip)
     package_list = ", ".join(packages)
     if environment is None:
         success_message = "Added packages to project file: %s." % (package_list)
@@ -185,7 +185,7 @@ def main_export(args):
 
 def main_add_packages(args):
     """Start the add-packages command and return exit status code."""
-    return add_packages(args.directory, args.env_spec, args.packages, args.channel)
+    return add_packages(args.directory, args.env_spec, args.packages, args.channel, args.pip)
 
 
 def main_remove_packages(args):

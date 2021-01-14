@@ -281,6 +281,7 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=service_commands.main_list)
 
     def add_package_args(preset):
+        preset.add_argument('--pip', action='store_true', help='Install the requested packages using pip.')
         preset.add_argument('-c',
                             '--channel',
                             metavar='CHANNEL',
