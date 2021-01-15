@@ -1786,7 +1786,9 @@ def dock(project,
         msg = "No known run command for this project try adding a 'commands:' section to anaconda-project.yml"
         return SimpleStatus(success=False, description=msg)
 
-    if (command not in project.commands) and (command != 'default'):
+    if command == 'default':
+        command = project.default_command.name
+    elif command not in project.commands:
         msg = 'Error setting Docker run command.\n'
         msg += 'The command {} is not one of the configured commands.\n'.format(command)
         msg += 'Available commands are:'
