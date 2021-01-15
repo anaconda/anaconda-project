@@ -5050,7 +5050,7 @@ def test_download_missing(monkeypatch):
 
 
 def _mock_build_image(path, tag, command, builder_image, build_args):
-    msg = '\nDocker image {} build successful.'.format(tag)
+    msg = '\nDocker image {} build successful with command {}.'.format(tag, command)
     return SimpleStatus(True, description=msg)
 
 
@@ -5062,7 +5062,7 @@ def test_dock_default_args(monkeypatch):
         monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
         status = project_ops.dock(project)
         assert status
-        assert 'Docker image dock-me:latest build successful.' in status.status_description
+        assert 'Docker image dock-me:latest build successful' in status.status_description
 
     with_directory_contents_completing_project_file(
         {
@@ -5083,7 +5083,7 @@ def test_dock_name_with_spaces(monkeypatch):
         monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
         status = project_ops.dock(project)
         assert status
-        assert 'Docker image dockme:latest build successful.' in status.status_description
+        assert 'Docker image dockme:latest build successful' in status.status_description
 
     with_directory_contents_completing_project_file(
         {
@@ -5115,3 +5115,37 @@ commands:
     unix: /usr/bin/true
     supports_http_options: false"""
         }, check)
+
+
+def test_dock_default_command_alias(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
+        status = project_ops.dock(project, command='default')
+        assert status
+        assert 'command cmd' in status.status_description
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """name: Dock Me
+commands:
+  cmd:
+    unix: /usr/bin/true
+    supports_http_options: false"""
+        }, check)
+
+
+def test_dock_without_commands(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
+        status = project_ops.dock(project)
+        assert not status
+        assert "No known run command for this project" in status.status_description
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """name: Dock Me"""}, check)
