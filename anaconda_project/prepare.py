@@ -709,7 +709,7 @@ def _internal_prepare_in_stages(project, environ_copy, overrides, keep_going_unt
         raise ValueError("invalid provide mode " + mode)
 
     assert not (command_name is not None and command is not None)
-    assert command_name is None or command_name in project.commands
+    assert command_name is None or (command_name in project.commands) or (command_name == 'default')
     assert overrides.env_spec_name is None or overrides.env_spec_name in project.env_specs
 
     if command is None:
@@ -817,7 +817,9 @@ def _project_problems_to_prepare_failure(project, environ, overrides, would_have
 
 
 def _prepare_failure_on_bad_command_name(project, command_name, environ, overrides, would_have_used_env_spec):
-    if command_name is not None and command_name not in project.commands:
+    if command_name == 'default':
+        command_name = project.default_command.name
+    elif command_name is not None and command_name not in project.commands:
         error = ("Command name '%s' is not in %s, these names were found: %s" %
                  (command_name, project.project_file.filename, ", ".join(sorted(project.commands.keys()))))
         project.frontend.error(error)
