@@ -2,6 +2,36 @@
 
 We [keep a changelog.](http://keepachangelog.com/)
 
+## Version 0.9.1
+
+### Issues Closed
+
+
+### Enhancements
+
+* [PR 299](https://github.com/Anaconda-Platform/anaconda-project/pull/299) Support for read-only environments 
+
+## Version 0.9.0
+
+### Issues Closed
+
+* [Issue 238](https://github.com/Anaconda-Platform/anaconda-project/issues/238) version file not updated for 0.8.4 ([PR 237](https://github.com/Anaconda-Platform/anaconda-project/pull/237))
+* [PR 245](https://github.com/Anaconda-Platform/anaconda-project/pull/245) Fix prepare action when using global "dependencies:"
+* [Issue 247](https://github.com/Anaconda-Platform/anaconda-project/issues/247) Graceful handling of read-only environments ([PR 250](https://github.com/Anaconda-Platform/anaconda-project/pull/250))
+* [Issue 255](https://github.com/Anaconda-Platform/anaconda-project/issues/255) Version 0.8.4 modifies anaconda-project.yml during prepare ([PR 256](https://github.com/Anaconda-Platform/anaconda-project/pull/256))
+* [Issue 285](https://github.com/Anaconda-Platform/anaconda-project/issues/285) .projectignore not created ([PR 215](https://github.com/Anaconda-Platform/anaconda-project/pull/215))
+
+### Enhancements
+
+* [PR 244](https://github.com/Anaconda-Platform/anaconda-project/pull/244) Templating for commands
+* [PR 257](https://github.com/Anaconda-Platform/anaconda-project/pull/257) list default command *only*
+* [PR 265](https://github.com/Anaconda-Platform/anaconda-project/pull/265) 'default' is an alias for the actual default command
+* [PR 286](https://github.com/Anaconda-Platform/anaconda-project/pull/286) Add command specific variables and define variable priority order
+* [PR 292](https://github.com/Anaconda-Platform/anaconda-project/pull/292) Allow multiple environment path directories
+* [PR 301](https://github.com/Anaconda-Platform/anaconda-project/pull/301) Allow unpacking into empty directory 
+* [PR 302](https://github.com/Anaconda-Platform/anaconda-project/pull/302) Add support for .readonly file
+
+
 ## Version 0.8.4 (2019/10/24) - Public Release
 
 ### Issues Closed
