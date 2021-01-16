@@ -285,6 +285,37 @@ packages:
         }, check)
 
 
+def test_prepare_default_command():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ, command_name='default')
+        assert result.errors == []
+        assert result
+        assert os.path.join(project.directory_path, 'foo.py') in result.command_exec_info.args
+
+        # environ = minimal_environ()
+        # result = prepare_without_interaction(project, environ=environ, command_name='bar')
+        # assert result.errors == []
+        # assert result
+        # assert os.path.join(project.directory_path, 'bar.py') in result.command_exec_info.args
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+commands:
+    foo:
+       bokeh_app: foo.py
+    bar:
+       bokeh_app: bar.py
+packages:
+  - bokeh
+""",
+            "foo.py": "# foo",
+            "bar.py": "# bar"
+        }, check)
+
+
 def test_prepare_command_not_in_project():
     def check(dirname):
         # create a command that isn't in the Project
