@@ -203,7 +203,7 @@ def get_env_vars(env_prefix):
     except CondaError as e:
         # conda env config was introduced in version 4.8
         if 'invalid choice' not in str(e).lower():
-            raise
+            raise  # pragma: no cover
         else:
             return {}
 
