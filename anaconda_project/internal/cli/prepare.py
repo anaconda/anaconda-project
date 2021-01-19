@@ -22,7 +22,7 @@ def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=F
     """
     project = load_project(project_dir, save=False)
 
-    if path.isfile(path.join(project_dir, 'requirements.txt')):  #and not path.isfile(project.project_file.filename):
+    if path.isfile(path.join(project_dir, 'requirements.txt')):
         default = project.env_specs[project.default_env_spec_name]
         if not default.conda_packages and (python is not None):
             default._conda_packages = [f'python={python}']
