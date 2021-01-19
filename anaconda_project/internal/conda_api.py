@@ -200,7 +200,7 @@ def get_env_vars(env_prefix):
 
     try:
         return _call_and_parse_json(['env', 'config', 'vars', 'list', '-p', env_prefix, '--json'])
-    except CondaError as e:
+    except CondaError as e:  # pragma: no cover
         # conda env config was introduced in version 4.8
         if 'invalid choice' not in str(e).lower():
             raise  # pragma: no cover
