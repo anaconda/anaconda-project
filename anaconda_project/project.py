@@ -184,10 +184,9 @@ class _ConfigCache(object):
             filenames = map(lambda f: os.path.isfile(os.path.join(self.directory_path, f)), filenames)
             if not any(filenames):
                 problems.append(
-                    ProjectProblem(
-                        text="Project file '%s' does not exist." % os.path.basename(project_file.filename),
-                        fix_prompt="Create file '%s'?" % project_file.filename,
-                        fix_function=accept_project_creation))
+                    ProjectProblem(text="Project file '%s' does not exist." % os.path.basename(project_file.filename),
+                                   fix_prompt="Create file '%s'?" % project_file.filename,
+                                   fix_function=accept_project_creation))
 
         if project_file.corrupted:
             problems.append(
