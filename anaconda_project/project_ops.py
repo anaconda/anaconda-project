@@ -1770,10 +1770,10 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
 
 
 def dockerize(project,
-         tag=None,
-         command='default',
-         builder_image='{}:latest'.format(DEFAULT_BUILDER_IMAGE),
-         build_args=None):
+              tag=None,
+              command='default',
+              builder_image='{}:latest'.format(DEFAULT_BUILDER_IMAGE),
+              build_args=None):
     """Build docker image from project.
 
     Args:

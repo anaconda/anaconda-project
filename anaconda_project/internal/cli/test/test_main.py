@@ -13,8 +13,8 @@ import os
 import anaconda_project
 from anaconda_project.internal.cli.main import _parse_args_and_run_subcommand
 
-all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'unarchive', 'upload', 'download', 'dockerize',
-                   'add-variable', 'remove-variable', 'list-variables', 'set-variable', 'unset-variable',
+all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'unarchive', 'upload', 'download',
+                   'dockerize', 'add-variable', 'remove-variable', 'list-variables', 'set-variable', 'unset-variable',
                    'add-download', 'remove-download', 'list-downloads', 'add-service', 'remove-service',
                    'list-services', 'add-env-spec', 'remove-env-spec', 'list-env-specs', 'export-env-spec', 'lock',
                    'unlock', 'update', 'add-packages', 'remove-packages', 'list-packages', 'add-platforms',
