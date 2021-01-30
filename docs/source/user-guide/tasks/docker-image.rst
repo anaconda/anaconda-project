@@ -4,23 +4,23 @@ Creating Docker Images
 
 *Available since version XYZ*
 
-Use the ``dock`` command to create a Docker image from
+Use the ``dockerize`` command to create a Docker image from
 the project. Images created from Anaconda Projects are
 configured to execute a single :doc:`defined command <work-with-commands>`
 in the ``anaconda-project.yml`` file chosen at build time.
 
-The ``dock`` command uses `source-to-image (s2i) <https://github.com/openshift/source-to-image#source-to-image-s2i>`_
+The ``dockerize`` command uses `source-to-image (s2i) <https://github.com/openshift/source-to-image#source-to-image-s2i>`_
 to build Docker images using the `s2i-anaconda-project builder images <https://github.com/Anaconda-Platform/s2i-anaconda-project>`_
 that have been uploaded to Docker Hub.
 
-Images built with ``dock`` will have a fully prepared ``env_spec`` for the desired
+Images built with ``dockerize`` will have a fully prepared ``env_spec`` for the desired
 command and expose port 8086 if the command listens for HTTP requests.
 
 
 Prerequisites
 -------------
 
-In order to utilize the ``dock`` command you will need to
+In order to utilize the ``dockerize`` command you will need to
 have Docker and source-to-image (s2i) installed.
 
 * `Docker <https://docs.docker.com/get-docker/>`_
@@ -40,7 +40,7 @@ Quickstart
 
    .. code-block:: text
 
-     anaconda-project dock --command <command-name> -t <image name>
+     anaconda-project dockerize --command <command-name> -t <image name>
 
 #. Run the Docker image and proxy port 8086
 
@@ -52,7 +52,7 @@ Quickstart
 Build docker images
 -------------------
 
-By default running the ``dock`` command will create a
+By default running the ``dockerize`` command will create a
 Docker image to execute the *default* command.
 
 The *default* command is determined in the following order
@@ -60,7 +60,7 @@ The *default* command is determined in the following order
 #. The command named ``default``
 #. The first command listed in the project file if no command is named ``default``
 
-The ``s2i-anaconda-project`` builder images have Miniconda and ``anaconda-project`` installed. When the ``dock``
+The ``s2i-anaconda-project`` builder images have Miniconda and ``anaconda-project`` installed. When the ``dockerize``
 command is run the following steps are performed.
 
 #. The project is archived to a temporary directory to ensure that files listed in your ``.projectignore`` (including
@@ -77,7 +77,7 @@ The steps in the ``s2i build`` process are
 Options
 ^^^^^^^
 
-The ``dock`` command accepts several optional arguments
+The ``dockerize`` command accepts several optional arguments
 
 ``--command``
   The named command to execute in the ``RUN`` layer of the Docker image.
@@ -92,7 +92,7 @@ The ``dock`` command accepts several optional arguments
 ``--builder-image``
   The s2i builder image name to use.
   Default: ``conda/s2i-anaconda-project-ubi7``
-  By default this is image is pulled from DockerHub when ``dock`` is run.
+  By default this is image is pulled from DockerHub when ``dockerize`` is run.
   See the Custom Builder Image section below to construct your own builder images.
 
 s2i build arguments
@@ -133,5 +133,5 @@ Custom builder images
 ---------------------
 
 If you want to customize the builder images you can clone the `s2i-anaconda-project repository <https://github.com/Anaconda-Platform/s2i-anaconda-project>`_,
-build the images. The custom builder images can be provided to ``anaconda-project dock`` using the ``--builder-image``
+build the images. The custom builder images can be provided to ``anaconda-project dockerize`` using the ``--builder-image``
 flag.

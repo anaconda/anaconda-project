@@ -31,7 +31,7 @@ import anaconda_project.internal.cli.archive as archive
 import anaconda_project.internal.cli.unarchive as unarchive
 import anaconda_project.internal.cli.upload as upload
 import anaconda_project.internal.cli.download as download
-import anaconda_project.internal.cli.dock as dock
+import anaconda_project.internal.cli.dockerize as dockerize
 import anaconda_project.internal.cli.activate as activate
 import anaconda_project.internal.cli.variable_commands as variable_commands
 import anaconda_project.internal.cli.download_commands as download_commands
@@ -167,7 +167,7 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
     preset.set_defaults(main=download.main)
 
-    preset = subparsers.add_parser('dock', help="Build a docker image of the Anaconda Project.")
+    preset = subparsers.add_parser('dockerize', help="Build a docker image of the Anaconda Project.")
     add_directory_arg(preset)
     preset.add_argument('-t',
                         '--tag',
@@ -190,7 +190,7 @@ def _parse_args_and_run_subcommand(argv):
                         help='Optional arguments for the s2i build command. '
                         'See the output of "s2i build --help" for the available arguments. '
                         'It is recommended to include a -- separator before supplying these arguments.')
-    preset.set_defaults(main=dock.main)
+    preset.set_defaults(main=dockerize.main)
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
     add_env_spec_arg(preset)

@@ -12,23 +12,23 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.internal.simple_status import SimpleStatus
 
 
-def _monkeypatch_dock(monkeypatch):
+def _monkeypatch_dockerize(monkeypatch):
     params = {}
 
-    def mock_dock(*args, **kwargs):
+    def mock_dockerize(*args, **kwargs):
         params['args'] = args
         params['kwargs'] = kwargs
         return SimpleStatus(success=True, description="Yay")
 
-    monkeypatch.setattr('anaconda_project.project_ops.dock', mock_dock)
+    monkeypatch.setattr('anaconda_project.project_ops.dockerize', mock_dockerize)
     return params
 
 
-def test_dock(capsys, monkeypatch):
-    params = _monkeypatch_dock(monkeypatch)
+def test_dockerize(capsys, monkeypatch):
+    params = _monkeypatch_dockerize(monkeypatch)
 
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'dock'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'dockerize'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -43,11 +43,11 @@ def test_dock(capsys, monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
-def test_dock_tag(capsys, monkeypatch):
-    params = _monkeypatch_dock(monkeypatch)
+def test_dockerize_tag(capsys, monkeypatch):
+    params = _monkeypatch_dockerize(monkeypatch)
 
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'dock', '-t', 'dockme:1'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'dockerize', '-t', 'dockme:1'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -59,11 +59,11 @@ def test_dock_tag(capsys, monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
-def test_dock_command(capsys, monkeypatch):
-    params = _monkeypatch_dock(monkeypatch)
+def test_dockerize_command(capsys, monkeypatch):
+    params = _monkeypatch_dockerize(monkeypatch)
 
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'dock', '--command', 'other-command'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'dockerize', '--command', 'other-command'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -75,11 +75,11 @@ def test_dock_command(capsys, monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
-def test_dock_build_args(capsys, monkeypatch):
-    params = _monkeypatch_dock(monkeypatch)
+def test_dockerize_build_args(capsys, monkeypatch):
+    params = _monkeypatch_dockerize(monkeypatch)
 
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'dock', '--', '-e', 'CMD=other', '--run'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'dockerize', '--', '-e', 'CMD=other', '--run'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -91,11 +91,11 @@ def test_dock_build_args(capsys, monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
-def test_dock_builder_image(capsys, monkeypatch):
-    params = _monkeypatch_dock(monkeypatch)
+def test_dockerize_builder_image(capsys, monkeypatch):
+    params = _monkeypatch_dockerize(monkeypatch)
 
     def check(dirname):
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'dock', '--builder-image', 'custom:latest'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'dockerize', '--builder-image', 'custom:latest'])
         assert code == 0
 
         out, err = capsys.readouterr()

@@ -5060,14 +5060,14 @@ def test_dock_default_args(monkeypatch):
         assert [] == project.problems
 
         monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
-        status = project_ops.dock(project)
+        status = project_ops.dockerize(project)
         assert status
-        assert 'Docker image dock-me:latest build successful' in status.status_description
+        assert 'Docker image dockerize-me:latest build successful' in status.status_description
 
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """name: dock-me
+            """name: dockerize-me
 commands:
   default:
     unix: /usr/bin/true
@@ -5081,14 +5081,14 @@ def test_dock_name_with_spaces(monkeypatch):
         assert [] == project.problems
 
         monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
-        status = project_ops.dock(project)
+        status = project_ops.dockerize(project)
         assert status
-        assert 'Docker image dockme:latest build successful' in status.status_description
+        assert 'Docker image dockerizeme:latest build successful' in status.status_description
 
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """name: Dock Me
+            """name: Dockerize Me
 commands:
   default:
     unix: /usr/bin/true
@@ -5102,14 +5102,14 @@ def test_dock_missing_command(monkeypatch):
         assert [] == project.problems
 
         monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
-        status = project_ops.dock(project, command='missing')
+        status = project_ops.dockerize(project, command='missing')
         assert not status
         assert 'The command missing is not one of the configured commands' in status.status_description
 
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """name: Dock Me
+            """name: Dockerize Me
 commands:
   default:
     unix: /usr/bin/true
@@ -5123,14 +5123,14 @@ def test_dock_default_command_alias(monkeypatch):
         assert [] == project.problems
 
         monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
-        status = project_ops.dock(project, command='default')
+        status = project_ops.dockerize(project, command='default')
         assert status
         assert 'command cmd' in status.status_description
 
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """name: Dock Me
+            """name: Dockerize Me
 commands:
   cmd:
     unix: /usr/bin/true
@@ -5144,8 +5144,8 @@ def test_dock_without_commands(monkeypatch):
         assert [] == project.problems
 
         monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
-        status = project_ops.dock(project)
+        status = project_ops.dockerize(project)
         assert not status
         assert "No known run command for this project" in status.status_description
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """name: Dock Me"""}, check)
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """name: Dockerize Me"""}, check)

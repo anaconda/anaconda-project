@@ -13,7 +13,7 @@ import os
 import anaconda_project
 from anaconda_project.internal.cli.main import _parse_args_and_run_subcommand
 
-all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'unarchive', 'upload', 'download', 'dock',
+all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'unarchive', 'upload', 'download', 'dockerize',
                    'add-variable', 'remove-variable', 'list-variables', 'set-variable', 'unset-variable',
                    'add-download', 'remove-download', 'list-downloads', 'add-service', 'remove-service',
                    'list-services', 'add-env-spec', 'remove-env-spec', 'list-env-specs', 'export-env-spec', 'lock',
@@ -76,7 +76,7 @@ expected_usage_msg_format = (  # noqa
     '                        project files in it\n'
     '    upload              Upload the project to Anaconda Cloud\n'
     '    download            Download the project from Anaconda Cloud\n'
-    '    dock                Build a docker image of the Anaconda Project.\n'
+    '    dockerize           Build a docker image of the Anaconda Project.\n'
     '    add-variable        Add a required environment variable to the project\n'
     '    remove-variable     Remove an environment variable from the project\n'
     '    list-variables      List all variables on the project\n'

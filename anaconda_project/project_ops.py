@@ -1769,7 +1769,7 @@ def download(project, unpack=True, project_dir=None, parent_dir=None, site=None,
     return download_status
 
 
-def dock(project,
+def dockerize(project,
          tag=None,
          command='default',
          builder_image='{}:latest'.format(DEFAULT_BUILDER_IMAGE),
