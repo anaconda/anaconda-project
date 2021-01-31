@@ -103,7 +103,7 @@ def test_main_fails_to_redis(monkeypatch, capsys):
 
     def main_redis_url(dirname):
         project_dir_disable_dedicated_env(dirname)
-        code = main(Args(directory=dirname, all=False, refresh=False))
+        code = main(Args(directory=dirname, all=False, refresh=False, python=None))
         assert 1 == code
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
