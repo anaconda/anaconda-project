@@ -674,6 +674,53 @@ def test_list_packages_from_env_default(capsys):
     _test_list_packages(capsys, None, '\nflask\nmandatory_package\nrequests\n\n', '\nmandatory_pip_package\n\n')
 
 
+def _test_list_packages_with_pip(capsys, env, expected_deps, expected_pip_deps):
+    def check_list_not_empty(dirname):
+        params = ['anaconda-project', 'list-packages', '--directory', dirname]
+        if env is not None:
+            params.extend(['--env-spec', env])
+
+        code = _parse_args_and_run_subcommand(params)
+
+        assert code == 0
+        out, err = capsys.readouterr()
+
+        project = Project(dirname)
+        assert project.default_env_spec_name == 'foo'
+        expected_out = "Conda Packages for environment '{}':\n{}".format(env or project.default_env_spec_name, expected_deps)
+        expected_out += "Pip Packages for environment '{}':\n{}".format(env or project.default_env_spec_name, expected_pip_deps)
+        assert out == expected_out
+
+    project_contents = ('env_specs:\n'
+                        '  foo:\n'
+                        '    packages:\n'
+                        '      - requests\n'
+                        '      - flask\n'
+                        '      - pip:\n'
+                        '          - barfoo\n'
+                        '  bar:\n'
+                        '    packages:\n'
+                        '      - httplib\n'
+                        '      - django\n'
+                        '      - pip:\n'
+                        '          - foobar\n\n'
+                        'packages:\n'
+                        ' - mandatory_package\n'
+                        ' - pip:\n'
+                        '    - foo\n')
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: project_contents}, check_list_not_empty)
+
+
+def test_list_packages_with_pip_from_env(capsys):
+    _test_list_packages_with_pip(capsys, 'bar', '\ndjango\nhttplib\nmandatory_package\n\n', '\nfoo\nfoobar\n\n')
+    _test_list_packages_with_pip(capsys, 'foo', '\nflask\nmandatory_package\nrequests\n\n', '\nbarfoo\nfoo\n\n')
+
+
+def test_list_packages_with_pip_from_env_default(capsys):
+    _test_list_packages_with_pip(capsys, None, '\nflask\nmandatory_package\nrequests\n\n', '\nbarfoo\nfoo\n\n')
+
+
 def test_list_packages_with_project_file_problems(capsys, monkeypatch):
     _test_environment_command_with_project_file_problems(capsys,
                                                          monkeypatch,
