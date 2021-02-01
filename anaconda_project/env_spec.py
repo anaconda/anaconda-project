@@ -18,7 +18,6 @@ import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.pip_api as pip_api
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project import conda_manager
-from anaconda_project.internal.conda_api import default_platforms_with_current
 
 from anaconda_project.yaml_file import _load_string, _save_file, _YAMLError, ryaml
 
@@ -63,9 +62,6 @@ class EnvSpec(object):
         self._inherit_from_names = inherit_from_names
         self._inherit_from = inherit_from
         self._lock_set = lock_set
-
-        if not platforms:
-            platforms = default_platforms_with_current()
         self._platforms = tuple(conda_api.sort_platform_list(platforms))
 
         # inherit_from must be a subset of inherit_from_names
