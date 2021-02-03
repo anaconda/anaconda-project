@@ -148,7 +148,7 @@ def list_platforms(project_dir, environment):
 
 def lock(project_dir, env_spec_name):
     """Lock dependency versions."""
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
     status = project_ops.lock(project, env_spec_name=env_spec_name)

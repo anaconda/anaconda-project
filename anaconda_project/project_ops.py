@@ -929,7 +929,7 @@ def _update_and_lock(project, env_spec_name, update):
 
     # everything successful; save the project
     if need_save:
-        project.save()
+        project.save_lock()
 
     if update:
         description = "Update complete."

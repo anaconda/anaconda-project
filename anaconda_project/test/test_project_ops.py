@@ -210,7 +210,7 @@ def test_create_no_import_environment_yml_when_not_fix_problems():
                                      icon='something.png',
                                      description="Hello World",
                                      fix_problems=False)
-        assert ["Environment spec 'stuff' from environment.yml is not in anaconda-project.yml."] == project.problems
+        assert len(project.problems) == 0
 
     with_directory_contents(
         {
