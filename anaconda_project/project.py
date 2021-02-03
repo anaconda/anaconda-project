@@ -806,10 +806,10 @@ class _ConfigCache(object):
 
         (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
                                                                                    self.directory_path)
-        if importable_spec is not None:
-            skip_spec_import = project_file.get_value(['skip_imports', 'environment'])
-            if skip_spec_import == importable_spec.logical_hash:
-                importable_spec = None
+        # if importable_spec is not None:
+        #     skip_spec_import = project_file.get_value(['skip_imports', 'environment'])
+        #     if (skip_spec_import == importable_spec.logical_hash) or skip_spec_import:
+        #         importable_spec = None
 
         if importable_spec is not None:
             old = self.env_specs.get(importable_spec.name)
@@ -1639,6 +1639,9 @@ class Project(object):
         Does nothing for config files that are not dirty.
         """
         self.project_file.save()
+        self.lock_file.save()
+
+    def save_lock(self):
         self.lock_file.save()
 
     def use_changes_without_saving(self):
