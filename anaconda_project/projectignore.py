@@ -11,12 +11,13 @@ import os
 import codecs
 
 _default_projectignore = """
-# This file contains a list of matching patterns to instruct
-# anaconda-project to ignore files/directories when building a
-# project archive, such as downloaded data sets. A subset of
-# the .gitignore file format is supported; see the documentation
-# for details. In fact, if your project already has a .gitignore
-# file, these patterns can be merged into it and this file removed.
+# This file contains a list of match patterns that instructs
+# anaconda-project to exclude certain files or directories when
+# building a project archive. The file format is a simplfied
+# version of Git's .gitignore file format. In fact, if the
+# project is hosted in a Git repository, these patterns can be
+# merged into the .gitignore file and this file removed.
+# See the anaconda-project documentation for more details.
 
 /anaconda-project-local.yml
 
@@ -26,17 +27,10 @@ _default_projectignore = """
 *.pyo
 __pycache__/
 
-# nodejs caching
-.cache/
-
 # Jupyter & Spyder stuff
 .ipynb_checkpoints/
 .Trash-*/
 /.spyderproject
-
-# Anaconda-project work directories
-/tmp/
-/envs/
 """.lstrip()
 
 

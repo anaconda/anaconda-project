@@ -23,7 +23,7 @@ def test_parse_ignore_file():
 
         pattern_strings = [pattern.pattern for pattern in patterns]
 
-        assert pattern_strings == [
+        assert set(pattern_strings) == [
             'bar', '/baz', 'whitespace_surrounding', 'foo # this comment will be part of the pattern',
             '#patternwithhash', 'hello'
         ]
@@ -99,8 +99,8 @@ def test_parse_default_ignore_file():
         pattern_strings = [pattern.pattern for pattern in patterns]
 
         assert pattern_strings == [
-            '/anaconda-project-local.yml', '__pycache__/', '*.pyc', '*.pyo', '*.pyd', '.ipynb_checkpoints/',
-            '/.spyderproject'
+            '/anaconda-project-local.yml', '*.pyc', '*.pyd', '*.pyo', '__pycache__/', '.ipynb_checkpoints/',
+            '.Trash-*/', '/.spyderproject'
         ]
 
     with_directory_contents(dict(), check)
