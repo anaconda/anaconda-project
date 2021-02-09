@@ -13,7 +13,7 @@ import codecs
 _default_projectignore = """
 # This file contains a list of matching patterns to instruct
 # anaconda-project to ignore files/directories when building a
-# project archive, such as downloaded data sets. A subset of 
+# project archive, such as downloaded data sets. A subset of
 # the .gitignore file format is supported; see the documentation
 # for details. In fact, if your project already has a .gitignore
 # file, these patterns can be merged into it and this file removed.
@@ -43,7 +43,7 @@ __pycache__/
 def add_projectignore_if_none(project_directory):
     """Add .projectignore if not found in project directory."""
     filename = os.path.join(project_directory, ".projectignore")
-    gfile = os.path.join(project_directory, ".gitignore")
+    gfilename = os.path.join(project_directory, ".gitignore")
     if not os.path.exists(filename) and not os.path.exists(gfilename):
         try:
             with codecs.open(filename, 'w', 'utf-8') as f:
