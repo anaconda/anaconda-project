@@ -148,6 +148,8 @@ def _load_ignore_file(project_directory, frontend):
 
 def _git_ignored_files(project_directory, frontend):
     if not os.path.exists(os.path.join(project_directory, ".git")):
+        if os.path.exists(os.path.join(project_directory, ".gitignore")):
+            frontend.error("Warning: the .gitignore file is being ignored because this directory is not a Git repository.")
         return []
 
     # It is pretty involved to parse .gitignore correctly. Lots of
