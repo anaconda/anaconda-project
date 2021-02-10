@@ -3785,14 +3785,7 @@ def test_archive_tar():
             assert os.path.exists(archivefile)
             _assert_tar_contains(
                 archivefile,
-                [
-                    '.projectignore',
-                    'a/b/c/d.py',
-                    'a/b/c/e.py',
-                    'emptydir',
-                    'foo.py',
-                    'anaconda-project.yml'  # , 'anaconda-project-local.yml'
-                ])
+                ['.projectignore', 'a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml'])
 
             # overwriting should work
             status = project_ops.archive(project, archivefile)
@@ -3801,14 +3794,7 @@ def test_archive_tar():
             assert os.path.exists(archivefile)
             _assert_tar_contains(
                 archivefile,
-                [
-                    '.projectignore',
-                    'a/b/c/d.py',
-                    'a/b/c/e.py',
-                    'emptydir',
-                    'foo.py',
-                    'anaconda-project.yml'  # , 'anaconda-project-local.yml'
-                ])
+                ['.projectignore', 'a/b/c/d.py', 'a/b/c/e.py', 'emptydir', 'foo.py', 'anaconda-project.yml'])
 
         with_directory_contents_completing_project_file(
             {
@@ -3985,7 +3971,7 @@ def test_archive_zip_with_gitignore():
 
             assert status
             assert os.path.exists(archivefile)
-            _assert_zip_contains(archivefile, ['foo.py', '.gitignore', 'anaconda-project.yml', '.projectignore'])
+            _assert_zip_contains(archivefile, ['foo.py', '.gitignore', 'anaconda-project.yml'])
 
         with_directory_contents_completing_project_file(
             _add_empty_git({

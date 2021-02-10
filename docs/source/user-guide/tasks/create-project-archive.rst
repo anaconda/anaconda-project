@@ -18,7 +18,9 @@ files, you might not want to include those either.
 
 The ``anaconda-project archive`` command automatically omits the
 files that Project can reproduce automatically, which includes
-the ``envs/default`` directory and any downloaded data.
+the ``envs/default`` directory and any downloaded data. It also
+excludes ``anaconda-project-local.yml``, which is intended to
+hold local configuration state only.
 
 To manually exclude any other files that you do not want to be
 in the archive, create a ``.projectignore`` file or a

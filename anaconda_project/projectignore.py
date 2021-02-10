@@ -19,8 +19,6 @@ _default_projectignore = """
 # merged into the .gitignore file and this file removed.
 # See the anaconda-project documentation for more details.
 
-/anaconda-project-local.yml
-
 # Python caching
 *.pyc
 *.pyd
