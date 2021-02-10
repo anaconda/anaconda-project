@@ -148,6 +148,9 @@ def _load_ignore_file(project_directory, frontend):
 
 def _git_ignored_files(project_directory, frontend):
     if not os.path.exists(os.path.join(project_directory, ".git")):
+        if os.path.exists(os.path.join(project_directory, ".gitignore")):
+            frontend.error(
+                "Warning: the .gitignore file is being ignored because this directory is not a Git repository.")
         return []
 
     # It is pretty involved to parse .gitignore correctly. Lots of
@@ -215,9 +218,9 @@ def _enumerate_archive_files(project_directory, frontend, requirements):
     if git_filter is None or ignore_file_filter is None:
         return None
 
-    plugin_patterns = set()
+    plugin_patterns = {'/anaconda-project-local.yml'}
     for req in requirements:
-        plugin_patterns = plugin_patterns.union(req.ignore_patterns)
+        plugin_patterns.update(req.ignore_patterns)
     plugin_patterns = [_FilePattern(s) for s in plugin_patterns]
 
     def is_plugin_generated(info):

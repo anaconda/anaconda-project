@@ -11,19 +11,23 @@ import os
 import codecs
 
 _default_projectignore = """
-# project-local contains your personal configuration choices and state
-/anaconda-project-local.yml
+# This file contains a list of match patterns that instructs
+# anaconda-project to exclude certain files or directories when
+# building a project archive. The file format is a simplfied
+# version of Git's .gitignore file format. In fact, if the
+# project is hosted in a Git repository, these patterns can be
+# merged into the .gitignore file and this file removed.
+# See the anaconda-project documentation for more details.
 
-# Files autocreated by Python
-__pycache__/
+# Python caching
 *.pyc
-*.pyo
 *.pyd
+*.pyo
+__pycache__/
 
-# Notebook stuff
+# Jupyter & Spyder stuff
 .ipynb_checkpoints/
-
-# Spyder stuff
+.Trash-*/
 /.spyderproject
 """.lstrip()
 
@@ -31,7 +35,8 @@ __pycache__/
 def add_projectignore_if_none(project_directory):
     """Add .projectignore if not found in project directory."""
     filename = os.path.join(project_directory, ".projectignore")
-    if not os.path.exists(filename):
+    gfilename = os.path.join(project_directory, ".gitignore")
+    if not os.path.exists(filename) and not os.path.exists(gfilename):
         try:
             with codecs.open(filename, 'w', 'utf-8') as f:
                 f.write(_default_projectignore)
