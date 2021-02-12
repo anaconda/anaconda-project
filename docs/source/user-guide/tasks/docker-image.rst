@@ -53,7 +53,7 @@ out to the host. The first entry in the ``-p`` flag must be ``8086`` while the s
 can be any valid unused port on the host. See `the Docker container networking docs for more details. <https://docs.docker.com/config/containers/container-networking/>`_
 
 
-Build docker images
+Build Docker images
 -------------------
 
 By default running the ``dockerize`` command will create a
@@ -102,6 +102,13 @@ The ``dockerize`` command accepts several optional arguments
 s2i build arguments
   Any further arguments or those supplied after ``--`` will be given to the ``s2i build`` command.
   See the `s2i build documentation for available build flags. <https://github.com/openshift/source-to-image/blob/master/docs/cli.md#build-flags>`_
+
+Builder images
+^^^^^^^^^^^^^^
+
+The default builder image for ``anaconda-project dockerize`` is ``conda/s2i-anaconda-project-ubi7``. To see
+other available builder images on DockerHub `click here <https://hub.docker.com/search?q=conda%2Fs2i-anaconda-project&type=image>`_.
+
 
 HTTP options
 ^^^^^^^^^^^^
