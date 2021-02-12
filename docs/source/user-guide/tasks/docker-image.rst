@@ -123,7 +123,7 @@ In addition to the channel configuration available in the ``anaconda-project.yml
 file you may need to supply custom `Conda configuration parameters <https://docs.conda.io/projects/conda/en/latest/user-guide/configuration/use-condarc.html>`_
 in order to build the Docker image.
 
-To provide a custom Conda configuration place a ``.condarc`` file at the top-level
+To provide a custom Conda configuration, place a ``.condarc`` file at the top-level
 of your project directory.
 
 For example, you can use the ``.condarc`` to configure access to
