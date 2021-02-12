@@ -179,8 +179,8 @@ def _parse_args_and_run_subcommand(argv):
         '--command',
         default='default',
         help='Select the command to run. If unspecified the "default" command is run.\nThe default command '
-        'is defined as either the command named "default" or the first command specified in the '
-        'anaconda-project.yml file.')
+        'is defined as either the command named "default" (if any) or (otherwise)  '
+        'the first command specified in the anaconda-project.yml file.')
     preset.add_argument('--builder-image',
                         default='{}:latest'.format(DEFAULT_BUILDER_IMAGE),
                         help='The s2i builder image')
