@@ -3,7 +3,7 @@ name: anaconda-project-dev
 channels:
   - defaults
   - conda-forge
-  - defusco
+  - ctools
 dependencies:
   - redis
   - notebook
