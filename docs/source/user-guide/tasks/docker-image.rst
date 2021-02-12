@@ -48,6 +48,10 @@ Quickstart
 
      docker run -p 8086:8086 <image name>
 
+It is necessary to add ``-p 8086:8086`` in order to publish port 8086 from the anaconda-project container
+out to the host. The first entry in the ``-p`` flag must be ``8086`` while the second entry
+can be any valid unused port on the host. See `the Docker container networking docs for more details. <https://docs.docker.com/config/containers/container-networking/>`_
+
 
 Build docker images
 -------------------
@@ -109,7 +113,7 @@ is executed with the supplied command. The full run command is
 
   anaconda-project run $CMD --anaconda-project-port 8086 --anaconda-project-address 0.0.0.0 --anaconda-project-no-browser --anaconda-project-use-xheaders
 
-This ensures that the command listens over port 8086 if it support the :ref:`http-commands`.
+This ensures that the command communicates over port 8086 if it supports the :ref:`http-commands`.
 
 If your desired command is not an HTTP command or you wish not to use the Jinja2 template features you must add
 ``supports_http_options: false`` to the command specification in the ``anaconda-project.yml`` file. When
