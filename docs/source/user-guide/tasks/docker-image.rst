@@ -42,14 +42,14 @@ Quickstart
 
      anaconda-project dockerize --command <command-name> -t <image name>
 
-#. Run the Docker image and proxy port 8086
+#. Run the Docker image and publish port 8086
 
    .. code-block:: text
 
      docker run -p 8086:8086 <image name>
 
 It is necessary to add ``-p 8086:8086`` in order to publish port 8086 from the anaconda-project container
-out to the host. The first entry in the ``-p`` flag must be ``8086`` while the second entry
+out to the host. The second entry in the ``-p`` flag must be ``8086`` while the first entry
 can be any valid unused port on the host. See `the Docker container networking docs for more details. <https://docs.docker.com/config/containers/container-networking/>`_
 
 
