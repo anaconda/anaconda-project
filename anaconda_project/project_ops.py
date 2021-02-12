@@ -1783,7 +1783,7 @@ def dockerize(project,
     """
 
     if not project.commands:
-        msg = "No known run command for this project try adding a 'commands:' section to anaconda-project.yml"
+        msg = "No known run command for this project; try adding a 'commands:' section to anaconda-project.yml"
         return SimpleStatus(success=False, description=msg)
 
     if command == 'default':
