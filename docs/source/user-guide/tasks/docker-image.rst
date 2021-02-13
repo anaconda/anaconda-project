@@ -95,7 +95,7 @@ The ``dockerize`` command accepts several optional arguments
 
 ``--builder-image``
   The s2i builder image name to use.
-  Default: ``conda/s2i-anaconda-project-ubi7``
+  Default: ``conda/s2i-anaconda-project-ubi8``
   By default this is image is pulled from DockerHub when ``dockerize`` is run.
   See the Custom Builder Image section below to construct your own builder images.
 
@@ -106,7 +106,7 @@ s2i build arguments
 Builder images
 ^^^^^^^^^^^^^^
 
-The default builder image for ``anaconda-project dockerize`` is ``conda/s2i-anaconda-project-ubi7``. To see
+The default builder image for ``anaconda-project dockerize`` is ``conda/s2i-anaconda-project-ubi8``. To see
 other available builder images on DockerHub `click here <https://hub.docker.com/search?q=conda%2Fs2i-anaconda-project&type=image>`_.
 
 

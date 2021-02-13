@@ -37,7 +37,7 @@ def test_dockerize(capsys, monkeypatch):
 
         assert params['kwargs']['tag'] is None
         assert params['kwargs']['command'] == 'default'
-        assert params['kwargs']['builder_image'] == 'conda/s2i-anaconda-project-ubi7:latest'
+        assert params['kwargs']['builder_image'] == 'conda/s2i-anaconda-project-ubi8:latest'
         assert params['kwargs']['build_args'] == []
 
     with_directory_contents_completing_project_file(dict(), check)
