@@ -283,7 +283,7 @@ def _list_relative_paths_for_unignored_project_files(project_directory, frontend
 
 
 # function exported for project_ops.py
-def _archive_project(project, filename):
+def _archive_project(project, filename, pack_envs=False):
     """Make an archive of the non-ignored files in the project.
 
     Args:
@@ -310,6 +310,20 @@ def _archive_project(project, filename):
     if project.project_file.has_unsaved_changes:
         frontend.error("%s has been modified but not saved." % project.project_file.basename)
         return SimpleStatus(success=False, description="Can't create an archive.", errors=frontend.pop_errors())
+
+    envs_path = os.path.join(project.project_file.project_dir, 'envs')
+    if pack_envs and os.path.isdir(envs_path):
+        import conda_pack
+        for env in os.listdir(envs_path):
+            pack = os.path.join(
+                project.project_file.project_dir,
+                'envs-{}.tar.bz2'.format(env)
+            )
+            conda_pack.pack(
+                prefix=os.path.join(envs_path, env),
+                output=pack,
+                verbose=True, force=True
+            )
 
     infos = _enumerate_archive_files(project.directory_path,
                                      frontend,
@@ -576,6 +590,21 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None)
             except (IOError, OSError):
                 pass
             raise e
+
+        from glob import glob
+        packed_envs = glob(os.path.join(project_dir, "envs-*.tar.bz2"))
+        for env in packed_envs:
+            env_path = os.path.join(
+                project_dir,
+                "envs",
+                os.path.basename(env).split('.')[0][5:]
+            )
+            with tarfile.open(env, 'r') as tar:
+                tar.extractall(path=env_path)
+            subprocess.check_call(
+                os.path.join(env_path, 'bin', 'conda-unpack')
+            )
+            os.remove(env)
 
         return _UnarchiveStatus(success=True,
                                 description=("Project archive unpacked to %s." % canonical_project_dir),
