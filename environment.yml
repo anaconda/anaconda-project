@@ -3,6 +3,7 @@ name: anaconda-project-dev
 channels:
   - defaults
   - conda-forge
+  - ctools
 dependencies:
   - redis
   - notebook
@@ -22,3 +23,5 @@ dependencies:
   - pep257
   # Optional; for multiprocessing tests
   - pytest-xdist
+  # Optional for docker (s2i) build support
+  - source-to-image

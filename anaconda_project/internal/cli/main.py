@@ -18,6 +18,7 @@ from anaconda_project.internal.cli.prepare_with_mode import (UI_MODE_TEXT_ASK_QU
 from anaconda_project import __version__ as version
 from anaconda_project.verbose import push_verbose_logger, pop_verbose_logger
 from anaconda_project.project import ALL_COMMAND_TYPES
+from anaconda_project.docker import DEFAULT_BUILDER_IMAGE
 from anaconda_project.requirements_registry.registry import RequirementsRegistry
 from anaconda_project.requirements_registry.requirements.download import _hash_algorithms
 import anaconda_project
@@ -30,6 +31,7 @@ import anaconda_project.internal.cli.archive as archive
 import anaconda_project.internal.cli.unarchive as unarchive
 import anaconda_project.internal.cli.upload as upload
 import anaconda_project.internal.cli.download as download
+import anaconda_project.internal.cli.dockerize as dockerize
 import anaconda_project.internal.cli.activate as activate
 import anaconda_project.internal.cli.variable_commands as variable_commands
 import anaconda_project.internal.cli.download_commands as download_commands
@@ -164,6 +166,31 @@ def _parse_args_and_run_subcommand(argv):
     preset.add_argument('-t', '--token', metavar='TOKEN', help='Auth token or a path to a file containing a token')
     preset.add_argument('-u', '--user', metavar='USERNAME', help='User account, defaults to the current user')
     preset.set_defaults(main=download.main)
+
+    preset = subparsers.add_parser('dockerize', help="Build a docker image of the Anaconda Project.")
+    add_directory_arg(preset)
+    preset.add_argument('-t',
+                        '--tag',
+                        default=None,
+                        help='Tag of the output docker image in the format name:tag. '
+                        'Default: "<project-name>:latest", where <project-name> is taken from '
+                        'the name tag in the anaconda-project.yml file.')
+    preset.add_argument(
+        '--command',
+        default='default',
+        help='Select the command to run. If unspecified the "default" command is run.\nThe default command '
+        'is defined as either the command named "default" (if any) or (otherwise)  '
+        'the first command specified in the anaconda-project.yml file.')
+    preset.add_argument('--builder-image',
+                        default='{}:latest'.format(DEFAULT_BUILDER_IMAGE),
+                        help='The s2i builder image')
+    preset.add_argument('build_args',
+                        default=None,
+                        nargs="*",
+                        help='Optional arguments for the s2i build command. '
+                        'See the output of "s2i build --help" for the available arguments. '
+                        'It is recommended to include a -- separator before supplying these arguments.')
+    preset.set_defaults(main=dockerize.main)
 
     preset = subparsers.add_parser('add-variable', help="Add a required environment variable to the project")
     add_env_spec_arg(preset)

@@ -35,6 +35,7 @@ from anaconda_project.test.fake_server import fake_server
 import anaconda_project.internal.keyring as keyring
 import anaconda_project.internal.conda_api as conda_api
 import anaconda_project.internal.plugins as plugins_api
+from anaconda_project.internal.simple_status import SimpleStatus
 
 
 def test_create(monkeypatch):
@@ -5032,3 +5033,105 @@ def test_download_missing(monkeypatch):
             DEFAULT_PROJECT_FILENAME: "name: foo\n",
             "foo.py": "print('hello')\n"
         }, check)
+
+
+def _mock_build_image(path, tag, command, builder_image, build_args):
+    msg = '\nDocker image {} build successful with command {}.'.format(tag, command)
+    return SimpleStatus(True, description=msg)
+
+
+def test_dock_default_args(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
+        status = project_ops.dockerize(project)
+        assert status
+        assert 'Docker image dockerize-me:latest build successful' in status.status_description
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """name: dockerize-me
+commands:
+  default:
+    unix: /usr/bin/true
+    supports_http_options: false"""
+        }, check)
+
+
+def test_dock_name_with_spaces(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
+        status = project_ops.dockerize(project)
+        assert status
+        assert 'Docker image dockerizeme:latest build successful' in status.status_description
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """name: Dockerize Me
+commands:
+  default:
+    unix: /usr/bin/true
+    supports_http_options: false"""
+        }, check)
+
+
+def test_dock_missing_command(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
+        status = project_ops.dockerize(project, command='missing')
+        assert not status
+        assert 'The command missing is not one of the configured commands' in status.status_description
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """name: Dockerize Me
+commands:
+  default:
+    unix: /usr/bin/true
+    supports_http_options: false"""
+        }, check)
+
+
+def test_dock_default_command_alias(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
+        status = project_ops.dockerize(project, command='default')
+        assert status
+        assert 'command cmd' in status.status_description
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """name: Dockerize Me
+commands:
+  cmd:
+    unix: /usr/bin/true
+    supports_http_options: false"""
+        }, check)
+
+
+def test_dock_without_commands(monkeypatch):
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert [] == project.problems
+
+        monkeypatch.setattr('anaconda_project.project_ops.build_image', _mock_build_image)
+        status = project_ops.dockerize(project)
+        assert not status
+        assert "No known run command for this project" in status.status_description
+
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """name: Dockerize Me"""}, check)
