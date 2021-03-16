@@ -1706,7 +1706,11 @@ def unarchive(filename, project_dir, parent_dir=None, unpack_envs=True, frontend
     """
     if frontend is None:
         frontend = _null_frontend()
-    return archiver._unarchive_project(filename, project_dir=project_dir, parent_dir=parent_dir, unpack_envs=unpack_envs, frontend=frontend)
+    return archiver._unarchive_project(filename,
+                                       project_dir=project_dir,
+                                       parent_dir=parent_dir,
+                                       unpack_envs=unpack_envs,
+                                       frontend=frontend)
 
 
 def upload(project, private=None, site=None, username=None, token=None, suffix='.tar.bz2', log_level=None):

@@ -129,8 +129,10 @@ def _parse_args_and_run_subcommand(argv):
                                    help="Create a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
     add_directory_arg(preset)
     preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
-    preset.add_argument('--pack-envs', action='store_true', help='Experimental: Package env_specs into the archive'
-                                                                 ' using conda-pack')
+    preset.add_argument('--pack-envs',
+                        action='store_true',
+                        help='Experimental: Package env_specs into the archive'
+                        ' using conda-pack')
 
     preset.set_defaults(main=archive.main)
 
@@ -138,7 +140,8 @@ def _parse_args_and_run_subcommand(argv):
                                    help="Unpack a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
     preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
     preset.add_argument('directory', metavar='DESTINATION_DIRECTORY', default=None, nargs='?')
-    preset.add_argument('--no-unpack-envs', help="Disable running conda-unpack if conda-packed envs are found.",
+    preset.add_argument('--no-unpack-envs',
+                        help="Disable running conda-unpack if conda-packed envs are found.",
                         action='store_true')
 
     preset.set_defaults(main=unarchive.main)

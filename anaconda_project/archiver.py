@@ -318,15 +318,8 @@ def _archive_project(project, filename, pack_envs=False):
     if pack_envs and os.path.isdir(envs_path):
         import conda_pack
         for env in os.listdir(envs_path):
-            pack = os.path.join(
-                project.project_file.project_dir,
-                '{}_envs_{}.tar.bz2'.format(current_platform(), env)
-            )
-            fn = conda_pack.pack(
-                prefix=os.path.join(envs_path, env),
-                output=pack,
-                verbose=True, force=True
-            )
+            pack = os.path.join(project.project_file.project_dir, '{}_envs_{}.tar.bz2'.format(current_platform(), env))
+            fn = conda_pack.pack(prefix=os.path.join(envs_path, env), output=pack, verbose=True, force=True)
             packed_envs.append(fn)
 
     infos = _enumerate_archive_files(project.directory_path,
@@ -608,17 +601,11 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None,
                     continue
 
                 env_spec = os.path.basename(env).split('_envs_')[1].split('.')[0]
-                env_path = os.path.join(
-                    canonical_project_dir,
-                    "envs",
-                    env_spec
-                )
+                env_path = os.path.join(canonical_project_dir, "envs", env_spec)
                 with tarfile.open(env, 'r') as tar:
                     tar.extractall(path=env_path)
                 frontend.info('- conda-unpack env_spec: {}'.format(env_spec))
-                subprocess.check_call(
-                    os.path.join(env_path, 'bin', 'conda-unpack')
-                )
+                subprocess.check_call(os.path.join(env_path, 'bin', 'conda-unpack'))
                 os.remove(env)
 
         return _UnarchiveStatus(success=True,
