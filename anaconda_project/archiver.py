@@ -314,6 +314,7 @@ def _archive_project(project, filename, pack_envs=False):
         return SimpleStatus(success=False, description="Can't create an archive.", errors=frontend.pop_errors())
 
     envs_path = os.path.join(project.project_file.project_dir, 'envs')
+    packed_envs = []
     if pack_envs and os.path.isdir(envs_path):
         import conda_pack
         for env in os.listdir(envs_path):
@@ -321,11 +322,12 @@ def _archive_project(project, filename, pack_envs=False):
                 project.project_file.project_dir,
                 '{}_envs_{}.tar.bz2'.format(current_platform(), env)
             )
-            conda_pack.pack(
+            fn = conda_pack.pack(
                 prefix=os.path.join(envs_path, env),
                 output=pack,
                 verbose=True, force=True
             )
+            packed_envs.append(fn)
 
     infos = _enumerate_archive_files(project.directory_path,
                                      frontend,
@@ -367,6 +369,9 @@ def _archive_project(project, filename, pack_envs=False):
             os.remove(tmp_filename)
         except (IOError, OSError):
             pass
+
+    for pack in packed_envs:
+        os.remove(pack)
 
     unlocked = []
     for env_spec in project.env_specs.values():
