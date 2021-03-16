@@ -12,7 +12,7 @@ from anaconda_project.internal.simple_status import SimpleStatus
 
 
 def test_unarchive_command(capsys, monkeypatch):
-    def mock_unarchive(filename, project_dir, parent_dir=None, frontend=None):
+    def mock_unarchive(filename, project_dir, parent_dir=None, frontend=None, unpack_envs=True):
         assert frontend is not None
         frontend.info("a")
         frontend.info("b")
@@ -28,7 +28,7 @@ def test_unarchive_command(capsys, monkeypatch):
 
 
 def test_unarchive_command_error(capsys, monkeypatch):
-    def mock_unarchive(filename, project_dir, parent_dir=None, frontend=None):
+    def mock_unarchive(filename, project_dir, parent_dir=None, frontend=None, unpack_envs=True):
         assert frontend is not None
         frontend.info("a")
         frontend.info("b")
