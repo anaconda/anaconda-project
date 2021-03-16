@@ -13,13 +13,13 @@ from anaconda_project.internal.cli.project_load import CliFrontend
 import anaconda_project.project_ops as project_ops
 
 
-def unarchive_command(archive_filename, project_dir):
+def unarchive_command(archive_filename, project_dir, unpack_envs):
     """Unpack an archive of the project.
 
     Returns:
         exit code
     """
-    status = project_ops.unarchive(archive_filename, project_dir, frontend=CliFrontend())
+    status = project_ops.unarchive(archive_filename, project_dir, frontend=CliFrontend(), unpack_envs=unpack_envs)
     if status:
         print(status.status_description)
         return 0
@@ -30,4 +30,4 @@ def unarchive_command(archive_filename, project_dir):
 
 def main(args):
     """Start the unarchive command and return exit status code."""
-    return unarchive_command(args.filename, args.directory)
+    return unarchive_command(args.filename, args.directory, not args.no_unpack_envs)

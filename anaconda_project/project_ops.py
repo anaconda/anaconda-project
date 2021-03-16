@@ -1680,7 +1680,7 @@ def archive(project, filename, pack_envs):
     return archiver._archive_project(project, filename, pack_envs)
 
 
-def unarchive(filename, project_dir, parent_dir=None, frontend=None):
+def unarchive(filename, project_dir, parent_dir=None, unpack_envs=True, frontend=None):
     """Unpack an archive of the project.
 
     The archive can be untrusted (we will safely defeat attempts
@@ -1698,6 +1698,7 @@ def unarchive(filename, project_dir, parent_dir=None, frontend=None):
         filename (str): name of a zip, tar.gz, or tar.bz2 archive file
         project_dir (str): the directory to place the project inside
         parent_dir (str): directory to place project_dir within
+        unpack_envs (bool): Flag to run conda-unpack if packed envs are found
 
     Returns:
         a ``Status``, if failed has ``errors``, on success has ``project_dir`` property.
@@ -1705,7 +1706,7 @@ def unarchive(filename, project_dir, parent_dir=None, frontend=None):
     """
     if frontend is None:
         frontend = _null_frontend()
-    return archiver._unarchive_project(filename, project_dir=project_dir, parent_dir=parent_dir, frontend=frontend)
+    return archiver._unarchive_project(filename, project_dir=project_dir, parent_dir=parent_dir, unpack_envs=unpack_envs, frontend=frontend)
 
 
 def upload(project, private=None, site=None, username=None, token=None, suffix='.tar.bz2', log_level=None):
