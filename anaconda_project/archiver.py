@@ -19,6 +19,7 @@ import tarfile
 import tempfile
 import uuid
 import zipfile
+from glob import glob
 
 from anaconda_project.frontend import _new_error_recorder
 from anaconda_project.internal import logged_subprocess
@@ -26,6 +27,7 @@ from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
 from anaconda_project.internal.rename import rename_over_existing
 from anaconda_project.internal.makedirs import makedirs_ok_if_exists
+from anaconda_project.internal.conda_api import current_platform
 
 
 class _FileInfo(object):
@@ -317,7 +319,7 @@ def _archive_project(project, filename, pack_envs=False):
         for env in os.listdir(envs_path):
             pack = os.path.join(
                 project.project_file.project_dir,
-                'envs-{}.tar.bz2'.format(env)
+                '{}_envs_{}.tar.bz2'.format(current_platform(), env)
             )
             conda_pack.pack(
                 prefix=os.path.join(envs_path, env),
@@ -591,13 +593,18 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None)
                 pass
             raise e
 
-        from glob import glob
-        packed_envs = glob(os.path.join(project_dir, "envs-*.tar.bz2"))
+        packed_envs = glob(os.path.join(canonical_project_dir, "*_envs_*.tar.bz2"))
         for env in packed_envs:
+            packed_platform = os.path.basename(env).split('_envs_')[0]
+            if packed_platform != current_platform():
+                os.remove(env)
+                continue
+
+            env_spec = os.path.basename(env).split('_envs_')[1].split('.')[0]
             env_path = os.path.join(
-                project_dir,
+                canonical_project_dir,
                 "envs",
-                os.path.basename(env).split('.')[0][5:]
+                env_spec
             )
             with tarfile.open(env, 'r') as tar:
                 tar.extractall(path=env_path)
