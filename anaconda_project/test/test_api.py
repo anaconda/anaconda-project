@@ -642,7 +642,7 @@ def test_unarchive(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.unarchive', mock_unarchive)
 
     p = api.AnacondaProject()
-    kwargs = dict(filename=43, project_dir=123, parent_dir=456, frontend=789, unpack_envs=False)
+    kwargs = dict(filename=43, project_dir=123, parent_dir=456, unpack_envs=False, frontend=789)
     result = p.unarchive(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
