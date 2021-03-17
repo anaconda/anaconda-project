@@ -21,6 +21,7 @@ from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviat
                                             push_conda_manager_class, pop_conda_manager_class)
 from anaconda_project.project import Project
 import anaconda_project.prepare as prepare
+from anaconda_project.internal.conda_api import current_platform
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, with_temporary_script_commandline,
                                                           with_directory_contents_completing_project_file,
                                                           complete_project_file_content)
@@ -4299,6 +4300,64 @@ name: archivedproj
             }, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
+
+
+def test_archive_unarchive_conda_pack():
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.zip")
+
+        def check(dirname):
+            project = project_ops.create(dirname)
+            assert [] == project.problems
+
+            status = prepare.prepare_without_interaction(project)
+            assert status
+
+            status = project_ops.archive(project, archivefile, pack_envs=True)
+
+            assert status
+            assert os.path.exists(archivefile)
+
+            env = project.default_env_spec_name
+            pack = '{}_envs_{}.tar.bz2'.format(current_platform(), env)
+            _assert_zip_contains(archivefile, ['foo.py', 'anaconda-project.yml', '.projectignore', 'bar/', pack])
+
+            unpacked = os.path.join(os.path.dirname(archivefile), 'unpacked')
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+            expected_files = [
+                'bar',
+                'anaconda-project.yml',
+                '.projectignore',
+                'foo.py',
+                'envs/default/conda-meta/history',
+                'envs/default/conda-meta/ca-certificates-2021.1.19-hecd8cb5_1.json',
+                'envs/default/ssl/cert.pem',
+                'envs/default/ssl/cacert.pem',
+                'envs/default/bin/conda-unpack',
+                'envs/default/bin/deactivate',
+                'envs/default/bin/activate',
+                'envs/default/var/cache/anaconda-project/env-specs/870bdbee007954fcf45dbc5e6cc2037e2fbcf979'
+            ]
+            _assert_dir_contains(unpacked, expected_files)
+
+        with_directory_contents_completing_project_file(
+            {
+                DEFAULT_PROJECT_FILENAME: """
+name: archivedproj
+packages:
+  - ca-certificates=2021.1.19=hecd8cb5_1
+        """,
+                "foo.py": "print('hello')\n",
+                "foo.pyc": "",
+                ".ipynb_checkpoints/bleh": "",
+                "bar/blah.pyc": ""
+            }, check)
+
+    with_directory_contents(dict(), archivetest)
 
 
 _CONTENTS_DIR = 1
