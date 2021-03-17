@@ -4329,16 +4329,9 @@ def test_archive_unarchive_conda_pack():
             assert status
             assert os.path.isdir(unpacked)
             expected_files = [
-                'bar',
-                'anaconda-project.yml',
-                '.projectignore',
-                'foo.py',
-                'envs/default/conda-meta/history',
-                'envs/default/conda-meta/ca-certificates-2021.1.19-hecd8cb5_1.json',
-                'envs/default/ssl/cert.pem',
-                'envs/default/ssl/cacert.pem',
-                'envs/default/bin/conda-unpack',
-                'envs/default/bin/deactivate',
+                'bar', 'anaconda-project.yml', '.projectignore', 'foo.py', 'envs/default/conda-meta/history',
+                'envs/default/conda-meta/ca-certificates-2021.1.19-hecd8cb5_1.json', 'envs/default/ssl/cert.pem',
+                'envs/default/ssl/cacert.pem', 'envs/default/bin/conda-unpack', 'envs/default/bin/deactivate',
                 'envs/default/bin/activate',
                 'envs/default/var/cache/anaconda-project/env-specs/870bdbee007954fcf45dbc5e6cc2037e2fbcf979'
             ]
