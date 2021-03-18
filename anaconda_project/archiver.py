@@ -592,11 +592,13 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None,
                 pass
             raise e
 
+        packed_envs = glob(os.path.join(canonical_project_dir, "*_envs_*.tar.bz2"))
         if unpack_envs:
-            packed_envs = glob(os.path.join(canonical_project_dir, "*_envs_*.tar.bz2"))
             for env in packed_envs:
                 packed_platform = os.path.basename(env).split('_envs_')[0]
                 if packed_platform != current_platform():
+                    frontend.info('Warning: Current platform {} does not match packed env for {}'.format(
+                        current_platform(), packed_platform))
                     os.remove(env)
                     continue
 
@@ -604,13 +606,20 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None,
                 env_path = os.path.join(canonical_project_dir, "envs", env_spec)
                 with tarfile.open(env, 'r') as tar:
                     tar.extractall(path=env_path)
-                frontend.info('- conda-unpack env_spec: {}'.format(env_spec))
+                frontend.info('Unpacking env_spec: {}'.format(env_spec))
 
-                if 'win' in current_platform():
-                    subprocess.check_call(os.path.join(env_path, 'Scripts', 'conda-unpack.exe'))
-                else:
-                    subprocess.check_call(os.path.join(env_path, 'bin', 'conda-unpack'))
+                try:
+                    if 'win' in current_platform():
+                        subprocess.check_call(os.path.join(env_path, 'Scripts', 'conda-unpack.exe'))
+                    else:
+                        subprocess.check_call(os.path.join(env_path, 'bin', 'conda-unpack'))
+                except (IOError, OSError) as e:
+                    frontend.info('Warning: Could not unpack env_spec {}'.format(env_spec))
+                    frontend.info(str(e))
 
+                os.remove(env)
+        else:
+            for env in packed_envs:
                 os.remove(env)
 
         return _UnarchiveStatus(success=True,
