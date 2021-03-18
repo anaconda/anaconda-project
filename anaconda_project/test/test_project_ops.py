@@ -4330,11 +4330,18 @@ def test_archive_unarchive_conda_pack():
             assert os.path.isdir(unpacked)
             expected_files = [
                 'bar', 'anaconda-project.yml', '.projectignore', 'foo.py', 'envs/default/conda-meta/history',
-                'envs/default/conda-meta/ca-certificates-2021.1.19-hecd8cb5_1.json', 'envs/default/ssl/cert.pem',
-                'envs/default/ssl/cacert.pem', 'envs/default/bin/conda-unpack', 'envs/default/bin/deactivate',
-                'envs/default/bin/activate',
-                'envs/default/var/cache/anaconda-project/env-specs/870bdbee007954fcf45dbc5e6cc2037e2fbcf979'
+                'envs/default/conda-meta/font-ttf-ubuntu-0.83-h8b1ccd4_0.json', 'envs/default/bin/conda-unpack',
+                'envs/default/bin/deactivate', 'envs/default/bin/activate',
+                'envs/default/var/cache/anaconda-project/env-specs/7d832cfb38dabc7b1c20f98e15bfc4c601f21b62',
+                'envs/default/fonts/Ubuntu-M.ttf', 'envs/default/fonts/Ubuntu-L.ttf',
+                'envs/default/fonts/UbuntuMono-BI.ttf', 'envs/default/fonts/Ubuntu-BI.ttf',
+                'envs/default/fonts/Ubuntu-MI.ttf', 'envs/default/fonts/Ubuntu-R.ttf',
+                'envs/default/fonts/Ubuntu-LI.ttf', 'envs/default/fonts/Ubuntu-B.ttf',
+                'envs/default/fonts/Ubuntu-C.ttf', 'envs/default/fonts/UbuntuMono-RI.ttf',
+                'envs/default/fonts/UbuntuMono-R.ttf', 'envs/default/fonts/Ubuntu-RI.ttf',
+                'envs/default/fonts/UbuntuMono-B.ttf'
             ]
+
             _assert_dir_contains(unpacked, expected_files)
 
         with_directory_contents_completing_project_file(
@@ -4342,7 +4349,7 @@ def test_archive_unarchive_conda_pack():
                 DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
 packages:
-  - ca-certificates=2021.1.19=hecd8cb5_1
+  - font-ttf-ubuntu=0.83=h8b1ccd4_0
         """,
                 "foo.py": "print('hello')\n",
                 "foo.pyc": "",
