@@ -4302,6 +4302,7 @@ name: archivedproj
     with_directory_contents_completing_project_file(dict(), archivetest)
 
 
+@pytest.mark.slow
 def test_archive_unarchive_conda_pack():
     def archivetest(archive_dest_dir):
         archivefile = os.path.join(archive_dest_dir, "foo.zip")
@@ -4431,6 +4432,44 @@ def _make_tar(archive_dest_dir, contents, compression=None):
         os.remove(a_symlink)
 
     return archivefile
+
+
+def test_unarchive_with_packed_envs_wrong_arch():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {
+            'a/a.txt': _CONTENTS_FILE,
+            "a/unknown_envs_default.tar.bz2": _CONTENTS_FILE
+        })
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            os.mkdir(unpacked)
+            status = project_ops.unarchive(archivefile, unpacked, unpack_envs=True)
+            assert status
+            _assert_dir_contains(unpacked, ['a.txt'])
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_with_packed_envs_no_unpack():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_tar(archive_dest_dir, {
+            'a/a.txt': _CONTENTS_FILE,
+            "a/{}_envs_default.tar.bz2".format(current_platform()): _CONTENTS_FILE
+        })
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            os.mkdir(unpacked)
+            status = project_ops.unarchive(archivefile, unpacked, unpack_envs=False)
+            assert status
+            _assert_dir_contains(unpacked, ['a.txt'])
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
 
 
 def _test_unarchive_tar(compression):
