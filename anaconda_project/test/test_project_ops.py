@@ -4341,20 +4341,17 @@ def test_archive_unarchive_conda_pack():
                 'envs/default/fonts/UbuntuMono-B.ttf'
             ]
 
-            scripts_nix = ['envs/default/bin/conda-unpack',
-             'envs/default/bin/deactivate',
-             'envs/default/bin/activate']
+            scripts_nix = ['envs/default/bin/conda-unpack', 'envs/default/bin/deactivate', 'envs/default/bin/activate']
 
-            scripts_win = ['envs/default/Scripts/activate.bat',
-            'envs/default/Scripts/conda-unpack-script.py',
-            'envs/default/Scripts/conda-unpack.exe',
-            'envs/default/Scripts/deactivate.bat']
+            scripts_win = [
+                'envs/default/Scripts/activate.bat', 'envs/default/Scripts/conda-unpack-script.py',
+                'envs/default/Scripts/conda-unpack.exe', 'envs/default/Scripts/deactivate.bat'
+            ]
 
             if 'win' in current_platform():
                 expected_files.extend(scripts_win)
             else:
                 expected_files.extend(scripts_nix)
-
 
             _assert_dir_contains(unpacked, expected_files)
 
