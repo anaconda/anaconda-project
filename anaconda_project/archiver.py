@@ -609,9 +609,9 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None,
                 frontend.info('Unpacking env_spec: {}'.format(env_spec))
 
                 try:
-                    if 'win' in current_platform():
+                    if 'win' in current_platform():  # pragma: no cover
                         subprocess.check_call(os.path.join(env_path, 'Scripts', 'conda-unpack.exe'))
-                    else:
+                    else:  # pragma: no cover
                         subprocess.check_call(os.path.join(env_path, 'bin', 'conda-unpack'))
                 except (IOError, OSError) as e:
                     frontend.info('Warning: Could not unpack env_spec {}'.format(env_spec))
