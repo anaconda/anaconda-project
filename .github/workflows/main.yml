@@ -105,6 +105,7 @@ jobs:
       run: |
           source ./conda/etc/profile.d/conda.sh 
           conda activate anaconda-project-dev
+          conda config --set restore_free_channel true
           pytest -vrfe --durations=10 \
             --cov-config=.coveragerc --cov-report=term-missing \
             --cov-fail-under=98 --cov-report=xml:./coverage.xml \
