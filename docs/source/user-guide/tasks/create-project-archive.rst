@@ -101,9 +101,11 @@ and add them to the Anaconda Project bundle.
 When the project bundle is extracted using ``anaconda-project unarchive`` if
 environment archives are found they will be extracted to the ``envs/`` directory.
 
+To disable extracting env bundles use ``anaconda-project unarchive --no-unpack-envs``.
+
 .. note::
 
   The environment bundles will only be extracted when the project bundle
   is unarchived from the same platform type (Mac, Linux, Windows) where it
-  was archived. For example, you cannot run ``archive --pack-envs`` on Windows
-  and ``unarchive`` on Linux. In this case the environment bundles are ignored.
+  was archived. For example, if you run ``archive --pack-envs`` on Windows
+  and ``unarchive`` on Linux the environment bundles are ignored.
