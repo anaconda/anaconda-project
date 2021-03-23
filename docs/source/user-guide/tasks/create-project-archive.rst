@@ -11,14 +11,14 @@ the file extension that you provide.
 Excluding files from the archive
 ================================
 
-Do not include the ``envs/default`` directory in the archive,
-because conda environments are large and do not work if moved
+Do not include the ``envs/`` directory in the archive,
+because Conda environments are large and do not work if moved
 between machines. If your project works with large downloaded
 files, you might not want to include those either.
 
 The ``anaconda-project archive`` command automatically omits the
 files that Project can reproduce automatically, which includes
-the ``envs/default`` directory and any downloaded data. It also
+the ``envs/`` directory and any downloaded data. It also
 excludes ``anaconda-project-local.yml``, which is intended to
 hold local configuration state only.
 
@@ -67,3 +67,43 @@ EXAMPLE::
         557  06-10-2016 10:33   iris/iris_plot/main.py
   ---------                     -------
        6003                     5 files
+
+Extracting the archive file
+===========================
+
+It is recommended that you unarchive Anaconda Project bundles using
+the ``unarchive`` command::
+
+  anaconda-project unarchive <bundle>
+
+This will unarchive any compression format (``.zip``, ``.tar.gz``, and
+``.tar.bz2``) on all supported platforms.
+
+
+Experimental: Packaging environments
+====================================
+
+There are cases where it may be preferable to package the
+Conda environments directly into the archive. For example,
+when the target system cannot connect to the repository to
+download and install Conda packages.
+
+To bundle the environments into the archive use the ``--pack-envs``
+flag. This will utilize `conda-pack <https://conda.github.io/conda-pack/index.html>`_
+to create separate sub-archives for each ``env_spec`` in the project
+and add them to the Anaconda Project bundle.
+
+.. note::
+
+  When using ``--pack-envs`` your Anaconda Project bundles may be
+  very large.
+
+When the project bundle is extracted using ``anaconda-project unarchive`` if
+environment archives are found they will be extracted to the ``envs/`` directory.
+
+.. note::
+
+  The environment bundles will only be extracted when the project bundle
+  is unarchived from the same platform type (Mac, Linux, Windows) where it
+  was archived. For example, you cannot run ``archive --pack-envs`` on Windows
+  and ``unarchive`` on Linux. In this case the environment bundles are ignored.
