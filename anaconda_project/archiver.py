@@ -546,7 +546,7 @@ class _UnarchiveStatus(SimpleStatus):
 
 
 # function exported for project_ops.py
-def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None, unpack_envs=True):
+def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None):
     """Unpack an archive of files in the project.
 
     This takes care of several details, for example it deals with
@@ -564,7 +564,6 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None,
         archive_filename (str): the tar or zip archive file
         project_dir (str): the directory that will contain the project config file
         parent_dir (str): place project directory in here
-        unpack_envs (bool): Flag to run conda-unpack if packed envs are found
 
     Returns:
         a ``Status``, if failed has ``errors``, on success has a ``project_dir`` property
@@ -613,36 +612,6 @@ def _unarchive_project(archive_filename, project_dir, frontend, parent_dir=None,
             except (IOError, OSError):
                 pass
             raise e
-
-        packed_envs = glob(os.path.join(canonical_project_dir, "*_envs_*.tar.bz2"))
-        if unpack_envs:
-            for env in packed_envs:
-                packed_platform = os.path.basename(env).split('_envs_')[0]
-                if packed_platform != current_platform():
-                    frontend.info('Warning: Current platform {} does not match packed env for {}'.format(
-                        current_platform(), packed_platform))
-                    os.remove(env)
-                    continue
-
-                env_spec = os.path.basename(env).split('_envs_')[1].split('.')[0]
-                env_path = os.path.join(canonical_project_dir, "envs", env_spec)
-                with tarfile.open(env, 'r') as tar:
-                    tar.extractall(path=env_path)
-                frontend.info('Unpacking env_spec: {}'.format(env_spec))
-
-                try:
-                    if 'win' in current_platform():  # pragma: no cover
-                        subprocess.check_call(os.path.join(env_path, 'Scripts', 'conda-unpack.exe'))
-                    else:  # pragma: no cover
-                        subprocess.check_call(os.path.join(env_path, 'bin', 'conda-unpack'))
-                except (IOError, OSError) as e:  # pragma: no cover
-                    frontend.info('Warning: Could not unpack env_spec {}'.format(env_spec))
-                    frontend.info(str(e))
-
-                os.remove(env)
-        else:
-            for env in packed_envs:
-                os.remove(env)
 
         return _UnarchiveStatus(success=True,
                                 description=("Project archive unpacked to %s." % canonical_project_dir),

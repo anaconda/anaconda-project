@@ -727,7 +727,7 @@ class AnacondaProject(object):
         """
         return project_ops.archive(project=project, filename=filename, pack_envs=pack_envs)
 
-    def unarchive(self, filename, project_dir, parent_dir=None, unpack_envs=True, frontend=None):
+    def unarchive(self, filename, project_dir, parent_dir=None, frontend=None):
         """Unpack an archive of the project.
 
         The archive can be untrusted (we will safely defeat attempts
@@ -745,7 +745,6 @@ class AnacondaProject(object):
             filename (str): name of a zip, tar.gz, or tar.bz2 archive file
             project_dir (str): the directory to place the project inside
             parent_dir (str): directory to place project_dir within
-            unpack_envs (bool): Flag to run conda-unpack for conda-packed envs found in bundle
             frontend (Frontend): frontend instance representing current UX
 
         Returns:
@@ -755,7 +754,6 @@ class AnacondaProject(object):
         return project_ops.unarchive(filename=filename,
                                      project_dir=project_dir,
                                      parent_dir=parent_dir,
-                                     unpack_envs=unpack_envs,
                                      frontend=frontend)
 
     def upload(self, project, private=None, site=None, username=None, token=None, suffix='.tar.bz2', log_level=None):

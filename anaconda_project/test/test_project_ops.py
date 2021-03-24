@@ -4444,7 +4444,7 @@ def test_unarchive_with_packed_envs_wrong_arch():
         def check(dirname):
             unpacked = os.path.join(dirname, "foo")
             os.mkdir(unpacked)
-            status = project_ops.unarchive(archivefile, unpacked, unpack_envs=True)
+            status = project_ops.unarchive(archivefile, unpacked)
             assert status
             _assert_dir_contains(unpacked, ['a.txt'])
 
@@ -4463,7 +4463,7 @@ def test_unarchive_with_packed_envs_no_unpack():
         def check(dirname):
             unpacked = os.path.join(dirname, "foo")
             os.mkdir(unpacked)
-            status = project_ops.unarchive(archivefile, unpacked, unpack_envs=False)
+            status = project_ops.unarchive(archivefile, unpacked)
             assert status
             _assert_dir_contains(unpacked, ['a.txt'])
 
