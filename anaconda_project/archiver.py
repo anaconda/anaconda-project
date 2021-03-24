@@ -256,7 +256,7 @@ def _leaf_infos(infos):
     return sorted(all_by_name.values(), key=lambda x: x.relative_path)
 
 
-def _write_tar(archive_root_name, infos, filename, compression, frontend):
+def _write_tar(archive_root_name, infos, filename, compression, packed_envs, frontend):
     if compression is None:
         compression = ""
     else:
@@ -267,13 +267,28 @@ def _write_tar(archive_root_name, infos, filename, compression, frontend):
             frontend.info("  added %s" % arcname)
             tf.add(info.full_path, arcname=arcname)
 
+        for pack in packed_envs:
+            with tarfile.open(pack, mode='r', dereference=False) as env:
+                for file in env:
+                    try:
+                        data = env.extractfile(file)
+                        tf.addfile(file, data)
+                    except KeyError:
+                        tf.addfile(file)
 
-def _write_zip(archive_root_name, infos, filename, frontend):
+
+def _write_zip(archive_root_name, infos, filename, packed_envs, frontend):
     with zipfile.ZipFile(filename, 'w') as zf:
         for info in _leaf_infos(infos):
             arcname = os.path.join(archive_root_name, info.relative_path)
             frontend.info("  added %s" % arcname)
             zf.write(info.full_path, arcname=arcname)
+
+        for pack in packed_envs:
+            with zipfile.ZipFile(pack, mode='r') as env:
+                for file in env.namelist():
+                    data = env.read(file)
+                    zf.writestr(file, data)
 
 
 # function exported for project.py
@@ -318,8 +333,15 @@ def _archive_project(project, filename, pack_envs=False):
     if pack_envs and os.path.isdir(envs_path):
         import conda_pack
         for env in os.listdir(envs_path):
-            pack = os.path.join(project.project_file.project_dir, '{}_envs_{}.tar.bz2'.format(current_platform(), env))
-            fn = conda_pack.pack(prefix=os.path.join(envs_path, env), output=pack, verbose=True, force=True)
+            prefix = os.path.join(envs_path, env)
+            with open(os.path.join(prefix, '.packed'), 'wt') as f:
+                f.write(current_platform())
+
+            ext = 'zip' if filename.lower().endswith(".zip") else 'tar'
+            pack = os.path.join(project.project_file.project_dir, '..', '{}_envs_{}.{}'.format(current_platform(), env, ext))
+            fn = conda_pack.pack(prefix=os.path.join(envs_path, env), arcroot=os.path.join(project.name, 'envs', env),
+                                 output=pack,
+                                 verbose=True, force=True)
             packed_envs.append(fn)
 
     infos = _enumerate_archive_files(project.directory_path,
@@ -339,13 +361,13 @@ def _archive_project(project, filename, pack_envs=False):
     tmp_filename = filename + ".tmp-" + str(uuid.uuid4())
     try:
         if filename.lower().endswith(".zip"):
-            _write_zip(project.name, infos, tmp_filename, frontend)
+            _write_zip(project.name, infos, tmp_filename, packed_envs=packed_envs, frontend=frontend)
         elif filename.lower().endswith(".tar.gz"):
-            _write_tar(project.name, infos, tmp_filename, compression="gz", frontend=frontend)
+            _write_tar(project.name, infos, tmp_filename, compression="gz", packed_envs=packed_envs, frontend=frontend)
         elif filename.lower().endswith(".tar.bz2"):
-            _write_tar(project.name, infos, tmp_filename, compression="bz2", frontend=frontend)
+            _write_tar(project.name, infos, tmp_filename, compression="bz2", packed_envs=packed_envs, frontend=frontend)
         elif filename.lower().endswith(".tar"):
-            _write_tar(project.name, infos, tmp_filename, compression=None, frontend=frontend)
+            _write_tar(project.name, infos, tmp_filename, compression=None, packed_envs=packed_envs, frontend=frontend)
         else:
             frontend.error("Unsupported archive filename %s." % (filename))
             return SimpleStatus(success=False,
