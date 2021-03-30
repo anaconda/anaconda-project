@@ -272,7 +272,7 @@ def _write_tar(archive_root_name, infos, filename, compression, packed_envs, fro
                     try:
                         data = env.extractfile(file)
                         tf.addfile(file, data)
-                    except KeyError:
+                    except KeyError:  # pragma: no cover
                         tf.addfile(file)
 
 
