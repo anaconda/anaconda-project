@@ -4303,9 +4303,10 @@ name: archivedproj
 
 
 @pytest.mark.slow
-def test_archive_unarchive_conda_pack():
+@pytest.mark.parametrize('suffix', ['zip', 'tar.bz2', 'tar.gz'])
+def test_archive_unarchive_conda_pack(suffix):
     def archivetest(archive_dest_dir):
-        archivefile = os.path.join(archive_dest_dir, "foo.zip")
+        archivefile = os.path.join(archive_dest_dir, "foo.{}".format(suffix))
 
         def check(dirname):
             project = project_ops.create(dirname)
@@ -4319,18 +4320,10 @@ def test_archive_unarchive_conda_pack():
             assert status
             assert os.path.exists(archivefile)
 
-            env = project.default_env_spec_name
-            pack = '{}_envs_{}.tar.bz2'.format(current_platform(), env)
-            _assert_zip_contains(archivefile, ['foo.py', 'anaconda-project.yml', '.projectignore', 'bar/', pack])
-
-            unpacked = os.path.join(os.path.dirname(archivefile), 'unpacked')
-            status = project_ops.unarchive(archivefile, unpacked)
-
-            assert status.errors == []
-            assert status
-            assert os.path.isdir(unpacked)
             expected_files = [
-                'bar', 'anaconda-project.yml', '.projectignore', 'foo.py', 'envs/default/conda-meta/history',
+                'anaconda-project.yml', '.projectignore', 'foo.py', 'bar/blah.py',
+                'envs/default/.packed',
+                'envs/default/conda-meta/history',
                 'envs/default/conda-meta/font-ttf-ubuntu-0.83-h8b1ccd4_0.json',
                 'envs/default/var/cache/anaconda-project/env-specs/7d832cfb38dabc7b1c20f98e15bfc4c601f21b62',
                 'envs/default/fonts/Ubuntu-M.ttf', 'envs/default/fonts/Ubuntu-L.ttf',
@@ -4354,6 +4347,17 @@ def test_archive_unarchive_conda_pack():
             else:
                 expected_files.extend(scripts_nix)
 
+            if suffix == 'zip':
+                _assert_zip_contains(archivefile, expected_files)
+            elif suffix in ['tar.bz2', 'tar.gz']:
+                _assert_tar_contains(archivefile, expected_files)
+
+            unpacked = os.path.join(os.path.dirname(archivefile), 'unpacked')
+            status = project_ops.unarchive(archivefile, unpacked)
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+
             _assert_dir_contains(unpacked, expected_files)
 
         with_directory_contents_completing_project_file(
@@ -4366,6 +4370,7 @@ packages:
                 "foo.py": "print('hello')\n",
                 "foo.pyc": "",
                 ".ipynb_checkpoints/bleh": "",
+                "bar/blah.py": "",
                 "bar/blah.pyc": ""
             }, check)
 
@@ -4432,44 +4437,6 @@ def _make_tar(archive_dest_dir, contents, compression=None):
         os.remove(a_symlink)
 
     return archivefile
-
-
-def test_unarchive_with_packed_envs_wrong_arch():
-    def archivetest(archive_dest_dir):
-        archivefile = _make_tar(archive_dest_dir, {
-            'a/a.txt': _CONTENTS_FILE,
-            "a/unknown_envs_default.tar.bz2": _CONTENTS_FILE
-        })
-
-        def check(dirname):
-            unpacked = os.path.join(dirname, "foo")
-            os.mkdir(unpacked)
-            status = project_ops.unarchive(archivefile, unpacked)
-            assert status
-            _assert_dir_contains(unpacked, ['a.txt'])
-
-        with_directory_contents(dict(), check)
-
-    with_directory_contents(dict(), archivetest)
-
-
-def test_unarchive_with_packed_envs_no_unpack():
-    def archivetest(archive_dest_dir):
-        archivefile = _make_tar(archive_dest_dir, {
-            'a/a.txt': _CONTENTS_FILE,
-            "a/{}_envs_default.tar.bz2".format(current_platform()): _CONTENTS_FILE
-        })
-
-        def check(dirname):
-            unpacked = os.path.join(dirname, "foo")
-            os.mkdir(unpacked)
-            status = project_ops.unarchive(archivefile, unpacked)
-            assert status
-            _assert_dir_contains(unpacked, ['a.txt'])
-
-        with_directory_contents(dict(), check)
-
-    with_directory_contents(dict(), archivetest)
 
 
 def _test_unarchive_tar(compression):
