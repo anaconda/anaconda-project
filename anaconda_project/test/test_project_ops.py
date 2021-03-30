@@ -4321,10 +4321,8 @@ def test_archive_unarchive_conda_pack(suffix):
             assert os.path.exists(archivefile)
 
             expected_files = [
-                'anaconda-project.yml', '.projectignore', 'foo.py', 'bar/blah.py',
-                'envs/default/.packed',
-                'envs/default/conda-meta/history',
-                'envs/default/conda-meta/font-ttf-ubuntu-0.83-h8b1ccd4_0.json',
+                'anaconda-project.yml', '.projectignore', 'foo.py', 'bar/blah.py', 'envs/default/.packed',
+                'envs/default/conda-meta/history', 'envs/default/conda-meta/font-ttf-ubuntu-0.83-h8b1ccd4_0.json',
                 'envs/default/var/cache/anaconda-project/env-specs/7d832cfb38dabc7b1c20f98e15bfc4c601f21b62',
                 'envs/default/fonts/Ubuntu-M.ttf', 'envs/default/fonts/Ubuntu-L.ttf',
                 'envs/default/fonts/UbuntuMono-BI.ttf', 'envs/default/fonts/Ubuntu-BI.ttf',

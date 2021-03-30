@@ -19,7 +19,6 @@ import tarfile
 import tempfile
 import uuid
 import zipfile
-from glob import glob
 
 from anaconda_project.frontend import _new_error_recorder
 from anaconda_project.internal import logged_subprocess
@@ -338,10 +337,13 @@ def _archive_project(project, filename, pack_envs=False):
                 f.write(current_platform())
 
             ext = 'zip' if filename.lower().endswith(".zip") else 'tar'
-            pack = os.path.join(project.project_file.project_dir, '..', '{}_envs_{}.{}'.format(current_platform(), env, ext))
-            fn = conda_pack.pack(prefix=os.path.join(envs_path, env), arcroot=os.path.join(project.name, 'envs', env),
+            pack = os.path.join(project.project_file.project_dir, '..',
+                                '{}_envs_{}.{}'.format(current_platform(), env, ext))
+            fn = conda_pack.pack(prefix=os.path.join(envs_path, env),
+                                 arcroot=os.path.join(project.name, 'envs', env),
                                  output=pack,
-                                 verbose=True, force=True)
+                                 verbose=True,
+                                 force=True)
             packed_envs.append(fn)
 
     infos = _enumerate_archive_files(project.directory_path,
