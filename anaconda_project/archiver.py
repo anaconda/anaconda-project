@@ -29,6 +29,33 @@ from anaconda_project.internal.makedirs import makedirs_ok_if_exists
 from anaconda_project.internal.conda_api import current_platform
 
 
+class PatchedZipFile(zipfile.ZipFile):
+
+    def extract(self, member, path=None, pwd=None):
+        if not isinstance(member, zipfile.ZipInfo):
+            member = self.getinfo(member)
+
+        if path is None:
+            path = os.getcwd()
+
+        ret_val = self._extract_member(member, path, pwd)
+        attr = member.external_attr >> 16
+        if attr != 0:
+            os.chmod(ret_val, attr)
+        return ret_val
+
+    def extractall(self, path=None, members=None, pwd=None):
+        if members is None:
+            members = self.namelist()
+
+        if path is None:
+            path = os.getcwd()
+        else:
+            path = os.fspath(path)
+
+        for zipinfo in members:
+            self.extract(zipinfo, path, pwd)
+
 class _FileInfo(object):
     def __init__(self, project_directory, filename, is_directory):
         self.full_path = os.path.abspath(filename)
@@ -277,15 +304,15 @@ def _write_tar(archive_root_name, infos, filename, compression, packed_envs, fro
 
 
 def _write_zip(archive_root_name, infos, filename, packed_envs, frontend):
-    with zipfile.ZipFile(filename, 'w') as zf:
+    with PatchedZipFile(filename, 'w') as zf:
         for info in _leaf_infos(infos):
             arcname = os.path.join(archive_root_name, info.relative_path)
             frontend.info("  added %s" % arcname)
             zf.write(info.full_path, arcname=arcname)
 
         for pack in packed_envs:
-            with zipfile.ZipFile(pack, mode='r') as env:
-                for file in env.namelist():
+            with PatchedZipFile(pack, mode='r') as env:
+                for file in env.infolist():
                     data = env.read(file)
                     zf.writestr(file, data)
 
@@ -328,8 +355,10 @@ def _archive_project(project, filename, pack_envs=False):
         return SimpleStatus(success=False, description="Can't create an archive.", errors=frontend.pop_errors())
 
     envs_path = os.path.join(project.project_file.project_dir, 'envs')
+
     packed_envs = []
     if pack_envs and os.path.isdir(envs_path):
+        conda_pack_dir = tempfile.mkdtemp()
         import conda_pack
         for env in os.listdir(envs_path):
             prefix = os.path.join(envs_path, env)
@@ -337,7 +366,7 @@ def _archive_project(project, filename, pack_envs=False):
                 f.write(current_platform())
 
             ext = 'zip' if filename.lower().endswith(".zip") else 'tar'
-            pack = os.path.join(project.project_file.project_dir, '..',
+            pack = os.path.join(conda_pack_dir,
                                 '{}_envs_{}.{}'.format(current_platform(), env, ext))
             fn = conda_pack.pack(prefix=os.path.join(envs_path, env),
                                  arcroot=os.path.join(project.name, 'envs', env),
@@ -384,11 +413,10 @@ def _archive_project(project, filename, pack_envs=False):
     finally:
         try:
             os.remove(tmp_filename)
+            if pack_envs:
+                os.remove(conda_pack_dir)
         except (IOError, OSError):
             pass
-
-    for pack in packed_envs:
-        os.remove(pack)
 
     unlocked = []
     for env_spec in project.env_specs.values():
@@ -406,7 +434,7 @@ def _archive_project(project, filename, pack_envs=False):
 
 
 def _list_files_zip(zip_path):
-    with zipfile.ZipFile(zip_path, mode='r') as zf:
+    with PatchedZipFile(zip_path, mode='r') as zf:
         return sorted(zf.namelist())
 
 
@@ -422,7 +450,7 @@ def _extract_files_zip(zip_path, src_and_dest, frontend):
     # then copy those files over.
     tmpdir = tempfile.mkdtemp()
     try:
-        with zipfile.ZipFile(zip_path, mode='r') as zf:
+        with PatchedZipFile(zip_path, mode='r') as zf:
             zf.extractall(tmpdir)
             for (src, dest) in src_and_dest:
                 frontend.info("Unpacking %s to %s" % (src, dest))

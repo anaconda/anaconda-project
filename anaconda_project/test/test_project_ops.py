@@ -12,6 +12,7 @@ import os
 from tornado import gen
 import platform
 import pytest
+import stat
 import tarfile
 import zipfile
 import glob
@@ -4357,6 +4358,10 @@ def test_archive_unarchive_conda_pack(suffix):
             assert os.path.isdir(unpacked)
 
             _assert_dir_contains(unpacked, expected_files)
+
+            conda_unpack = os.path.join(unpacked, 'envs', 'default', 'bin', 'conda-unpack')
+            mode = os.lstat(conda_unpack)[stat.ST_MODE]
+            assert mode & stat.S_IXUSR
 
         with_directory_contents_completing_project_file(
             {
