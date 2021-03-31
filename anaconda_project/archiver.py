@@ -30,7 +30,7 @@ from anaconda_project.internal.conda_api import current_platform
 
 
 class PatchedZipFile(zipfile.ZipFile):
-
+    # thanks: https://stackoverflow.com/a/53834422
     def extract(self, member, path=None, pwd=None):
         if not isinstance(member, zipfile.ZipInfo):
             member = self.getinfo(member)
