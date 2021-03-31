@@ -3908,7 +3908,7 @@ def test_archive_cannot_write_destination_path(monkeypatch):
         def mock_ZipFile(*args, **kwargs):
             raise IOError("NOPE")
 
-        monkeypatch.setattr('anaconda_project.archiver.PatchedZipFile', mock_ZipFile)
+        monkeypatch.setattr('zipfile.ZipFile', mock_ZipFile)
 
         # need to mock plugins since entry_points uses zipfile.ZipFile that
         # we are mocking for this test
