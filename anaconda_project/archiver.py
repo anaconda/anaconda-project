@@ -30,8 +30,10 @@ from anaconda_project.internal.conda_api import current_platform
 
 
 class PatchedZipFile(zipfile.ZipFile):
+    """Patched to preserve file mode."""
     # thanks: https://stackoverflow.com/a/53834422
     def extract(self, member, path=None, pwd=None):
+        """Patched to preserve file mode."""
         if not isinstance(member, zipfile.ZipInfo):
             member = self.getinfo(member)
 
@@ -45,6 +47,7 @@ class PatchedZipFile(zipfile.ZipFile):
         return ret_val
 
     def extractall(self, path=None, members=None, pwd=None):
+        """Patched to preserve file mode."""
         if members is None:
             members = self.namelist()
 
@@ -55,6 +58,7 @@ class PatchedZipFile(zipfile.ZipFile):
 
         for zipinfo in members:
             self.extract(zipinfo, path, pwd)
+
 
 class _FileInfo(object):
     def __init__(self, project_directory, filename, is_directory):
@@ -366,8 +370,7 @@ def _archive_project(project, filename, pack_envs=False):
                 f.write(current_platform())
 
             ext = 'zip' if filename.lower().endswith(".zip") else 'tar'
-            pack = os.path.join(conda_pack_dir,
-                                '{}_envs_{}.{}'.format(current_platform(), env, ext))
+            pack = os.path.join(conda_pack_dir, '{}_envs_{}.{}'.format(current_platform(), env, ext))
             fn = conda_pack.pack(prefix=os.path.join(envs_path, env),
                                  arcroot=os.path.join(project.name, 'envs', env),
                                  output=pack,
