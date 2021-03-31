@@ -31,6 +31,7 @@ from anaconda_project.internal.conda_api import current_platform
 
 class PatchedZipFile(zipfile.ZipFile):
     """Patched to preserve file mode."""
+
     # thanks: https://stackoverflow.com/a/53834422
     def extract(self, member, path=None, pwd=None):
         """Patched to preserve file mode."""
