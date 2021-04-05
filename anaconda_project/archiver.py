@@ -19,6 +19,7 @@ import tarfile
 import tempfile
 import uuid
 import zipfile
+from conda_pack._progress import progressbar
 
 from anaconda_project.frontend import _new_error_recorder
 from anaconda_project.internal import logged_subprocess
@@ -267,13 +268,16 @@ def _write_tar(archive_root_name, infos, filename, compression, packed_envs, fro
             tf.add(info.full_path, arcname=arcname)
 
         for pack in packed_envs:
+            env_name = os.path.basename(pack)
+            print('Joining packed env {}'.format(env_name))
             with tarfile.open(pack, mode='r', dereference=False) as env:
-                for file in env:
-                    try:
-                        data = env.extractfile(file)
-                        tf.addfile(file, data)
-                    except KeyError:  # pragma: no cover
-                        tf.addfile(file)
+                with progressbar(env.getmembers()) as env_p:
+                    for file in env_p:
+                        try:
+                            data = env.extractfile(file)
+                            tf.addfile(file, data)
+                        except KeyError:  # pragma: no cover
+                            tf.addfile(file)
 
 
 def _write_zip(archive_root_name, infos, filename, packed_envs, frontend):
@@ -284,10 +288,13 @@ def _write_zip(archive_root_name, infos, filename, packed_envs, frontend):
             zf.write(info.full_path, arcname=arcname)
 
         for pack in packed_envs:
+            env_name = os.path.basename(pack)
+            print('Joining packed env {}'.format(env_name))
             with zipfile.ZipFile(pack, mode='r') as env:
-                for file in env.infolist():
-                    data = env.read(file)
-                    zf.writestr(file, data)
+                with progressbar(env.infolist()) as infolist:
+                    for file in infolist:
+                        data = env.read(file)
+                        zf.writestr(file, data)
 
 
 # function exported for project.py
@@ -335,7 +342,7 @@ def _archive_project(project, filename, pack_envs=False):
         import conda_pack
         for env in os.listdir(envs_path):
             prefix = os.path.join(envs_path, env)
-            with open(os.path.join(prefix, '.packed'), 'wt') as f:
+            with open(os.path.join(prefix, 'conda-meta', '.packed'), 'wt') as f:
                 f.write(current_platform())
 
             ext = 'zip' if filename.lower().endswith(".zip") else 'tar'
