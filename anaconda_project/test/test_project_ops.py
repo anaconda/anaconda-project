@@ -4359,9 +4359,10 @@ def test_archive_unarchive_conda_pack(suffix):
 
             _assert_dir_contains(unpacked, expected_files)
 
-            conda_unpack = os.path.join(unpacked, 'envs', 'default', 'bin', 'conda-unpack')
-            mode = os.lstat(conda_unpack)[stat.ST_MODE]
-            assert mode & stat.S_IXUSR
+            if 'win' not in current_platform():
+                conda_unpack = os.path.join(unpacked, 'envs', 'default', 'bin', 'conda-unpack')
+                mode = os.lstat(conda_unpack)[stat.ST_MODE]
+                assert mode & stat.S_IXUSR
 
         with_directory_contents_completing_project_file(
             {
