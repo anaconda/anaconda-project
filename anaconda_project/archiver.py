@@ -19,6 +19,7 @@ import tarfile
 import tempfile
 import uuid
 import zipfile
+from io import BytesIO
 from conda_pack._progress import progressbar
 
 from anaconda_project.frontend import _new_error_recorder
@@ -278,6 +279,17 @@ def _write_tar(archive_root_name, infos, filename, compression, packed_envs, fro
                             tf.addfile(file, data)
                         except KeyError:  # pragma: no cover
                             tf.addfile(file)
+                    env_spec = env_name.split('.')[0].split('_')[-1]
+                    dot_packed = os.path.join(archive_root_name, 'envs', env_spec, 'conda-meta', '.packed')
+                    platform = '{}\n'.format(current_platform())
+
+                    f = BytesIO()
+                    f.write(platform.encode())
+
+                    tinfo = tarfile.TarInfo(dot_packed)
+                    tinfo.size = f.tell()
+                    f.seek(0)
+                    tf.addfile(tinfo, fileobj=f)
 
 
 def _write_zip(archive_root_name, infos, filename, packed_envs, frontend):
@@ -295,6 +307,9 @@ def _write_zip(archive_root_name, infos, filename, packed_envs, frontend):
                     for file in infolist:
                         data = env.read(file)
                         zf.writestr(file, data)
+                    env_spec = env_name.split('.')[0].split('_')[-1]
+                    dot_packed = os.path.join(archive_root_name, 'envs', env_spec, 'conda-meta', '.packed')
+                    zf.writestr(dot_packed, '{}\n'.format(current_platform()))
 
 
 # function exported for project.py
@@ -341,10 +356,6 @@ def _archive_project(project, filename, pack_envs=False):
         conda_pack_dir = tempfile.mkdtemp()
         import conda_pack
         for env in os.listdir(envs_path):
-            prefix = os.path.join(envs_path, env)
-            with open(os.path.join(prefix, 'conda-meta', '.packed'), 'wt') as f:
-                f.write(current_platform())
-
             ext = 'zip' if filename.lower().endswith(".zip") else 'tar'
             pack = os.path.join(conda_pack_dir, '{}_envs_{}.{}'.format(current_platform(), env, ext))
             fn = conda_pack.pack(prefix=os.path.join(envs_path, env),
