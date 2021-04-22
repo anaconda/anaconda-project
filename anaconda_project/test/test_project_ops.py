@@ -4396,58 +4396,6 @@ packages:
     with_directory_contents(dict(), archivetest)
 
 
-@pytest.mark.slow
-def test_prepare_conda_pack():
-    def preparetest(archive_dest_dir):
-        archivefile = os.path.join(archive_dest_dir, "foo.tar.gz")
-
-        def check(dirname):
-            project = project_ops.create(dirname)
-            assert [] == project.problems
-
-            status = prepare.prepare_without_interaction(project)
-            assert status
-
-            status = project_ops.archive(project, archivefile, pack_envs=True)
-
-            assert status
-            assert os.path.exists(archivefile)
-
-            unpacked = os.path.join(os.path.dirname(archivefile), 'unpacked')
-            status = project_ops.unarchive(archivefile, unpacked)
-            assert status.errors == []
-            assert status
-            assert os.path.isdir(unpacked)
-
-            numpy_config = os.path.join(unpacked, 'envs/default/lib/python3.7/site-packages/numpy/__config__.py')
-
-            with open(numpy_config) as f:
-                original = f.read()
-
-            assert 'placehold_placehold_placehold_placehold_' in original
-
-            status = prepare.prepare_without_interaction(project)
-
-            with open(numpy_config) as f:
-                unpacked = f.read()
-
-            assert original != unpacked
-            assert 'placehold_placehold_placehold_placehold_' not in original
-
-        with_directory_contents_completing_project_file(
-            {
-                DEFAULT_PROJECT_FILENAME: """
-name: archivedproj
-packages:
-  - numpy=1.18
-  - python=3.7
-        """,
-                "foo.py": "print('hello')\n"
-            }, check)
-
-    with_directory_contents(dict(), preparetest)
-
-
 _CONTENTS_DIR = 1
 _CONTENTS_FILE = 2
 _CONTENTS_SYMLINK = 3
