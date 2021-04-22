@@ -86,26 +86,24 @@ Experimental: Packaging environments
 There are cases where it may be preferable to package the
 Conda environments directly into the archive. For example,
 when the target system cannot connect to the repository to
-download and install Conda packages.
+download and install packages.
 
 To bundle the environments into the archive use the ``--pack-envs``
 flag. This will utilize `conda-pack <https://conda.github.io/conda-pack/index.html>`_
-to create separate sub-archives for each ``env_spec`` in the project
-and add them to the Anaconda Project bundle.
+to add each ``env_spec`` to the Anaconda Project bundle.
+
+With the ``--pack-envs`` the ``prepare`` command is run automatically
+to ensure that all ``env_specs`` are up-to-date before building
+the bundle.
 
 .. note::
 
   When using ``--pack-envs`` your Anaconda Project bundles may be
   very large.
 
-When the project bundle is extracted using ``anaconda-project unarchive`` if
-environment archives are found they will be extracted to the ``envs/`` directory.
+The bundle can be extracted using either ``anaconda-project unarchive``
+or OS packages for Zip, ``tar.gz``, and ``tar.bz2`` files.
 
-To disable extracting env bundles use ``anaconda-project unarchive --no-unpack-envs``.
-
-.. note::
-
-  The environment bundles will only be extracted when the project bundle
-  is unarchived from the same platform type (Mac, Linux, Windows) where it
-  was archived. For example, if you run ``archive --pack-envs`` on Windows
-  and ``unarchive`` on Linux the environment bundles are ignored.
+If a pack-envs bundle is extracted on a platform (Mac, Linux, Windows) that
+does not match the platform used to create the bundle the ``env_specs`` will be
+re-created when you run ``anaconda-project prepare`` or ``anaconda-project run``.
