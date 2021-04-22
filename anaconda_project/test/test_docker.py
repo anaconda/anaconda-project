@@ -11,6 +11,12 @@ import subprocess
 
 from anaconda_project.docker import build_image
 
+try:
+    FileNotFoundError  # noqa
+except NameError:
+    # python 2
+    FileNotFoundError = OSError
+
 
 def test_build_image_pass(monkeypatch):
     def mock_check_call(*args, **kwargs):

@@ -13,6 +13,12 @@ from anaconda_project.internal.simple_status import SimpleStatus
 
 DEFAULT_BUILDER_IMAGE = 'conda/s2i-anaconda-project-ubi8'
 
+try:
+    FileNotFoundError  # noqa
+except NameError:
+    # python 2
+    FileNotFoundError = OSError
+
 
 def build_image(path, tag, command, builder_image=DEFAULT_BUILDER_IMAGE, build_args=None):
     """Run s2i build."""
