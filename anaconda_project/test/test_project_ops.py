@@ -3645,7 +3645,7 @@ env_specs:
 
 
 def _strip_prefixes(names):
-    return list([name[len("archivedproj/"):] for name in names])
+    return list([name[len("archivedproj/"):].replace('\\', '/') for name in names])
 
 
 def _assert_zip_contains(zip_path, filenames):

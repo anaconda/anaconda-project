@@ -393,7 +393,8 @@ class DefaultCondaManager(CondaManager):
             matched = packed_arch == conda_api.current_platform()
             if matched:
                 if 'win' in conda_api.current_platform():
-                    unpack_script = os.path.join(prefix, 'Scripts', 'conda-unpack.exe')
+                    unpack_script = ['python', os.path.join(prefix, 'Scripts', 'conda-unpack-script.py')]
+
                 else:
                     unpack_script = os.path.join(prefix, 'bin', 'conda-unpack')
 
