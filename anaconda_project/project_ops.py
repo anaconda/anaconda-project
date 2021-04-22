@@ -34,7 +34,7 @@ from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
 from anaconda_project.internal.conda_api import (parse_spec, default_platforms_with_current)
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
-from anaconda_project.internal.py2_compat import is_string
+from anaconda_project.internal.py2_compat import is_string, is_dict
 from anaconda_project.docker import build_image, DEFAULT_BUILDER_IMAGE
 
 
@@ -424,9 +424,13 @@ def _update_env_spec(project, name, packages, channels, create, pip=False):
         # packages may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
         old_packages = env_dict.get('packages', [])
-        # old_packages_set = set(parse_spec(dep).name for dep in old_packages if is_string(dep))
-        conda_packages_set = project.env_specs[name].conda_package_names_set
-        pip_packages_set = project.env_specs[name].pip_package_names_set
+        if pip:
+            for pip_idx, dep in enumerate(old_packages):
+                if is_dict(dep) and list(dep.keys()) == ['pip']:
+                    old_packages_set = set(parse_spec(d).name for d in dep.get('pip', []) if is_string(d))
+                    break
+        else:
+            old_packages_set = set(parse_spec(dep).name for dep in old_packages if is_string(dep))
         bad_specs = []
         updated_specs = []
         new_specs = []
@@ -463,7 +467,10 @@ def _update_env_spec(project, name, packages, channels, create, pip=False):
         _map_inplace(replace_spec, old_packages)
         # add all the new ones
         for added in new_specs:
-            old_packages.append(added)
+            if pip:
+                old_packages[pip_idx]['pip'].append(added)
+            else:
+                old_packages.append(added)
 
         env_dict['packages'] = old_packages
 

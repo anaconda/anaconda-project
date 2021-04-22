@@ -1952,6 +1952,40 @@ packages:
         }, check)
 
 
+def test_add_pip_packages_to_all_environments():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_packages(project,
+                                              env_spec_name=None,
+                                              packages=['foo', 'bar'],
+                                              pip=True,
+                                              channels=None)
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert [dict(pip=['foo', 'bar']), ] == list(project2.project_file.get_value('packages'))
+        # assert ['hello', 'world'] == list(project2.project_file.get_value('channels'))
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set.enabled
+            assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}, platforms=['linux-64', 'osx-64',
+                                                                                        'win-64']))
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages:
+ - pip: [] # be sure we don't break with this in the list
+                """,
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
 def test_add_packages_cannot_resolve_deps():
     def check(dirname):
         def attempt():

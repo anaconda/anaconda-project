@@ -120,8 +120,13 @@ def list_packages(project_dir, environment):
     if env is None:
         print("Project doesn't have an environment called '{}'".format(environment), file=sys.stderr)
         return 1
-    print("Packages for environment '{}':\n".format(env.name))
+    print("Conda packages for environment '{}':\n".format(env.name))
     print("\n".join(sorted(env.conda_packages)), end='\n\n')
+
+    if env.pip_packages:
+        print("Pip packages for environment '{}':\n".format(env.name))
+        print("\n".join(sorted(env.pip_packages)), end='\n\n')
+
     return 0
 
 

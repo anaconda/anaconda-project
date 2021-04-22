@@ -361,7 +361,26 @@ def test_add_packages_to_all_environments(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(env_spec_name=None, packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
+        assert dict(env_spec_name=None, packages=['a', 'b'], channels=['c1', 'c2'], pip=False) == params['kwargs']
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_add_pip_packages_to_all_environments(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_add_packages(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
+
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'add-packages', '--pip', 'a', 'b'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Installed ok.\n' + 'Added packages to project file: a, b.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name=None, packages=['a', 'b'], channels=None, pip=True) == params['kwargs']
 
     with_directory_contents_completing_project_file(dict(), check)
 
@@ -380,7 +399,32 @@ def test_add_packages_to_specific_environment(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(env_spec_name='foo', packages=['a', 'b'], channels=['c1', 'c2']) == params['kwargs']
+        assert dict(env_spec_name='foo', packages=['a', 'b'], channels=['c1', 'c2'], pip=False) == params['kwargs']
+
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+env_specs:
+  foo:
+   packages:
+     - bar
+"""}, check)
+
+
+def test_add_pip_packages_to_specific_environment(capsys, monkeypatch):
+    def check(dirname):
+        _monkeypatch_pwd(monkeypatch, dirname)
+        params = _monkeypatch_add_packages(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
+
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'add-packages', '--env-spec', 'foo', '--pip', 'a', 'b'])
+        assert code == 0
+
+        out, err = capsys.readouterr()
+        assert ('Installed ok.\n' + 'Added packages to environment foo in project file: a, b.\n') == out
+        assert '' == err
+
+        assert 1 == len(params['args'])
+        assert dict(env_spec_name='foo', packages=['a', 'b'], channels=None, pip=True) == params['kwargs']
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
@@ -586,7 +630,7 @@ def test_list_packages_wrong_env(capsys):
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_missing_env)
 
 
-def _test_list_packages(capsys, env, expected_deps):
+def _test_list_packages(capsys, env, expected_conda_deps, expected_pip_deps):
     def check_list_not_empty(dirname):
         params = ['anaconda-project', 'list-packages', '--directory', dirname]
         if env is not None:
@@ -599,7 +643,8 @@ def _test_list_packages(capsys, env, expected_deps):
 
         project = Project(dirname)
         assert project.default_env_spec_name == 'foo'
-        expected_out = "Packages for environment '{}':\n{}".format(env or project.default_env_spec_name, expected_deps)
+        expected_out = "Conda packages for environment '{}':\n{}".format(env or project.default_env_spec_name, expected_conda_deps)
+        expected_out += "Pip packages for environment '{}':\n{}".format(env or project.default_env_spec_name, expected_pip_deps)
         assert out == expected_out
 
     project_contents = ('env_specs:\n'
@@ -612,18 +657,20 @@ def _test_list_packages(capsys, env, expected_deps):
                         '      - httplib\n'
                         '      - django\n\n'
                         'packages:\n'
-                        ' - mandatory_package\n')
+                        ' - mandatory_package\n'
+                        ' - pip:\n'
+                        '     - mandatory_pip_package\n')
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: project_contents}, check_list_not_empty)
 
 
 def test_list_packages_from_env(capsys):
-    _test_list_packages(capsys, 'bar', '\ndjango\nhttplib\nmandatory_package\n\n')
-    _test_list_packages(capsys, 'foo', '\nflask\nmandatory_package\nrequests\n\n')
+    _test_list_packages(capsys, 'bar', '\ndjango\nhttplib\nmandatory_package\n\n', '\nmandatory_pip_package\n\n')
+    _test_list_packages(capsys, 'foo', '\nflask\nmandatory_package\nrequests\n\n', '\nmandatory_pip_package\n\n')
 
 
 def test_list_packages_from_env_default(capsys):
-    _test_list_packages(capsys, None, '\nflask\nmandatory_package\nrequests\n\n')
+    _test_list_packages(capsys, None, '\nflask\nmandatory_package\nrequests\n\n', '\nmandatory_pip_package\n\n')
 
 
 def test_list_packages_with_project_file_problems(capsys, monkeypatch):
