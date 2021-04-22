@@ -4316,6 +4316,11 @@ def test_archive_unarchive_conda_pack(suffix):
             status = prepare.prepare_without_interaction(project)
             assert status
 
+            # a dummy file to test conda-unpack
+            original_prefix = os.path.join(dirname, 'envs', 'default')
+            with open(os.path.join(original_prefix, 'conda-meta', '_prefix'), 'wt') as f:
+                f.write(original_prefix)
+
             status = project_ops.archive(project, archivefile, pack_envs=True)
 
             assert status
@@ -4323,7 +4328,8 @@ def test_archive_unarchive_conda_pack(suffix):
 
             expected_files = [
                 'anaconda-project.yml', '.projectignore', 'foo.py', 'bar/blah.py', 'envs/default/conda-meta/.packed',
-                'envs/default/conda-meta/history', 'envs/default/conda-meta/font-ttf-ubuntu-0.83-h8b1ccd4_0.json',
+                'envs/default/conda-meta/history', 'envs/default/conda-meta/_prefix',
+                'envs/default/conda-meta/font-ttf-ubuntu-0.83-h8b1ccd4_0.json',
                 'envs/default/var/cache/anaconda-project/env-specs/7d832cfb38dabc7b1c20f98e15bfc4c601f21b62',
                 'envs/default/fonts/Ubuntu-M.ttf', 'envs/default/fonts/Ubuntu-L.ttf',
                 'envs/default/fonts/UbuntuMono-BI.ttf', 'envs/default/fonts/Ubuntu-BI.ttf',
@@ -4364,6 +4370,15 @@ def test_archive_unarchive_conda_pack(suffix):
                 mode = os.lstat(conda_unpack)[stat.ST_MODE]
                 assert mode & stat.S_IXUSR
 
+            unpacked_project = Project(unpacked)
+            status = prepare.prepare_without_interaction(unpacked_project)
+            assert status
+
+            with open(os.path.join(unpacked, 'envs', 'default', 'conda-meta', '_prefix')) as f:
+                unpacked_prefix = f.read()
+
+            assert unpacked_prefix != original_prefix
+
         with_directory_contents_completing_project_file(
             {
                 DEFAULT_PROJECT_FILENAME: """
@@ -4379,6 +4394,58 @@ packages:
             }, check)
 
     with_directory_contents(dict(), archivetest)
+
+
+@pytest.mark.slow
+def test_prepare_conda_pack():
+    def preparetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.tar.gz")
+
+        def check(dirname):
+            project = project_ops.create(dirname)
+            assert [] == project.problems
+
+            status = prepare.prepare_without_interaction(project)
+            assert status
+
+            status = project_ops.archive(project, archivefile, pack_envs=True)
+
+            assert status
+            assert os.path.exists(archivefile)
+
+            unpacked = os.path.join(os.path.dirname(archivefile), 'unpacked')
+            status = project_ops.unarchive(archivefile, unpacked)
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+
+            numpy_config = os.path.join(unpacked, 'envs/default/lib/python3.7/site-packages/numpy/__config__.py')
+
+            with open(numpy_config) as f:
+                original = f.read()
+
+            assert 'placehold_placehold_placehold_placehold_' in original
+
+            status = prepare.prepare_without_interaction(project)
+
+            with open(numpy_config) as f:
+                unpacked = f.read()
+
+            assert original != unpacked
+            assert 'placehold_placehold_placehold_placehold_' not in original
+
+        with_directory_contents_completing_project_file(
+            {
+                DEFAULT_PROJECT_FILENAME: """
+name: archivedproj
+packages:
+  - numpy=1.18
+  - python=3.7
+        """,
+                "foo.py": "print('hello')\n"
+            }, check)
+
+    with_directory_contents(dict(), preparetest)
 
 
 _CONTENTS_DIR = 1
