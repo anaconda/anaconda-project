@@ -401,8 +401,8 @@ class DefaultCondaManager(CondaManager):
                 try:
                     subprocess.check_call(unpack_script)
                     os.remove(packed)
-                except OSError as e:
-                    self._log_info('Warning: conda-unpack could not be run: {}'
+                except (subprocess.CalledProcessError, OSError) as e:
+                    self._log_info('Warning: conda-unpack could not be run: \n{}\n'
                                    'The environment will be recreated.'.format(str(e)))
                     create = True
                     shutil.rmtree(prefix)
