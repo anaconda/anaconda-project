@@ -33,6 +33,7 @@ from anaconda_project.requirements_registry.providers.conda_env import _remove_e
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
 from anaconda_project.internal.conda_api import (parse_spec, default_platforms_with_current)
+from anaconda_project.internal import conda_api
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 from anaconda_project.internal.py2_compat import is_string, is_dict
 from anaconda_project.docker import build_image, DEFAULT_BUILDER_IMAGE
@@ -844,6 +845,13 @@ def _update_and_lock(project, env_spec_name, update):
                             project.frontend.info(line)
 
                     status = _try_requirement_without_commit(project, CondaEnvRequirement, env.name)
+                    # Pip packages can only be added to the lock file after
+                    # they are installed. Pip does not have a dry-run feature
+                    prefix = env.path(project.directory_path)
+                    pip_pkgs = conda_api.installed_pip(prefix)
+                    if pip_pkgs:
+                        project.lock_file._add_pip_packages(env.name, conda_api.installed_pip(prefix))
+
                     if status:
                         need_save = True
                         if update:

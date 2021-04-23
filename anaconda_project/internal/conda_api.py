@@ -19,7 +19,7 @@ import tempfile
 
 from anaconda_project.internal import streaming_popen
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
-from anaconda_project.internal.py2_compat import is_string
+from anaconda_project.internal.py2_compat import is_string, is_dict
 
 CONDA_EXE = os.environ.get("CONDA_EXE", "conda")
 
@@ -325,6 +325,15 @@ def installed(prefix):
         if pieces is not None:
             result[pieces[0]] = pieces
     return result
+
+
+def installed_pip(prefix):
+    cmd_list = ['env', 'export', '--json', '-p', prefix]
+    parsed = _call_and_parse_json(cmd_list)
+    dependencies = parsed.get('dependencies', [])
+    for dep in dependencies:
+        if is_dict(dep):
+            return dep.get('pip', [])
 
 
 def resolve_dependencies(pkgs, channels=(), platform=None):
