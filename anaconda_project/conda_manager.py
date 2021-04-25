@@ -426,6 +426,10 @@ class CondaLockSet(object):
         return _combine_conda_package_lists(shared, per_platform)
 
     @property
+    def pip_package_specs(self):
+        return self._package_specs_by_platform.get('pip', [])
+
+    @property
     def package_specs_for_current_platform(self):
         """Sequence of package spec strings for the current platform."""
         assert self.supports_current_platform

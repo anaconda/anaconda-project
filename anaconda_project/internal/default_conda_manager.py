@@ -335,7 +335,7 @@ class DefaultCondaManager(CondaManager):
                                               (prefix),
                                               missing_packages=tuple(spec.conda_package_names_for_create_set),
                                               wrong_version_packages=(),
-                                              missing_pip_packages=tuple(spec.pip_package_names_set),
+                                              missing_pip_packages=tuple(spec.pip_package_names_for_create_set),
                                               wrong_version_pip_packages=(),
                                               broken=True)
 

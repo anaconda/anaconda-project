@@ -94,13 +94,20 @@ class EnvSpec(object):
         self.conda_constrained_packages = sorted(conda_constrained_packages)
 
         pip_specs_by_name = dict()
-        for spec in self.pip_packages:
+        for spec in self.pip_packages_for_create:
             # we quietly skip invalid specs here and let them fail
             # somewhere we can more easily report an error message.
             parsed = pip_api.parse_spec(spec)
             if parsed is not None:
                 pip_specs_by_name[parsed.name] = spec
-        self._pip_specs_by_name = pip_specs_by_name
+        self._pip_specs_for_create_by_name = pip_specs_by_name
+
+        name_set = set()
+        for spec in self.pip_packages:
+            parsed = pip_api.parse_spec(spec)
+            if parsed is not None:
+                name_set.add(parsed.name)
+        self._pip_logical_specs_name_set = name_set
 
         self._conda = conda_manager.new_conda_manager()
 
@@ -237,7 +244,13 @@ class EnvSpec(object):
     @property
     def pip_package_names_set(self):
         """Pip package names that we require, as a Python set."""
-        return set(self._pip_specs_by_name.keys())
+        return set(self._pip_logical_specs_name_set)
+
+    @property
+    def pip_package_names_for_create_set(self):
+        """Pip package names that we require, as a Python set."""
+        return set(self._pip_specs_for_create_by_name.keys())
+        
 
     @property
     def lock_set(self):
@@ -251,6 +264,14 @@ class EnvSpec(object):
             return self._lock_set.package_specs_for_current_platform
         else:
             return self.conda_packages
+
+    @property
+    def pip_packages_for_create(self):
+        """Get pip packages (preferring the lock set list if present)."""
+        if self._lock_set is not None and self._lock_set.enabled and self._lock_set.supports_current_platform:
+            return self._lock_set.pip_package_specs
+        else:
+            return self.pip_packages
 
     def _specs_for_package_names(self, names, mapping):
         specs = []
@@ -266,7 +287,7 @@ class EnvSpec(object):
 
     def specs_for_pip_package_names(self, names):
         """Get the full install specs given an iterable of package names."""
-        return self._specs_for_package_names(names, self._pip_specs_by_name)
+        return self._specs_for_package_names(names, self._pip_specs_for_create_by_name)
 
     @property
     def inherit_from(self):
