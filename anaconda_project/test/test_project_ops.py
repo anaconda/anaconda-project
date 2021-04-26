@@ -1968,7 +1968,9 @@ def test_add_pip_packages_to_all_environments():
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert [dict(pip=['foo', 'bar']), ] == list(project2.project_file.get_value('packages'))
+        assert [
+            dict(pip=['foo', 'bar']),
+        ] == list(project2.project_file.get_value('packages'))
         # assert ['hello', 'world'] == list(project2.project_file.get_value('channels'))
 
         for env_spec in project2.env_specs.values():

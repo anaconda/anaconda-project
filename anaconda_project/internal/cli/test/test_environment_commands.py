@@ -371,8 +371,7 @@ def test_add_pip_packages_to_all_environments(capsys, monkeypatch):
         _monkeypatch_pwd(monkeypatch, dirname)
         params = _monkeypatch_add_packages(monkeypatch, SimpleStatus(success=True, description='Installed ok.'))
 
-        code = _parse_args_and_run_subcommand(
-            ['anaconda-project', 'add-packages', '--pip', 'a', 'b'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'add-packages', '--pip', 'a', 'b'])
         assert code == 0
 
         out, err = capsys.readouterr()
@@ -643,8 +642,10 @@ def _test_list_packages(capsys, env, expected_conda_deps, expected_pip_deps):
 
         project = Project(dirname)
         assert project.default_env_spec_name == 'foo'
-        expected_out = "Conda packages for environment '{}':\n{}".format(env or project.default_env_spec_name, expected_conda_deps)
-        expected_out += "Pip packages for environment '{}':\n{}".format(env or project.default_env_spec_name, expected_pip_deps)
+        expected_out = "Conda packages for environment '{}':\n{}".format(env or project.default_env_spec_name,
+                                                                         expected_conda_deps)
+        expected_out += "Pip packages for environment '{}':\n{}".format(env or project.default_env_spec_name,
+                                                                        expected_pip_deps)
         assert out == expected_out
 
     project_contents = ('env_specs:\n'

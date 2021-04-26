@@ -250,7 +250,6 @@ class EnvSpec(object):
     def pip_package_names_for_create_set(self):
         """Pip package names that we require, as a Python set."""
         return set(self._pip_specs_for_create_by_name.keys())
-        
 
     @property
     def lock_set(self):
