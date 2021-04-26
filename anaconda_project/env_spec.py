@@ -268,7 +268,13 @@ class EnvSpec(object):
     def pip_packages_for_create(self):
         """Get pip packages (preferring the lock set list if present)."""
         if self._lock_set is not None and self._lock_set.enabled and self._lock_set.supports_current_platform:
-            return self._lock_set.pip_package_specs
+            # This happens during the lock procedure because pip packages
+            # cannot be determined until they are installed. Conda is the
+            # reverse.
+            if not self._lock_set.pip_package_specs and self.pip_packages:
+                return self.pip_packages
+            else:
+                return self._lock_set.pip_package_specs
         else:
             return self.pip_packages
 
