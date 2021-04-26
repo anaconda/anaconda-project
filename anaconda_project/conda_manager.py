@@ -427,6 +427,7 @@ class CondaLockSet(object):
 
     @property
     def pip_package_specs(self):
+        """Sequence of pip packages."""
         return self._package_specs_by_platform.get('pip', [])
 
     @property
