@@ -27,7 +27,6 @@ def archive_command(project_dir, archive_filename, pack_envs):
                                          command_name=None,
                                          all=True)
         if not prepare_status:
-            console_utils.print_status_errors(prepare_status)
             return 1
 
     project = load_project(project_dir)
