@@ -11,15 +11,15 @@ the file extension that you provide.
 Excluding files from the archive
 ================================
 
-Do not include the ``envs/`` directory in the archive,
-because Conda environments are large and do not work if moved
-between machines. If your project works with large downloaded
-files, you might not want to include those either.
-
 The ``anaconda-project archive`` command automatically omits the
 files that Project can reproduce automatically, which includes
-the ``envs/`` directory and any downloaded data. It also
-excludes ``anaconda-project-local.yml``, which is intended to
+the ``envs/`` directory and any downloaded data files defined in the
+:ref:`downloads <downloads>` section of the ``anaconda-project.yml`` file.
+
+See :ref:`Packagaging Environments <packed-envs>` below to bundle Conda
+environments in the archive.
+
+The archive also excludes ``anaconda-project-local.yml``, which is intended to
 hold local configuration state only.
 
 To manually exclude any other files that you do not want to be
@@ -71,14 +71,15 @@ EXAMPLE::
 Extracting the archive file
 ===========================
 
-It is recommended that you unarchive Anaconda Project bundles using
-the ``unarchive`` command::
+Anaconda Project archives can be extracted using packages
+provided by the OS or using the ``anaconda-project unarchive`` command.
+
+The ``unarchive`` command can extract bundles in any of the supported
+formats (``.zip``, ``.tar.gz``, and ``.tar.bz2``)::
 
   anaconda-project unarchive <bundle>
 
-This will unarchive any compression format (``.zip``, ``.tar.gz``, and
-``.tar.bz2``) on all supported platforms.
-
+.. _packed-envs:
 
 Experimental: Packaging environments
 ====================================
