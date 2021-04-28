@@ -85,8 +85,8 @@ Experimental: Packaging environments
 
 There are cases where it may be preferable to package the
 Conda environments directly into the archive. For example,
-when the target system cannot connect to the repository to
-download and install packages.
+you may want to support uses where the target system cannot
+connect to the repository to download and install packages.
 
 To bundle the environments into the archive use the ``--pack-envs``
 flag. This will utilize `conda-pack <https://conda.github.io/conda-pack/index.html>`_
