@@ -622,7 +622,7 @@ def test_archive(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.archive', mock_archive)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, filename=123)
+    kwargs = dict(project=43, filename=123, pack_envs=False)
     result = p.archive(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

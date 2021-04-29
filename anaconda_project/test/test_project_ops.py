@@ -12,6 +12,7 @@ import os
 from tornado import gen
 import platform
 import pytest
+import stat
 import tarfile
 import zipfile
 import glob
@@ -21,6 +22,7 @@ from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviat
                                             push_conda_manager_class, pop_conda_manager_class)
 from anaconda_project.project import Project
 import anaconda_project.prepare as prepare
+from anaconda_project.internal.conda_api import current_platform
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, with_temporary_script_commandline,
                                                           with_directory_contents_completing_project_file,
                                                           complete_project_file_content)
@@ -3643,7 +3645,7 @@ env_specs:
 
 
 def _strip_prefixes(names):
-    return list([name[len("archivedproj/"):] for name in names])
+    return list([name[len("archivedproj/"):].replace('\\', '/') for name in names])
 
 
 def _assert_zip_contains(zip_path, filenames):
@@ -4299,6 +4301,99 @@ name: archivedproj
             }, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize('suffix', ['zip', 'tar.bz2', 'tar.gz'])
+def test_archive_unarchive_conda_pack(suffix):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.{}".format(suffix))
+
+        def check(dirname):
+            project = project_ops.create(dirname)
+            assert [] == project.problems
+
+            status = prepare.prepare_without_interaction(project)
+            assert status
+
+            # a dummy file to test conda-unpack
+            original_prefix = os.path.join(dirname, 'envs', 'default')
+            with open(os.path.join(original_prefix, 'conda-meta', '_prefix'), 'wt') as f:
+                f.write(original_prefix)
+
+            status = project_ops.archive(project, archivefile, pack_envs=True)
+
+            assert status
+            assert os.path.exists(archivefile)
+
+            expected_files = [
+                'anaconda-project.yml', '.projectignore', 'foo.py', 'bar/blah.py', 'envs/default/conda-meta/.packed',
+                'envs/default/conda-meta/history', 'envs/default/conda-meta/_prefix',
+                'envs/default/conda-meta/font-ttf-ubuntu-0.83-h8b1ccd4_0.json',
+                'envs/default/var/cache/anaconda-project/env-specs/7d832cfb38dabc7b1c20f98e15bfc4c601f21b62',
+                'envs/default/fonts/Ubuntu-M.ttf', 'envs/default/fonts/Ubuntu-L.ttf',
+                'envs/default/fonts/UbuntuMono-BI.ttf', 'envs/default/fonts/Ubuntu-BI.ttf',
+                'envs/default/fonts/Ubuntu-MI.ttf', 'envs/default/fonts/Ubuntu-R.ttf',
+                'envs/default/fonts/Ubuntu-LI.ttf', 'envs/default/fonts/Ubuntu-B.ttf',
+                'envs/default/fonts/Ubuntu-C.ttf', 'envs/default/fonts/UbuntuMono-RI.ttf',
+                'envs/default/fonts/UbuntuMono-R.ttf', 'envs/default/fonts/Ubuntu-RI.ttf',
+                'envs/default/fonts/UbuntuMono-B.ttf'
+            ]
+
+            scripts_nix = ['envs/default/bin/conda-unpack', 'envs/default/bin/deactivate', 'envs/default/bin/activate']
+
+            scripts_win = [
+                'envs/default/Scripts/activate.bat', 'envs/default/Scripts/conda-unpack-script.py',
+                'envs/default/Scripts/conda-unpack.exe', 'envs/default/Scripts/deactivate.bat'
+            ]
+
+            if 'win' in current_platform():
+                expected_files.extend(scripts_win)
+            else:
+                expected_files.extend(scripts_nix)
+
+            if suffix == 'zip':
+                _assert_zip_contains(archivefile, expected_files)
+            elif suffix in ['tar.bz2', 'tar.gz']:
+                _assert_tar_contains(archivefile, expected_files)
+
+            unpacked = os.path.join(os.path.dirname(archivefile), 'unpacked')
+            status = project_ops.unarchive(archivefile, unpacked)
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+
+            _assert_dir_contains(unpacked, expected_files)
+
+            if 'win' not in current_platform():
+                conda_unpack = os.path.join(unpacked, 'envs', 'default', 'bin', 'conda-unpack')
+                mode = os.lstat(conda_unpack)[stat.ST_MODE]
+                assert mode & stat.S_IXUSR
+
+            unpacked_project = Project(unpacked)
+            status = prepare.prepare_without_interaction(unpacked_project)
+            assert status
+
+            with open(os.path.join(unpacked, 'envs', 'default', 'conda-meta', '_prefix')) as f:
+                unpacked_prefix = f.read()
+
+            assert unpacked_prefix != original_prefix
+
+        with_directory_contents_completing_project_file(
+            {
+                DEFAULT_PROJECT_FILENAME: """
+name: archivedproj
+packages:
+  - font-ttf-ubuntu=0.83=h8b1ccd4_0
+        """,
+                "foo.py": "print('hello')\n",
+                "foo.pyc": "",
+                ".ipynb_checkpoints/bleh": "",
+                "bar/blah.py": "",
+                "bar/blah.pyc": ""
+            }, check)
+
+    with_directory_contents(dict(), archivetest)
 
 
 _CONTENTS_DIR = 1

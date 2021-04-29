@@ -1667,7 +1667,7 @@ def clean(project, prepare_result):
         return SimpleStatus(success=False, description="Failed to clean everything up.", errors=errors)
 
 
-def archive(project, filename):
+def archive(project, filename, pack_envs=False):
     """Make an archive of the non-ignored files in the project.
 
     Args:
@@ -1677,7 +1677,7 @@ def archive(project, filename):
     Returns:
         a ``Status``, if failed has ``errors``
     """
-    return archiver._archive_project(project, filename)
+    return archiver._archive_project(project, filename, pack_envs)
 
 
 def unarchive(filename, project_dir, parent_dir=None, frontend=None):

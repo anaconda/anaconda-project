@@ -285,6 +285,35 @@ packages:
         }, check)
 
 
+@pytest.mark.slow
+def test_prepare_missing_unpack():
+    def check(dirname):
+        project = Project(dirname)
+        environ = minimal_environ()
+        result = prepare_without_interaction(project, environ=environ)
+        assert result
+
+        # now mimmick an unpacked project
+        packed_file = os.path.join(dirname, 'envs', 'default', 'conda-meta', '.packed')
+        with open(packed_file, 'wt') as f:
+            f.write(conda_api.current_platform())
+
+        # without a functional conda-unpack script it will rebuild the env
+        result = prepare_without_interaction(project, environ=environ)
+        assert result
+        assert not os.path.exists(packed_file)
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+env_specs:
+  default: {}
+""",
+            "foo.py": "# foo",
+            "bar.py": "# bar",
+        }, check)
+
+
 def test_prepare_default_command():
     def check(dirname):
         project = project_no_dedicated_env(dirname)

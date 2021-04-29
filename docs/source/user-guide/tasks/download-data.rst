@@ -1,3 +1,5 @@
+.. _`downloads`:
+
 ===============================
 Downloading data into a project
 ===============================

@@ -11,15 +11,15 @@ the file extension that you provide.
 Excluding files from the archive
 ================================
 
-Do not include the ``envs/default`` directory in the archive,
-because conda environments are large and do not work if moved
-between machines. If your project works with large downloaded
-files, you might not want to include those either.
-
 The ``anaconda-project archive`` command automatically omits the
 files that Project can reproduce automatically, which includes
-the ``envs/default`` directory and any downloaded data. It also
-excludes ``anaconda-project-local.yml``, which is intended to
+the ``envs/`` directory and any downloaded data files defined in the
+:ref:`downloads <downloads>` section of the ``anaconda-project.yml`` file.
+
+See :ref:`Packagaging Environments <packed-envs>` below to bundle Conda
+environments in the archive.
+
+The archive also excludes ``anaconda-project-local.yml``, which is intended to
 hold local configuration state only.
 
 To manually exclude any other files that you do not want to be
@@ -67,3 +67,44 @@ EXAMPLE::
         557  06-10-2016 10:33   iris/iris_plot/main.py
   ---------                     -------
        6003                     5 files
+
+Extracting the archive file
+===========================
+
+Anaconda Project archives can be extracted using packages
+provided by the OS or using the ``anaconda-project unarchive`` command.
+
+The ``unarchive`` command can extract bundles in any of the supported
+formats (``.zip``, ``.tar.gz``, and ``.tar.bz2``)::
+
+  anaconda-project unarchive <bundle>
+
+.. _packed-envs:
+
+Experimental: Packaging environments
+====================================
+
+There are cases where it may be preferable to package the
+Conda environments directly into the archive. For example,
+you may want to support uses where the target system cannot
+connect to the repository to download and install packages.
+
+To bundle the environments into the archive use the ``--pack-envs``
+flag. This will utilize `conda-pack <https://conda.github.io/conda-pack/index.html>`_
+to add each ``env_spec`` to the Anaconda Project bundle.
+
+With the ``--pack-envs`` the ``prepare`` command is run automatically
+to ensure that all ``env_specs`` are up-to-date before building
+the bundle.
+
+.. note::
+
+  When using ``--pack-envs`` your Anaconda Project bundles may be
+  very large.
+
+The bundle can be extracted using either ``anaconda-project unarchive``
+or OS packages for Zip, ``tar.gz``, and ``tar.bz2`` files.
+
+If a pack-envs bundle is extracted on a platform (Mac, Linux, Windows) that
+does not match the platform used to create the bundle the ``env_specs`` will be
+re-created when you run ``anaconda-project prepare`` or ``anaconda-project run``.

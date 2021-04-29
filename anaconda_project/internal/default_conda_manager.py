@@ -11,6 +11,8 @@ from __future__ import absolute_import
 import codecs
 import glob
 import os
+import shutil
+import subprocess
 
 from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaLockSet, CondaManagerError)
 import anaconda_project.internal.conda_api as conda_api
@@ -381,7 +383,37 @@ class DefaultCondaManager(CondaManager):
         if deviations.unfixable:
             raise CondaManagerError("Unable to update environment at %s" % prefix)
 
-        if os.path.isdir(os.path.join(prefix, 'conda-meta')):
+        conda_meta = os.path.join(prefix, 'conda-meta')
+        packed = os.path.join(conda_meta, '.packed')
+
+        if os.path.isdir(conda_meta) and os.path.exists(packed):
+            with open(packed) as f:
+                packed_arch = f.read().strip()
+
+            matched = packed_arch == conda_api.current_platform()
+            if matched:
+                if 'win' in conda_api.current_platform():
+                    unpack_script = ['python', os.path.join(prefix, 'Scripts', 'conda-unpack-script.py')]
+
+                else:
+                    unpack_script = os.path.join(prefix, 'bin', 'conda-unpack')
+
+                try:
+                    subprocess.check_call(unpack_script)
+                    os.remove(packed)
+                except (subprocess.CalledProcessError, OSError) as e:
+                    self._log_info('Warning: conda-unpack could not be run: \n{}\n'
+                                   'The environment will be recreated.'.format(str(e)))
+                    create = True
+                    shutil.rmtree(prefix)
+
+            else:
+                self._log_info('Warning: The unpacked env does not match the current architecture. '
+                               'It will be recreated.')
+                create = True
+                shutil.rmtree(prefix)
+
+        if os.path.isdir(conda_meta):
             to_update = list(set(deviations.missing_packages + deviations.wrong_version_packages))
             if len(to_update) > 0:
                 specs = spec.specs_for_conda_package_names(to_update)

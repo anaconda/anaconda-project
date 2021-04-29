@@ -714,17 +714,18 @@ class AnacondaProject(object):
         """
         return project_ops.clean(project=project, prepare_result=prepare_result)
 
-    def archive(self, project, filename):
+    def archive(self, project, filename, pack_envs=False):
         """Make an archive of the non-ignored files in the project.
 
         Args:
             project (``Project``): the project
             filename (str): name of a zip, tar.gz, or tar.bz2 archive file
+            pack_envs (bool): Flag to include conda-packs of each env_spec in the archive
 
         Returns:
             a ``Status``, if failed has ``errors``
         """
-        return project_ops.archive(project=project, filename=filename)
+        return project_ops.archive(project=project, filename=filename, pack_envs=pack_envs)
 
     def unarchive(self, filename, project_dir, parent_dir=None, frontend=None):
         """Unpack an archive of the project.

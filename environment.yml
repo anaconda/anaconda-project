@@ -9,6 +9,7 @@ dependencies:
   - notebook
   - ruamel_yaml
   - anaconda-client
+  - conda-pack
   - requests
   - psutil
   - tornado>=4.2

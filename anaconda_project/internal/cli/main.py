@@ -129,6 +129,11 @@ def _parse_args_and_run_subcommand(argv):
                                    help="Create a .zip, .tar.gz, or .tar.bz2 archive with project files in it")
     add_directory_arg(preset)
     preset.add_argument('filename', metavar='ARCHIVE_FILENAME')
+    preset.add_argument('--pack-envs',
+                        action='store_true',
+                        help='Experimental: Package env_specs into the archive'
+                        ' using conda-pack')
+
     preset.set_defaults(main=archive.main)
 
     preset = subparsers.add_parser('unarchive',
