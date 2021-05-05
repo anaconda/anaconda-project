@@ -465,8 +465,14 @@ class DefaultCondaManager(CondaManager):
         # write a file to tell us we can short-circuit next time
         self._write_timestamp_file(prefix, spec)
 
-    def remove_packages(self, prefix, packages):
-        try:
-            conda_api.remove(prefix, packages, stdout_callback=self._on_stdout, stderr_callback=self._on_stderr)
-        except conda_api.CondaError as e:
-            raise CondaManagerError("Failed to remove packages from %s: %s" % (prefix, str(e)))
+    def remove_packages(self, prefix, packages, pip=False):
+        if pip:
+            try:
+                pip_api.remove(prefix, packages, stdout_callback=self._on_stdout, stderr_callback=self._on_stderr)
+            except pip_api.PipError as e:
+                raise CondaManagerError('Failed to remove pip packages from {}: {}'.format(prefix, str(e)))
+        else:
+            try:
+                conda_api.remove(prefix, packages, stdout_callback=self._on_stdout, stderr_callback=self._on_stderr)
+            except conda_api.CondaError as e:
+                raise CondaManagerError("Failed to remove packages from %s: %s" % (prefix, str(e)))

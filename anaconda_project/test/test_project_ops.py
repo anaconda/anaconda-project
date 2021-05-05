@@ -16,6 +16,7 @@ import stat
 import tarfile
 import zipfile
 import glob
+from collections import OrderedDict
 
 from anaconda_project import project_ops
 from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaLockSet, CondaManagerError,
@@ -1596,7 +1597,7 @@ def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove
             if self.fix_works:
                 self.fixed = True
 
-        def remove_packages(self, prefix, packages):
+        def remove_packages(self, prefix, packages, pip=False):
             if remove_error is not None:
                 raise CondaManagerError(remove_error)
 
@@ -2079,6 +2080,56 @@ packages:
   - foo
   - bar
   - baz
+env_specs:
+  hello:
+    packages:
+     - foo
+     - woot
+  hello2:
+    packages:
+     - foo
+     - bar
+     - pip: [] # make sure we don't choke on non-string items in list
+        """,
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
+def test_remove_conda_packages_from_global_with_pip_packages():
+    def check(dirname):
+        def attempt():
+            os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
+            project = Project(dirname)
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
+
+            assert ['foo', 'bar', 'baz', OrderedDict([('pip', [])])] == list(project.project_file.get_value('packages'))
+            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo', 'bar'])
+            assert [] == status.errors
+            assert status
+
+        _with_conda_test(attempt, remove_error="Removal fail")
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert ['baz', OrderedDict([('pip', [])])] == list(project2.project_file.get_value('packages'))
+        assert ['woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set.enabled
+            assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}, platforms=['linux-64', 'osx-64',
+                                                                                        'win-64']))
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages:
+  - foo
+  - bar
+  - baz
+  - pip: []
 env_specs:
   hello:
     packages:

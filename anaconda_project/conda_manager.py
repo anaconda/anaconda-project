@@ -159,7 +159,7 @@ class CondaManager(with_metaclass(ABCMeta)):
         pass  # pragma: no cover
 
     @abstractmethod
-    def remove_packages(self, prefix, packages):
+    def remove_packages(self, prefix, packages, pip):
         """Remove the given package name from the environment in prefix.
 
         This method ideally would not exist. The ideal approach is
@@ -174,6 +174,7 @@ class CondaManager(with_metaclass(ABCMeta)):
         Args:
            prefix (str): environment path
            package (list of str): package names
+           pip (bool): remove packages using pip
 
         Returns:
            None

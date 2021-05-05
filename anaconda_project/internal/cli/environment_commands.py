@@ -63,10 +63,10 @@ def add_packages(project, environment, packages, channels, pip=False):
     return _handle_status(status, success_message)
 
 
-def remove_packages(project, environment, packages):
+def remove_packages(project, environment, packages, pip):
     """Remove packages from the project."""
     project = load_project(project)
-    status = project_ops.remove_packages(project, env_spec_name=environment, packages=packages)
+    status = project_ops.remove_packages(project, env_spec_name=environment, packages=packages, pip=pip)
     package_list = ", ".join(packages)
     if environment is None:
         success_message = "Removed packages from project file: %s." % (package_list)
@@ -195,7 +195,7 @@ def main_add_packages(args):
 
 def main_remove_packages(args):
     """Start the remove-packages command and return exit status code."""
-    return remove_packages(args.directory, args.env_spec, args.packages)
+    return remove_packages(args.directory, args.env_spec, args.packages, args.pip)
 
 
 def main_add_platforms(args):
