@@ -447,7 +447,7 @@ def test_remove_packages_from_all_environments(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(env_spec_name=None, packages=['bar']) == params['kwargs']
+        assert dict(env_spec_name=None, packages=['bar'], pip=False) == params['kwargs']
 
     with_directory_contents_completing_project_file(dict(), check)
 
@@ -465,7 +465,7 @@ def test_remove_packages_from_specific_environment(capsys, monkeypatch):
         assert '' == err
 
         assert 1 == len(params['args'])
-        assert dict(env_spec_name='foo', packages=['bar']) == params['kwargs']
+        assert dict(env_spec_name='foo', packages=['bar'], pip=False) == params['kwargs']
 
     with_directory_contents_completing_project_file(dict(), check)
 
