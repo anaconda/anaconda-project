@@ -16,6 +16,7 @@ import re
 import shutil
 import sys
 import tempfile
+import yaml
 
 from anaconda_project.internal import streaming_popen
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
@@ -328,8 +329,9 @@ def installed(prefix):
 
 
 def installed_pip(prefix):
-    cmd_list = ['env', 'export', '--json', '-p', prefix]
-    parsed = _call_and_parse_json(cmd_list)
+    cmd_list = ['env', 'export', '-p', prefix]
+    stdout = _call_conda(cmd_list)
+    parsed = yaml.safe_load(stdout)
     dependencies = parsed.get('dependencies', [])
     for dep in dependencies:
         if is_dict(dep):
