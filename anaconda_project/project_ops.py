@@ -722,7 +722,6 @@ def remove_packages(project, env_spec_name, packages, pip=False):
         assert len(env_dicts) > 0
 
         def _get_deps(env_dict, pip=False):
-            # _pkgs = project.project_file.root.get('packages', [])
             _pkgs = env_dict.get('packages', [])
             if pip:
                 pip_dicts = [dep for dep in _pkgs if is_dict(dep) and 'pip' in dep]
