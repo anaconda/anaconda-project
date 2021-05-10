@@ -2279,7 +2279,7 @@ def test_remove_pip_packages_from_one_environment_with_pkgs():
         # note that hello will still inherit the deps from the global packages,
         # and that's fine
         assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value('packages'))
-        assert [OrderedDict([('pip', [])])
+        assert ['qbert', OrderedDict([('pip', [])])
                 ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
 
         # be sure we didn't delete comments from global packages section
