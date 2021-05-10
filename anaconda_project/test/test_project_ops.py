@@ -1530,6 +1530,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
     def check(dirname):
         project = Project(dirname)
         specs = ('numpy<1.11.3', 'pandas')
+        pip_spec = ['chardet']
         for spec in specs:
             if spec == specs[0]:
                 status = project_ops.add_env_spec(project, name='foo', packages=[spec], channels=[])
@@ -1561,6 +1562,9 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             assert len(files) == 1, files
             version = os.path.basename(files[0]).split('-', 2)[1]
             assert tuple(map(int, version.split('.'))) < (1, 11, 3), files[0]
+
+            status = project_ops.add_packages(project, 'foo', packages=pip_spec, pip=True, channels=[])
+            assert status
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
@@ -2253,6 +2257,63 @@ env_specs:
         }, check)
 
 
+def test_remove_pip_packages_from_one_environment_with_pkgs():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
+
+            assert ['qbert', OrderedDict([('pip', ['pbert', 'foo',
+                                                   'bar'])])] == list(project.project_file.get_value('packages'))
+            status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'], pip=True)
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        # note that hello will still inherit the deps from the global packages,
+        # and that's fine
+        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value('packages'))
+        assert [OrderedDict([('pip', [])])
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+
+        # be sure we didn't delete comments from global packages section
+        content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
+        assert '# this is a pre comment' in content
+        assert '# this is a post comment' in content
+
+        for env_spec in project2.env_specs.values():
+            if env_spec.name == 'hello':
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.equivalent_to(
+                    CondaLockSet({'all': []}, platforms=['linux-64', 'osx-64', 'win-64']))
+            else:
+                assert env_spec.lock_set.enabled
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages:
+  # this is a pre comment
+  - qbert # this is a post comment
+  - pip:
+    - pbert
+    - foo
+    - bar
+env_specs:
+  hello:
+    packages:
+      - qbert
+        """,
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
 def test_remove_pip_packages_from_one_environment_empty_pkgs():
     def check(dirname):
         def attempt():
@@ -2860,7 +2921,7 @@ def test_unlock_broken_project():
 
 def test_lock_and_update_and_unlock_all_envs():
     def check(dirname):
-        resolve_results = {'all': ['a=1.0=1']}
+        resolve_results = {'all': ['a=1.0=1'], 'pip': ['cc==1.0']}
 
         def attempt():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
@@ -2888,6 +2949,8 @@ def test_lock_and_update_and_unlock_all_envs():
                 '  packages:',
                 '+   all:',
                 '+     a=1.0=1',
+                '+   pip:',
+                '+     cc==1.0',
                 'Added locked dependencies for env spec bar to anaconda-project-lock.yml.',
                 'Updating locked dependencies for env spec foo...',
                 'Changes to locked dependencies for foo:',
@@ -2898,6 +2961,8 @@ def test_lock_and_update_and_unlock_all_envs():
                 '  packages:',
                 '+   all:',
                 '+     a=1.0=1',
+                '+   pip:',
+                '+     cc==1.0',
                 'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'
             ] == project.frontend.logs
             # yapf: enable
@@ -2907,9 +2972,15 @@ def test_lock_and_update_and_unlock_all_envs():
             assert ('a=1.0=1', ) == project.env_specs['foo'].lock_set.package_specs_for_current_platform
             assert ('a=1.0=1', ) == project.env_specs['bar'].lock_set.package_specs_for_current_platform
 
+            assert ['cc==1.0'] == project.env_specs['foo'].lock_set.pip_package_specs
+            assert ['cc==1.0'] == project.env_specs['bar'].lock_set.pip_package_specs
+
             assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
             # 'b' gets dropped here since it wasn't in the lock set
             assert ('a=1.0=1', ) == project.env_specs['bar'].conda_packages_for_create
+
+            assert ['cc==1.0'] == project.env_specs['foo'].pip_packages_for_create
+            assert ['cc==1.0'] == project.env_specs['bar'].pip_packages_for_create
 
             assert project.env_specs['foo'].platforms == conda_api.default_platforms
             assert project.env_specs['bar'].platforms == conda_api.default_platforms
@@ -2963,6 +3034,9 @@ def test_lock_and_update_and_unlock_all_envs():
             assert ('a', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
 
+            assert ('cc', ) == project.env_specs['foo'].pip_packages_for_create
+            assert ('dd', ) == project.env_specs['bar'].pip_packages_for_create
+
         _with_conda_test(attempt, resolve_dependencies=resolve_results)
 
     with_directory_contents(
@@ -2974,9 +3048,13 @@ env_specs:
   foo:
     packages:
       - a
+      - pip:
+        - cc
   bar:
     packages:
       - b
+      - pip:
+        - dd
 """
         }, check)
 

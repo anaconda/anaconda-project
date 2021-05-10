@@ -426,10 +426,15 @@ def _update_env_spec(project, name, packages, channels, create, pip=False):
         # so don't convert this thing to a regular list.
         old_packages = env_dict.get('packages', [])
         if pip:
-            for pip_idx, dep in enumerate(old_packages):
+            pip_idx = None
+            for idx, dep in enumerate(old_packages):
                 if is_dict(dep) and list(dep.keys()) == ['pip']:
-                    old_packages_set = set(parse_spec(d).name for d in dep.get('pip', []) if is_string(d))
+                    pip_idx = idx
                     break
+            if pip_idx is None:
+                old_packages_set = set()
+            else:
+                old_packages_set = set(parse_spec(d).name for d in old_packages[pip_idx].get('pip', []) if is_string(d))
         else:
             old_packages_set = set(parse_spec(dep).name for dep in old_packages if is_string(dep))
         bad_specs = []
@@ -467,11 +472,13 @@ def _update_env_spec(project, name, packages, channels, create, pip=False):
 
         _map_inplace(replace_spec, old_packages)
         # add all the new ones
-        for added in new_specs:
-            if pip:
-                old_packages[pip_idx]['pip'].append(added)
+        if pip:
+            if pip_idx is None:
+                old_packages.append({'pip': new_specs})
             else:
-                old_packages.append(added)
+                old_packages[pip_idx]['pip'].extend(new_specs)
+        else:
+            old_packages.extend(new_specs)
 
         env_dict['packages'] = old_packages
 
@@ -887,7 +894,7 @@ def _update_and_lock(project, env_spec_name, update):
                     prefix = env.path(project.directory_path)
                     pip_pkgs = conda_api.installed_pip(prefix)
                     if pip_pkgs:
-                        project.lock_file._add_pip_packages(env.name, conda_api.installed_pip(prefix))
+                        project.lock_file._add_pip_packages(env.name, pip_pkgs)
 
                     if status:
                         need_save = True
