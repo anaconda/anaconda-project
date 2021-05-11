@@ -15,7 +15,7 @@ DEFAULT_BUILDER_IMAGE = 'conda/s2i-anaconda-project-ubi8'
 
 try:
     FileNotFoundError  # noqa
-except NameError:      # pragma: no cover
+except NameError:  # pragma: no cover
     # python 2
     FileNotFoundError = OSError
 
