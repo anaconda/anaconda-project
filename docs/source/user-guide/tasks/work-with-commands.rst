@@ -68,6 +68,22 @@ to add code files to your project:
 #. OPTIONAL: In a text editor, open ``anaconda-project.yml`` to
    see the new command listed in the commands section.
 
+Specifying multi-line commands
+==============================
+
+Commands added to the ``anaconda-project.yml`` file can can
+multiple lines of execution by using the YAML ``|`` string specifier.
+For example a single command can be defined in the ``anaconda-project.yml``
+file to run multiple linting tools.
+
+.. code-block:: yaml
+
+  commands:
+    unix: |
+      yapf --in-place
+      flake8
+      pep256
+
 
 Using commands that need different environments
 ===============================================
