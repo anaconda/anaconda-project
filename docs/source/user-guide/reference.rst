@@ -477,6 +477,84 @@ you'll also get the dependencies those versions were tested with.
 And you'll be able to see changes in your dependencies over time
 in your revision control history.
 
+Additionally, all pip packages added to the ``anaconda-project.yml`` file
+or installed as dependencies will be added to the ``anaconda-project-lock.yml``
+file similar to the output of ``pip freeze``. For example, see the following
+``anaconda-project-lock.yml`` file that matches the following package specification.
+
+.. code-block:: yaml
+
+  packages:
+    - python=3.8
+    - pip:
+      - requests
+
+.. code-block:: yaml
+
+  locking_enabled: true
+  
+  env_specs:
+    default:
+      locked: true
+      env_spec_hash: 292a009a194f1ca1d3432c824df6ff51a7aef388
+      platforms:
+      - linux-64
+      - osx-64
+      - win-64
+      packages:
+        all:
+        - wheel=0.36.2=pyhd3eb1b0_0
+        linux-64:
+        - _libgcc_mutex=0.1=main
+        - ca-certificates=2021.4.13=h06a4308_1
+        - certifi=2020.12.5=py38h06a4308_0
+        - ld_impl_linux-64=2.33.1=h53a641e_7
+        - libffi=3.3=he6710b0_2
+        - libgcc-ng=9.1.0=hdf63c60_0
+        - libstdcxx-ng=9.1.0=hdf63c60_0
+        - ncurses=6.2=he6710b0_1
+        - openssl=1.1.1k=h27cfd23_0
+        - pip=21.0.1=py38h06a4308_0
+        - python=3.8.8=hdb3f193_5
+        - readline=8.1=h27cfd23_0
+        - setuptools=52.0.0=py38h06a4308_0
+        - sqlite=3.35.4=hdfb4753_0
+        - tk=8.6.10=hbc83047_0
+        - xz=5.2.5=h7b6447c_0
+        - zlib=1.2.11=h7b6447c_3
+        osx-64:
+        - ca-certificates=2021.4.13=hecd8cb5_1
+        - certifi=2020.12.5=py38hecd8cb5_0
+        - libcxx=10.0.0=1
+        - libffi=3.3=hb1e8313_2
+        - ncurses=6.2=h0a44026_1
+        - openssl=1.1.1k=h9ed2024_0
+        - pip=21.0.1=py38hecd8cb5_0
+        - python=3.8.8=h88f2d9e_5
+        - readline=8.1=h9ed2024_0
+        - setuptools=52.0.0=py38hecd8cb5_0
+        - sqlite=3.35.4=hce871da_0
+        - tk=8.6.10=hb0a8c7a_0
+        - xz=5.2.5=h1de35cc_0
+        - zlib=1.2.11=h1de35cc_3
+        win-64:
+        - ca-certificates=2021.4.13=haa95532_1
+        - certifi=2020.12.5=py38haa95532_0
+        - openssl=1.1.1k=h2bbff1b_0
+        - pip=21.0.1=py38haa95532_0
+        - python=3.8.8=hdbf39b2_5
+        - setuptools=52.0.0=py38haa95532_0
+        - sqlite=3.35.4=h2bbff1b_0
+        - vc=14.2=h21ff451_1
+        - vs2015_runtime=14.27.29016=h5e58377_2
+        - wincertstore=0.2=py38_0
+        pip:
+        - chardet==4.0.0
+        - idna==2.10
+        - requests==2.25.1
+        - urllib3==1.26.4
+
+
 Specifying supported platforms
 ==============================
 
