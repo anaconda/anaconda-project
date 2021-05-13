@@ -858,7 +858,7 @@ class _ConfigCache(object):
             # to add this if we are going to ask about environment.yml
             # import, above.
             def add_default_env_spec(project):
-                default_spec = __default_env_spec(self.global_base_env_spec)
+                default_spec = _anaconda_default_env_spec(self.global_base_env_spec)
                 project.project_file.set_value(['env_specs', default_spec.name], default_spec.to_json())
 
             # This section should now be inaccessible
