@@ -4685,7 +4685,7 @@ name: archivedproj
 
 
 @pytest.mark.slow
-@pytset.mark.skipif((sys.version_info.major == 2) and (platform.system() == 'Linux'),
+@pytest.mark.skipif((sys.version_info.major == 2) and (platform.system() == 'Linux'),
                     reason='Something wrong with pip freeze on linux for py2')
 @pytest.mark.parametrize('suffix', ['zip', 'tar.bz2', 'tar.gz'])
 def test_archive_unarchive_conda_pack_with_pip(suffix):
