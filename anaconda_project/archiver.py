@@ -358,9 +358,11 @@ def _archive_project(project, filename, pack_envs=False):
         for env in os.listdir(envs_path):
             ext = 'zip' if filename.lower().endswith(".zip") else 'tar'
             pack = os.path.join(conda_pack_dir, '{}_envs_{}.{}'.format(current_platform(), env, ext))
+            zip_symlinks = True if ext == 'zip' else False
             fn = conda_pack.pack(prefix=os.path.join(envs_path, env),
                                  arcroot=os.path.join(project.name, 'envs', env),
                                  output=pack,
+                                 zip_symlinks=zip_symlinks,
                                  verbose=True,
                                  force=True)
             packed_envs.append(fn)
