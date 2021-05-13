@@ -385,6 +385,7 @@ class DefaultCondaManager(CondaManager):
 
         conda_meta = os.path.join(prefix, 'conda-meta')
         packed = os.path.join(conda_meta, '.packed')
+        install_pip = True
 
         if os.path.isdir(conda_meta) and os.path.exists(packed):
             with open(packed) as f:
@@ -401,6 +402,7 @@ class DefaultCondaManager(CondaManager):
                 try:
                     subprocess.check_call(unpack_script)
                     os.remove(packed)
+                    install_pip = False
                 except (subprocess.CalledProcessError, OSError) as e:
                     self._log_info('Warning: conda-unpack could not be run: \n{}\n'
                                    'The environment will be recreated.'.format(str(e)))
@@ -450,7 +452,7 @@ class DefaultCondaManager(CondaManager):
 
         # now add pip if needed
         missing = list(deviations.missing_pip_packages)
-        if len(missing) > 0:
+        if (len(missing) > 0) and install_pip:
             specs = spec.specs_for_pip_package_names(missing)
             assert len(specs) == len(missing)
             try:

@@ -4685,6 +4685,48 @@ name: archivedproj
 
 @pytest.mark.slow
 @pytest.mark.parametrize('suffix', ['zip', 'tar.bz2', 'tar.gz'])
+def test_archive_unarchive_conda_pack_with_pip(suffix):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.{}".format(suffix))
+
+        def check(dirname):
+            project = project_ops.create(dirname)
+            assert [] == project.problems
+
+            status = prepare.prepare_without_interaction(project)
+            assert status
+
+            status = project_ops.archive(project, archivefile, pack_envs=True)
+
+            assert status
+            assert os.path.exists(archivefile)
+
+            unpacked = os.path.join(os.path.dirname(archivefile), 'unpacked')
+            status = project_ops.unarchive(archivefile, unpacked)
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+
+            unpacked_project = Project(unpacked)
+            status = prepare.prepare_without_interaction(unpacked_project)
+            assert status
+
+        with_directory_contents_completing_project_file(
+            {
+                DEFAULT_PROJECT_FILENAME: """
+name: archivedproj
+packages:
+  - python=3.8
+  - pip:
+    - pep8
+"""
+            }, check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize('suffix', ['zip', 'tar.bz2', 'tar.gz'])
 def test_archive_unarchive_conda_pack(suffix):
     def archivetest(archive_dest_dir):
         archivefile = os.path.join(archive_dest_dir, "foo.{}".format(suffix))
