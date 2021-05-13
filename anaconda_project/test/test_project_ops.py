@@ -4712,15 +4712,13 @@ def test_archive_unarchive_conda_pack_with_pip(suffix):
             assert status
 
         with_directory_contents_completing_project_file(
-            {
-                DEFAULT_PROJECT_FILENAME: """
+            {DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
 packages:
   - python=3.8
   - pip:
     - pep8
-"""
-            }, check)
+"""}, check)
 
     with_directory_contents(dict(), archivetest)
 
