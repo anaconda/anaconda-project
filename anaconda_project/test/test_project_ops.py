@@ -82,14 +82,14 @@ def test_create(monkeypatch):
 
         assert sorted(list(project.env_specs.keys())) == sorted(['default'])
         spec = project.env_specs['default']
-        assert spec.conda_packages == ('anaconda', )
+        assert spec.conda_packages == ()
         assert spec.pip_packages == ()
         assert spec.channels == ()
 
-        # Test the --empty-environment flag
-        project = project_ops.create(subdir, make_directory=True, empty_environment=True)
+        # Test the --with-anaconda-package flag
+        project = project_ops.create(subdir, make_directory=True, with_anaconda_package=True)
         spec = project.env_specs['default']
-        assert spec.conda_packages == ()
+        assert spec.conda_packages == ('anaconda', )
         assert spec.pip_packages == ()
 
     with_directory_contents(dict(), check_create)
@@ -231,7 +231,11 @@ dependencies:
 
 def test_create_imports_notebook():
     def check_create(dirname):
-        project = project_ops.create(dirname, make_directory=False, name='hello', description="Hello World")
+        project = project_ops.create(dirname,
+                                     make_directory=False,
+                                     name='hello',
+                                     description="Hello World",
+                                     with_anaconda_package=True)
         assert [] == project.problems
         assert [] == project.suggestions
         assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))

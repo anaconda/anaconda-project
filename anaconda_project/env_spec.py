@@ -634,3 +634,17 @@ def _anaconda_default_env_spec(shared_base_spec):
                    description="Default environment spec for running commands",
                    inherit_from_names=(),
                    inherit_from=inherit_from)
+
+
+def _empty_default_env_spec(shared_base_spec):
+    if shared_base_spec is None:
+        inherit_from = ()
+    else:
+        inherit_from = (shared_base_spec, )
+    return EnvSpec(name="default",
+                   conda_packages=[],
+                   channels=[],
+                   platforms=conda_api.default_platforms_with_current(),
+                   description="Default environment spec for running commands",
+                   inherit_from_names=(),
+                   inherit_from=inherit_from)

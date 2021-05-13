@@ -41,7 +41,7 @@ from anaconda_project.docker import build_image, DEFAULT_BUILDER_IMAGE
 
 def create(directory_path,
            make_directory=False,
-           empty_environment=False,
+           with_anaconda_package=False,
            name=None,
            icon=None,
            description=None,
@@ -60,7 +60,7 @@ def create(directory_path,
     Args:
         directory_path (str): directory to contain anaconda-project.yml
         make_directory (bool): True to create the directory if it doesn't exist
-        empty_environment (bool): True to create an empty base environment
+        with_anaconda_package (bool): True to add the 'anaconda' package
         name (str): Name of the new project or None to leave unset (uses directory name)
         icon (str): Icon for the new project or None to leave unset (uses no icon)
         description (str): Description for the new project or None to leave unset
@@ -78,8 +78,8 @@ def create(directory_path,
 
     project = Project(directory_path, scan_parents=False)
 
-    if empty_environment:
-        project.project_file.set_value('packages', [])
+    if with_anaconda_package:
+        project.project_file.set_value('packages', ['anaconda'])
     if name is not None:
         project.project_file.set_value('name', name)
     if icon is not None:
