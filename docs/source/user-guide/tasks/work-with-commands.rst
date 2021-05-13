@@ -71,7 +71,7 @@ to add code files to your project:
 Specifying multi-line commands
 ==============================
 
-Commands added to the ``anaconda-project.yml`` file can can
+Commands added to the ``anaconda-project.yml`` file can span
 multiple lines of execution by using the YAML ``|`` string specifier.
 For example a single command can be defined in the ``anaconda-project.yml``
 file to run multiple linting tools.

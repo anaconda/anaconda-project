@@ -34,7 +34,7 @@ Adding packages
 ***************
 
 To add packages to your project that are not yet in your
-``packages:`` list:
+``packages:`` list there are two appraoches.
 
 #. From within your project directory, run::
 
@@ -54,37 +54,15 @@ To add packages to your project that are not yet in your
      Using Conda environment /Users/adefusco/Desktop/iris/envs/default.
      Added packages to project file: hvplot=0.7, dask.
 
-#. OPTIONAL: In a text editor, open ``anaconda-project.yml`` to
-   see the new packages listed in the packages section. To install the packages
-   run ``anaconda-project prepare``.
+#. Instead of using the ``add-packages`` command you can edit the ``anaconda-project.yml``
+   file directly using any text editor and add package names to the ``packages:`` list.
+   To complete the installation of these new packages into your activate environment run
+   ``anaconda-project prepare`` on the command line after saving the file.
 
-*****************
-Removing packages
-*****************
-
-To remove packages from the ``packages:`` list run::
-
-  anaconda-project remove-packages package1 package2
-
-NOTE: Replace ``package1`` and ``package2`` with the names of
-the packages that you want to include. You can specify as many
-packages as you want.
-
-EXAMPLE: To remove the package hvplot::
-
-  $ anaconda-project remove-packages hvplot
-  Using Conda environment /Users/adefusco/Desktop/testproj/envs/default.
-  Removed packages from project file: hvplot.
-
-******************
-Using pip packages
-******************
-
-In addition to adding and removing Conda packages as shown above Pip packages
+In addition to adding Conda packages as shown above Pip packages
 can be specified using the ``--pip`` flag::
 
   anaconda-project add-packages --pip package1 package2
-  anaconda-project remove-packages --pip package1 package2
 
 NOTE: Replace ``package1`` and ``package2`` with the names of
 the packages that you want to include. You can specify as many
@@ -126,7 +104,25 @@ the ``pip:`` key within the ``packages:`` list. For example,
 
 Then run ``anaconda-project prepare`` to install the new packages into the environment.
 
-EXAMPLE: To remove the ``requests`` package from the default environment::
+*****************
+Removing packages
+*****************
+
+To remove packages from the ``packages:`` list run::
+
+  anaconda-project remove-packages package1 package2
+
+NOTE: Replace ``package1`` and ``package2`` with the names of
+the packages that you want to include. You can specify as many
+packages as you want.
+
+EXAMPLE: To remove the package hvplot::
+
+  $ anaconda-project remove-packages hvplot
+  Using Conda environment /Users/adefusco/Desktop/testproj/envs/default.
+  Removed packages from project file: hvplot.
+
+EXAMPLE: To remove the ``requests`` pip package from the default environment::
 
   $ anaconda-project remove-packages --pip requests
   Found existing installation: requests 2.25.1
@@ -144,7 +140,6 @@ Pip packages can specified in a number of ways.
 * From PyPI (or other indexes)
 * Direct URL to the package archive
 * Revision Control services (for example git and svn)
-* Package directories inside the Anaconda Project itself
 
 To install a package from a revision control service::
 
@@ -159,7 +154,8 @@ Where
 * ``<package>`` is the name of the package as declared in ``setup.py``
 
 NOTE: It is required that you use ``#egg=<package>`` to install a revision control hosted
-package.
+package. This is considered `best practice by pip <https://pip.pypa.io/en/latest/cli/pip_install/#vcs-support>`_ and allows the pip dependency solver to 
+correctly identify the package if it is a dependency of another package in your project.
 
 EXAMPLE: Add the tranquilizer package to your project directly from Github::
 
