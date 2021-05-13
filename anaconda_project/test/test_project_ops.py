@@ -4715,7 +4715,7 @@ def test_archive_unarchive_conda_pack_with_pip(suffix):
             {DEFAULT_PROJECT_FILENAME: """
 name: archivedproj
 packages:
-  - python=3.8
+  - python=3.7
   - pip:
     - pep8
 """}, check)
