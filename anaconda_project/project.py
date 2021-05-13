@@ -14,7 +14,7 @@ import os
 from os.path import join
 
 from anaconda_project.env_spec import (EnvSpec, _anaconda_default_env_spec, _find_importable_spec,
-                                       _find_out_of_sync_importable_spec)
+                                       _find_out_of_sync_importable_spec, _empty_default_env_spec)
 from anaconda_project.requirements_registry.registry import RequirementsRegistry
 from anaconda_project.requirements_registry.requirement import EnvVarRequirement
 from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
@@ -858,7 +858,7 @@ class _ConfigCache(object):
             # to add this if we are going to ask about environment.yml
             # import, above.
             def add_default_env_spec(project):
-                default_spec = _anaconda_default_env_spec(self.global_base_env_spec)
+                default_spec = __default_env_spec(self.global_base_env_spec)
                 project.project_file.set_value(['env_specs', default_spec.name], default_spec.to_json())
 
             # This section should now be inaccessible
@@ -1183,7 +1183,7 @@ class Project(object):
             if importable_spec is not None:
                 return [importable_spec]
             else:
-                return [_anaconda_default_env_spec(shared_base_spec=None)]
+                return [_empty_default_env_spec(shared_base_spec=None)]
 
         self._project_file = ProjectFile.load_for_directory(directory_path,
                                                             default_env_specs_func=load_default_specs,
