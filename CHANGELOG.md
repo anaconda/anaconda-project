@@ -2,19 +2,50 @@
 
 We [keep a changelog.](http://keepachangelog.com/)
 
+## Version 0.10.0
+
+### Issues Closed
+
+* [Issue 77](https://github.com/Anaconda-Platform/anaconda-project/issues/77) anaconda-project download feature request ([PR 217](https://github.com/Anaconda-Platform/anaconda-project/pull/217))
+* [Issue 148](https://github.com/Anaconda-Platform/anaconda-project/issues/148) Packages installed when none requested ([PR 322](https://github.com/Anaconda-Platform/anaconda-project/pull/322))
+* [Issue 151](https://github.com/Anaconda-Platform/anaconda-project/issues/151) anaconda-project-lock.yml does not contain pip depdendencies ([PR 317](https://github.com/Anaconda-Platform/anaconda-project/pull/317))
+* [Issue 172](https://github.com/Anaconda-Platform/anaconda-project/issues/172) install pip packages from git ([PR 317](https://github.com/Anaconda-Platform/anaconda-project/pull/317))
+* [Issue 181](https://github.com/Anaconda-Platform/anaconda-project/issues/181) list-packages excludes pip packages ([PR 317](https://github.com/Anaconda-Platform/anaconda-project/pull/317))
+* [Issue 196](https://github.com/Anaconda-Platform/anaconda-project/issues/196) support multi-line commands ([PR 317](https://github.com/Anaconda-Platform/anaconda-project/pull/317))
+* [Issue 252](https://github.com/Anaconda-Platform/anaconda-project/issues/252) Packages installed when none requested ([PR 322](https://github.com/Anaconda-Platform/anaconda-project/pull/322))
+* [Issue 253](https://github.com/Anaconda-Platform/anaconda-project/issues/253) Docs rendering problem
+
+### Enhancements
+
+* [PR 306](https://github.com/Anaconda-Platform/anaconda-project/pull/306) Build docker images with s2i
+* [PR 311](https://github.com/Anaconda-Platform/anaconda-project/pull/311) Support `default` command alias with `anaconda-project prepare --command default` if no command is acutally named `default`
+* [PR 313](https://github.com/Anaconda-Platform/anaconda-project/pull/313) Add `--pack-envs` to `anaconda-project archive` to add Conda-packed envs to the project archive
+* [PR 317](https://github.com/Anaconda-Platform/anaconda-project/pull/317) Improve pip package support
+* [PR 322](https://github.com/Anaconda-Platform/anaconda-project/pull/322) `anaconda-project init` makes an empty environment by default
+* [PR 323](https://github.com/Anaconda-Platform/anaconda-project/pull/323) Changelog and maintenance
+
+### Bug fixes
+
+* [PR 312](https://github.com/Anaconda-Platform/anaconda-project/pull/312) Do not add `.projectignore` if `.gitignore` is found
+
 ## Version 0.9.1
 
 ### Issues Closed
+
+* [Issue 270](https://github.com/Anaconda-Platform/anaconda-project/issues/270) read-only environments ([PR 299](https://github.com/Anaconda-Platform/anaconda-project/pull/299))
 
 
 ### Enhancements
 
 * [PR 299](https://github.com/Anaconda-Platform/anaconda-project/pull/299) Support for read-only environments 
+* [PR 307](https://github.com/Anaconda-Platform/anaconda-project/pull/307) Support .readonly file in environments
+* [PR 309](https://github.com/Anaconda-Platform/anaconda-project/pull/309) Add option to replace read-only environment
 
 ## Version 0.9.0
 
 ### Issues Closed
 
+* [Issue 190](https://github.com/Anaconda-Platform/anaconda-project/issues/238) anaconda-project commands in a subdrectory ([PR 215](https://github.com/Anaconda-Platform/anaconda-project/pull/215))
 * [Issue 238](https://github.com/Anaconda-Platform/anaconda-project/issues/238) version file not updated for 0.8.4 ([PR 237](https://github.com/Anaconda-Platform/anaconda-project/pull/237))
 * [PR 245](https://github.com/Anaconda-Platform/anaconda-project/pull/245) Fix prepare action when using global "dependencies:"
 * [Issue 247](https://github.com/Anaconda-Platform/anaconda-project/issues/247) Graceful handling of read-only environments ([PR 250](https://github.com/Anaconda-Platform/anaconda-project/pull/250))
@@ -23,6 +54,7 @@ We [keep a changelog.](http://keepachangelog.com/)
 
 ### Enhancements
 
+* [PR 215](https://github.com/Anaconda-Platform/anaconda-project/pull/215) Run anaconda-project commands from a subdirectory
 * [PR 244](https://github.com/Anaconda-Platform/anaconda-project/pull/244) Templating for commands
 * [PR 257](https://github.com/Anaconda-Platform/anaconda-project/pull/257) list default command *only*
 * [PR 265](https://github.com/Anaconda-Platform/anaconda-project/pull/265) 'default' is an alias for the actual default command
