@@ -14,7 +14,7 @@ import os
 from os.path import join
 
 from anaconda_project.env_spec import (EnvSpec, _anaconda_default_env_spec, _find_importable_spec,
-                                       _find_out_of_sync_importable_spec)
+                                       _find_out_of_sync_importable_spec, _empty_default_env_spec)
 from anaconda_project.requirements_registry.registry import RequirementsRegistry
 from anaconda_project.requirements_registry.requirement import EnvVarRequirement
 from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
@@ -1183,7 +1183,7 @@ class Project(object):
             if importable_spec is not None:
                 return [importable_spec]
             else:
-                return [_anaconda_default_env_spec(shared_base_spec=None)]
+                return [_empty_default_env_spec(shared_base_spec=None)]
 
         self._project_file = ProjectFile.load_for_directory(directory_path,
                                                             default_env_specs_func=load_default_specs,

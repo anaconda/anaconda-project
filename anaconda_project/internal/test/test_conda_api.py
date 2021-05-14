@@ -102,9 +102,7 @@ def test_conda_create_no_packages():
     def do_test(dirname):
         envdir = os.path.join(dirname, "myenv")
 
-        with pytest.raises(TypeError) as excinfo:
-            conda_api.create(prefix=envdir, pkgs=[])
-        assert 'must specify a list' in repr(excinfo.value)
+        conda_api.create(prefix=envdir, pkgs=[])
 
     with_directory_contents(dict(), do_test)
 

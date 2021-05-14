@@ -243,9 +243,6 @@ def _get_root_prefix():
 
 def create(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback=None):
     """Create an environment either by name or path with a specified set of packages."""
-    if not pkgs or not isinstance(pkgs, (list, tuple)):
-        raise TypeError('must specify a list of one or more packages to install into new environment')
-
     if os.path.exists(prefix):
         raise CondaEnvExistsError('Conda environment [%s] already exists' % prefix)
 

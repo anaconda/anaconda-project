@@ -6,9 +6,9 @@ Tasks
    :maxdepth: 1
 
    create-project
+   work-with-packages
    download-data
    work-with-commands
-   work-with-packages
    work-with-variables
    run-project
    clean-project

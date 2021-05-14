@@ -53,11 +53,11 @@ def test_init_in_pwd(capsys, monkeypatch):
     with_directory_contents(dict(), check)
 
 
-def test_init_empty_environment(capsys, monkeypatch):
+def test_init_with_anaconda_package(capsys, monkeypatch):
     def check(dirname):
         _monkeypatch_pwd(monkeypatch, dirname)
 
-        code = _parse_args_and_run_subcommand(['anaconda-project', 'init', '--empty-environment'])
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'init', '--with-anaconda-package'])
         assert code == 0
 
         assert os.path.isfile(os.path.join(dirname, DEFAULT_PROJECT_FILENAME))

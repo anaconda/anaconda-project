@@ -435,9 +435,6 @@ class DefaultCondaManager(CondaManager):
             # Create environment from scratch
 
             command_line_packages = set(spec.conda_packages_for_create)
-            # conda won't let us create a completely empty environment
-            if len(command_line_packages) == 0:
-                command_line_packages = set(['python'])
 
             try:
                 conda_api.create(prefix=prefix,
