@@ -34,7 +34,7 @@ Adding packages
 ***************
 
 To add packages to your project that are not yet in your
-``packages:`` list there are two appraoches.
+``packages:`` list there are two approaches.
 
 #. From within your project directory, run::
 

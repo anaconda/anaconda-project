@@ -2,7 +2,7 @@
 Creating Docker Images
 ======================
 
-*Available since version XYZ*
+*Available since version 0.10.0*
 
 Use the ``dockerize`` command to create a Docker image from
 the project. Images created from Anaconda Projects are
