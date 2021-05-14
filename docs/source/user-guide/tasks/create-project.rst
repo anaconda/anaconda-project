@@ -26,7 +26,7 @@ Creating a project
    will modify this file.
 
 As of version 0.10.0 ``anaconda-project init`` will initialize an
-empty environment. No packages will be listed in the ``pakcages:`` list.
-To replicate this behavior on older versions run:
+empty environment. No packages will be listed in the ``pakcages:`` key.
+To replicate this behavior on older versions run::
 
   anaconda-project init --empty-environment
