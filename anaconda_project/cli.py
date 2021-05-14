@@ -19,3 +19,7 @@ def main():
     Conda expects us to take no args and return an exit code.
     """
     return cli_main.main()
+
+
+if __name__ == '__main__':
+    main()
