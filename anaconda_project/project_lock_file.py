@@ -139,6 +139,9 @@ env_specs: {}
         as_json = lock_set.to_json()
         self.set_value(['env_specs', env_spec_name], as_json)
 
+    def _add_pip_packages(self, env_spec_name, pip_packages):
+        self.set_value(['env_specs', env_spec_name, 'packages', 'pip'], pip_packages)
+
     def _disable_locking(self, env_spec_name):
         """Library-internal method."""
         if env_spec_name is None:

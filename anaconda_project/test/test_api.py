@@ -352,7 +352,7 @@ def test_add_packages(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.add_packages', mock_add_packages)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, env_spec_name='foo', packages=['a'], channels=['b'])
+    kwargs = dict(project=43, env_spec_name='foo', packages=['a'], channels=['b'], pip=False)
     result = p.add_packages(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']
@@ -372,7 +372,7 @@ def test_remove_packages(monkeypatch):
     monkeypatch.setattr('anaconda_project.project_ops.remove_packages', mock_remove_packages)
 
     p = api.AnacondaProject()
-    kwargs = dict(project=43, env_spec_name='foo', packages=['a'])
+    kwargs = dict(project=43, env_spec_name='foo', packages=['a'], pip=None)
     result = p.remove_packages(**kwargs)
     assert 42 == result
     assert kwargs == params['kwargs']

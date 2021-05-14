@@ -33,8 +33,9 @@ from anaconda_project.requirements_registry.providers.conda_env import _remove_e
 from anaconda_project.internal.simple_status import SimpleStatus
 import anaconda_project.conda_manager as conda_manager
 from anaconda_project.internal.conda_api import (parse_spec, default_platforms_with_current)
+from anaconda_project.internal import conda_api
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
-from anaconda_project.internal.py2_compat import is_string
+from anaconda_project.internal.py2_compat import is_string, is_dict
 from anaconda_project.docker import build_image, DEFAULT_BUILDER_IMAGE
 
 
@@ -392,7 +393,7 @@ def _updating_project_lock_file(project):
         status_holder.status = failed  # pragma: no cover # should not happen
 
 
-def _update_env_spec(project, name, packages, channels, create):
+def _update_env_spec(project, name, packages, channels, create, pip=False):
     failed = _check_problems(project)
     if failed is not None:
         return failed
@@ -424,7 +425,18 @@ def _update_env_spec(project, name, packages, channels, create):
         # packages may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
         old_packages = env_dict.get('packages', [])
-        old_packages_set = set(parse_spec(dep).name for dep in old_packages if is_string(dep))
+        if pip:
+            pip_idx = None
+            for idx, dep in enumerate(old_packages):
+                if is_dict(dep) and list(dep.keys()) == ['pip']:
+                    pip_idx = idx
+                    break
+            if pip_idx is None:
+                old_packages_set = set()
+            else:
+                old_packages_set = set(parse_spec(d).name for d in old_packages[pip_idx].get('pip', []) if is_string(d))
+        else:
+            old_packages_set = set(parse_spec(dep).name for dep in old_packages if is_string(dep))
         bad_specs = []
         updated_specs = []
         new_specs = []
@@ -460,8 +472,13 @@ def _update_env_spec(project, name, packages, channels, create):
 
         _map_inplace(replace_spec, old_packages)
         # add all the new ones
-        for added in new_specs:
-            old_packages.append(added)
+        if pip:
+            if pip_idx is None:
+                old_packages.append({'pip': new_specs})
+            else:
+                old_packages[pip_idx]['pip'].extend(new_specs)
+        else:
+            old_packages.extend(new_specs)
 
         env_dict['packages'] = old_packages
 
@@ -594,7 +611,7 @@ def export_env_spec(project, name, filename):
     return SimpleStatus(success=True, description="Exported environment spec {} to {}.".format(name, filename))
 
 
-def add_packages(project, env_spec_name, packages, channels):
+def add_packages(project, env_spec_name, packages, channels, pip=False):
     """Attempt to install packages then add them to anaconda-project.yml.
 
     If the env_spec_name is None rather than an env name,
@@ -616,10 +633,10 @@ def add_packages(project, env_spec_name, packages, channels):
     Returns:
         ``Status`` instance
     """
-    return _update_env_spec(project, env_spec_name, packages, channels, create=False)
+    return _update_env_spec(project, env_spec_name, packages, channels, create=False, pip=pip)
 
 
-def remove_packages(project, env_spec_name, packages):
+def remove_packages(project, env_spec_name, packages, pip=False):
     """Attempt to remove packages from an environment in anaconda-project.yml.
 
     If the env_spec_name is None rather than an env name,
@@ -636,6 +653,7 @@ def remove_packages(project, env_spec_name, packages):
         project (Project): the project
         env_spec_name (str): environment spec name or None for all environment specs
         packages (list of str): packages to remove
+        pip (bool): Remove packages from pip installed collection if True
 
     Returns:
         ``Status`` instance
@@ -689,7 +707,7 @@ def remove_packages(project, env_spec_name, packages):
         prefix = env.path(project.directory_path)
         try:
             if os.path.isdir(prefix):
-                conda.remove_packages(prefix, packages)
+                conda.remove_packages(prefix, packages, pip=pip)
         except conda_manager.CondaManagerError:
             pass  # ignore errors; not all the envs will exist or have the package installed perhaps
 
@@ -710,25 +728,61 @@ def remove_packages(project, env_spec_name, packages):
 
         assert len(env_dicts) > 0
 
-        previous_global_deps = set(project.project_file.root.get('packages', []))
+        def _get_deps(env_dict, pip=False):
+            _pkgs = env_dict.get('packages', [])
+            if pip:
+                pip_dicts = [dep for dep in _pkgs if is_dict(dep) and 'pip' in dep]
+                assert len(pip_dicts) == 1, 'There should only be one pip: key'
+                return pip_dicts[0]['pip']
+            else:
+                return [dep for dep in _pkgs if is_string(dep)]
+
+        previous_global_deps = set(_get_deps(project.project_file.root, pip=pip))
 
         for env_dict in env_dicts:
             # packages may be a "CommentedSeq" and we don't want to lose the comments,
             # so don't convert this thing to a regular list.
             old_packages = env_dict.get('packages', [])
             removed_set = set(packages)
-            _filter_inplace(lambda dep: not (is_string(dep) and dep in removed_set), old_packages)
-            env_dict['packages'] = old_packages
+
+            if pip:
+                pip_idx = None
+                for idx, dep in enumerate(old_packages):
+                    if is_dict(dep) and 'pip' in dep:
+                        pip_idx = idx
+
+                if pip_idx is None:
+                    if len(old_packages):
+                        env_dict['packages'].append({'pip': []})
+                    else:
+                        env_dict['packages'] = [{'pip': []}]
+                else:
+                    pip_packages = old_packages.pop(pip_idx)['pip']
+                    _filter_inplace(lambda dep: not (is_string(dep) and dep in removed_set), pip_packages)
+                    env_dict['packages'].append({'pip': pip_packages})
+            else:
+                _filter_inplace(lambda dep: not (is_string(dep) and dep in removed_set), old_packages)
+                env_dict['packages'] = old_packages
 
         # if we removed any deps from global, add them to the
         # individual envs that were not supposed to be affected.
-        new_global_deps = set(project.project_file.root.get('packages', []))
+        new_global_deps = set(_get_deps(project.project_file.root, pip=pip))
         removed_from_global = (previous_global_deps - new_global_deps)
         for env_dict in unaffected_env_dicts:
             # old_packages may be a "CommentedSeq" and we don't want to lose the comments,
             # so don't convert this thing to a regular list.
             old_packages = env_dict.get('packages', [])
-            old_packages.extend(list(removed_from_global))
+            if pip:
+                pip_idx = None
+                for idx, dep in enumerate(old_packages):
+                    if is_dict(dep) and 'pip' in dep:
+                        pip_idx = idx
+                if pip_idx is None:
+                    old_packages.append({'pip': list(removed_from_global)})
+                else:
+                    old_packages[pip_idx]['pip'].extend(list(removed_from_global))
+            else:
+                old_packages.extend(list(removed_from_global))
             env_dict['packages'] = old_packages
 
     if status_holder.status is not None:
@@ -835,6 +889,13 @@ def _update_and_lock(project, env_spec_name, update):
                             project.frontend.info(line)
 
                     status = _try_requirement_without_commit(project, CondaEnvRequirement, env.name)
+                    # Pip packages can only be added to the lock file after
+                    # they are installed. Pip does not have a dry-run feature
+                    prefix = env.path(project.directory_path)
+                    pip_pkgs = conda_api.installed_pip(prefix)
+                    if pip_pkgs:
+                        project.lock_file._add_pip_packages(env.name, pip_pkgs)
+
                     if status:
                         need_save = True
                         if update:

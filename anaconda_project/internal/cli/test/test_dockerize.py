@@ -24,6 +24,18 @@ def _monkeypatch_dockerize(monkeypatch):
     return params
 
 
+def _monkeypatch_dockerize_fail(monkeypatch):
+    params = {}
+
+    def mock_dockerize(*args, **kwargs):
+        params['args'] = args
+        params['kwargs'] = kwargs
+        return SimpleStatus(success=False, description="Boo")
+
+    monkeypatch.setattr('anaconda_project.project_ops.dockerize', mock_dockerize)
+    return params
+
+
 def test_dockerize(capsys, monkeypatch):
     params = _monkeypatch_dockerize(monkeypatch)
 
@@ -34,6 +46,25 @@ def test_dockerize(capsys, monkeypatch):
         out, err = capsys.readouterr()
         assert 'Yay\n' == out
         assert '' == err
+
+        assert params['kwargs']['tag'] is None
+        assert params['kwargs']['command'] == 'default'
+        assert params['kwargs']['builder_image'] == 'conda/s2i-anaconda-project-ubi8:latest'
+        assert params['kwargs']['build_args'] == []
+
+    with_directory_contents_completing_project_file(dict(), check)
+
+
+def test_dockerize_fail(capsys, monkeypatch):
+    params = _monkeypatch_dockerize_fail(monkeypatch)
+
+    def check(dirname):
+        code = _parse_args_and_run_subcommand(['anaconda-project', 'dockerize'])
+        assert code == 1
+
+        out, err = capsys.readouterr()
+        assert 'Boo\n' == err
+        assert '' == out
 
         assert params['kwargs']['tag'] is None
         assert params['kwargs']['command'] == 'default'

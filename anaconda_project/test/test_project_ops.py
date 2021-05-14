@@ -16,6 +16,8 @@ import stat
 import tarfile
 import zipfile
 import glob
+import sys
+from collections import OrderedDict
 
 from anaconda_project import project_ops
 from anaconda_project.conda_manager import (CondaManager, CondaEnvironmentDeviations, CondaLockSet, CondaManagerError,
@@ -1529,6 +1531,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
     def check(dirname):
         project = Project(dirname)
         specs = ('numpy<1.11.3', 'pandas')
+        pip_spec = ['chardet']
         for spec in specs:
             if spec == specs[0]:
                 status = project_ops.add_env_spec(project, name='foo', packages=[spec], channels=[])
@@ -1560,6 +1563,9 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             assert len(files) == 1, files
             version = os.path.basename(files[0]).split('-', 2)[1]
             assert tuple(map(int, version.split('.'))) < (1, 11, 3), files[0]
+
+            status = project_ops.add_packages(project, 'foo', packages=pip_spec, pip=True, channels=[])
+            assert status
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
@@ -1596,7 +1602,7 @@ def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove
             if self.fix_works:
                 self.fixed = True
 
-        def remove_packages(self, prefix, packages):
+        def remove_packages(self, prefix, packages, pip=False):
             if remove_error is not None:
                 raise CondaManagerError(remove_error)
 
@@ -1952,6 +1958,42 @@ packages:
         }, check)
 
 
+def test_add_pip_packages_to_all_environments():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_packages(project,
+                                              env_spec_name=None,
+                                              packages=['foo', 'bar'],
+                                              pip=True,
+                                              channels=None)
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert [
+            dict(pip=['foo', 'bar']),
+        ] == list(project2.project_file.get_value('packages'))
+        # assert ['hello', 'world'] == list(project2.project_file.get_value('channels'))
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set.enabled
+            assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}, platforms=['linux-64', 'osx-64',
+                                                                                        'win-64']))
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages:
+ - pip: [] # be sure we don't break with this in the list
+                """,
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
 def test_add_packages_cannot_resolve_deps():
     def check(dirname):
         def attempt():
@@ -2058,6 +2100,277 @@ env_specs:
         }, check)
 
 
+def test_remove_conda_packages_from_global_with_pip_packages():
+    def check(dirname):
+        def attempt():
+            os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
+            project = Project(dirname)
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
+
+            assert ['foo', 'bar', 'baz', OrderedDict([('pip', [])])] == list(project.project_file.get_value('packages'))
+            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo', 'bar'])
+            assert [] == status.errors
+            assert status
+
+        _with_conda_test(attempt, remove_error="Removal fail")
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert ['baz', OrderedDict([('pip', [])])] == list(project2.project_file.get_value('packages'))
+        assert ['woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set.enabled
+            assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}, platforms=['linux-64', 'osx-64',
+                                                                                        'win-64']))
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages:
+  - foo
+  - bar
+  - baz
+  - pip: []
+env_specs:
+  hello:
+    packages:
+     - foo
+     - woot
+  hello2:
+    packages:
+     - foo
+     - bar
+     - pip: [] # make sure we don't choke on non-string items in list
+        """,
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
+def test_remove_pip_packages_from_global():
+    def check(dirname):
+        def attempt():
+            os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
+            project = Project(dirname)
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
+
+            assert ['foo', OrderedDict([('pip', ['bar', 'baz'])])] == list(project.project_file.get_value('packages'))
+            assert ['foo', OrderedDict([('pip', ['bar', 'woot'])])
+                    ] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            status = project_ops.remove_packages(project, env_spec_name=None, packages=['bar'], pip=True)
+            assert [] == status.errors
+            assert status
+
+        _with_conda_test(attempt, remove_error="Removal fail")
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert ['foo', OrderedDict([('pip', ['baz'])])] == list(project2.project_file.get_value('packages'))
+        assert ['foo', OrderedDict([('pip', ['woot'])])
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
+
+        for env_spec in project2.env_specs.values():
+            assert env_spec.lock_set.enabled
+            assert env_spec.lock_set.equivalent_to(CondaLockSet({'all': []}, platforms=['linux-64', 'osx-64',
+                                                                                        'win-64']))
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages:
+  - foo
+  - pip:
+    - bar
+    - baz
+env_specs:
+  hello:
+    packages:
+     - foo
+     - pip:
+       - bar
+       - woot
+  hello2: {}
+        """,
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
+def test_remove_pip_packages_from_one_environment():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
+
+            assert ['qbert', OrderedDict([('pip', ['pbert', 'foo',
+                                                   'bar'])])] == list(project.project_file.get_value('packages'))
+            status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'], pip=True)
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        # note that hello will still inherit the deps from the global packages,
+        # and that's fine
+        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value('packages'))
+        assert [OrderedDict([('pip', [])])
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+
+        # be sure we didn't delete comments from global packages section
+        content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
+        assert '# this is a pre comment' in content
+        assert '# this is a post comment' in content
+
+        for env_spec in project2.env_specs.values():
+            if env_spec.name == 'hello':
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.equivalent_to(
+                    CondaLockSet({'all': []}, platforms=['linux-64', 'osx-64', 'win-64']))
+            else:
+                assert env_spec.lock_set.enabled
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages:
+  # this is a pre comment
+  - qbert # this is a post comment
+  - pip:
+    - pbert
+    - foo
+    - bar
+env_specs:
+  hello:
+    packages:
+      - pip:
+        - foo
+        """,
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
+def test_remove_pip_packages_from_one_environment_with_pkgs():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
+
+            assert ['qbert', OrderedDict([('pip', ['pbert', 'foo',
+                                                   'bar'])])] == list(project.project_file.get_value('packages'))
+            status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'], pip=True)
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        # note that hello will still inherit the deps from the global packages,
+        # and that's fine
+        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value('packages'))
+        assert ['qbert', OrderedDict([('pip', [])])
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+
+        # be sure we didn't delete comments from global packages section
+        content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
+        assert '# this is a pre comment' in content
+        assert '# this is a post comment' in content
+
+        for env_spec in project2.env_specs.values():
+            if env_spec.name == 'hello':
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.equivalent_to(
+                    CondaLockSet({'all': []}, platforms=['linux-64', 'osx-64', 'win-64']))
+            else:
+                assert env_spec.lock_set.enabled
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages:
+  # this is a pre comment
+  - qbert # this is a post comment
+  - pip:
+    - pbert
+    - foo
+    - bar
+env_specs:
+  hello:
+    packages:
+      - qbert
+        """,
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
+def test_remove_pip_packages_from_one_environment_empty_pkgs():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+
+            for env_spec in project.env_specs.values():
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.platforms == ()
+
+            assert ['qbert', OrderedDict([('pip', ['pbert', 'foo',
+                                                   'bar'])])] == list(project.project_file.get_value('packages'))
+            status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'], pip=True)
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        # note that hello will still inherit the deps from the global packages,
+        # and that's fine
+        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value('packages'))
+        assert [OrderedDict([('pip', [])])
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+
+        # be sure we didn't delete comments from global packages section
+        content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
+        assert '# this is a pre comment' in content
+        assert '# this is a post comment' in content
+
+        for env_spec in project2.env_specs.values():
+            if env_spec.name == 'hello':
+                assert env_spec.lock_set.enabled
+                assert env_spec.lock_set.equivalent_to(
+                    CondaLockSet({'all': []}, platforms=['linux-64', 'osx-64', 'win-64']))
+            else:
+                assert env_spec.lock_set.enabled
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: """
+packages:
+  # this is a pre comment
+  - qbert # this is a post comment
+  - pip:
+    - pbert
+    - foo
+    - bar
+env_specs:
+  hello:
+    packages: []
+        """,
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
 def test_remove_packages_from_one_environment():
     def check(dirname):
         def attempt():
@@ -2154,6 +2467,57 @@ env_specs:
     packages:
      # this is a pre comment
      - baz # this is a post comment
+"""
+        }, check)
+
+
+def test_remove_pip_packages_from_one_environment_leaving_others_unaffected():
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            assert ['qbert', OrderedDict([('pip', ['pbert', 'foo',
+                                                   'bar'])])] == list(project.project_file.get_value('packages'))
+            status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'], pip=True)
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        # be sure we really made the config changes
+        project2 = Project(dirname)
+        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value('packages'))
+        assert [OrderedDict([('pip', [])])
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+        assert set(['baz', 'foo',
+                    'bar']) == set(project2.project_file.get_value(['env_specs', 'another', 'packages'], [])[0]['pip'])
+        assert project2.env_specs['another'].pip_package_names_set == set(['foo', 'bar', 'baz', 'pbert'])
+        assert project2.env_specs['hello'].pip_package_names_set == set(['pbert'])
+
+        # be sure we didn't delete comments from the env
+        content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
+        assert '# this is a pre comment' in content
+        assert '# this is a post comment' in content
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
+packages:
+  - qbert
+  - pip:
+    - pbert
+    - foo
+    - bar
+env_specs:
+  hello:
+    packages:
+     - pip:
+       - foo
+  another:
+    packages:
+      - pip:
+        # this is a pre comment
+        - baz # this is a post comment
 """
         }, check)
 
@@ -2558,7 +2922,7 @@ def test_unlock_broken_project():
 
 def test_lock_and_update_and_unlock_all_envs():
     def check(dirname):
-        resolve_results = {'all': ['a=1.0=1']}
+        resolve_results = {'all': ['a=1.0=1'], 'pip': ['cc==1.0']}
 
         def attempt():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
@@ -2586,6 +2950,8 @@ def test_lock_and_update_and_unlock_all_envs():
                 '  packages:',
                 '+   all:',
                 '+     a=1.0=1',
+                '+   pip:',
+                '+     cc==1.0',
                 'Added locked dependencies for env spec bar to anaconda-project-lock.yml.',
                 'Updating locked dependencies for env spec foo...',
                 'Changes to locked dependencies for foo:',
@@ -2596,6 +2962,8 @@ def test_lock_and_update_and_unlock_all_envs():
                 '  packages:',
                 '+   all:',
                 '+     a=1.0=1',
+                '+   pip:',
+                '+     cc==1.0',
                 'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'
             ] == project.frontend.logs
             # yapf: enable
@@ -2605,9 +2973,15 @@ def test_lock_and_update_and_unlock_all_envs():
             assert ('a=1.0=1', ) == project.env_specs['foo'].lock_set.package_specs_for_current_platform
             assert ('a=1.0=1', ) == project.env_specs['bar'].lock_set.package_specs_for_current_platform
 
+            assert ['cc==1.0'] == project.env_specs['foo'].lock_set.pip_package_specs
+            assert ['cc==1.0'] == project.env_specs['bar'].lock_set.pip_package_specs
+
             assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
             # 'b' gets dropped here since it wasn't in the lock set
             assert ('a=1.0=1', ) == project.env_specs['bar'].conda_packages_for_create
+
+            assert ['cc==1.0'] == project.env_specs['foo'].pip_packages_for_create
+            assert ['cc==1.0'] == project.env_specs['bar'].pip_packages_for_create
 
             assert project.env_specs['foo'].platforms == conda_api.default_platforms
             assert project.env_specs['bar'].platforms == conda_api.default_platforms
@@ -2661,6 +3035,9 @@ def test_lock_and_update_and_unlock_all_envs():
             assert ('a', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
 
+            assert ('cc', ) == project.env_specs['foo'].pip_packages_for_create
+            assert ('dd', ) == project.env_specs['bar'].pip_packages_for_create
+
         _with_conda_test(attempt, resolve_dependencies=resolve_results)
 
     with_directory_contents(
@@ -2672,9 +3049,13 @@ env_specs:
   foo:
     packages:
       - a
+      - pip:
+        - cc
   bar:
     packages:
       - b
+      - pip:
+        - dd
 """
         }, check)
 
@@ -4301,6 +4682,48 @@ name: archivedproj
             }, check)
 
     with_directory_contents_completing_project_file(dict(), archivetest)
+
+
+@pytest.mark.slow
+@pytest.mark.skipif((sys.version_info.major == 2) and (platform.system() == 'Linux'),
+                    reason='Something wrong with pip freeze on linux for py2')
+@pytest.mark.parametrize('suffix', ['zip', 'tar.bz2', 'tar.gz'])
+def test_archive_unarchive_conda_pack_with_pip(suffix):
+    def archivetest(archive_dest_dir):
+        archivefile = os.path.join(archive_dest_dir, "foo.{}".format(suffix))
+
+        def check(dirname):
+            project = project_ops.create(dirname)
+            assert [] == project.problems
+
+            status = prepare.prepare_without_interaction(project)
+            assert status
+
+            status = project_ops.archive(project, archivefile, pack_envs=True)
+
+            assert status
+            assert os.path.exists(archivefile)
+
+            unpacked = os.path.join(os.path.dirname(archivefile), 'unpacked')
+            status = project_ops.unarchive(archivefile, unpacked)
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+
+            unpacked_project = Project(unpacked)
+            status = prepare.prepare_without_interaction(unpacked_project)
+            assert status
+
+        with_directory_contents_completing_project_file(
+            {DEFAULT_PROJECT_FILENAME: """
+name: archivedproj
+packages:
+  - python=3.7
+  - pip:
+    - pep8
+"""}, check)
+
+    with_directory_contents(dict(), archivetest)
 
 
 @pytest.mark.slow

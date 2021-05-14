@@ -28,6 +28,16 @@ def test_build_image_pass(monkeypatch):
     assert status
 
 
+def test_build_image_extra_args(monkeypatch):
+    def mock_check_call(*args, **kwargs):
+        return
+
+    monkeypatch.setattr('subprocess.check_call', mock_check_call)
+
+    status = build_image('.', 'tag', 'default', build_args={'-f': 'Dockerfile'})
+    assert status
+
+
 def test_build_image_failed(monkeypatch):
     def mock_check_call(*args, **kwargs):
         raise subprocess.CalledProcessError(1, 's2i', 'failed to build')

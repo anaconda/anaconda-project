@@ -442,7 +442,7 @@ class AnacondaProject(object):
         """
         return project_ops.export_env_spec(project=project, name=name, filename=filename)
 
-    def add_packages(self, project, env_spec_name, packages, channels):
+    def add_packages(self, project, env_spec_name, packages, channels, pip=False):
         """Attempt to install packages then add them to anaconda-project.yml.
 
         If the environment spec name is None rather than an env
@@ -460,6 +460,7 @@ class AnacondaProject(object):
             env_spec_name (str): environment spec name or None for all environment specs
             packages (list of str): packages (with optional version info, as for conda install)
             channels (list of str): channels (as they should be passed to conda --channel)
+            pip (bool): Flag to request packages to be installed with pip if True else use Conda.
 
         Returns:
             ``Status`` instance
@@ -468,9 +469,10 @@ class AnacondaProject(object):
         return project_ops.add_packages(project=project,
                                         env_spec_name=env_spec_name,
                                         packages=packages,
-                                        channels=channels)
+                                        channels=channels,
+                                        pip=pip)
 
-    def remove_packages(self, project, env_spec_name, packages):
+    def remove_packages(self, project, env_spec_name, packages, pip):
         """Attempt to remove packages from an environment spec in anaconda-project.yml.
 
         If the environment spec name is None rather than an env
@@ -487,12 +489,13 @@ class AnacondaProject(object):
             project (Project): the project
             env_spec_name (str): environment name or None for all environments
             packages (list of str): packages
+            pip (bool): Flag to request packages to be removed with pip if True else use Conda.
 
         Returns:
             ``Status`` instance
 
         """
-        return project_ops.remove_packages(project=project, env_spec_name=env_spec_name, packages=packages)
+        return project_ops.remove_packages(project=project, env_spec_name=env_spec_name, packages=packages, pip=pip)
 
     def lock(self, project, env_spec_name):
         """Attempt to freeze dependency versions in anaconda-project-lock.yml.

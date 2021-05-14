@@ -51,10 +51,10 @@ def export_env_spec(project_dir, name, filename):
     return _handle_status(status)
 
 
-def add_packages(project, environment, packages, channels):
+def add_packages(project, environment, packages, channels, pip=False):
     """Add packages to the project."""
     project = load_project(project)
-    status = project_ops.add_packages(project, env_spec_name=environment, packages=packages, channels=channels)
+    status = project_ops.add_packages(project, env_spec_name=environment, packages=packages, channels=channels, pip=pip)
     package_list = ", ".join(packages)
     if environment is None:
         success_message = "Added packages to project file: %s." % (package_list)
@@ -63,10 +63,10 @@ def add_packages(project, environment, packages, channels):
     return _handle_status(status, success_message)
 
 
-def remove_packages(project, environment, packages):
+def remove_packages(project, environment, packages, pip):
     """Remove packages from the project."""
     project = load_project(project)
-    status = project_ops.remove_packages(project, env_spec_name=environment, packages=packages)
+    status = project_ops.remove_packages(project, env_spec_name=environment, packages=packages, pip=pip)
     package_list = ", ".join(packages)
     if environment is None:
         success_message = "Removed packages from project file: %s." % (package_list)
@@ -120,8 +120,13 @@ def list_packages(project_dir, environment):
     if env is None:
         print("Project doesn't have an environment called '{}'".format(environment), file=sys.stderr)
         return 1
-    print("Packages for environment '{}':\n".format(env.name))
+    print("Conda packages for environment '{}':\n".format(env.name))
     print("\n".join(sorted(env.conda_packages)), end='\n\n')
+
+    if env.pip_packages:
+        print("Pip packages for environment '{}':\n".format(env.name))
+        print("\n".join(sorted(env.pip_packages)), end='\n\n')
+
     return 0
 
 
@@ -185,12 +190,12 @@ def main_export(args):
 
 def main_add_packages(args):
     """Start the add-packages command and return exit status code."""
-    return add_packages(args.directory, args.env_spec, args.packages, args.channel)
+    return add_packages(args.directory, args.env_spec, args.packages, args.channel, args.pip)
 
 
 def main_remove_packages(args):
     """Start the remove-packages command and return exit status code."""
-    return remove_packages(args.directory, args.env_spec, args.packages)
+    return remove_packages(args.directory, args.env_spec, args.packages, args.pip)
 
 
 def main_add_platforms(args):

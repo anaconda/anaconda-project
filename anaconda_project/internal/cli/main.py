@@ -281,6 +281,7 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=service_commands.main_list)
 
     def add_package_args(preset):
+        preset.add_argument('--pip', action='store_true', help='Install the requested packages using pip.')
         preset.add_argument('-c',
                             '--channel',
                             metavar='CHANNEL',
@@ -333,6 +334,7 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser('remove-packages', help="Remove packages from one or all project environments")
     add_directory_arg(preset)
     add_env_spec_arg(preset)
+    preset.add_argument('--pip', action='store_true', help='Uninstall the requested packages using pip.')
     preset.add_argument('packages', metavar='PACKAGE_NAME', default=None, nargs='+')
     preset.set_defaults(main=environment_commands.main_remove_packages)
 

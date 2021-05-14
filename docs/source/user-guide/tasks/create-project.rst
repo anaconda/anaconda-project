@@ -24,3 +24,45 @@ Creating a project
    see what the file looks like for an empty project. As you work
    with your project, the ``anaconda-project`` commands you use
    will modify this file.
+
+By default the ``init`` command will add the ``anaconda`` metapackage
+to the default environment. This metapackage will install over 200 of the
+most commonly used data science and scientific computing packages.
+
+The ``anaconda-project.yml`` file will include the following sections
+
+.. code-block:: yaml
+
+  name: iris
+
+  packages:
+    - anaconda
+  channels: []
+
+  env_specs:
+    default:
+      description: Default environment spec for running commands
+      packages: []
+      channels: []
+      platforms: []
+
+To create an ``anaconda-project.yml`` file with no default packages run::
+
+  anaconda-project init --empty-environment --directory iris
+
+*******************
+Prepare environment
+*******************
+
+Once the project directory and ``anaconda-project.yml`` file have been created
+``cd`` into the new directory and install the packages::
+
+  anaconda-project prepare
+
+This will create a new Conda environment in a subdirectory of your project
+directory called ``envs/default``.
+
+For more information about adding and removing packages and environments (``env_specs``)
+see :ref:`Packages`.
+
+See :ref:`Configuration` to change the default location of the Conda environments.

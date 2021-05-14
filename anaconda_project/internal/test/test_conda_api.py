@@ -17,6 +17,7 @@ import stat
 from pprint import pprint
 
 import anaconda_project.internal.conda_api as conda_api
+import anaconda_project.internal.pip_api as pip_api
 
 from anaconda_project.internal.test.tmpfile_utils import (with_directory_contents, tmp_script_commandline)
 
@@ -147,6 +148,20 @@ def test_conda_install_no_packages(monkeypatch):
         with pytest.raises(TypeError) as excinfo:
             conda_api.install(prefix=envdir, pkgs=[])
         assert 'must specify a list' in repr(excinfo.value)
+
+    with_directory_contents(dict(), do_test)
+
+
+@pytest.mark.slow
+def test_pip_installed():
+    def do_test(dirname):
+        envdir = os.path.join(dirname, 'myenv')
+
+        conda_api.create(prefix=envdir, pkgs=['python'])
+        pip_api.install(prefix=envdir, pkgs=['chardet==3'])
+
+        pip_packages = conda_api.installed_pip(envdir)
+        assert pip_packages == ['chardet==3.0.0']
 
     with_directory_contents(dict(), do_test)
 

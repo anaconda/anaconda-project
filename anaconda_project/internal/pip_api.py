@@ -8,12 +8,11 @@
 from __future__ import absolute_import, print_function
 
 import collections
-import subprocess
 import os
 import re
 import sys
 
-from anaconda_project.internal import logged_subprocess
+from anaconda_project.internal import streaming_popen
 
 
 class PipError(Exception):
@@ -41,43 +40,44 @@ def _get_pip_command(prefix, extra_args):
     return cmd_list
 
 
-def _call_pip(prefix, extra_args):
+def _call_pip(prefix, extra_args, stdout_callback=None, stderr_callback=None):
     cmd_list = _get_pip_command(prefix, extra_args)
 
     try:
-        p = logged_subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (p, stdout_lines, stderr_lines) = streaming_popen.popen(cmd_list,
+                                                                stdout_callback=stdout_callback,
+                                                                stderr_callback=stderr_callback)
     except OSError as e:
         raise PipError("failed to run: %r: %r" % (" ".join(cmd_list), repr(e)))
-    (out, err) = p.communicate()
-    errstr = err.decode().strip()
+    errstr = "".join(stderr_lines)
     if p.returncode != 0:
         raise PipError('%s: %s' % (" ".join(cmd_list), errstr))
     elif errstr != '':
         for line in errstr.split("\n"):
             print("%s %s: %s" % (cmd_list[0], cmd_list[1], line), file=sys.stderr)
-    return out
+    return "".join(stdout_lines)
 
 
-def install(prefix, pkgs=None):
+def install(prefix, pkgs=None, stdout_callback=None, stderr_callback=None):
     """Install packages into an environment."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to install into existing environment, not %r' %
                         pkgs)
 
-    args = ['install', '--quiet']
+    args = ['install']
     args.extend(pkgs)
 
-    return _call_pip(prefix, extra_args=args)
+    return _call_pip(prefix, extra_args=args, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
 
 
-def remove(prefix, pkgs=None):
+def remove(prefix, pkgs=None, stdout_callback=None, stderr_callback=None):
     """Remove packages from an environment."""
     if not pkgs or not isinstance(pkgs, (list, tuple)):
         raise TypeError('must specify a list of one or more packages to remove from existing environment')
 
-    args = ['uninstall', '--quiet', '--yes']
+    args = ['uninstall', '--yes']
     args.extend(pkgs)
-    return _call_pip(prefix, extra_args=args)
+    return _call_pip(prefix, extra_args=args, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
 
 
 def installed(prefix):
@@ -88,7 +88,7 @@ def installed(prefix):
     try:
         # Use freeze instead of list so we get a consistent format across
         # different versions of pip
-        out = _call_pip(prefix, extra_args=['freeze']).decode('utf-8')
+        out = _call_pip(prefix, extra_args=['freeze'])
         # on Windows, $ in a regex doesn't match \r\n, we need to get rid of \r
         out = out.replace("\r\n", "\n")
     except PipNotInstalledError:

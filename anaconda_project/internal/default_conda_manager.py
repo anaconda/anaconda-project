@@ -335,7 +335,7 @@ class DefaultCondaManager(CondaManager):
                                               (prefix),
                                               missing_packages=tuple(spec.conda_package_names_for_create_set),
                                               wrong_version_packages=(),
-                                              missing_pip_packages=tuple(spec.pip_package_names_set),
+                                              missing_pip_packages=tuple(spec.pip_package_names_for_create_set),
                                               wrong_version_pip_packages=(),
                                               broken=True)
 
@@ -385,6 +385,7 @@ class DefaultCondaManager(CondaManager):
 
         conda_meta = os.path.join(prefix, 'conda-meta')
         packed = os.path.join(conda_meta, '.packed')
+        install_pip = True
 
         if os.path.isdir(conda_meta) and os.path.exists(packed):
             with open(packed) as f:
@@ -401,6 +402,7 @@ class DefaultCondaManager(CondaManager):
                 try:
                     subprocess.check_call(unpack_script)
                     os.remove(packed)
+                    install_pip = False
                 except (subprocess.CalledProcessError, OSError) as e:
                     self._log_info('Warning: conda-unpack could not be run: \n{}\n'
                                    'The environment will be recreated.'.format(str(e)))
@@ -450,11 +452,14 @@ class DefaultCondaManager(CondaManager):
 
         # now add pip if needed
         missing = list(deviations.missing_pip_packages)
-        if len(missing) > 0:
+        if (len(missing) > 0) and install_pip:
             specs = spec.specs_for_pip_package_names(missing)
             assert len(specs) == len(missing)
             try:
-                pip_api.install(prefix=prefix, pkgs=specs)
+                pip_api.install(prefix=prefix,
+                                pkgs=specs,
+                                stdout_callback=self._on_stdout,
+                                stderr_callback=self._on_stderr)
             except pip_api.PipError as e:
                 raise CondaManagerError("Failed to install missing pip packages: {}: {}".format(
                     ", ".join(missing), str(e)))
@@ -462,8 +467,14 @@ class DefaultCondaManager(CondaManager):
         # write a file to tell us we can short-circuit next time
         self._write_timestamp_file(prefix, spec)
 
-    def remove_packages(self, prefix, packages):
-        try:
-            conda_api.remove(prefix, packages, stdout_callback=self._on_stdout, stderr_callback=self._on_stderr)
-        except conda_api.CondaError as e:
-            raise CondaManagerError("Failed to remove packages from %s: %s" % (prefix, str(e)))
+    def remove_packages(self, prefix, packages, pip=False):
+        if pip:
+            try:
+                pip_api.remove(prefix, packages, stdout_callback=self._on_stdout, stderr_callback=self._on_stderr)
+            except pip_api.PipError as e:
+                raise CondaManagerError('Failed to remove pip packages from {}: {}'.format(prefix, str(e)))
+        else:
+            try:
+                conda_api.remove(prefix, packages, stdout_callback=self._on_stdout, stderr_callback=self._on_stderr)
+            except conda_api.CondaError as e:
+                raise CondaManagerError("Failed to remove packages from %s: %s" % (prefix, str(e)))

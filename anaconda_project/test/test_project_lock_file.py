@@ -176,6 +176,7 @@ def test_get_lock_set():
         foo_lock_set = _get_lock_set(lock_file, 'foo')
         assert foo_lock_set.enabled
         assert ('foo=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
+        assert ['qbert==1.0.0'] == foo_lock_set.pip_package_specs
         bar_lock_set = _get_lock_set(lock_file, 'bar')
         assert bar_lock_set.disabled
 
@@ -191,12 +192,16 @@ env_specs:
     packages:
       all:
         - foo=1.0=1
+      pip:
+        - qbert==1.0.0
   bar:
     locked: false
     platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     packages:
       all:
         - bar=2.0=2
+      pip:
+        - pbert==1.1.0
 """
         }, check_file)
 
