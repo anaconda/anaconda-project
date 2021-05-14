@@ -104,3 +104,9 @@ htmlcov
 CHANGELOG.temp
 
 examples/*/envs
+
+## testing outputs
+cov.xml
+coverage.xml
+junit.xml
+/fake_project

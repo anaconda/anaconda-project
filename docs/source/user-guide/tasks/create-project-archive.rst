@@ -84,6 +84,8 @@ formats (``.zip``, ``.tar.gz``, and ``.tar.bz2``)::
 Experimental: Packaging environments
 ====================================
 
+*Available since version 0.10.0*
+
 There are cases where it may be preferable to package the
 Conda environments directly into the archive. For example,
 you may want to support uses where the target system cannot

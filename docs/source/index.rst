@@ -36,7 +36,7 @@ Benefits of Project
    ``anaconda-project run``."
 
  * Project facilitates collaboration by ensuring that all users
-   working on a project have the same dependencies in their conda 
+   working on a project have the same dependencies in their Conda 
    environments. Project automates environment creation and 
    verifies that environments have the right versions of packages.
 
@@ -70,7 +70,7 @@ Project automates project setup by establishing all prerequisite
 conditions for the project's commands to execute successfully. 
 These conditions could include:
 
-* Creating a conda environment that includes certain packages.
+* Creating a Conda environment that includes certain packages.
 * Prompting the user for passwords or other configuration.
 * Downloading data files.
 * Starting extra processes such as a database server.
