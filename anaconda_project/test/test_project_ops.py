@@ -4828,7 +4828,7 @@ _CONTENTS_FILE = 2
 _CONTENTS_SYMLINK = 3
 
 
-def _make_zip(archive_dest_dir, contents):
+def _make_zip(archive_dest_dir, contents, mode_zero=False):
     archivefile = os.path.join(archive_dest_dir, "foo.zip")
     with zipfile.ZipFile(archivefile, 'w') as zf:
         for (key, what) in contents.items():
@@ -4838,6 +4838,10 @@ def _make_zip(archive_dest_dir, contents):
                     key = key + os.sep
                 zf.writestr(key, "")
             elif what is _CONTENTS_FILE:
+                if mode_zero:
+                    info = zipfile.ZipInfo(key)
+                    info.external_attr = 16
+                    zf.writestr(info, "hello")
                 zf.writestr(key, "hello")
             else:
                 raise AssertionError("can't put this in a zip")
@@ -4933,6 +4937,33 @@ def test_unarchive_zip():
             'a/c': _CONTENTS_DIR,
             'a': _CONTENTS_DIR
         })
+
+        # with zipfile.ZipFile(archivefile, 'r') as zf:
+        #    print(repr(zf.namelist()))
+
+        def check(dirname):
+            unpacked = os.path.join(dirname, "foo")
+            status = project_ops.unarchive(archivefile, unpacked)
+
+            assert status.errors == []
+            assert status
+            assert os.path.isdir(unpacked)
+            _assert_dir_contains(unpacked, ['a.txt', 'c', 'q/b.txt'])
+            assert status.project_dir == unpacked
+
+        with_directory_contents(dict(), check)
+
+    with_directory_contents(dict(), archivetest)
+
+
+def test_unarchive_zip_mode_zero():
+    def archivetest(archive_dest_dir):
+        archivefile = _make_zip(archive_dest_dir, {
+            'a/a.txt': _CONTENTS_FILE,
+            'a/q/b.txt': _CONTENTS_FILE,
+            'a/c': _CONTENTS_DIR,
+            'a': _CONTENTS_DIR
+        }, mode_zero=True)
 
         # with zipfile.ZipFile(archivefile, 'r') as zf:
         #    print(repr(zf.namelist()))
