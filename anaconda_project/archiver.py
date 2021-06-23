@@ -440,7 +440,8 @@ def _extractall_chmod(zf, destination):
     for zinfo in zf.infolist():
         out_path = zf.extract(zinfo.filename, path=destination)
         mode = zinfo.external_attr >> 16
-        os.chmod(out_path, mode)
+        if not (mode == 0):
+            os.chmod(out_path, mode)
 
 
 def _extract_files_zip(zip_path, src_and_dest, frontend):
