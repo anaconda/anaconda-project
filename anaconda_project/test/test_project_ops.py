@@ -4963,7 +4963,8 @@ def test_unarchive_zip_mode_zero():
             'a/q/b.txt': _CONTENTS_FILE,
             'a/c': _CONTENTS_DIR,
             'a': _CONTENTS_DIR
-        }, mode_zero=True)
+        },
+                                mode_zero=True)
 
         # with zipfile.ZipFile(archivefile, 'r') as zf:
         #    print(repr(zf.namelist()))
