@@ -30,7 +30,7 @@ class FileDownloader(object):
         self._hash = None
         self._client = None
         self._errors = []
-        self._progress= None
+        self._progress = None
 
     @gen.coroutine
     def run(self):
@@ -85,7 +85,7 @@ class FileDownloader(object):
 
             try:
                 _file.write(chunk)
-                self._progress.update(len(chunk)/1024/1024)
+                self._progress.update(len(chunk) / 1024 / 1024)
             except EnvironmentError as e:
                 # we can't actually throw this error or Tornado freaks out, so instead
                 # we ignore all future chunks once we have an error, which does mean
@@ -94,8 +94,10 @@ class FileDownloader(object):
 
         def read_header(line):
             if 'content-length' in line.lower():
-                file_size = int(line.split(':')[1])/1024/1024
-                self._progress = tqdm(unit='MiB', total=file_size, unit_scale=True,
+                file_size = int(line.split(':')[1]) / 1024 / 1024
+                self._progress = tqdm(unit='MiB',
+                                      total=file_size,
+                                      unit_scale=True,
                                       desc=os.path.basename(self._filename))
 
         try:
