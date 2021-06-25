@@ -29,6 +29,7 @@ requirements:
     - ruamel_yaml
     - tornado >=4.2
     - jinja2
+    - tqdm
 
 test:
   requires:

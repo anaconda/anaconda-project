@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 
 from tornado import httpclient
 from tornado import gen
+from tqdm import tqdm
 
 import anaconda_project.internal.makedirs as makedirs
 import anaconda_project.internal.rename as rename
@@ -29,6 +30,7 @@ class FileDownloader(object):
         self._hash = None
         self._client = None
         self._errors = []
+        self._progress= None
 
     @gen.coroutine
     def run(self):
@@ -83,15 +85,23 @@ class FileDownloader(object):
 
             try:
                 _file.write(chunk)
+                self._progress.update(len(chunk)/1024/1024)
             except EnvironmentError as e:
                 # we can't actually throw this error or Tornado freaks out, so instead
                 # we ignore all future chunks once we have an error, which does mean
                 # we continue to download bytes that we don't use. yuck.
                 self._errors.append("Failed to write to %s: %s" % (tmp_filename, e))
 
+        def read_header(line):
+            if 'content-length' in line.lower():
+                file_size = int(line.split(':')[1])/1024/1024
+                self._progress = tqdm(unit='MiB', total=file_size, unit_scale=True,
+                                      desc=os.path.basename(self._filename))
+
         try:
             timeout_in_seconds = 60 * 10  # pretty long because we could be dealing with huge files
             request = httpclient.HTTPRequest(url=self._url,
+                                             header_callback=read_header,
                                              streaming_callback=writer,
                                              request_timeout=timeout_in_seconds)
             try:
@@ -99,6 +109,9 @@ class FileDownloader(object):
             except Exception as e:
                 self._errors.append("Failed download to %s: %s" % (self._filename, str(e)))
                 raise gen.Return(None)
+            finally:
+                if self._progress is not None:
+                    self._progress.close()
 
             # assert fetch() was supposed to throw the error, not leave it here unthrown
             assert response.error is None
