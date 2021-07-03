@@ -13,6 +13,7 @@ import os
 import re
 import tarfile
 import zipfile
+from tqdm import tqdm
 
 import requests
 import binstar_client.utils as binstar_utils
@@ -182,14 +183,16 @@ class _Client(object):
             filename = eval(re.findall("filename=(.+);", res.headers["Content-Disposition"])[0])
             if parent_dir:
                 filename = os.path.join(parent_dir, filename)
-            print('Downloading {}'.format(project))
-            print('.', end='')
+            progress = tqdm(unit='KiB',
+                            total=int(res.headers.get('Content-Length', None)) / 1024,
+                            unit_scale=True,
+                            desc='Download')
             with open(filename, 'wb') as f:
-                for chunk in res.iter_content(chunk_size=4096):
+                for chunk in res.iter_content(chunk_size=1024):
                     if chunk:
-                        print('.', end='')
+                        progress.update(len(chunk) / 1024)
                         f.write(chunk)
-            print()
+                progress.close()
         self._check_response(res)
         return os.path.abspath(filename)
 
