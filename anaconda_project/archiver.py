@@ -21,8 +21,9 @@ import uuid
 import zipfile
 from io import BytesIO
 from conda_pack._progress import progressbar
+from tqdm import tqdm
 
-from anaconda_project.frontend import _new_error_recorder
+from anaconda_project.frontend import NullFrontend, _new_error_recorder
 from anaconda_project.internal import logged_subprocess
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.internal.directory_contains import subdirectory_relative_to_directory
@@ -452,6 +453,8 @@ def _extract_files_zip(zip_path, src_and_dest, frontend):
     try:
         with zipfile.ZipFile(zip_path, mode='r') as zf:
             _extractall_chmod(zf, tmpdir)
+            if isinstance(frontend.underlying, NullFrontend):
+                src_and_dest = tqdm(src_and_dest, desc='Extract ')
             for (src, dest) in src_and_dest:
                 frontend.info("Unpacking %s to %s" % (src, dest))
                 src_path = os.path.join(tmpdir, src)
@@ -470,6 +473,8 @@ def _extract_files_zip(zip_path, src_and_dest, frontend):
 
 def _extract_files_tar(tar_path, src_and_dest, frontend):
     with tarfile.open(tar_path, mode='r') as tf:
+        if isinstance(frontend.underlying, NullFrontend):
+            src_and_dest = tqdm(src_and_dest, desc='Extract ')
         for (src, dest) in src_and_dest:
             frontend.info("Unpacking %s to %s" % (src, dest))
             member = tf.getmember(src)
