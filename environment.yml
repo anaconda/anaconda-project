@@ -11,6 +11,7 @@ dependencies:
   - anaconda-client
   - conda-pack
   - requests
+  - tqdm
   - psutil
   - tornado>=4.2
   - pip
