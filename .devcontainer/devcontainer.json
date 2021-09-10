@@ -1,0 +1,26 @@
+{
+	"name": "Miniconda",
+	"build": { 
+		"context": "..",
+		"dockerfile": "Dockerfile",
+		"args": {
+			"MINICONDA_VERSION": "4.8.2",
+			"PYTHON_VERSION": "3.7.10",
+			"ENV_NAME": "dev",
+			"ENV_YAML": "environment.yml"
+		}
+	},
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": { 
+		"python.condaPath": "/opt/conda/bin/conda",
+	},
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"ms-python.python",
+		"ms-python.vscode-pylance"
+	],
+
+	"remoteUser": "vscode"
+}

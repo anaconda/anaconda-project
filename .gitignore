@@ -15,7 +15,6 @@
 *.tmp
 *.coverage.*
 .idea/
-.vscode/
 
 # Compiled source #
 ###################
