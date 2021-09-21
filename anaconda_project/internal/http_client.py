@@ -85,7 +85,8 @@ class FileDownloader(object):
 
             try:
                 _file.write(chunk)
-                self._progress.update(len(chunk) / 1024 / 1024)
+                if self._progress is not None:
+                    self._progress.update(len(chunk) / 1024 / 1024)
             except EnvironmentError as e:
                 # we can't actually throw this error or Tornado freaks out, so instead
                 # we ignore all future chunks once we have an error, which does mean
