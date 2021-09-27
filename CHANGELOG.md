@@ -2,6 +2,20 @@
 
 We [keep a changelog.](http://keepachangelog.com/)
 
+## Version 0.10.2
+
+### Bug fixes
+
+* [PR 340](https://github.com/Anaconda-Platform/anaconda-project/pull/340) Fix issue with progress bar
+
+
+## Version 0.10.1
+
+### Enhancements
+
+* [PR 331](https://github.com/Anaconda-Platform/anaconda-project/pull/331) Add CLI progress bars for project download and extract
+* [PR 330](https://github.com/Anaconda-Platform/anaconda-project/pull/330) Add CLI progress bars for data downloads
+
 ## Version 0.10.0
 
 ### Issues Closed
