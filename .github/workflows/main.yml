@@ -18,7 +18,8 @@ jobs:
         fetch-depth: 0
     - uses: conda-incubator/setup-miniconda@v2
       with:
-        auto-update-conda: true
+        auto-update-conda: false
+        auto-activate-base: true
         python-version: "3.8"
     - name: Install build dependencies
       run: |
@@ -26,7 +27,6 @@ jobs:
         conda install -y conda-build conda-verify flake8 pep257 yapf==0.30.0 sphinx sphinx_rtd_theme
     - name: Verify formatting compliance
       run: |
-        source /usr/share/miniconda/bin/activate
         if ! yapf --diff --recursive anaconda_project; then
             echo "----"
             echo "Please run 'yapf --in-place --recursive anaconda_project'"
@@ -37,7 +37,6 @@ jobs:
         pep257 anaconda_project
     - name: Build the documentation as a test
       run: |
-        source /usr/share/miniconda/bin/activate
         cd docs
         make html
     - name: Build the package
