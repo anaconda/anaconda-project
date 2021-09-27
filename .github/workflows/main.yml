@@ -19,13 +19,14 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2
       with:
         auto-update-conda: false
-        auto-activate-base: true
         python-version: "3.8"
     - name: Install build dependencies
+      shell: bash -l {0}
       run: |
         conda config --append channels conda-forge
         conda install -y conda-build conda-verify flake8 pep257 yapf==0.30.0 sphinx sphinx_rtd_theme
     - name: Verify formatting compliance
+      shell: bash -l {0}
       run: |
         if ! yapf --diff --recursive anaconda_project; then
             echo "----"
@@ -37,11 +38,14 @@ jobs:
         pep257 anaconda_project
     - name: Build the documentation as a test
       run: |
+        shell: bash -l {0}
         cd docs
         make html
     - name: Build the package
+      shell: bash -l {0}
       run: conda build --no-test
     - name: Reduce the size of the build artifact
+      shell: bash -l {0}
       run: rm -rf ${CONDA}/conda-bld/{git_cache,work,anaconda-project*,*/.cache}
     - name: Upload the build artifact
       uses: actions/upload-artifact@v2
