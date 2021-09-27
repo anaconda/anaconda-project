@@ -19,7 +19,9 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2
       with:
         auto-update-conda: false
-        python-version: "3.8"
+        miniconda-version: py37_4.10.3
+        auto-activate-base: true
+        activate-environment: ""
     - name: Install build dependencies
       shell: bash -l {0}
       run: |
@@ -37,8 +39,8 @@ jobs:
         flake8 anaconda_project
         pep257 anaconda_project
     - name: Build the documentation as a test
+      shell: bash -l {0}
       run: |
-        shell: bash -l {0}
         cd docs
         make html
     - name: Build the package
