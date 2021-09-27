@@ -22,7 +22,7 @@ RUN conda config --prepend pkgs_dirs /home/${USERNAME}/.conda/pkgs
 # Environment creation is done in two steps.
 # 1. create env with desired Python version
 # 2. apply required packages from specified environment.yml file
-COPY ${ENV_YAML} /tmp/conda-tmp/
+COPY ${ENV_YAML} /tmp/conda-tmp/environment.yml
 RUN conda create -n ${ENV_NAME} python=${PYTHON_VERSION} \
     && if [ -f "/tmp/conda-tmp/environment.yml" ]; then \
           conda env update -n ${ENV_NAME} -f /tmp/conda-tmp/environment.yml; \
