@@ -45,7 +45,7 @@ jobs:
         make html
     - name: Build the package
       shell: bash -l {0}
-      run: conda build --no-test
+      run: conda build --no-test conda.recipe
     - name: Reduce the size of the build artifact
       shell: bash -l {0}
       run: rm -rf ${CONDA}/conda-bld/{git_cache,work,anaconda-project*,*/.cache}
