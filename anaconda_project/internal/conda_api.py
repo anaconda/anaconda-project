@@ -52,96 +52,22 @@ def _get_conda_command(extra_args):
     return cmd_list
 
 
-# This is obviously ridiculous, we'll work to
-# find a better way (at least in newer versions
-# of conda).
-def _platform_hacked_conda_code(platform, bits):
-    return """import conda
-try:
-    # this is conda 4.2 and 4.3
-
-    # fix whether default channels have msys
-    import conda.base.constants
-    from conda.base.constants import DEFAULT_CHANNELS_UNIX, DEFAULT_CHANNELS_WIN
-    if "{platform}" == 'win':
-        corrected_channels = DEFAULT_CHANNELS_WIN
-    else:
-        corrected_channels = DEFAULT_CHANNELS_UNIX
-
-    setattr(conda.base.constants, 'DEFAULT_CHANNELS', corrected_channels)
-
-    from conda.base.context import Context
-
-    class KapselHackedContext(Context):
-        @property
-        def subdir(self):
-            return "{platform}-{bits}"
-
-        @property
-        def bits(self):
-            return {bits}
-
-    setattr(conda.base.context.context, "__class__", KapselHackedContext)
-except ImportError:
-    # this is conda 4.1
-    import conda.config
-
-    setattr(conda.config, "platform", "{platform}")
-    setattr(conda.config, "bits", "{bits}")
-    setattr(conda.config, "subdir", "{platform}-{bits}")
-
-    # fix up the default urls
-    msys_url = 'https://repo.continuum.io/pkgs/msys2'
-    if "{platform}" == "win":
-        if msys_url not in conda.config.defaults_:
-            conda.config.defaults_.append(msys_url)
-    else:
-        if msys_url in conda.config.defaults_:
-            conda.config.defaults_.remove(msys_url)
-
-
-import conda.cli
-import sys
-
-sys.argv[0] = "conda"
-sys.exit(conda.cli.main())
-""".format(platform=platform, bits=bits).strip() + "\n"
-
-
-def _get_platform_hacked_conda_command(extra_args, platform):
-    """Get conda command and a string representing it in error messages."""
-    if platform == current_platform() or platform is None:
-        cmd_list = _get_conda_command(extra_args)
-        return (cmd_list, " ".join(cmd_list))
-    else:
-        (platform_name, bits) = platform.split("-")
-
-        conda_code = _platform_hacked_conda_code(platform_name, bits)
-
-        # this has to run with the python from the root env,
-        # so the conda modules will be found.
-        root_prefix = _get_root_prefix()
-        root_python = None
-        for location in (('bin', 'python'), ('python.exe', ), ('Scripts', 'python.exe'), ('Library', 'bin',
-                                                                                          'python.exe')):
-            candidate = os.path.join(root_prefix, *location)
-            if os.path.isfile(candidate):
-                root_python = candidate
-                break
-        assert root_python is not None
-
-        cmd_list = [root_python, '-c', conda_code]
-        cmd_list.extend(extra_args)
-        return (cmd_list, " ".join(["conda"] + cmd_list[3:]))
-
-
 def _call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None, stderr_callback=None):
     assert len(extra_args) > 0  # we deref extra_args[0] below
 
-    (cmd_list, command_in_errors) = _get_platform_hacked_conda_command(extra_args, platform=platform)
+    cmd_list = _get_conda_command(extra_args)
+    command_in_errors = " ".join(cmd_list)
+
+    env = None
+    if platform is not None and (platform != current_platform()):
+        env = os.environ.copy()
+        env['CONDA_SUBDIR'] = platform
+        if 'win' in platform:
+            env['CONDA_CHANNELS'] = 'msys2'
 
     try:
         (p, stdout_lines, stderr_lines) = streaming_popen.popen(cmd_list,
+                                                                env=env,
                                                                 stdout_callback=stdout_callback,
                                                                 stderr_callback=stderr_callback)
     except OSError as e:
@@ -636,11 +562,18 @@ assert tuple(sorted(default_platforms)) == default_platforms
 default_platforms_plus_32_bit = ('linux-32', 'linux-64', 'osx-64', 'win-32', 'win-64')
 assert tuple(sorted(default_platforms_plus_32_bit)) == default_platforms_plus_32_bit
 
-_non_x86_linux_machines = {'armv6l', 'armv7l', 'ppc64le'}
+_non_x86_linux_machines = {'aarch64', 'armv6l', 'armv7l', 'ppc64le'}
+_non_x86_osx_machines = {'arm64'}
 
 # this list will get outdated, unfortunately.
 _known_platforms = tuple(
-    sorted(list(default_platforms_plus_32_bit) + ['osx-32'] + [("linux-%s" % m) for m in _non_x86_linux_machines]))
+    sorted(
+        list(default_platforms_plus_32_bit)
+        + ['osx-32']
+        + [("linux-%s" % m) for m in _non_x86_linux_machines]
+        + [("osx-%s" % m) for m in _non_x86_osx_machines]
+    )
+)
 
 known_platform_names = ('linux', 'osx', 'win')
 assert tuple(sorted(known_platform_names)) == known_platform_names
@@ -683,18 +616,8 @@ assert set(_known_platform_groups_keys) == set(_known_platform_groups.keys())
 
 
 def current_platform():
-    m = platform.machine()
-    if m in _non_x86_linux_machines:
-        return 'linux-%s' % m
-    else:
-        _platform_map = {
-            'linux2': 'linux',
-            'linux': 'linux',
-            'darwin': 'osx',
-            'win32': 'win',
-        }
-        p = _platform_map.get(sys.platform, 'unknown')
-        return '%s-%d' % (p, (8 * tuple.__itemsize__))
+    conda_info = info()
+    return conda_info.get('platform')
 
 
 _default_platforms_with_current = tuple(sorted(list(set(default_platforms + (current_platform(), )))))
