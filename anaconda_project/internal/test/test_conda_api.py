@@ -181,7 +181,7 @@ def test_conda_remove_no_packages(monkeypatch):
 
 
 def test_conda_invoke_fails(monkeypatch):
-    def mock_popen(args, stdout=None, stderr=None):
+    def mock_popen(args, stdout=None, stderr=None, env=None):
         raise OSError("failed to exec")
 
     def do_test(dirname):
