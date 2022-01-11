@@ -568,12 +568,8 @@ _non_x86_osx_machines = {'arm64'}
 # this list will get outdated, unfortunately.
 _known_platforms = tuple(
     sorted(
-        list(default_platforms_plus_32_bit)
-        + ['osx-32']
-        + [("linux-%s" % m) for m in _non_x86_linux_machines]
-        + [("osx-%s" % m) for m in _non_x86_osx_machines]
-    )
-)
+        list(default_platforms_plus_32_bit) + ['osx-32'] + [("linux-%s" % m) for m in _non_x86_linux_machines] +
+        [("osx-%s" % m) for m in _non_x86_osx_machines]))
 
 known_platform_names = ('linux', 'osx', 'win')
 assert tuple(sorted(known_platform_names)) == known_platform_names
