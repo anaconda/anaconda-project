@@ -80,7 +80,7 @@ def popen(args, stdout_callback, stderr_callback, **kwargs):
     if stderr_callback is None:
         stderr_callback = ignore_line
 
-    p = logged_subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = logged_subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
 
     queue = Queue()
 
