@@ -59,7 +59,7 @@ def _call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None
     command_in_errors = " ".join(cmd_list)
 
     env = None
-    if platform is not None and (platform != current_platform()):
+    if platform is not None:
         env = os.environ.copy()
         env['CONDA_SUBDIR'] = platform
         if 'win' in platform:
