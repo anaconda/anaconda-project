@@ -1131,7 +1131,7 @@ def test_resolve_dependencies_with_conda_41_json(monkeypatch):
 
 
 def test_current_platform_non_x86_linux(monkeypatch):
-    monkeypatch.setattr('platform.machine', lambda: 'armv7l')
+    monkeypatch.setenv('CONDA_SUBDIR', 'linux-armv7l')
     assert conda_api.current_platform() == 'linux-armv7l'
 
 
