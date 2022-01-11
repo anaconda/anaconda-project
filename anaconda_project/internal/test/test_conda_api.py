@@ -155,7 +155,7 @@ def test_pip_installed():
     def do_test(dirname):
         envdir = os.path.join(dirname, 'myenv')
 
-        conda_api.create(prefix=envdir, pkgs=['python'])
+        conda_api.create(prefix=envdir, pkgs=['python3.8'])
         pip_api.install(prefix=envdir, pkgs=['chardet==3'])
 
         pip_packages = conda_api.installed_pip(envdir)
