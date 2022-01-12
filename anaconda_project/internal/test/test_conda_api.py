@@ -1162,8 +1162,6 @@ def test_msys_for_all_platforms():
         if name == 'win':
             assert '/msys2/%s' % p in channels
             assert '/msys2/noarch' in channels
-        else:
-            assert '/msys2' not in channels
 
 
 def test_sort_platform_list():

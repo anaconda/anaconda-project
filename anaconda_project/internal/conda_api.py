@@ -64,6 +64,8 @@ def _call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None
         env['CONDA_SUBDIR'] = platform
         if 'win' in platform:
             env['CONDA_CHANNELS'] = 'defaults,msys2'
+        else:
+            env['CONDA_CHANNELS'] = 'defaults'
 
     try:
         (p, stdout_lines, stderr_lines) = streaming_popen.popen(cmd_list,
