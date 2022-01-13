@@ -158,17 +158,6 @@ def resolve_env_to_prefix(name_or_prefix):
     return None
 
 
-_cached_root_prefix = None
-
-
-def _get_root_prefix():
-    global _cached_root_prefix
-
-    if _cached_root_prefix is None:
-        _cached_root_prefix = resolve_env_to_prefix('root')
-    return _cached_root_prefix
-
-
 def create(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback=None):
     """Create an environment either by name or path with a specified set of packages."""
     if os.path.exists(prefix):
