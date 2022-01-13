@@ -327,7 +327,7 @@ def _contains_conda_meta(path):
     return os.path.isdir(conda_meta)
 
 
-def _is_conda_bindir_unix(path): # pragma: no cover (unix only)
+def _is_conda_bindir_unix(path):  # pragma: no cover (unix only)
     if path.endswith("/"):
         path = path[:-1]
     if not path.endswith("/bin"):
