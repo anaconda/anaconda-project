@@ -13,6 +13,7 @@ dependencies:
   - requests
   - psutil
   - tornado>=4.2
+  - tqdm
   - pip
   - keyring
   - pytest
