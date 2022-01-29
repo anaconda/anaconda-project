@@ -435,12 +435,11 @@ def main():
     )
 
     options = parser.parse_args()
-    tr = TestRunner(
-        pytest_args=options.pytest_args,
-        format_only=options.format_only,
-        git_staged_only=options.git_staged_only,
-        skip_slow_tests=options.skip_slow_tests,
-        profile_formatting=options.profile_formatting)
+    tr = TestRunner(pytest_args=options.pytest_args,
+                    format_only=options.format_only,
+                    git_staged_only=options.git_staged_only,
+                    skip_slow_tests=options.skip_slow_tests,
+                    profile_formatting=options.profile_formatting)
     tr.run_tests()
 
 
