@@ -349,7 +349,7 @@ def test_add_variables():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_add_var)
 
 
-def test_add_variables_to_env_spec():
+def test_add_variables_to_env_spec(packages):
     def check_add_var(dirname):
         project = project_no_dedicated_env(dirname)
         status = project_ops.add_variables(project, 'myspec', ['foo', 'baz'], dict(foo='bar'))
@@ -363,13 +363,13 @@ def test_add_variables_to_env_spec():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
+            f"""
 env_specs:
     default:
-      packages: [python]
+      {packages}: [python]
       channels: []
     myspec:
-      packages: [python]
+      {packages}: [python]
       channels: []
 """
         }, check_add_var)
@@ -467,7 +467,7 @@ def test_remove_variables():
                                     '  foo: baz\n  bar: qux')}, check_remove_var)
 
 
-def test_remove_variables_with_env_spec():
+def test_remove_variables_with_env_spec(packages):
     def check_remove_var(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -485,13 +485,13 @@ def test_remove_variables_with_env_spec():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
+            f"""
 env_specs:
   default:
-    packages: [python]
+    {packages}: [python]
     channels: []
   myspec:
-    packages: [python]
+    {packages}: [python]
     channels: []
     variables:
       foo: baz
@@ -716,7 +716,7 @@ def test_add_command_bokeh():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_add_command)
 
 
-def test_add_command_bokeh_overwrites():
+def test_add_command_bokeh_overwrites(packages):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project, 'bokeh_test', 'bokeh_app', 'file.py')
@@ -733,12 +733,12 @@ def test_add_command_bokeh_overwrites():
             DEFAULT_PROJECT_FILENAME: ('commands:\n'
                                        '  bokeh_test:\n'
                                        '    bokeh_app: replaced.py\n'
-                                       'packages:\n'
+                                       f'{packages}:\n'
                                        '  - bokeh\n')
         }, check_add_command)
 
 
-def test_add_command_sets_env_spec():
+def test_add_command_sets_env_spec(packages):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project, 'bokeh_test', 'bokeh_app', 'file.py', env_spec_name='foo')
@@ -752,14 +752,14 @@ def test_add_command_sets_env_spec():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                       '  foo: { "packages" : ["bokeh"] }\n'
+                                       f'  foo: {{ "{packages}" : ["bokeh"] }}\n'
                                        'commands:\n'
                                        '  bokeh_test:\n'
                                        '    bokeh_app: replaced.py\n')
         }, check_add_command)
 
 
-def test_add_command_leaves_env_spec():
+def test_add_command_leaves_env_spec(packages):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project, 'bokeh_test', 'bokeh_app', 'file.py', env_spec_name=None)
@@ -773,7 +773,7 @@ def test_add_command_leaves_env_spec():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                       '  foo: { "packages" : ["bokeh"] }\n'
+                                       f'  foo: {{ "{packages}" : ["bokeh"] }}\n'
                                        'commands:\n'
                                        '  bokeh_test:\n'
                                        '    env_spec: "foo"\n'
@@ -781,7 +781,7 @@ def test_add_command_leaves_env_spec():
         }, check_add_command)
 
 
-def test_add_command_generates_env_spec_suggestion():
+def test_add_command_generates_env_spec_suggestion(packages):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         assert project.problems == []
@@ -798,7 +798,7 @@ def test_add_command_generates_env_spec_suggestion():
         command = re_loaded.get_value(['commands', 'bokeh_test'])
         assert command['bokeh_app'] == 'file.py'
         assert command['env_spec'] == 'bar'
-        assert re_loaded.get_value(['env_specs', 'bar', 'packages']) is None
+        assert re_loaded.get_value(['env_specs', 'bar', packages]) is None
 
         assert project.problems == []
         assert project.suggestions == [('%s: Command ' % project.project_file.basename) +
@@ -808,12 +808,12 @@ def test_add_command_generates_env_spec_suggestion():
         project.project_file.save()
 
         re_loaded = ProjectFile.load_for_directory(project.directory_path)
-        assert re_loaded.get_value(['env_specs', 'bar', 'packages']) == ['bokeh']
+        assert re_loaded.get_value(['env_specs', 'bar', packages]) == ['bokeh']
 
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                       '  foo: { "packages" : ["bokeh"] }\n'
+                                       f'  foo: {{ "{packages}" : ["bokeh"] }}\n'
                                        '  bar: {}\n'
                                        'commands:\n'
                                        '  bokeh_test:\n'
@@ -822,7 +822,7 @@ def test_add_command_generates_env_spec_suggestion():
         }, check_add_command)
 
 
-def test_add_command_leaves_supports_http_options():
+def test_add_command_leaves_supports_http_options(packages):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project,
@@ -842,7 +842,7 @@ def test_add_command_leaves_supports_http_options():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                       '  foo: { "packages" : ["bokeh"] }\n'
+                                       f'  foo: {{ "{packages}" : ["bokeh"] }}\n'
                                        'commands:\n'
                                        '  bokeh_test:\n'
                                        '    supports_http_options: false\n'
@@ -850,7 +850,7 @@ def test_add_command_leaves_supports_http_options():
         }, check_add_command)
 
 
-def test_add_command_leaves_supports_http_options_unset():
+def test_add_command_leaves_supports_http_options_unset(packages):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project,
@@ -870,14 +870,14 @@ def test_add_command_leaves_supports_http_options_unset():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                       '  foo: { "packages" : ["bokeh"] }\n'
+                                       f'  foo: {{ "{packages}" : ["bokeh"] }}\n'
                                        'commands:\n'
                                        '  bokeh_test:\n'
                                        '    bokeh_app: replaced.py\n')
         }, check_add_command)
 
 
-def test_add_command_modifies_supports_http_options():
+def test_add_command_modifies_supports_http_options(packages):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
         result = project_ops.add_command(project,
@@ -897,7 +897,7 @@ def test_add_command_modifies_supports_http_options():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME: ('env_specs:\n'
-                                       '  foo: { "packages" : ["bokeh"] }\n'
+                                       f'  foo: {{ "{packages}" : ["bokeh"] }}\n'
                                        'commands:\n'
                                        '  bokeh_test:\n'
                                        '    supports_http_options: false\n'
@@ -1252,7 +1252,7 @@ def test_add_download(monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
-def test_add_download_to_env_spec(monkeypatch):
+def test_add_download_to_env_spec(monkeypatch, packages):
     def check(dirname):
         _monkeypatch_download_file(monkeypatch, dirname)
 
@@ -1272,13 +1272,13 @@ def test_add_download_to_env_spec(monkeypatch):
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
+            r"""
 env_specs:
     default:
-      packages: [python]
+      {packages}: [python]
       channels: []
     myspec:
-      packages: [python]
+      {packages}: [python]
       channels: []
         """
         }, check)
@@ -1489,7 +1489,7 @@ downloads:
 """}, check)
 
 
-def test_remove_download_with_env_spec(monkeypatch):
+def test_remove_download_with_env_spec(monkeypatch, packages):
     def check(dirname):
         config_path = ['env_specs', 'myspec', 'downloads', 'MYDATA']
         project = project_no_dedicated_env(dirname)
@@ -1506,13 +1506,13 @@ def test_remove_download_with_env_spec(monkeypatch):
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
+            f"""
 env_specs:
     default:
-      packages: [python]
+      {packages}: [python]
       channels: []
     myspec:
-      packages: [python]
+      {packages}: [python]
       channels: []
       downloads:
         MYDATA: "http://localhost:123456"
@@ -1723,7 +1723,7 @@ def test_add_env_spec_with_packages_and_channels():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
-def test_add_env_spec_extending_existing_lists():
+def test_add_env_spec_extending_existing_lists(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -1737,19 +1737,19 @@ def test_add_env_spec_extending_existing_lists():
 
         # be sure download was added to the file and saved
         project2 = Project(dirname)
-        assert dict(packages=['b', 'a', 'c'],
+        assert dict({packages: ['b', 'a', 'c']},
                     channels=['c3', 'c1', 'c2']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: f"""
 env_specs:
   foo:
-    packages: [ 'b' ]
+    {packages}: [ 'b' ]
     channels: [ 'c3']
 """}, check)
 
 
-def test_add_env_spec_extending_existing_lists_with_versions():
+def test_add_env_spec_extending_existing_lists_with_versions(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -1763,14 +1763,14 @@ def test_add_env_spec_extending_existing_lists_with_versions():
 
         # be sure download was added to the file and saved
         project2 = Project(dirname)
-        assert dict(packages=['b=2.0', 'a', 'c'],
+        assert dict({packages: ['b=2.0', 'a', 'c']},
                     channels=['c3', 'c1', 'c2']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: f"""
 env_specs:
   foo:
-    packages: [ 'b=1.0' ]
+    {packages}: [ 'b=1.0' ]
     channels: [ 'c3']
 """}, check)
 
@@ -1795,7 +1795,7 @@ def test_add_env_spec_cannot_resolve_deps():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
-def test_remove_env_spec():
+def test_remove_env_spec(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -1820,31 +1820,29 @@ def test_remove_env_spec():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: foo
 env_specs:
   hello:
-   packages:
+   {packages}:
      - a
   another:
-   packages:
+   {packages}:
      - b
     """,
-            DEFAULT_PROJECT_LOCK_FILENAME:
-            """
+            DEFAULT_PROJECT_LOCK_FILENAME: f"""
 locking_enabled: true
 env_specs:
   hello:
     platforms: [linux-32,linux-64,osx-64,win-32,win-64]
-    packages:
+    {packages}:
       all:
       - a=1.0=1
 """
         }, check)
 
 
-def test_remove_only_env_spec():
+def test_remove_only_env_spec(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -1865,16 +1863,16 @@ def test_remove_only_env_spec():
         assert project2.lock_file.get_value(['env_specs', 'hello'], None) is None
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: f"""
 name: foo
 env_specs:
   hello:
-   packages:
+   {packages}:
      - a
     """}, check)
 
 
-def test_remove_env_spec_causes_problem():
+def test_remove_env_spec_causes_problem(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -1901,8 +1899,7 @@ def test_remove_env_spec_causes_problem():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: foo
 commands:
   default:
@@ -1910,26 +1907,25 @@ commands:
     env_spec: hello
 env_specs:
   hello:
-   packages:
+   {packages}:
      - a
   another:
-   packages:
+   {packages}:
      - b
     """,
-            DEFAULT_PROJECT_LOCK_FILENAME:
-            """
+            DEFAULT_PROJECT_LOCK_FILENAME: f"""
 locking_enabled: true
 env_specs:
   hello:
     platforms: [linux-32,linux-64,osx-64,win-32,win-64]
-    packages:
+    {packages}:
       all:
       - a=1.0=1
 """
         }, check)
 
 
-def test_add_packages_to_all_environments():
+def test_add_packages_to_all_environments(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -1944,7 +1940,7 @@ def test_add_packages_to_all_environments():
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert [dict(pip=[]), 'foo', 'bar'] == list(project2.project_file.get_value('packages'))
+        assert [dict(pip=[]), 'foo', 'bar'] == list(project2.project_file.get_value(packages))
         assert ['hello', 'world'] == list(project2.project_file.get_value('channels'))
 
         for env_spec in project2.env_specs.values():
@@ -1954,15 +1950,15 @@ def test_add_packages_to_all_environments():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
  - pip: [] # be sure we don't break with this in the list
                 """,
             DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
         }, check)
 
 
-def test_add_pip_packages_to_all_environments():
+def test_add_pip_packages_to_all_environments(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -1980,7 +1976,7 @@ def test_add_pip_packages_to_all_environments():
         project2 = Project(dirname)
         assert [
             dict(pip=['foo', 'bar']),
-        ] == list(project2.project_file.get_value('packages'))
+        ] == list(project2.project_file.get_value(packages))
         # assert ['hello', 'world'] == list(project2.project_file.get_value('channels'))
 
         for env_spec in project2.env_specs.values():
@@ -1990,8 +1986,8 @@ def test_add_pip_packages_to_all_environments():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
  - pip: [] # be sure we don't break with this in the list
                 """,
             DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
@@ -2055,7 +2051,7 @@ def test_add_packages_invalid_spec():
     with_directory_contents_completing_project_file(dict(), check)
 
 
-def test_remove_packages_from_all_environments():
+def test_remove_packages_from_all_environments(packages):
     def check(dirname):
         def attempt():
             os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
@@ -2084,18 +2080,18 @@ def test_remove_packages_from_all_environments():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   - foo
   - bar
   - baz
 env_specs:
   hello:
-    packages:
+    {packages}:
      - foo
      - woot
   hello2:
-    packages:
+    {packages}:
      - foo
      - bar
      - pip: [] # make sure we don't choke on non-string items in list
@@ -2104,7 +2100,7 @@ env_specs:
         }, check)
 
 
-def test_remove_conda_packages_from_global_with_pip_packages():
+def test_remove_conda_packages_from_global_with_pip_packages(packages):
     def check(dirname):
         def attempt():
             os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
@@ -2133,19 +2129,19 @@ def test_remove_conda_packages_from_global_with_pip_packages():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   - foo
   - bar
   - baz
   - pip: []
 env_specs:
   hello:
-    packages:
+    {packages}:
      - foo
      - woot
   hello2:
-    packages:
+    {packages}:
      - foo
      - bar
      - pip: [] # make sure we don't choke on non-string items in list
@@ -2154,7 +2150,7 @@ env_specs:
         }, check)
 
 
-def test_remove_pip_packages_from_global():
+def test_remove_pip_packages_from_global(packages):
     def check(dirname):
         def attempt():
             os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
@@ -2185,26 +2181,26 @@ def test_remove_pip_packages_from_global():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   - foo
   - pip:
     - bar
     - baz
 env_specs:
   hello:
-    packages:
+    {packages}:
      - foo
      - pip:
        - bar
        - woot
-  hello2: {}
+  hello2: {{}}
         """,
             DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
         }, check)
 
 
-def test_remove_pip_packages_from_one_environment():
+def test_remove_pip_packages_from_one_environment(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -2244,8 +2240,8 @@ def test_remove_pip_packages_from_one_environment():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   # this is a pre comment
   - qbert # this is a post comment
   - pip:
@@ -2254,7 +2250,7 @@ packages:
     - bar
 env_specs:
   hello:
-    packages:
+    {packages}:
       - pip:
         - foo
         """,
@@ -2262,7 +2258,7 @@ env_specs:
         }, check)
 
 
-def test_remove_pip_packages_from_one_environment_with_pkgs():
+def test_remove_pip_packages_from_one_environment_with_pkgs(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -2302,8 +2298,8 @@ def test_remove_pip_packages_from_one_environment_with_pkgs():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   # this is a pre comment
   - qbert # this is a post comment
   - pip:
@@ -2312,14 +2308,14 @@ packages:
     - bar
 env_specs:
   hello:
-    packages:
+    {packages}:
       - qbert
         """,
             DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
         }, check)
 
 
-def test_remove_pip_packages_from_one_environment_empty_pkgs():
+def test_remove_pip_packages_from_one_environment_empty_pkgs(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -2359,8 +2355,8 @@ def test_remove_pip_packages_from_one_environment_empty_pkgs():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   # this is a pre comment
   - qbert # this is a post comment
   - pip:
@@ -2369,13 +2365,13 @@ packages:
     - bar
 env_specs:
   hello:
-    packages: []
+    {packages}: []
         """,
             DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
         }, check)
 
 
-def test_remove_packages_from_one_environment():
+def test_remove_packages_from_one_environment(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -2414,22 +2410,22 @@ def test_remove_packages_from_one_environment():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   # this is a pre comment
   - qbert # this is a post comment
   - foo
   - bar
 env_specs:
   hello:
-    packages:
+    {packages}:
      - foo
         """,
             DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
         }, check)
 
 
-def test_remove_packages_from_one_environment_leaving_others_unaffected():
+def test_remove_packages_from_one_environment_leaving_others_unaffected(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -2457,25 +2453,24 @@ def test_remove_packages_from_one_environment_leaving_others_unaffected():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   - qbert
   - foo
   - bar
 env_specs:
   hello:
-    packages:
+    {packages}:
      - foo
   another:
-    packages:
+    {packages}:
      # this is a pre comment
      - baz # this is a post comment
 """
         }, check)
 
 
-def test_remove_pip_packages_from_one_environment_leaving_others_unaffected():
+def test_remove_pip_packages_from_one_environment_leaving_others_unaffected(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -2504,9 +2499,8 @@ def test_remove_pip_packages_from_one_environment_leaving_others_unaffected():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   - qbert
   - pip:
     - pbert
@@ -2514,11 +2508,11 @@ packages:
     - bar
 env_specs:
   hello:
-    packages:
+    {packages}:
      - pip:
        - foo
   another:
-    packages:
+    {packages}:
       - pip:
         # this is a pre comment
         - baz # this is a post comment
@@ -2526,7 +2520,7 @@ env_specs:
         }, check)
 
 
-def test_remove_packages_cannot_resolve_deps():
+def test_remove_packages_cannot_resolve_deps(packages):
     def check(dirname):
         def attempt():
             os.makedirs(os.path.join(dirname, 'envs', 'hello'))  # forces us to really run remove_packages
@@ -2556,14 +2550,14 @@ def test_remove_packages_cannot_resolve_deps():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
-packages:
+            DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   - foo
   - bar
   - baz
 env_specs:
   hello:
-    packages:
+    {packages}:
      - foo
      - woot
         """,
@@ -2571,7 +2565,7 @@ env_specs:
         }, check)
 
 
-def test_remove_packages_from_nonexistent_environment():
+def test_remove_packages_from_nonexistent_environment(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -2587,8 +2581,8 @@ def test_remove_packages_from_nonexistent_environment():
         project2 = Project(dirname)
         assert ['foo', 'bar'] == list(project2.project_file.get_value('packages'))
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
-packages:
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: f"""
+{packages}:
   - foo
   - bar
 """}, check)
@@ -2924,7 +2918,7 @@ def test_unlock_broken_project():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
 
 
-def test_lock_and_update_and_unlock_all_envs():
+def test_lock_and_update_and_unlock_all_envs(packages):
     def check(dirname):
         resolve_results = {'all': ['a=1.0=1'], 'pip': ['cc==1.0']}
 
@@ -2951,7 +2945,7 @@ def test_lock_and_update_and_unlock_all_envs():
                 '+   linux-64',
                 '+   osx-64',
                 '+   win-64',
-                '  packages:',
+                f'  {packages}:',
                 '+   all:',
                 '+     a=1.0=1',
                 '+   pip:',
@@ -2963,7 +2957,7 @@ def test_lock_and_update_and_unlock_all_envs():
                 '+   linux-64',
                 '+   osx-64',
                 '+   win-64',
-                '  packages:',
+                f'  {packages}:',
                 '+   all:',
                 '+     a=1.0=1',
                 '+   pip:',
@@ -3046,17 +3040,16 @@ def test_lock_and_update_and_unlock_all_envs():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: locktest
 env_specs:
   foo:
-    packages:
+    {packages}:
       - a
       - pip:
         - cc
   bar:
-    packages:
+    {packages}:
       - b
       - pip:
         - dd
@@ -3064,7 +3057,7 @@ env_specs:
         }, check)
 
 
-def test_lock_and_unlock_single_env():
+def test_lock_and_unlock_single_env(packages):
     def check(dirname):
         def attempt():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
@@ -3088,7 +3081,7 @@ def test_lock_and_unlock_single_env():
                     '+   linux-64',
                     '+   osx-64',
                     '+   win-64',
-                    '  packages:',
+                    f'  {packages}:',
                     '+   all:',
                     '+     a=1.0=1',
                     'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'] == project.frontend.logs
@@ -3166,22 +3159,21 @@ def test_lock_and_unlock_single_env():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: locktest
 env_specs:
   foo:
-    packages:
+    {packages}:
       - a
   bar:
     platforms: [osx-64]
-    packages:
+    {packages}:
       - b
 """
         }, check)
 
 
-def test_locking_with_missing_lock_set_does_an_update():
+def test_locking_with_missing_lock_set_does_an_update(packages):
     def check(dirname):
         def attempt():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
@@ -3206,7 +3198,7 @@ def test_locking_with_missing_lock_set_does_an_update():
                     '+   linux-64',
                     '+   osx-64',
                     '+   win-64',
-                    '  packages:',
+                    f'  {packages}:',
                     '+   all:',
                     '+     a=1.0=1',
                     'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'] == project.frontend.logs
@@ -3227,12 +3219,12 @@ def test_locking_with_missing_lock_set_does_an_update():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: locktest
 platforms: [linux-64,osx-64,win-64]
 env_specs:
   foo:
-    packages:
+    {packages}:
       - a
         """,
             DEFAULT_PROJECT_LOCK_FILENAME: """
@@ -3242,7 +3234,7 @@ locking_enabled: true
         }, check)
 
 
-def test_update_changes_only_the_hash():
+def test_update_changes_only_the_hash(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname, frontend=FakeFrontend())
@@ -3272,29 +3264,27 @@ def test_update_changes_only_the_hash():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
   foo:
-    packages:
+    {packages}:
       - a
 """,
-            DEFAULT_PROJECT_LOCK_FILENAME:
-            """
+            DEFAULT_PROJECT_LOCK_FILENAME: f"""
 locking_enabled: true
 env_specs:
   foo:
     platforms: [linux-32,linux-64,osx-64,win-32,win-64]
     env_spec_hash: old
-    packages:
+    {packages}:
       all: ['a=1.0=1']
 """
         }, check)
 
 
-def test_lock_conda_error():
+def test_lock_conda_error(packages):
     def check(dirname):
         def attempt():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
@@ -3315,22 +3305,21 @@ def test_lock_conda_error():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
   foo:
-    packages:
+    {packages}:
       - a
   bar:
-    packages:
+    {packages}:
       - b
 """
         }, check)
 
 
-def test_lock_resolve_dependencies_error(monkeypatch):
+def test_lock_resolve_dependencies_error(monkeypatch, packages):
     def check(dirname):
         def attempt():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
@@ -3348,22 +3337,21 @@ def test_lock_resolve_dependencies_error(monkeypatch):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
   foo:
-    packages:
+    {packages}:
       - a
   bar:
-    packages:
+    {packages}:
       - b
 """
         }, check)
 
 
-def test_unlock_conda_error():
+def test_unlock_conda_error(packages):
     def check(dirname):
         def attempt():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
@@ -3391,39 +3379,37 @@ def test_unlock_conda_error():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
   foo:
-    packages:
+    {packages}:
       - a
   bar:
-    packages:
+    {packages}:
       - b
 """,
-            DEFAULT_PROJECT_LOCK_FILENAME:
-            """
+            DEFAULT_PROJECT_LOCK_FILENAME: f"""
 locking_enabled: true
 env_specs:
   foo:
     locked: true
     platforms: [linux-32,linux-64,osx-64,win-32,win-64]
-    packages:
+    {packages}:
        all:
          - c
   bar:
     locked: true
     platforms: [linux-32,linux-64,osx-64,win-32,win-64]
-    packages:
+    {packages}:
        all:
          - d
 """
         }, check)
 
 
-def test_update_unlocked_envs():
+def test_update_unlocked_envs(packages):
     def check(dirname):
         resolve_results = {'all': ['a=1.0=1']}
 
@@ -3458,22 +3444,21 @@ def test_update_unlocked_envs():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
   foo:
-    packages:
+    {packages}:
       - a
   bar:
-    packages:
+    {packages}:
       - b
 """
         }, check)
 
 
-def test_update_empty_lock_sets():
+def test_update_empty_lock_sets(packages):
     def check(dirname):
         resolve_results = {'all': ['a=1.0=1']}
 
@@ -3499,7 +3484,7 @@ def test_update_empty_lock_sets():
                 '+   linux-64',
                 '+   osx-64',
                 '+   win-64',
-                '  packages:',
+                f'  {packages}:',
                 '+   all:',
                 '+     a=1.0=1',
                 'Updated locked dependencies for env spec bar in anaconda-project-lock.yml.',
@@ -3509,7 +3494,7 @@ def test_update_empty_lock_sets():
                 '+   linux-64',
                 '+   osx-64',
                 '+   win-64',
-                '  packages:',
+                f'  {packages}:',
                 '+   all:',
                 '+     a=1.0=1',
                 'Updated locked dependencies for env spec foo in anaconda-project-lock.yml.'
@@ -3525,22 +3510,22 @@ def test_update_empty_lock_sets():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: locktest
 platforms: [linux-64,osx-64,win-64]
 env_specs:
   foo:
-    packages:
+    {packages}:
       - a
   bar:
-    packages:
+    {packages}:
       - b
         """,
             DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
         }, check)
 
 
-def test_export_env_spec():
+def test_export_env_spec(packages):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         exported = os.path.join(dirname, "exported.yml")
@@ -3549,17 +3534,17 @@ def test_export_env_spec():
         assert status.status_description == ('Exported environment spec default to %s.' % exported)
 
     with_directory_contents_completing_project_file(
-        {"anaconda-project.yml": """
+        {"anaconda-project.yml": f"""
 env_specs:
   default:
-    packages:
+    {packages}:
       - blah
     channels:
       - boo
 """}, check)
 
 
-def test_export_nonexistent_env_spec():
+def test_export_nonexistent_env_spec(packages):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         exported = os.path.join(dirname, "exported.yml")
@@ -3569,17 +3554,17 @@ def test_export_nonexistent_env_spec():
         assert status.status_description == "Environment spec bar doesn't exist."
 
     with_directory_contents_completing_project_file(
-        {"anaconda-project.yml": """
+        {"anaconda-project.yml": f"""
 env_specs:
   default:
-    packages:
+    {packages}:
       - blah
     channels:
       - boo
 """}, check)
 
 
-def test_export_env_spec_io_error(monkeypatch):
+def test_export_env_spec_io_error(monkeypatch, packages):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         exported = os.path.join(dirname, "exported.yml")
@@ -3594,10 +3579,10 @@ def test_export_env_spec_io_error(monkeypatch):
         assert status.status_description == ("Failed to save %s: NOOO." % exported)
 
     with_directory_contents_completing_project_file(
-        {"anaconda-project.yml": """
+        {"anaconda-project.yml": f"""
 env_specs:
   default:
-    packages:
+    {packages}:
       - blah
     channels:
       - boo
@@ -3644,7 +3629,7 @@ def test_add_service(monkeypatch):
     with_directory_contents_completing_project_file(dict(), check)
 
 
-def test_add_service_with_env_spec(monkeypatch):
+def test_add_service_with_env_spec(monkeypatch, packages):
     def check(dirname):
         _monkeypatch_can_connect_to_socket_on_standard_redis_port(monkeypatch)
 
@@ -3661,14 +3646,13 @@ def test_add_service_with_env_spec(monkeypatch):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 env_specs:
     default:
-      packages: [python]
+      {packages}: [python]
       channels: []
     myspec:
-      packages: [python]
+      {packages}: [python]
       channels: []
 """
         }, check)
@@ -3818,7 +3802,7 @@ services:
 """}, check)
 
 
-def test_remove_service_with_env_spec(monkeypatch):
+def test_remove_service_with_env_spec(monkeypatch, packages):
     def check(dirname):
         config_path = ['env_specs', 'myspec', 'services', 'REDIS_URL']
         project = project_no_dedicated_env(dirname)
@@ -3833,14 +3817,13 @@ def test_remove_service_with_env_spec(monkeypatch):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME:
-            """
+            DEFAULT_PROJECT_FILENAME: f"""
 env_specs:
     default:
-      packages: [python]
+      {packages}: [python]
       channels: []
     myspec:
-      packages: [python]
+      {packages}: [python]
       channels: []
       services:
         REDIS_URL: redis
@@ -4105,7 +4088,7 @@ services:
     with_directory_contents_completing_project_file(dict(), archivetest)
 
 
-def test_archive_unlocked_warning():
+def test_archive_unlocked_warning(packages):
     def archivetest(archive_dest_dir):
         archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
@@ -4134,21 +4117,21 @@ def test_archive_unlocked_warning():
 
         with_directory_contents_completing_project_file(
             {
-                DEFAULT_PROJECT_FILENAME: """
+                DEFAULT_PROJECT_FILENAME: f"""
 name: archivedproj
 env_specs:
   foo:
-    packages: []
+    {packages}: []
   bar:
-    packages: []
+    {packages}: []
     """,
-                DEFAULT_PROJECT_LOCK_FILENAME: """
+                DEFAULT_PROJECT_LOCK_FILENAME: f"""
 locking_enabled: false
 env_specs:
   foo:
     locked: true
     platforms: [linux-32,linux-64,osx-64,win-32,win-64]
-    packages:
+    {packages}:
       all: []
              """,
                 "foo.py": "print('hello')\n"
@@ -4573,7 +4556,7 @@ def test_archive_with_no_project_file(monkeypatch):
     with_directory_contents(dict(), archivetest)
 
 
-def test_archive_with_unsaved_project(monkeypatch):
+def test_archive_with_unsaved_project(monkeypatch, packages):
     def archivetest(archive_dest_dir):
         archivefile = os.path.join(archive_dest_dir, "foo.zip")
 
@@ -4590,10 +4573,10 @@ def test_archive_with_unsaved_project(monkeypatch):
             assert status.errors == ["%s has been modified but not saved." % DEFAULT_PROJECT_FILENAME]
 
         with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+            {DEFAULT_PROJECT_FILENAME: f"""
 env_specs:
   default:
-    packages: []
+    {packages}: []
 """}, check)
 
     with_directory_contents(dict(), archivetest)
@@ -4692,7 +4675,7 @@ name: archivedproj
 @pytest.mark.skipif((sys.version_info.major == 2) and (platform.system() == 'Linux'),
                     reason='Something wrong with pip freeze on linux for py2')
 @pytest.mark.parametrize('suffix', ['zip', 'tar.bz2', 'tar.gz'])
-def test_archive_unarchive_conda_pack_with_pip(suffix):
+def test_archive_unarchive_conda_pack_with_pip(suffix, packages):
     def archivetest(archive_dest_dir):
         archivefile = os.path.join(archive_dest_dir, "foo.{}".format(suffix))
 
@@ -4719,9 +4702,9 @@ def test_archive_unarchive_conda_pack_with_pip(suffix):
             assert status
 
         with_directory_contents_completing_project_file(
-            {DEFAULT_PROJECT_FILENAME: """
+            {DEFAULT_PROJECT_FILENAME: f"""
 name: archivedproj
-packages:
+{packages}:
   - python=3.7
   - pip:
     - pep8
@@ -4732,7 +4715,7 @@ packages:
 
 @pytest.mark.slow
 @pytest.mark.parametrize('suffix', ['zip', 'tar.bz2', 'tar.gz'])
-def test_archive_unarchive_conda_pack(suffix):
+def test_archive_unarchive_conda_pack(suffix, packages):
     def archivetest(archive_dest_dir):
         archivefile = os.path.join(archive_dest_dir, "foo.{}".format(suffix))
 
@@ -4808,9 +4791,9 @@ def test_archive_unarchive_conda_pack(suffix):
 
         with_directory_contents_completing_project_file(
             {
-                DEFAULT_PROJECT_FILENAME: """
+                DEFAULT_PROJECT_FILENAME: f"""
 name: archivedproj
-packages:
+{packages}:
   - font-ttf-ubuntu=0.83=h8b1ccd4_0
         """,
                 "foo.py": "print('hello')\n",
