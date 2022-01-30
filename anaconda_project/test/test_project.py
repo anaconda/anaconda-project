@@ -36,6 +36,12 @@ from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
 
 
+@pytest.fixture(params=["packages", "dependencies"])
+def packages(request):
+    """Ensure equivalence between `dependencies` and `packages`"""
+    yield request.param
+
+
 def _assert_find_executable(name, path):
     found = find_executable(name, path)
     if found is None:
@@ -475,7 +481,7 @@ icon: foo.png
         }, check_set_icon)
 
 
-def test_get_dependencies_requirements_from_project_file():
+def test_get_package_requirements_from_project_file(packages):
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
         env = project.env_specs['default']
@@ -501,52 +507,8 @@ def test_get_dependencies_requirements_from_project_file():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
-dependencies:
-  - foo
-  - hello >= 1.0
-  - world
-  - pip:
-     - pip1
-     - pip2==1.3
-  - pip:
-     - pip3
-
-channels:
-  - mtv
-  - hbo
-    """
-        }, check_get_packages)
-
-
-def test_get_package_requirements_from_project_file():
-    def check_get_packages(dirname):
-        project = project_no_dedicated_env(dirname)
-        env = project.env_specs['default']
-        assert env.name == 'default'
-        assert ("mtv", "hbo") == env.channels
-        assert ("foo", "hello >= 1.0", "world") == env.conda_packages
-        assert ("pip1", "pip2==1.3", "pip3") == env.pip_packages
-        assert set(["foo", "hello", "world"]) == env.conda_package_names_set
-        assert set(["pip1", "pip2", "pip3"]) == env.pip_package_names_set
-
-        requirements = project.requirements(project.default_env_spec_name)
-
-        # find CondaEnvRequirement
-        conda_env_req = None
-        for r in requirements:
-            if isinstance(r, CondaEnvRequirement):
-                assert conda_env_req is None  # only one
-                conda_env_req = r
-        assert len(conda_env_req.env_specs) == 1
-        assert 'default' in conda_env_req.env_specs
-        assert conda_env_req.env_specs['default'] is env
-
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME:
-            """
-packages:
+            f"""
+{packages}:
   - foo
   - hello >= 1.0
   - world
