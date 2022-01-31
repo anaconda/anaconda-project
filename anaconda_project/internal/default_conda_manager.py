@@ -98,6 +98,7 @@ def _extract_common(by_platform):
 
 class DefaultCondaManager(CondaManager):
     def __init__(self, frontend):
+        """The default Conda manager."""
         self._frontend = frontend
 
     def _log_info(self, line):

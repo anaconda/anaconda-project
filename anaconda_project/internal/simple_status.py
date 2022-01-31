@@ -13,6 +13,7 @@ from anaconda_project.status import Status
 
 class SimpleStatus(Status):
     def __init__(self, success, description, errors=()):
+        """Simple Status."""
         self._success = success
         self._description = description
         self._errors = list(errors)
