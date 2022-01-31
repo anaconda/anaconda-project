@@ -22,7 +22,7 @@ dependencies:
   # Pinned to ensure consistency between local and CI
   - yapf==0.30.0
   - flake8
-  - pep257
+  - pydocstyle
   # Optional; for multiprocessing tests
   - pytest-xdist
   # Optional for docker (s2i) build support
