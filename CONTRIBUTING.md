@@ -59,6 +59,8 @@ To run the tests,
 
 You can also use the [VSCode Python test discovery](https://code.visualstudio.com/docs/python/testing#_test-discovery). It should automatically discover
 the tests after configuring the project environment to `anaconda-project-dev`.
+A VSCode launch configuration file `.vscode/launch.json` is included in this project
+that enables [test debugging](https://code.visualstudio.com/docs/python/testing#_debug-tests).
 
 ### Specific tests
 
