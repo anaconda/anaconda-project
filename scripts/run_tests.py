@@ -301,34 +301,33 @@ class TestRunner:
         else:
             print("flake8 passed!")
 
-    def _pep257(self):
-        from pep257 import (run_pep257, NO_VIOLATIONS_RETURN_CODE,
-                            VIOLATIONS_RETURN_CODE, INVALID_OPTIONS_RETURN_CODE)
-        from pep257 import log as pep257_log
+    def _pydocstyle(self):
+        from pydocstyle.cli import run_pydocstyle, ReturnCode
+        from pydocstyle.utils import log as pydocstyle_log
 
-        # hack pep257 not to spam enormous amounts of debug logging if you
+        # hack pydocstyle not to spam enormous amounts of debug logging if you
         # use pytest -s.
         # run_pep257() below calls log.setLevel
         def ignore_set_level(level):
             pass
 
-        pep257_log.setLevel = ignore_set_level
+        pydocstyle_log.setLevel = ignore_set_level
 
         # hack alert (replacing argv temporarily because pep257 looks at it)
         old_argv = sys.argv
         try:
-            sys.argv = ['pep257', os.path.join(ROOT, 'anaconda_project')]
-            code = run_pep257()
+            sys.argv = ['pydocstyle', os.path.join(ROOT, 'anaconda_project')]
+            code = run_pydocstyle()
         finally:
             sys.argv = old_argv
-        if code == INVALID_OPTIONS_RETURN_CODE:
-            print("pep257 found invalid configuration.")
-            self.failed.append('pep257')
-        elif code == VIOLATIONS_RETURN_CODE:
-            print("pep257 reported some violations.")
-            self.failed.append('pep257')
-        elif code == NO_VIOLATIONS_RETURN_CODE:
-            print("pep257 says docstrings look good.")
+        if code == ReturnCode.invalid_options:
+            print("pydocstyle found invalid configuration.")
+            self.failed.append('pydocstyle')
+        elif code == ReturnCode.violations_found:
+            print("pydocstyle reported some violations.")
+            self.failed.append('pydocstyle')
+        elif code == ReturnCode.no_violations_found:
+            print("pydocstyle says docstrings look good.")
         else:
             raise RuntimeError("unexpected code from pep257: " + str(code))
 
@@ -374,7 +373,7 @@ class TestRunner:
         self._flake8()
         if not self.format_only:
             self._pytest()
-        self._pep257()
+        self._pydocstyle()
 
         if len(self.failed) > 0:
             print("Failures in: " + repr(self.failed))
