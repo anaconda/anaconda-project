@@ -302,7 +302,8 @@ class TestRunner:
             print("flake8 passed!")
 
     def _pep257(self):
-        from pep257 import (run_pep257, NO_VIOLATIONS_RETURN_CODE, VIOLATIONS_RETURN_CODE, INVALID_OPTIONS_RETURN_CODE)
+        from pep257 import (run_pep257, NO_VIOLATIONS_RETURN_CODE,
+                            VIOLATIONS_RETURN_CODE, INVALID_OPTIONS_RETURN_CODE)
         from pep257 import log as pep257_log
 
         # hack pep257 not to spam enormous amounts of debug logging if you
@@ -352,7 +353,6 @@ class TestRunner:
     def run_tests(self):
         if os.path.exists(os.path.join(ROOT, '.eggs')):
             print(".eggs directory exists which means some dependency was " "not installed via conda/pip")
-            print("  (if this happens on CI, this may need fixing in " ".travis.yml or appveyor.xml)")
             print("  (if this happens on your workstation, try conda/pip " "installing the deps and deleting .eggs")
             self.failed.append("eggs-directory-exists")
 
@@ -435,12 +435,11 @@ def main():
     )
 
     options = parser.parse_args()
-    tr = TestRunner(
-        pytest_args=options.pytest_args,
-        format_only=options.format_only,
-        git_staged_only=options.git_staged_only,
-        skip_slow_tests=options.skip_slow_tests,
-        profile_formatting=options.profile_formatting)
+    tr = TestRunner(pytest_args=options.pytest_args,
+                    format_only=options.format_only,
+                    git_staged_only=options.git_staged_only,
+                    skip_slow_tests=options.skip_slow_tests,
+                    profile_formatting=options.profile_formatting)
     tr.run_tests()
 
 

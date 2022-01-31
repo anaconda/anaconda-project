@@ -75,15 +75,14 @@ source_static = ColumnDataSource(data=dict(date=[], t1=[], t2=[], t1_returns=[],
 tools = 'pan,wheel_zoom,xbox_select,reset'
 
 corr = figure(plot_width=350, plot_height=350, tools='pan,wheel_zoom,box_select,reset')
-corr.circle(
-    't1_returns',
-    't2_returns',
-    size=2,
-    source=source,
-    selection_color="orange",
-    alpha=0.6,
-    nonselection_alpha=0.1,
-    selection_alpha=0.4)
+corr.circle('t1_returns',
+            't2_returns',
+            size=2,
+            source=source,
+            selection_color="orange",
+            alpha=0.6,
+            nonselection_alpha=0.1,
+            selection_alpha=0.4)
 
 ts1 = figure(plot_width=900, plot_height=200, tools=tools, x_axis_type='datetime', active_drag="xbox_select")
 ts1.line('date', 't1', source=source_static)
