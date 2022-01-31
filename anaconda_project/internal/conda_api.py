@@ -28,6 +28,7 @@ CONDA_EXE = os.environ.get("CONDA_EXE", "conda")
 class CondaError(Exception):
     """General Conda error."""
     def __init__(self, message, json=None):
+        """Initialize CondaError."""
         super(CondaError, self).__init__(message)
         self.json = json
 

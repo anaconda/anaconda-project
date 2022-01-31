@@ -18,6 +18,7 @@ import anaconda_project.internal.cli.console_utils as console_utils
 
 class CliFrontend(Frontend):
     def __init__(self):
+        """Frontend for printing."""
         super(CliFrontend, self).__init__()
 
     def info(self, message):
