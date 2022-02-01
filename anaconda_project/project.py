@@ -529,11 +529,11 @@ class _ConfigCache(object):
             platforms = self._parse_platforms(problems, lock_file, lock_set)
 
             conda_packages_by_platform = dict()
-            packages_by_platform = lock_set.get('packages', {})
+            packages_by_platform = lock_set.get(lock_file.pkg_key, {})
             if not is_dict(packages_by_platform):
                 _file_problem(
                     problems, lock_file,
-                    "'packages:' section in env spec '%s' in lock file should be a dictionary, found %r" %
+                    f"'{lock_file.pkg_key}:' section in env spec '%s' in lock file should be a dictionary, found %r" %
                     (name, packages_by_platform))
                 continue
 
@@ -564,6 +564,9 @@ class _ConfigCache(object):
             self.lock_sets[name] = lock_set_object
 
     def _update_env_specs(self, problems, project_file, lock_file):
+        # Should we check/set lock_file.pkg_key?
+        pkg_key = project_file.pkg_key
+        
         def _parse_string_list(parent_dict, key, what):
             return self._parse_string_list(problems, project_file, parent_dict, key, what)
 
@@ -576,14 +579,13 @@ class _ConfigCache(object):
         def _parse_packages(parent_dict):
             # dependencies allows environment.yml-like project files. It is not
             # expected to have both dependencies and packages
-            pkg_key = 'dependencies' if project_file.get_value('dependencies') else 'packages'
-            return self._parse_packages(problems, project_file, pkg_key, parent_dict)
+            return self._parse_packages(problems, project_file, project_file.pkg_key, parent_dict)
 
         (shared_deps, shared_pip_deps) = _parse_packages(project_file.root)
         shared_channels = _parse_channels(project_file.root)
         shared_platforms = _parse_platforms(project_file.root)
 
-        _default_env_spec = CommentedMap([('default', CommentedMap([('packages', []), ('channels', [])]))])
+        _default_env_spec = CommentedMap([('default', CommentedMap([(pkg_key, []), ('channels', [])]))])
         env_specs = project_file.get_value('env_specs', default=_default_env_spec)
 
         first_env_spec_name = None
@@ -776,8 +778,8 @@ class _ConfigCache(object):
                 for platform in env_spec.lock_set.platforms:
                     conda_packages = env_spec.lock_set.package_specs_for_platform(platform)
                     if len(conda_packages) == 0:
-                        text = ("Lock file lists no packages for env spec '%s' on platform %s") % (env_spec.name,
-                                                                                                   platform)
+                        text = (f"Lock file lists no {lock_file.pkg_key} for env spec '%s' on platform %s" %
+                                (env_spec.name, platform))
                         problems.append(ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
                     else:
                         # If conda ever had RPM-like "Obsoletes" then this situation _may_ happen
@@ -789,8 +791,9 @@ class _ConfigCache(object):
                                 lock_set_names.add(parsed.name)
                         unlocked_names = env_spec.conda_package_names_set - lock_set_names
                         if len(unlocked_names) > 0:
-                            text = "Lock file is missing %s packages for env spec %s on %s (%s)" % (
-                                len(unlocked_names), env_spec.name, platform, ",".join(sorted(list(unlocked_names))))
+                            text = (f"Lock file is missing %s {lock_file.pkg_key} for env spec %s on %s (%s)" %
+                                    (len(unlocked_names), env_spec.name, platform,
+                                     ",".join(sorted(list(unlocked_names)))))
                             problems.append(
                                 ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
 
@@ -1134,16 +1137,16 @@ class _ConfigCache(object):
                 def add_packages_to_env_spec(project):
                     env_dict = project.project_file.get_value(['env_specs', env_spec.name])
                     assert env_dict is not None
-                    packages = env_dict.get('packages', [])
+                    packages = env_dict.get(project_file.pkg_key, [])
                     for m in missing:
                         # m would already be in there if we fixed the same env spec
                         # twice because two commands used it, for example.
                         if m not in packages:
                             packages.append(m)
-                    project.project_file.set_value(['env_specs', env_spec.name, 'packages'], packages)
+                    project.project_file.set_value(['env_specs', env_spec.name, project_file.pkg_key], packages)
 
                 problem = ProjectProblem(
-                    text=("Command %s uses env spec %s which does not have the packages: %s" %
+                    text=(f"Command %s uses env spec %s which does not have the {project_file.pkg_key}: %s" %
                           (command.name, env_spec.name, ", ".join(missing))),
                     filename=project_file.filename,
                     fix_prompt=("Add %s to env spec %s in %s?" %

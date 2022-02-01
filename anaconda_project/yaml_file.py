@@ -115,6 +115,8 @@ class YamlFile(object):
 
     """
 
+    pkg_key = "packages"        # Default: "packages" or "dependencies"
+
     # The dummy entry works around a bug/quirk in ruamel.yaml that drops the
     # top comment for an empty dictionary
     template = '# yaml file\n__dummy__: dummy'
@@ -136,6 +138,13 @@ class YamlFile(object):
         self._previous_content = ""
         self._change_count = 0
         self.load()
+
+        # Set `pkg_key` if we have one at the top level of the file, otherwise use
+        # default.  Could look into environments if not defined.  Could also raise error
+        # if both are defined?
+        for pkg_key in ['dependencies', 'packages']:
+            if self.get_value(pkg_key):
+                self.pkg_key = pkg_key
 
     def load(self):
         """Reload the file from disk, discarding any unsaved changes.
