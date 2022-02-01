@@ -31,7 +31,6 @@ from anaconda_project.requirements_registry.requirements.service import ServiceR
 from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
 from anaconda_project.project import (Project, ProjectProblem)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
-from anaconda_project.yaml_file import YamlFile
 from anaconda_project.project_lock_file import DEFAULT_PROJECT_LOCK_FILENAME
 from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
@@ -556,11 +555,11 @@ def test_complain_about_pip_deps_not_a_string(packages):
         "should be a list of pip package names" in project.problems[0]
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: f"""
-{packages}:
+        {DEFAULT_PROJECT_FILENAME: """
+packages:
     - pip:
-      - {{}}
-    """}, check)
+      - {}
+    """.replace('packages', packages)}, check)
 
 
 def test_complain_about_packages_bad_spec(packages):
@@ -619,6 +618,7 @@ variables:
         }, check_complain_about_conda_env_var)
 
 
+@pytest._change_default_pkg_key
 def test_load_environments(packages):
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
@@ -687,8 +687,8 @@ def test_load_environments(packages):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
-{packages}:
+            DEFAULT_PROJECT_FILENAME: """
+packages:
   - global1=1.0
   - global2=1.0
 channels:
@@ -697,15 +697,15 @@ channels:
 env_specs:
   foo:
     description: "THE FOO"
-    {packages}:
+    packages:
        - python
        - dog
        - cat
        - zebra
-  bar: {{}}
+  bar: {}
   foo_child:
     inherit_from: foo
-    {packages}:
+    packages:
        - dog=2.0
        - global1=2.0
        - lion
@@ -714,7 +714,7 @@ env_specs:
     channels:
        - abc
   mixin:
-    {packages}:
+    packages:
        - bunny
        - walrus=1.0
        - global2=2.0
@@ -724,14 +724,14 @@ env_specs:
        - hbo
   foo_grandchild:
     inherit_from: [foo_child, mixin]
-    {packages}:
+    packages:
        - walrus=2.0
        - dog=3.0
        - pip:
          - seahorse
     channels:
        - nbc
-    """
+    """.replace('packages', packages)
         }, check_environments)
 
 
@@ -756,8 +756,8 @@ def test_load_environments_merging_in_global(packages):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
-{packages}:
+            DEFAULT_PROJECT_FILENAME: """
+packages:
   - dead-parrot
   - elephant
 
@@ -766,20 +766,20 @@ channels:
 
 env_specs:
   foo:
-    {packages}:
+    packages:
        - python
        - dog
        - cat
        - zebra
     channels:
        - hbo
-  bar: {{}}
+  bar: {}
   default:
-    {packages}:
+    packages:
       - lion
     channels:
       - cartoons
-    """
+    """.replace('packages', packages)
         }, check_environments)
 
 
@@ -1749,8 +1749,16 @@ def test_invalid_skip_imports_notebooks(packages):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: ("commands:\n default:\n    unix: echo 'pass'\nservices:\n" +
-                                       f"  REDIS_URL: redis\n{packages}: ['notebook']\nskip_imports:\n  notebooks: {{}}\n")
+            DEFAULT_PROJECT_FILENAME: """
+commands:
+ default:
+    unix: echo 'pass'
+services:
+    REDIS_URL: redis
+packages: ['notebook']
+skip_imports:
+  notebooks: {}
+""".replace('packages', packages)
         }, check)
 
 
@@ -2311,10 +2319,8 @@ commands:
 """}, check_run_with_stuff_missing)
 
 
+@pytest._change_default_pkg_key
 def test_get_publication_info_from_empty_project(packages):
-    # This sets the default, testing both 'packages' and 'dependencies'.
-    old_pkg_key, YamlFile.pkg_key = YamlFile.pkg_key, packages
-
     def check_publication_info_from_empty(dirname):
         project = project_no_dedicated_env(dirname)
         expected = {
@@ -2344,8 +2350,6 @@ env_specs:
     description: "Default"
     """}, check_publication_info_from_empty)
 
-    YamlFile.pkg_key = old_pkg_key  # Reset default value.
-
 
 _complicated_project_contents = """
 name: foo bar
@@ -2369,7 +2373,7 @@ commands:
     notebook: foo.ipynb
     registers_fusion_function: true
 
-{packages}:
+packages:
   - foo
 
 channels:
@@ -2378,19 +2382,19 @@ channels:
 env_specs:
   default:
     description: "Default"
-    {packages}:
+    packages:
       - notebook
   woot:
-    {packages}:
+    packages:
       - blah
       - bokeh
     channels:
       - woohoo
   w00t:
     description: "double 0"
-    {packages}:
+    packages:
       - something
-  lol: {{}}
+  lol: {}
 
 downloads:
   FOO: https://example.com/blah
@@ -2399,7 +2403,7 @@ services:
   REDIS_URL: redis
 
 variables:
-  SOMETHING: {{}}
+  SOMETHING: {}
   SOMETHING_ELSE:
      default: 42
 """
@@ -2600,7 +2604,7 @@ def test_get_publication_info_from_complex_project(packages):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.format(packages=packages),
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.replace('packages', packages),
             "main.py": "",
             "foo.ipynb": ""
         }, check_publication_info_from_complex)
@@ -2635,7 +2639,7 @@ def test_find_requirements(packages):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.format(packages=packages),
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.replace('packages', packages),
             "main.py": "",
             "foo.ipynb": ""
         }, check_find_requirements)
@@ -2667,7 +2671,7 @@ def test_requirements_subsets(packages):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.format(packages=packages),
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.replace('packages', packages),
             "main.py": "",
             "foo.ipynb": ""
         }, check_requirements_subsets)
@@ -2693,7 +2697,7 @@ def test_env_var_name_list_properties(packages):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.format(packages=packages),
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.replace('packages', packages),
             "main.py": "",
             "foo.ipynb": ""
         }, check_env_var_name_list_properties)
@@ -2884,6 +2888,7 @@ channels:
         }, check)
 
 
+@pytest._change_default_pkg_key
 def test_no_auto_fix_env_spec_with_notebook_bokeh_injection(packages):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -3364,10 +3369,11 @@ env_specs:
 """}, check)
 
 
+@pytest._change_default_pkg_key
 def test_lock_file_non_dict_lock_set_packages(packages):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        expected_error = ("%s: 'packages:' section in env spec 'default' in lock file should be a dictionary, " +
+        expected_error = (f"%s: '{packages}:' section in env spec 'default' in lock file should be a dictionary, " +
                           "found %r") % (project.lock_file.basename, 42)
         assert [expected_error] == project.problems
 
@@ -3379,6 +3385,7 @@ env_specs:
 """}, check)
 
 
+@pytest._change_default_pkg_key
 def test_lock_file_has_pip_packages(packages):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -3402,6 +3409,7 @@ env_specs:
         }, check)
 
 
+@pytest._change_default_pkg_key
 def test_lock_file_has_invalid_packages(packages):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -3495,6 +3503,7 @@ env_specs:
         }, check)
 
 
+@pytest._change_default_pkg_key
 def test_lock_file_has_empty_and_wrong_package_lists(packages):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -3502,11 +3511,11 @@ def test_lock_file_has_empty_and_wrong_package_lists(packages):
         assert [] == project.problems
         # yapf: disable
         assert [
-            'anaconda-project-lock.yml: Lock file lists no packages for env spec '
+            f'anaconda-project-lock.yml: Lock file lists no {packages} for env spec '
             "'default' on platform linux-64",
-            'anaconda-project-lock.yml: Lock file is missing 1 packages for env spec '
+            f'anaconda-project-lock.yml: Lock file is missing 1 {packages} for env spec '
             'default on osx-64 (hello)',
-            'anaconda-project-lock.yml: Lock file lists no packages for env spec '
+            f'anaconda-project-lock.yml: Lock file lists no {packages} for env spec '
             "'default' on platform win-64"
         ] == project.suggestions
         # yapf: enable
@@ -3549,16 +3558,16 @@ env_specs:
       {packages}:
          - hello
 """,
-            DEFAULT_PROJECT_LOCK_FILENAME: f"""
+            DEFAULT_PROJECT_LOCK_FILENAME: """
 env_specs:
   default:
     platforms: [linux-64,osx-64,win-64]
-    {packages}:
+    packages:
       all: [hello]
   orphan:
     platforms: [linux-64,osx-64,win-64]
-    packages: {{}}
-"""
+    packages: {}
+""".replace('packages', packages)
         }, check)
 
 

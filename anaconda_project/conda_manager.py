@@ -394,7 +394,7 @@ class CondaLockSet(object):
                 packages_diff.extend(map(lambda x: x, diff))
 
         if packages_diff:
-            packages_diff = ['  packages:'] + packages_diff
+            packages_diff = [f'  {YamlFile.pkg_key}:'] + packages_diff
 
         if old is None:
             old_platforms = []

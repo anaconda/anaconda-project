@@ -802,6 +802,7 @@ def test_add_command_leaves_env_spec(packages):
         }, check_add_command)
 
 
+@pytest._change_default_pkg_key
 def test_add_command_generates_env_spec_suggestion(packages):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
@@ -823,7 +824,7 @@ def test_add_command_generates_env_spec_suggestion(packages):
 
         assert project.problems == []
         assert project.suggestions == [('%s: Command ' % project.project_file.basename) +
-                                       'bokeh_test uses env spec bar which does not have the packages: bokeh']
+                                       f'bokeh_test uses env spec bar which does not have the {packages}: bokeh']
 
         project.fix_problems_and_suggestions()
         project.project_file.save()
@@ -1746,6 +1747,7 @@ def test_add_env_spec_with_packages_and_channels():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
+@pytest._change_default_pkg_key
 def test_add_env_spec_extending_existing_lists(packages):
     def check(dirname):
         def attempt():
@@ -1772,6 +1774,7 @@ env_specs:
 """}, check)
 
 
+@pytest._change_default_pkg_key
 def test_add_env_spec_extending_existing_lists_with_versions(packages):
     def check(dirname):
         def attempt():
@@ -1818,6 +1821,7 @@ def test_add_env_spec_cannot_resolve_deps():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
+@pytest._change_default_pkg_key
 def test_remove_env_spec(packages):
     def check(dirname):
         def attempt():
@@ -1895,6 +1899,7 @@ env_specs:
     """}, check)
 
 
+@pytest._change_default_pkg_key
 def test_remove_env_spec_causes_problem(packages):
     def check(dirname):
         def attempt():
@@ -2083,8 +2088,8 @@ def test_remove_packages_from_all_environments(packages):
                 assert env_spec.lock_set.enabled
                 assert env_spec.lock_set.platforms == ()
 
-            assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('packages'))
-            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value(packages))
+            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', packages], []))
             status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo', 'bar'])
             assert [] == status.errors
             assert status
@@ -2093,8 +2098,8 @@ def test_remove_packages_from_all_environments(packages):
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert ['baz'] == list(project2.project_file.get_value('packages'))
-        assert ['woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
+        assert ['baz'] == list(project2.project_file.get_value(packages))
+        assert ['woot'] == list(project2.project_file.get_value(['env_specs', 'hello', packages]))
 
         for env_spec in project2.env_specs.values():
             assert env_spec.lock_set.enabled
@@ -2132,8 +2137,8 @@ def test_remove_conda_packages_from_global_with_pip_packages(packages):
                 assert env_spec.lock_set.enabled
                 assert env_spec.lock_set.platforms == ()
 
-            assert ['foo', 'bar', 'baz', OrderedDict([('pip', [])])] == list(project.project_file.get_value('packages'))
-            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            assert ['foo', 'bar', 'baz', OrderedDict([('pip', [])])] == list(project.project_file.get_value(packages))
+            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', packages], []))
             status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo', 'bar'])
             assert [] == status.errors
             assert status
@@ -2142,8 +2147,8 @@ def test_remove_conda_packages_from_global_with_pip_packages(packages):
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert ['baz', OrderedDict([('pip', [])])] == list(project2.project_file.get_value('packages'))
-        assert ['woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
+        assert ['baz', OrderedDict([('pip', [])])] == list(project2.project_file.get_value(packages))
+        assert ['woot'] == list(project2.project_file.get_value(['env_specs', 'hello', packages]))
 
         for env_spec in project2.env_specs.values():
             assert env_spec.lock_set.enabled
@@ -2182,9 +2187,9 @@ def test_remove_pip_packages_from_global(packages):
                 assert env_spec.lock_set.enabled
                 assert env_spec.lock_set.platforms == ()
 
-            assert ['foo', OrderedDict([('pip', ['bar', 'baz'])])] == list(project.project_file.get_value('packages'))
+            assert ['foo', OrderedDict([('pip', ['bar', 'baz'])])] == list(project.project_file.get_value(packages))
             assert ['foo', OrderedDict([('pip', ['bar', 'woot'])])
-                    ] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+                    ] == list(project.project_file.get_value(['env_specs', 'hello', packages], []))
             status = project_ops.remove_packages(project, env_spec_name=None, packages=['bar'], pip=True)
             assert [] == status.errors
             assert status
@@ -2193,9 +2198,9 @@ def test_remove_pip_packages_from_global(packages):
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert ['foo', OrderedDict([('pip', ['baz'])])] == list(project2.project_file.get_value('packages'))
+        assert ['foo', OrderedDict([('pip', ['baz'])])] == list(project2.project_file.get_value(packages))
         assert ['foo', OrderedDict([('pip', ['woot'])])
-                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', packages]))
 
         for env_spec in project2.env_specs.values():
             assert env_spec.lock_set.enabled
@@ -2233,7 +2238,7 @@ def test_remove_pip_packages_from_one_environment(packages):
                 assert env_spec.lock_set.platforms == ()
 
             assert ['qbert', OrderedDict([('pip', ['pbert', 'foo',
-                                                   'bar'])])] == list(project.project_file.get_value('packages'))
+                                                   'bar'])])] == list(project.project_file.get_value(packages))
             status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'], pip=True)
             assert status
             assert [] == status.errors
@@ -2244,9 +2249,9 @@ def test_remove_pip_packages_from_one_environment(packages):
         project2 = Project(dirname)
         # note that hello will still inherit the deps from the global packages,
         # and that's fine
-        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value('packages'))
+        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value(packages))
         assert [OrderedDict([('pip', [])])
-                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', packages], []))
 
         # be sure we didn't delete comments from global packages section
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
@@ -2291,7 +2296,7 @@ def test_remove_pip_packages_from_one_environment_with_pkgs(packages):
                 assert env_spec.lock_set.platforms == ()
 
             assert ['qbert', OrderedDict([('pip', ['pbert', 'foo',
-                                                   'bar'])])] == list(project.project_file.get_value('packages'))
+                                                   'bar'])])] == list(project.project_file.get_value(packages))
             status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'], pip=True)
             assert status
             assert [] == status.errors
@@ -2302,9 +2307,9 @@ def test_remove_pip_packages_from_one_environment_with_pkgs(packages):
         project2 = Project(dirname)
         # note that hello will still inherit the deps from the global packages,
         # and that's fine
-        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value('packages'))
+        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value(packages))
         assert ['qbert', OrderedDict([('pip', [])])
-                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', packages], []))
 
         # be sure we didn't delete comments from global packages section
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
@@ -2348,7 +2353,7 @@ def test_remove_pip_packages_from_one_environment_empty_pkgs(packages):
                 assert env_spec.lock_set.platforms == ()
 
             assert ['qbert', OrderedDict([('pip', ['pbert', 'foo',
-                                                   'bar'])])] == list(project.project_file.get_value('packages'))
+                                                   'bar'])])] == list(project.project_file.get_value(packages))
             status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'], pip=True)
             assert status
             assert [] == status.errors
@@ -2359,9 +2364,9 @@ def test_remove_pip_packages_from_one_environment_empty_pkgs(packages):
         project2 = Project(dirname)
         # note that hello will still inherit the deps from the global packages,
         # and that's fine
-        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value('packages'))
+        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value(packages))
         assert [OrderedDict([('pip', [])])
-                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', packages], []))
 
         # be sure we didn't delete comments from global packages section
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
@@ -2403,8 +2408,8 @@ def test_remove_packages_from_one_environment(packages):
                 assert env_spec.lock_set.enabled
                 assert env_spec.lock_set.platforms == ()
 
-            assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('packages'))
-            assert ['foo'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value(packages))
+            assert ['foo'] == list(project.project_file.get_value(['env_specs', 'hello', packages], []))
             status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'])
             assert status
             assert [] == status.errors
@@ -2415,8 +2420,8 @@ def test_remove_packages_from_one_environment(packages):
         project2 = Project(dirname)
         # note that hello will still inherit the deps from the global packages,
         # and that's fine
-        assert ['qbert'] == list(project2.project_file.get_value('packages'))
-        assert [] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+        assert ['qbert'] == list(project2.project_file.get_value(packages))
+        assert [] == list(project2.project_file.get_value(['env_specs', 'hello', packages], []))
 
         # be sure we didn't delete comments from global packages section
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
@@ -2452,8 +2457,8 @@ def test_remove_packages_from_one_environment_leaving_others_unaffected(packages
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value('packages'))
-            assert ['foo'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            assert ['qbert', 'foo', 'bar'] == list(project.project_file.get_value(packages))
+            assert ['foo'] == list(project.project_file.get_value(['env_specs', 'hello', packages], []))
             status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'])
             assert status
             assert [] == status.errors
@@ -2462,10 +2467,10 @@ def test_remove_packages_from_one_environment_leaving_others_unaffected(packages
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert ['qbert'] == list(project2.project_file.get_value('packages'))
-        assert [] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+        assert ['qbert'] == list(project2.project_file.get_value(packages))
+        assert [] == list(project2.project_file.get_value(['env_specs', 'hello', packages], []))
         assert set(['baz', 'foo',
-                    'bar']) == set(project2.project_file.get_value(['env_specs', 'another', 'packages'], []))
+                    'bar']) == set(project2.project_file.get_value(['env_specs', 'another', packages], []))
         assert project2.env_specs['another'].conda_package_names_set == set(['qbert', 'foo', 'bar', 'baz'])
         assert project2.env_specs['hello'].conda_package_names_set == set(['qbert'])
 
@@ -2498,7 +2503,7 @@ def test_remove_pip_packages_from_one_environment_leaving_others_unaffected(pack
         def attempt():
             project = Project(dirname)
             assert ['qbert', OrderedDict([('pip', ['pbert', 'foo',
-                                                   'bar'])])] == list(project.project_file.get_value('packages'))
+                                                   'bar'])])] == list(project.project_file.get_value(packages))
             status = project_ops.remove_packages(project, env_spec_name='hello', packages=['foo', 'bar'], pip=True)
             assert status
             assert [] == status.errors
@@ -2507,11 +2512,11 @@ def test_remove_pip_packages_from_one_environment_leaving_others_unaffected(pack
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value('packages'))
+        assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value(packages))
         assert [OrderedDict([('pip', [])])
-                ] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+                ] == list(project2.project_file.get_value(['env_specs', 'hello', packages], []))
         assert set(['baz', 'foo',
-                    'bar']) == set(project2.project_file.get_value(['env_specs', 'another', 'packages'], [])[0]['pip'])
+                    'bar']) == set(project2.project_file.get_value(['env_specs', 'another', packages], [])[0]['pip'])
         assert project2.env_specs['another'].pip_package_names_set == set(['foo', 'bar', 'baz', 'pbert'])
         assert project2.env_specs['hello'].pip_package_names_set == set(['pbert'])
 
@@ -2552,8 +2557,8 @@ def test_remove_packages_cannot_resolve_deps(packages):
                 assert env_spec.lock_set.enabled
                 assert env_spec.lock_set.platforms == ()
 
-            assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value('packages'))
-            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', 'packages'], []))
+            assert ['foo', 'bar', 'baz'] == list(project.project_file.get_value(packages))
+            assert ['foo', 'woot'] == list(project.project_file.get_value(['env_specs', 'hello', packages], []))
             status = project_ops.remove_packages(project, env_spec_name=None, packages=['foo', 'bar'])
             assert status.status_description == "Error resolving dependencies for hello: NOPE."
             assert status.errors == []
@@ -2564,8 +2569,8 @@ def test_remove_packages_cannot_resolve_deps(packages):
 
         # be sure we didn't make the config changes
         project2 = Project(dirname)
-        assert ['foo', 'bar', 'baz'] == list(project2.project_file.get_value('packages'))
-        assert ['foo', 'woot'] == list(project2.project_file.get_value(['env_specs', 'hello', 'packages']))
+        assert ['foo', 'bar', 'baz'] == list(project2.project_file.get_value(packages))
+        assert ['foo', 'woot'] == list(project2.project_file.get_value(['env_specs', 'hello', packages]))
 
         for env_spec in project2.env_specs.values():
             assert env_spec.lock_set.enabled
@@ -2592,7 +2597,7 @@ def test_remove_packages_from_nonexistent_environment(packages):
     def check(dirname):
         def attempt():
             project = Project(dirname)
-            assert ['foo', 'bar'] == list(project.project_file.get_value('packages'))
+            assert ['foo', 'bar'] == list(project.project_file.get_value(packages))
             status = project_ops.remove_packages(project, env_spec_name='not_an_environment', packages=['foo', 'bar'])
             assert not status
             assert [] == status.errors
@@ -2602,7 +2607,7 @@ def test_remove_packages_from_nonexistent_environment(packages):
 
         # be sure we didn't make the config changes
         project2 = Project(dirname)
-        assert ['foo', 'bar'] == list(project2.project_file.get_value('packages'))
+        assert ['foo', 'bar'] == list(project2.project_file.get_value(packages))
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: f"""
 {packages}:
@@ -2941,6 +2946,7 @@ def test_unlock_broken_project():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
 
 
+@pytest._change_default_pkg_key
 def test_lock_and_update_and_unlock_all_envs(packages):
     def check(dirname):
         resolve_results = {'all': ['a=1.0=1'], 'pip': ['cc==1.0']}
@@ -2950,7 +2956,6 @@ def test_lock_and_update_and_unlock_all_envs(packages):
             assert not os.path.isfile(filename)
 
             project = Project(dirname, frontend=FakeFrontend())
-
             assert project.env_specs['foo'].platforms == ()
             assert project.env_specs['bar'].platforms == ()
 
@@ -3079,6 +3084,7 @@ env_specs:
         }, check)
 
 
+@pytest._change_default_pkg_key
 def test_lock_and_unlock_single_env(mocked_hash, packages):
     def check(dirname):
         def attempt():
@@ -3198,6 +3204,7 @@ env_specs:
         }, check)
 
 
+@pytest._change_default_pkg_key
 def test_locking_with_missing_lock_set_does_an_update(packages):
     def check(dirname):
         def attempt():
@@ -3260,6 +3267,7 @@ locking_enabled: true
         }, check)
 
 
+@pytest._change_default_pkg_key
 def test_update_changes_only_the_hash(packages):
     def check(dirname):
         def attempt():
@@ -3484,6 +3492,7 @@ env_specs:
         }, check)
 
 
+@pytest._change_default_pkg_key
 def test_update_empty_lock_sets(packages):
     def check(dirname):
         resolve_results = {'all': ['a=1.0=1']}

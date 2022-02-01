@@ -19,7 +19,7 @@ import anaconda_project.internal.pip_api as pip_api
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project import conda_manager
 
-from anaconda_project.yaml_file import _load_string, _save_file, _YAMLError, ryaml
+from anaconda_project.yaml_file import _load_string, _save_file, _YAMLError, ryaml, YamlFile
 
 
 class EnvSpec(object):
@@ -392,6 +392,8 @@ class EnvSpec(object):
 
     def to_json(self):
         """Get JSON for an anaconda-project.yml env spec section."""
+        pkg_key = YamlFile.pkg_key
+
         # Note that we use _conda_packages (only the packages we
         # introduce ourselves) rather than conda_packages
         # (includes inherited packages).
@@ -406,14 +408,19 @@ class EnvSpec(object):
         # have ordering... OrderedDict doesn't work because the
         # yaml saver saves them as some "!!omap" nonsense. Other
         # than ordering, the formatting isn't even preserved here.
-        template_json = ryaml.load("something:\n    description: null\n" + "    packages: []\n" + "    channels: []\n",
+        template_json = ryaml.load("""
+something:
+    description: null
+    packages: []
+    channels: []
+""".replace('packages', pkg_key),
                                    Loader=ryaml.RoundTripLoader)
 
         if self._description is not None:
             template_json['something']['description'] = self._description
         else:
             del template_json['something']['description']
-        template_json['something']['packages'] = packages
+        template_json['something'][pkg_key] = packages
         template_json['something']['channels'] = channels
 
         # usually "platforms" will be global so don't clutter

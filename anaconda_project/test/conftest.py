@@ -1,4 +1,7 @@
+import functools
+
 import pytest
+
 
 @pytest.fixture(params=["packages", "dependencies"])
 def packages(request):
@@ -6,3 +9,17 @@ def packages(request):
     yield request.param
 
 
+def _change_default_pkg_key(test_function):
+    from anaconda_project.yaml_file import YamlFile
+
+    @functools.wraps(test_function)
+    def wrapper(*v, **kw):
+        old_pkg_key, YamlFile.pkg_key = YamlFile.pkg_key, kw['packages']
+        try:
+            return test_function(*v, **kw)
+        finally:
+            YamlFile.pkg_key = old_pkg_key
+    return wrapper
+
+
+pytest._change_default_pkg_key = _change_default_pkg_key
