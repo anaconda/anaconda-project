@@ -841,7 +841,8 @@ class _ConfigCache(object):
                 prompt = "Overwrite env spec %s with the changes from %s?" % (importable_spec.name, importable_filename)
 
             def overwrite_env_spec_from_importable(project):
-                project.project_file.set_value(['env_specs', importable_spec.name], importable_spec.to_json())
+                project.project_file.set_value(['env_specs', importable_spec.name],
+                                               importable_spec.to_json(pkg_key=project.pkg_key))
 
             def remember_no_import_importable(project):
                 project.project_file.set_value(['skip_imports', 'environment'], importable_spec.logical_hash)
@@ -862,7 +863,8 @@ class _ConfigCache(object):
             # import, above.
             def add_default_env_spec(project):
                 default_spec = _anaconda_default_env_spec(self.global_base_env_spec)
-                project.project_file.set_value(['env_specs', default_spec.name], default_spec.to_json())
+                project.project_file.set_value(['env_specs', default_spec.name],
+                                               default_spec.to_json(pkg_key=project.pkg_key))
 
             # This section should now be inaccessible
             # since env_spec will be added at runtime if missing
@@ -1202,6 +1204,10 @@ class Project(object):
         assert isinstance(frontend, Frontend)
         self._frontends = [frontend]
 
+    @property
+    def pkg_key(self):
+        return self.project_file.pkg_key
+    
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._lock_file)
         return self._config_cache

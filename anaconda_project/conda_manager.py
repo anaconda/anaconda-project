@@ -442,7 +442,7 @@ class CondaLockSet(object):
         """Whether we have locked deps for the current platform."""
         return self.enabled and conda_api.current_platform() in self.platforms
 
-    def to_json(self):
+    def to_json(self, pkg_key=YamlFile.pkg_key):
         """JSON/YAML version of the lock set."""
         yaml_dict = _CommentedMap()
 
@@ -462,7 +462,7 @@ class CondaLockSet(object):
             for package in self._package_specs_by_platform[platform]:
                 packages.append(package)
             packages_dict[platform] = packages
-        yaml_dict[YamlFile.pkg_key] = packages_dict
+        yaml_dict[pkg_key] = packages_dict
 
         _block_style_all_nodes(yaml_dict)
         return yaml_dict

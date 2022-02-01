@@ -139,12 +139,10 @@ class YamlFile(object):
         self._change_count = 0
         self.load()
 
-        # Set `pkg_key` if we have one at the top level of the file, otherwise use
-        # default.  Could look into environments if not defined.  Could also raise error
-        # if both are defined?
-        for pkg_key in ['dependencies', 'packages']:
-            if self.get_value(pkg_key):
-                self.pkg_key = pkg_key
+        pkg_key = self._get_pkg_key()
+        if pkg_key:
+            # Only set if defined, otherwise fallback to the class default.
+            self.pkg_key = pkg_key
 
     def load(self):
         """Reload the file from disk, discarding any unsaved changes.
@@ -206,6 +204,30 @@ class YamlFile(object):
                 if not self._save_default_content():
                     # pretend we already saved
                     self._previous_content = _dump_string(self._yaml)
+
+    def _get_pkg_key(self):
+        """Return the `pkg_key` ('dependencies' or 'packages') for the file.
+
+        We search for an appropriately named key at the top level, or in the
+        `env_specs`.  Return `None` if none specified.
+        """
+        pkg_key = None
+        try:
+            for _pkg_key in ['dependencies', 'packages']:
+                if self.get_value(_pkg_key):
+                    assert not pkg_key or pkg_key == _pkg_key
+                    pkg_key = _pkg_key
+            env_specs = self.get_value('env_specs')
+            if env_specs:
+                for _spec in env_specs:
+                    for _pkg_key in ['dependencies', 'packages']:
+                        if _pkg_key in env_specs[_spec]:
+                            assert not pkg_key or pkg_key == _pkg_key
+                            pkg_key = _pkg_key
+        except Exception:
+            # Don't do error checking here...
+            pass
+        return pkg_key
 
     def _load_template(self):
         # ruamel.yaml returns None if you load an empty file,

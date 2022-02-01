@@ -250,7 +250,7 @@ def test_find_out_of_sync_does_not_exist():
     assert name is None
 
 
-def test_to_json():
+def test_to_json(pkg_key):
     # the stuff from this parent env spec should NOT end up in the JSON
     hi = EnvSpec(name="hi",
                  conda_packages=['q', 'r'],
@@ -265,19 +265,19 @@ def test_to_json():
                    channels=['x', 'y'],
                    inherit_from_names=('hi', ),
                    inherit_from=(hi, ))
-    json = spec.to_json()
+    json = spec.to_json(pkg_key=pkg_key)
 
     assert {
         'description': "The Foo Spec",
         'channels': ['x', 'y'],
         'inherit_from': 'hi',
-        'packages': ['a', 'b', {
+        pkg_key: ['a', 'b', {
             'pip': ['c', 'd']
         }]
     } == json
 
 
-def test_to_json_no_description_no_pip_no_inherit():
+def test_to_json_no_description_no_pip_no_inherit(pkg_key):
     # should be able to jsonify a spec with no description
     spec = EnvSpec(name="foo",
                    conda_packages=['a', 'b'],
@@ -285,23 +285,23 @@ def test_to_json_no_description_no_pip_no_inherit():
                    channels=['x', 'y'],
                    inherit_from_names=(),
                    inherit_from=())
-    json = spec.to_json()
+    json = spec.to_json(pkg_key=pkg_key)
 
-    assert {'channels': ['x', 'y'], 'packages': ['a', 'b']} == json
+    assert {'channels': ['x', 'y'], pkg_key: ['a', 'b']} == json
 
 
-def test_to_json_multiple_inheritance():
+def test_to_json_multiple_inheritance(pkg_key):
     spec = EnvSpec(name="foo",
                    conda_packages=['a', 'b'],
                    pip_packages=['c', 'd'],
                    channels=['x', 'y'],
                    inherit_from_names=('hi', 'hello'))
-    json = spec.to_json()
+    json = spec.to_json(pkg_key=pkg_key)
 
     assert {
         'channels': ['x', 'y'],
         'inherit_from': ['hi', 'hello'],
-        'packages': ['a', 'b', {
+        pkg_key: ['a', 'b', {
             'pip': ['c', 'd']
         }]
     } == json

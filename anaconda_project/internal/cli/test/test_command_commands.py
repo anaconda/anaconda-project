@@ -193,7 +193,7 @@ def test_add_command_ask_type_twice(monkeypatch, capsys):
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ''}, check_ask_type)
 
 
-def test_add_command_specifying_notebook(monkeypatch, capsys):
+def test_add_command_specifying_notebook(monkeypatch, capsys, pkg_key):
     def check_specifying_notebook(dirname):
         args = Args('notebook', 'test', 'file.ipynb', directory=dirname)
         res = main(args)
@@ -206,11 +206,11 @@ def test_add_command_specifying_notebook(monkeypatch, capsys):
         assert command['env_spec'] == 'default'
         assert len(command.keys()) == 2
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n'},
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: f'{pkg_key}:\n - notebook\n'},
                                                     check_specifying_notebook)
 
 
-def test_add_command_guessing_notebook(monkeypatch, capsys):
+def test_add_command_guessing_notebook(monkeypatch, capsys, pkg_key):
     def check_guessing_notebook(dirname):
         args = Args(None, 'test', 'file.ipynb', directory=dirname)
         res = main(args)
@@ -225,7 +225,7 @@ def test_add_command_guessing_notebook(monkeypatch, capsys):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: 'packages:\n - notebook\n',
+            DEFAULT_PROJECT_FILENAME: f'{pkg_key}:\n - notebook\n',
             'file.ipynb': "{}"
         }, check_guessing_notebook)
 
@@ -332,7 +332,7 @@ def test_remove_command_with_project_file_problems(capsys, monkeypatch):
                                           append_dir=True)
 
 
-def test_remove_command(monkeypatch, capsys):
+def test_remove_command(monkeypatch, capsys, pkg_key):
     def check(dirname):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'remove-command', 'test', '--directory', dirname])
         assert code == 0
@@ -347,7 +347,7 @@ def test_remove_command(monkeypatch, capsys):
         assert err == ''
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: 'packages: ["notebook"]\ncommands:\n  test:\n    notebook: file.ipynb\n'}, check)
+        {DEFAULT_PROJECT_FILENAME: f'{pkg_key}: ["notebook"]\ncommands:\n  test:\n    notebook: file.ipynb\n'}, check)
 
 
 def test_remove_command_missing(monkeypatch, capsys):
@@ -378,7 +378,7 @@ def test_list_commands_empty_project(capsys):
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_empty_project)
 
 
-def test_list_commands(capsys):
+def test_list_commands(capsys, pkg_key):
     def check_empty_project(dirname):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--directory', dirname])
         assert code == 0
@@ -404,13 +404,13 @@ run_notebook  Notebook test.ipynb
                                        "    bokeh_app: test.py\n"
                                        "  run_notebook:\n"
                                        "    notebook: test.ipynb\n"
-                                       "packages:\n"
+                                       f"{pkg_key}:\n"
                                        " - bokeh\n"
                                        " - notebook\n")
         }, check_empty_project)
 
 
-def test_list_default_command(capsys):
+def test_list_default_command(capsys, pkg_key):
     def check_empty_project(dirname):
         code = _parse_args_and_run_subcommand(['anaconda-project', 'list-default-command', '--directory', dirname])
         assert code == 0
@@ -426,7 +426,7 @@ def test_list_default_command(capsys):
                                        "    bokeh_app: test.py\n"
                                        "  0second:\n"
                                        "    notebook: test.ipynb\n"
-                                       "packages:\n"
+                                       f"{pkg_key}:\n"
                                        " - bokeh\n"
                                        " - notebook\n")
         }, check_empty_project)

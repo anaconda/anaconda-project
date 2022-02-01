@@ -390,10 +390,8 @@ class EnvSpec(object):
 
         return True
 
-    def to_json(self):
+    def to_json(self, pkg_key=YamlFile.pkg_key):
         """Get JSON for an anaconda-project.yml env spec section."""
-        pkg_key = YamlFile.pkg_key
-
         # Note that we use _conda_packages (only the packages we
         # introduce ourselves) rather than conda_packages
         # (includes inherited packages).
@@ -411,9 +409,9 @@ class EnvSpec(object):
         template_json = ryaml.load("""
 something:
     description: null
-    packages: []
+    <pkg_key>: []
     channels: []
-""".replace('packages', pkg_key),
+""".replace('<pkg_key>', pkg_key),
                                    Loader=ryaml.RoundTripLoader)
 
         if self._description is not None:

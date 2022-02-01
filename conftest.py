@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.fixture(params=["packages", "dependencies"])
-def packages(request):
+def pkg_key(request):
     """Ensure equivalence between `dependencies` and `packages`"""
     yield request.param
 
@@ -14,7 +14,7 @@ def _change_default_pkg_key(test_function):
 
     @functools.wraps(test_function)
     def wrapper(*v, **kw):
-        old_pkg_key, YamlFile.pkg_key = YamlFile.pkg_key, kw['packages']
+        old_pkg_key, YamlFile.pkg_key = YamlFile.pkg_key, kw['pkg_key']
         try:
             return test_function(*v, **kw)
         finally:

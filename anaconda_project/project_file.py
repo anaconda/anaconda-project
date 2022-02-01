@@ -92,7 +92,7 @@ downloads: {}
 # before your code runs.
 # Use `anaconda-project add-packages` to add packages.
 #
-packages: []
+<pkg_key>: []
 
 #
 # In the channels section, list any Conda channel URLs to be searched
@@ -119,7 +119,7 @@ platforms: []
 # Use `anaconda-project add-env-spec` to add environment specs.
 #
 env_specs: {}
-'''
+'''.replace('<pkg_key>', YamlFile.pkg_key)
 
     @classmethod
     def load_for_directory(cls, directory, default_env_specs_func=_empty_default_env_spec, scan_parents=True):
@@ -190,7 +190,7 @@ env_specs: {}
         default_env_specs = self._default_env_specs_func()
         assert default_env_specs is not None
         for env_spec in default_env_specs:
-            as_json['env_specs'][env_spec.name] = env_spec.to_json()
+            as_json['env_specs'][env_spec.name] = env_spec.to_json(pkg_key=self.pkg_key)
 
         if len(default_env_specs) == 1:
             # if there's only one env spec, keep it for name/description
@@ -204,8 +204,8 @@ env_specs: {}
                 dest.extend(src)
                 del src[:]
 
-            if 'packages' in spec_json:
-                move_list_elements(spec_json['packages'], as_json['packages'])
+            if self.pkg_key in spec_json:
+                move_list_elements(spec_json[self.pkg_key], as_json[self.pkg_key])
             if 'channels' in spec_json:
                 move_list_elements(spec_json['channels'], as_json['channels'])
             if 'platforms' in spec_json:
