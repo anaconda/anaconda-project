@@ -31,6 +31,7 @@ from anaconda_project.requirements_registry.requirements.service import ServiceR
 from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
 from anaconda_project.project import (Project, ProjectProblem)
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.yaml_file import YamlFile
 from anaconda_project.project_lock_file import DEFAULT_PROJECT_LOCK_FILENAME
 from anaconda_project.test.environ_utils import minimal_environ
 from anaconda_project.test.project_utils import project_no_dedicated_env
@@ -2311,6 +2312,9 @@ commands:
 
 
 def test_get_publication_info_from_empty_project(packages):
+    # This sets the default, testing both 'packages' and 'dependencies'.
+    old_pkg_key, YamlFile.pkg_key = YamlFile.pkg_key, packages
+
     def check_publication_info_from_empty(dirname):
         project = project_no_dedicated_env(dirname)
         expected = {
@@ -2322,7 +2326,7 @@ def test_get_publication_info_from_empty_project(packages):
             'env_specs': {
                 'default': {
                     'channels': [],
-                    f'{packages}': [],
+                    packages: [],
                     'description': 'Default',
                     'locked': False,
                     'platforms': [],
@@ -2339,6 +2343,8 @@ env_specs:
   default:
     description: "Default"
     """}, check_publication_info_from_empty)
+
+    YamlFile.pkg_key = old_pkg_key  # Reset default value.
 
 
 _complicated_project_contents = """
@@ -2480,7 +2486,7 @@ def test_get_publication_info_from_complex_project(packages):
                 },
                 'lol': {
                     'channels': ['bar'],
-                    f'{packages}': ['foo'],
+                    packages: ['foo'],
                     'description': 'lol',
                     'locked': False,
                     'platforms': ['linux-64', 'osx-64', 'win-64'],
@@ -2516,7 +2522,7 @@ def test_get_publication_info_from_complex_project(packages):
                 },
                 'w00t': {
                     'channels': ['bar'],
-                    f'{packages}': ['foo', 'something'],
+                    packages: ['foo', 'something'],
                     'description': 'double 0',
                     'locked': False,
                     'platforms': ['linux-64', 'osx-64', 'win-64'],
@@ -2552,7 +2558,7 @@ def test_get_publication_info_from_complex_project(packages):
                 },
                 'woot': {
                     'channels': ['bar', 'woohoo'],
-                    f'{packages}': ['foo', 'blah', 'bokeh'],
+                    packages: ['foo', 'blah', 'bokeh'],
                     'description': 'woot',
                     'locked': False,
                     'platforms': ['linux-64', 'osx-64', 'win-64'],
