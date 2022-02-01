@@ -12,7 +12,7 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 import difflib
 
-from anaconda_project.yaml_file import (_CommentedMap, _CommentedSeq, _block_style_all_nodes)
+from anaconda_project.yaml_file import (_CommentedMap, _CommentedSeq, _block_style_all_nodes, YamlFile)
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal import conda_api
 from anaconda_project.internal import pip_api
@@ -462,7 +462,7 @@ class CondaLockSet(object):
             for package in self._package_specs_by_platform[platform]:
                 packages.append(package)
             packages_dict[platform] = packages
-        yaml_dict['packages'] = packages_dict
+        yaml_dict[YamlFile.pkg_key] = packages_dict
 
         _block_style_all_nodes(yaml_dict)
         return yaml_dict
