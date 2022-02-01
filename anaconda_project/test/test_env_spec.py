@@ -298,13 +298,7 @@ def test_to_json_multiple_inheritance(pkg_key):
                    inherit_from_names=('hi', 'hello'))
     json = spec.to_json(pkg_key=pkg_key)
 
-    assert {
-        'channels': ['x', 'y'],
-        'inherit_from': ['hi', 'hello'],
-        pkg_key: ['a', 'b', {
-            'pip': ['c', 'd']
-        }]
-    } == json
+    assert {'channels': ['x', 'y'], 'inherit_from': ['hi', 'hello'], pkg_key: ['a', 'b', {'pip': ['c', 'd']}]} == json
 
 
 def test_diff_from():

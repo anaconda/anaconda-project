@@ -115,7 +115,7 @@ class YamlFile(object):
 
     """
 
-    pkg_key = "packages"        # Default: "packages" or "dependencies"
+    pkg_key = "packages"  # Default: "packages" or "dependencies"
 
     # The dummy entry works around a bug/quirk in ruamel.yaml that drops the
     # top comment for an empty dictionary

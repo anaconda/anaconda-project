@@ -209,7 +209,8 @@ def test_requirement_inheritance():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 variables:
   FOO: { default: "global" }
 downloads:
@@ -256,7 +257,8 @@ def test_problem_empty_names(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 variables:
   ' ': 'thing'
 downloads:
@@ -498,7 +500,8 @@ def test_get_package_requirements_from_project_file(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 {pkg_key}:
   - foo
   - hello >= 1.0
@@ -687,7 +690,8 @@ def test_load_environments(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 <pkg_key>:
   - global1=1.0
   - global2=1.0
@@ -756,7 +760,8 @@ def test_load_environments_merging_in_global(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 <pkg_key>:
   - dead-parrot
   - elephant
@@ -905,7 +910,8 @@ def test_complain_about_cycle_of_many_env_specs():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
    a:
       inherit_from: b
@@ -1246,7 +1252,8 @@ def test_command_with_many_problems_at_once():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 commands:
   default:
      unix: bar
@@ -1749,7 +1756,8 @@ def test_invalid_skip_imports_notebooks(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 commands:
  default:
     unix: echo 'pass'
@@ -2828,7 +2836,8 @@ def test_auto_fix_env_spec_out_of_sync(pkg_key):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 name: foo
 env_specs: { 'stuff': { '<pkg_key>':[] } }
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
@@ -2869,12 +2878,14 @@ def test_auto_fix_env_spec_import_saying_no(pkg_key):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 name: foo
 env_specs: {'default':{'<pkg_key>':[]}}
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 """.lstrip().replace('<pkg_key>', pkg_key),
-            "environment.yml": """
+            "environment.yml":
+            """
 name: stuff
 dependencies:
  - a
@@ -2970,7 +2981,8 @@ def test_no_auto_fix_env_spec_with_notebook_bokeh_injection(pkg_key):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 name: foo
 env_specs: { 'stuff': { '<pkg_key>':[] } }
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
@@ -3156,7 +3168,8 @@ def test_unknown_field_in_lock_set_of_lock_file():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_LOCK_FILENAME: """
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            """
 env_specs:
   default:
      platforms: [linux-64,osx-64,win-64]
@@ -3236,7 +3249,8 @@ def test_load_weird_platform(pkg_key):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: foo
 platforms: [linux-64, weird-valid, weirdinvalid]
 env_specs:
@@ -3253,7 +3267,8 @@ def test_only_some_env_specs_have_platforms_locking_disabled(pkg_key):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: foo
 
 env_specs:
@@ -3396,7 +3411,8 @@ def test_lock_file_has_pip_packages(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_LOCK_FILENAME: f"""
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            f"""
 env_specs:
   default:
     platforms: [linux-64,osx-64,win-64]
@@ -3422,7 +3438,8 @@ def test_lock_file_has_invalid_packages(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_LOCK_FILENAME: f"""
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            f"""
 env_specs:
   default:
     {pkg_key}:
@@ -3448,7 +3465,8 @@ def test_lock_file_has_wrong_platforms(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_LOCK_FILENAME: f"""
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            f"""
 env_specs:
   default:
     platforms: ["win-64"]
@@ -3469,13 +3487,15 @@ def test_lock_file_has_zero_platforms(pkg_key):
         ] == project.suggestions
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_LOCK_FILENAME: f"""
+        {
+            DEFAULT_PROJECT_LOCK_FILENAME: f"""
 env_specs:
   default:
     platforms: []
     {pkg_key}:
       all: [foo]
-"""}, check)
+"""
+        }, check)
 
 
 def test_lock_file_has_wrong_hash(pkg_key):
@@ -3491,7 +3511,8 @@ def test_lock_file_has_wrong_hash(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_LOCK_FILENAME: f"""
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            f"""
 env_specs:
   default:
     env_spec_hash: wrong
@@ -3521,13 +3542,15 @@ def test_lock_file_has_empty_and_wrong_package_lists(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 env_specs:
    default:
       {pkg_key}:
          - hello
 """,
-            DEFAULT_PROJECT_LOCK_FILENAME: f"""
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            f"""
 env_specs:
   default:
     platforms: [linux-64,osx-64,win-64]
@@ -3551,13 +3574,15 @@ def test_lock_file_has_orphan_env_spec(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 env_specs:
    default:
       {pkg_key}:
          - hello
 """,
-            DEFAULT_PROJECT_LOCK_FILENAME: """
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            """
 env_specs:
   default:
     platforms: [linux-64,osx-64,win-64]

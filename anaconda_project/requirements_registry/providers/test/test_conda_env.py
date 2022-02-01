@@ -222,7 +222,8 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 <pkg_key>:
     - python=3.7
     - ipython
@@ -341,7 +342,8 @@ def test_configure_different_env_spec(monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   default:
     <pkg_key>: []
@@ -400,13 +402,16 @@ def test_clone_readonly_environment_with_deviations(monkeypatch, pkg_key):
             assert 'requests' in cloned
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 <pkg_key>:
   - python=3.7
   - requests
 env_specs:
   default: {}
-""".replace('<pkg_key>', pkg_key)}, clone_readonly_and_prepare)
+""".replace('<pkg_key>', pkg_key)
+        }, clone_readonly_and_prepare)
 
 
 @pytest.mark.slow
@@ -435,13 +440,16 @@ def test_replace_readonly_environment_with_deviations(monkeypatch, pkg_key):
             assert 'requests' in replaced
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 <pkg_key>:
   - python=3.7
   - requests
 env_specs:
   default: {}
-""".replace('<pkg_key>', pkg_key)}, replace_readonly_and_prepare)
+""".replace('<pkg_key>', pkg_key)
+        }, replace_readonly_and_prepare)
 
 
 @pytest.mark.slow
@@ -463,13 +471,16 @@ def test_fail_readonly_environment_with_deviations_unset_policy(monkeypatch, pkg
             assert '  Conda environment is missing packages: requests and the environment is read-only' in result.errors
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 <pkg_key>:
   - python=3.7
   - requests
 env_specs:
   default: {}
-""".replace('<pkg_key>', pkg_key)}, clone_readonly_and_prepare)
+""".replace('<pkg_key>', pkg_key)
+        }, clone_readonly_and_prepare)
 
 
 @pytest.mark.slow
@@ -493,10 +504,13 @@ def test_fail_readonly_environment_with_deviations_set_policy(monkeypatch, pkg_k
             assert '  Conda environment is missing packages: requests and the environment is read-only' in result.errors
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
+        {
+            DEFAULT_PROJECT_FILENAME:
+            """
 <pkg_key>:
   - python=3.7
   - requests
 env_specs:
   default: {}
-""".replace('<pkg_key>', pkg_key)}, clone_readonly_and_prepare)
+""".replace('<pkg_key>', pkg_key)
+        }, clone_readonly_and_prepare)
