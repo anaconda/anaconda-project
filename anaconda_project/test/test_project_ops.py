@@ -1850,7 +1850,8 @@ def test_remove_env_spec(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: foo
 env_specs:
   hello:
@@ -1860,7 +1861,8 @@ env_specs:
    {pkg_key}:
      - b
     """,
-            DEFAULT_PROJECT_LOCK_FILENAME: f"""
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            f"""
 locking_enabled: true
 env_specs:
   hello:
@@ -1930,7 +1932,8 @@ def test_remove_env_spec_causes_problem(pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: foo
 commands:
   default:
@@ -1944,7 +1947,8 @@ env_specs:
    {pkg_key}:
      - b
     """,
-            DEFAULT_PROJECT_LOCK_FILENAME: f"""
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            f"""
 locking_enabled: true
 env_specs:
   hello:
@@ -2253,8 +2257,8 @@ def test_remove_pip_packages_from_one_environment(pkg_key):
         # note that hello will still inherit the deps from the global packages,
         # and that's fine
         assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value(pkg_key))
-        assert [OrderedDict([('pip', [])])
-                ] == list(project2.project_file.get_value(['env_specs', 'hello', pkg_key], []))
+        assert [OrderedDict([('pip', [])])] == list(project2.project_file.get_value(['env_specs', 'hello', pkg_key],
+                                                                                    []))
 
         # be sure we didn't delete comments from global packages section
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
@@ -2311,8 +2315,9 @@ def test_remove_pip_packages_from_one_environment_with_pkgs(pkg_key):
         # note that hello will still inherit the deps from the global packages,
         # and that's fine
         assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value(pkg_key))
-        assert ['qbert', OrderedDict([('pip', [])])
-                ] == list(project2.project_file.get_value(['env_specs', 'hello', pkg_key], []))
+        assert ['qbert',
+                OrderedDict([('pip', [])])] == list(project2.project_file.get_value(['env_specs', 'hello', pkg_key],
+                                                                                    []))
 
         # be sure we didn't delete comments from global packages section
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
@@ -2368,8 +2373,8 @@ def test_remove_pip_packages_from_one_environment_empty_pkgs(pkg_key):
         # note that hello will still inherit the deps from the global packages,
         # and that's fine
         assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value(pkg_key))
-        assert [OrderedDict([('pip', [])])
-                ] == list(project2.project_file.get_value(['env_specs', 'hello', pkg_key], []))
+        assert [OrderedDict([('pip', [])])] == list(project2.project_file.get_value(['env_specs', 'hello', pkg_key],
+                                                                                    []))
 
         # be sure we didn't delete comments from global packages section
         content = codecs.open(project2.project_file.filename, 'r', 'utf-8').read()
@@ -2472,8 +2477,7 @@ def test_remove_packages_from_one_environment_leaving_others_unaffected(pkg_key)
         project2 = Project(dirname)
         assert ['qbert'] == list(project2.project_file.get_value(pkg_key))
         assert [] == list(project2.project_file.get_value(['env_specs', 'hello', pkg_key], []))
-        assert set(['baz', 'foo',
-                    'bar']) == set(project2.project_file.get_value(['env_specs', 'another', pkg_key], []))
+        assert set(['baz', 'foo', 'bar']) == set(project2.project_file.get_value(['env_specs', 'another', pkg_key], []))
         assert project2.env_specs['another'].conda_package_names_set == set(['qbert', 'foo', 'bar', 'baz'])
         assert project2.env_specs['hello'].conda_package_names_set == set(['qbert'])
 
@@ -2484,7 +2488,8 @@ def test_remove_packages_from_one_environment_leaving_others_unaffected(pkg_key)
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 {pkg_key}:
   - qbert
   - foo
@@ -2516,8 +2521,8 @@ def test_remove_pip_packages_from_one_environment_leaving_others_unaffected(pkg_
         # be sure we really made the config changes
         project2 = Project(dirname)
         assert ['qbert', OrderedDict([('pip', ['pbert'])])] == list(project2.project_file.get_value(pkg_key))
-        assert [OrderedDict([('pip', [])])
-                ] == list(project2.project_file.get_value(['env_specs', 'hello', pkg_key], []))
+        assert [OrderedDict([('pip', [])])] == list(project2.project_file.get_value(['env_specs', 'hello', pkg_key],
+                                                                                    []))
         assert set(['baz', 'foo',
                     'bar']) == set(project2.project_file.get_value(['env_specs', 'another', pkg_key], [])[0]['pip'])
         assert project2.env_specs['another'].pip_package_names_set == set(['foo', 'bar', 'baz', 'pbert'])
@@ -2530,7 +2535,8 @@ def test_remove_pip_packages_from_one_environment_leaving_others_unaffected(pkg_
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 {pkg_key}:
   - qbert
   - pip:
@@ -3070,7 +3076,8 @@ Added locked dependencies for env spec foo to anaconda-project-lock.yml.""".form
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: locktest
 env_specs:
   foo:
@@ -3193,7 +3200,8 @@ Added locked dependencies for env spec foo to anaconda-project-lock.yml.""".form
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: locktest
 env_specs:
   foo:
@@ -3301,7 +3309,8 @@ def test_update_changes_only_the_hash(pkg_key):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: locktest
 platforms: [linux-32,linux-64,osx-64,osx-arm64,win-32,win-64]
 env_specs:
@@ -3309,7 +3318,8 @@ env_specs:
     {pkg_key}:
       - a
 """,
-            DEFAULT_PROJECT_LOCK_FILENAME: f"""
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            f"""
 locking_enabled: true
 env_specs:
   foo:
@@ -3342,7 +3352,8 @@ def test_lock_conda_error(pkg_key):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
@@ -3374,7 +3385,8 @@ def test_lock_resolve_dependencies_error(monkeypatch, pkg_key):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
@@ -3416,7 +3428,8 @@ def test_unlock_conda_error(pkg_key):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
@@ -3427,7 +3440,8 @@ env_specs:
     {pkg_key}:
       - b
 """,
-            DEFAULT_PROJECT_LOCK_FILENAME: f"""
+            DEFAULT_PROJECT_LOCK_FILENAME:
+            f"""
 locking_enabled: true
 env_specs:
   foo:
@@ -3481,7 +3495,8 @@ def test_update_unlocked_envs(pkg_key):
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 name: locktest
 platforms: [linux-32,linux-64,osx-64,win-32,win-64]
 env_specs:
@@ -3686,7 +3701,8 @@ def test_add_service_with_env_spec(monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 env_specs:
     default:
       {pkg_key}: [python]
@@ -3857,7 +3873,8 @@ def test_remove_service_with_env_spec(monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: f"""
+            DEFAULT_PROJECT_FILENAME:
+            f"""
 env_specs:
     default:
       {pkg_key}: [python]

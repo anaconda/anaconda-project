@@ -192,7 +192,8 @@ def test_remove_env_spec_fails(capsys, monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     channels: []
@@ -203,7 +204,8 @@ env_specs:
     <pkg_key>:
     - bar
 """.replace('<pkg_key>', pkg_key),
-            'envs/foo/bin/test': 'code here'
+            'envs/foo/bin/test':
+            'code here'
         }, check)
 
 
@@ -221,7 +223,8 @@ def test_remove_env_spec(capsys, monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     channels: []
@@ -232,7 +235,8 @@ env_specs:
     <pkg_key>:
     - baz
 """.replace('<pkg_key>', pkg_key),
-            'envs/foo/bin/test': 'code here'
+            'envs/foo/bin/test':
+            'code here'
         }, check)
 
 
@@ -249,14 +253,16 @@ def test_remove_only_env_spec(capsys, monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     channels: []
     <pkg_key>:
     - bar
 """.replace('<pkg_key>', pkg_key),
-            'envs/foo/bin/test': 'code here'
+            'envs/foo/bin/test':
+            'code here'
         }, check)
 
 
@@ -274,7 +280,8 @@ def test_remove_env_spec_in_use(capsys, monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 commands:
   foo:
     unix: envs/foo/bin/test
@@ -288,7 +295,8 @@ env_specs:
       <pkg_key>:
         - boo
 """.replace('<pkg_key>', pkg_key),
-            'envs/foo/bin/test': 'code here'
+            'envs/foo/bin/test':
+            'code here'
         }, check)
 
 
@@ -316,7 +324,8 @@ def test_export_env_spec(capsys, monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     channels: []
@@ -327,7 +336,8 @@ env_specs:
     <pkg_key>:
     - baz
 """.replace('<pkg_key>', pkg_key),
-            'envs/foo/bin/test': 'code here'
+            'envs/foo/bin/test':
+            'code here'
         }, check)
 
 
@@ -345,7 +355,8 @@ def test_export_env_spec_default_name(capsys, monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     channels: []
@@ -356,7 +367,8 @@ env_specs:
     <pkg_key>:
     - baz
 """.replace('<pkg_key>', pkg_key),
-            'envs/foo/bin/test': 'code here'
+            'envs/foo/bin/test':
+            'code here'
         }, check)
 
 
@@ -373,7 +385,8 @@ def test_export_env_spec_no_filename(capsys, monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     channels: []
@@ -384,7 +397,8 @@ env_specs:
     <pkg_key>:
     - baz
 """.replace('<pkg_key>', pkg_key),
-            'envs/foo/bin/test': 'code here'
+            'envs/foo/bin/test':
+            'code here'
         }, check)
 
 
@@ -477,14 +491,12 @@ def test_add_pip_packages_to_specific_environment(capsys, monkeypatch):
         assert dict(env_spec_name='foo', packages=['a', 'b'], channels=None, pip=True) == params['kwargs']
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
    <pkg_key>:
      - bar
-"""
-        }, check)
+"""}, check)
 
 
 def test_remove_packages_from_all_environments(capsys, monkeypatch):
@@ -567,14 +579,12 @@ def test_add_platforms_to_specific_environment(capsys, monkeypatch, pkg_key):
         assert dict(env_spec_name='foo', platforms=['a', 'b']) == params['kwargs']
 
     with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME: """
+        {DEFAULT_PROJECT_FILENAME: """
 env_specs:
   foo:
    <pkg_key>:
      - bar
-""".replace('<pkg_key>', pkg_key)
-        }, check)
+""".replace('<pkg_key>', pkg_key)}, check)
 
 
 def test_remove_platforms_from_all_environments(capsys, monkeypatch):
@@ -632,7 +642,8 @@ foo
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     <pkg_key>:
@@ -724,15 +735,24 @@ env_specs:
 
 
 def test_list_packages_from_env(capsys, pkg_key):
-    _test_list_packages(capsys, 'bar', '\ndjango\nhttplib\nmandatory_package\n\n',
-                        '\nmandatory_pip_package\n\n', pkg_key=pkg_key)
-    _test_list_packages(capsys, 'foo', '\nflask\nmandatory_package\nrequests\n\n',
-                        '\nmandatory_pip_package\n\n', pkg_key=pkg_key)
+    _test_list_packages(capsys,
+                        'bar',
+                        '\ndjango\nhttplib\nmandatory_package\n\n',
+                        '\nmandatory_pip_package\n\n',
+                        pkg_key=pkg_key)
+    _test_list_packages(capsys,
+                        'foo',
+                        '\nflask\nmandatory_package\nrequests\n\n',
+                        '\nmandatory_pip_package\n\n',
+                        pkg_key=pkg_key)
 
 
 def test_list_packages_from_env_default(capsys, pkg_key):
-    _test_list_packages(capsys, None, '\nflask\nmandatory_package\nrequests\n\n',
-                        '\nmandatory_pip_package\n\n', pkg_key=pkg_key)
+    _test_list_packages(capsys,
+                        None,
+                        '\nflask\nmandatory_package\nrequests\n\n',
+                        '\nmandatory_pip_package\n\n',
+                        pkg_key=pkg_key)
 
 
 def test_list_packages_with_project_file_problems(capsys, monkeypatch):

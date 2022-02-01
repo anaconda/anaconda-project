@@ -566,7 +566,7 @@ class _ConfigCache(object):
     def _update_env_specs(self, problems, project_file, lock_file):
         # Should we check/set lock_file.pkg_key?
         pkg_key = project_file.pkg_key
-        
+
         def _parse_string_list(parent_dict, key, what):
             return self._parse_string_list(problems, project_file, parent_dict, key, what)
 
@@ -791,9 +791,9 @@ class _ConfigCache(object):
                                 lock_set_names.add(parsed.name)
                         unlocked_names = env_spec.conda_package_names_set - lock_set_names
                         if len(unlocked_names) > 0:
-                            text = (f"Lock file is missing %s {lock_file.pkg_key} for env spec %s on %s (%s)" %
-                                    (len(unlocked_names), env_spec.name, platform,
-                                     ",".join(sorted(list(unlocked_names)))))
+                            text = (
+                                f"Lock file is missing %s {lock_file.pkg_key} for env spec %s on %s (%s)" %
+                                (len(unlocked_names), env_spec.name, platform, ",".join(sorted(list(unlocked_names)))))
                             problems.append(
                                 ProjectProblem(text=text, filename=lock_file.filename, only_a_suggestion=True))
 
@@ -1206,8 +1206,9 @@ class Project(object):
 
     @property
     def pkg_key(self):
+        """Return the project `pkg_key` - 'packages' or 'dependencies'."""
         return self.project_file.pkg_key
-    
+
     def _updated_cache(self):
         self._config_cache.update(self._project_file, self._lock_file)
         return self._config_cache

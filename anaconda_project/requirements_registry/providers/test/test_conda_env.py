@@ -342,7 +342,8 @@ def test_configure_different_env_spec(monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   default:
     <pkg_key>: []

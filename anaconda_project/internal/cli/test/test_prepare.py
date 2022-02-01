@@ -116,7 +116,6 @@ services:
     assert "All ports from 6380 to 6449 were in use" in err
 
 
-#@pytest._change_default_pkg_key
 def test_prepare_command_choose_environment(capsys, monkeypatch, pkg_key):
     def mock_conda_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         from anaconda_project.internal.makedirs import makedirs_ok_if_exists
@@ -143,7 +142,8 @@ def test_prepare_command_choose_environment(capsys, monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     <pkg_key>:
@@ -188,7 +188,8 @@ def test_prepare_command_all_environments(capsys, monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     <pkg_key>:
@@ -237,7 +238,8 @@ def test_prepare_command_all_environments_refresh(capsys, monkeypatch, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     <pkg_key>:
@@ -282,7 +284,8 @@ def test_prepare_command_default_environment_refresh(capsys, monkeypatch, pkg_ke
         foo_package_json = os.path.join(default_envdir, "conda-meta", "nonexistent_foo-0.1-pyNN.json")
         assert os.path.isfile(foo_package_json)
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 <pkg_key>:
     - nonexistent_foo
 """.replace("<pkg_key>", pkg_key)}, check_prepare_choose_environment)
@@ -310,7 +313,8 @@ def test_prepare_command_choose_environment_does_not_exist(capsys, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     <pkg_key>:
@@ -344,7 +348,8 @@ def test_prepare_command_choose_command_chooses_env_spec(capsys, pkg_key):
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME:
+            """
 env_specs:
   foo:
     <pkg_key>:
@@ -656,7 +661,8 @@ Use `anaconda-project list-commands` to see what's available.
 """ == out
         assert '' == err
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
 <pkg_key>: []
 weird_field: 42
 """.replace("<pkg_key>", pkg_key)}, check)

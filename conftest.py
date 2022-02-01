@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# Copyright (c) 2017, Anaconda, Inc. All rights reserved.
+#
+# Licensed under the terms of the BSD 3-Clause License.
+# (See LICENSE.txt for details)
+# -----------------------------------------------------------------------------
 import functools
 
 import pytest
@@ -19,6 +26,7 @@ def _change_default_pkg_key(test_function):
             return test_function(*v, **kw)
         finally:
             YamlFile.pkg_key = old_pkg_key
+
     return wrapper
 
 
