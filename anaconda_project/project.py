@@ -1582,7 +1582,7 @@ class Project(object):
         json['commands'] = commands
         envs = dict()
         for key, env in self.env_specs.items():
-            envs[key] = dict(packages=list(env.conda_packages),
+            envs[key] = dict({self._project_file.pkg_key: list(env.conda_packages)},
                              channels=list(env.channels),
                              description=env.description,
                              locked=env.lock_set.enabled,
