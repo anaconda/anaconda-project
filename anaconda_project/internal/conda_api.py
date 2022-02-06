@@ -62,10 +62,6 @@ def _call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None
     if platform is not None:
         env = os.environ.copy()
         env['CONDA_SUBDIR'] = platform
-        if 'win' in platform:
-            env['CONDA_CHANNELS'] = 'defaults,msys2'
-        else:
-            env['CONDA_CHANNELS'] = 'defaults'
 
     try:
         (p, stdout_lines, stderr_lines) = streaming_popen.popen(cmd_list,
@@ -163,10 +159,13 @@ def create(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback
     if os.path.exists(prefix):
         raise CondaEnvExistsError('Conda environment [%s] already exists' % prefix)
 
-    cmd_list = ['create', '--yes', '--prefix', prefix]
+    cmd_list = ['create', '--override-channels', '--yes', '--prefix', prefix]
 
-    for channel in channels:
-        cmd_list.extend(['--channel', channel])
+    if channels:
+        for channel in channels:
+            cmd_list.extend(['--channel', channel])
+    else:
+        cmd_list.extend(['--channel', 'defaults'])
 
     cmd_list.extend(pkgs)
     _call_conda(cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
@@ -192,11 +191,14 @@ def install(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callbac
         raise TypeError('must specify a list of one or more packages to install into existing environment, not %r',
                         pkgs)
 
-    cmd_list = ['install', '--yes']
+    cmd_list = ['install', '--override-channels', '--yes']
     cmd_list.extend(['--prefix', prefix])
 
-    for channel in channels:
-        cmd_list.extend(['--channel', channel])
+    if channels:
+        for channel in channels:
+            cmd_list.extend(['--channel', channel])
+    else:
+        cmd_list.extend(['--channel', 'defaults'])
 
     cmd_list.extend(pkgs)
     _call_conda(cmd_list, stdout_callback=stdout_callback, stderr_callback=stderr_callback)
@@ -268,10 +270,19 @@ def resolve_dependencies(pkgs, channels=(), platform=None):
     # after we remove it, and then conda's mkdir would fail.
     os.rmdir(prefix)
 
-    cmd_list = ['create', '--yes', '--quiet', '--json', '--dry-run', '--prefix', prefix]
+    cmd_list = ['create', '--override-channels', '--yes', '--quiet', '--json', '--dry-run', '--prefix', prefix]
 
-    for channel in channels:
-        cmd_list.extend(['--channel', channel])
+    if channels:
+        for channel in channels:
+            cmd_list.extend(['--channel', channel])
+    else:
+        cmd_list.extend(['--channel', 'defaults'])
+
+    # This is only needed here (cross-platform solves) and not in create
+    # or install since Conda defaults already ensure that msys2 is present.
+    if platform is not None:
+        if 'win' in platform:
+            cmd_list.extend(['--channel', 'msys2'])
 
     cmd_list.extend(pkgs)
     try:

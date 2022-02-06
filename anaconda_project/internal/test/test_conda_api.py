@@ -249,7 +249,8 @@ sys.exit(0)
 
 def test_conda_create_gets_channels(monkeypatch):
     def mock_call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None, stderr_callback=None):
-        assert ['create', '--yes', '--prefix', '/prefix', '--channel', 'foo', 'python'] == extra_args
+        assert ['create', '--override-channels', '--yes', '--prefix', '/prefix', '--channel', 'foo',
+                'python'] == extra_args
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
     conda_api.create(prefix='/prefix', pkgs=['python'], channels=['foo'])
@@ -257,7 +258,8 @@ def test_conda_create_gets_channels(monkeypatch):
 
 def test_conda_install_gets_channels(monkeypatch):
     def mock_call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None, stderr_callback=None):
-        assert ['install', '--yes', '--prefix', '/prefix', '--channel', 'foo', 'python'] == extra_args
+        assert ['install', '--override-channels', '--yes', '--prefix', '/prefix', '--channel', 'foo',
+                'python'] == extra_args
 
     monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
     conda_api.install(prefix='/prefix', pkgs=['python'], channels=['foo'])
@@ -636,40 +638,41 @@ def test_environ_set_prefix_to_root():
 
 
 @pytest.mark.slow
-def test_resolve_dependencies_with_actual_conda_current_platform():
+@pytest.mark.parametrize('p', conda_api.default_platforms_plus_32_bit)
+def test_resolve_dependencies_with_actual_conda(p):
     try:
-        result = conda_api.resolve_dependencies(['bokeh=0.12.7'], platform=None)
+        result = conda_api.resolve_dependencies(['requests=2.20.1'], platform=p)
     except conda_api.CondaError as e:
+        print("*** Dependency resolution failed on %s" % p)
         pprint(e.json)
         raise e
 
     names = [pkg[0] for pkg in result]
-    assert 'bokeh' in names
+    assert 'requests' in names
     names_and_versions = [(pkg[0], pkg[1]) for pkg in result]
-    assert ('bokeh', '0.12.7') in names_and_versions
-    assert len(result) > 1  # bokeh has some dependencies so should be >1
+    assert ('requests', '2.20.1') in names_and_versions
+    assert len(result) > 1  # requests has some dependencies so should be >1
+
+    print("Dependency resolution test OK on %s" % p)
 
 
 @pytest.mark.slow
-def test_resolve_dependencies_with_actual_conda_other_platforms():
-    for p in conda_api.default_platforms_plus_32_bit:
-        if p == conda_api.current_platform():
-            print("Skipping dependency resolution test on current platform %s" % p)
-            continue
-        try:
-            result = conda_api.resolve_dependencies(['bokeh=0.12.7'], platform=p)
-        except conda_api.CondaError as e:
-            print("*** Dependency resolution failed on %s" % p)
-            pprint(e.json)
-            raise e
+@pytest.mark.parametrize('p', [p for p in conda_api.default_platforms_plus_32_bit if 'win' in p])
+def test_resolve_msys2_dependencies_with_actual_conda(p):
+    try:
+        result = conda_api.resolve_dependencies(['m2-msys2-runtime=2.5.0.17080.65c939c'], platform=p)
+    except conda_api.CondaError as e:
+        print("*** Dependency resolution failed on %s" % p)
+        pprint(e.json)
+        raise e
 
-        names = [pkg[0] for pkg in result]
-        assert 'bokeh' in names
-        names_and_versions = [(pkg[0], pkg[1]) for pkg in result]
-        assert ('bokeh', '0.12.7') in names_and_versions
-        assert len(result) > 1  # bokeh has some dependencies so should be >1
+    names = [pkg[0] for pkg in result]
+    assert 'm2-msys2-runtime' in names
+    names_and_versions = [(pkg[0], pkg[1]) for pkg in result]
+    assert ('m2-msys2-runtime', '2.5.0.17080.65c939c') in names_and_versions
+    assert len(result) > 1  # requests has some dependencies so should be >1
 
-        print("Dependency resolution test OK on %s" % p)
+    print("Dependency resolution test OK on %s" % p)
 
 
 @pytest.mark.slow
@@ -1135,33 +1138,14 @@ def test_current_platform_non_x86_linux(monkeypatch):
     assert conda_api.current_platform() == 'linux-armv7l'
 
 
+def test_current_platform_non_x86_mac(monkeypatch):
+    monkeypatch.setenv('CONDA_SUBDIR', 'osx-arm64')
+    assert conda_api.current_platform() == 'osx-arm64'
+
+
 # this test assumes all dev and CI happens on popular platforms.
 def test_current_platform_is_in_default():
     assert conda_api.current_platform() in conda_api.default_platforms
-
-
-@pytest.mark.slow
-def test_msys_for_all_platforms():
-    for p in conda_api.default_platforms_plus_32_bit:
-        (name, bits) = conda_api.parse_platform(p)
-        info = conda_api.info(platform=p)
-        print("*** info() for %s" % p)
-        pprint(info)
-        assert 'channels' in info
-
-        # conda 4.1 has a slash on the channels and 4.3 does not
-        def no_slash(url):
-            if url.endswith("/"):
-                return url[:-1]
-            else:
-                return url
-
-        channels = [no_slash(channel) for channel in info['channels']]
-        # Designed to handle repo.continuum.io and repo.anaconda.com
-        channels = '\n'.join(channels)
-        if name == 'win':
-            assert '/msys2/%s' % p in channels
-            assert '/msys2/noarch' in channels
 
 
 def test_sort_platform_list():
