@@ -1534,7 +1534,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
 
     def check(dirname):
         project = Project(dirname)
-        specs = ('python=3.8', 'numpy<1.19.2', 'pandas')
+        specs = ('numpy<1.19.2', 'pandas')
         pip_spec = ['chardet']
         for spec in specs:
             if spec == specs[0]:
