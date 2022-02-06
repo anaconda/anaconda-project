@@ -1534,7 +1534,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
 
     def check(dirname):
         project = Project(dirname)
-        specs = ('numpy<1.11.3', 'pandas')
+        specs = ('python=3.8', 'numpy<1.19.2', 'pandas')
         pip_spec = ['chardet']
         for spec in specs:
             if spec == specs[0]:
@@ -1556,7 +1556,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             env_commented_map = project2.project_file.get_value(['env_specs', 'foo'])
             assert spec in env_commented_map['packages'], env_commented_map['packages']
 
-            # ensure numpy <1.11.3 is present in both passes
+            # ensure numpy <1.19.2 is present in both passes
             meta_path = os.path.join(dirname, 'envs', 'foo', 'conda-meta')
             # pinned file no longer present between environment preparation steps
             assert os.path.isdir(meta_path)
@@ -1566,7 +1566,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             files = glob.glob(os.path.join(meta_path, 'numpy-1.*-*'))
             assert len(files) == 1, files
             version = os.path.basename(files[0]).split('-', 2)[1]
-            assert tuple(map(int, version.split('.'))) < (1, 11, 3), files[0]
+            assert tuple(map(int, version.split('.'))) < (1, 19, 2), files[0]
 
             status = project_ops.add_packages(project, 'foo', packages=pip_spec, pip=True, channels=[])
             assert status
