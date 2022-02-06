@@ -136,11 +136,11 @@ env_specs: {}
                 single_env['locked'] = False
 
         # now set up the one env
-        as_json = lock_set.to_json()
+        as_json = lock_set.to_json(pkg_key=self.pkg_key)
         self.set_value(['env_specs', env_spec_name], as_json)
 
     def _add_pip_packages(self, env_spec_name, pip_packages):
-        self.set_value(['env_specs', env_spec_name, 'packages', 'pip'], pip_packages)
+        self.set_value(['env_specs', env_spec_name, self.pkg_key, 'pip'], pip_packages)
 
     def _disable_locking(self, env_spec_name):
         """Library-internal method."""
@@ -149,5 +149,5 @@ env_specs: {}
             self.unset_value(['env_specs'])
         else:
             self.set_value(['env_specs', env_spec_name, 'locked'], False)
-            self.unset_value(['env_specs', env_spec_name, 'packages'])
+            self.unset_value(['env_specs', env_spec_name, self.pkg_key])
             self.unset_value(['env_specs', env_spec_name, 'platforms'])

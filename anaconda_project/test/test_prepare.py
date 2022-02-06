@@ -138,9 +138,14 @@ def test_default_to_system_environ():
                 if original in ('root', 'base') and updated in ('root', 'base'):
                     print("we have a root/base environment name issue here")
                     continue
-                if key == 'PATH' and platform.system() == 'Windows':
-                    print("prepare changed PATH on Windows and ideally it would not.")
-                    continue
+                if key == 'PATH':
+                    if platform.system() == 'Windows':
+                        print("prepare changed PATH on Windows and ideally it would not.")
+                        continue
+                    if result.environ.get("CONDA_STACKED_2", False):
+                        print("prepare changed PATH with stacked environments.")
+                        continue
+
                 updated = updated.split(os.pathsep)
                 original = original.split(os.pathsep)
                 print("ORIGINAL {}: {}".format(key, repr(original)))

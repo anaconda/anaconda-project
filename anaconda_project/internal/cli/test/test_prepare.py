@@ -116,7 +116,7 @@ services:
     assert "All ports from 6380 to 6449 were in use" in err
 
 
-def test_prepare_command_choose_environment(capsys, monkeypatch):
+def test_prepare_command_choose_environment(capsys, monkeypatch, pkg_key):
     def mock_conda_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         from anaconda_project.internal.makedirs import makedirs_ok_if_exists
         metadir = os.path.join(prefix, "conda-meta")
@@ -146,12 +146,12 @@ def test_prepare_command_choose_environment(capsys, monkeypatch):
             """
 env_specs:
   foo:
-    packages:
+    <pkg_key>:
         - nonexistent_foo
   bar:
-    packages:
+    <pkg_key>:
         - nonexistent_bar
-"""
+""".replace("<pkg_key>", pkg_key)
         }, check_prepare_choose_environment)
 
     out, err = capsys.readouterr()
@@ -160,7 +160,7 @@ env_specs:
     assert err == ""
 
 
-def test_prepare_command_all_environments(capsys, monkeypatch):
+def test_prepare_command_all_environments(capsys, monkeypatch, pkg_key):
     def mock_conda_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         from anaconda_project.internal.makedirs import makedirs_ok_if_exists
         metadir = os.path.join(prefix, "conda-meta")
@@ -192,12 +192,12 @@ def test_prepare_command_all_environments(capsys, monkeypatch):
             """
 env_specs:
   foo:
-    packages:
+    <pkg_key>:
         - nonexistent_foo
   bar:
-    packages:
+    <pkg_key>:
         - nonexistent_bar
-"""
+""".replace("<pkg_key>", pkg_key)
         }, check_prepare_choose_environment)
 
     out, err = capsys.readouterr()
@@ -206,7 +206,7 @@ env_specs:
     assert err == ""
 
 
-def test_prepare_command_all_environments_refresh(capsys, monkeypatch):
+def test_prepare_command_all_environments_refresh(capsys, monkeypatch, pkg_key):
     def mock_conda_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         from anaconda_project.internal.makedirs import makedirs_ok_if_exists
         metadir = os.path.join(prefix, "conda-meta")
@@ -242,12 +242,12 @@ def test_prepare_command_all_environments_refresh(capsys, monkeypatch):
             """
 env_specs:
   foo:
-    packages:
+    <pkg_key>:
         - nonexistent_foo
   bar:
-    packages:
+    <pkg_key>:
         - nonexistent_bar
-"""
+""".replace("<pkg_key>", pkg_key)
         }, check_prepare_choose_environment)
 
     out, err = capsys.readouterr()
@@ -258,7 +258,7 @@ env_specs:
     assert err == ""
 
 
-def test_prepare_command_default_environment_refresh(capsys, monkeypatch):
+def test_prepare_command_default_environment_refresh(capsys, monkeypatch, pkg_key):
     def mock_conda_create(prefix, pkgs, channels, stdout_callback, stderr_callback):
         from anaconda_project.internal.makedirs import makedirs_ok_if_exists
         metadir = os.path.join(prefix, "conda-meta")
@@ -284,10 +284,11 @@ def test_prepare_command_default_environment_refresh(capsys, monkeypatch):
         foo_package_json = os.path.join(default_envdir, "conda-meta", "nonexistent_foo-0.1-pyNN.json")
         assert os.path.isfile(foo_package_json)
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
-packages:
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+<pkg_key>:
     - nonexistent_foo
-"""}, check_prepare_choose_environment)
+""".replace("<pkg_key>", pkg_key)}, check_prepare_choose_environment)
 
     out, err = capsys.readouterr()
     assert out == ("The project is ready to run commands.\n" +
@@ -297,7 +298,7 @@ packages:
     assert err == ""
 
 
-def test_prepare_command_choose_environment_does_not_exist(capsys):
+def test_prepare_command_choose_environment_does_not_exist(capsys, pkg_key):
     def check_prepare_choose_environment_does_not_exist(dirname):
         project_dir_disable_dedicated_env(dirname)
         result = _parse_args_and_run_subcommand(
@@ -316,17 +317,17 @@ def test_prepare_command_choose_environment_does_not_exist(capsys):
             """
 env_specs:
   foo:
-    packages:
+    <pkg_key>:
         - nonexistent_foo
   bar:
-    packages:
+    <pkg_key>:
         - nonexistent_bar
-"""
+""".replace("<pkg_key>", pkg_key)
         }, check_prepare_choose_environment_does_not_exist)
 
 
 @pytest.mark.slow
-def test_prepare_command_choose_command_chooses_env_spec(capsys):
+def test_prepare_command_choose_command_chooses_env_spec(capsys, pkg_key):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)
         result = _parse_args_and_run_subcommand(
@@ -351,10 +352,10 @@ def test_prepare_command_choose_command_chooses_env_spec(capsys):
             """
 env_specs:
   foo:
-    packages:
+    <pkg_key>:
         - nonexistent_foo
   bar:
-    packages:
+    <pkg_key>:
         - nonexistent_bar
 commands:
   with_foo:
@@ -364,7 +365,7 @@ commands:
     conda_app_entry: python --version
     env_spec: bar
 
-"""
+""".replace("<pkg_key>", pkg_key)
         }, check)
 
 
@@ -605,7 +606,7 @@ env_specs: 42
 
 
 @pytest.mark.slow
-def test_no_ask_conda_prefix_interactively(monkeypatch, capsys):
+def test_no_ask_conda_prefix_interactively(monkeypatch, capsys, pkg_key):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)
 
@@ -628,12 +629,12 @@ def test_no_ask_conda_prefix_interactively(monkeypatch, capsys):
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
-packages:
+<pkg_key>:
  - nonexistent_package_name
-"""}, check)
+""".replace("<pkg_key>", pkg_key)}, check)
 
 
-def test_display_suggestions(monkeypatch, capsys):
+def test_display_suggestions(monkeypatch, capsys, pkg_key):
     def check(dirname):
         project_dir_disable_dedicated_env(dirname)
 
@@ -660,7 +661,8 @@ Use `anaconda-project list-commands` to see what's available.
 """ == out
         assert '' == err
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
-packages: []
+    with_directory_contents_completing_project_file(
+        {DEFAULT_PROJECT_FILENAME: """
+<pkg_key>: []
 weird_field: 42
-"""}, check)
+""".replace("<pkg_key>", pkg_key)}, check)

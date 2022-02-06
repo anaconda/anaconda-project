@@ -242,7 +242,7 @@ variables:
 """}, check_problem)
 
 
-def test_problem_empty_names():
+def test_problem_empty_names(pkg_key):
     def check_problem(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -258,7 +258,7 @@ def test_problem_empty_names():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
+            f"""
 variables:
   ' ': 'thing'
 downloads:
@@ -267,7 +267,7 @@ services:
   ' ': redis
 env_specs:
   ' ':
-    packages:
+    {pkg_key}:
        - python
 commands:
   ' ':
@@ -475,7 +475,7 @@ icon: foo.png
         }, check_set_icon)
 
 
-def test_get_dependencies_requirements_from_project_file():
+def test_get_package_requirements_from_project_file(pkg_key):
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
         env = project.env_specs['default']
@@ -501,52 +501,8 @@ def test_get_dependencies_requirements_from_project_file():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
-dependencies:
-  - foo
-  - hello >= 1.0
-  - world
-  - pip:
-     - pip1
-     - pip2==1.3
-  - pip:
-     - pip3
-
-channels:
-  - mtv
-  - hbo
-    """
-        }, check_get_packages)
-
-
-def test_get_package_requirements_from_project_file():
-    def check_get_packages(dirname):
-        project = project_no_dedicated_env(dirname)
-        env = project.env_specs['default']
-        assert env.name == 'default'
-        assert ("mtv", "hbo") == env.channels
-        assert ("foo", "hello >= 1.0", "world") == env.conda_packages
-        assert ("pip1", "pip2==1.3", "pip3") == env.pip_packages
-        assert set(["foo", "hello", "world"]) == env.conda_package_names_set
-        assert set(["pip1", "pip2", "pip3"]) == env.pip_package_names_set
-
-        requirements = project.requirements(project.default_env_spec_name)
-
-        # find CondaEnvRequirement
-        conda_env_req = None
-        for r in requirements:
-            if isinstance(r, CondaEnvRequirement):
-                assert conda_env_req is None  # only one
-                conda_env_req = r
-        assert len(conda_env_req.env_specs) == 1
-        assert 'default' in conda_env_req.env_specs
-        assert conda_env_req.env_specs['default'] is env
-
-    with_directory_contents_completing_project_file(
-        {
-            DEFAULT_PROJECT_FILENAME:
-            """
-packages:
+            f"""
+{pkg_key}:
   - foo
   - hello >= 1.0
   - world
@@ -571,31 +527,31 @@ def test_get_package_requirements_from_empty_project():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_get_packages)
 
 
-def test_complain_about_packages_not_a_list():
+def test_complain_about_packages_not_a_list(pkg_key):
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         "should be a list of strings not" in project.problems[0]
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
-packages:
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: f"""
+{pkg_key}:
     foo: bar
     """}, check_get_packages)
 
 
-def test_complain_about_pip_deps_not_a_list():
+def test_complain_about_pip_deps_not_a_list(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         "should be a list of strings not" in project.problems[0]
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
-packages:
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: f"""
+{pkg_key}:
     - pip: bar
     """}, check)
 
 
-def test_complain_about_pip_deps_not_a_string():
+def test_complain_about_pip_deps_not_a_string(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
@@ -603,13 +559,13 @@ def test_complain_about_pip_deps_not_a_string():
 
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
-packages:
+<pkg_key>:
     - pip:
       - {}
-    """}, check)
+    """.replace('<pkg_key>', pkg_key)}, check)
 
 
-def test_complain_about_packages_bad_spec():
+def test_complain_about_packages_bad_spec(pkg_key):
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
         filename = project.project_file.basename
@@ -620,8 +576,8 @@ def test_complain_about_packages_bad_spec():
         ] == project.problems
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: """
-packages:
+        {DEFAULT_PROJECT_FILENAME: f"""
+{pkg_key}:
     - "="
     - foo bar
     - pip:
@@ -665,7 +621,8 @@ variables:
         }, check_complain_about_conda_env_var)
 
 
-def test_load_environments():
+@pytest._change_default_pkg_key
+def test_load_environments(pkg_key):
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
@@ -735,7 +692,7 @@ def test_load_environments():
         {
             DEFAULT_PROJECT_FILENAME:
             """
-packages:
+<pkg_key>:
   - global1=1.0
   - global2=1.0
 channels:
@@ -744,7 +701,7 @@ channels:
 env_specs:
   foo:
     description: "THE FOO"
-    packages:
+    <pkg_key>:
        - python
        - dog
        - cat
@@ -752,7 +709,7 @@ env_specs:
   bar: {}
   foo_child:
     inherit_from: foo
-    packages:
+    <pkg_key>:
        - dog=2.0
        - global1=2.0
        - lion
@@ -761,7 +718,7 @@ env_specs:
     channels:
        - abc
   mixin:
-    packages:
+    <pkg_key>:
        - bunny
        - walrus=1.0
        - global2=2.0
@@ -771,18 +728,18 @@ env_specs:
        - hbo
   foo_grandchild:
     inherit_from: [foo_child, mixin]
-    packages:
+    <pkg_key>:
        - walrus=2.0
        - dog=3.0
        - pip:
          - seahorse
     channels:
        - nbc
-    """
+    """.replace('<pkg_key>', pkg_key)
         }, check_environments)
 
 
-def test_load_environments_merging_in_global():
+def test_load_environments_merging_in_global(pkg_key):
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
         assert 0 == len(project.problems)
@@ -805,7 +762,7 @@ def test_load_environments_merging_in_global():
         {
             DEFAULT_PROJECT_FILENAME:
             """
-packages:
+<pkg_key>:
   - dead-parrot
   - elephant
 
@@ -814,7 +771,7 @@ channels:
 
 env_specs:
   foo:
-    packages:
+    <pkg_key>:
        - python
        - dog
        - cat
@@ -823,11 +780,11 @@ env_specs:
        - hbo
   bar: {}
   default:
-    packages:
+    <pkg_key>:
       - lion
     channels:
       - cartoons
-    """
+    """.replace('<pkg_key>', pkg_key)
         }, check_environments)
 
 
@@ -895,14 +852,14 @@ env_specs:
     """}, check_environments)
 
 
-def test_complain_about_packages_list_of_wrong_thing():
+def test_complain_about_packages_list_of_wrong_thing(pkg_key):
     def check_get_packages(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
         "should be a string not '42'" in project.problems[0]
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """
-packages:
+    with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: f"""
+{pkg_key}:
     - 42
     """}, check_get_packages)
 
@@ -1245,7 +1202,7 @@ def test_command_with_extras():
         check)
 
 
-def test_command_with_custom_description():
+def test_command_with_custom_description(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
@@ -1256,7 +1213,7 @@ def test_command_with_custom_description():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            "commands:\n default:\n    bokeh_app: test.py\n    description: hi\npackages:\n - bokeh\n"
+            f"commands:\n default:\n    bokeh_app: test.py\n    description: hi\n{pkg_key}:\n - bokeh\n"
         }, check)
 
 
@@ -1635,7 +1592,7 @@ def test_notebook_command_with_project_http_args_separated_by_equals():
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check)
 
 
-def test_notebook_guess_command():
+def test_notebook_guess_command(pkg_key):
     def check_notebook_guess_command(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -1666,7 +1623,7 @@ def test_notebook_guess_command():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            f"commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\n{pkg_key}: ['notebook']\n",
             'test.ipynb': '{}',
             'envs/should_ignore_this.ipynb': '{}',
             'services/should_ignore_this.ipynb': '{}',
@@ -1677,7 +1634,7 @@ def test_notebook_guess_command():
     # anaconda-project run data.ipynb
 
 
-def test_notebook_guess_command_can_be_default():
+def test_notebook_guess_command_can_be_default(pkg_key):
     def check_notebook_guess_command_can_be_default(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -1698,7 +1655,7 @@ def test_notebook_guess_command_can_be_default():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: "packages: ['notebook']\n",
+            DEFAULT_PROJECT_FILENAME: f"{pkg_key}: ['notebook']\n",
             # we pick the first command alphabetically in this case
             # so the test looks for that
             'a.ipynb': '{}',
@@ -1735,7 +1692,7 @@ def test_notebook_command_jupyter_not_on_path(monkeypatch):
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check_notebook_command)
 
 
-def test_multiple_notebooks_suggestion_rejected():
+def test_multiple_notebooks_suggestion_rejected(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -1759,7 +1716,7 @@ def test_multiple_notebooks_suggestion_rejected():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            f"commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\n{pkg_key}: ['notebook']\n",
             'test.ipynb': '{}',
             'foo/test2.ipynb': '{}',
             'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
@@ -1769,7 +1726,7 @@ def test_multiple_notebooks_suggestion_rejected():
         }, check)
 
 
-def test_skip_all_notebook_imports():
+def test_skip_all_notebook_imports(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -1785,12 +1742,12 @@ def test_skip_all_notebook_imports():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            f"commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\n{pkg_key}: ['notebook']\n",
             'test.ipynb': '{}'
         }, check)
 
 
-def test_invalid_skip_imports_notebooks():
+def test_invalid_skip_imports_notebooks(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert 1 == len(project.problems)
@@ -1799,12 +1756,21 @@ def test_invalid_skip_imports_notebooks():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: ("commands:\n default:\n    unix: echo 'pass'\nservices:\n" +
-                                       "  REDIS_URL: redis\npackages: ['notebook']\nskip_imports:\n  notebooks: {}\n")
+            DEFAULT_PROJECT_FILENAME:
+            """
+commands:
+ default:
+    unix: echo 'pass'
+services:
+    REDIS_URL: redis
+<pkg_key>: ['notebook']
+skip_imports:
+  notebooks: {}
+""".replace('<pkg_key>', pkg_key)
         }, check)
 
 
-def test_single_notebook_suggestion_rejected():
+def test_single_notebook_suggestion_rejected(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -1826,7 +1792,7 @@ def test_single_notebook_suggestion_rejected():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            "commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\npackages: ['notebook']\n",
+            f"commands:\n default:\n    unix: echo 'pass'\nservices:\n    REDIS_URL: redis\n{pkg_key}: ['notebook']\n",
             'test.ipynb': '{}',
             'envs/should_ignore_this.ipynb': 'pretend this is more notebook data',
             'services/should_ignore_this.ipynb': 'pretend this is more notebook data',
@@ -2361,7 +2327,8 @@ commands:
 """}, check_run_with_stuff_missing)
 
 
-def test_get_publication_info_from_empty_project():
+@pytest._change_default_pkg_key
+def test_get_publication_info_from_empty_project(pkg_key):
     def check_publication_info_from_empty(dirname):
         project = project_no_dedicated_env(dirname)
         expected = {
@@ -2373,7 +2340,7 @@ def test_get_publication_info_from_empty_project():
             'env_specs': {
                 'default': {
                     'channels': [],
-                    'packages': [],
+                    pkg_key: [],
                     'description': 'Default',
                     'locked': False,
                     'platforms': [],
@@ -2414,7 +2381,7 @@ commands:
     notebook: foo.ipynb
     registers_fusion_function: true
 
-packages:
+<pkg_key>:
   - foo
 
 channels:
@@ -2423,17 +2390,17 @@ channels:
 env_specs:
   default:
     description: "Default"
-    packages:
+    <pkg_key>:
       - notebook
   woot:
-    packages:
+    <pkg_key>:
       - blah
       - bokeh
     channels:
       - woohoo
   w00t:
     description: "double 0"
-    packages:
+    <pkg_key>:
       - something
   lol: {}
 
@@ -2450,7 +2417,7 @@ variables:
 """
 
 
-def test_get_publication_info_from_complex_project():
+def test_get_publication_info_from_complex_project(pkg_key):
     def check_publication_info_from_complex(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -2495,7 +2462,7 @@ def test_get_publication_info_from_complex_project():
             'env_specs': {
                 'default': {
                     'channels': ['bar'],
-                    'packages': ['foo', 'notebook'],
+                    f'{pkg_key}': ['foo', 'notebook'],
                     'description': 'Default',
                     'locked': False,
                     'platforms': ['linux-64', 'osx-64', 'win-64'],
@@ -2531,7 +2498,7 @@ def test_get_publication_info_from_complex_project():
                 },
                 'lol': {
                     'channels': ['bar'],
-                    'packages': ['foo'],
+                    pkg_key: ['foo'],
                     'description': 'lol',
                     'locked': False,
                     'platforms': ['linux-64', 'osx-64', 'win-64'],
@@ -2567,7 +2534,7 @@ def test_get_publication_info_from_complex_project():
                 },
                 'w00t': {
                     'channels': ['bar'],
-                    'packages': ['foo', 'something'],
+                    pkg_key: ['foo', 'something'],
                     'description': 'double 0',
                     'locked': False,
                     'platforms': ['linux-64', 'osx-64', 'win-64'],
@@ -2603,7 +2570,7 @@ def test_get_publication_info_from_complex_project():
                 },
                 'woot': {
                     'channels': ['bar', 'woohoo'],
-                    'packages': ['foo', 'blah', 'bokeh'],
+                    pkg_key: ['foo', 'blah', 'bokeh'],
                     'description': 'woot',
                     'locked': False,
                     'platforms': ['linux-64', 'osx-64', 'win-64'],
@@ -2645,13 +2612,13 @@ def test_get_publication_info_from_complex_project():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.replace('<pkg_key>', pkg_key),
             "main.py": "",
             "foo.ipynb": ""
         }, check_publication_info_from_complex)
 
 
-def test_find_requirements():
+def test_find_requirements(pkg_key):
     def check_find_requirements(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
@@ -2680,13 +2647,13 @@ def test_find_requirements():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.replace('<pkg_key>', pkg_key),
             "main.py": "",
             "foo.ipynb": ""
         }, check_find_requirements)
 
 
-def test_requirements_subsets():
+def test_requirements_subsets(pkg_key):
     def check_requirements_subsets(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
@@ -2712,13 +2679,13 @@ def test_requirements_subsets():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.replace('<pkg_key>', pkg_key),
             "main.py": "",
             "foo.ipynb": ""
         }, check_requirements_subsets)
 
 
-def test_env_var_name_list_properties():
+def test_env_var_name_list_properties(pkg_key):
     def check_env_var_name_list_properties(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
@@ -2738,7 +2705,7 @@ def test_env_var_name_list_properties():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: _complicated_project_contents,
+            DEFAULT_PROJECT_FILENAME: _complicated_project_contents.replace('<pkg_key>', pkg_key),
             "main.py": "",
             "foo.ipynb": ""
         }, check_env_var_name_list_properties)
@@ -2847,7 +2814,7 @@ efg
         }, check)
 
 
-def test_auto_fix_env_spec_out_of_sync():
+def test_auto_fix_env_spec_out_of_sync(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert len(project.problems) == 1
@@ -2857,7 +2824,6 @@ def test_auto_fix_env_spec_out_of_sync():
         assert ("Environment spec 'stuff' from environment.yml is out of sync with anaconda-project.yml. Diff:\n" +
                 "  channels:\n    + bar\n+ a\n+ b\n  pip:\n    + foo") == problem.text
         assert problem.can_fix
-
         problem.fix(project)
         project.project_file.save()
 
@@ -2871,8 +2837,13 @@ def test_auto_fix_env_spec_out_of_sync():
     with_directory_contents(
         {
             DEFAULT_PROJECT_FILENAME:
-            "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
-            "environment.yml": """
+            """
+name: foo
+env_specs: { 'stuff': { '<pkg_key>':[] } }
+platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+""".lstrip().replace('<pkg_key>', pkg_key),
+            "environment.yml":
+            """
 name: stuff
 dependencies:
  - a
@@ -2885,7 +2856,7 @@ channels:
         }, check)
 
 
-def test_auto_fix_env_spec_import_saying_no():
+def test_auto_fix_env_spec_import_saying_no(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert len(project.problems) == 1
@@ -2908,8 +2879,13 @@ def test_auto_fix_env_spec_import_saying_no():
     with_directory_contents(
         {
             DEFAULT_PROJECT_FILENAME:
-            "name: foo\nenv_specs: {'default':{'packages':[]}}\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
-            "environment.yml": """
+            """
+name: foo
+env_specs: {'default':{'<pkg_key>':[]}}
+platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+""".lstrip().replace('<pkg_key>', pkg_key),
+            "environment.yml":
+            """
 name: stuff
 dependencies:
  - a
@@ -2922,7 +2898,8 @@ channels:
         }, check)
 
 
-def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
+@pytest._change_default_pkg_key
+def test_no_auto_fix_env_spec_with_notebook_bokeh_injection(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert len(project.problems) == 1
@@ -2944,9 +2921,9 @@ def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
         assert spec.channels == ('bar', )
 
         # add bokeh and notebook, which we should ignore
-        packages = project.project_file.get_value(['env_specs', 'stuff', 'packages'])
-        packages.extend(['bokeh', 'notebook'])
-        project.project_file.set_value(['env_specs', 'stuff', 'packages'], packages)
+        the_packages = project.project_file.get_value(['env_specs', 'stuff', pkg_key])
+        the_packages.extend(['bokeh', 'notebook'])
+        project.project_file.set_value(['env_specs', 'stuff', pkg_key], the_packages)
         project.project_file.save()
 
         # no problems despite the diff
@@ -2955,17 +2932,17 @@ def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
         assert spec.conda_packages == ('a', 'b', 'bokeh', 'notebook')
 
         # add some other package, should NOT ignore
-        packages = project.project_file.get_value(['env_specs', 'stuff', 'packages'])
-        packages.extend(['someother'])
-        project.project_file.set_value(['env_specs', 'stuff', 'packages'], packages)
+        the_packages = project.project_file.get_value(['env_specs', 'stuff', pkg_key])
+        the_packages.extend(['someother'])
+        project.project_file.set_value(['env_specs', 'stuff', pkg_key], the_packages)
         project.project_file.save()
 
         assert len(project.problems) == 1
 
         # remove that again
-        packages = project.project_file.get_value(['env_specs', 'stuff', 'packages'])
-        packages.remove('someother')
-        project.project_file.set_value(['env_specs', 'stuff', 'packages'], packages)
+        the_packages = project.project_file.get_value(['env_specs', 'stuff', pkg_key])
+        the_packages.remove('someother')
+        project.project_file.set_value(['env_specs', 'stuff', pkg_key], the_packages)
         project.project_file.save()
 
         assert len(project.problems) == 0
@@ -2989,9 +2966,9 @@ def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
         assert len(project.problems) == 0
 
         # add a pip package, should NOT ignore
-        packages = project.project_file.get_value(['env_specs', 'stuff', 'packages'])
+        the_packages = project.project_file.get_value(['env_specs', 'stuff', pkg_key])
         pip_list = None
-        for p in packages:
+        for p in the_packages:
             if isinstance(p, dict):
                 pip_list = p['pip']
         pip_list.append('someother')
@@ -3005,8 +2982,13 @@ def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
     with_directory_contents(
         {
             DEFAULT_PROJECT_FILENAME:
-            "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
-            "environment.yml": """
+            """
+name: foo
+env_specs: { 'stuff': { '<pkg_key>':[] } }
+platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+""".lstrip().replace('<pkg_key>', pkg_key),
+            "environment.yml":
+            """
 name: stuff
 dependencies:
  - a
@@ -3051,7 +3033,7 @@ def test_auto_fix_notebook_dep():
         }, check)
 
 
-def test_no_auto_fix_notebook_dep_if_we_have_anaconda():
+def test_no_auto_fix_notebook_dep_if_we_have_anaconda(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -3061,7 +3043,7 @@ def test_no_auto_fix_notebook_dep_if_we_have_anaconda():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: ('packages:\n'
+            DEFAULT_PROJECT_FILENAME: (f'{pkg_key}:\n'
                                        ' - anaconda\n'
                                        'commands:\n'
                                        '  foo.ipynb:\n'
@@ -3071,7 +3053,7 @@ def test_no_auto_fix_notebook_dep_if_we_have_anaconda():
         }, check)
 
 
-def test_no_auto_fix_notebook_dep_if_we_have_notebook():
+def test_no_auto_fix_notebook_dep_if_we_have_notebook(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -3080,7 +3062,7 @@ def test_no_auto_fix_notebook_dep_if_we_have_notebook():
 
     with_directory_contents_completing_project_file(
         {
-            DEFAULT_PROJECT_FILENAME: ('packages:\n'
+            DEFAULT_PROJECT_FILENAME: (f'{pkg_key}:\n'
                                        ' - notebook\n'
                                        'commands:\n'
                                        '  foo.ipynb:\n'
@@ -3142,7 +3124,7 @@ def test_unknown_field_in_command():
         {DEFAULT_PROJECT_FILENAME: "commands:\n  foo:\n    unix: something\n    somejunk: True\n"}, check)
 
 
-def test_unknown_field_in_env_spec():
+def test_unknown_field_in_env_spec(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
@@ -3150,10 +3132,10 @@ def test_unknown_field_in_env_spec():
         assert [expected_suggestion] == project.suggestions
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_FILENAME: "env_specs:\n  foo:\n    packages: [something]\n    somejunk: True\n"}, check)
+        {DEFAULT_PROJECT_FILENAME: f"env_specs:\n  foo:\n    {pkg_key}: [something]\n    somejunk: True\n"}, check)
 
 
-def test_unknown_field_in_env_spec_allowed():
+def test_unknown_field_in_env_spec_allowed(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
@@ -3162,7 +3144,7 @@ def test_unknown_field_in_env_spec_allowed():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            "env_specs:\n  foo:\n    packages: [something]\n    somejunk: True\n    user_fields: [somejunk]\n"
+            f"env_specs:\n  foo:\n    {pkg_key}: [something]\n    somejunk: True\n    user_fields: [somejunk]\n"
         }, check)
 
 
@@ -3204,7 +3186,7 @@ def test_empty_file_has_problems():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
 
 
-def test_with_one_locked_env_spec_has_problems():
+def test_with_one_locked_env_spec_has_problems(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [
@@ -3214,10 +3196,10 @@ def test_with_one_locked_env_spec_has_problems():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME: f"""
 env_specs:
   foo:
-     packages: []
+     {pkg_key}: []
 """,
             DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
         }, check)
@@ -3237,19 +3219,19 @@ def test_with_locking_enabled_no_env_specs_has_problems():
     }, check)
 
 
-def test_with_locking_disabled_no_platforms_required():
+def test_with_locking_disabled_no_platforms_required(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs:\n  default:\n    packages: []\n",
+            DEFAULT_PROJECT_FILENAME: f"name: foo\nenv_specs:\n  default:\n    {pkg_key}: []\n",
             DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: false\n"
         }, check)
 
 
-def test_load_weird_platform():
+def test_load_weird_platform(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -3268,17 +3250,17 @@ def test_load_weird_platform():
     with_directory_contents(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
+            f"""
 name: foo
 platforms: [linux-64, weird-valid, weirdinvalid]
 env_specs:
   default:
-    packages: [foo]
+    {pkg_key}: [foo]
 """
         }, check)
 
 
-def test_only_some_env_specs_have_platforms_locking_disabled():
+def test_only_some_env_specs_have_platforms_locking_disabled(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
@@ -3286,20 +3268,20 @@ def test_only_some_env_specs_have_platforms_locking_disabled():
     with_directory_contents(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
+            f"""
 name: foo
 
 env_specs:
   default:
     platforms: [linux-64]
-    packages: [foo]
+    {pkg_key}: [foo]
   no_platforms:
-    packages: [bar]
+    {pkg_key}: [bar]
 """
         }, check)
 
 
-def test_only_some_env_specs_have_platforms_locking_enabled():
+def test_only_some_env_specs_have_platforms_locking_enabled(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [("anaconda-project.yml: Env spec no_platforms does not have anything in its " + "'platforms:' field.")
@@ -3307,15 +3289,15 @@ def test_only_some_env_specs_have_platforms_locking_enabled():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: foo
 
 env_specs:
   default:
     platforms: [linux-64]
-    packages: [foo]
+    {pkg_key}: [foo]
   no_platforms:
-    packages: [bar]
+    {pkg_key}: [bar]
         """,
             DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
         }, check)
@@ -3401,22 +3383,24 @@ env_specs:
 """}, check)
 
 
-def test_lock_file_non_dict_lock_set_packages():
+@pytest._change_default_pkg_key
+def test_lock_file_non_dict_lock_set_packages(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        expected_error = ("%s: 'packages:' section in env spec 'default' in lock file should be a dictionary, " +
+        expected_error = (f"%s: '{pkg_key}:' section in env spec 'default' in lock file should be a dictionary, " +
                           "found %r") % (project.lock_file.basename, 42)
         assert [expected_error] == project.problems
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_LOCK_FILENAME: """
+        {DEFAULT_PROJECT_LOCK_FILENAME: f"""
 env_specs:
   default:
-    packages: 42
+    {pkg_key}: 42
 """}, check)
 
 
-def test_lock_file_has_pip_packages():
+@pytest._change_default_pkg_key
+def test_lock_file_has_pip_packages(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
         assert [] == project.problems
@@ -3428,11 +3412,11 @@ def test_lock_file_has_pip_packages():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_LOCK_FILENAME:
-            """
+            f"""
 env_specs:
   default:
     platforms: [linux-64,osx-64,win-64]
-    packages:
+    {pkg_key}:
       all:
         - pip:
           - foobar
@@ -3440,7 +3424,8 @@ env_specs:
         }, check)
 
 
-def test_lock_file_has_invalid_packages():
+@pytest._change_default_pkg_key
+def test_lock_file_has_invalid_packages(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -3454,10 +3439,10 @@ def test_lock_file_has_invalid_packages():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_LOCK_FILENAME:
-            """
+            f"""
 env_specs:
   default:
-    packages:
+    {pkg_key}:
       all:
         - "="
         - foo bar
@@ -3467,7 +3452,7 @@ env_specs:
         }, check)
 
 
-def test_lock_file_has_wrong_platforms():
+def test_lock_file_has_wrong_platforms(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -3481,17 +3466,17 @@ def test_lock_file_has_wrong_platforms():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_LOCK_FILENAME:
-            """
+            f"""
 env_specs:
   default:
     platforms: ["win-64"]
-    packages:
+    {pkg_key}:
       all: [foo]
 """
         }, check)
 
 
-def test_lock_file_has_zero_platforms():
+def test_lock_file_has_zero_platforms(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -3502,16 +3487,18 @@ def test_lock_file_has_zero_platforms():
         ] == project.suggestions
 
     with_directory_contents_completing_project_file(
-        {DEFAULT_PROJECT_LOCK_FILENAME: """
+        {
+            DEFAULT_PROJECT_LOCK_FILENAME: f"""
 env_specs:
   default:
     platforms: []
-    packages:
+    {pkg_key}:
       all: [foo]
-"""}, check)
+"""
+        }, check)
 
 
-def test_lock_file_has_wrong_hash():
+def test_lock_file_has_wrong_hash(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -3525,29 +3512,30 @@ def test_lock_file_has_wrong_hash():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_LOCK_FILENAME:
-            """
+            f"""
 env_specs:
   default:
     env_spec_hash: wrong
     platforms: [linux-64,osx-64,win-64]
-    packages:
+    {pkg_key}:
       all: [foo]
 """
         }, check)
 
 
-def test_lock_file_has_empty_and_wrong_package_lists():
+@pytest._change_default_pkg_key
+def test_lock_file_has_empty_and_wrong_package_lists(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
         assert [] == project.problems
         # yapf: disable
         assert [
-            'anaconda-project-lock.yml: Lock file lists no packages for env spec '
+            f'anaconda-project-lock.yml: Lock file lists no {pkg_key} for env spec '
             "'default' on platform linux-64",
-            'anaconda-project-lock.yml: Lock file is missing 1 packages for env spec '
+            f'anaconda-project-lock.yml: Lock file is missing 1 {pkg_key} for env spec '
             'default on osx-64 (hello)',
-            'anaconda-project-lock.yml: Lock file lists no packages for env spec '
+            f'anaconda-project-lock.yml: Lock file lists no {pkg_key} for env spec '
             "'default' on platform win-64"
         ] == project.suggestions
         # yapf: enable
@@ -3555,18 +3543,18 @@ def test_lock_file_has_empty_and_wrong_package_lists():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
+            f"""
 env_specs:
    default:
-      packages:
+      {pkg_key}:
          - hello
 """,
             DEFAULT_PROJECT_LOCK_FILENAME:
-            """
+            f"""
 env_specs:
   default:
     platforms: [linux-64,osx-64,win-64]
-    packages:
+    {pkg_key}:
       linux-64: []
       win-64: []
       win-32: [foo]
@@ -3576,7 +3564,7 @@ env_specs:
         }, check)
 
 
-def test_lock_file_has_orphan_env_spec():
+def test_lock_file_has_orphan_env_spec(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -3587,10 +3575,10 @@ def test_lock_file_has_orphan_env_spec():
     with_directory_contents_completing_project_file(
         {
             DEFAULT_PROJECT_FILENAME:
-            """
+            f"""
 env_specs:
    default:
-      packages:
+      {pkg_key}:
          - hello
 """,
             DEFAULT_PROJECT_LOCK_FILENAME:
@@ -3598,16 +3586,16 @@ env_specs:
 env_specs:
   default:
     platforms: [linux-64,osx-64,win-64]
-    packages:
+    <pkg_key>:
       all: [hello]
   orphan:
     platforms: [linux-64,osx-64,win-64]
-    packages: {}
-"""
+    <pkg_key>: {}
+""".replace('<pkg_key>', pkg_key)
         }, check)
 
 
-def test_fix_project_file_with_no_platforms():
+def test_fix_project_file_with_no_platforms(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -3624,11 +3612,11 @@ def test_fix_project_file_with_no_platforms():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: foo
 env_specs:
    default:
-      packages:
+      {pkg_key}:
          - hello
 """,
             DEFAULT_PROJECT_LOCK_FILENAME: """
@@ -3637,7 +3625,7 @@ locking_enabled: true
         }, check)
 
 
-def test_fix_env_spec_with_no_platforms():
+def test_fix_env_spec_with_no_platforms(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
 
@@ -3660,20 +3648,20 @@ def test_fix_env_spec_with_no_platforms():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: """
+            DEFAULT_PROJECT_FILENAME: f"""
 name: foo
 env_specs:
    default:
       platforms: ['linux-64']
-      packages:
+      {pkg_key}:
          - hello
    foo:
       platforms: []
-      packages:
+      {pkg_key}:
          - apackage
    bar:
       platforms: []
-      packages:
+      {pkg_key}:
          - package2
 """,
             DEFAULT_PROJECT_LOCK_FILENAME: """

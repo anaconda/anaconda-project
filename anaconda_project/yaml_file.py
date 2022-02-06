@@ -115,6 +115,8 @@ class YamlFile(object):
 
     """
 
+    pkg_key = "packages"  # Default: "packages" or "dependencies"
+
     # The dummy entry works around a bug/quirk in ruamel.yaml that drops the
     # top comment for an empty dictionary
     template = '# yaml file\n__dummy__: dummy'
@@ -136,6 +138,11 @@ class YamlFile(object):
         self._previous_content = ""
         self._change_count = 0
         self.load()
+
+        pkg_key = self._get_pkg_key()
+        if pkg_key:
+            # Only set if defined, otherwise fallback to the class default.
+            self.pkg_key = pkg_key
 
     def load(self):
         """Reload the file from disk, discarding any unsaved changes.
@@ -197,6 +204,30 @@ class YamlFile(object):
                 if not self._save_default_content():
                     # pretend we already saved
                     self._previous_content = _dump_string(self._yaml)
+
+    def _get_pkg_key(self):
+        """Return the `pkg_key` ('dependencies' or 'packages') for the file.
+
+        We search for an appropriately named key at the top level, or in the
+        `env_specs`.  Return `None` if none specified.
+        """
+        pkg_key = None
+        try:
+            for _pkg_key in ['dependencies', 'packages']:
+                if self.get_value(_pkg_key):
+                    assert not pkg_key or pkg_key == _pkg_key
+                    pkg_key = _pkg_key
+            env_specs = self.get_value('env_specs')
+            if env_specs:
+                for _spec in env_specs:
+                    for _pkg_key in ['dependencies', 'packages']:
+                        if _pkg_key in env_specs[_spec]:
+                            assert not pkg_key or pkg_key == _pkg_key
+                            pkg_key = _pkg_key
+        except Exception:
+            # Don't do error checking here...
+            pass
+        return pkg_key
 
     def _load_template(self):
         # ruamel.yaml returns None if you load an empty file,

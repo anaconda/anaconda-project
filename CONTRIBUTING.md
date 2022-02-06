@@ -7,7 +7,7 @@ Here's how to work on the code:
    specific versions, or the warnings and errors may have changed
    which will make tests fail.  The simplest way to get the right
    environment is `conda env create environment.yml` but you can
-   also look in that file and/or .travis.yml/appveyor.xml to see
+   also look in that file and/or `.travis.yml/appveyor.xml` to see
    which packages are neded and then create the dev environment
    by hand as you see fit.
  * NOTE: Do make sure to respect the version pins found in the

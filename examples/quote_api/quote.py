@@ -88,17 +88,20 @@ class QuoteApplication(gunicorn.app.base.BaseApplication):
 # arg parser for the standard project options
 parser = ArgumentParser(prog="quote-api", description="API server that returns a quote.")
 parser.add_argument('--anaconda-project-host', action='append', help='Hostname to allow in requests')
-parser.add_argument(
-    '--anaconda-project-no-browser', action='store_true', default=False, help='Disable opening in a browser')
-parser.add_argument(
-    '--anaconda-project-use-xheaders', action='store_true', default=False, help='Trust X-headers from reverse proxy')
+parser.add_argument('--anaconda-project-no-browser',
+                    action='store_true',
+                    default=False,
+                    help='Disable opening in a browser')
+parser.add_argument('--anaconda-project-use-xheaders',
+                    action='store_true',
+                    default=False,
+                    help='Trust X-headers from reverse proxy')
 parser.add_argument('--anaconda-project-url-prefix', action='store', default='', help='Prefix in front of urls')
 parser.add_argument('--anaconda-project-port', action='store', default='8080', help='Port to listen on')
 parser.add_argument('--anaconda-project-address', action='store', default='0.0.0.0', help='IP to listen on')
-parser.add_argument(
-    '--anaconda-project-iframe-hosts',
-    action='append',
-    help='Space-separated hosts which can embed us in an iframe per our Content-Security-Policy')
+parser.add_argument('--anaconda-project-iframe-hosts',
+                    action='append',
+                    help='Space-separated hosts which can embed us in an iframe per our Content-Security-Policy')
 
 if __name__ == '__main__':
     # This app accepts but ignores --anaconda-project-no-browser because we never bother to open a browser,
@@ -106,11 +109,10 @@ if __name__ == '__main__':
     args = parser.parse_args(sys.argv[1:])
     if not args.anaconda_project_host:
         args.anaconda_project_host = ['localhost:' + args.anaconda_project_port]
-    app = QuoteApplication(
-        port=args.anaconda_project_port,
-        address=args.anaconda_project_address,
-        prefix=args.anaconda_project_url_prefix,
-        hosts=args.anaconda_project_host)
+    app = QuoteApplication(port=args.anaconda_project_port,
+                           address=args.anaconda_project_address,
+                           prefix=args.anaconda_project_url_prefix,
+                           hosts=args.anaconda_project_host)
     print("Starting API server. Try http://localhost:%s%s" % (app.port, app.prefix + '/quote'))
     try:
         app.run()

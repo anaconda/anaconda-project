@@ -12,7 +12,7 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 import difflib
 
-from anaconda_project.yaml_file import (_CommentedMap, _CommentedSeq, _block_style_all_nodes)
+from anaconda_project.yaml_file import (_CommentedMap, _CommentedSeq, _block_style_all_nodes, YamlFile)
 from anaconda_project.internal.metaclass import with_metaclass
 from anaconda_project.internal import conda_api
 from anaconda_project.internal import pip_api
@@ -394,7 +394,7 @@ class CondaLockSet(object):
                 packages_diff.extend(map(lambda x: x, diff))
 
         if packages_diff:
-            packages_diff = ['  packages:'] + packages_diff
+            packages_diff = [f'  {YamlFile.pkg_key}:'] + packages_diff
 
         if old is None:
             old_platforms = []
@@ -442,7 +442,7 @@ class CondaLockSet(object):
         """Whether we have locked deps for the current platform."""
         return self.enabled and conda_api.current_platform() in self.platforms
 
-    def to_json(self):
+    def to_json(self, pkg_key=YamlFile.pkg_key):
         """JSON/YAML version of the lock set."""
         yaml_dict = _CommentedMap()
 
@@ -462,7 +462,7 @@ class CondaLockSet(object):
             for package in self._package_specs_by_platform[platform]:
                 packages.append(package)
             packages_dict[platform] = packages
-        yaml_dict['packages'] = packages_dict
+        yaml_dict[pkg_key] = packages_dict
 
         _block_style_all_nodes(yaml_dict)
         return yaml_dict

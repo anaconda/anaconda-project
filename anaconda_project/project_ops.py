@@ -79,7 +79,7 @@ def create(directory_path,
     project = Project(directory_path, scan_parents=False)
 
     if with_anaconda_package:
-        project.project_file.set_value('packages', ['anaconda'])
+        project.project_file.set_value(project.project_file.pkg_key, ['anaconda'])
     if name is not None:
         project.project_file.set_value('name', name)
     if icon is not None:
@@ -394,6 +394,9 @@ def _updating_project_lock_file(project):
 
 
 def _update_env_spec(project, name, packages, channels, create, pip=False):
+    # Get the name of the package key from the file ('dependencies' vs 'packages')
+    pkg_key = project.project_file.pkg_key
+
     failed = _check_problems(project)
     if failed is not None:
         return failed
@@ -424,7 +427,7 @@ def _update_env_spec(project, name, packages, channels, create, pip=False):
 
         # packages may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
-        old_packages = env_dict.get('packages', [])
+        old_packages = env_dict.get(pkg_key, [])
         if pip:
             pip_idx = None
             for idx, dep in enumerate(old_packages):
@@ -480,7 +483,7 @@ def _update_env_spec(project, name, packages, channels, create, pip=False):
         else:
             old_packages.extend(new_specs)
 
-        env_dict['packages'] = old_packages
+        env_dict[pkg_key] = old_packages
 
         # channels may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
@@ -678,6 +681,9 @@ def remove_packages(project, env_spec_name, packages, pip=False):
     # be nicer to rewrite this whole thing when we add version pinning
     # anyway.
 
+    # Get the name of the package key from the file ('dependencies' vs 'packages')
+    pkg_key = project.project_file.pkg_key
+
     failed = _check_problems(project)
     if failed is not None:
         return failed
@@ -729,7 +735,7 @@ def remove_packages(project, env_spec_name, packages, pip=False):
         assert len(env_dicts) > 0
 
         def _get_deps(env_dict, pip=False):
-            _pkgs = env_dict.get('packages', [])
+            _pkgs = env_dict.get(pkg_key, [])
             if pip:
                 pip_dicts = [dep for dep in _pkgs if is_dict(dep) and 'pip' in dep]
                 assert len(pip_dicts) == 1, 'There should only be one pip: key'
@@ -742,7 +748,7 @@ def remove_packages(project, env_spec_name, packages, pip=False):
         for env_dict in env_dicts:
             # packages may be a "CommentedSeq" and we don't want to lose the comments,
             # so don't convert this thing to a regular list.
-            old_packages = env_dict.get('packages', [])
+            old_packages = env_dict.get(pkg_key, [])
             removed_set = set(packages)
 
             if pip:
@@ -753,16 +759,16 @@ def remove_packages(project, env_spec_name, packages, pip=False):
 
                 if pip_idx is None:
                     if len(old_packages):
-                        env_dict['packages'].append({'pip': []})
+                        env_dict[pkg_key].append({'pip': []})
                     else:
-                        env_dict['packages'] = [{'pip': []}]
+                        env_dict[pkg_key] = [{'pip': []}]
                 else:
                     pip_packages = old_packages.pop(pip_idx)['pip']
                     _filter_inplace(lambda dep: not (is_string(dep) and dep in removed_set), pip_packages)
-                    env_dict['packages'].append({'pip': pip_packages})
+                    env_dict[pkg_key].append({'pip': pip_packages})
             else:
                 _filter_inplace(lambda dep: not (is_string(dep) and dep in removed_set), old_packages)
-                env_dict['packages'] = old_packages
+                env_dict[pkg_key] = old_packages
 
         # if we removed any deps from global, add them to the
         # individual envs that were not supposed to be affected.
@@ -771,7 +777,7 @@ def remove_packages(project, env_spec_name, packages, pip=False):
         for env_dict in unaffected_env_dicts:
             # old_packages may be a "CommentedSeq" and we don't want to lose the comments,
             # so don't convert this thing to a regular list.
-            old_packages = env_dict.get('packages', [])
+            old_packages = env_dict.get(pkg_key, [])
             if pip:
                 pip_idx = None
                 for idx, dep in enumerate(old_packages):
@@ -783,7 +789,7 @@ def remove_packages(project, env_spec_name, packages, pip=False):
                     old_packages[pip_idx]['pip'].extend(list(removed_from_global))
             else:
                 old_packages.extend(list(removed_from_global))
-            env_dict['packages'] = old_packages
+            env_dict[pkg_key] = old_packages
 
     if status_holder.status is not None:
         project.load()  # revert
