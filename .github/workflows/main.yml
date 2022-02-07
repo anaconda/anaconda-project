@@ -117,7 +117,7 @@ jobs:
           source ./conda/etc/profile.d/conda.sh
           [ ${{ matrix.pyver }} == 2.7 ] && BACKPORTS="backports.tempfile backports.functools_lru_cache"
           conda create -y -n anaconda-project-dev python=${{ matrix.pyver }} \
-            $BACKPORTS coverage 'pytest<5' pytest-cov redis notebook bokeh \
+            $BACKPORTS coverage pytest pytest-cov redis notebook bokeh \
             keyring setuptools pip local::anaconda-project
     - name: Run the tests
       run: |
