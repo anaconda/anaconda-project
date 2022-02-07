@@ -65,7 +65,7 @@ jobs:
       matrix:
         os: [macos-latest,ubuntu-latest,windows-latest]
         pyver: [2.7,3.6,3.7,3.8]
-        cver: [4.6,4.7,4.8]
+        cver: [4.6,4.7,4.8, 4.9, 4.10, 4.11]
         exclude:
           # Cannot instantiate these environment for these yet
           - pyver: 3.8
@@ -84,12 +84,21 @@ jobs:
             cver: 4.7
           - pyver: 2.7
             cver: 4.8
+          - pyver: 2.7
+            cver: 4.9
+          - pyver: 2.7
+            cver: 4.10
+          - pyver: 2.7
+            cver: 4.11
+          # Conda dropped py36 for base env
+          - pyver: 3.6
+            cver: 4.11
           # Unexplained failures in test_download
           - pyver: 2.7
             os: macos-latest
           # https://github.com/tornadoweb/tornado/issues/2804
-          - pyver: 3.8
-            os: windows-latest
+          # - pyver: 3.8
+          #   os: windows-latest
     steps:
     - name: Retrieve the source code
       uses: actions/checkout@v2
