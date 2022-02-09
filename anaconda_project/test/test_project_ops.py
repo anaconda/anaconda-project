@@ -1535,7 +1535,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
     def check(dirname):
         project = Project(dirname)
         specs = ('numpy<1.19.2', 'pandas')
-        pip_spec = ['chardet']
+        pip_spec = ['requests']
         for spec in specs:
             if spec == specs[0]:
                 status = project_ops.add_env_spec(project, name='foo', packages=[spec], channels=[])

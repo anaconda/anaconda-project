@@ -63,7 +63,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest,ubuntu-latest,windows-2019]
+        os: [macos-latest,ubuntu-latest,windows-latest]
         pyver: [2.7,3.6,3.7,3.8]
         cver: [4.6,4.7,4.8, 4.9, "4.10", "4.11"]
         exclude:
