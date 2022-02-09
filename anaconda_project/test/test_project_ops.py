@@ -1535,7 +1535,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
     def check(dirname):
         project = Project(dirname)
         specs = ('numpy<1.19.2', 'pandas')
-        pip_spec = ['requests']
+        pip_spec = ['chardet']
         for spec in specs:
             if spec == specs[0]:
                 status = project_ops.add_env_spec(project, name='foo', packages=[spec], channels=[])
@@ -1569,7 +1569,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             assert tuple(map(int, version.split('.'))) < (1, 19, 2), files[0]
 
             status = project_ops.add_packages(project, 'foo', packages=pip_spec, pip=True, channels=[])
-            assert status
+            assert status, status.errors
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
