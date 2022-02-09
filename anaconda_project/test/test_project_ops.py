@@ -1568,6 +1568,9 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             version = os.path.basename(files[0]).split('-', 2)[1]
             assert tuple(map(int, version.split('.'))) < (1, 19, 2), files[0]
 
+            status = project_ops.add_packages(project, 'foo', packages=['pip'], channels=[])
+            assert status, status.errors
+
             status = project_ops.add_packages(project, 'foo', packages=pip_spec, pip=True, channels=[])
             assert status, status.errors
 
