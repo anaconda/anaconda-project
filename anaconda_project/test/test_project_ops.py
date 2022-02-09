@@ -1534,17 +1534,13 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
 
     def check(dirname):
         project = Project(dirname)
-        specs = ('numpy<1.19.2', 'pandas')
-        pip_spec = ['chardet']
-        for spec in specs:
-            if spec == specs[0]:
-                status = project_ops.add_env_spec(project, name='foo', packages=[spec], channels=[])
-            else:
-                status = project_ops.add_packages(project, 'foo', packages=[spec], channels=[])
-            if not status:
-                print(status.status_description)
-                print(repr(status.errors))
-            assert status
+
+        status = project_ops.add_env_spec(project, name='foo', packages=['python=3.8'], channels=[])
+        assert status, status.errors
+
+        for spec in ['numpy<1.19.2', 'bokeh', 'pip']:
+            status = project_ops.add_packages(project, 'foo', packages=[spec], channels=[])
+            assert status, status.errors
 
             assert 'foo' in project.env_specs
             env = project.env_specs['foo']
@@ -1568,11 +1564,11 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             version = os.path.basename(files[0]).split('-', 2)[1]
             assert tuple(map(int, version.split('.'))) < (1, 19, 2), files[0]
 
-            status = project_ops.add_packages(project, 'foo', packages=['pip'], channels=[])
-            assert status, status.errors
-
-            status = project_ops.add_packages(project, 'foo', packages=pip_spec, pip=True, channels=[])
-            assert status, status.errors
+        status = project_ops.add_packages(project, 'foo', packages=['chardet'], pip=True, channels=[])
+        assert status, status.errors
+        project2 = Project(dirname)
+        env_spec = project2.env_specs['foo']
+        assert 'chardet' in env_spec.pip_packages, {'conda': env_spec.conda_packages, 'pip': env_spec.pip_packages}
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
