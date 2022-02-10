@@ -85,6 +85,7 @@ jobs:
           - pyver: 2.7
             cver: 4.8
           - pyver: 2.7
+          # Py2.7 support ends
             cver: 4.9
           - pyver: 2.7
             cver: "4.10"
@@ -96,9 +97,17 @@ jobs:
           # Unexplained failures in test_download
           - pyver: 2.7
             os: macos-latest
-          # https://github.com/tornadoweb/tornado/issues/2804
-          # - pyver: 3.8
-          #   os: windows-latest
+          # Odd timestamp behavior
+          - pyver: 3.7
+            os: ubuntu-latest
+            cver: 4.8
+          - pyver: 3.8
+            os: ubuntu-latest
+            cver: 4.8
+          # Old versions will be trimmed from tests soon
+          - os: windows-latest
+            pyver: 2.7
+            cver: 4.6
     steps:
     - name: Retrieve the source code
       uses: actions/checkout@v2
