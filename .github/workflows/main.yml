@@ -108,6 +108,9 @@ jobs:
           - os: windows-latest
             pyver: 2.7
             cver: 4.6
+          - os: windows-latest
+            pyver: 3.6
+            cver: 4.6
     steps:
     - name: Retrieve the source code
       uses: actions/checkout@v2
