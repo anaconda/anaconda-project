@@ -42,6 +42,27 @@ import anaconda_project.internal.plugins as plugins_api
 from anaconda_project.internal.simple_status import SimpleStatus
 
 
+@pytest.fixture()
+def mocked_hash(monkeypatch):
+    # Certain # tests are designed without explicitly specifying
+    # the supported platform, which means that anaconda-project will
+    # inject the default platforms into the yaml files.
+    # If tests are run on non-default platforms (not linux-64, osx-64, win-64)
+    # then the platforms list is amended with the current platform.
+    # The logical_hash is computed with the platforms list so the hash
+    # will change if it is run on a non-default platform.
+    # The purpose of the mock (used in only select tests) is to provide
+    # a hash without the platform list to allow the tests to run correctly
+    # on non-default platforms.
+    from anaconda_project.env_spec import EnvSpec
+    old_compute_hash = EnvSpec._compute_hash
+
+    def fake_hash(self, conda_packages, platforms):
+        return old_compute_hash(self, conda_packages=conda_packages, platforms=())
+
+    monkeypatch.setattr('anaconda_project.env_spec.EnvSpec._compute_hash', fake_hash)
+
+
 def test_create(monkeypatch):
     def check_create(dirname):
         subdir = os.path.join(dirname, 'foo')
@@ -1667,7 +1688,7 @@ def test_add_env_spec():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
-def test_add_env_spec_no_global_platforms():
+def test_add_env_spec_no_global_platforms(mocked_hash):
     def check(dirname):
         def attempt():
             project = Project(dirname)
@@ -1682,21 +1703,21 @@ def test_add_env_spec_no_global_platforms():
             status = project_ops.add_env_spec(project, name='foo', packages=[], channels=[])
             assert status
 
-            assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['foo'].platforms
+            assert conda_api.default_platforms_with_current() == project.env_specs['foo'].platforms
 
         _with_conda_test(attempt)
 
         # be sure we really made the config changes
         project2 = Project(dirname)
         assert dict(packages=[], channels=[],
-                    platforms=['linux-64', 'osx-64',
-                               'win-64']) == dict(project2.project_file.get_value(['env_specs', 'foo']))
+                    platforms=list(conda_api.default_platforms_with_current())
+                    ) == dict(project2.project_file.get_value(['env_specs', 'foo']))
 
         assert dict(locked=True,
-                    env_spec_hash='a30f02c961ef4f3fe07ceb09e0906394c3885a79',
+                    env_spec_hash='da39a3ee5e6b4b0d3255bfef95601890afd80709',
                     packages=dict(all=[]),
-                    platforms=['linux-64', 'osx-64',
-                               'win-64']) == dict(project2.lock_file.get_value(['env_specs', 'foo']))
+                    platforms=list(conda_api.default_platforms_with_current())
+                    ) == dict(project2.lock_file.get_value(['env_specs', 'foo']))
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
@@ -2946,33 +2967,31 @@ def test_lock_and_update_and_unlock_all_envs():
             assert status
 
             # yapf: disable
-            assert [
-                'Set project platforms list to linux-64, osx-64, win-64',
-                'Updating locked dependencies for env spec bar...',
-                'Changes to locked dependencies for bar:',
-                '  platforms:',
-                '+   linux-64',
-                '+   osx-64',
-                '+   win-64',
-                '  packages:',
-                '+   all:',
-                '+     a=1.0=1',
-                '+   pip:',
-                '+     cc==1.0',
-                'Added locked dependencies for env spec bar to anaconda-project-lock.yml.',
-                'Updating locked dependencies for env spec foo...',
-                'Changes to locked dependencies for foo:',
-                '  platforms:',
-                '+   linux-64',
-                '+   osx-64',
-                '+   win-64',
-                '  packages:',
-                '+   all:',
-                '+     a=1.0=1',
-                '+   pip:',
-                '+     cc==1.0',
-                'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'
-            ] == project.frontend.logs
+            expected_output = """Set project platforms list to {platforms}
+Updating locked dependencies for env spec bar...
+Changes to locked dependencies for bar:
+  platforms:
+{platforms_diff}
+  packages:
++   all:
++     a=1.0=1
++   pip:
++     cc==1.0
+Added locked dependencies for env spec bar to anaconda-project-lock.yml.
+Updating locked dependencies for env spec foo...
+Changes to locked dependencies for foo:
+  platforms:
+{platforms_diff}
+  packages:
++   all:
++     a=1.0=1
++   pip:
++     cc==1.0
+Added locked dependencies for env spec foo to anaconda-project-lock.yml.""".format(
+                platforms=', '.join(conda_api.default_platforms_with_current()),
+                platforms_diff='\n'.join(['+   {p}'.format(p=p) for p in conda_api.default_platforms_with_current()])
+            ).splitlines()
+            assert expected_output == project.frontend.logs
             # yapf: enable
 
             assert os.path.isfile(filename)
@@ -2990,11 +3009,11 @@ def test_lock_and_update_and_unlock_all_envs():
             assert ['cc==1.0'] == project.env_specs['foo'].pip_packages_for_create
             assert ['cc==1.0'] == project.env_specs['bar'].pip_packages_for_create
 
-            assert project.env_specs['foo'].platforms == conda_api.default_platforms
-            assert project.env_specs['bar'].platforms == conda_api.default_platforms
+            assert project.env_specs['foo'].platforms == conda_api.default_platforms_with_current()
+            assert project.env_specs['bar'].platforms == conda_api.default_platforms_with_current()
 
             # we should have set the global platforms, not in each env spec
-            assert conda_api.default_platforms == project.project_file.get_value('platforms')
+            assert conda_api.default_platforms_with_current() == project.project_file.get_value('platforms')
             assert project.project_file.get_value(['env_specs', 'foo', 'platforms'], None) is None
             assert project.project_file.get_value(['env_specs', 'bar', 'platforms'], None) is None
 
@@ -3067,7 +3086,7 @@ env_specs:
         }, check)
 
 
-def test_lock_and_unlock_single_env():
+def test_lock_and_unlock_single_env(mocked_hash):
     def check(dirname):
         def attempt():
             filename = os.path.join(dirname, DEFAULT_PROJECT_LOCK_FILENAME)
@@ -3084,17 +3103,19 @@ def test_lock_and_unlock_single_env():
             assert status
 
             # yapf: disable
-            assert ['Set platforms for foo to linux-64, osx-64, win-64',
-                    'Updating locked dependencies for env spec foo...',
-                    'Changes to locked dependencies for foo:',
-                    '  platforms:',
-                    '+   linux-64',
-                    '+   osx-64',
-                    '+   win-64',
-                    '  packages:',
-                    '+   all:',
-                    '+     a=1.0=1',
-                    'Added locked dependencies for env spec foo to anaconda-project-lock.yml.'] == project.frontend.logs
+            expected_output = """Set platforms for foo to {platforms}
+Updating locked dependencies for env spec foo...
+Changes to locked dependencies for foo:
+  platforms:
+{platforms_diff}
+  packages:
++   all:
++     a=1.0=1
+Added locked dependencies for env spec foo to anaconda-project-lock.yml.""".format(
+                platforms=', '.join(conda_api.default_platforms_with_current()),
+                platforms_diff='\n'.join(['+   {p}'.format(p=p) for p in conda_api.default_platforms_with_current()])
+            ).splitlines()
+            assert expected_output == project.frontend.logs
             # yapf: enable
 
             assert 'Project dependencies are locked.' == status.status_description
@@ -3103,18 +3124,18 @@ def test_lock_and_unlock_single_env():
 
             foo_lock_set = project.env_specs['foo'].lock_set
             assert ('a=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
-            assert foo_lock_set.env_spec_hash == 'b7f3266407fe0056da25fc23764bb7643c3560be'
+            assert foo_lock_set.env_spec_hash == '86f7e437faa5a7fce15d1ddcb9eaeaea377667b8'
             assert project.env_specs['bar'].lock_set.disabled
 
             assert ('a=1.0=1', ) == project.env_specs['foo'].conda_packages_for_create
             assert ('b', ) == project.env_specs['bar'].conda_packages_for_create
 
-            assert project.env_specs['foo'].platforms == conda_api.default_platforms
+            assert project.env_specs['foo'].platforms == conda_api.default_platforms_with_current()
             assert project.env_specs['bar'].platforms == ('osx-64', )
 
             # we should NOT have set the global platforms
             assert project.project_file.get_value('platforms', None) is None
-            assert conda_api.default_platforms == project.project_file.get_value(['env_specs', 'foo', 'platforms'],
+            assert conda_api.default_platforms_with_current() == project.project_file.get_value(['env_specs', 'foo', 'platforms'],
                                                                                  None)
             assert [
                 'osx-64',
@@ -3149,7 +3170,7 @@ def test_lock_and_unlock_single_env():
 
             foo_lock_set = project.env_specs['foo'].lock_set
             assert ('a=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
-            assert foo_lock_set.env_spec_hash == 'fb71df6e984eb3330f442f1e9a7726aaa698ca59'
+            assert foo_lock_set.env_spec_hash == 'b3a7c645306726ef4965c7be7e859ec0efd9af5b'
 
             # Now unlock
             project.frontend.reset()
