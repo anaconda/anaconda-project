@@ -1839,7 +1839,7 @@ env_specs:
 locking_enabled: true
 env_specs:
   hello:
-    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    platforms: [linux-32,linux-64,osx-64,osx-arm64,win-32,win-64]
     packages:
       all:
       - a=1.0=1
@@ -1924,7 +1924,7 @@ env_specs:
 locking_enabled: true
 env_specs:
   hello:
-    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    platforms: [linux-32,linux-64,osx-64,osx-arm64,win-32,win-64]
     packages:
       all:
       - a=1.0=1
@@ -3192,7 +3192,7 @@ def test_locking_with_missing_lock_set_does_an_update():
 
             project = Project(dirname, frontend=FakeFrontend())
 
-            assert project.env_specs['foo'].platforms == ('linux-64', 'osx-64', 'win-64')
+            assert project.env_specs['foo'].platforms == ('linux-64', 'osx-64', 'osx-arm64', 'win-64')
             # lock set should be enabled yet missing and empty
             assert project.env_specs['foo'].lock_set.enabled
             assert project.env_specs['foo'].lock_set.missing
@@ -3208,6 +3208,7 @@ def test_locking_with_missing_lock_set_does_an_update():
                     '  platforms:',
                     '+   linux-64',
                     '+   osx-64',
+                    '+   osx-arm64',
                     '+   win-64',
                     '  packages:',
                     '+   all:',
@@ -3222,7 +3223,7 @@ def test_locking_with_missing_lock_set_does_an_update():
 
             foo_lock_set = project.env_specs['foo'].lock_set
             assert ('a=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
-            assert foo_lock_set.env_spec_hash == 'b7f3266407fe0056da25fc23764bb7643c3560be'
+            assert foo_lock_set.env_spec_hash == '83ac707b75eaa131f7a26a0b09172a7f39ff7195'
             assert project.env_specs['foo'].lock_set.enabled
             assert not project.env_specs['foo'].lock_set.missing
 
@@ -3232,7 +3233,7 @@ def test_locking_with_missing_lock_set_does_an_update():
         {
             DEFAULT_PROJECT_FILENAME: """
 name: locktest
-platforms: [linux-64,osx-64,win-64]
+platforms: [linux-64,osx-64,osx-arm64,win-64]
 env_specs:
   foo:
     packages:
@@ -3262,14 +3263,14 @@ def test_update_changes_only_the_hash():
             assert status
             assert [
                 'Updating locked dependencies for env spec foo...',
-                'Updated hash for env spec foo to 9990ec43408f9593030a3a136c916022189f04b3 in '
+                'Updated hash for env spec foo to 072f81028686690f6e2c6602e484ba78d084eec9 in '
                 'anaconda-project-lock.yml.'
             ] == project.frontend.logs
             assert 'Update complete.' == status.status_description
 
             foo_lock_set = project.env_specs['foo'].lock_set
             assert ('a=1.0=1', ) == foo_lock_set.package_specs_for_current_platform
-            assert foo_lock_set.env_spec_hash == '9990ec43408f9593030a3a136c916022189f04b3'
+            assert foo_lock_set.env_spec_hash == '072f81028686690f6e2c6602e484ba78d084eec9'
 
         _with_conda_test(attempt, resolve_dependencies={'all': ['a=1.0=1']})
 
@@ -3278,7 +3279,7 @@ def test_update_changes_only_the_hash():
             DEFAULT_PROJECT_FILENAME:
             """
 name: locktest
-platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+platforms: [linux-32,linux-64,osx-64,osx-arm64,win-32,win-64]
 env_specs:
   foo:
     packages:
@@ -3289,7 +3290,7 @@ env_specs:
 locking_enabled: true
 env_specs:
   foo:
-    platforms: [linux-32,linux-64,osx-64,win-32,win-64]
+    platforms: [linux-32,linux-64,osx-64,osx-arm64,win-32,win-64]
     env_spec_hash: old
     packages:
       all: ['a=1.0=1']
@@ -3501,6 +3502,7 @@ def test_update_empty_lock_sets():
                 '  platforms:',
                 '+   linux-64',
                 '+   osx-64',
+                '+   osx-arm64',
                 '+   win-64',
                 '  packages:',
                 '+   all:',
@@ -3511,6 +3513,7 @@ def test_update_empty_lock_sets():
                 '  platforms:',
                 '+   linux-64',
                 '+   osx-64',
+                '+   osx-arm64',
                 '+   win-64',
                 '  packages:',
                 '+   all:',
@@ -3521,7 +3524,7 @@ def test_update_empty_lock_sets():
             for env in project.env_specs.values():
                 assert env.lock_set.enabled
                 assert env.lock_set.supports_current_platform
-                assert env.lock_set.platforms == conda_api.default_platforms
+                assert env.lock_set.platforms == ('linux-64', 'osx-64', 'osx-arm64', 'win-64')
                 assert env.lock_set.package_specs_for_current_platform == ('a=1.0=1', )
 
         _with_conda_test(attempt, resolve_dependencies=resolve_results)
@@ -3530,7 +3533,7 @@ def test_update_empty_lock_sets():
         {
             DEFAULT_PROJECT_FILENAME: """
 name: locktest
-platforms: [linux-64,osx-64,win-64]
+platforms: [linux-64,osx-64,osx-arm64,win-64]
 env_specs:
   foo:
     packages:
