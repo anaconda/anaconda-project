@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function
 
 import os
 import platform
+import pytest
 
 from anaconda_project.test.project_utils import project_no_dedicated_env
 from anaconda_project.test.environ_utils import minimal_environ, strip_environ
@@ -20,6 +21,7 @@ from anaconda_project.internal.test.tmpfile_utils import (tmp_script_commandline
                                                           with_directory_contents_completing_project_file)
 from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.local_state_file import LocalStateFile
+from anaconda_project.internal import conda_api
 
 
 def _monkeypatch_pwd(monkeypatch, dirname):
@@ -164,13 +166,9 @@ def test_remove_service_duplicate(capsys, monkeypatch):
         {DEFAULT_PROJECT_FILENAME: 'services:\n  ABC: redis\n  TEST: redis'}, check)
 
 
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
+@pytest.mark.skipif(conda_api.current_platform() == 'osx-arm64', reason='We cannot install redis server on osx-arm64')
 def test_remove_service_running_redis(monkeypatch):
-    # this test will fail if you don't have Redis installed, since
-    # it actually starts it.
-    if platform.system() == 'Windows':
-        print("Cannot start redis-server on Windows")
-        return
-
     from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
     from anaconda_project.requirements_registry.providers.test import test_redis_provider
 
