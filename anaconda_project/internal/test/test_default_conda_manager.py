@@ -40,7 +40,7 @@ else:
     # Use a different package from the test env due to weird CI path/env errors
     PYINSTRUMENT_BINARY = "bin/pyinstrument"
 
-test_spec = EnvSpec(name='myenv', conda_packages=['ipython', 'python=3.6'], pip_packages=['pyinstrument'], channels=[])
+test_spec = EnvSpec(name='myenv', conda_packages=['ipython', 'python=3.8'], pip_packages=['pyinstrument'], channels=[])
 
 
 def test_current_platform_unsupported_by_env_spec(monkeypatch):
@@ -76,7 +76,7 @@ def test_current_platform_unsupported_by_lock_set(monkeypatch):
                    conda_packages=['ipython'],
                    pip_packages=['flake8'],
                    channels=[],
-                   platforms=conda_api.default_platforms,
+                   platforms=conda_api.default_platforms_with_current(),
                    lock_set=lock_set)
 
     def do_test(dirname):
@@ -101,7 +101,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
 
     spec = test_spec
-    assert spec.conda_packages == ('ipython', 'python=3.6')
+    assert spec.conda_packages == ('ipython', 'python=3.8')
     assert spec.pip_packages == ('pyinstrument', )
 
     spec_with_phony_pip_package = EnvSpec(name='myenv',
@@ -123,21 +123,21 @@ def test_conda_create_and_install_and_remove(monkeypatch):
     assert spec_with_bad_url_pip_package.pip_package_names_set == set(('pyinstrument', 'phony'))
 
     spec_with_old_ipython = EnvSpec(name='myenv',
-                                    conda_packages=['ipython=5.4.1'],
+                                    conda_packages=['ipython=7.10.1'],
                                     pip_packages=['pyinstrument'],
                                     channels=[])
-    assert spec_with_old_ipython.conda_packages == ('ipython=5.4.1', )
+    assert spec_with_old_ipython.conda_packages == ('ipython=7.10.1', )
 
     spec_with_bokeh = EnvSpec(name='myenv', conda_packages=['bokeh'], pip_packages=['pyinstrument'], channels=[])
     assert spec_with_bokeh.conda_packages == ('bokeh', )
 
     spec_with_bokeh_and_old_ipython = EnvSpec(name='myenv',
-                                              conda_packages=['bokeh', 'ipython=5.4.1'],
+                                              conda_packages=['bokeh', 'ipython=7.10.1'],
                                               pip_packages=['pyinstrument'],
                                               channels=[])
     assert spec_with_bokeh_and_old_ipython.conda_packages == (
         'bokeh',
-        'ipython=5.4.1',
+        'ipython=7.10.1',
     )
 
     def do_test(dirname):

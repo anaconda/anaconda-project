@@ -73,9 +73,9 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         envdir = os.path.join(dirname, "myenv")
         print('CONDA_EXE: {}'.format(os.environ.get('CONDA_EXE')))
         # originally we did not specify a python version here, but we
-        # needed to add it with python 3.8 was released because a compatible
+        # needed to add it with python 3.9 was released because a compatible
         # version of ipython had not been created yet.
-        conda_api.create(prefix=envdir, pkgs=['python<3.8'])
+        conda_api.create(prefix=envdir, pkgs=['python<3.9'])
 
         assert os.path.isdir(envdir)
         assert os.path.isdir(os.path.join(envdir, "conda-meta"))
@@ -689,7 +689,7 @@ def test_resolve_dependencies_for_bogus_package_with_actual_conda():
 @pytest.mark.slow
 def test_resolve_dependencies_with_actual_conda_depending_on_conda():
     try:
-        result = conda_api.resolve_dependencies(['conda=4.3.27'], platform=None)
+        result = conda_api.resolve_dependencies(['conda=4.10.1'], platform=None)
     except conda_api.CondaError as e:
         pprint(e.json)
         raise e
@@ -697,7 +697,7 @@ def test_resolve_dependencies_with_actual_conda_depending_on_conda():
     names = [pkg[0] for pkg in result]
     assert 'conda' in names
     names_and_versions = [(pkg[0], pkg[1]) for pkg in result]
-    assert ('conda', '4.3.27') in names_and_versions
+    assert ('conda', '4.10.1') in names_and_versions
     assert len(result) > 1  # conda has some dependencies so should be >1
 
 
@@ -1144,6 +1144,7 @@ def test_current_platform_non_x86_mac(monkeypatch):
 
 
 # this test assumes all dev and CI happens on popular platforms.
+@pytest.mark.skip(reason="This test is no longer a good idea")
 def test_current_platform_is_in_default():
     assert conda_api.current_platform() in conda_api.default_platforms
 
@@ -1178,7 +1179,7 @@ def test_conda_clone_readonly():
         # originally we did not specify a python version here, but we
         # needed to add it with python 3.8 was released because a compatible
         # version of ipython had not been created yet.
-        conda_api.create(prefix=readonly, pkgs=['python<3.8'])
+        conda_api.create(prefix=readonly, pkgs=['python<3.9'])
 
         assert os.path.isdir(readonly)
         assert os.path.isdir(os.path.join(readonly, "conda-meta"))
