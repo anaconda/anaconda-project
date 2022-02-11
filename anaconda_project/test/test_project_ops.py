@@ -1590,7 +1590,6 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
         project2 = Project(dirname)
         env_spec = project2.env_specs['foo']
         assert 'chardet' in env_spec.pip_packages, {'conda': env_spec.conda_packages, 'pip': env_spec.pip_packages}
-        assert 'chardet' in os.listdir(os.path.join(dirname, 'envs', 'foo', 'lib', 'python3.8', 'site-packages'))
 
     with_directory_contents_completing_project_file(
         {
