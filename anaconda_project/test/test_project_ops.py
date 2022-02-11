@@ -1559,7 +1559,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
         status = project_ops.add_env_spec(project, name='foo', packages=['python=3.8'], channels=[])
         assert status, status.errors
 
-        for spec in ['markupsafe<2.0.1', 'jinja2', 'pip']:
+        for spec in ['markupsafe<2.0.0', 'jinja2', 'pip']:
             status = project_ops.add_packages(project, 'foo', packages=[spec], channels=[])
             assert status, status.errors
 
@@ -1573,7 +1573,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             env_commented_map = project2.project_file.get_value(['env_specs', 'foo'])
             assert spec in env_commented_map['packages'], env_commented_map['packages']
 
-            # ensure markupsafe <2.0.1 is present in both passes
+            # ensure markupsafe <2.0.0 is present in both passes
             meta_path = os.path.join(dirname, 'envs', 'foo', 'conda-meta')
             # pinned file no longer present between environment preparation steps
             assert os.path.isdir(meta_path)
@@ -1583,7 +1583,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             files = glob.glob(os.path.join(meta_path, 'markupsafe-1.*-*'))
             assert len(files) == 1, files
             version = os.path.basename(files[0]).split('-', 2)[1]
-            assert tuple(map(int, version.split('.'))) < (2, 0, 1), files[0]
+            assert tuple(map(int, version.split('.'))) < (2, 0, 0), files[0]
 
         status = project_ops.add_packages(project, 'foo', packages=['chardet'], pip=True, channels=[])
         assert status, status.errors
