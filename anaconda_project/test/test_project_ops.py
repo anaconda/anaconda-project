@@ -1524,9 +1524,9 @@ env_specs:
 # one test that does the real thing to be sure it works. Furthermore, we want
 # to exercise the logic that ensures anaconda-project can properly pin package
 # versions during intermediate install steps. To do so, we purposefully install
-# a version of numpy that is incompatible with the latest version of pandas, and
-# then we add a latest version of pandas. If anaconda-project does the right thing,
-# conda will install an earlier version of pandas to respect the numpy version pin.
+# a version of markupsafe that is incompatible with the latest version of jinja2, and
+# then we add a latest version of jinja2. If anaconda-project does the right thing,
+# conda will install an earlier version of jinja2 to respect the markupsafe version pin.
 @pytest.mark.slow
 def test_add_env_spec_with_real_conda_manager(monkeypatch):
     monkeypatch_conda_not_to_use_links(monkeypatch)
@@ -1538,7 +1538,7 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
         status = project_ops.add_env_spec(project, name='foo', packages=['python=3.8'], channels=[])
         assert status, status.errors
 
-        for spec in ['numpy<1.19.2', 'bokeh', 'pip']:
+        for spec in ['markupsafe<2.0.1', 'jinja2', 'pip']:
             status = project_ops.add_packages(project, 'foo', packages=[spec], channels=[])
             assert status, status.errors
 
@@ -1552,25 +1552,29 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
             env_commented_map = project2.project_file.get_value(['env_specs', 'foo'])
             assert spec in env_commented_map['packages'], env_commented_map['packages']
 
-            # ensure numpy <1.19.2 is present in both passes
+            # ensure markupsafe <2.0.1 is present in both passes
             meta_path = os.path.join(dirname, 'envs', 'foo', 'conda-meta')
             # pinned file no longer present between environment preparation steps
             assert os.path.isdir(meta_path)
             pinned = os.path.join(meta_path, 'pinned')
             assert not os.path.exists(pinned)
             # assert open(pinned, 'r').read() == specs[0]
-            files = glob.glob(os.path.join(meta_path, 'numpy-1.*-*'))
+            files = glob.glob(os.path.join(meta_path, 'markupsafe-1.*-*'))
             assert len(files) == 1, files
             version = os.path.basename(files[0]).split('-', 2)[1]
-            assert tuple(map(int, version.split('.'))) < (1, 19, 2), files[0]
+            assert tuple(map(int, version.split('.'))) < (2, 0, 1), files[0]
 
         status = project_ops.add_packages(project, 'foo', packages=['chardet'], pip=True, channels=[])
         assert status, status.errors
         project2 = Project(dirname)
         env_spec = project2.env_specs['foo']
         assert 'chardet' in env_spec.pip_packages, {'conda': env_spec.conda_packages, 'pip': env_spec.pip_packages}
+        assert 'chardet' in os.listdir(os.path.join(dirname, 'envs', 'foo', 'lib', 'python3.8', 'site-packages'))
 
-    with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
+    with_directory_contents_completing_project_file({
+        DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n",
+        DEFAULT_PROJECT_FILENAME: "platforms: [linux-64,osx-64,osx-arm64,win-64]\n"
+        }, check)
 
 
 def _push_conda_test(fix_works, missing_packages, wrong_version_packages, remove_error, resolve_dependencies,
