@@ -1592,9 +1592,10 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch):
         assert 'chardet' in env_spec.pip_packages, {'conda': env_spec.conda_packages, 'pip': env_spec.pip_packages}
         assert 'chardet' in os.listdir(os.path.join(dirname, 'envs', 'foo', 'lib', 'python3.8', 'site-packages'))
 
-    with_directory_contents_completing_project_file({
-        DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n",
-        DEFAULT_PROJECT_FILENAME: "platforms: [linux-64,osx-64,osx-arm64,win-64]\n"
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n",
+            DEFAULT_PROJECT_FILENAME: "platforms: [linux-64,osx-64,osx-arm64,win-64]\n"
         }, check)
 
 
@@ -1709,15 +1710,14 @@ def test_add_env_spec_no_global_platforms(mocked_hash):
 
         # be sure we really made the config changes
         project2 = Project(dirname)
-        assert dict(packages=[], channels=[],
-                    platforms=list(conda_api.default_platforms_with_current())
-                    ) == dict(project2.project_file.get_value(['env_specs', 'foo']))
+        assert dict(packages=[], channels=[], platforms=list(conda_api.default_platforms_with_current())) == dict(
+            project2.project_file.get_value(['env_specs', 'foo']))
 
         assert dict(locked=True,
                     env_spec_hash='da39a3ee5e6b4b0d3255bfef95601890afd80709',
                     packages=dict(all=[]),
-                    platforms=list(conda_api.default_platforms_with_current())
-                    ) == dict(project2.lock_file.get_value(['env_specs', 'foo']))
+                    platforms=list(conda_api.default_platforms_with_current())) == dict(
+                        project2.lock_file.get_value(['env_specs', 'foo']))
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
@@ -3135,8 +3135,8 @@ Added locked dependencies for env spec foo to anaconda-project-lock.yml.""".form
 
             # we should NOT have set the global platforms
             assert project.project_file.get_value('platforms', None) is None
-            assert conda_api.default_platforms_with_current() == project.project_file.get_value(['env_specs', 'foo', 'platforms'],
-                                                                                 None)
+            assert conda_api.default_platforms_with_current() == project.project_file.get_value(
+                ['env_specs', 'foo', 'platforms'], None)
             assert [
                 'osx-64',
             ] == project.project_file.get_value(['env_specs', 'bar', 'platforms'], None)
