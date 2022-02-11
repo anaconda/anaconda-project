@@ -12,6 +12,7 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 from anaconda_project.test.project_utils import assert_identical_except_blank_lines
 from anaconda_project.project_file import ProjectFile, DEFAULT_PROJECT_FILENAME, possible_project_file_names
 from anaconda_project.env_spec import EnvSpec
+from anaconda_project.internal import conda_api
 
 expected_default_file_template = """# This is an Anaconda project file.
 #
@@ -82,10 +83,8 @@ default_global_platforms = """#
 # Use `anaconda-project add-platforms` to add platforms.
 #
 platforms:
-- linux-64
-- osx-64
-- win-64
-"""
+{platforms}
+""".format(platforms='\n'.join(['- {p}'.format(p=p) for p in conda_api.default_platforms_with_current()]))
 
 empty_default_env_specs = """#
 # You can define multiple, named environment specs.

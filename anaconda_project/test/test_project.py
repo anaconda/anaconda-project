@@ -3620,7 +3620,7 @@ def test_fix_project_file_with_no_platforms():
 
         assert [] == project.problems
 
-        assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['default'].platforms
+        assert conda_api.default_platforms_with_current() == project.env_specs['default'].platforms
 
     with_directory_contents(
         {
@@ -3655,8 +3655,8 @@ def test_fix_env_spec_with_no_platforms():
         assert [] == project.problems
 
         assert ('linux-64', ) == project.env_specs['default'].platforms
-        assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['foo'].platforms
-        assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['bar'].platforms
+        assert conda_api.default_platforms_with_current() == project.env_specs['foo'].platforms
+        assert conda_api.default_platforms_with_current() == project.env_specs['bar'].platforms
 
     with_directory_contents(
         {
