@@ -225,9 +225,9 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch):
             DEFAULT_PROJECT_FILENAME:
             """
 packages:
-    - python=3.7
+    - python=3.8
     - ipython
-    - numpy=1.15
+    - numpy=1.19
     - pip
     - pip:
       - flake8
@@ -380,7 +380,7 @@ def _readonly_env(env_name, packages):
 @pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
 def test_clone_readonly_environment_with_deviations(monkeypatch):
     def clone_readonly_and_prepare(dirname):
-        with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
+        with _readonly_env(env_name='default', packages=('python=3.8', )) as ro_prefix:
             readonly = conda_api.installed(ro_prefix)
             assert 'python' in readonly
             assert 'requests' not in readonly
@@ -404,7 +404,7 @@ def test_clone_readonly_environment_with_deviations(monkeypatch):
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 packages:
-  - python=3.7
+  - python=3.8
   - requests
 env_specs:
   default: {}
@@ -415,7 +415,7 @@ env_specs:
 @pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
 def test_replace_readonly_environment_with_deviations(monkeypatch):
     def replace_readonly_and_prepare(dirname):
-        with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
+        with _readonly_env(env_name='default', packages=('python=3.8', )) as ro_prefix:
             readonly = conda_api.installed(ro_prefix)
             assert 'python' in readonly
             assert 'requests' not in readonly
@@ -439,7 +439,7 @@ def test_replace_readonly_environment_with_deviations(monkeypatch):
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 packages:
-  - python=3.7
+  - python=3.8
   - requests
 env_specs:
   default: {}
@@ -450,7 +450,7 @@ env_specs:
 @pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
 def test_fail_readonly_environment_with_deviations_unset_policy(monkeypatch):
     def clone_readonly_and_prepare(dirname):
-        with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
+        with _readonly_env(env_name='default', packages=('python=3.8', )) as ro_prefix:
             readonly = conda_api.installed(ro_prefix)
             assert 'python' in readonly
             assert 'requests' not in readonly
@@ -467,7 +467,7 @@ def test_fail_readonly_environment_with_deviations_unset_policy(monkeypatch):
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 packages:
-  - python=3.7
+  - python=3.8
   - requests
 env_specs:
   default: {}
@@ -478,7 +478,7 @@ env_specs:
 @pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
 def test_fail_readonly_environment_with_deviations_set_policy(monkeypatch):
     def clone_readonly_and_prepare(dirname):
-        with _readonly_env(env_name='default', packages=('python=3.7', )) as ro_prefix:
+        with _readonly_env(env_name='default', packages=('python=3.8', )) as ro_prefix:
             readonly = conda_api.installed(ro_prefix)
             assert 'python' in readonly
             assert 'requests' not in readonly
@@ -497,7 +497,7 @@ def test_fail_readonly_environment_with_deviations_set_policy(monkeypatch):
     with_directory_contents_completing_project_file(
         {DEFAULT_PROJECT_FILENAME: """
 packages:
-  - python=3.7
+  - python=3.8
   - requests
 env_specs:
   default: {}
