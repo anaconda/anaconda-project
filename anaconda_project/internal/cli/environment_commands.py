@@ -157,7 +157,7 @@ def lock(project_dir, env_spec_name):
 
 def update(project_dir, env_spec_name):
     """Update dependency versions."""
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     if console_utils.print_project_problems(project):
         return 1
     status = project_ops.update(project, env_spec_name=env_spec_name)
