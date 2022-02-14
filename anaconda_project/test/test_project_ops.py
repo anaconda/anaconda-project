@@ -802,7 +802,7 @@ def test_add_command_leaves_env_spec(pkg_key):
         }, check_add_command)
 
 
-@pytest._change_default_pkg_key
+
 def test_add_command_generates_env_spec_suggestion(pkg_key):
     def check_add_command(dirname):
         project = project_no_dedicated_env(dirname)
@@ -1557,11 +1557,11 @@ def test_add_env_spec_with_real_conda_manager(monkeypatch, pkg_key):
     def check(dirname):
         project = Project(dirname)
 
-        status = project_ops.add_env_spec(project, name='foo', pkg_key=['python=3.8'], channels=[])
+        status = project_ops.add_env_spec(project, name='foo', packages=['python=3.8'], channels=[])
         assert status, status.errors
 
         for spec in ['markupsafe<2.0.0', 'jinja2', 'pip']:
-            status = project_ops.add_packages(project, 'foo', pkg_key=[spec], channels=[])
+            status = project_ops.add_packages(project, 'foo', packages=[spec], channels=[])
             assert status, status.errors
 
             assert 'foo' in project.env_specs
@@ -1659,7 +1659,7 @@ def _with_conda_test(f,
         _pop_conda_test()
 
 
-@pytest._change_default_pkg_key
+
 def test_add_env_spec(pkg_key):
     def check(dirname):
         def attempt():
@@ -1690,7 +1690,7 @@ def test_add_env_spec(pkg_key):
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_add_env_spec_no_global_platforms(mocked_hash, pkg_key):
     def check(dirname):
         def attempt():
@@ -1724,7 +1724,7 @@ def test_add_env_spec_no_global_platforms(mocked_hash, pkg_key):
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_add_env_spec_with_packages_and_channels(pkg_key):
     def check(dirname):
         def attempt():
@@ -1750,7 +1750,7 @@ def test_add_env_spec_with_packages_and_channels(pkg_key):
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_add_env_spec_extending_existing_lists(pkg_key):
     def check(dirname):
         def attempt():
@@ -1777,7 +1777,7 @@ env_specs:
 """}, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_add_env_spec_extending_existing_lists_with_versions(pkg_key):
     def check(dirname):
         def attempt():
@@ -1824,7 +1824,7 @@ def test_add_env_spec_cannot_resolve_deps():
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"}, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_remove_env_spec(pkg_key):
     def check(dirname):
         def attempt():
@@ -1904,7 +1904,7 @@ env_specs:
     """}, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_remove_env_spec_causes_problem(pkg_key):
     def check(dirname):
         def attempt():
@@ -2955,7 +2955,7 @@ def test_unlock_broken_project():
     with_directory_contents({DEFAULT_PROJECT_FILENAME: ""}, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_lock_and_update_and_unlock_all_envs(pkg_key):
     def check(dirname):
         resolve_results = {'all': ['a=1.0=1'], 'pip': ['cc==1.0']}
@@ -3094,7 +3094,7 @@ env_specs:
         }, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_lock_and_unlock_single_env(mocked_hash, pkg_key):
     def check(dirname):
         def attempt():
@@ -3215,7 +3215,7 @@ env_specs:
         }, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_locking_with_missing_lock_set_does_an_update(pkg_key):
     def check(dirname):
         def attempt():
@@ -3278,7 +3278,7 @@ locking_enabled: true
         }, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_update_changes_only_the_hash(pkg_key):
     def check(dirname):
         def attempt():
@@ -3510,7 +3510,7 @@ env_specs:
         }, check)
 
 
-@pytest._change_default_pkg_key
+
 def test_update_empty_lock_sets(pkg_key):
     def check(dirname):
         resolve_results = {'all': ['a=1.0=1']}

@@ -621,7 +621,6 @@ variables:
         }, check_complain_about_conda_env_var)
 
 
-@pytest._change_default_pkg_key
 def test_load_environments(pkg_key):
     def check_environments(dirname):
         project = project_no_dedicated_env(dirname)
@@ -2327,7 +2326,6 @@ commands:
 """}, check_run_with_stuff_missing)
 
 
-@pytest._change_default_pkg_key
 def test_get_publication_info_from_empty_project(pkg_key):
     def check_publication_info_from_empty(dirname):
         project = project_no_dedicated_env(dirname)
@@ -2898,7 +2896,6 @@ channels:
         }, check)
 
 
-@pytest._change_default_pkg_key
 def test_no_auto_fix_env_spec_with_notebook_bokeh_injection(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -3383,7 +3380,6 @@ env_specs:
 """}, check)
 
 
-@pytest._change_default_pkg_key
 def test_lock_file_non_dict_lock_set_packages(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -3399,7 +3395,6 @@ env_specs:
 """}, check)
 
 
-@pytest._change_default_pkg_key
 def test_lock_file_has_pip_packages(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -3424,7 +3419,6 @@ env_specs:
         }, check)
 
 
-@pytest._change_default_pkg_key
 def test_lock_file_has_invalid_packages(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)
@@ -3523,7 +3517,6 @@ env_specs:
         }, check)
 
 
-@pytest._change_default_pkg_key
 def test_lock_file_has_empty_and_wrong_package_lists(pkg_key):
     def check(dirname):
         project = project_no_dedicated_env(dirname)

@@ -195,8 +195,8 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch, pkg_key):
         assert 'bokeh' not in installed
 
         # Preparing it again with new packages added should add those
-        deps = project.project_file.get_value('packages')
-        project.project_file.set_value('packages', deps + ['bokeh'])
+        deps = project.project_file.get_value(pkg_key)
+        project.project_file.set_value(pkg_key, deps + ['bokeh'])
         project.project_file.save()
         environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare_without_interaction(project, environ=environ)
@@ -213,8 +213,8 @@ def test_prepare_project_scoped_env_with_packages(monkeypatch, pkg_key):
         assert 'flake8' in installed_pip
 
         # Preparing it again with a bogus package should fail
-        deps = project.project_file.get_value('packages')
-        project.project_file.set_value(['packages'], deps + ['boguspackage'])
+        deps = project.project_file.get_value(pkg_key)
+        project.project_file.set_value([pkg_key], deps + ['boguspackage'])
         project.project_file.save()
         environ = minimal_environ(PROJECT_DIR=dirname)
         result = prepare_without_interaction(project, environ=environ)
@@ -407,7 +407,7 @@ def test_clone_readonly_environment_with_deviations(monkeypatch, pkg_key):
   - python=3.8
   - requests
 env_specs:
-  default: {}
+  default: {{}}
 """.format(pkg_key=pkg_key)}, clone_readonly_and_prepare)
 
 
@@ -442,8 +442,8 @@ def test_replace_readonly_environment_with_deviations(monkeypatch, pkg_key):
   - python=3.8
   - requests
 env_specs:
-  default: {}
-""".replace(pkg_key=pkg_key)}, replace_readonly_and_prepare)
+  default: {{}}
+""".format(pkg_key=pkg_key)}, replace_readonly_and_prepare)
 
 
 @pytest.mark.slow
@@ -470,8 +470,8 @@ def test_fail_readonly_environment_with_deviations_unset_policy(monkeypatch, pkg
   - python=3.8
   - requests
 env_specs:
-  default: {}
-""".replace(pkg_key=pkg_key)}, clone_readonly_and_prepare)
+  default: {{}}
+""".format(pkg_key=pkg_key)}, clone_readonly_and_prepare)
 
 
 @pytest.mark.slow
@@ -500,5 +500,5 @@ def test_fail_readonly_environment_with_deviations_set_policy(monkeypatch, pkg_k
   - python=3.8
   - requests
 env_specs:
-  default: {}
+  default: {{}}
 """.format(pkg_key=pkg_key)}, clone_readonly_and_prepare)
