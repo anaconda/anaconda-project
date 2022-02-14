@@ -29,7 +29,7 @@ def archive_command(project_dir, archive_filename, pack_envs):
         if not prepare_status:
             return 1
 
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
 
     status = project_ops.archive(project, archive_filename, pack_envs)
     if status:
