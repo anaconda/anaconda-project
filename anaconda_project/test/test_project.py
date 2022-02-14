@@ -2870,8 +2870,8 @@ def test_auto_fix_env_spec_out_of_sync():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME:
-            "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
+            DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\n"
+            "platforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
             "environment.yml": """
 name: stuff
 dependencies:
@@ -3004,8 +3004,8 @@ def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME:
-            "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
+            DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\n"
+            "platforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
             "environment.yml": """
 name: stuff
 dependencies:
@@ -3620,7 +3620,7 @@ def test_fix_project_file_with_no_platforms():
 
         assert [] == project.problems
 
-        assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['default'].platforms
+        assert conda_api.default_platforms_with_current() == project.env_specs['default'].platforms
 
     with_directory_contents(
         {
@@ -3655,8 +3655,8 @@ def test_fix_env_spec_with_no_platforms():
         assert [] == project.problems
 
         assert ('linux-64', ) == project.env_specs['default'].platforms
-        assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['foo'].platforms
-        assert ('linux-64', 'osx-64', 'win-64') == project.env_specs['bar'].platforms
+        assert conda_api.default_platforms_with_current() == project.env_specs['foo'].platforms
+        assert conda_api.default_platforms_with_current() == project.env_specs['bar'].platforms
 
     with_directory_contents(
         {

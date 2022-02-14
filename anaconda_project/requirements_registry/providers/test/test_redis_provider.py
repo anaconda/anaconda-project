@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function
 import codecs
 import os
 import platform
+import pytest
 import sys
 
 from anaconda_project.test.project_utils import project_no_dedicated_env
@@ -25,6 +26,7 @@ from anaconda_project.requirements_registry.requirements.redis import RedisRequi
 from anaconda_project.prepare import prepare_without_interaction, unprepare
 from anaconda_project import provide
 from anaconda_project.project_file import DEFAULT_PROJECT_FILENAME
+from anaconda_project.internal import conda_api
 
 
 # This is kind of an awkward way to do it for historical reasons,
@@ -198,13 +200,9 @@ def _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, rea
     return can_connect_args_list
 
 
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
+@pytest.mark.skipif(conda_api.current_platform() == 'osx-arm64', reason='We cannot install redis server on osx-arm64')
 def test_prepare_and_unprepare_local_redis_server(monkeypatch):
-    # this test will fail if you don't have Redis installed, since
-    # it actually starts it.
-    if platform.system() == 'Windows':
-        print("Cannot start redis-server on Windows")
-        return
-
     from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     can_connect_args_list = _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(
@@ -253,13 +251,9 @@ services:
 """}, start_local_redis)
 
 
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
+@pytest.mark.skipif(conda_api.current_platform() == 'osx-arm64', reason='We cannot install redis server on osx-arm64')
 def test_prepare_and_unprepare_local_redis_server_with_failed_unprovide(monkeypatch):
-    # this test will fail if you don't have Redis installed, since
-    # it actually starts it.
-    if platform.system() == 'Windows':
-        print("Cannot start redis-server on Windows")
-        return
-
     from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
@@ -283,13 +277,9 @@ services:
 """}, start_local_redis)
 
 
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
+@pytest.mark.skipif(conda_api.current_platform() == 'osx-arm64', reason='We cannot install redis server on osx-arm64')
 def test_prepare_and_unprepare_two_local_redis_servers_with_failed_unprovide(monkeypatch):
-    # this test will fail if you don't have Redis installed, since
-    # it actually starts it.
-    if platform.system() == 'Windows':
-        print("Cannot start redis-server on Windows")
-        return
-
     from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
@@ -316,13 +306,9 @@ services:
 """}, start_local_redis)
 
 
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
+@pytest.mark.skipif(conda_api.current_platform() == 'osx-arm64', reason='We cannot install redis server on osx-arm64')
 def test_prepare_local_redis_server_twice_reuses(monkeypatch):
-    # this test will fail if you don't have Redis installed, since
-    # it actually starts it.
-    if platform.system() == 'Windows':
-        print("Cannot start redis-server on Windows")
-        return
-
     from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     can_connect_args_list = _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(
@@ -387,13 +373,9 @@ services:
 """}, start_local_redis)
 
 
+@pytest.mark.skipif(platform.system() == 'Windows', reason='Windows has a hard time with read-only directories')
+@pytest.mark.skipif(conda_api.current_platform() == 'osx-arm64', reason='We cannot install redis server on osx-arm64')
 def test_prepare_local_redis_server_times_out(monkeypatch, capsys):
-    # this test will fail if you don't have Redis installed, since
-    # it actually starts it.
-    if platform.system() == 'Windows':
-        print("Cannot start redis-server on Windows")
-        return
-
     from anaconda_project.requirements_registry.network_util import can_connect_to_socket as real_can_connect_to_socket
 
     _monkeypatch_can_connect_to_socket_on_nonstandard_port_only(monkeypatch, real_can_connect_to_socket)
