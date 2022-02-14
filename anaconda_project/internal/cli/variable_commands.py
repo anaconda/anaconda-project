@@ -75,7 +75,7 @@ def set_variables(project_dir, env_spec_name, vars_and_values):
             return 1
         # maxsplit=1 -- no maxsplit keywork in py27
         fixed_vars.append(tuple(var.split('=', 1)))
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     status = project_ops.set_variables(project, env_spec_name, fixed_vars)
     if status:
         print(status.status_description)
@@ -91,7 +91,7 @@ def unset_variables(project_dir, env_spec_name, vars_to_unset):
     Returns:
         Returns exit code
     """
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     status = project_ops.unset_variables(project, env_spec_name, vars_to_unset)
     if status:
         print(status.status_description)

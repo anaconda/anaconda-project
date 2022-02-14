@@ -19,7 +19,7 @@ def dockerize_command(project_dir, tag, command, builder_image, build_args):
     Returns:
         exit code
     """
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     status = project_ops.dockerize(project,
                                    tag=tag,
                                    command=command,
