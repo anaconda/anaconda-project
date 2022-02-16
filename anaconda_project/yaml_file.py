@@ -70,7 +70,7 @@ def _load_string(contents):
 
 
 def _dump_string(yaml):
-    return ryaml.dump(yaml, Dumper=ryaml.RoundTripDumper)
+    return ryaml.dump(yaml, Dumper=ryaml.RoundTripDumper, block_seq_indent=2)
 
 
 def _save_file(yaml, filename, contents=None):
@@ -115,7 +115,7 @@ class YamlFile(object):
 
     """
 
-    pkg_key = "packages"  # Default: "packages" or "dependencies"
+    pkg_key = "dependencies"  # Default: "packages" or "dependencies"
 
     # The dummy entry works around a bug/quirk in ruamel.yaml that drops the
     # top comment for an empty dictionary

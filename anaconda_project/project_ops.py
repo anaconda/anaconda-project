@@ -37,6 +37,7 @@ from anaconda_project.internal import conda_api
 import anaconda_project.internal.notebook_analyzer as notebook_analyzer
 from anaconda_project.internal.py2_compat import is_string, is_dict
 from anaconda_project.docker import build_image, DEFAULT_BUILDER_IMAGE
+from anaconda_project.yaml_file import YamlFile
 
 
 def create(directory_path,
@@ -103,6 +104,70 @@ def create(directory_path,
         # the directory which we may not want... so only do it if
         # we're problem-free.
         project.project_file.save()
+
+    return project
+
+
+def init(directory_path,
+         make_directory=False,
+         dependencies=None,
+         channels=None,
+         name=None):
+    """Initialize a conda-project skeleton in the given directory.
+
+    Returns a Project instance even if creation fails or the directory
+    doesn't exist, but in those cases the ``problems`` attribute
+    of the Project will describe the problem.
+
+    If the environment.yml already exists, this simply loads it and
+    executes prepare.
+
+    This will prepare the project (create environments, etc.)
+    unless install=False
+
+    Args:
+        directory_path (str): directory to contain anaconda-project.yml
+        make_directory (bool): True to create the directory if it doesn't exist
+        dependencies (list): Packages to add to the environment
+        channels (list): Channels from which to install packages
+        name (str): Name of the new project or None to leave unset (uses directory name)
+        install (bool): True to create environment
+
+    Returns:
+        a Project instance
+    """
+    if make_directory and not os.path.exists(directory_path):
+        try:
+            os.makedirs(directory_path)
+        except (IOError, OSError):  # py3=IOError, py2=OSError
+            # allow project.problems to report the issue
+            pass
+
+    if name is None:
+        name = os.path.basename(os.path.abspath(directory_path))
+    if channels is None:
+        channels = ['defaults']
+    if dependencies is None:
+        dependencies = []
+    else:
+        pip = []
+        conda = []
+        for pkg in dependencies:
+            if pkg.startswith('pip:'):
+                pip.append(pkg.split('pip:', maxsplit=1)[1])
+            else:
+                conda.append(pkg)
+
+        dependencies = conda + [{'pip': pip}]
+
+    environment_yaml = YamlFile(filename=os.path.join(directory_path, 'environment.yml'))
+    environment_yaml.set_value('name', name)
+    environment_yaml.set_value('channels', channels)
+    environment_yaml.set_value('dependencies', dependencies)
+    environment_yaml.set_value('platforms', conda_api.default_platforms_with_current())
+    environment_yaml.save()
+
+    project = Project(directory_path, scan_parents=False)
 
     return project
 

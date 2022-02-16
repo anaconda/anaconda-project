@@ -807,15 +807,15 @@ class _ConfigCache(object):
 
         # Look for environment.yml, requirements.txt that are out of sync
 
-        (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
-                                                                                   self.directory_path)
+        # (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
+        #                                                                            self.directory_path)
         # if importable_spec is not None:
         #     skip_spec_import = project_file.get_value(['skip_imports', 'environment'])
         #     if (skip_spec_import == importable_spec.logical_hash) or skip_spec_import:
         #         importable_spec = None
 
-        if importable_spec is not None:
-            old = self.env_specs.get(importable_spec.name)
+        # if importable_spec is not None:
+        #     old = self.env_specs.get(importable_spec.name)
 
         # this is a pretty bad hack, but if we injected "notebook"
         # or "bokeh" deps to make a notebook/bokeh command work,
@@ -827,13 +827,13 @@ class _ConfigCache(object):
         # missing notebook dep, add it, then complain about environment.yml
         # out of sync, and `anaconda-project init` in a directory with a .ipynb
         # and an environment.yml doesn't result in a valid project.
-        if importable_spec is not None and old is not None and \
-                importable_spec.diff_only_removes_notebook_or_bokeh(old):
-            importable_spec = None
+        # if importable_spec is not None and old is not None and \
+        #         importable_spec.diff_only_removes_notebook_or_bokeh(old):
+        #     importable_spec = None
 
-        if importable_spec is not None:
-            project_file.set_value(['env_specs', importable_spec.name], importable_spec.to_json())
-            project_file.use_changes_without_saving()
+        # if importable_spec is not None:
+        #     project_file.set_value(['env_specs', importable_spec.name], importable_spec.to_json())
+        #     project_file.use_changes_without_saving()
             # print(project_file._yaml)
             # if old is None:
             #     text = "Environment spec '%s' from %s is not in %s." % (importable_spec.name, importable_filename,
@@ -1189,11 +1189,11 @@ class Project(object):
         self._directory_path = os.path.realpath(directory_path).rstrip(os.sep)
 
         def load_default_specs():
-            (importable_spec, importable_filename) = _find_importable_spec(directory_path)
-            if importable_spec is not None:
-                return [importable_spec]
-            else:
-                return [_empty_default_env_spec(shared_base_spec=None)]
+            # (importable_spec, importable_filename) = _find_importable_spec(directory_path)
+            # if importable_spec is not None:
+            #     return [importable_spec]
+            # else:
+            return [_empty_default_env_spec(shared_base_spec=None)]
 
         self._project_file = ProjectFile.load_for_directory(directory_path,
                                                             default_env_specs_func=load_default_specs,

@@ -56,6 +56,15 @@ def add_packages(project, environment, packages, channels, pip=False):
     project = load_project(project)
     status = project_ops.add_packages(project, env_spec_name=environment, packages=packages, channels=channels, pip=pip)
     package_list = ", ".join(packages)
+    # Pip packages can only be added to the lock file after
+    # they are installed. Pip does not have a dry-run feature
+    env_name = 'default' if environment is None else environment
+    prefix = project.env_specs[env_name].path(project.project_file.project_dir)
+    pip_pkgs = conda_api.installed_pip(prefix)
+    if pip_pkgs:
+        project.lock_file._add_pip_packages(env_name, pip_pkgs)
+        project.lock_file.save()
+
     if environment is None:
         success_message = "Added packages to project file: %s." % (package_list)
     else:
@@ -190,7 +199,25 @@ def main_export(args):
 
 def main_add_packages(args):
     """Start the add-packages command and return exit status code."""
-    return add_packages(args.directory, args.env_spec, args.packages, args.channel, args.pip)
+    try:
+        pkgs = args.dependencies
+        pip = []
+        conda = []
+        for pkg in pkgs:
+            if pkg.startswith('pip:'):
+                pip.append(pkg.split('pip:', maxsplit=1)[1])
+            else:
+                conda.append(pkg)
+
+        result = add_packages(args.directory, args.env_spec, conda, args.channel, pip=False)
+        if result!=0:
+            return result
+        else:
+            return add_packages(args.directory, args.env_spec, pip, channels=[], pip=True)
+    except AttributeError:
+        # called using anaconda-project cli
+        return add_packages(args.directory, args.env_spec, args.packages, args.channel, args.pip)
+
 
 
 def main_remove_packages(args):
