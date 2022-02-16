@@ -7,65 +7,98 @@ Project for the first time.
 
 After completing this guide, you will be able to:
 
-* Create a project containing a Bokeh app.
+* Create a new reproducible project.
 * Run the project with a single command.
 * Package and share the project.
 
 If you have not yet installed and started Project,
 follow the :doc:`Installation instructions <../install>`.
 
-For more information on Bokeh, see `Welcome to Bokeh
-<http://bokeh.pydata.org/en/latest/>`_.
 
+Create a new project
+====================
 
-Creating a project containing a Bokeh app
-===========================================
-
-To create a project called "clustering_app":
+The following steps will create a project called "demo_app":
 
 #. Open a Command Prompt or terminal window.
 
-#. Create a directory called ``clustering_app``, switch to it
-   and then initialize the project::
+#. Initialize the project in a new directory::
 
-     $ mkdir clustering_app
-     $ cd clustering_app
-     $ anaconda-project init
-     Project configuration is in /User/Anaconda/My Anaconda Projects/clustering_app/anaconda-project.yml
+     $ anaconda-project init -y --directory demo_app
 
-#. Inside the ``clustering_app`` project directory, create and
-   save a file named ``main.py`` that contains the code from the
-   `Bokeh clustering example
-   <https://raw.githubusercontent.com/bokeh/bokeh/master/examples/app/clustering/main.py>`_.
+#. Navigate into your project directory::
 
-#. Add the packages that the Bokeh clustering demo depends on::
+     $ cd demo_app
 
-     anaconda-project add-packages python=3.5 bokeh=0.12.4 numpy=1.12.0 scikit-learn=0.18.1
+#. Add the package dependencies::
 
-#. Tell Project about the Bokeh app::
+     $ anaconda-project add-packages python=3.8 notebook hvplot=0.7.3 panel=0.12.6 xarray=0.20 pooch=1.4 netCDF4
 
-     anaconda-project add-command plot .
+Create an example notebook-based Panel app
+==========================================
 
-   NOTE: By default, Bokeh looks for the file ``main.py``, so you
-   do not need to include this in the command string after the
-   "plot" command name.
+In this section, we will create a new notebook called
+``Interactive.ipynb`` via **either** of the following methods:
 
-#. When prompted, type ``B`` for Bokeh app::
+#. Download this `quickstart`_ example (either right-click and "save-as"
+   into your project directory or use ``curl`` on a unix-like platform)::
 
-     Is `plot` a (B)okeh app, (N)otebook, or (C)ommand line? B
-     Added a command 'plot' to the project.
-     Run it with `anaconda-project run plot`.
+    $ curl https://raw.githubusercontent.com/Anaconda-Platform/anaconda-project/master/examples/quickstart/Interactive.ipynb -o Interactive.ipynb
+
+   Note that this example is taken from a larger, more full-featured
+   `hvPlot interactive`_ one that will work as well, if you would prefer
+   to download that.
+
+#. Alternatively, you may launch a Jupyter notebook session with::
+
+    $ anaconda-project run jupyter notebook
+
+   and create a notebook called ``Interactive.ipynb`` with the following contents placed into a cell:
+
+.. code-block:: python
+
+    import xarray as xr
+    import hvplot.xarray
+    import hvplot.pandas
+    import panel as pn
+    import panel.widgets as pnw
+
+    ds = xr.tutorial.load_dataset('air_temperature')
+    diff = ds.air.interactive.sel(time=pnw.DiscreteSlider) - ds.air.mean('time')
+    kind = pnw.Select(options=['contourf', 'contour', 'image'], value='image')
+    interactive = diff.hvplot(cmap='RdBu_r', clim=(-20, 20), kind=kind)
+
+    pn.Column(
+        pn.Row(
+            pn.panel("https://hvplot.holoviz.org/assets/hvplot-wm.png", width=100),
+            pn.Spacer(width=20),
+            pn.Column(
+                pn.panel("## Select a time and type of plot", width=400),
+                interactive.widgets()
+            ),
+            pn.panel("https://panel.holoviz.org/_static/logo_stacked.png", width=100)
+        ),
+        interactive.panel()
+    ).servable()
+
+
+.. _hvPlot interactive: https://raw.githubusercontent.com/holoviz/hvplot/master/examples/user_guide/Interactive.ipynb
+.. _quickstart: https://raw.githubusercontent.com/Anaconda-Platform/anaconda-project/master/examples/quickstart/Interactive.ipynb
+
+Run your project
+================
+
+#. Register a new command to launch the notebook as a `Panel`_ app::
+
+     $ anaconda-project add-command --type unix dashboard "panel serve Interactive.ipynb"
+
+.. _Panel: https://panel.holoviz.org
 
 #. Run your new project::
 
-     anaconda-project run
+     $ anaconda-project run
 
-   NOTE: If your project included more than one command, you
-   would need to specify which command to run. For more
-   information, see :doc:`tasks/run-project`.
-
-   A browser window opens, displaying the clustering app.
-
+   You should now be able to view your application at http://localhost:5006/Interactive
 
 Sharing your project
 ====================
@@ -74,23 +107,20 @@ To share this project with a colleague:
 
 #. Archive the project::
 
-     anaconda-project archive clustering.zip
+     $ anaconda-project archive interactive.zip
 
 #. Send the archive file to your colleague.
 
 You can also share a project by uploading it to Anaconda Cloud.
 For more information, see :doc:`tasks/share-project`.
 
-
-Running your project
-====================
-
 Anyone with Project---your colleague or someone who downloads
 your project from Cloud---can run your project by unzipping the
 project archive file and then running a single command, without
 having to do any setup::
 
-     anaconda-project run
+     $ anaconda-project unarchive interactive.zip
+     $ anaconda-project run
 
 NOTE: If your project contained more than one command, the person
 using your project would need to specify which command to run.
