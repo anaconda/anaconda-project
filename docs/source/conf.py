@@ -243,7 +243,7 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'AnacondaProjectdoc'
 
-html_style = 'css/project.css'
+html_style = 'css/custom.css'
 
 # -- Options for LaTeX output ---------------------------------------------
 
