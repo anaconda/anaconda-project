@@ -96,6 +96,7 @@ able to rely on long-term interface stability.
    :hidden:
 
    install
+   getting-started
    config
    user-guide/index
    help-support

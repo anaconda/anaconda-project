@@ -13,7 +13,7 @@ named ``anaconda-project.yml``.
 
 TIP: Read more about YAML syntax at http://yaml.org/start.html
 
-TIP: You may want to go through :doc:`the anaconda-project tutorial <tutorial>`
+TIP: You may want to go through :doc:`the anaconda-project tutorial <../getting-started>`
 before digging into the details in this document.
 
 ``anaconda-project.yml``, ``anaconda-project-local.yml``, ``anaconda-project-lock.yml``
