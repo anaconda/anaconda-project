@@ -98,7 +98,7 @@ Run your project
 
      $ anaconda-project add-command --type unix dashboard "panel serve Interactive.ipynb"
 
-  .. note:: The ``unix`` command type may be used for linux & macOS. For Windows, replace ``--type unix`` with ``--type win``
+  .. note:: The ``unix`` command type may be used for linux & macOS. For Windows, replace ``--type unix`` with ``--type windows``
 
 2. Run your new project::
 
