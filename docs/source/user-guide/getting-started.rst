@@ -45,7 +45,7 @@ In this section, we will create a new notebook called
 
     $ curl https://raw.githubusercontent.com/Anaconda-Platform/anaconda-project/master/examples/quickstart/Interactive.ipynb -o Interactive.ipynb
 
-   Note that this example is taken from a larger, more full-featured
+.. note:: This example is taken from a larger, more full-featured
    `hvPlot interactive`_ one that will work as well, if you would prefer
    to download that.
 
@@ -92,13 +92,14 @@ Run your project
 
      $ anaconda-project add-command --type unix dashboard "panel serve Interactive.ipynb"
 
+.. note:: The ``unix`` command type may be used for linux & macOS. For Windows, replace ``--type unix`` with ``--type win``
 .. _Panel: https://panel.holoviz.org
 
 #. Run your new project::
 
-     $ anaconda-project run
+     $ anaconda-project run dashboard --show
 
-   You should now be able to view your application at http://localhost:5006/Interactive
+   Your application should now be running and available at http://localhost:5006/Interactive
 
 Sharing your project
 ====================
