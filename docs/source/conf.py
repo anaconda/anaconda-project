@@ -52,7 +52,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Anaconda Project'
-copyright = '2016, Anaconda, Inc'
+copyright = '2022, Anaconda, Inc'
 author = 'Anaconda'
 
 # The version info for the project you're documenting, acts as replacement for

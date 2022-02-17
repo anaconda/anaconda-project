@@ -6,7 +6,6 @@ User guide
    :maxdepth: 1
 
    concepts
-   getting-started
    tasks/index
    reference
    
