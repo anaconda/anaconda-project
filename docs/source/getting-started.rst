@@ -123,9 +123,9 @@ having to do any setup::
      $ cd demo_app
      $ anaconda-project run
 
-NOTE: If your project contains more than one command, the person
-using your project will need to specify which command to run.
-For more information, see :doc:`user-guide/tasks/run-project`.
+.. note:: If your project contains more than one command, the person
+   using your project will need to specify which command to run.
+   For more information, see :doc:`user-guide/tasks/run-project`.
 
 Project downloads the data, installs the necessary packages and
 runs the command.
