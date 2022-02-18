@@ -2780,18 +2780,9 @@ def test_auto_fix_missing_name():
         check)
 
 
-def test_auto_fix_env_spec_import():
+def test_env_spec_in_environment_yml():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        assert len(project.problems) == 1
-        assert len(project.problem_objects) == 1
-        assert len(project.fixable_problems) == 1
-        problem = project.problem_objects[0]
-        assert problem.text == "Environment spec 'stuff' from environment.yml is not in anaconda-project.yml."
-        assert problem.can_fix
-
-        problem.fix(project)
-        project.project_file.save()
 
         assert project.problems == []
         assert list(project.env_specs.keys()) == ['stuff']
@@ -2816,18 +2807,9 @@ channels:
         }, check)
 
 
-def test_auto_fix_requirements_txt_import():
+def test_requirements_txt():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        assert len(project.problems) == 1
-        assert len(project.problem_objects) == 1
-        assert len(project.fixable_problems) == 1
-        problem = project.problem_objects[0]
-        assert problem.text == "Environment spec 'default' from requirements.txt is not in anaconda-project.yml."
-        assert problem.can_fix
-
-        problem.fix(project)
-        project.project_file.save()
 
         assert project.problems == []
         assert list(project.env_specs.keys()) == ['default']
@@ -3209,7 +3191,6 @@ def test_with_one_locked_env_spec_has_problems():
         project = project_no_dedicated_env(dirname)
         assert [
             "anaconda-project.yml: The 'name:' field is missing.",
-            "anaconda-project.yml: The 'platforms:' field should list platforms the project supports."
         ] == project.problems
 
     with_directory_contents(
@@ -3226,10 +3207,7 @@ env_specs:
 def test_with_locking_enabled_no_env_specs_has_problems():
     def check(dirname):
         project = project_no_dedicated_env(dirname)
-        assert [
-            "anaconda-project.yml: The 'name:' field is missing.",
-            "anaconda-project.yml: The 'platforms:' field should list platforms the project supports."
-        ] == project.problems
+        assert ["anaconda-project.yml: The 'name:' field is missing."] == project.problems
 
     with_directory_contents({
         DEFAULT_PROJECT_FILENAME: "",

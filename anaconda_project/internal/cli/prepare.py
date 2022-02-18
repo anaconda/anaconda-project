@@ -7,20 +7,26 @@
 # -----------------------------------------------------------------------------
 """The ``prepare`` command configures a project to run, asking the user questions if necessary."""
 from __future__ import absolute_import, print_function
+from os import path
 
 import anaconda_project.internal.cli.console_utils as console_utils
 from anaconda_project.internal.cli.prepare_with_mode import prepare_with_ui_mode_printing_errors
 from anaconda_project.internal.cli.project_load import load_project
 
 
-def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=False, refresh=False):
+def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=False, refresh=False, python=None):
     """Configure the project to run.
 
     Returns:
         Prepare result (can be treated as True on success).
     """
-    project = load_project(project_dir)
-    project_dir = project.directory_path
+    project = load_project(project_dir, save=False)
+
+    if path.isfile(path.join(project_dir, 'requirements.txt')):
+        default = project.env_specs[project.default_env_spec_name]
+        if not default.conda_packages and (python is not None):
+            default._conda_packages = [f'python={python}']
+
     if console_utils.print_project_problems(project):
         return False
     if all:
@@ -37,7 +43,7 @@ def prepare_command(project_dir, ui_mode, conda_environment, command_name, all=F
 
 def main(args):
     """Start the prepare command and return exit status code."""
-    if prepare_command(args.directory, args.mode, args.env_spec, args.command, args.all, args.refresh):
+    if prepare_command(args.directory, args.mode, args.env_spec, args.command, args.all, args.refresh, args.python):
         print("The project is ready to run commands.")
         print("Use `anaconda-project list-commands` to see what's available.")
         return 0

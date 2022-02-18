@@ -19,7 +19,7 @@ def upload_command(project_dir, private, site, username, token, suffix):
     Returns:
         exit code
     """
-    project = load_project(project_dir)
+    project = load_project(project_dir, save=False)
     status = project_ops.upload(project, private=private, site=site, username=username, token=token, suffix=suffix)
     if status:
         print(status.status_description)

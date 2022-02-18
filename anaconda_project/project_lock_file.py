@@ -13,19 +13,21 @@ import os
 from anaconda_project.yaml_file import YamlFile, _CommentedMap, _block_style_all_nodes
 
 # these are in the order we'll use them if multiple are present
-possible_project_lock_file_names = ("anaconda-project-lock.yml", "anaconda-project-lock.yaml")
+possible_project_lock_file_names = ("project-lock.yml", 'project-lock.yaml',
+                                    "conda-project-lock.yml", "conda-project-lock.yaml",
+                                    "anaconda-project-lock.yml", "anaconda-project-lock.yaml")
 
 DEFAULT_PROJECT_LOCK_FILENAME = possible_project_lock_file_names[0]
 
 
 class ProjectLockFile(YamlFile):
-    """Represents the ``anaconda-project-lock.yml`` file which describes locked package versions."""
+    """Represents the ``project-lock.yml`` file which describes locked package versions."""
 
     template = '''
-# This is an Anaconda project lock file.
+# This is a Conda project lock file.
 # The lock file locks down exact versions of all your dependencies.
 #
-# In most cases, this file is automatically maintained by the `anaconda-project` command or GUI tools.
+# In most cases, this file is automatically maintained by the `conda-project` command or GUI tools.
 # It's best to keep this file in revision control (such as git or svn).
 # The file is in YAML format, please see http://www.yaml.org/start.html for more.
 #

@@ -77,7 +77,7 @@ def test_load_environment_yml_no_name():
         spec = _load_environment_yml(filename)
 
         assert spec is not None
-        assert spec.name == os.path.basename(filename)
+        assert spec.name == 'default'
         assert spec.conda_packages == ('bar=1.0', 'baz')
         assert spec.pip_packages == ('pippy', 'poppy==2.0')
         assert spec.channels == ('channel1', 'channel2')

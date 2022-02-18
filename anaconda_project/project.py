@@ -180,10 +180,13 @@ class _ConfigCache(object):
         if not project_exists:
             problems.append("Project directory '%s' does not exist." % self.directory_path)
         elif self.must_exist and not os.path.isfile(project_file.filename):
-            problems.append(
-                ProjectProblem(text="Project file '%s' does not exist." % os.path.basename(project_file.filename),
-                               fix_prompt="Create file '%s'?" % project_file.filename,
-                               fix_function=accept_project_creation))
+            filenames = ("environment.yml", "environment.yaml", 'requirements.txt')
+            filenames = map(lambda f: os.path.isfile(os.path.join(self.directory_path, f)), filenames)
+            if not any(filenames):
+                problems.append(
+                    ProjectProblem(text="Project file '%s' does not exist." % os.path.basename(project_file.filename),
+                                   fix_prompt="Create file '%s'?" % project_file.filename,
+                                   fix_function=accept_project_creation))
 
         if project_file.corrupted:
             problems.append(
@@ -220,7 +223,6 @@ class _ConfigCache(object):
             # options in the variables section, and after _update_env_specs
             # since we use those
             self._update_conda_env_requirements(requirements, problems, project_file)
-
             # this MUST be after we update env reqs so we have the valid env spec names
             self._update_commands(problems, project_file, requirements)
 
@@ -804,10 +806,10 @@ class _ConfigCache(object):
 
         (importable_spec, importable_filename) = _find_out_of_sync_importable_spec(self.env_specs.values(),
                                                                                    self.directory_path)
-        if importable_spec is not None:
-            skip_spec_import = project_file.get_value(['skip_imports', 'environment'])
-            if skip_spec_import == importable_spec.logical_hash:
-                importable_spec = None
+        # if importable_spec is not None:
+        #     skip_spec_import = project_file.get_value(['skip_imports', 'environment'])
+        #     if (skip_spec_import == importable_spec.logical_hash) or skip_spec_import:
+        #         importable_spec = None
 
         if importable_spec is not None:
             old = self.env_specs.get(importable_spec.name)
@@ -827,30 +829,34 @@ class _ConfigCache(object):
             importable_spec = None
 
         if importable_spec is not None:
-            if old is None:
-                text = "Environment spec '%s' from %s is not in %s." % (importable_spec.name, importable_filename,
-                                                                        os.path.basename(project_file.filename))
-                prompt = "Add env spec %s to %s?" % (importable_spec.name, os.path.basename(project_file.filename))
-            else:
-                text = "Environment spec '%s' from %s is out of sync with %s. Diff:\n%s" % (
-                    importable_spec.name, importable_filename, os.path.basename(
-                        project_file.filename), importable_spec.diff_from(old))
-                prompt = "Overwrite env spec %s with the changes from %s?" % (importable_spec.name, importable_filename)
+            project_file.set_value(['env_specs', importable_spec.name], importable_spec.to_json())
+            project_file.use_changes_without_saving()
+            # print(project_file._yaml)
+            # if old is None:
+            #     text = "Environment spec '%s' from %s is not in %s." % (importable_spec.name, importable_filename,
+            #                                                             os.path.basename(project_file.filename))
+            #     prompt = "Add env spec %s to %s?" % (importable_spec.name, os.path.basename(project_file.filename))
+            # else:
+            #     text = "Environment spec '%s' from %s is out of sync with %s. Diff:\n%s" % (
+            #         importable_spec.name, importable_filename, os.path.basename(project_file.filename),
+            #         importable_spec.diff_from(old))
+            #     prompt = "Overwrite env spec %s with the changes from %s?" % (importable_spec.name, importable_filename)
 
-            def overwrite_env_spec_from_importable(project):
-                project.project_file.set_value(['env_specs', importable_spec.name], importable_spec.to_json())
+            # def overwrite_env_spec_from_importable(project):
+            #     project.project_file.set_value(['env_specs', importable_spec.name], importable_spec.to_json())
 
-            def remember_no_import_importable(project):
-                project.project_file.set_value(['skip_imports', 'environment'], importable_spec.logical_hash)
+            # def remember_no_import_importable(project):
+            #     project.project_file.set_value(['skip_imports', 'environment'], importable_spec.logical_hash)
 
-            # we don't set the filename here because it isn't really an error in the
-            # file, it ends up reading strangely.
-            problems.append(
-                ProjectProblem(text=text,
-                               fix_prompt=prompt,
-                               fix_function=overwrite_env_spec_from_importable,
-                               no_fix_function=remember_no_import_importable))
-        elif env_specs_is_empty or env_specs_is_missing:
+            # # we don't set the filename here because it isn't really an error in the
+            # # file, it ends up reading strangely.
+            # problems.append(
+            #     ProjectProblem(
+            #         text=text,
+            #         fix_prompt=prompt,
+            #         fix_function=overwrite_env_spec_from_importable,
+            #         no_fix_function=remember_no_import_importable))
+        if env_specs_is_empty or env_specs_is_missing:
             # we do NOT want to add this problem if we merely
             # failed to parse individual env specs; it must be
             # safe to overwrite the env_specs key, so it has to
@@ -1633,6 +1639,9 @@ class Project(object):
         Does nothing for config files that are not dirty.
         """
         self.project_file.save()
+        self.lock_file.save()
+
+    def save_lock(self):
         self.lock_file.save()
 
     def use_changes_without_saving(self):

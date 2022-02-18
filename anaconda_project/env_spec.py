@@ -501,7 +501,7 @@ def _load_environment_yml(filename):
             name = os.path.basename(yaml['prefix'])
 
     if not name:
-        name = os.path.basename(filename)
+        name = 'default'
 
     # We don't do too much validation here because we end up doing it
     # later if we import this into the project, and then load it from
