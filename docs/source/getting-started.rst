@@ -62,29 +62,20 @@ In this section, we will create a new notebook called
 
  .. code-block:: python
 
-    import xarray as xr
-    import hvplot.xarray
-    import hvplot.pandas
-    import panel as pn
-    import panel.widgets as pnw
+    import xarray as xr, hvplot.xarray, hvplot.pandas, panel as pn, panel.widgets as pnw
 
-    ds = xr.tutorial.load_dataset('air_temperature')
-    diff = ds.air.interactive.sel(time=pnw.DiscreteSlider) - ds.air.mean('time')
-    kind = pnw.Select(options=['contourf', 'contour', 'image'], value='image')
-    interactive = diff.hvplot(cmap='RdBu_r', clim=(-20, 20), kind=kind)
+    ds     = xr.tutorial.load_dataset('air_temperature')
+    diff   = ds.air.interactive.sel(time=pnw.DiscreteSlider) - ds.air.mean('time')
+    kind   = pnw.Select(options=['contourf', 'contour', 'image'], value='image')
+    plot   = diff.hvplot(cmap='RdBu_r', clim=(-20, 20), kind=kind)
+
+    hvlogo = pn.panel("https://hvplot.holoviz.org/assets/hvplot-wm.png", width=100)
+    pnlogo = pn.panel("https://panel.holoviz.org/_static/logo_stacked.png", width=100)
+    text   = pn.panel("## Select a time and type of plot", width=400)
 
     pn.Column(
-        pn.Row(
-            pn.panel("https://hvplot.holoviz.org/assets/hvplot-wm.png", width=100),
-            pn.Spacer(width=20),
-            pn.Column(
-                pn.panel("## Select a time and type of plot", width=400),
-                interactive.widgets()
-            ),
-            pn.panel("https://panel.holoviz.org/_static/logo_stacked.png", width=100)
-        ),
-        interactive.panel()
-    ).servable()
+        pn.Row(hvlogo, pn.Spacer(width=20), pn.Column(text, plot.widgets()), pnlogo),
+        plot.panel()).servable()
 
  You can exit the running Jupyter Notebook program using CTRL+C in your terminal or command line.
 
@@ -132,9 +123,9 @@ having to do any setup::
      $ cd demo_app
      $ anaconda-project run
 
-NOTE: If your project contains more than one command, the person
-using your project will need to specify which command to run.
-For more information, see :doc:`user-guide/tasks/run-project`.
+.. note:: If your project contains more than one command, the person
+   using your project will need to specify which command to run.
+   For more information, see :doc:`user-guide/tasks/run-project`.
 
 Project downloads the data, installs the necessary packages and
 runs the command.
