@@ -28,7 +28,7 @@ setuptools.setup(
         "anaconda-client",
         "conda-pack",
         "requests",
-        "ruamel_yaml",
+        "ruamel.yaml",
         "tornado>=4.2",
         "jinja2",
         "tqdm",
