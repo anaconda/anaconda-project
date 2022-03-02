@@ -1,42 +1,132 @@
 # Mechanics
 
-Here's how to work on the code:
+## Development environment
 
- * STEP ONE: you need an environment with the right
-   dependencies. A trick is that the formatters/linters need to be
-   specific versions, or the warnings and errors may have changed
-   which will make tests fail.  The simplest way to get the right
-   environment is `conda env create environment.yml` but you can
-   also look in that file and/or .travis.yml/appveyor.xml to see
-   which packages are neded and then create the dev environment
-   by hand as you see fit.
- * NOTE: Do make sure to respect the version pins found in the
-   `environment.yml` file. In particular, different versions of
-   the reformatting package `yapf` may reformat the code in a
-   slightly different manner. This will introduce a number of
-   spurious changes to your local clone that will break testing
-   in CI if committed.
+You need an environment with the right dependencies. A trick is
+that the formatters/linters need to be specific versions, or the
+warnings and errors may have changed which will make tests fail.
+The simplest way to get the right environment is
 
-After you've activated your anaconda-project-dev environment,
+```
+> conda env create -f environment.yml
+```
 
- * `python scripts/run_tests.py` is configured to run all the checks that
-   have to pass before you commit or push. It also reformats the
-   code with yapf if necessary. Continuous integration runs this
-   command so you should run it and make it pass before you push
-   to the repo.
+You can also look in that file to see which packages are needed and
+then create the dev environment by hand as you see fit.
+
+To install the dev environment for a specific Python version,
+in this case 3.7, there are two steps.
+
+```
+> conda create -n anaconda-project-dev python=3.7
+> conda env update -f environment.yml
+```
+
+
+NOTE: Do make sure to respect the version pins found in the
+`environment.yml` file. In particular, different versions of
+the reformatting package `yapf` may reformat the code in a
+slightly different manner. This will introduce a number of
+spurious changes to your local clone that will break testing
+in CI if committed.
+
+## Optional: Installing anaconda-project
+
+It is not strictly necessary to install anaconda-project into
+the development environment in order to run tests, but you
+may wish to run the CLI and to do so we recommend installing
+the package as editable into the `anaconda-project-dev` Conda
+environment. Note that the `--no-deps` is added here since all
+requirements have already been installed using the procedures
+stated above.
+
+```
+> conda activate anaconda-project-dev
+> pip install --no-deps -e .
+```
+
+## Running tests
+
+The `setup.cfg` file configures pytest arguments for all the
+arguments needed to run tests and to compute test coverage.
+
+To run the tests,
+
+```
+> conda activate anaconda-project-dev
+> pytest
+```
+
+You can also use the [VSCode Python test discovery](https://code.visualstudio.com/docs/python/testing#_test-discovery). It should automatically discover
+the tests after configuring the project environment to `anaconda-project-dev`.
+A VSCode launch configuration file `.vscode/launch.json` is included in this project
+that enables [test debugging](https://code.visualstudio.com/docs/python/testing#_debug-tests).
+
+### Specific tests
+
+This will run all tests with verbose output, even if one or more
+tests fail and compute the test coverage.
+
+To only run a subset of tests you can supply the specific directory
+to run, for example
+
+```
+> pytest anaconda_project/internal/cli/test
+```
+
+A specific test file
+
+```
+> pytest anaconda_project/internal/cli/test/test_main.py
+```
+
+Or a specific test function
+
+```
+> pytest anaconda_project/internal/cli/test/test_main.py::test_main_help
+```
+
+### Exclude slow tests
+
+To run only "fast" tests, use
+
+```
+> pytest -k-slow
+```
+
+which skips slow tests. Slow tests have to pass in CI, but often it's
+helfpul to get all the fast tests working before debugging the slow ones.
+
+### The run_test.py script
+
+The `scripts/run_tests.py` file is configured to run all the checks that
+have to pass before you commit or push. It will run `pytest` just as shown
+above and will reformat the code with `yapf` if necessary. Here's the full
+help output.
+
+```
+> conda activate anaconda-project-dev
+> python scripts/run_tests.py --help
+Coverage monkeypatched to skip_covered
+usage: run_tests.py [-h] [--pytest-args [PYTEST_ARGS [PYTEST_ARGS ...]]] [--format-only]
+                    [--git-staged-only] [--skip-slow-tests] [--profile-formatting]
+
+Run tests
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --pytest-args [PYTEST_ARGS [PYTEST_ARGS ...]]
+                        Pass custom pytests arguments
+  --format-only         Only run the linters and formatters not the actual tests
+  --git-staged-only     Only run the linters and formatters on files added to the commit
+  --skip-slow-tests     Skip tests marked slow
+  --profile-formatting  Profile the linter and formatter steps
+```
+
  * To only run the formatter and linter, use `python scripts/run_tests.py
    --format-only`.
  * If you have added but uncommitted changes, you can use use `python scripts/run_tests.py
    --format-only --git-staged-only` to lint only the added files.
- * To only run the tests, use `python -m pytest -vv anaconda_project`
- * To only run a single file of tests use `python -m pytest
-   -vv anaconda_project/test/test_foo.py`
- * To only run a single test function `python -m pytest
-   -vv anaconda_project/test/test_foo.py::test_something`
- * To run only "fast" tests, use `python -m pytest -vv -k-slow
-   anaconda_project` which skips slow tests. Slow tests have to
-   pass in CI, but often it's helfpul to get all the fast tests
-   working before debugging the slow ones.
  * There's a script `build_and_upload.sh` that should be used to
    manually make a release. The checked-out revision should have
    a version tag prior to running the script.
@@ -49,17 +139,6 @@ that the issue might be a good first one to tackle if you're
 unfamiliar with the codebase.
 
 Please feel free to ask questions about how to approach an issue.
-
-# Making releases
-
-There's `build_and_upload.sh` script; the flow is:
-
- * create a signed git tag `vX.Y.Z`
- * run `build_and_upload.sh`
- * push the git tag to the repo
-
-`build_and_upload.sh` assumes you're logged in to anaconda.org and
-have permissions to publish.
 
 # Code Tour
 

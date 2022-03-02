@@ -26,7 +26,7 @@ jobs:
       shell: bash -l {0}
       run: |
         conda config --append channels conda-forge
-        conda install -y conda-build conda-verify flake8 pep257 yapf==0.30.0 sphinx sphinx_rtd_theme
+        conda install -y conda-build conda-verify flake8 pydocstyle yapf==0.30.0 sphinx sphinx_rtd_theme
     - name: Verify formatting compliance
       shell: bash -l {0}
       run: |
@@ -37,7 +37,7 @@ jobs:
             exit -1
         fi
         flake8 anaconda_project
-        pep257 anaconda_project
+        pydocstyle anaconda_project
     - name: Build the documentation as a test
       shell: bash -l {0}
       run: |

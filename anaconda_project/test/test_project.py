@@ -2870,8 +2870,8 @@ def test_auto_fix_env_spec_out_of_sync():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\n"
-            "platforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
+            DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }"
+            "\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
             "environment.yml": """
 name: stuff
 dependencies:
@@ -3004,8 +3004,8 @@ def test_no_auto_fix_env_spec_with_notebook_bokeh_injection():
 
     with_directory_contents(
         {
-            DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }\n"
-            "platforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
+            DEFAULT_PROJECT_FILENAME: "name: foo\nenv_specs: { 'stuff': { 'packages':[] } }"
+            "\nplatforms: [linux-32,linux-64,osx-64,win-32,win-64]\n",
             "environment.yml": """
 name: stuff
 dependencies:

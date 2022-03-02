@@ -1,2 +1,2 @@
-[pep257]
+[pydocstyle]
 match_dir=(?!test).*

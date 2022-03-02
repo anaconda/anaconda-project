@@ -28,7 +28,6 @@ def get_plugins(plugin_hook_type):
     type of hook.
 
     Args:
-
         - plugin_hook_type(str): type of hook
 
     Output:
