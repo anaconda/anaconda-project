@@ -9,6 +9,8 @@ from __future__ import absolute_import, print_function
 from functools import partial
 
 import os
+import platform
+import pytest
 
 import anaconda_project
 from anaconda_project.internal.cli.main import _parse_args_and_run_subcommand
@@ -50,6 +52,7 @@ def test_main_bad_subcommand(capsys):
     assert "" == out
 
     assert 2 == code
+
 
 
 expected_usage_msg_format = (  # noqa
@@ -176,6 +179,18 @@ def test_main_calls_run(monkeypatch, capsys):
 
 def test_main_calls_prepare(monkeypatch, capsys):
     _main_calls_subcommand(monkeypatch, capsys, 'prepare')
+
+
+@pytest.mark.skipif(platform.system() != 'Windows', reason='Windows paths are case-insensitive')
+def test_main_normcase_directory(monkeypatch):
+    def mock_subcommand_main(args):
+        return args
+
+    monkeypatch.setattr('anaconda_project.internal.cli.command_commands.main_list',
+                        mock_subcommand_main)
+    dirname = 'C:\\UsErS\\PRojecT'
+    args = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--directory', dirname])
+    assert args.directory == os.path.normcase(dirname)
 
 
 def test_main_when_buggy(capsys, monkeypatch):
