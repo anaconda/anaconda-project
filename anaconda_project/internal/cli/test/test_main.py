@@ -54,7 +54,6 @@ def test_main_bad_subcommand(capsys):
     assert 2 == code
 
 
-
 expected_usage_msg_format = (  # noqa
     'usage: anaconda-project [-h] [-v] [--verbose]\n'
     '                        %s\n'
@@ -186,8 +185,7 @@ def test_main_normcase_directory(monkeypatch):
     def mock_subcommand_main(args):
         return args
 
-    monkeypatch.setattr('anaconda_project.internal.cli.command_commands.main_list',
-                        mock_subcommand_main)
+    monkeypatch.setattr('anaconda_project.internal.cli.command_commands.main_list', mock_subcommand_main)
     dirname = 'C:\\UsErS\\PRojecT'
     args = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--directory', dirname])
     assert args.directory == os.path.normcase(dirname)
