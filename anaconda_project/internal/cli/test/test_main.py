@@ -158,7 +158,7 @@ def test_main_help_via_entry_point(capsys, monkeypatch):
 def _main_calls_subcommand(monkeypatch, capsys, subcommand):
     def mock_subcommand_main(subcommand, args):
         print("Hi I am subcommand {}".format(subcommand))
-        assert args.directory == os.path.abspath('MYPROJECT')
+        assert args.directory == os.path.normcase(os.path.abspath('MYPROJECT'))
         return 27
 
     monkeypatch.setattr('anaconda_project.internal.cli.{}.main'.format(subcommand),
