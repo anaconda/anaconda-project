@@ -18,11 +18,15 @@ We [keep a changelog.](http://keepachangelog.com/)
 * [PR 358](https://github.com/Anaconda-Platform/anaconda-project/pull/358) Update CONTRIBUTING.md
 * Docs PRs [369](https://github.com/Anaconda-Platform/anaconda-project/pull/369), [370](https://github.com/Anaconda-Platform/anaconda-project/pull/370), [371](https://github.com/Anaconda-Platform/anaconda-project/pull/371), [372](https://github.com/Anaconda-Platform/anaconda-project/pull/372), [373](https://github.com/Anaconda-Platform/anaconda-project/pull/373), [374](https://github.com/Anaconda-Platform/anaconda-project/pull/374)
 
+### Issues closed
+* [Issue 339](https://github.com/Anaconda-Platform/anaconda-project/issues/339) Downloading a file with no content-length in its header fails
+
 ## Version 0.10.2
 
 ### Bug fixes
 
 * [PR 340](https://github.com/Anaconda-Platform/anaconda-project/pull/340) Fix issue with progress bar
+
 
 
 ## Version 0.10.1
@@ -44,6 +48,7 @@ We [keep a changelog.](http://keepachangelog.com/)
 * [Issue 196](https://github.com/Anaconda-Platform/anaconda-project/issues/196) support multi-line commands ([PR 317](https://github.com/Anaconda-Platform/anaconda-project/pull/317))
 * [Issue 252](https://github.com/Anaconda-Platform/anaconda-project/issues/252) Packages installed when none requested ([PR 322](https://github.com/Anaconda-Platform/anaconda-project/pull/322))
 * [Issue 253](https://github.com/Anaconda-Platform/anaconda-project/issues/253) Docs rendering problem
+* [Issue 329](https://github.com/Anaconda-Platform/anaconda-project/issues/329) file download progress bar
 
 ### Enhancements
 
