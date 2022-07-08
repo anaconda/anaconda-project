@@ -64,8 +64,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest,ubuntu-latest,windows-latest]
-        pyver: [2.7,3.6,3.7,3.8]
-        cver: [4.6,4.7,4.8, 4.9, "4.10", "4.11"]
+        pyver: [2.7,3.6,3.7,3.8,3.9,"3.10"]
+        cver: [4.6,4.7,4.8, 4.9, "4.10", "4.11","4.12","4.13"]
         exclude:
           # Cannot instantiate these environment for these yet
           - pyver: 3.8
@@ -111,6 +111,18 @@ jobs:
           - os: windows-latest
             pyver: 3.6
             cver: 4.6
+
+          # Python 3.10
+          - cver: 4.8
+            pyver: "3.10"
+          - cver: 4.9
+            pyver: "3.10"
+          - cver: "4.11"
+            pyver: "3.10"
+
+          # Python 3.9
+          - cver: 4.8
+            pyver: 3.9
     steps:
     - name: Retrieve the source code
       uses: actions/checkout@v2
