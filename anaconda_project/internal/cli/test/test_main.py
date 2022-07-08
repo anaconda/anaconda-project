@@ -40,8 +40,7 @@ def test_main_no_subcommand(capsys):
     assert expected_error_msg == err
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 9),
-                    reason='Argparse error changed')
+@pytest.mark.skipif(sys.version_info >= (3, 9), reason='Argparse error changed')
 def test_main_bad_subcommand(capsys):
     code = _parse_args_and_run_subcommand(['project', 'foo'])
 
@@ -56,8 +55,7 @@ def test_main_bad_subcommand(capsys):
     assert 2 == code
 
 
-@pytest.mark.skipif(sys.version_info < (3, 9),
-                    reason='Argparse error changed')
+@pytest.mark.skipif(sys.version_info < (3, 9), reason='Argparse error changed')
 def test_main_bad_subcommand_py39_and_above(capsys):
     code = _parse_args_and_run_subcommand(['project', 'foo'])
 
@@ -146,8 +144,7 @@ expected_usage_msg_without_activate = expected_usage_msg_format % (all_subcomman
     ",activate", ""), all_subcommands_in_curlies.replace(",activate", ""), "")
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 10),
-                    reason='Argparse help changed')
+@pytest.mark.skipif(sys.version_info >= (3, 10), reason='Argparse help changed')
 def test_main_help(capsys):
     code = _parse_args_and_run_subcommand(['project', '--help'])
 
@@ -159,8 +156,7 @@ def test_main_help(capsys):
     assert 0 == code
 
 
-@pytest.mark.skipif(sys.version_info < (3, 10),
-                    reason='Argparse help changed')
+@pytest.mark.skipif(sys.version_info < (3, 10), reason='Argparse help changed')
 def test_main_help_py310_and_above(capsys):
     code = _parse_args_and_run_subcommand(['project', '--help'])
 
@@ -172,8 +168,7 @@ def test_main_help_py310_and_above(capsys):
     assert 0 == code
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 10),
-                    reason='Argparse help changed')
+@pytest.mark.skipif(sys.version_info >= (3, 10), reason='Argparse help changed')
 def test_main_help_via_entry_point(capsys, monkeypatch):
     from anaconda_project.internal.cli.main import main
 
@@ -192,8 +187,7 @@ def test_main_help_via_entry_point(capsys, monkeypatch):
     anaconda_project._beta_test_mode = False
 
 
-@pytest.mark.skipif(sys.version_info < (3, 10),
-                    reason='Argparse help changed')
+@pytest.mark.skipif(sys.version_info < (3, 10), reason='Argparse help changed')
 def test_main_help_via_entry_point_py310_and_above(capsys, monkeypatch):
     from anaconda_project.internal.cli.main import main
 
