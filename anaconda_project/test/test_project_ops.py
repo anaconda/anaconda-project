@@ -5186,7 +5186,7 @@ def test_unarchive_error_on_corrupt_tar():
             status = project_ops.unarchive(archivefile, unpacked)
 
             message = "file could not be opened successfully"
-            assert status.errors == [message]
+            assert status.errors[0].startswith(message)
             assert not status
             assert not os.path.isdir(unpacked)
 
