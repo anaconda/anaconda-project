@@ -2,6 +2,22 @@
 
 We [keep a changelog.](http://keepachangelog.com/)
 
+## Version 0.11.0
+
+### Bug fixes
+
+* [PR 326](https://github.com/Anaconda-Platform/anaconda-project/pull/326) Fix extract for zipfiles from Github/Gitlab
+* [PR 356](https://github.com/Anaconda-Platform/anaconda-project/pull/356) Add tdqm dependency for progress bars. Resolves [355](https://github.com/Anaconda-Platform/anaconda-project/issues/355), [382](https://github.com/Anaconda-Platform/anaconda-project/issues/382)
+
+### Enhancements
+
+* [PR 352](https://github.com/Anaconda-Platform/anaconda-project/pull/352) Add Linux and Mac arm platforms. Resolves [Issue 336](https://github.com/Anaconda-Platform/anaconda-project/issues/336) **Breaking change**
+
+### Maintenance
+
+* [PR 358](https://github.com/Anaconda-Platform/anaconda-project/pull/358) Update CONTRIBUTING.md
+* Docs PRs [369](https://github.com/Anaconda-Platform/anaconda-project/pull/369), [370](https://github.com/Anaconda-Platform/anaconda-project/pull/370), [371](https://github.com/Anaconda-Platform/anaconda-project/pull/371), [372](https://github.com/Anaconda-Platform/anaconda-project/pull/372), [373](https://github.com/Anaconda-Platform/anaconda-project/pull/373), [374](https://github.com/Anaconda-Platform/anaconda-project/pull/374)
+
 ## Version 0.10.2
 
 ### Bug fixes
