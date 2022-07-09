@@ -423,7 +423,7 @@ def _parse_args_and_run_subcommand(argv):
         # '--directory' is used for most subcommands; for unarchive,
         # args.directory is positional and may be None
         if 'directory' in args and args.directory is not None:
-            args.directory = os.path.normcase(os.path.abspath(args.directory))
+            args.directory = os.path.realpath(os.path.abspath(args.directory))
         return args.main(args)
     finally:
         if args.verbose:

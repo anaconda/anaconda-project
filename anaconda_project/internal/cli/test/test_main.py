@@ -158,7 +158,7 @@ def test_main_help_via_entry_point(capsys, monkeypatch):
 def _main_calls_subcommand(monkeypatch, capsys, subcommand):
     def mock_subcommand_main(subcommand, args):
         print("Hi I am subcommand {}".format(subcommand))
-        assert args.directory == os.path.normcase(os.path.abspath('MYPROJECT'))
+        assert args.directory == os.path.realpath(os.path.abspath('MYPROJECT'))
         return 27
 
     monkeypatch.setattr('anaconda_project.internal.cli.{}.main'.format(subcommand),
@@ -181,14 +181,14 @@ def test_main_calls_prepare(monkeypatch, capsys):
 
 
 @pytest.mark.skipif(platform.system() != 'Windows', reason='Windows paths are case-insensitive')
-def test_main_normcase_directory(monkeypatch):
+def test_main_realpath_directory(monkeypatch):
     def mock_subcommand_main(args):
         return args
 
     monkeypatch.setattr('anaconda_project.internal.cli.command_commands.main_list', mock_subcommand_main)
     dirname = 'C:\\UsErS\\PRojecT'
     args = _parse_args_and_run_subcommand(['anaconda-project', 'list-commands', '--directory', dirname])
-    assert args.directory == os.path.normcase(dirname)
+    assert args.directory == os.path.realpath(dirname)
 
 
 def test_main_when_buggy(capsys, monkeypatch):

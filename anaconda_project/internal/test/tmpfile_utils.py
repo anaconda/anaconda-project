@@ -28,7 +28,7 @@ makedirs_ok_if_exists(local_tmp)
 
 def with_directory_contents(contents, func):
     tempd = TemporaryDirectory(prefix="test-")
-    dirname = os.path.normcase(tempd.name)
+    dirname = os.path.realpath(tempd.name)
     try:
         for filename, file_content in contents.items():
             path = os.path.join(dirname, filename)
