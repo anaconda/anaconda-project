@@ -134,15 +134,7 @@ def test_main_dirname_not_provided_use_pwd(monkeypatch, capsys):
     can_connect_args = _monkeypatch_can_connect_to_socket_to_succeed(monkeypatch)
 
     def main_redis_url(dirname):
-        from os.path import abspath as real_abspath
-
-        def mock_abspath(path):
-            if path == ".":
-                return dirname
-            else:
-                return real_abspath(path)
-
-        monkeypatch.setattr('os.path.abspath', mock_abspath)
+        monkeypatch.chdir(dirname)
         project_dir_disable_dedicated_env(dirname)
         code = _parse_args_and_run_subcommand(['anaconda-project', 'activate'])
         assert code == 0
