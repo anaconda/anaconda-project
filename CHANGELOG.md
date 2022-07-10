@@ -8,18 +8,23 @@ We [keep a changelog.](http://keepachangelog.com/)
 
 * [PR 326](https://github.com/Anaconda-Platform/anaconda-project/pull/326) Fix extract for zipfiles from Github/Gitlab
 * [PR 356](https://github.com/Anaconda-Platform/anaconda-project/pull/356) Add tdqm dependency for progress bars. Resolves [355](https://github.com/Anaconda-Platform/anaconda-project/issues/355), [382](https://github.com/Anaconda-Platform/anaconda-project/issues/382)
+* [PR 380](https://github.com/Anaconda-Platform/anaconda-project/pull/380) realpath for safety on Windows. Resolves [Issue 379](https://github.com/Anaconda-Platform/anaconda-project/issues/379) and [Issue 344](https://github.com/Anaconda-Platform/anaconda-project/issues/344)
 
 ### Enhancements
 
-* [PR 352](https://github.com/Anaconda-Platform/anaconda-project/pull/352) Add Linux and Mac arm platforms. Resolves [Issue 336](https://github.com/Anaconda-Platform/anaconda-project/issues/336) **Breaking change**
+* [PR 352](https://github.com/Anaconda-Platform/anaconda-project/pull/352) Add Linux and Mac arm platforms. Resolves [Issue 336](https://github.com/Anaconda-Platform/anaconda-project/issues/336) and [PR 274](https://github.com/Anaconda-Platform/anaconda-project/pull/274) **Breaking change**
 
 ### Maintenance
 
 * [PR 358](https://github.com/Anaconda-Platform/anaconda-project/pull/358) Update CONTRIBUTING.md
 * Docs PRs [369](https://github.com/Anaconda-Platform/anaconda-project/pull/369), [370](https://github.com/Anaconda-Platform/anaconda-project/pull/370), [371](https://github.com/Anaconda-Platform/anaconda-project/pull/371), [372](https://github.com/Anaconda-Platform/anaconda-project/pull/372), [373](https://github.com/Anaconda-Platform/anaconda-project/pull/373), [374](https://github.com/Anaconda-Platform/anaconda-project/pull/374)
+* [PR 384](https://github.com/Anaconda-Platform/anaconda-project/pull/384) Drop Python 2.7 tests, add Python 3.9, 3.10 and Conda 4.11 - 4.13
 
 ### Issues closed
 * [Issue 339](https://github.com/Anaconda-Platform/anaconda-project/issues/339) Downloading a file with no content-length in its header fails
+* [Issue 379](https://github.com/Anaconda-Platform/anaconda-project/issues/379) infinite loop on windows: searching for files
+* [Issue 344](https://github.com/Anaconda-Platform/anaconda-project/issues/344) Anaconda-project appears to lockup if run on an empty directory.
+* [Issue 336](https://github.com/Anaconda-Platform/anaconda-project/issues/336) Allow one to use --override-channels for reproducibility
 
 ## Version 0.10.2
 
