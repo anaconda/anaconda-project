@@ -247,6 +247,17 @@ sys.exit(0)
     with_directory_contents(dict(), do_test)
 
 
+def test_conda_create_disable_override_channels(monkeypatch):
+    monkeypatch.setenv('ANACONDA_PROJECT_DISABLE_OVERRIDE_CHANNELS', True)
+
+    def mock_call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None, stderr_callback=None):
+        assert ['create', '--yes', '--prefix', '/prefix', '--channel', 'foo',
+                'python'] == extra_args
+
+    monkeypatch.setattr('anaconda_project.internal.conda_api._call_conda', mock_call_conda)
+    conda_api.create(prefix='/prefix', pkgs=['python'], channels=['foo'])
+
+
 def test_conda_create_gets_channels(monkeypatch):
     def mock_call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None, stderr_callback=None):
         assert ['create', '--override-channels', '--yes', '--prefix', '/prefix', '--channel', 'foo',

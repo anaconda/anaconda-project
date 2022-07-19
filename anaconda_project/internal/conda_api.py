@@ -160,7 +160,11 @@ def create(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback
     if os.path.exists(prefix):
         raise CondaEnvExistsError('Conda environment [%s] already exists' % prefix)
 
-    cmd_list = ['create', '--override-channels', '--yes', '--prefix', prefix]
+    cmd_list = ['create', '--yes', '--prefix', prefix]
+
+    disable_override_channels = os.environ.get('ANACONDA_PROJECT_DISABLE_OVERRIDE_CHANNELS', False)
+    if not disable_override_channels:
+        cmd_list.insert(1, '--override-channels')
 
     if channels:
         for channel in channels:
