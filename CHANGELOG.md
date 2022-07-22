@@ -13,6 +13,7 @@ We [keep a changelog.](http://keepachangelog.com/)
 ### Enhancements
 
 * [PR 352](https://github.com/Anaconda-Platform/anaconda-project/pull/352) Add Linux and Mac arm platforms. Resolves [Issue 336](https://github.com/Anaconda-Platform/anaconda-project/issues/336) and [PR 274](https://github.com/Anaconda-Platform/anaconda-project/pull/274) **Breaking change**
+* [PR 386](https://github.com/Anaconda-Platform/anaconda-project/pull/386) Enables ``ANACONDA_PROJECT_DISABLE_OVERRIDE_CHANNELS`` env variable to revert PR 352 if needed
 
 ### Maintenance
 
