@@ -134,7 +134,7 @@ no ``channels:`` key in the ``anaconda-project.yml`` file, as in this example:
 
 To install packages from one or more channels use the ``-c <channel-name>`` flag, just like
 ``conda install``. To specify multiple channels add more ``-c <channel-name>`` flags. The order
-in which the flags appear is the order that Conda will check for available packages. Optionally,
+in which the flags appear is the order that Conda will check for available packages. Equivalently,
 you can edit the ``anaconda-project.yml`` to supply a list of channels in the ``channels:`` key.
 
 For example::
