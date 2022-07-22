@@ -7,8 +7,16 @@ Configuration
 Environment variables
 ---------------------
 
-Anaconda Project has two modifiable configuration settings, both of which
+Anaconda Project has modifiable configuration settings, which
 are currently controlled exclusively by environment variables.
+
+``ANACONDA_PROJECT_DISABLE_OVERRIDE_CHANNELS``
+  Starting in version 0.11.0 Anaconda Project ignores any CondaRC
+  configuration settings for ``channels:`` by default. Packages will only be
+  installed from channels listed in the ``anaconda-project.yml`` file.
+  Set this environment variable to a true value (1, or ``'True'``) to disable
+  the override and allow the user or global CondaRC configuration to control
+  channels from which Anaconda Project can install packages.
 
 ``ANACONDA_PROJECT_ENVS_PATH``
   This variable provides a list of directories to search for environments
