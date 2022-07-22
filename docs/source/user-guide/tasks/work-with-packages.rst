@@ -111,7 +111,7 @@ Package Channels
 .. note::
 
   *Breaking Change in version 0.11.0*. All channels you wish to search through for packages must be supplied on the CLI
-  or in the project YAML file.  Anaconda Project will not respect channels declared in your ``.condarc`` file.
+  or in the project YAML file.  To support reproducible projects that build the same way for different users, Anaconda Project will not respect channels declared in your ``.condarc`` file.
 
 Up till now we have not instructed Conda to install packages from specific channels so all packages are installed from
 the Conda default channels because a specific channel was not requested with ``anaconda-project add-packages`` and
