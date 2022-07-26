@@ -104,6 +104,64 @@ the ``pip:`` key within the ``packages:`` list. For example,
 
 Then run ``anaconda-project prepare`` to install the new packages into the environment.
 
+****************
+Package Channels
+****************
+
+.. note::
+
+  *Breaking Change in version 0.11.0*. All channels you wish to search through for packages must be supplied on the CLI
+  or in the project YAML file.  To support reproducible projects that build the same way for different users, Anaconda Project will not respect channels declared in your ``.condarc`` file.
+
+Up till now we have not instructed Conda to install packages from specific channels, so all packages are installed from
+the Conda default channels. The default channels
+will be used if there is no specific channel requested with ``anaconda-project add-packages`` and
+no ``channels:`` key in the ``anaconda-project.yml`` file, as in this example:
+
+.. code-block:: yaml
+
+  name: ExampleProject
+
+  packages:
+    - python=3.8
+    - notebook
+    - pandas
+    - pip:
+      - requests
+  
+  env_specs:
+    default: {}
+
+To install packages from one or more channels use the ``-c <channel-name>`` flag, just like
+``conda install``. To specify multiple channels add more ``-c <channel-name>`` flags. The order
+in which the flags appear is the order that Conda will check for available packages. Equivalently,
+you can edit the ``anaconda-project.yml`` to supply a list of channels in the ``channels:`` key.
+
+For example::
+
+  anaconda-project add-packages -c defaults -c conda-forge fastapi
+
+The resulting ``anaconda-project.yml`` file is now
+
+.. code-block:: yaml
+
+  name: ExampleProject
+
+  packages:
+    - python=3.8
+    - notebook
+    - pandas
+    - pip:
+      - requests
+
+  channels:
+    - defaults
+    - conda-forge
+
+  env_specs:
+    default: {}
+
+
 *****************
 Removing packages
 *****************
