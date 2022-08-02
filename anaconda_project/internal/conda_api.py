@@ -287,7 +287,7 @@ def resolve_dependencies(pkgs, channels=(), platform=None):
     cmd_list = ['create', '--override-channels', '--yes', '--quiet', '--json', '--dry-run', '--prefix', prefix]
 
     if channels:
-        for channel in channels:
+        for channel in _implicit_defaults(channels):
             cmd_list.extend(['--channel', channel])
     else:
         cmd_list.extend(['--channel', 'defaults'])
