@@ -45,6 +45,15 @@ class CondaEnvMissingError(CondaError):
     pass
 
 
+def _implicit_defaults(channels):
+    trimmed = [c for c in channels if c != 'nodefaults']
+
+    if 'nodefaults' not in channels:
+        trimmed.append('defaults')
+
+    return trimmed
+
+
 # this function exists so we can monkeypatch it in tests
 def _get_conda_command(extra_args):
     # just use whatever conda is on the path
@@ -167,7 +176,7 @@ def create(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback
         cmd_list.insert(1, '--override-channels')
 
     if channels:
-        for channel in channels:
+        for channel in _implicit_defaults(channels):
             cmd_list.extend(['--channel', channel])
     else:
         cmd_list.extend(['--channel', 'defaults'])
@@ -200,7 +209,7 @@ def install(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callbac
     cmd_list.extend(['--prefix', prefix])
 
     if channels:
-        for channel in channels:
+        for channel in _implicit_defaults(channels):
             cmd_list.extend(['--channel', channel])
     else:
         cmd_list.extend(['--channel', 'defaults'])
