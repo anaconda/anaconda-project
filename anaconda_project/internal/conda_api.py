@@ -205,8 +205,12 @@ def install(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callbac
         raise TypeError('must specify a list of one or more packages to install into existing environment, not %r',
                         pkgs)
 
-    cmd_list = ['install', '--override-channels', '--yes']
+    cmd_list = ['install', '--yes']
     cmd_list.extend(['--prefix', prefix])
+
+    disable_override_channels = os.environ.get('ANACONDA_PROJECT_DISABLE_OVERRIDE_CHANNELS', False)
+    if not disable_override_channels:
+        cmd_list.insert(1, '--override-channels')
 
     if channels:
         for channel in _implicit_defaults(channels):
@@ -284,7 +288,11 @@ def resolve_dependencies(pkgs, channels=(), platform=None):
     # after we remove it, and then conda's mkdir would fail.
     os.rmdir(prefix)
 
-    cmd_list = ['create', '--override-channels', '--yes', '--quiet', '--json', '--dry-run', '--prefix', prefix]
+    cmd_list = ['create', '--yes', '--quiet', '--json', '--dry-run', '--prefix', prefix]
+
+    disable_override_channels = os.environ.get('ANACONDA_PROJECT_DISABLE_OVERRIDE_CHANNELS', False)
+    if not disable_override_channels:
+        cmd_list.insert(1, '--override-channels')
 
     if channels:
         for channel in _implicit_defaults(channels):
