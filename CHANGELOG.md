@@ -2,6 +2,13 @@
 
 We [keep a changelog.](http://keepachangelog.com/)
 
+## Version 0.11.1
+
+### Bug fixes 
+
+* [PR 388](https://github.com/Anaconda-Platform/anaconda-project/pull/388) implicit use of "defaults" channel. Resolves
+[387](https://github.com/Anaconda-Platform/anaconda-project/issues/387)
+
 ## Version 0.11.0
 
 ### Bug fixes
