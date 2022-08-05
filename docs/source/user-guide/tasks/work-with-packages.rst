@@ -114,14 +114,15 @@ Package Channels
   or in the project YAML file.  To support reproducible projects that build the same way for different users, Anaconda Project will not respect channels declared in your ``.condarc`` file.
 
 .. note::
-  *Backwards compatibility fix in version 0.11.1*. The ``defaults`` channel is always appended when packages are installed
-  or locked even if it is not specified in the ``channels:`` list. To avoid searching over the ``defaults`` channel add the chanel ``nodefaults``.
+  *Backwards compatibility fix in version 0.11.1*. The ``defaults`` channel is always appended to the list of channels
+  even if it is not specified in the ``channels:`` list in the project file or with the ``-c`` flag using the CLI.
+  If the ``defaults`` channel is specified no change is made. To avoid including the ``defaults`` channel add the
+  channel name ``nodefaults``.
 
 
 Up till now we have not instructed Conda to install packages from specific channels, so all packages are installed from
-the Conda default channels. The default channels
-will be used if there is no specific channel requested with ``anaconda-project add-packages`` and
-no ``channels:`` key in the ``anaconda-project.yml`` file, as in this example:
+the Conda default channels. If no channels are speicified in the project file or on the command line then the
+``defaults`` channel is used.
 
 .. code-block:: yaml
 
@@ -167,6 +168,33 @@ The resulting ``anaconda-project.yml`` file is now
     default: {}
 
 
+If you wish to avoid using the ``defaults`` channel you must add the channel ``nodefaults``. This will instruct
+Anaconda Project to not append the ``defaults`` channel automatically. The order in which ``nodefaults`` appears
+does not matter.
+
+For example to install packages only from the ``conda-forge`` channel::
+
+  anaconda-project add-packages -c conda-forge -c nodefaults fastapi
+
+The resulting ``anaconda-project.yml`` file is now
+
+.. code-block:: yaml
+
+  name: ExampleProject
+
+  packages:
+    - python=3.8
+    - notebook
+    - pandas
+    - pip:
+      - requests
+
+  channels:
+    - conda-forge
+    - nodefaults
+
+  env_specs:
+    default: {}
 
 
 *****************
