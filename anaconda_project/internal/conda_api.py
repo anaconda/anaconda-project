@@ -48,7 +48,7 @@ class CondaEnvMissingError(CondaError):
 def _implicit_defaults(channels):
     trimmed = [c for c in channels if c != 'nodefaults']
 
-    if 'nodefaults' not in channels:
+    if ('nodefaults' not in channels) and ('defaults' not in channels):
         trimmed.append('defaults')
 
     return trimmed
