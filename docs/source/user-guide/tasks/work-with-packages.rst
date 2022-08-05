@@ -114,7 +114,7 @@ Package Channels
   or in the project YAML file.  To support reproducible projects that build the same way for different users, Anaconda Project will not respect channels declared in your ``.condarc`` file.
 
 .. note::
-  *Backwards compatibility fix in version 0.11.1*. The ``defaults`` channel is always included when packages are installed
+  *Backwards compatibility fix in version 0.11.1*. The ``defaults`` channel is always appended when packages are installed
   or locked even if it is not specified in the ``channels:`` list. To avoid searching over the ``defaults`` channel add the chanel ``nodefaults``.
 
 
