@@ -45,6 +45,15 @@ class CondaEnvMissingError(CondaError):
     pass
 
 
+def _implicit_defaults(channels):
+    trimmed = [c for c in channels if c != 'nodefaults']
+
+    if ('nodefaults' not in channels) and ('defaults' not in channels):
+        trimmed.append('defaults')
+
+    return trimmed
+
+
 # this function exists so we can monkeypatch it in tests
 def _get_conda_command(extra_args):
     # just use whatever conda is on the path
@@ -167,7 +176,7 @@ def create(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callback
         cmd_list.insert(1, '--override-channels')
 
     if channels:
-        for channel in channels:
+        for channel in _implicit_defaults(channels):
             cmd_list.extend(['--channel', channel])
     else:
         cmd_list.extend(['--channel', 'defaults'])
@@ -196,11 +205,15 @@ def install(prefix, pkgs=None, channels=(), stdout_callback=None, stderr_callbac
         raise TypeError('must specify a list of one or more packages to install into existing environment, not %r',
                         pkgs)
 
-    cmd_list = ['install', '--override-channels', '--yes']
+    cmd_list = ['install', '--yes']
     cmd_list.extend(['--prefix', prefix])
 
+    disable_override_channels = os.environ.get('ANACONDA_PROJECT_DISABLE_OVERRIDE_CHANNELS', False)
+    if not disable_override_channels:
+        cmd_list.insert(1, '--override-channels')
+
     if channels:
-        for channel in channels:
+        for channel in _implicit_defaults(channels):
             cmd_list.extend(['--channel', channel])
     else:
         cmd_list.extend(['--channel', 'defaults'])
@@ -275,10 +288,14 @@ def resolve_dependencies(pkgs, channels=(), platform=None):
     # after we remove it, and then conda's mkdir would fail.
     os.rmdir(prefix)
 
-    cmd_list = ['create', '--override-channels', '--yes', '--quiet', '--json', '--dry-run', '--prefix', prefix]
+    cmd_list = ['create', '--yes', '--quiet', '--json', '--dry-run', '--prefix', prefix]
+
+    disable_override_channels = os.environ.get('ANACONDA_PROJECT_DISABLE_OVERRIDE_CHANNELS', False)
+    if not disable_override_channels:
+        cmd_list.insert(1, '--override-channels')
 
     if channels:
-        for channel in channels:
+        for channel in _implicit_defaults(channels):
             cmd_list.extend(['--channel', channel])
     else:
         cmd_list.extend(['--channel', 'defaults'])
