@@ -143,8 +143,8 @@ def test_default_to_system_environ():
                     continue
                 updated = updated.split(os.pathsep)
                 original = original.split(os.pathsep)
-                print("ORIGINAL {}: {}".format(key, repr(original)))
-                print("UPDATED {}: {}".format(key, repr(updated)))
+                print(f"ORIGINAL {key}: {repr(original)}")
+                print(f"UPDATED {key}: {repr(updated)}")
             assert updated == original
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: """

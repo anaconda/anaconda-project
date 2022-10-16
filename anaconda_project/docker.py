@@ -23,17 +23,17 @@ except NameError:  # pragma: no cover
 def build_image(path, tag, command, builder_image=DEFAULT_BUILDER_IMAGE, build_args=None):
     """Run s2i build."""
 
-    cmd = ['s2i', 'build', '--copy', path, builder_image, tag, '-e', 'CMD={}'.format(command)]
+    cmd = ['s2i', 'build', '--copy', path, builder_image, tag, '-e', f'CMD={command}']
     if build_args is not None:
         cmd.extend(build_args)
 
-    start_msg = '''*** {} image build starting.'''.format(tag)
+    start_msg = f'''*** {tag} image build starting.'''
     print(start_msg)
     print(' '.join(cmd))
 
     try:
         _ = subprocess.check_call(cmd)
-        msg = '''\nDocker image {} build successful.'''.format(tag)
+        msg = f'''\nDocker image {tag} build successful.'''
         return SimpleStatus(success=True, description=msg)
     except subprocess.CalledProcessError as e:
         error_msg = '''\nAn error was encountered building this docker image.'''

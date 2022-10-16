@@ -17,7 +17,7 @@ class RedisRequirement(ServiceRequirement):
     @property
     def description(self):
         """Override superclass to supply our description."""
-        return self._description("A running Redis server, located by a redis: URL set as %s." % (self.env_var))
+        return self._description(f"A running Redis server, located by a redis: URL set as {self.env_var}.")
 
     def _why_not_provided(self, environ):
         url = self._get_value_of_env_var(environ)
@@ -25,14 +25,14 @@ class RedisRequirement(ServiceRequirement):
             return self._unset_message()
         split = network_util.urlparse.urlsplit(url)
         if split.scheme != 'redis':
-            return "{env_var} value '{url}' does not have 'redis:' scheme.".format(env_var=self.env_var, url=url)
+            return f"{self.env_var} value '{url}' does not have 'redis:' scheme."
         port = 6379
         if split.port is not None:
             port = split.port
         if network_util.can_connect_to_socket(split.hostname, port):
             return None
         else:
-            return "Cannot connect to Redis at {url}.".format(url=url)
+            return f"Cannot connect to Redis at {url}."
 
     def check_status(self, environ, local_state_file, default_env_spec_name, overrides, latest_provide_result=None):
         """Override superclass to get our status."""

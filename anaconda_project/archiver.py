@@ -271,7 +271,7 @@ def _write_tar(archive_root_name, infos, filename, compression, packed_envs, fro
 
         for pack in packed_envs:
             env_name = os.path.basename(pack)
-            print('Joining packed env {}'.format(env_name))
+            print(f'Joining packed env {env_name}')
             with tarfile.open(pack, mode='r', dereference=False) as env:
                 with progressbar(env.getmembers()) as env_p:
                     for file in env_p:
@@ -282,7 +282,7 @@ def _write_tar(archive_root_name, infos, filename, compression, packed_envs, fro
                             tf.addfile(file)
                     env_spec = env_name.split('.')[0].split('_')[-1]
                     dot_packed = os.path.join(archive_root_name, 'envs', env_spec, 'conda-meta', '.packed')
-                    platform = '{}\n'.format(current_platform())
+                    platform = f'{current_platform()}\n'
 
                     f = BytesIO()
                     f.write(platform.encode())
@@ -302,7 +302,7 @@ def _write_zip(archive_root_name, infos, filename, packed_envs, frontend):
 
         for pack in packed_envs:
             env_name = os.path.basename(pack)
-            print('Joining packed env {}'.format(env_name))
+            print(f'Joining packed env {env_name}')
             with zipfile.ZipFile(pack, mode='r') as env:
                 with progressbar(env.infolist()) as infolist:
                     for file in infolist:
@@ -310,7 +310,7 @@ def _write_zip(archive_root_name, infos, filename, packed_envs, frontend):
                         zf.writestr(file, data)
                     env_spec = env_name.split('.')[0].split('_')[-1]
                     dot_packed = os.path.join(archive_root_name, 'envs', env_spec, 'conda-meta', '.packed')
-                    zf.writestr(dot_packed, '{}\n'.format(current_platform()))
+                    zf.writestr(dot_packed, f'{current_platform()}\n')
 
 
 # function exported for project.py
@@ -358,7 +358,7 @@ def _archive_project(project, filename, pack_envs=False):
         import conda_pack
         for env in os.listdir(envs_path):
             ext = 'zip' if filename.lower().endswith(".zip") else 'tar'
-            pack = os.path.join(conda_pack_dir, '{}_envs_{}.{}'.format(current_platform(), env, ext))
+            pack = os.path.join(conda_pack_dir, f'{current_platform()}_envs_{env}.{ext}')
             zip_symlinks = True if ext == 'zip' else False
             fn = conda_pack.pack(prefix=os.path.join(envs_path, env),
                                  arcroot=os.path.join(project.name, 'envs', env),

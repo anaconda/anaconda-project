@@ -52,7 +52,7 @@ def remove_download(project_dir, env_spec_name, filename_variable):
                                          prepare_result=result)
     if status:
         print(status.status_description)
-        print("Removed {} from the project file.".format(filename_variable))
+        print(f"Removed {filename_variable} from the project file.")
         return 0
     else:
         console_utils.print_status_errors(status)
@@ -66,7 +66,7 @@ def list_downloads(project_dir, env_spec_name):
         return 1
 
     if project.downloads(env_spec_name):
-        print("Downloads for project: {}\n".format(project_dir))
+        print(f"Downloads for project: {project_dir}\n")
         console_utils.print_names_and_descriptions(project.download_requirements(env_spec_name), name_attr='title')
     else:
         print("No downloads found in project.")

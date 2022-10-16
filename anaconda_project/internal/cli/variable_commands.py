@@ -57,7 +57,7 @@ def list_variables(project_dir, env_spec_name):
     project = load_project(project_dir)
     if console_utils.print_project_problems(project):
         return 1
-    print("Variables for project: {}\n".format(project_dir))
+    print(f"Variables for project: {project_dir}\n")
     console_utils.print_names_and_descriptions(project.all_variable_requirements(env_spec_name), name_attr='env_var')
     return 0
 
@@ -71,7 +71,7 @@ def set_variables(project_dir, env_spec_name, vars_and_values):
     fixed_vars = []
     for var in vars_and_values:
         if '=' not in var:
-            print("Error: argument '{}' should be in NAME=value format".format(var))
+            print(f"Error: argument '{var}' should be in NAME=value format")
             return 1
         # maxsplit=1 -- no maxsplit keywork in py27
         fixed_vars.append(tuple(var.split('=', 1)))

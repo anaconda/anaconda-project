@@ -31,7 +31,7 @@ def _basename(fname):
         base2, ext1 = os.path.splitext(base1)
         return base2
     else:
-        raise ValueError('{} does not appear to be a compressed archive.'.format(fname))
+        raise ValueError(f'{fname} does not appear to be a compressed archive.')
 
 
 class _Client(object):
@@ -62,14 +62,14 @@ class _Client(object):
     # https://github.com/Anaconda-Platform/anaconda-server/issues/2229
     def _exists(self, project_name, username=None):
         if username:
-            url = "{}/apps/{}/projects/{}".format(self._api.domain, username, project_name)
+            url = f"{self._api.domain}/apps/{username}/projects/{username, project_name}"
         else:
-            url = "{}/apps/{}/projects/{}".format(self._api.domain, self._username(), project_name)
+            url = f"{self._api.domain}/apps/{self._username()}/projects/{project_name}"
         res = self._api.session.get(url)
         return res.status_code == 200
 
     def create(self, project_info, private):
-        url = "{}/apps/{}/projects".format(self._api.domain, self._username())
+        url = f"{self._api.domain}/apps/{self._username()}/projects"
         json = {
             'name': project_info['name'],
             'access': 'public',
@@ -95,7 +95,7 @@ class _Client(object):
         assert False, ("unsupported archive filename %s" % archive_filename)  # pragma: no cover (should not be reached)
 
     def stage(self, project_info, archive_filename, uploaded_basename, private):
-        url = "{}/apps/{}/projects/{}/stage".format(self._api.domain, self._username(), project_info['name'])
+        url = f"{self._api.domain}/apps/{self._username()}/projects/{project_info['name']}/stage"
         config = project_info.copy()
         config['size'] = os.path.getsize(archive_filename)
         if private:
@@ -111,7 +111,7 @@ class _Client(object):
 
     def commit(self, project_name, dist_id):
 
-        url = "{}/apps/{}/projects/{}/commit/{}".format(self._api.domain, self._username(), project_name, dist_id)
+        url = f"{self._api.domain}/apps/{self._username()}/projects/{project_name}/commit/{dist_id}"
         data, headers = binstar_utils.jencode({})
         res = self._api.session.post(url, data=data, headers=headers)
         self._check_response(res)
@@ -176,7 +176,7 @@ class _Client(object):
         if not self._exists(project_name, owner):
             raise BinstarError('404')
 
-        url = "{}/apps/{}/projects/{}/download".format(self._api.domain, owner, project_name)
+        url = f"{self._api.domain}/apps/{owner}/projects/{project_name}/download"
         data, headers = binstar_utils.jencode({})
         with self._api.session.get(url, data=data, headers=headers, stream=True) as res:
             res.raise_for_status()
@@ -243,4 +243,4 @@ def _download(project, project_dir=None, parent_dir=None, site=None, username=No
         fn = client.download(project, project_dir, parent_dir)
         return _DownloadedStatus(fn)
     except BinstarError as e:
-        return SimpleStatus(success=False, description="{} was not found.".format(project), errors=[str(e)])
+        return SimpleStatus(success=False, description=f"{project} was not found.", errors=[str(e)])
