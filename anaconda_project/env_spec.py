@@ -434,7 +434,7 @@ class EnvSpec(object):
         """Write the augmented pinned file in the environment."""
         conda_meta_path = os.path.join(prefix, 'conda-meta')
         if not os.path.isdir(conda_meta_path):
-            raise RuntimeError('Expected path {} to exist'.format(conda_meta_path))
+            raise RuntimeError(f'Expected path {conda_meta_path} to exist')
         fname = os.path.join(conda_meta_path, 'pinned')
         if os.path.exists(fname):
             with open(fname, 'r') as fp:
@@ -457,7 +457,7 @@ class EnvSpec(object):
         """Remove the pinned file."""
         conda_meta_path = os.path.join(prefix, 'conda-meta')
         if not os.path.isdir(conda_meta_path):
-            raise RuntimeError('Expected path {} to exist'.format(conda_meta_path))
+            raise RuntimeError(f'Expected path {conda_meta_path} to exist')
         fname = os.path.join(conda_meta_path, 'pinned')
         if os.path.exists(fname):
             if os.path.exists(fname + '.__ap_orig'):

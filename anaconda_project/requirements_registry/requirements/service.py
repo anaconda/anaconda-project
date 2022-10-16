@@ -25,12 +25,12 @@ class ServiceRequirement(EnvVarRequirement):
         elif isinstance(item, dict):
             service_type = item.get('type', None)
             if service_type is None:
-                problems.append("Service {} doesn't contain a 'type' field.".format(varname))
+                problems.append(f"Service {varname} doesn't contain a 'type' field.")
                 return None
             options = deepcopy(item)
         else:
             problems.append(
-                "Service {} should have a service type string or a dictionary as its value.".format(varname))
+                f"Service {varname} should have a service type string or a dictionary as its value.")
             return None
 
         if not EnvVarRequirement._parse_default(options, varname, problems):

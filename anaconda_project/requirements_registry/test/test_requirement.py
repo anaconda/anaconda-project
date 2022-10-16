@@ -80,7 +80,7 @@ def test_requirement_parse_default():
     list_default = dict(default=[])
 
     def type_error(value):
-        return "default value for variable FOO must be null, a string, or a number, not {value}.".format(value=value)
+        return f"default value for variable FOO must be null, a string, or a number, not {value}."
 
     problems = []
 

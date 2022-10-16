@@ -191,7 +191,7 @@ def _parse_args_and_run_subcommand(argv):
         'is defined as either the command named "default" (if any) or (otherwise)  '
         'the first command specified in the anaconda-project.yml file.')
     preset.add_argument('--builder-image',
-                        default='{}:latest'.format(DEFAULT_BUILDER_IMAGE),
+                        default=f'{DEFAULT_BUILDER_IMAGE}:latest',
                         help='The s2i builder image')
     preset.add_argument('build_args',
                         default=None,

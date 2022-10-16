@@ -42,7 +42,7 @@ def activate(dirname, ui_mode, conda_environment, command_name):
     for key in sorted_keys:
         value = result.environ[key]
         if key not in os.environ or os.environ[key] != value:
-            exports.append("export {key}={value}".format(key=key, value=quote(value)))
+            exports.append(f"export {key}={quote(value)}")
     return exports
 
 

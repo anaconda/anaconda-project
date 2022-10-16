@@ -48,15 +48,14 @@ class DownloadRequirement(EnvVarRequirement):
                     continue
 
                 if hash_algorithm is not None:
-                    problems.append("Multiple checksums for download {}: {} and {}.".format(
-                        varname, hash_algorithm, method))
+                    problems.append(f"Multiple checksums for download {varname}: {hash_algorithm} and {method}.")
                     return None
                 else:
                     hash_value = item[method]
                     if is_string(hash_value):
                         hash_algorithm = method
                     else:
-                        problems.append("Checksum value for {} should be a string not {}.".format(varname, hash_value))
+                        problems.append(f"Checksum value for {varname} should be a string not {hash_value}.")
                         return None
 
             filename = item.get('filename', None)

@@ -343,7 +343,7 @@ class TestRunner:
         try:
             errno = pytest.main(pytest_args)
             if errno != 0:
-                print("pytest failed, code {errno}".format(errno=errno))
+                print(f"pytest failed, code {errno}")
                 self.failed.append('pytest')
         except CoverageError as e:
             print("Test coverage failure: " + str(e))

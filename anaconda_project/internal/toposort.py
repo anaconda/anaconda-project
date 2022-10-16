@@ -13,7 +13,7 @@ import collections
 class CycleError(Exception):
     def __init__(self, involving):
         """Initialize CycleError."""
-        message = "Cycle in graph involving {involving}".format(involving=involving)
+        message = f"Cycle in graph involving {involving}"
         super(CycleError, self).__init__(message)
         self.involving = involving
 

@@ -297,6 +297,6 @@ def test_list_service_with_empty_project(capsys, monkeypatch):
 
         out, err = capsys.readouterr()
         assert err == ''
-        assert out == "No services found for project: {}\n".format(dirname)
+        assert out == f"No services found for project: {dirname}\n"
 
     with_directory_contents_completing_project_file({DEFAULT_PROJECT_FILENAME: ""}, check_empty)
