@@ -406,7 +406,8 @@ class EnvSpec(object):
         # have ordering... OrderedDict doesn't work because the
         # yaml saver saves them as some "!!omap" nonsense. Other
         # than ordering, the formatting isn't even preserved here.
-        template_json = _load_string("something:\n    description: null\n" + "    packages: []\n" + "    channels: []\n")
+        template_json = _load_string("something:\n    description: null\n" + "    packages: []\n" +
+                                     "    channels: []\n")
 
         if self._description is not None:
             template_json['something']['description'] = self._description
