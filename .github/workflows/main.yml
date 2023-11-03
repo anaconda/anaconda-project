@@ -16,7 +16,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: conda-incubator/setup-miniconda@v2.1.1
       with:
         auto-update-conda: false
         miniconda-version: py37_4.10.3
