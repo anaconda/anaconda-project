@@ -52,7 +52,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: package-${{ github.sha }}
-        path: /usr/share/miniconda3/conda-bld
+        path: /usr/share/miniconda/conda-bld
   tests:
     defaults:
       run:
