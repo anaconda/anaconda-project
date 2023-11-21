@@ -7,7 +7,7 @@ channels:
 dependencies:
   - redis
   - notebook
-  - ruamel_yaml
+  - ruamel.yaml
   - anaconda-client
   - conda-pack
   - requests

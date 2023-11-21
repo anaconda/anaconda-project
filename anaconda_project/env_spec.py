@@ -19,7 +19,7 @@ import anaconda_project.internal.pip_api as pip_api
 from anaconda_project.internal.py2_compat import is_string
 from anaconda_project import conda_manager
 
-from anaconda_project.yaml_file import _load_string, _save_file, _YAMLError, ryaml
+from anaconda_project.yaml_file import _load_string, _save_file, _YAMLError
 
 
 class EnvSpec(object):
@@ -402,12 +402,12 @@ class EnvSpec(object):
         channels = list(self._channels)
         platforms = list(self._platforms)
 
-        # this is a gross, roundabout hack to get ryaml dicts that
+        # this is a gross, roundabout hack to get ruamel.yaml dicts that
         # have ordering... OrderedDict doesn't work because the
         # yaml saver saves them as some "!!omap" nonsense. Other
         # than ordering, the formatting isn't even preserved here.
-        template_json = ryaml.load("something:\n    description: null\n" + "    packages: []\n" + "    channels: []\n",
-                                   Loader=ryaml.RoundTripLoader)
+        template_json = _load_string("something:\n    description: null\n" + "    packages: []\n" +
+                                     "    channels: []\n")
 
         if self._description is not None:
             template_json['something']['description'] = self._description
@@ -474,7 +474,7 @@ class EnvSpec(object):
             packages.append(dict(pip=pip_packages))
         channels = list(self.channels)
 
-        yaml = ryaml.load("name: " "\ndependencies: []\nchannels: []\n", Loader=ryaml.RoundTripLoader)
+        yaml = _load_string("name: " "\ndependencies: []\nchannels: []\n")
 
         assert self.name is not None  # the global anonymous spec can't be saved
         yaml['name'] = self.name

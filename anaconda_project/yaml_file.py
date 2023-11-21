@@ -12,22 +12,15 @@ from __future__ import absolute_import, print_function
 # comments, etc., which is why we use it instead of the usual yaml
 # module. Remember the project file is intended to go into source
 # control.
-try:
-    # this is the conda-packaged version of ruamel.yaml which has the
-    # module renamed
-    import ruamel_yaml as ryaml
-    from ruamel_yaml.error import YAMLError
-    from ruamel_yaml.comments import CommentedMap
-    from ruamel_yaml.comments import CommentedSeq
-except ImportError:  # pragma: no cover
-    # this is the upstream version
-    import ruamel.yaml as ryaml  # pragma: no cover
-    from ruamel.yaml.error import YAMLError  # pragma: no cover
-    from ruamel.yaml.comments import CommentedMap  # pragma: no cover
-    from ruamel.yaml.comments import CommentedSeq  # pragma: no cover
+import ruamel.yaml
+import ruamel.yaml.constructor
+from ruamel.yaml.error import YAMLError  # pragma: no cover
+from ruamel.yaml.comments import CommentedMap  # pragma: no cover
+from ruamel.yaml.comments import CommentedSeq  # pragma: no cover
 
 import codecs
 import errno
+import io
 import os
 import sys
 import uuid
@@ -57,20 +50,26 @@ def _atomic_replace(path, contents, encoding='utf-8'):
             pass
 
 
+def _get_yaml():
+    return ruamel.yaml.YAML(typ="rt")
+
+
 def _load_string(contents):
     if contents.strip() == '':
-        # ryaml.load below returns None for an empty file, we want
+        # YAML.load below returns None for an empty file, we want
         # to return an empty dict instead.
         return {}
     else:
         # using RoundTripLoader incorporates safe_load
         # (we don't load code)
-        assert issubclass(ryaml.RoundTripLoader, ryaml.constructor.SafeConstructor)
-        return ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+        assert issubclass(ruamel.yaml.RoundTripLoader, ruamel.yaml.constructor.SafeConstructor)
+        return _get_yaml().load(contents)
 
 
 def _dump_string(yaml):
-    return ryaml.dump(yaml, Dumper=ryaml.RoundTripDumper)
+    stream = io.StringIO()
+    _get_yaml().dump(yaml, stream=stream)
+    return stream.getvalue()
 
 
 def _save_file(yaml, filename, contents=None):
@@ -79,7 +78,7 @@ def _save_file(yaml, filename, contents=None):
 
     try:
         # This is to ensure we don't corrupt the file, even if ruamel.yaml is broken
-        ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+        _get_yaml().load(contents)
     except YAMLError as e:  # pragma: no cover (should not happen)
         print("ruamel.yaml bug; it failed to parse a file that it generated.", file=sys.stderr)
         print("  the parse error was: " + str(e), file=sys.stderr)
