@@ -31,6 +31,7 @@ class FileDownloader(object):
         self._client = None
         self._errors = []
         self._progress = None
+        self._progress_kwargs = None
 
     @gen.coroutine
     def run(self):
@@ -94,12 +95,18 @@ class FileDownloader(object):
                 self._errors.append("Failed to write to %s: %s" % (tmp_filename, e))
 
         def read_header(line):
-            if 'content-length' in line.lower():
-                file_size = int(line.split(':')[1]) / 1024 / 1024
-                self._progress = tqdm(unit='MiB',
-                                      total=file_size,
-                                      unit_scale=True,
-                                      desc=os.path.basename(self._filename))
+            # Display basic progress stats when the response has no Content-Length.
+            if self._progress_kwargs is None:
+                self._progress_kwargs = dict(
+                    unit='MiB',
+                    unit_scale=True,
+                    desc=os.path.basename(self._filename),
+                )
+            elif 'content-length' in line.lower():
+                self._progress_kwargs['total'] = int(line.split(':')[1]) / 1024 / 1024
+            # Last line of the header
+            if line == "\r\n":
+                self._progress = tqdm(**self._progress_kwargs)
 
         try:
             timeout_in_seconds = 60 * 10  # pretty long because we could be dealing with huge files
