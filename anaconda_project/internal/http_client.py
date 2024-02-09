@@ -109,7 +109,10 @@ class FileDownloader(object):
                 self._progress = tqdm(**self._progress_kwargs)
 
         try:
-            timeout_in_seconds = 60 * 10  # pretty long because we could be dealing with huge files
+            timeout_in_seconds = int(os.getenv(
+                'ANACONDA_PROJECT_DOWNLOADS_TIMEOUT',
+                60 * 10  # pretty long because we could be dealing with huge files
+            ))
             request = httpclient.HTTPRequest(url=self._url,
                                              header_callback=read_header,
                                              streaming_callback=writer,
