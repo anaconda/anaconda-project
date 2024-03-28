@@ -1,4 +1,5 @@
 name: anaconda-project-docs
 dependencies:
 - sphinx
-- sphinx_rtd_theme
+- pydata-sphinx-theme
+- sphinx-copybutton
