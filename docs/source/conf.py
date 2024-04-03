@@ -193,7 +193,10 @@ html_css_files = ['css/custom.css']
 # Custom sidebar templates, maps document names to template names.
 #
 html_sidebars = {
-    "**": ["sidebar-nav-bs-override"], # Use the newly made template instead of the default sidebar navigation
+    "**": [
+        "sidebar-nav-bs-override", # Use override template instead of the default sidebar navigation
+        "sidebar-ethical-ads"
+        ], 
 }
 
 # Additional templates that should be rendered to pages, maps page names to
