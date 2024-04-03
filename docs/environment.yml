@@ -3,6 +3,7 @@ dependencies:
 - sphinx
 - pydata-sphinx-theme=0.14.4
 - sphinx-copybutton
+- sphinx-notfound-page
 channels:
 - defaults
 - conda-forge
