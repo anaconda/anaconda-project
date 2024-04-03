@@ -139,6 +139,9 @@ html_theme_options = {
     "footer_start": ["copyright"],
     "footer_center": ["sphinx-version"],
     "footer_end":["theme-version"],
+    "logo": {
+        "text": "Anaconda Project"
+        }
     }
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -155,8 +158,8 @@ html_title = 'Anaconda Project'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#
-# html_logo = None
+
+html_logo = "_static/Anaconda_Icon.png"
 
 # The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
