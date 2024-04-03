@@ -141,7 +141,14 @@ html_theme_options = {
     "footer_end":["theme-version"],
     "logo": {
         "text": "Anaconda Project"
+        },
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/Anaconda-Platform/anaconda-project/",
+            "icon": "fa-brands fa-github",
         }
+    ]
     }
 
 # Add any paths that contain custom themes here, relative to this directory.
