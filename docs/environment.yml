@@ -1,5 +1,5 @@
 name: anaconda-project-docs
 dependencies:
 - sphinx
-- pydata-sphinx-theme
+- pydata-sphinx-theme=0.14.4
 - sphinx-copybutton
