@@ -206,6 +206,13 @@ html_sidebars = {
         ], 
 }
 
+# Suppresses build warnings caused by more than one header having the same name
+# Note: This suppression and the sphinx.ext.autosectionlabel extension should
+# be removed if sections with the same header ever need to be referred to by label.
+# Or the same header labels should be rewritten to not be the same.
+
+suppress_warnings = ['autosectionlabel.*']
+
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
 #
