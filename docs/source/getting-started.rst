@@ -100,36 +100,6 @@ Run your project
 
 .. _Panel: https://panel.holoviz.org
 
-Sharing your project
-====================
-
-To share this project with a colleague:
-
-#. Archive the project::
-
-     $ anaconda-project archive interactive.zip
-
-#. Send the archive file to your colleague.
-
-You can also share a project by uploading it to Anaconda Cloud.
-For more information, see :doc:`user-guide/tasks/share-project`.
-
-Anyone with Project---your colleague or someone who downloads
-your project from Cloud---can run your project by unzipping the
-project archive file and then running a single command, without
-having to do any setup::
-
-     $ anaconda-project unarchive interactive.zip
-     $ cd demo_app
-     $ anaconda-project run
-
-.. note:: If your project contains more than one command, the person
-   using your project will need to specify which command to run.
-   For more information, see :doc:`user-guide/tasks/run-project`.
-
-Project downloads the data, installs the necessary packages and
-runs the command.
-
 
 Next steps
 ==========
