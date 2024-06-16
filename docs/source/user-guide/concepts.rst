@@ -10,7 +10,7 @@ Concepts
 
 
 Project
-========
+=======
 
 A project is a folder that contains an ``anaconda-project.yml``
 configuration file together with scripts, notebooks and other
@@ -38,7 +38,7 @@ command---``anaconda-project run``.
 
 
 Configuration files
-====================
+===================
 
 Projects are affected by 3 configuration files:
 
@@ -84,7 +84,7 @@ into your script, which can be a security risk.
 
 
 Comparing Project to conda env and environment.yml
-===================================================
+==================================================
 
 Project has similar functionality to the ``conda env`` command
 and the ``environment.yml`` file, but it may be more convenient.

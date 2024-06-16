@@ -1,83 +1,141 @@
-@import url("theme.css");
+/* Changed default colors of theme to match anaconda.com's greens.
+Also changed warning admonition from default orange to red and
+added caution admonition orange coloring. */
 
-.wy-nav-content {
-    padding: 1.618em 3.236em;
-    height: 100%;
-    max-width: 1500px;
-    /* max-width: 800px; */
-    margin: auto;
-    background-color: #ffffff;
+html[data-theme="light"] {
+    --pst-color-primary: #43b049;
+    --pst-color-secondary-highlight: #0ccb4a;
+    --pst-color-link-hover: #0ccb4a;
+    --pst-color-caution: #ee9040;
+    --pst-color-caution-text: #fff;
+    --pst-color-caution-highlight: #cf6912;
+    --pst-color-caution-bg: #f8e5d0;
+    --pst-color-warning: #dc3545;
+    --pst-color-warning-text: #fff;
+    --pst-color-warning-highlight: #a71d2a;
+    --pst-color-warning-bg: #f8d0d0;
+    --sd-color-card-border-hover: var(--pst-color-primary);
+    --pst-heading-color: var(--pst-color-primary);
 }
 
-.wy-side-nav-search {
-    /*background color of the top search bar*/
-    background-color: #43B02A;
+html[data-theme="dark"] {
+    --pst-color-primary: #43b049;
+    --pst-color-secondary-highlight: #0ccb4a;
+    --pst-color-link-hover: #0ccb4a;
+    --pst-color-caution: #ee9040;
+    --pst-color-caution-text: #fff;
+    --pst-color-caution-highlight: #cf6912;
+    --pst-color-caution-bg: #654402;
+    --pst-color-warning: #cb4653;
+    --pst-color-warning-text: #fff;
+    --pst-color-warning-highlight: #992b36;
+    --pst-color-warning-bg: #650202;
+    --sd-color-card-border-hover: var(--pst-color-primary);
+    --pst-heading-color: var(--pst-color-primary);
 }
 
-.wy-nav-side {
-/* This relates to the entire color of the sidebar */
-   background-color:#EEEEEE;
+a.headerlink {
+    color: #0ccb4a !important;
 }
 
-.wy-menu a:hover {
-    /*background color of text upon hovering*/
-    background: #c9c9c9
+/* Updates the dropdown color to be the same green as the tip admonition*/
+
+details.sd-dropdown summary.sd-card-header.sd-bg-primary, details.sd-dropdown summary.sd-card-header.sd-bg-primary+div.sd-summary-content {
+    --pst-sd-dropdown-bg-color: var(--pst-color-success-bg);
 }
 
-.wy-menu-vertical li.on a:hover,.wy-menu-vertical li.current>a:hover {
-    /*background color of text upon hovering an open list*/
-    background: #c9c9c9
+/* Adds side margins to inline Sphinx Design icons in dropdowns*/
+
+details.sd-dropdown summary.sd-card-header svg {
+    margin-left: 4px;
+    margin-right: 4px;
 }
 
-.wy-menu-vertical {
-    /* text color of expanded menu items in the sidebar */
-    color:#414042;
+/* Inserting Inter and Poppins fonts (found in the _static/fonts
+folder) into the docs. The Inter font doesn't have an italic, so
+Helvetica is a compromise. */
+
+body {
+    --pst-font-family-base: "Inter", "Helvetica", Arial, sans-serif;
+    font-weight: 400;
 }
 
-.section h1 {
-    /*header 1 text color */
-    color: #047704;
+.heading-style, h1, h2, h3, h4, h5, h6 {
+    --pst-font-family-heading: "Poppins", "Helvetica Neue", Arial, sans-serif;
+    --pst-font-weight-heading: 600;
  }
-  
-.rst-content .toctree-wrapper p.caption, h2, h3, h4, h5, h6, legend {
-    /*text color of rst content and subheads*/
-    color: #414042;
+ 
+ strong {
+    font-weight: 600;
+ }
+ 
+ em {
+    font-family: "Helvetica" !important;
+    font-style: italic;
+ }
+
+ /* Added new caution color (orange) to caution admonitions. By default, they use
+ --pst-color-warning, which has been changed to red above.*/
+
+.admonition.caution>.admonition-title:before, div.admonition.caution>.admonition-title:before {
+    background-color: var(--pst-color-caution-bg);
 }
 
-.wy-menu-vertical a {
-    /* Text color of toc */
-    color: #025C02;
+.admonition.caution>.admonition-title:after, div.admonition.caution>.admonition-title:after {
+    color: var(--pst-color-caution);
 }
 
-.wy-nav-content-wrap {
-    /* background color of wrap around main content*/
-    background-color: white;
+.admonition.caution, div.admonition.caution {
+    border-color: var(--pst-color-caution);
 }
 
-.section-title {
-    /*text color of section titles*/
-    color:#078E07;
+/* Removing blockquote css because it isn't used in the
+Anaconda docs and makes it impossible to have a note,
+admonition, or second-level list in the middle of an
+ordered list. */
+
+blockquote, blockquote p {
+    border-left: none;
+    border-radius: 0;
+    padding: 0;
+    background-color: transparent;
 }
 
-.rst-content pre.literal-block, .rst-content div[class^='highlight'] pre, .rst-content .linenodiv pre {
-    /*color of code blocks*/
-    background-color: #EEEEEE
+/* This fixes an issue where the scrollbar on the left side nav
+appears when it doesn't need to by reducing the size of the
+div below the sidebar nav. */
+
+.bd-sidebar-primary .sidebar-primary-items__end { 
+    margin-top: 1em 
 }
 
-h1, h2, .rst-content .toctree-wrapper p.caption, h3, h4, h5, h6, legend {
-    /*font formats*/
-    font-family: "Proxima Nova","Helvetica","Arial",sans-serif;
-}
-.wy-menu-vertical li.toctree-l1.current>a {
-    /*text color of toctree*/
-    color: #025C02;
+/*Controls coloring of built-in announcement banner. These can
+be created using html_theme_options = {"announcement": "Here's
+an announcement."}*/
+
+.bd-header-announcement {
+    background-color: var(--pst-color-primary);
+    color: white
 }
 
-.toctree-l1:hover {
-    background-color: #EEEEEE;
+/* Adds a little padding to the bottom of tab set divs inside other tab sets, in 
+case there is a paragraph of text right after them. Without this
+the text is a little too close to the horizontal line that ends
+the secondary tab set*/
+
+.sd-tab-content>.sd-tab-set {
+    margin-bottom: 10px;
 }
 
-.wy-nav-top {
-    /*color of nav at top when the window is narrow*/
-    background: #43B02A;
+/*Removing hover underline from nav elements*/
+
+.bd-header .navbar-nav li.current a.nav-link:hover {
+    text-decoration: none;
 }
+
+  /*Changing outline of search form color*/
+
+  .form-control:focus, .form-control:focus-visible {
+    outline: 3px solid var(--pst-color-primary);
+    box-shadow: 0 0 0 0.25rem rgba(67,176,73,.25);
+  }

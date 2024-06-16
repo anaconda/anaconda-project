@@ -94,11 +94,27 @@ able to rely on long-term interface stability.
 .. toctree::
    :maxdepth: 1
    :hidden:
+   :caption: Get started
 
    install
    getting-started
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: User guide
+
+   user-guide/concepts
+   user-guide/tasks/index
+   user-guide/reference
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: Reference
+
    config
-   user-guide/index
    help-support
+
 
 .. |reg|	unicode:: U+000AE .. REGISTERED SIGN

@@ -19,16 +19,16 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v2
       with:
         auto-update-conda: false
-        miniconda-version: py37_4.10.3
+        miniconda-version: "latest"
         auto-activate-base: true
         activate-environment: ""
     - name: Install build dependencies
-      shell: bash -l {0}
+      shell: bash -el {0}
       run: |
         conda config --append channels conda-forge
-        conda install -y conda-build conda-verify flake8 pydocstyle yapf==0.30.0 sphinx sphinx_rtd_theme
+        conda install -y conda-build conda-verify flake8 pydocstyle yapf==0.30.0 sphinx pydata-sphinx-theme==0.14.4 sphinx-copybutton sphinx-notfound-page
     - name: Verify formatting compliance
-      shell: bash -l {0}
+      shell: bash -el {0}
       run: |
         if ! yapf --diff --recursive anaconda_project; then
             echo "----"
@@ -39,15 +39,15 @@ jobs:
         flake8 anaconda_project
         pydocstyle anaconda_project
     - name: Build the documentation as a test
-      shell: bash -l {0}
+      shell: bash -el {0}
       run: |
         cd docs
         make html
     - name: Build the package
-      shell: bash -l {0}
+      shell: bash -el {0}
       run: conda build --no-test conda.recipe
     - name: Reduce the size of the build artifact
-      shell: bash -l {0}
+      shell: bash -el {0}
       run: rm -rf ${CONDA}/conda-bld/{git_cache,work,anaconda-project*,*/.cache}
     - name: Upload the build artifact
       uses: actions/upload-artifact@v2
