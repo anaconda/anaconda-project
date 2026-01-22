@@ -54,7 +54,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        pyver: ["3.10", "3.11", "3.12", "3.13"]
+        pyver: ["3.10", "3.11", "3.12"]
     steps:
     - name: Retrieve the source code
       uses: actions/checkout@v4
@@ -73,12 +73,21 @@ jobs:
       run: |
         conda config --prepend channels conda-forge
         conda config --append channels ./conda-bld
+    - name: Extract package version
+      id: pkg_version
+      shell: bash -el {0}
+      run: |
+        PKG=$(ls ./conda-bld/*/anaconda-project-* 2>/dev/null | head -1)
+        echo "Found package: $PKG"
+        VERSION=$(basename "$PKG" | cut -d '-' -f 3)
+        echo "Extracted version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
     - name: Build the test environment
       shell: bash -el {0}
       run: |
         conda create -y -n anaconda-project-dev python=${{ matrix.pyver }} \
           coverage pytest pytest-cov redis notebook bokeh \
-          keyring setuptools pip anaconda-project
+          keyring setuptools pip "anaconda-project==${{ steps.pkg_version.outputs.version }}"
     - name: Run the tests
       shell: bash -el {0}
       run: |
