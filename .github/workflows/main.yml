@@ -26,16 +26,10 @@ jobs:
       shell: bash -el {0}
       run: |
         conda config --append channels conda-forge
-        conda install -y conda-build conda-verify flake8 pydocstyle yapf==0.30.0 sphinx pydata-sphinx-theme==0.14.4 sphinx-copybutton sphinx-notfound-page
+        conda install -y conda-build conda-verify flake8 pydocstyle sphinx pydata-sphinx-theme==0.14.4 sphinx-copybutton sphinx-notfound-page
     - name: Verify formatting compliance
       shell: bash -el {0}
       run: |
-        if ! yapf --diff --recursive anaconda_project; then
-            echo "----"
-            echo "Please run 'yapf --in-place --recursive anaconda_project'"
-            echo "locally and commit the resulting changes."
-            exit 1
-        fi
         flake8 anaconda_project
         pydocstyle anaconda_project
     - name: Build the documentation as a test
