@@ -4781,7 +4781,7 @@ def test_archive_unarchive_conda_pack(suffix):
 
             expected_files = [
                 'anaconda-project.yml', '.projectignore', 'foo.py', 'bar/blah.py', 'envs/default/conda-meta/.packed',
-                'envs/default/conda-meta/history', 'envs/default/conda-meta/_prefix',
+                'envs/default/conda-meta/history', 'envs/default/conda-meta/_prefix', 'envs/default/conda-meta/created_at',
                 'envs/default/conda-meta/font-ttf-ubuntu-0.83-h8b1ccd4_0.json',
                 'envs/default/var/cache/anaconda-project/env-specs/7d832cfb38dabc7b1c20f98e15bfc4c601f21b62',
                 'envs/default/fonts/Ubuntu-M.ttf', 'envs/default/fonts/Ubuntu-L.ttf',
@@ -4790,10 +4790,13 @@ def test_archive_unarchive_conda_pack(suffix):
                 'envs/default/fonts/Ubuntu-LI.ttf', 'envs/default/fonts/Ubuntu-B.ttf',
                 'envs/default/fonts/Ubuntu-C.ttf', 'envs/default/fonts/UbuntuMono-RI.ttf',
                 'envs/default/fonts/UbuntuMono-R.ttf', 'envs/default/fonts/Ubuntu-RI.ttf',
-                'envs/default/fonts/UbuntuMono-B.ttf'
+                'envs/default/fonts/UbuntuMono-B.ttf', 'envs/default/etc/aau_token'
             ]
 
-            scripts_nix = ['envs/default/bin/conda-unpack', 'envs/default/bin/deactivate', 'envs/default/bin/activate']
+            scripts_nix = [
+                'envs/default/bin/conda-unpack', 'envs/default/bin/deactivate',
+                'envs/default/bin/activate', 'envs/default/bin/activate.fish',
+            ]
 
             scripts_win = [
                 'envs/default/Scripts/activate.bat', 'envs/default/Scripts/conda-unpack-script.py',
@@ -5531,7 +5534,7 @@ def test_upload(monkeypatch):
         with fake_server(monkeypatch, expected_basename='foo.tar.bz2'):
             project = project_no_dedicated_env(dirname)
             assert [] == project.problems
-            status = project_ops.upload(project, site='unit_test')
+            status = project_ops.upload(project, site='unit_test', token='fake_token')
             assert status
             assert status.url == 'http://example.com/whatevs'
 
