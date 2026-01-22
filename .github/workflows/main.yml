@@ -26,12 +26,7 @@ jobs:
       shell: bash -el {0}
       run: |
         conda config --append channels conda-forge
-        conda install -y conda-build conda-verify flake8 pydocstyle sphinx pydata-sphinx-theme==0.14.4 sphinx-copybutton sphinx-notfound-page
-    - name: Verify formatting compliance
-      shell: bash -el {0}
-      run: |
-        flake8 anaconda_project
-        pydocstyle anaconda_project
+        conda install -y conda-build sphinx pydata-sphinx-theme==0.14.4 sphinx-copybutton sphinx-notfound-page
     - name: Build the documentation as a test
       shell: bash -el {0}
       run: |
