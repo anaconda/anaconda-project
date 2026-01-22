@@ -13,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Retrieve the source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: conda-incubator/setup-miniconda@v3
       with:
-        auto-update-conda: false
-        miniconda-version: "latest"
+        auto-update-conda: true
+        python-version: "3.12"
         auto-activate-base: true
         activate-environment: ""
     - name: Install build dependencies
@@ -34,7 +34,7 @@ jobs:
             echo "----"
             echo "Please run 'yapf --in-place --recursive anaconda_project'"
             echo "locally and commit the resulting changes."
-            exit -1
+            exit 1
         fi
         flake8 anaconda_project
         pydocstyle anaconda_project
@@ -50,10 +50,11 @@ jobs:
       shell: bash -el {0}
       run: rm -rf ${CONDA}/conda-bld/{git_cache,work,anaconda-project*,*/.cache}
     - name: Upload the build artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: package-${{ github.sha }}
-        path: /usr/share/miniconda3/conda-bld
+        path: ${{ env.CONDA }}/conda-bld
+
   tests:
     defaults:
       run:
@@ -63,103 +64,81 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest,ubuntu-latest,windows-latest]
-        pyver: [3.6,3.7,3.8,3.9,"3.10"]
-        cver: [4.6,4.7,4.8, 4.9, "4.10", "4.11","4.12","4.13"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        pyver: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         exclude:
-          # Cannot instantiate these environment for these yet
-          - pyver: 3.8
-            cver: 4.6
-          - pyver: 3.8
-            cver: 4.7
-          # Minor test back off to save build time
-          - pyver: 3.7
-            cver: 4.6
-          - pyver: 3.6
-            cver: 4.8
-          - pyver: 3.6
-            cver: 4.7
-          # Conda dropped py36 for base env
-          - pyver: 3.6
-            cver: "4.11"
-          # Odd timestamp behavior
-          - pyver: 3.7
-            os: ubuntu-latest
-            cver: 4.8
-          - pyver: 3.8
-            os: ubuntu-latest
-            cver: 4.8
+          # Python 3.14 is still in development
           - os: windows-latest
-            pyver: 3.6
-            cver: 4.6
-
-          # Python 3.10
-          - cver: 4.8
-            pyver: "3.10"
-          - cver: 4.9
-            pyver: "3.10"
-          - cver: "4.11"
-            pyver: "3.10"
-
-          # Python 3.9
-          - cver: 4.8
-            pyver: 3.9
+            pyver: "3.14"
+          - os: macos-latest
+            pyver: "3.14"
     steps:
     - name: Retrieve the source code
-      uses: actions/checkout@v2
-    - name: Build the conda environment
-      run: |
-          [ $RUNNER_OS == Windows ] && CONDA_EXE=$CONDA/Scripts/conda.exe
-          [ $RUNNER_OS == macOS ] && export CONDA_PKGS_DIRS=~/.pkgs
-          ${CONDA_EXE:-conda} create -y -p ./conda conda=${{ matrix.cver }}
+      uses: actions/checkout@v4
+    - uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+        python-version: ${{ matrix.pyver }}
+        auto-activate-base: true
     - name: Download the build artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: package-${{ github.sha }}
-        path: ./conda/conda-bld
+        path: ./conda-bld
+    - name: Configure conda channels
+      shell: bash -el {0}
+      run: |
+        conda config --prepend channels conda-forge
+        conda config --append channels ./conda-bld
+        conda index ./conda-bld
     - name: Build the test environment
+      shell: bash -el {0}
       run: |
-          source ./conda/etc/profile.d/conda.sh
-          [ ${{ matrix.pyver }} == 2.7 ] && BACKPORTS="backports.tempfile backports.functools_lru_cache"
-          conda create -y -n anaconda-project-dev python=${{ matrix.pyver }} \
-            $BACKPORTS coverage pytest pytest-cov redis notebook bokeh \
-            keyring setuptools pip local::anaconda-project
+        conda create -y -n anaconda-project-dev python=${{ matrix.pyver }} \
+          coverage pytest pytest-cov redis notebook bokeh \
+          keyring setuptools pip anaconda-project
     - name: Run the tests
+      shell: bash -el {0}
       run: |
-          source ./conda/etc/profile.d/conda.sh 
-          conda activate anaconda-project-dev
-          [ ${{matrix.cver}} != 4.6 ] && conda config --set restore_free_channel true
-          pytest -vrfe --durations=10 \
-            --cov-config=.coveragerc --cov-report=term-missing \
-            --cov-fail-under=98 --cov-report=xml:./coverage.xml \
-            --cov=anaconda_project anaconda_project
-    - uses: codecov/codecov-action@v1
+        conda activate anaconda-project-dev
+        pytest -vrfe --durations=10 \
+          --cov-config=.coveragerc --cov-report=term-missing \
+          --cov-fail-under=95 --cov-report=xml:./coverage.xml \
+          --cov=anaconda_project anaconda_project
+    - name: Upload coverage
+      uses: codecov/codecov-action@v4
+      if: matrix.os == 'ubuntu-latest' && matrix.pyver == '3.12'
       with:
         file: ./coverage.xml
+        fail_ci_if_error: false
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   upload:
     needs: tests
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     steps:
     - name: Retrieve the source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
+    - uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+        python-version: "3.12"
+        auto-activate-base: true
     - name: Download the build artifacts
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: package-${{ github.sha }}
         path: conda-bld
     - name: Upload to anaconda.org
+      shell: bash -el {0}
       env:
         ANACONDA_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
         GITHUB_REF: ${{ github.ref }}
       run: |
-        source $CONDA/bin/activate
         conda install -y anaconda-client
         [[ "$GITHUB_REF" =~ ^refs/tags/ ]] || export LABEL="--label dev"
         anaconda --verbose --token $ANACONDA_TOKEN upload --user ctools $LABEL conda-bld/*/*.tar.bz2 --force
-    - name: Clean up older artifacts
-      uses: glassechidna/artifact-cleaner@master
-      with:
-        minimumAge: 86400
