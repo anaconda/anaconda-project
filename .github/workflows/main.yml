@@ -79,7 +79,6 @@ jobs:
       run: |
         conda config --prepend channels conda-forge
         conda config --append channels ./conda-bld
-        conda index ./conda-bld
     - name: Build the test environment
       shell: bash -el {0}
       run: |
