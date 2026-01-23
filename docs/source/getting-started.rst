@@ -79,7 +79,7 @@ In this section, we will create a new notebook called
 
  You can exit the running Jupyter Notebook program using CTRL+C in your terminal or command line.
 
-.. _hvPlot interactive: https://raw.githubusercontent.com/holoviz/hvplot/master/examples/user_guide/Interactive.ipynb
+.. _hvPlot interactive: https://raw.githubusercontent.com/holoviz/hvplot/main/doc/user_guide/Interactive.ipynb
 .. _quickstart: https://raw.githubusercontent.com/Anaconda-Platform/anaconda-project/master/examples/quickstart/Interactive.ipynb
 
 Run your project
