@@ -12,21 +12,17 @@ from __future__ import absolute_import, print_function
 # comments, etc., which is why we use it instead of the usual yaml
 # module. Remember the project file is intended to go into source
 # control.
-try:
-    # this is the conda-packaged version of ruamel.yaml which has the
-    # module renamed
-    import ruamel_yaml as ryaml
-    from ruamel_yaml.error import YAMLError
-    from ruamel_yaml.comments import CommentedMap
-    from ruamel_yaml.comments import CommentedSeq
-except ImportError:  # pragma: no cover
-    # this is the upstream version
-    import ruamel.yaml as ryaml  # pragma: no cover
-    from ruamel.yaml.error import YAMLError  # pragma: no cover
-    from ruamel.yaml.comments import CommentedMap  # pragma: no cover
-    from ruamel.yaml.comments import CommentedSeq  # pragma: no cover
+#
+# We use the modern YAML() instance API rather than the deprecated
+# function-based API (RoundTripLoader/RoundTripDumper). The old API
+# was deprecated in 0.17.0 and removed in 0.18.0, and versions 0.17.5+
+# had bugs that dropped comments when using the old API.
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
+from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 import codecs
+import io
 import errno
 import os
 import sys
@@ -40,6 +36,12 @@ from anaconda_project.internal.py2_compat import is_string
 _YAMLError = YAMLError
 _CommentedMap = CommentedMap
 _CommentedSeq = CommentedSeq
+
+# Module-level YAML instance configured for round-trip (comment-preserving) mode.
+# This is reused across all load/dump operations for efficiency.
+_yaml = YAML()
+_yaml.preserve_quotes = True
+_yaml.default_flow_style = False
 
 
 def _atomic_replace(path, contents, encoding='utf-8'):
@@ -59,27 +61,26 @@ def _atomic_replace(path, contents, encoding='utf-8'):
 
 def _load_string(contents):
     if contents.strip() == '':
-        # ryaml.load below returns None for an empty file, we want
+        # _yaml.load returns None for an empty file, we want
         # to return an empty dict instead.
         return {}
     else:
-        # using RoundTripLoader incorporates safe_load
-        # (we don't load code)
-        assert issubclass(ryaml.RoundTripLoader, ryaml.constructor.SafeConstructor)
-        return ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+        return _yaml.load(io.StringIO(contents))
 
 
-def _dump_string(yaml):
-    return ryaml.dump(yaml, Dumper=ryaml.RoundTripDumper)
+def _dump_string(yaml_data):
+    stream = io.StringIO()
+    _yaml.dump(yaml_data, stream)
+    return stream.getvalue()
 
 
-def _save_file(yaml, filename, contents=None):
+def _save_file(yaml_data, filename, contents=None):
     if contents is None:
-        contents = _dump_string(yaml)
+        contents = _dump_string(yaml_data)
 
     try:
         # This is to ensure we don't corrupt the file, even if ruamel.yaml is broken
-        ryaml.load(contents, Loader=ryaml.RoundTripLoader)
+        _yaml.load(io.StringIO(contents))
     except YAMLError as e:  # pragma: no cover (should not happen)
         print("ruamel.yaml bug; it failed to parse a file that it generated.", file=sys.stderr)
         print("  the parse error was: " + str(e), file=sys.stderr)
