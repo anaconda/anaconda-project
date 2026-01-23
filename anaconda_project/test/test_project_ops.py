@@ -4796,11 +4796,13 @@ def test_archive_unarchive_conda_pack(suffix):
             scripts_nix = [
                 'envs/default/bin/conda-unpack', 'envs/default/bin/deactivate',
                 'envs/default/bin/activate', 'envs/default/bin/activate.fish',
+                'envs/default/bin/conda_unpack_progress.py'
             ]
 
             scripts_win = [
                 'envs/default/Scripts/activate.bat', 'envs/default/Scripts/conda-unpack-script.py',
-                'envs/default/Scripts/conda-unpack.exe', 'envs/default/Scripts/deactivate.bat'
+                'envs/default/Scripts/conda-unpack.exe', 'envs/default/Scripts/deactivate.bat',
+                'envs/default/Scripts/conda_unpack_progress.py'
             ]
 
             if 'win' in current_platform():
