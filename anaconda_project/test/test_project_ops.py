@@ -5449,8 +5449,13 @@ def test_unarchive_zip_error_on_empty():
 
 
 def test_unarchive_abs_project_dir_with_parent_dir():
+    if platform.system() == 'Windows':
+        left, right = 'C:\\absolute', 'C:\\bar'
+    else:
+        left, right = '/absolute', '/bar'
+
     with pytest.raises(ValueError) as excinfo:
-        project_ops.unarchive("foo.tar.gz", "/absolute", "/bar")
+        project_ops.unarchive("foo.tar.gz", left, right)
     assert "If supplying parent_dir to unarchive, project_dir must be relative or None" == str(excinfo.value)
 
 
