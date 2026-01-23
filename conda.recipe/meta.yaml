@@ -1,4 +1,5 @@
 {% set data = load_setup_py_data() %}
+{% set python_min = "3.10" %}
 
 package:
   name: anaconda-project
@@ -18,22 +19,22 @@ build:
 
 requirements:
   host:
-    - python {{ python }}
+    - python {{ python_min }}
     - pip
+    - setuptools
 
   run:
     - anaconda-client
     - conda-pack
-    - python
+    - python >={{ python_min }}
     - requests
-    - ruamel_yaml
+    - ruamel.yaml >=0.15
     - tornado >=4.2
     - jinja2
     - tqdm
 
 test:
   requires:
-    - backports.tempfile # [py2k]
     - coverage
     - pytest
     - pytest-cov

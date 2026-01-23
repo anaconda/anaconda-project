@@ -17,14 +17,14 @@ from anaconda_project.internal.test.tmpfile_utils import with_directory_contents
 
 def test_username(monkeypatch):
     with fake_server(monkeypatch):
-        client = _Client(site='unit_test')
+        client = _Client(site='unit_test', token='fake_token')
         username = client._username()
         assert username == 'fake_username'
 
 
 def test_username_override(monkeypatch):
     with fake_server(monkeypatch):
-        client = _Client(site='unit_test', username='foobar')
+        client = _Client(site='unit_test', username='foobar', token='fake_token')
         username = client._username()
         assert username == 'foobar'
 
@@ -42,7 +42,7 @@ def test_upload(monkeypatch):
             archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, "foo.zip", site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test', token='fake_token')
             assert status
 
     with_directory_contents(dict(), check)
@@ -55,7 +55,7 @@ def test_upload_failing_auth(monkeypatch):
             archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, "foo.zip", site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test', token='fake_token')
             assert not status
             assert ['Not logged in.'] == status.errors
 
@@ -69,7 +69,7 @@ def test_upload_missing_login(monkeypatch):
             archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, "foo.zip", site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test', token='fake_token')
             assert not status
             assert ['Not logged in.'] == status.errors
 
@@ -83,7 +83,7 @@ def test_upload_failing_create(monkeypatch):
             archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, "foo.zip", site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test', token='fake_token')
             assert not status
             assert '501' in status.errors[0]
 
@@ -97,7 +97,7 @@ def test_upload_failing_stage(monkeypatch):
             archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, "foo.zip", site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test', token='fake_token')
             assert not status
             assert '501' in status.errors[0]
 
@@ -111,7 +111,7 @@ def test_upload_failing_s3_upload(monkeypatch):
             archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, "foo.zip", site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test', token='fake_token')
             assert not status
             assert '501' in status.errors[0]
 
@@ -125,7 +125,7 @@ def test_upload_failing_commit(monkeypatch):
             archivefile = os.path.join(dirname, "tmp.zip")
             project_ops.archive(project, archivefile)
 
-            status = _upload(project, archivefile, "foo.zip", site='unit_test')
+            status = _upload(project, archivefile, "foo.zip", site='unit_test', token='fake_token')
             assert not status
             assert '501' in status.errors[0]
 
@@ -135,7 +135,7 @@ def test_upload_failing_commit(monkeypatch):
 def test_download(monkeypatch):
     def check(dirname):
         with fake_server(monkeypatch, expected_basename='fake_project.zip'):
-            status = _download('fake_username/fake_project', site='unit_test')
+            status = _download('fake_username/fake_project', site='unit_test', token='fake_token')
             assert status
 
     with_directory_contents(dict(), check)
@@ -144,7 +144,7 @@ def test_download(monkeypatch):
 def test_download_no_username(monkeypatch):
     def check(dirname):
         with fake_server(monkeypatch, expected_basename='fake_project.zip'):
-            status = _download('fake_project', site='unit_test')
+            status = _download('fake_project', site='unit_test', token='fake_token')
             assert status
 
     with_directory_contents(dict(), check)
@@ -153,7 +153,7 @@ def test_download_no_username(monkeypatch):
 def test_download_missing(monkeypatch):
     def check(dirname):
         with fake_server(monkeypatch, expected_basename='fake_project.zip'):
-            status = _download('fake_username/missing_project', site='unit_test')
+            status = _download('fake_username/missing_project', site='unit_test', token='fake_token')
             assert '404' in status.errors[0]
 
     with_directory_contents(dict(), check)
@@ -162,7 +162,7 @@ def test_download_missing(monkeypatch):
 def test_download_missing_no_username(monkeypatch):
     def check(dirname):
         with fake_server(monkeypatch, expected_basename='fake_project.zip'):
-            status = _download('missing_project', site='unit_test')
+            status = _download('missing_project', site='unit_test', token='fake_token')
             assert '404' in status.errors[0]
 
     with_directory_contents(dict(), check)

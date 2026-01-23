@@ -4059,14 +4059,16 @@ def _strip_prefixes(names):
     return list([name[len("archivedproj/"):].replace('\\', '/') for name in names])
 
 
-def _assert_zip_contains(zip_path, filenames):
+def _assert_zip_contains(zip_path, filenames, optional=()):
     with zipfile.ZipFile(zip_path, mode='r') as zf:
-        assert sorted(_strip_prefixes(zf.namelist())) == sorted(filenames)
+        found = set(_strip_prefixes(zf.namelist())) - set(optional)
+        assert sorted(found) == sorted(filenames)
 
 
-def _assert_tar_contains(tar_path, filenames):
+def _assert_tar_contains(tar_path, filenames, optional=()):
     with tarfile.open(tar_path, mode='r') as tf:
-        assert sorted(_strip_prefixes(tf.getnames())) == sorted(filenames)
+        found = set(_strip_prefixes(tf.getnames())) - set(optional)
+        assert sorted(found) == sorted(filenames)
 
 
 def _relative_to(root, path):
@@ -4781,7 +4783,7 @@ def test_archive_unarchive_conda_pack(suffix):
 
             expected_files = [
                 'anaconda-project.yml', '.projectignore', 'foo.py', 'bar/blah.py', 'envs/default/conda-meta/.packed',
-                'envs/default/conda-meta/history', 'envs/default/conda-meta/_prefix',
+                'envs/default/conda-meta/history', 'envs/default/conda-meta/_prefix', 'envs/default/conda-meta/created_at',
                 'envs/default/conda-meta/font-ttf-ubuntu-0.83-h8b1ccd4_0.json',
                 'envs/default/var/cache/anaconda-project/env-specs/7d832cfb38dabc7b1c20f98e15bfc4c601f21b62',
                 'envs/default/fonts/Ubuntu-M.ttf', 'envs/default/fonts/Ubuntu-L.ttf',
@@ -4790,14 +4792,22 @@ def test_archive_unarchive_conda_pack(suffix):
                 'envs/default/fonts/Ubuntu-LI.ttf', 'envs/default/fonts/Ubuntu-B.ttf',
                 'envs/default/fonts/Ubuntu-C.ttf', 'envs/default/fonts/UbuntuMono-RI.ttf',
                 'envs/default/fonts/UbuntuMono-R.ttf', 'envs/default/fonts/Ubuntu-RI.ttf',
-                'envs/default/fonts/UbuntuMono-B.ttf'
+                'envs/default/fonts/UbuntuMono-B.ttf', 'envs/default/etc/aau_token'
             ]
 
-            scripts_nix = ['envs/default/bin/conda-unpack', 'envs/default/bin/deactivate', 'envs/default/bin/activate']
+            scripts_nix = [
+                'envs/default/bin/conda-unpack', 'envs/default/bin/deactivate',
+                'envs/default/bin/activate', 'envs/default/bin/activate.fish'
+            ]
 
             scripts_win = [
                 'envs/default/Scripts/activate.bat', 'envs/default/Scripts/conda-unpack-script.py',
                 'envs/default/Scripts/conda-unpack.exe', 'envs/default/Scripts/deactivate.bat'
+            ]
+
+            optional = [
+                'envs/default/bin/conda_unpack_progress.py',
+                'envs/default/Scripts/conda_unpack_progress.py'
             ]
 
             if 'win' in current_platform():
@@ -4806,9 +4816,9 @@ def test_archive_unarchive_conda_pack(suffix):
                 expected_files.extend(scripts_nix)
 
             if suffix == 'zip':
-                _assert_zip_contains(archivefile, expected_files)
+                _assert_zip_contains(archivefile, expected_files, optional)
             elif suffix in ['tar.bz2', 'tar.gz']:
-                _assert_tar_contains(archivefile, expected_files)
+                _assert_tar_contains(archivefile, expected_files, optional)
 
             unpacked = os.path.join(os.path.dirname(archivefile), 'unpacked')
             status = project_ops.unarchive(archivefile, unpacked)
@@ -5444,8 +5454,13 @@ def test_unarchive_zip_error_on_empty():
 
 
 def test_unarchive_abs_project_dir_with_parent_dir():
+    if platform.system() == 'Windows':
+        left, right = 'C:\\absolute', 'C:\\bar'
+    else:
+        left, right = '/absolute', '/bar'
+
     with pytest.raises(ValueError) as excinfo:
-        project_ops.unarchive("foo.tar.gz", "/absolute", "/bar")
+        project_ops.unarchive("foo.tar.gz", left, right)
     assert "If supplying parent_dir to unarchive, project_dir must be relative or None" == str(excinfo.value)
 
 
@@ -5531,7 +5546,7 @@ def test_upload(monkeypatch):
         with fake_server(monkeypatch, expected_basename='foo.tar.bz2'):
             project = project_no_dedicated_env(dirname)
             assert [] == project.problems
-            status = project_ops.upload(project, site='unit_test')
+            status = project_ops.upload(project, site='unit_test', token='fake_token')
             assert status
             assert status.url == 'http://example.com/whatevs'
 

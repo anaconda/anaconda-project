@@ -25,7 +25,7 @@ def detect_linesep(lines):
 
 def add_lineseps(lines, sep=None):
     sep = sep or os.linesep
-    return list(map(lambda l: l + sep, lines))
+    return list(map(lambda line: line + sep, lines))
 
 
 def test_streaming():

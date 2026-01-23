@@ -32,7 +32,11 @@ import os
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autosectionlabel']
+extensions = [
+              'sphinx.ext.autosectionlabel',
+              'sphinx_copybutton',
+              'notfound.extension'
+             ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -69,7 +73,7 @@ release = '0.8.0rc5'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -125,15 +129,28 @@ todo_include_todos = False
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+    html_theme = 'pydata_sphinx_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
-# html_theme_options = {}
+# further. The documentation for the current theme is found at
+# https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html.
+
+html_theme_options = {
+    "navbar_center": ["navbar-nav-override"],
+    "footer_start": ["copyright"],
+    "footer_center": ["sphinx-version"],
+    "footer_end":["theme-version"],
+    "logo": {
+        "text": "Anaconda Project"
+        },
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/Anaconda-Platform/anaconda-project/",
+            "icon": "fa-brands fa-github",
+        }
+    ]
+    }
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -141,22 +158,22 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
 #
-# html_title = 'Anaconda Project v0.8.0rc5'
+html_title = 'Anaconda Project'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #
-# html_short_title = None
+#html_short_title = None
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#
-# html_logo = None
+
+html_logo = "_static/Anaconda_Icon.png"
 
 # The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
 # pixels large.
-#
-# html_favicon = None
+
+html_favicon = "_static/favicon.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -183,7 +200,19 @@ html_css_files = ['css/custom.css']
 
 # Custom sidebar templates, maps document names to template names.
 #
-# html_sidebars = {}
+html_sidebars = {
+    "**": [
+        "sidebar-nav-bs-override", # Use override template instead of the default sidebar navigation
+        "sidebar-ethical-ads"
+        ], 
+}
+
+# Suppresses build warnings caused by more than one header having the same name
+# Note: This suppression and the sphinx.ext.autosectionlabel extension should
+# be removed if sections with the same header ever need to be referred to by label.
+# Or the same header labels should be rewritten to not be the same.
+
+suppress_warnings = ['autosectionlabel.*']
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
