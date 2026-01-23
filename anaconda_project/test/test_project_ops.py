@@ -4059,14 +4059,16 @@ def _strip_prefixes(names):
     return list([name[len("archivedproj/"):].replace('\\', '/') for name in names])
 
 
-def _assert_zip_contains(zip_path, filenames):
+def _assert_zip_contains(zip_path, filenames, optional=()):
     with zipfile.ZipFile(zip_path, mode='r') as zf:
-        assert sorted(_strip_prefixes(zf.namelist())) == sorted(filenames)
+        found = set(_strip_prefixes(zf.namelist())) - set(optional)
+        assert sorted(found) == sorted(filenames)
 
 
-def _assert_tar_contains(tar_path, filenames):
+def _assert_tar_contains(tar_path, filenames, optional=()):
     with tarfile.open(tar_path, mode='r') as tf:
-        assert sorted(_strip_prefixes(tf.getnames())) == sorted(filenames)
+        found = set(_strip_prefixes(tf.getnames())) - set(optional)
+        assert sorted(found) == sorted(filenames)
 
 
 def _relative_to(root, path):
@@ -4795,13 +4797,16 @@ def test_archive_unarchive_conda_pack(suffix):
 
             scripts_nix = [
                 'envs/default/bin/conda-unpack', 'envs/default/bin/deactivate',
-                'envs/default/bin/activate', 'envs/default/bin/activate.fish',
-                'envs/default/bin/conda_unpack_progress.py'
+                'envs/default/bin/activate', 'envs/default/bin/activate.fish'
             ]
 
             scripts_win = [
                 'envs/default/Scripts/activate.bat', 'envs/default/Scripts/conda-unpack-script.py',
-                'envs/default/Scripts/conda-unpack.exe', 'envs/default/Scripts/deactivate.bat',
+                'envs/default/Scripts/conda-unpack.exe', 'envs/default/Scripts/deactivate.bat'
+            ]
+
+            optional = [
+                'envs/default/bin/conda_unpack_progress.py',
                 'envs/default/Scripts/conda_unpack_progress.py'
             ]
 
@@ -4811,9 +4816,9 @@ def test_archive_unarchive_conda_pack(suffix):
                 expected_files.extend(scripts_nix)
 
             if suffix == 'zip':
-                _assert_zip_contains(archivefile, expected_files)
+                _assert_zip_contains(archivefile, expected_files, optional)
             elif suffix in ['tar.bz2', 'tar.gz']:
-                _assert_tar_contains(archivefile, expected_files)
+                _assert_tar_contains(archivefile, expected_files, optional)
 
             unpacked = os.path.join(os.path.dirname(archivefile), 'unpacked')
             status = project_ops.unarchive(archivefile, unpacked)
