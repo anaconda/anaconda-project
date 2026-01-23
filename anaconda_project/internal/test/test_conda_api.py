@@ -336,8 +336,9 @@ def test_resolve_bogus_env(monkeypatch):
 
 
 def test_resolve_env_prefix_from_dirname():
-    prefix = conda_api.resolve_env_to_prefix('/foo/bar')
-    assert "/foo/bar" == prefix
+    expected = 'C:\\foo\\bar' if platform.system() == 'Windows' else '/foo/bar'
+    prefix = conda_api.resolve_env_to_prefix(expected)
+    assert expected == prefix
 
 
 def test_installed():
