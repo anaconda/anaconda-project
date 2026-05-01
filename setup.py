@@ -26,6 +26,7 @@ setuptools.setup(name='anaconda-project',
                  install_requires=[
                      "anaconda-client",
                      "conda-pack",
+                     "entrypoints",
                      "requests",
                      "ruamel.yaml>=0.15",
                      "tornado>=4.2",
