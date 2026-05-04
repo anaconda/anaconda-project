@@ -243,7 +243,7 @@ def export_pixi_toml(project):
         lines.append('[environments]')
         for env_name in sorted(env_specs):
             if env_name == 'default':
-                lines.append('default = {{ solve-group = "default" }}')
+                lines.append('default = { solve-group = "default" }')
             else:
                 lines.append('{name} = {{ features = ["{name}"], solve-group = "default" }}'.format(name=env_name))
         lines.append('')
