@@ -279,6 +279,7 @@ def test_conda_create_and_install_and_remove(monkeypatch):
         message = str(excinfo.value)
         valid_strings = ('no packages found to remove', 'Package not found', "named 'ipython' found to remove",
                          'PackagesNotFoundError:', 'PackagesNotFoundInChannelsError:',
+                         'PackageNotInstalledError:', 'is not installed in prefix',
                          "is missing from the environment")
         assert any(s in message for s in valid_strings)
         assert not manager._timestamp_file_up_to_date(envdir, spec)
