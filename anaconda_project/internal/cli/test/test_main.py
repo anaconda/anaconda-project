@@ -23,7 +23,7 @@ all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'un
                    'list-services', 'add-env-spec', 'remove-env-spec', 'list-env-specs', 'export-env-spec', 'lock',
                    'unlock', 'update', 'add-packages', 'remove-packages', 'list-packages', 'add-platforms',
                    'remove-platforms', 'list-platforms', 'add-command', 'remove-command', 'list-default-command',
-                   'list-commands')
+                   'list-commands', 'export-pixi')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -133,6 +133,7 @@ expected_usage_msg_format = (  # noqa
     '    list-default-command\n'
     '                        List only the default command on the project\n'
     '    list-commands       List the commands on the project\n'
+    '    export-pixi         Export the project as a pixi.toml file\n'
     '\n'
     'optional arguments:\n'
     '  -h, --help            show this help message and exit\n'
