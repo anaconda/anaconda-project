@@ -11,9 +11,15 @@ from __future__ import absolute_import, print_function
 import os
 import re
 
+from anaconda_project.requirements_registry.requirement import EnvVarRequirement
+from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
+from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
+from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
+
 
 def _toml_string(value):
     escaped = value.replace('\\', '\\\\').replace('"', '\\"')
+    escaped = escaped.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
     return '"{}"'.format(escaped)
 
 
@@ -83,7 +89,7 @@ def _write_dependencies(lines, conda_packages, pip_packages, indent=''):
         lines.append('{}[pypi-dependencies]'.format(indent))
         for spec in sorted(pip_packages):
             # pip specs are already in pip format (e.g. "package>=1.0")
-            m = re.match(r'^([a-zA-Z0-9_][a-zA-Z0-9_.\-]*)\s*(.*)?$', spec)
+            m = re.match(r'^([a-zA-Z0-9_][a-zA-Z0-9_.\-]*(?:\[[^\]]*\])?)\s*(.*)?$', spec)
             if m:
                 name = m.group(1)
                 version = m.group(2).strip() if m.group(2) else '*'
@@ -175,11 +181,14 @@ def export_pixi_toml(project):
 
         global_conda = sorted(all_conda) if all_conda else []
         global_pip = sorted(all_pip) if all_pip else []
-    else:
+    elif env_specs:
         # Single env — everything is global
         env = list(env_specs.values())[0]
         global_conda = list(env.conda_packages)
         global_pip = list(env.pip_packages)
+    else:
+        global_conda = []
+        global_pip = []
 
     # Write global dependencies
     _write_dependencies(lines, global_conda, global_pip)
@@ -187,10 +196,6 @@ def export_pixi_toml(project):
     # -- [activation] for variables
     variables_with_defaults = {}
     for req in project.requirements(project.default_env_spec_name):
-        from anaconda_project.requirements_registry.requirement import EnvVarRequirement
-        from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
-        from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
-        from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
         if isinstance(req, (CondaEnvRequirement, DownloadRequirement, ServiceRequirement)):
             continue
         if isinstance(req, EnvVarRequirement):
@@ -227,7 +232,7 @@ def export_pixi_toml(project):
                 if extra_pip:
                     lines.append('[feature.{}.pypi-dependencies]'.format(env_name))
                     for spec in sorted(extra_pip):
-                        m = re.match(r'^([a-zA-Z0-9_][a-zA-Z0-9_.\-]*)\s*(.*)?$', spec)
+                        m = re.match(r'^([a-zA-Z0-9_][a-zA-Z0-9_.\-]*(?:\[[^\]]*\])?)\s*(.*)?$', spec)
                         if m:
                             name = m.group(1)
                             version = m.group(2).strip() if m.group(2) else '*'
@@ -258,20 +263,13 @@ def export_pixi_toml(project):
 
         if global_tasks:
             lines.append('[tasks]')
-        for cmd_name, command in sorted(commands.items()):
-            task_cmd, comment = _command_to_task(command)
-            if task_cmd is None:
-                lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
-                continue
-
-            desc = command.description
-            env_spec_name = command.default_env_spec_name
-
-            # Skip description if it just echoes the command string or name
-            has_desc = desc and desc != cmd_name and desc != task_cmd
-
-            # Simple inline form for commands without env spec binding
-            if not has_multiple_envs or env_spec_name == 'default' or env_spec_name is None:
+            for cmd_name, command in global_tasks:
+                task_cmd, comment = _command_to_task(command)
+                if task_cmd is None:
+                    lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
+                    continue
+                desc = command.description
+                has_desc = desc and desc != cmd_name and desc != task_cmd
                 if comment:
                     lines.append('# {}'.format(comment))
                 if has_desc:
@@ -279,23 +277,29 @@ def export_pixi_toml(project):
                         cmd_name, _toml_string(task_cmd), _toml_string(desc)))
                 else:
                     lines.append('{} = {}'.format(cmd_name, _toml_string(task_cmd)))
-            else:
-                # Task scoped to a feature (runs in that feature's environment)
-                section = 'feature.{}.tasks.{}'.format(env_spec_name, cmd_name)
-                lines.append('')
-                lines.append('[{}]'.format(section))
-                lines.append('cmd = {}'.format(_toml_string(task_cmd)))
-                if has_desc:
-                    lines.append('description = {}'.format(_toml_string(desc)))
-                if comment:
-                    lines.append('# {}'.format(comment))
-        lines.append('')
+            lines.append('')
+
+        for cmd_name, command in feature_tasks:
+            task_cmd, comment = _command_to_task(command)
+            if task_cmd is None:
+                lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
+                continue
+            desc = command.description
+            env_spec_name = command.default_env_spec_name
+            has_desc = desc and desc != cmd_name and desc != task_cmd
+            section = 'feature.{}.tasks.{}'.format(env_spec_name, cmd_name)
+            lines.append('[{}]'.format(section))
+            lines.append('cmd = {}'.format(_toml_string(task_cmd)))
+            if has_desc:
+                lines.append('description = {}'.format(_toml_string(desc)))
+            if comment:
+                lines.append('# {}'.format(comment))
+            lines.append('')
 
     # -- Downloads as comments (no pixi equivalent)
     downloads = {}
     for env_name in env_specs:
         for req in project.requirements(env_name):
-            from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
             if isinstance(req, DownloadRequirement):
                 downloads[req.env_var] = req.url
 
@@ -310,7 +314,6 @@ def export_pixi_toml(project):
     services = {}
     for env_name in env_specs:
         for req in project.requirements(env_name):
-            from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
             if isinstance(req, ServiceRequirement):
                 services[req.env_var] = req.service_type
 
@@ -323,10 +326,6 @@ def export_pixi_toml(project):
     # -- Variables without defaults as comments
     vars_without_defaults = {}
     for req in project.requirements(project.default_env_spec_name):
-        from anaconda_project.requirements_registry.requirement import EnvVarRequirement
-        from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
-        from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
-        from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
         if isinstance(req, (CondaEnvRequirement, DownloadRequirement, ServiceRequirement)):
             continue
         if isinstance(req, EnvVarRequirement) and req.default_as_string is None:
