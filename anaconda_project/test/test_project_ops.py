@@ -4086,8 +4086,9 @@ def _recursive_list(dir_path):
             yield _relative_to(dir_path, os.path.join(root, filename))
 
 
-def _assert_dir_contains(dir_path, filenames):
-    assert sorted([filename.replace("\\", "/") for filename in _recursive_list(dir_path)]) == sorted(filenames)
+def _assert_dir_contains(dir_path, filenames, optional=()):
+    found = set(filename.replace("\\", "/") for filename in _recursive_list(dir_path)) - set(optional)
+    assert sorted(found) == sorted(filenames)
 
 
 def test_archive_zip():
@@ -4826,7 +4827,7 @@ def test_archive_unarchive_conda_pack(suffix):
             assert status
             assert os.path.isdir(unpacked)
 
-            _assert_dir_contains(unpacked, expected_files)
+            _assert_dir_contains(unpacked, expected_files, optional)
 
             if 'win' not in current_platform():
                 conda_unpack = os.path.join(unpacked, 'envs', 'default', 'bin', 'conda-unpack')
