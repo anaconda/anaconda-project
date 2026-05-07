@@ -125,14 +125,7 @@ def export_pixi_toml(project):
     """
     lines = []
 
-    # -- [project] metadata
-    lines.append('[project]')
-    lines.append('name = {}'.format(_toml_string(project.name)))
-    if project.description:
-        lines.append('description = {}'.format(_toml_string(project.description)))
-    lines.append('')
-
-    # -- [workspace] channels and platforms
+    # -- [workspace] metadata, channels, and platforms
     # Collect channels from all env specs (union, preserving order)
     all_channels = []
     seen_channels = set()
@@ -150,6 +143,9 @@ def export_pixi_toml(project):
         all_platforms = {'linux-64'}
 
     lines.append('[workspace]')
+    lines.append('name = {}'.format(_toml_string(project.name)))
+    if project.description:
+        lines.append('description = {}'.format(_toml_string(project.description)))
     if all_channels:
         lines.append('channels = {}'.format(_toml_inline_array(all_channels)))
     else:
