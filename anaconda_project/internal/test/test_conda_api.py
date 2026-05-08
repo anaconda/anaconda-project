@@ -111,7 +111,8 @@ def _assert_packages_not_found(e):
     # conda has changed this message several times
     ok = False
     valid_strings = ('No packages found', 'Package missing in current', 'Package missing in current',
-                     'PackageNotFoundError:', 'PackagesNotFoundError:', 'Package not found')
+                     'PackageNotFoundError:', 'PackagesNotFoundError:',
+                     'PackagesNotFoundInChannelsError:', 'Package not found')
 
     ok = any(s in str(e) for s in valid_strings)
     if not ok:
