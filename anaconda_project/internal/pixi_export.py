@@ -17,6 +17,11 @@ from anaconda_project.requirements_registry.requirements.download import Downloa
 from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
 
 
+def _sanitize_env_name(name):
+    """Pixi environment/feature names allow only lowercase letters, numbers, and dashes."""
+    return re.sub(r'[^a-z0-9-]', '-', name.lower())
+
+
 def _toml_string(value):
     escaped = value.replace('\\', '\\\\').replace('"', '\\"')
     escaped = escaped.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
@@ -217,16 +222,17 @@ def export_pixi_toml(project):
             extra_conda = [p for p in env.conda_packages if p not in global_conda_set]
             extra_pip = [p for p in env.pip_packages if p not in global_pip_set]
 
+            pixi_env_name = _sanitize_env_name(env_name)
             if extra_conda or extra_pip:
                 if extra_conda:
-                    lines.append('[feature.{}.dependencies]'.format(env_name))
+                    lines.append('[feature.{}.dependencies]'.format(pixi_env_name))
                     for spec in sorted(extra_conda, key=lambda s: _conda_spec_to_pixi(s)[0].lower()):
                         name, version = _conda_spec_to_pixi(spec)
                         lines.append('{} = {}'.format(name, _format_dep_value(version)))
                     lines.append('')
 
                 if extra_pip:
-                    lines.append('[feature.{}.pypi-dependencies]'.format(env_name))
+                    lines.append('[feature.{}.pypi-dependencies]'.format(pixi_env_name))
                     for spec in sorted(extra_pip):
                         m = re.match(r'^([a-zA-Z0-9_][a-zA-Z0-9_.\-]*(?:\[[^\]]*\])?)\s*(.*)?$', spec)
                         if m:
@@ -241,7 +247,8 @@ def export_pixi_toml(project):
             if env_name == 'default':
                 lines.append('default = { solve-group = "default" }')
             else:
-                lines.append('{name} = {{ features = ["{name}"], solve-group = "default" }}'.format(name=env_name))
+                pixi_env_name = _sanitize_env_name(env_name)
+                lines.append('{name} = {{ features = ["{name}"], solve-group = "default" }}'.format(name=pixi_env_name))
         lines.append('')
 
     # -- [tasks] from commands
@@ -282,8 +289,9 @@ def export_pixi_toml(project):
                 continue
             desc = command.description
             env_spec_name = command.default_env_spec_name
+            pixi_env_name = _sanitize_env_name(env_spec_name)
             has_desc = desc and desc != cmd_name and desc != task_cmd
-            section = 'feature.{}.tasks.{}'.format(env_spec_name, cmd_name)
+            section = 'feature.{}.tasks.{}'.format(pixi_env_name, cmd_name)
             lines.append('[{}]'.format(section))
             lines.append('cmd = {}'.format(_toml_string(task_cmd)))
             if has_desc:
