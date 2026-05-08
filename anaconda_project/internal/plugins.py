@@ -6,14 +6,13 @@
 # The full license is in the file LICENSE.txt, distributed with this software.
 # -----------------------------------------------------------------------------
 
-try:
-    from entrypoints import get_group_named
-except ImportError:  # py 2.7
-    from pkg_resources import iter_entry_points
+from importlib.metadata import entry_points
 
-    def get_group_named(group_name):
-        """Facade function to align old entry_points api to new one."""
-        return {plugin.name: plugin for plugin in iter_entry_points(group_name)}
+
+def get_group_named(group_name):
+    """Return entry points for the given group as a dict of name -> EntryPoint."""
+    eps = entry_points(group=group_name)
+    return {ep.name: ep for ep in eps}
 
 
 def _get_entry_points_plugins(entry_point_group):
