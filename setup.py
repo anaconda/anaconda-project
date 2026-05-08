@@ -32,6 +32,7 @@ setuptools.setup(name='anaconda-project',
                      "tornado>=4.2",
                      "jinja2",
                      "tqdm",
+                     "tomli; python_version < '3.11'",
                  ],
                  entry_points={"console_scripts": [
                      "anaconda-project = anaconda_project.cli:main",
