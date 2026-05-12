@@ -33,6 +33,7 @@ requirements:
     - tornado >=4.2
     - jinja2
     - tqdm
+    - tomli  # [py<311]
 
 test:
   requires:
