@@ -358,7 +358,14 @@ def export_pixi_toml(project):
     # The anonymous base spec's packages are the global ones.
     # In the project model, these are the top-level packages/channels.
     # env_spec.conda_packages includes inherited, so we find the common set.
-    if has_multiple_envs:
+    #
+    # Special case: a single non-default env_spec keeps all its packages in
+    # its feature block, not the top-level [dependencies]. Pixi always
+    # creates an implicit `default` environment populated from
+    # [dependencies], so emitting the packages globally would let `pixi run`
+    # use them under the wrong name and hide the real env_spec name.
+    single_named_env = (len(env_specs) == 1 and 'default' not in env_specs)
+    if has_multiple_envs and not single_named_env:
         # Find packages common to all env specs (the global/inherited ones)
         all_conda = None
         all_pip = None
@@ -374,8 +381,8 @@ def export_pixi_toml(project):
 
         global_conda = sorted(all_conda) if all_conda else []
         global_pip = sorted(all_pip) if all_pip else []
-    elif env_specs:
-        # Single env — everything is global
+    elif env_specs and not single_named_env:
+        # Single env named `default` — everything is global
         env = list(env_specs.values())[0]
         global_conda = list(env.conda_packages)
         global_pip = list(env.pip_packages)

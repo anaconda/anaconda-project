@@ -221,6 +221,30 @@ commands:
         assert 'echo $MY_VAR' in result
         assert 'unresolved env var' not in result
 
+    def test_single_named_env_keeps_packages_in_feature(self):
+        # When the only env_spec has a non-default name, its packages must
+        # land in [feature.<name>.dependencies], not top-level
+        # [dependencies] — pixi auto-creates an implicit `default`
+        # environment from [dependencies], which would conflict with the
+        # named env.
+        project = self._make_project("""
+name: Glaciers
+packages:
+  - panel
+  - pandas
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = export_pixi_toml(project)
+        assert '[feature.sampleproj.dependencies]' in result
+        assert 'panel = "*"' in result
+        # Top-level [dependencies] would let pixi's implicit default env
+        # carry the packages under the wrong name.
+        assert '\n[dependencies]\n' not in result
+        assert 'sampleproj = { features = ["sampleproj"]' in result
+
     def test_unknown_var_flagged(self):
         project = self._make_project("""
 name: UnknownVar
