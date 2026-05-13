@@ -12,14 +12,76 @@ import os
 import pytest
 import tempfile
 
+from anaconda_project.internal import pixi_export as pixi_export_module
 from anaconda_project.internal.pixi_export import (
+    CondaNotAvailableError,
     _conda_spec_to_pixi,
+    _expand_defaults_in_channels,
     _strip_conda_prefix_paths,
     _translate_command_env_vars,
     _windows_to_deno_shell,
     export_pixi_toml,
 )
 from anaconda_project.project import Project
+
+
+# Use a stable, fake `defaults` expansion across the suite so tests don't
+# depend on the developer's local `conda config` and don't shell out to
+# conda once per test.
+FAKE_DEFAULTS = ['https://example.test/main', 'https://example.test/r']
+
+
+@pytest.fixture(autouse=True)
+def _stub_default_channels(monkeypatch):
+    monkeypatch.setattr(
+        pixi_export_module, '_resolve_default_channels',
+        lambda: list(FAKE_DEFAULTS),
+    )
+
+
+class TestExpandDefaultsInChannels:
+    def test_no_defaults(self):
+        out = _expand_defaults_in_channels(['conda-forge', 'bioconda'], FAKE_DEFAULTS)
+        assert out == ['conda-forge', 'bioconda']
+
+    def test_defaults_expanded_in_place(self):
+        out = _expand_defaults_in_channels(['defaults', 'bioconda'], FAKE_DEFAULTS)
+        assert out == FAKE_DEFAULTS + ['bioconda']
+
+    def test_defaults_in_middle(self):
+        out = _expand_defaults_in_channels(
+            ['bioconda', 'defaults', 'conda-forge'], FAKE_DEFAULTS)
+        assert out == ['bioconda'] + FAKE_DEFAULTS + ['conda-forge']
+
+    def test_dedup_when_default_already_listed(self):
+        out = _expand_defaults_in_channels(
+            ['https://example.test/main', 'defaults'], FAKE_DEFAULTS)
+        # The pre-existing entry wins; defaults' duplicate is skipped.
+        assert out == ['https://example.test/main', 'https://example.test/r']
+
+    def test_multiple_defaults_collapse(self):
+        out = _expand_defaults_in_channels(['defaults', 'defaults'], FAKE_DEFAULTS)
+        assert out == FAKE_DEFAULTS
+
+
+class TestExportFailsWithoutConda:
+    def test_export_raises_when_conda_missing(self, monkeypatch, tmpdir):
+        # Override the autouse stub: simulate conda being unreachable.
+        def boom():
+            raise CondaNotAvailableError('conda not found')
+        monkeypatch.setattr(
+            pixi_export_module, '_resolve_default_channels', boom)
+
+        yml = tmpdir.join('anaconda-project.yml')
+        yml.write("""
+name: NeedsConda
+packages: []
+platforms:
+  - linux-64
+""")
+        project = Project(str(tmpdir))
+        with pytest.raises(CondaNotAvailableError):
+            export_pixi_toml(project)
 
 
 class TestCondaSpecToPixi:
@@ -81,7 +143,12 @@ commands:
         assert 'description = "A test project"' in result
         assert 'numpy = "*"' in result
         assert 'pandas = ">=2.0"' in result
-        assert '"defaults"' in result
+        # `defaults` from the yml is expanded into the URLs that conda
+        # would resolve it to. The literal "defaults" never appears in
+        # the converted manifest — pixi has no such meta-channel.
+        assert '"defaults"' not in result
+        assert 'https://example.test/main' in result
+        assert 'https://example.test/r' in result
         assert '"linux-64"' in result
         assert 'run = "python main.py"' in result
 
@@ -168,6 +235,10 @@ commands:
         assert '# converted from notebook' in result
 
     def test_default_channels_when_empty(self):
+        # When the yml declares no channels, fall back to the URLs that
+        # conda's default_channels resolves to (NOT a hard-coded
+        # conda-forge), since pixi has no `defaults` meta-channel and
+        # the user's local conda config is the source of truth.
         project = self._make_project("""
 name: NoChan
 packages: []
@@ -175,7 +246,9 @@ platforms:
   - linux-64
 """)
         result = export_pixi_toml(project)
-        assert 'channels = ["conda-forge"]' in result
+        assert 'channels = ["https://example.test/main", "https://example.test/r"]' in result
+        assert '"defaults"' not in result
+        assert '"conda-forge"' not in result
 
     def test_downloads_become_prepare_task(self):
         # Single env (default) — prepare emitted at top-level. Body
