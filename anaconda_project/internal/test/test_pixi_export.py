@@ -177,7 +177,9 @@ platforms:
         result = export_pixi_toml(project)
         assert 'channels = ["conda-forge"]' in result
 
-    def test_downloads_as_comments(self):
+    def test_downloads_become_prepare_task(self):
+        # Single env (default) — prepare emitted at top-level. Body
+        # invokes the ap_download.py helper rather than inlining urllib.
         project = self._make_project("""
 name: DlTest
 packages: []
@@ -187,8 +189,115 @@ downloads:
   DATASET: https://example.com/data.csv
 """)
         result = export_pixi_toml(project)
-        assert '# Downloads from anaconda-project.yml' in result
-        assert 'DATASET = https://example.com/data.csv' in result
+        assert '[tasks.prepare]' in result
+        assert 'python3 ap_download.py' in result
+        assert 'https://example.com/data.csv' in result
+        # When the prepare body has real work, we drop the marker echo —
+        # pixi smashes the marker onto the same banner line as the next
+        # command, which is ugly. Detection still works via the task name.
+        assert 'Running migrated anaconda-project prepare task' not in result
+        # No python in the env: warning at the top of the file.
+        assert '# WARNING: prepare task uses system python3' in result
+        # Old comment-only path is gone.
+        assert '# Downloads from anaconda-project.yml' not in result
+
+    def test_marker_echo_only_when_no_downloads(self):
+        # The no-op prepare body still uses the marker echo so the task
+        # has *something* to print and so anyone reading the manifest
+        # immediately sees what it came from.
+        project = self._make_project("""
+name: NoDl
+packages:
+  - python
+platforms:
+  - linux-64
+""")
+        result = export_pixi_toml(project)
+        assert 'Running migrated anaconda-project prepare task' in result
+
+    def test_only_default_env_gets_prepare(self):
+        # anaconda-project's top-level downloads: apply to every env, but
+        # we only need to fetch them once. Emit prepare only under the
+        # default env's feature; the other envs don't get a prepare task.
+        project = self._make_project("""
+name: NycMulti
+packages:
+  - python
+platforms:
+  - linux-64
+downloads:
+  DATA: https://example.com/big.parq
+env_specs:
+  sampleproj: {}
+  test:
+    packages:
+      - pytest
+""")
+        result = export_pixi_toml(project)
+        # Exactly one ap_download.py invocation, under the default env.
+        assert result.count('python3 ap_download.py') == 1
+        assert '[feature.sampleproj.tasks.prepare]' in result
+        # Non-default env has no prepare task at all.
+        assert '[feature.test.tasks.prepare]' not in result
+
+    def test_no_warning_when_env_has_python(self):
+        project = self._make_project("""
+name: HasPython
+packages:
+  - python=3.11
+platforms:
+  - linux-64
+downloads:
+  DATASET: https://example.com/data.csv
+""")
+        result = export_pixi_toml(project)
+        # User declared python — no warning, no injection.
+        assert 'python = "3.11.*"' in result
+        assert '# WARNING' not in result
+
+    def test_prepare_in_default_env_only(self):
+        # We emit exactly one prepare task, scoped to the default env's
+        # feature. Other envs don't get one — keeps the manifest small
+        # and avoids pixi's "ambiguous task" prompt entirely.
+        project = self._make_project("""
+name: MultiDl
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  web:
+    downloads:
+      WEB_DATA: https://example.com/web.csv
+  ml:
+    downloads:
+      ML_DATA: https://example.com/ml.csv
+""")
+        result = export_pixi_toml(project)
+        # Default env (first declared = web) gets the prepare task.
+        assert '[feature.web.tasks.prepare]' in result
+        assert 'web.csv' in result
+        # Non-default env (ml) does NOT get a prepare task.
+        assert '[feature.ml.tasks.prepare]' not in result
+        # No prepare-all either — single prepare keeps things simple.
+        assert 'prepare-all' not in result
+
+    def test_marker_prepare_when_no_downloads(self):
+        # Every converted project gets a prepare task — even when there are
+        # no downloads to fetch. Detection of "is this a converted project?"
+        # relies on the presence of `prepare`.
+        project = self._make_project("""
+name: Plain
+packages:
+  - python
+platforms:
+  - linux-64
+""")
+        result = export_pixi_toml(project)
+        assert '[tasks.prepare]' in result
+        assert 'Running migrated anaconda-project prepare task' in result
+        # No downloads, so no urllib invocation.
+        assert 'urllib.request' not in result
 
     def test_project_dir_translated(self):
         project = self._make_project("""
@@ -220,6 +329,108 @@ commands:
         result = export_pixi_toml(project)
         assert 'echo $MY_VAR' in result
         assert 'unresolved env var' not in result
+
+    def test_env_specs_emit_in_source_order(self):
+        # The first uncommented entry in [environments] is the user's
+        # intended default — downstream tooling reads it to drive
+        # `pixi install -e $(...)`. We must preserve insertion order even
+        # if dict iteration would otherwise be alphabetical.
+        project = self._make_project("""
+name: OrderTest
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  zeta:
+    packages:
+      - flask
+  alpha:
+    packages:
+      - pytest
+""")
+        result = export_pixi_toml(project)
+        env_block = result.split('[environments]', 1)[1]
+        zeta_pos = env_block.index('zeta')
+        alpha_pos = env_block.index('alpha')
+        assert zeta_pos < alpha_pos
+
+    def test_default_in_multi_env_emits_as_comment(self):
+        # When the user names one of multiple env_specs `default`, we don't
+        # redeclare it (pixi already creates it from the default feature).
+        # We comment its slot so position-based extraction still finds the
+        # user's first-listed env.
+        project = self._make_project("""
+name: MultiWithDefault
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  prod:
+    packages:
+      - flask
+  default:
+    packages:
+      - pytest
+  staging:
+    packages:
+      - debugpy
+""")
+        result = export_pixi_toml(project)
+        # pytest from `default` env_spec belongs in pixi's default feature.
+        assert 'pytest = "*"' in result.split('[feature.', 1)[0]
+        # `default` slot is a comment, in position between prod and staging.
+        env_block = result.split('[environments]', 1)[1]
+        prod_pos = env_block.index('prod')
+        comment_pos = env_block.index('# default')
+        staging_pos = env_block.index('staging')
+        assert prod_pos < comment_pos < staging_pos
+        # No [feature.default.dependencies] (would be unreachable).
+        assert '[feature.default.dependencies]' not in result
+
+    def test_no_solve_group_emitted(self):
+        # anaconda-project doesn't assume environments solve together, so
+        # we shouldn't either.
+        project = self._make_project("""
+name: NoSolve
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  a:
+    packages:
+      - flask
+  b:
+    packages:
+      - pytest
+""")
+        result = export_pixi_toml(project)
+        assert 'solve-group' not in result
+
+    def test_single_named_env_uses_global_dependencies(self):
+        # Packages live in top-level [dependencies] (the default feature);
+        # the named env inherits them. The marker comment tells downstream
+        # tooling which env to target with bare `pixi <cmd>`.
+        project = self._make_project("""
+name: Glaciers
+packages:
+  - panel
+  - pandas
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = export_pixi_toml(project)
+        assert '[dependencies]' in result
+        assert 'panel = "*"' in result
+        assert 'pandas = "*"' in result
+        assert 'sampleproj = { features = ["sampleproj"]' in result
+        # We don't need no-default-feature now that the default feature
+        # is the source of truth.
+        assert 'no-default-feature' not in result
 
     def test_unknown_var_flagged(self):
         project = self._make_project("""

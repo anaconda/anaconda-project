@@ -28,6 +28,18 @@ def _toml_string(value):
     return '"{}"'.format(escaped)
 
 
+def _toml_multiline_string(value):
+    """Format a multi-line shell command as a TOML triple-quoted string.
+
+    The leading newline after ``\"\"\"`` is stripped by TOML, so we add one
+    so the body starts on its own line for readability. Triple-quoted
+    strings still process backslash escapes; we only need to escape any
+    literal triple-quote sequence in the body.
+    """
+    escaped = value.replace('\\', '\\\\').replace('"""', '\\"\\"\\"')
+    return '"""\n{}\n"""'.format(escaped)
+
+
 def _toml_inline_array(items):
     return '[{}]'.format(', '.join(_toml_string(i) for i in items))
 
@@ -246,6 +258,73 @@ def _windows_to_deno_shell(command_str):
     return ''.join(out)
 
 
+_PREPARE_MARKER_ECHO = 'echo "Running migrated anaconda-project prepare task..."'
+
+# Helper script written next to pixi.toml during conversion; see
+# anaconda_project/internal/ap_download.py for the source. Prepare tasks
+# invoke it via `python ap_download.py <url> <filename> [<description>]`
+# rather than inlining the urllib calls — keeps the TOML readable, and the
+# script can grow over time without bloating the manifest.
+DOWNLOAD_HELPER_FILENAME = 'ap_download.py'
+
+
+def _has_python(specs):
+    """Return True if any spec in ``specs`` declares the ``python`` package.
+
+    Specs may be channel-prefixed (``conda-forge::python``) or version-
+    constrained (``python=3.11``, ``python>=3.10``) — strip the metadata
+    before comparing.
+    """
+    for spec in specs:
+        name, _ = _conda_spec_to_pixi(spec)
+        if name == 'python':
+            return True
+    return False
+
+
+def _shell_quote(value):
+    """Quote a string for safe inclusion in a deno_task_shell argv.
+
+    Wrap with double quotes and escape only the characters that have
+    special meaning inside a double-quoted token: ``"``, ``\\``, ``$``,
+    and backtick. Anything else (including spaces, single quotes, and
+    glob characters) survives unchanged.
+    """
+    escaped = (value
+               .replace('\\', '\\\\')
+               .replace('"', '\\"')
+               .replace('$', '\\$')
+               .replace('`', '\\`'))
+    return '"{}"'.format(escaped)
+
+
+def _build_prepare_command(downloads):
+    """Build a multi-line shell command that runs the download helper script
+    once per anaconda-project download entry.
+
+    The helper (``ap_download.py``) is written alongside the pixi.toml at
+    conversion time; we just emit ``python ap_download.py <args>`` for each
+    download. The marker echo is omitted here because the helper's own
+    ``[prepare] ...`` log lines are more informative — and because pixi
+    bundles the marker echo and the first python invocation onto a single
+    banner line, smashing them visually. Detection of "is this a converted
+    anaconda-project?" still works via the task name `prepare`.
+    """
+    lines = []
+    for description, url, filename in downloads:
+        # `python3` (not `python`) so the helper resolves to system python
+        # when the env doesn't declare its own. anaconda-project's yml may
+        # not include python in every env_spec, and ap_download.py is pure
+        # stdlib, so we don't need a project-specific interpreter.
+        lines.append('python3 {script} {url} {path} {desc}'.format(
+            script=DOWNLOAD_HELPER_FILENAME,
+            url=_shell_quote(url),
+            path=_shell_quote(filename),
+            desc=_shell_quote(description),
+        ))
+    return '\n'.join(lines)
+
+
 def _command_to_task(command, declared_vars):
     """Convert a ProjectCommand to a pixi task string or None.
 
@@ -339,6 +418,15 @@ def export_pixi_toml(project):
     if not all_platforms:
         all_platforms = {'linux-64'}
 
+    # -- Determine if we need features (multiple env specs)
+    env_specs = project.env_specs
+    has_multiple_envs = len(env_specs) > 1 or (len(env_specs) == 1 and 'default' not in env_specs)
+
+    # Placeholder for a warning prefix; populated below once we know
+    # whether any download-needing env lacks python. We insert it at the
+    # top of the file so it's the first thing a maintainer sees.
+    warning_prefix_index = len(lines)
+
     lines.append('[workspace]')
     lines.append('name = {}'.format(_toml_string(project.name)))
     if project.description:
@@ -350,16 +438,12 @@ def export_pixi_toml(project):
     lines.append('platforms = {}'.format(_toml_inline_array(sorted(all_platforms))))
     lines.append('')
 
-    # -- Determine if we need features (multiple env specs)
-    env_specs = project.env_specs
-    has_multiple_envs = len(env_specs) > 1 or (len(env_specs) == 1 and 'default' not in env_specs)
-
     # -- Collect global (inherited by all) packages
-    # The anonymous base spec's packages are the global ones.
-    # In the project model, these are the top-level packages/channels.
-    # env_spec.conda_packages includes inherited, so we find the common set.
+    # Find packages common to every env_spec — these go in the top-level
+    # [dependencies] (i.e. pixi's default feature) and every named env
+    # inherits them. Anything env-specific lands in [feature.X.dependencies]
+    # below.
     if has_multiple_envs:
-        # Find packages common to all env specs (the global/inherited ones)
         all_conda = None
         all_pip = None
         for env in env_specs.values():
@@ -371,17 +455,67 @@ def export_pixi_toml(project):
             else:
                 all_conda &= conda_set
                 all_pip &= pip_set
-
         global_conda = sorted(all_conda) if all_conda else []
         global_pip = sorted(all_pip) if all_pip else []
     elif env_specs:
-        # Single env — everything is global
         env = list(env_specs.values())[0]
         global_conda = list(env.conda_packages)
         global_pip = list(env.pip_packages)
     else:
         global_conda = []
         global_pip = []
+
+    # If the user has an env_spec literally named `default`, fold its
+    # packages into the global set — they belong to pixi's default feature,
+    # not a separate `[feature.default.dependencies]` block (which would
+    # be unreachable since we don't redeclare the default env below).
+    if has_multiple_envs and 'default' in env_specs:
+        default_env = env_specs['default']
+        for spec in default_env.conda_packages:
+            if spec not in global_conda:
+                global_conda.append(spec)
+        for spec in default_env.pip_packages:
+            if spec not in global_pip:
+                global_pip.append(spec)
+
+    # Compute downloads per env now so we can both emit prepare task
+    # bodies below and warn the caller about envs that lack python.
+    downloads_per_env = {}
+    for env_name in env_specs:
+        env_downloads = []
+        for req in project.requirements(env_name):
+            if isinstance(req, DownloadRequirement):
+                # Prefer the user-supplied description from the yml; fall
+                # back to the env_var name when the user didn't write one.
+                description = req.options.get('description') or req.env_var
+                env_downloads.append((description, req.url, req.filename))
+        if env_downloads:
+            downloads_per_env[env_name] = env_downloads
+
+    # Identify envs that need ap_download.py but don't declare python.
+    # The helper is pure stdlib so it'll work with system `python3`, but
+    # the user should know they're depending on something outside the
+    # env. Insert a warning comment at the top of the file (above
+    # [workspace]) so it's the first thing a maintainer sees.
+    envs_relying_on_system_python = []
+    if downloads_per_env and not _has_python(global_conda):
+        for env_name in downloads_per_env:
+            env = env_specs[env_name]
+            if not _has_python(env.conda_packages):
+                envs_relying_on_system_python.append(env_name)
+
+    if envs_relying_on_system_python:
+        warning = [
+            '# WARNING: prepare task uses system python3 to run ap_download.py.',
+            '# The following env(s) declare downloads but no python package:',
+        ]
+        for env_name in envs_relying_on_system_python:
+            warning.append('#   {}'.format(env_name))
+        warning.append(
+            '# Add `python` to the env_spec(s) above if you want a sandboxed '
+            'interpreter.')
+        warning.append('')
+        lines[warning_prefix_index:warning_prefix_index] = warning
 
     # Write global dependencies
     _write_dependencies(lines, global_conda, global_pip)
@@ -407,8 +541,10 @@ def export_pixi_toml(project):
         global_conda_set = set(global_conda)
         global_pip_set = set(global_pip)
 
-        for env_name, env in sorted(env_specs.items()):
-            if env_name == 'default' and not (set(env.conda_packages) - global_conda_set):
+        for env_name, env in env_specs.items():
+            # `default` is folded into the global default feature above —
+            # nothing to emit as a separate [feature.default.X] block.
+            if env_name == 'default':
                 continue
 
             extra_conda = [p for p in env.conda_packages if p not in global_conda_set]
@@ -434,13 +570,25 @@ def export_pixi_toml(project):
                     lines.append('')
 
         # -- [environments] section
+        # Emit envs in the order they appear in anaconda-project.yml so
+        # downstream tooling can identify the project's intended default
+        # env_spec by reading the first entry. Common packages live in
+        # top-level [dependencies] (the default feature) and every named
+        # env inherits them.
+        #
+        # If the user happened to name one of their env_specs `default`,
+        # we comment its slot rather than declare it — pixi already
+        # materializes a `default` environment from the default feature,
+        # and re-declaring it would either no-op or fight that machinery.
+        # The comment preserves position so callers reading the first
+        # uncommented entry still get the user's first non-default env.
         lines.append('[environments]')
-        for env_name in sorted(env_specs):
+        for env_name in env_specs:
             if env_name == 'default':
-                lines.append('default = { solve-group = "default" }')
+                lines.append('# default  (pixi creates this implicitly from the default feature)')
             else:
                 pixi_env_name = _sanitize_env_name(env_name)
-                lines.append('{name} = {{ features = ["{name}"], solve-group = "default" }}'.format(name=pixi_env_name))
+                lines.append('{name} = {{ features = ["{name}"] }}'.format(name=pixi_env_name))
         lines.append('')
 
     # -- Collect every env var the project declares, so command-string
@@ -503,19 +651,43 @@ def export_pixi_toml(project):
                 lines.append('# {}'.format(comment))
             lines.append('')
 
-    # -- Downloads as comments (no pixi equivalent)
-    downloads = {}
-    for env_name in env_specs:
-        for req in project.requirements(env_name):
-            if isinstance(req, DownloadRequirement):
-                downloads[req.env_var] = req.url
+    # -- `prepare` task
+    # Mirror anaconda-project's prepare semantics for the default env:
+    # fetch any declared downloads. Emit exactly one `prepare` task,
+    # scoped to the default env_spec's feature when there is one (so it
+    # only resolves under that env), or at the top level when the manifest
+    # has no [environments] table.
+    #
+    # The presence of `prepare` is itself the canonical signal that this
+    # pixi.toml was converted from anaconda-project.yml. Other env_specs
+    # don't get a prepare task — keeps the manifest small and avoids
+    # pixi's env-selection prompt entirely.
+    if 'default' in env_specs:
+        default_source = 'default'
+    elif project.default_env_spec_name in env_specs:
+        default_source = project.default_env_spec_name
+    elif env_specs:
+        default_source = next(iter(env_specs))
+    else:
+        default_source = None
 
-    if downloads:
-        lines.append('# Downloads from anaconda-project.yml (no pixi equivalent).')
-        lines.append('# Consider adding setup tasks to fetch these:')
-        for var_name, url in sorted(downloads.items()):
-            lines.append('#   {} = {}'.format(var_name, url))
-        lines.append('')
+    if default_source in downloads_per_env:
+        prepare_body = _toml_multiline_string(
+            _build_prepare_command(downloads_per_env[default_source]))
+    else:
+        prepare_body = _toml_string(_PREPARE_MARKER_ECHO)
+
+    # Multi-env: scope to the default env's feature so `pixi run prepare`
+    # auto-resolves to that env. (When the default is the literal
+    # `default`, fold to the global default feature — pixi's implicit
+    # default env picks it up.)
+    if has_multiple_envs and default_source and default_source != 'default':
+        pixi_env_name = _sanitize_env_name(default_source)
+        lines.append('[feature.{}.tasks.prepare]'.format(pixi_env_name))
+    else:
+        lines.append('[tasks.prepare]')
+    lines.append('cmd = {}'.format(prepare_body))
+    lines.append('')
 
     # -- Services as comments
     services = {}
