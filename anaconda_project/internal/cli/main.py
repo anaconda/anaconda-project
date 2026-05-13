@@ -38,6 +38,7 @@ import anaconda_project.internal.cli.download_commands as download_commands
 import anaconda_project.internal.cli.service_commands as service_commands
 import anaconda_project.internal.cli.environment_commands as environment_commands
 import anaconda_project.internal.cli.command_commands as command_commands
+import anaconda_project.internal.cli.pixi_commands as pixi_commands
 
 
 def _parse_args_and_run_subcommand(argv):
@@ -400,6 +401,11 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser('list-commands', help="List the commands on the project")
     add_directory_arg(preset)
     preset.set_defaults(main=command_commands.main_list)
+
+    preset = subparsers.add_parser('export-pixi', help="Export the project as a pixi.toml file")
+    add_directory_arg(preset)
+    preset.add_argument('filename', metavar='PIXI_TOML_FILE', nargs='?', default='pixi.toml')
+    preset.set_defaults(main=pixi_commands.main_export_pixi)
 
     # argparse doesn't do this for us for whatever reason
     if len(argv) < 2:

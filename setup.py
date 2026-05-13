@@ -26,11 +26,13 @@ setuptools.setup(name='anaconda-project',
                  install_requires=[
                      "anaconda-client",
                      "conda-pack",
+                     "entrypoints",
                      "requests",
                      "ruamel.yaml>=0.15",
                      "tornado>=4.2",
                      "jinja2",
                      "tqdm",
+                     "tomli; python_version < '3.11'",
                  ],
                  entry_points={"console_scripts": [
                      "anaconda-project = anaconda_project.cli:main",

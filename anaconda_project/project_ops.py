@@ -611,6 +611,33 @@ def export_env_spec(project, name, filename):
     return SimpleStatus(success=True, description="Exported environment spec {} to {}.".format(name, filename))
 
 
+def export_pixi(project, filename):
+    """Export the project as a pixi.toml file.
+
+    Returns a ``Status`` subtype.
+
+    Args:
+        project (Project): the project
+        filename (str): file to export to
+
+    Returns:
+        ``Status`` instance
+    """
+    failed = _check_problems(project)
+    if failed is not None:
+        return failed
+
+    from anaconda_project.internal.pixi_export import export_pixi_toml
+    try:
+        content = export_pixi_toml(project)
+        with open(filename, 'w') as f:
+            f.write(content)
+    except Exception as e:
+        return SimpleStatus(success=False, description="Failed to save {}: {}.".format(filename, str(e)))
+
+    return SimpleStatus(success=True, description="Exported project to {}.".format(filename))
+
+
 def add_packages(project, env_spec_name, packages, channels, pip=False):
     """Attempt to install packages then add them to anaconda-project.yml.
 

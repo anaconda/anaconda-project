@@ -80,7 +80,7 @@ jobs:
         conda config --append channels ./conda-bld
         conda create -y -n anaconda-project-dev python=${{ matrix.pyver }} \
           coverage pytest pytest-cov redis notebook bokeh \
-          keyring setuptools pip "anaconda-project==${{ steps.pkg_version.outputs.version }}"
+          keyring setuptools entrypoints pip "anaconda-project==${{ steps.pkg_version.outputs.version }}"
     - name: Run the tests
       shell: bash -el {0}
       run: |
