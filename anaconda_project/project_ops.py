@@ -627,11 +627,33 @@ def export_pixi(project, filename):
     if failed is not None:
         return failed
 
-    from anaconda_project.internal.pixi_export import export_pixi_toml
+    from anaconda_project.internal.pixi_export import export_pixi_toml, DOWNLOAD_HELPER_FILENAME
+    import sys
     try:
         content = export_pixi_toml(project)
         with open(filename, 'w') as f:
             f.write(content)
+        # If the converted manifest invokes ap_download.py, drop the helper
+        # next to pixi.toml so `pixi run prepare` has the script available.
+        if DOWNLOAD_HELPER_FILENAME in content:
+            helper_src = os.path.join(os.path.dirname(__file__),
+                                      'internal', DOWNLOAD_HELPER_FILENAME)
+            helper_dst = os.path.join(os.path.dirname(filename) or '.',
+                                      DOWNLOAD_HELPER_FILENAME)
+            shutil.copyfile(helper_src, helper_dst)
+        # Surface any warnings the exporter wrote to the file so the user
+        # sees them immediately rather than only on later inspection.
+        warning_lines = []
+        in_warning = False
+        for line in content.splitlines():
+            if line.startswith('# WARNING:'):
+                in_warning = True
+            if in_warning:
+                if line == '':
+                    break
+                warning_lines.append(line)
+        if warning_lines:
+            print('\n'.join(warning_lines), file=sys.stderr)
     except Exception as e:
         return SimpleStatus(success=False, description="Failed to save {}: {}.".format(filename, str(e)))
 
