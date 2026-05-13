@@ -111,11 +111,9 @@ To share this project with a colleague:
 
 #. Send the archive file to your colleague.
 
-You can also share a project by uploading it to Anaconda Cloud.
 For more information, see :doc:`user-guide/tasks/share-project`.
 
-Anyone with Project---your colleague or someone who downloads
-your project from Cloud---can run your project by unzipping the
+Anyone with Project can run your project by unzipping the
 project archive file and then running a single command, without
 having to do any setup::
 
