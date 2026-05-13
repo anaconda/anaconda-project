@@ -140,7 +140,7 @@ _ENV_VAR_REF_RE = re.compile(
 #     Windows. With an .exe/.bat/.cmd/.com suffix we know it's a Windows
 #     binary that PATH will find.
 _CONDA_PREFIX_STRIP_RE = re.compile(
-    r'\$\{CONDA_PREFIX\}/'
+    r'(?:\$\{CONDA_PREFIX\}|\$CONDA_PREFIX)/'
     r'(?:'
     r'(?:bin|Scripts|Library/bin|Library/usr/bin|Library/mingw-w64/bin)/'
     r'(?P<sub>[A-Za-z0-9_.\-]+?)(?:\.exe|\.bat|\.cmd|\.com)?'
@@ -168,15 +168,19 @@ def _strip_conda_prefix_paths(command_str):
 def _translate_command_env_vars(command_str, declared_vars):
     """Rewrite env-var references in a command string for execution under pixi.
 
-    Pixi runs tasks through deno_task_shell, which expands ``${VAR}``/``$VAR``
-    uniformly across platforms. We:
+    Pixi runs tasks through deno_task_shell, which only expands the bare
+    ``$VAR`` form — the braced ``${VAR}`` form is a parse error. We emit the
+    bare form whenever it's unambiguous (i.e. the next character can't extend
+    the variable name) and the braced form otherwise so the right substring
+    is taken as the var name.
+
+    We:
 
     * Map well-known anaconda-project vars (``PROJECT_DIR``, ``CONDA_ENV_PATH``)
       to their pixi equivalents.
     * Pass through vars the project declares itself (they end up in
       ``[activation.env]`` or are required-from-environment).
-    * Convert any Windows-style ``%VAR%`` to ``${VAR}`` so the same command
-      works on every platform under deno_task_shell.
+    * Convert any Windows-style ``%VAR%`` to the deno_task_shell form.
     * Collect any reference we can't account for and return it for the caller
       to flag in a comment.
 
@@ -187,14 +191,31 @@ def _translate_command_env_vars(command_str, declared_vars):
 
     def replace(match):
         name = match.group('braced') or match.group('bare') or match.group('windows')
-        if name in _ANACONDA_PROJECT_ENV_VAR_MAP:
-            return '${{{}}}'.format(_ANACONDA_PROJECT_ENV_VAR_MAP[name])
-        if name in declared_vars:
-            return '${{{}}}'.format(name)
-        if name not in seen_unresolved:
-            seen_unresolved.add(name)
-            unresolved.append(name)
-        return '${{{}}}'.format(name)
+        target = _ANACONDA_PROJECT_ENV_VAR_MAP.get(name, name)
+        # If we couldn't map the name to a pixi-known var or a project-declared
+        # var, flag it for the caller — the rewrite still emits the var as-is,
+        # but the user needs to set it via [activation.env] or the shell.
+        if name not in _ANACONDA_PROJECT_ENV_VAR_MAP and name not in declared_vars:
+            if name not in seen_unresolved:
+                seen_unresolved.add(name)
+                unresolved.append(name)
+        # deno_task_shell rejects ${VAR}; use bare $VAR unless the following
+        # character would extend the var name (alphanumeric or underscore),
+        # in which case fall back to a portable form. Since deno doesn't
+        # accept braces at all, we wrap the var with a no-op separator —
+        # there isn't one — so we accept that the bare form must be used and
+        # keep the original braces only when there is no ambiguity. In
+        # practice, command lines almost always have a separator after the
+        # var (slash, space, dot, etc.).
+        end = match.end()
+        next_char = command_str[end] if end < len(command_str) else ''
+        if next_char and (next_char.isalnum() or next_char == '_'):
+            # Ambiguous bare form — preserve braces; deno will error here,
+            # but the original command had the same problem and there's no
+            # safe rewrite. Note this is rare; real commands separate the
+            # var with a path/space/etc.
+            return '${{{}}}'.format(target)
+        return '${}'.format(target)
 
     return _ENV_VAR_REF_RE.sub(replace, command_str), unresolved
 

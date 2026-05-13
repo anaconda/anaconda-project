@@ -201,7 +201,7 @@ commands:
     unix: python ${PROJECT_DIR}/main.py
 """)
         result = export_pixi_toml(project)
-        assert '${PIXI_PROJECT_ROOT}/main.py' in result
+        assert '$PIXI_PROJECT_ROOT/main.py' in result
         assert '${PROJECT_DIR}' not in result
 
     def test_declared_var_passes_through(self):
@@ -218,7 +218,7 @@ commands:
     unix: echo ${MY_VAR}
 """)
         result = export_pixi_toml(project)
-        assert 'echo ${MY_VAR}' in result
+        assert 'echo $MY_VAR' in result
         assert 'unresolved env var' not in result
 
     def test_unknown_var_flagged(self):
@@ -238,38 +238,46 @@ commands:
 class TestTranslateCommandEnvVars:
     def test_project_dir_braced(self):
         out, unresolved = _translate_command_env_vars('python ${PROJECT_DIR}/x.py', set())
-        assert out == 'python ${PIXI_PROJECT_ROOT}/x.py'
+        assert out == 'python $PIXI_PROJECT_ROOT/x.py'
         assert unresolved == []
 
     def test_project_dir_bare(self):
         out, unresolved = _translate_command_env_vars('python $PROJECT_DIR/x.py', set())
-        assert out == 'python ${PIXI_PROJECT_ROOT}/x.py'
+        assert out == 'python $PIXI_PROJECT_ROOT/x.py'
         assert unresolved == []
 
     def test_project_dir_windows(self):
         out, unresolved = _translate_command_env_vars('python %PROJECT_DIR%\\x.py', set())
-        # ${PIXI_PROJECT_ROOT} is the deno_task_shell-friendly form on every OS.
-        assert out == 'python ${PIXI_PROJECT_ROOT}\\x.py'
+        # $PIXI_PROJECT_ROOT is the deno_task_shell-friendly form on every OS.
+        assert out == 'python $PIXI_PROJECT_ROOT\\x.py'
         assert unresolved == []
 
     def test_conda_env_path_to_conda_prefix(self):
         out, unresolved = _translate_command_env_vars('${CONDA_ENV_PATH}/bin/foo', set())
-        assert out == '${CONDA_PREFIX}/bin/foo'
+        assert out == '$CONDA_PREFIX/bin/foo'
         assert unresolved == []
 
     def test_declared_var(self):
         out, unresolved = _translate_command_env_vars('echo $MY_VAR', {'MY_VAR'})
-        assert out == 'echo ${MY_VAR}'
+        assert out == 'echo $MY_VAR'
         assert unresolved == []
 
     def test_unknown_var(self):
         out, unresolved = _translate_command_env_vars('echo $WAT', set())
-        assert out == 'echo ${WAT}'
+        assert out == 'echo $WAT'
         assert unresolved == ['WAT']
 
     def test_unknown_dedup(self):
         out, unresolved = _translate_command_env_vars('echo $WAT $WAT $OTHER', set())
         assert unresolved == ['WAT', 'OTHER']
+
+    def test_ambiguous_suffix_keeps_braces(self):
+        # An immediately-adjacent identifier character would extend the bare
+        # var name, so we must keep the braces even though deno_task_shell
+        # rejects them — there's no safe rewrite, and the original command
+        # had the same ambiguity.
+        out, unresolved = _translate_command_env_vars('${PROJECT_DIR}suffix', set())
+        assert out == '${PIXI_PROJECT_ROOT}suffix'
 
 
 class TestWindowsToDenoShell:
@@ -304,7 +312,7 @@ commands:
     windows: python %PROJECT_DIR%\\hello.py
 """)
         result = export_pixi_toml(project)
-        assert 'run = "python ${PIXI_PROJECT_ROOT}/hello.py"' in result
+        assert 'run = "python $PIXI_PROJECT_ROOT/hello.py"' in result
         assert 'windows command differs' not in result
 
     def test_diverging_unix_and_windows_flags_comment(self):
@@ -319,7 +327,7 @@ commands:
     windows: python %PROJECT_DIR%\\hello_win.py
 """)
         result = export_pixi_toml(project)
-        assert 'run = "python ${PIXI_PROJECT_ROOT}/hello.py"' in result
+        assert 'run = "python $PIXI_PROJECT_ROOT/hello.py"' in result
         assert 'windows command differs from unix' in result
         assert 'hello_win.py' in result
 
@@ -334,7 +342,7 @@ commands:
     windows: python %PROJECT_DIR%\\hello.py
 """)
         result = export_pixi_toml(project)
-        assert 'run = "python ${PIXI_PROJECT_ROOT}/hello.py"' in result
+        assert 'run = "python $PIXI_PROJECT_ROOT/hello.py"' in result
         assert 'translated from windows-only command' in result
 
 
@@ -360,8 +368,8 @@ class TestStripCondaPrefixPaths:
             'cat ${CONDA_PREFIX}/conda-meta/history'
 
     def test_pixi_project_root_left_alone(self):
-        assert _strip_conda_prefix_paths('python ${PIXI_PROJECT_ROOT}/hello.py') == \
-            'python ${PIXI_PROJECT_ROOT}/hello.py'
+        assert _strip_conda_prefix_paths('python $PIXI_PROJECT_ROOT/hello.py') == \
+            'python $PIXI_PROJECT_ROOT/hello.py'
 
     def test_strips_at_end_of_string(self):
         assert _strip_conda_prefix_paths('exec ${CONDA_PREFIX}/bin/python') == 'exec python'
@@ -389,5 +397,5 @@ commands:
     windows: '%CONDA_PREFIX%\\python.exe %PROJECT_DIR%\\hello.py'
 """)
         result = export_pixi_toml(project)
-        assert 'run = "python ${PIXI_PROJECT_ROOT}/hello.py"' in result
+        assert 'run = "python $PIXI_PROJECT_ROOT/hello.py"' in result
         assert 'windows command differs' not in result
