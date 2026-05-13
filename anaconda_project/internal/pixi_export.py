@@ -102,21 +102,192 @@ def _write_dependencies(lines, conda_packages, pip_packages, indent=''):
         lines.append('')
 
 
-def _command_to_task(command):
+# anaconda-project sets these in the runtime environment for every task; pixi
+# provides equivalents that we can substitute in command strings so that
+# `pixi run <task>` resolves them the same way `anaconda-project run` does.
+# Vars that pixi sets natively (CONDA_PREFIX, PATH, CONDA_DEFAULT_ENV) map to
+# themselves and just need to survive the syntax conversion below.
+_ANACONDA_PROJECT_ENV_VAR_MAP = {
+    'PROJECT_DIR': 'PIXI_PROJECT_ROOT',
+    'CONDA_ENV_PATH': 'CONDA_PREFIX',
+    'CONDA_PREFIX': 'CONDA_PREFIX',
+    'CONDA_DEFAULT_ENV': 'CONDA_DEFAULT_ENV',
+    'PATH': 'PATH',
+}
+
+# Matches ${VAR}, $VAR, and %VAR% references in a command string. The Windows
+# %VAR% form is included because anaconda-project commands routinely carry
+# both unix and windows command lines, and we may emit either.
+_ENV_VAR_REF_RE = re.compile(
+    r'\$\{(?P<braced>[A-Za-z_][A-Za-z0-9_]*)\}'
+    r'|\$(?P<bare>[A-Za-z_][A-Za-z0-9_]*)'
+    r'|%(?P<windows>[A-Za-z_][A-Za-z0-9_]*)%'
+)
+
+
+# pixi's task activation prepends the env's executable directories to PATH:
+#   * unix: ${CONDA_PREFIX}/bin
+#   * windows: ${CONDA_PREFIX}, ${CONDA_PREFIX}/Scripts, ${CONDA_PREFIX}/Library/bin,
+#     ${CONDA_PREFIX}/Library/usr/bin, ${CONDA_PREFIX}/Library/mingw-w64/bin
+# So anything explicitly rooted at one of those locations can be reduced to
+# its bare command name, and PATH resolution will find the right binary on
+# whichever platform pixi is invoked on.
+#
+# Match either:
+#   ${CONDA_PREFIX}/<known-subdir>/<name>[.ext]   — always safe to strip
+#   ${CONDA_PREFIX}/<name>.<exe-ext>              — only safe with an
+#     executable extension, because the conda env root is only on PATH on
+#     Windows. With an .exe/.bat/.cmd/.com suffix we know it's a Windows
+#     binary that PATH will find.
+_CONDA_PREFIX_STRIP_RE = re.compile(
+    r'\$\{CONDA_PREFIX\}/'
+    r'(?:'
+    r'(?:bin|Scripts|Library/bin|Library/usr/bin|Library/mingw-w64/bin)/'
+    r'(?P<sub>[A-Za-z0-9_.\-]+?)(?:\.exe|\.bat|\.cmd|\.com)?'
+    r'|'
+    r'(?P<root>[A-Za-z0-9_.\-]+?)(?:\.exe|\.bat|\.cmd|\.com)'
+    r')'
+    r'(?=\s|$|["\'])'
+)
+
+
+def _strip_conda_prefix_paths(command_str):
+    """Drop ${CONDA_PREFIX}-rooted path prefixes from command tokens.
+
+    Pixi puts the env's executable directories at the front of PATH, so users
+    don't need to spell out ``${CONDA_PREFIX}/bin/python`` — bare ``python``
+    resolves to the same binary. Folding these to the bare form makes unix
+    and windows forms agree more often (so we emit one task instead of a
+    divergence comment) and keeps the task portable.
+    """
+    def replace(m):
+        return m.group('sub') or m.group('root')
+    return _CONDA_PREFIX_STRIP_RE.sub(replace, command_str)
+
+
+def _translate_command_env_vars(command_str, declared_vars):
+    """Rewrite env-var references in a command string for execution under pixi.
+
+    Pixi runs tasks through deno_task_shell, which expands ``${VAR}``/``$VAR``
+    uniformly across platforms. We:
+
+    * Map well-known anaconda-project vars (``PROJECT_DIR``, ``CONDA_ENV_PATH``)
+      to their pixi equivalents.
+    * Pass through vars the project declares itself (they end up in
+      ``[activation.env]`` or are required-from-environment).
+    * Convert any Windows-style ``%VAR%`` to ``${VAR}`` so the same command
+      works on every platform under deno_task_shell.
+    * Collect any reference we can't account for and return it for the caller
+      to flag in a comment.
+
+    Returns ``(translated_command, unresolved_vars)``.
+    """
+    unresolved = []
+    seen_unresolved = set()
+
+    def replace(match):
+        name = match.group('braced') or match.group('bare') or match.group('windows')
+        if name in _ANACONDA_PROJECT_ENV_VAR_MAP:
+            return '${{{}}}'.format(_ANACONDA_PROJECT_ENV_VAR_MAP[name])
+        if name in declared_vars:
+            return '${{{}}}'.format(name)
+        if name not in seen_unresolved:
+            seen_unresolved.add(name)
+            unresolved.append(name)
+        return '${{{}}}'.format(name)
+
+    return _ENV_VAR_REF_RE.sub(replace, command_str), unresolved
+
+
+# Tokens are delimited by whitespace and shell metacharacters. We only rewrite
+# backslashes inside tokens that look path-shaped (contain a ${VAR} reference
+# or a recognizable path/extension fragment) so we don't mangle shell escapes,
+# regex literals, or quoted strings that happen to contain a backslash.
+_TOKEN_SPLIT_RE = re.compile(r'(\s+|[|&;<>()])')
+_PATH_SHAPED_RE = re.compile(r'(\$\{[^}]+\}|\.\\|/|\.[A-Za-z]{1,5}(?:\\|$|/))')
+
+
+def _windows_to_deno_shell(command_str):
+    """Best-effort rewrite of a Windows command string to the unix-flavored
+    form deno_task_shell understands.
+
+    Currently this only swaps backslashes for forward slashes inside
+    path-shaped tokens. Env-var translation (``%VAR%`` → ``${VAR}``) is left
+    to ``_translate_command_env_vars``, which runs after this normalization.
+    """
+    parts = _TOKEN_SPLIT_RE.split(command_str)
+    out = []
+    for part in parts:
+        if part and _PATH_SHAPED_RE.search(part):
+            out.append(part.replace('\\', '/'))
+        else:
+            out.append(part)
+    return ''.join(out)
+
+
+def _command_to_task(command, declared_vars):
     """Convert a ProjectCommand to a pixi task string or None.
 
-    Returns (task_cmd_string, comment_or_none).
+    Pixi runs tasks under deno_task_shell, which speaks unix-style syntax on
+    every platform. So we always emit a single task command — built from the
+    unix line if present, or normalized from the windows line otherwise. When
+    the project provides both and they disagree even after normalization, we
+    keep the unix form (the deno_task_shell-native one) and surface the
+    divergence in a comment so a maintainer can review.
+
+    Returns ``(task_cmd_string, raw_cmd_string, comments)``. ``raw_cmd_string``
+    is the pre-translation form, useful for comparing against
+    ``command.description`` (which anaconda-project synthesizes from the raw
+    command when the user hasn't supplied one).
     """
-    # Prefer unix command, fall back to notebook/bokeh
+    comments = []
+    # raw_forms holds every string that anaconda-project might use as the
+    # synthesized command.description, so callers can suppress descriptions
+    # that just echo the original command line.
+    raw_forms = []
+    raw_cmd = None
     if command.unix_shell_commandline:
-        return command.unix_shell_commandline, None
-    if command.notebook is not None:
-        return 'jupyter notebook {}'.format(command.notebook), 'converted from notebook command'
-    if command.bokeh_app is not None:
-        return 'bokeh serve {}'.format(command.bokeh_app), 'converted from bokeh_app command'
-    if command.windows_cmd_commandline:
-        return command.windows_cmd_commandline, 'windows-only command'
-    return None, None
+        raw_cmd = command.unix_shell_commandline
+        raw_forms.append(raw_cmd)
+    elif command.notebook is not None:
+        raw_cmd = 'jupyter notebook {}'.format(command.notebook)
+        comments.append('converted from notebook command')
+    elif command.bokeh_app is not None:
+        raw_cmd = 'bokeh serve {}'.format(command.bokeh_app)
+        comments.append('converted from bokeh_app command')
+    elif command.windows_cmd_commandline:
+        # No unix variant — normalize the windows form so it runs under
+        # deno_task_shell on every platform pixi targets.
+        raw_cmd = _windows_to_deno_shell(command.windows_cmd_commandline)
+        raw_forms.append(command.windows_cmd_commandline)
+        raw_forms.append(raw_cmd)
+        comments.append('translated from windows-only command')
+    else:
+        return None, None, comments
+
+    translated, unresolved = _translate_command_env_vars(raw_cmd, declared_vars)
+    translated = _strip_conda_prefix_paths(translated)
+
+    # If both forms exist, check that the windows line doesn't say something
+    # the unix line doesn't — pixi can't run two variants of the same task,
+    # so divergence is a maintainer-facing warning. We compare *after* both
+    # env-var translation and conda-prefix stripping so that things like
+    # ${CONDA_PREFIX}/bin/python and %CONDA_PREFIX%\python.exe collapse to
+    # the same `python` and don't trigger a spurious divergence note.
+    if command.unix_shell_commandline and command.windows_cmd_commandline:
+        win_normalized = _windows_to_deno_shell(command.windows_cmd_commandline)
+        win_translated, _ = _translate_command_env_vars(win_normalized, declared_vars)
+        win_translated = _strip_conda_prefix_paths(win_translated)
+        if win_translated != translated:
+            comments.append(
+                'windows command differs from unix; using unix form. '
+                'windows would have been: {}'.format(win_translated))
+
+    if unresolved:
+        comments.append(
+            'unresolved env var(s): {} — set them via [activation.env] or '
+            'before running pixi'.format(', '.join(unresolved)))
+    return translated, raw_forms, comments
 
 
 def export_pixi_toml(project):
@@ -251,6 +422,17 @@ def export_pixi_toml(project):
                 lines.append('{name} = {{ features = ["{name}"], solve-group = "default" }}'.format(name=pixi_env_name))
         lines.append('')
 
+    # -- Collect every env var the project declares, so command-string
+    # references to them survive translation untouched. Includes
+    # `variables:` (with or without defaults), `downloads:`, and `services:`.
+    declared_vars = set()
+    for env_name in env_specs:
+        for req in project.requirements(env_name):
+            if isinstance(req, CondaEnvRequirement):
+                continue
+            if isinstance(req, EnvVarRequirement):
+                declared_vars.add(req.env_var)
+
     # -- [tasks] from commands
     commands = project.commands
     if commands:
@@ -267,13 +449,13 @@ def export_pixi_toml(project):
         if global_tasks:
             lines.append('[tasks]')
             for cmd_name, command in global_tasks:
-                task_cmd, comment = _command_to_task(command)
+                task_cmd, raw_forms, comments = _command_to_task(command, declared_vars)
                 if task_cmd is None:
                     lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
                     continue
                 desc = command.description
-                has_desc = desc and desc != cmd_name and desc != task_cmd
-                if comment:
+                has_desc = desc and desc != cmd_name and desc not in (raw_forms or [])
+                for comment in comments:
                     lines.append('# {}'.format(comment))
                 if has_desc:
                     lines.append('{} = {{ cmd = {}, description = {} }}'.format(
@@ -283,20 +465,20 @@ def export_pixi_toml(project):
             lines.append('')
 
         for cmd_name, command in feature_tasks:
-            task_cmd, comment = _command_to_task(command)
+            task_cmd, raw_forms, comments = _command_to_task(command, declared_vars)
             if task_cmd is None:
                 lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
                 continue
             desc = command.description
             env_spec_name = command.default_env_spec_name
             pixi_env_name = _sanitize_env_name(env_spec_name)
-            has_desc = desc and desc != cmd_name and desc != task_cmd
+            has_desc = desc and desc != cmd_name and desc not in (raw_forms or [])
             section = 'feature.{}.tasks.{}'.format(pixi_env_name, cmd_name)
             lines.append('[{}]'.format(section))
             lines.append('cmd = {}'.format(_toml_string(task_cmd)))
             if has_desc:
                 lines.append('description = {}'.format(_toml_string(desc)))
-            if comment:
+            for comment in comments:
                 lines.append('# {}'.format(comment))
             lines.append('')
 

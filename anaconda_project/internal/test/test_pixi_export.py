@@ -14,6 +14,9 @@ import tempfile
 
 from anaconda_project.internal.pixi_export import (
     _conda_spec_to_pixi,
+    _strip_conda_prefix_paths,
+    _translate_command_env_vars,
+    _windows_to_deno_shell,
     export_pixi_toml,
 )
 from anaconda_project.project import Project
@@ -186,3 +189,205 @@ downloads:
         result = export_pixi_toml(project)
         assert '# Downloads from anaconda-project.yml' in result
         assert 'DATASET = https://example.com/data.csv' in result
+
+    def test_project_dir_translated(self):
+        project = self._make_project("""
+name: PdTest
+packages: []
+platforms:
+  - linux-64
+commands:
+  run:
+    unix: python ${PROJECT_DIR}/main.py
+""")
+        result = export_pixi_toml(project)
+        assert '${PIXI_PROJECT_ROOT}/main.py' in result
+        assert '${PROJECT_DIR}' not in result
+
+    def test_declared_var_passes_through(self):
+        project = self._make_project("""
+name: DeclTest
+packages: []
+platforms:
+  - linux-64
+variables:
+  MY_VAR:
+    default: hi
+commands:
+  run:
+    unix: echo ${MY_VAR}
+""")
+        result = export_pixi_toml(project)
+        assert 'echo ${MY_VAR}' in result
+        assert 'unresolved env var' not in result
+
+    def test_unknown_var_flagged(self):
+        project = self._make_project("""
+name: UnknownVar
+packages: []
+platforms:
+  - linux-64
+commands:
+  run:
+    unix: echo ${SOMETHING_RANDOM}
+""")
+        result = export_pixi_toml(project)
+        assert 'unresolved env var(s): SOMETHING_RANDOM' in result
+
+
+class TestTranslateCommandEnvVars:
+    def test_project_dir_braced(self):
+        out, unresolved = _translate_command_env_vars('python ${PROJECT_DIR}/x.py', set())
+        assert out == 'python ${PIXI_PROJECT_ROOT}/x.py'
+        assert unresolved == []
+
+    def test_project_dir_bare(self):
+        out, unresolved = _translate_command_env_vars('python $PROJECT_DIR/x.py', set())
+        assert out == 'python ${PIXI_PROJECT_ROOT}/x.py'
+        assert unresolved == []
+
+    def test_project_dir_windows(self):
+        out, unresolved = _translate_command_env_vars('python %PROJECT_DIR%\\x.py', set())
+        # ${PIXI_PROJECT_ROOT} is the deno_task_shell-friendly form on every OS.
+        assert out == 'python ${PIXI_PROJECT_ROOT}\\x.py'
+        assert unresolved == []
+
+    def test_conda_env_path_to_conda_prefix(self):
+        out, unresolved = _translate_command_env_vars('${CONDA_ENV_PATH}/bin/foo', set())
+        assert out == '${CONDA_PREFIX}/bin/foo'
+        assert unresolved == []
+
+    def test_declared_var(self):
+        out, unresolved = _translate_command_env_vars('echo $MY_VAR', {'MY_VAR'})
+        assert out == 'echo ${MY_VAR}'
+        assert unresolved == []
+
+    def test_unknown_var(self):
+        out, unresolved = _translate_command_env_vars('echo $WAT', set())
+        assert out == 'echo ${WAT}'
+        assert unresolved == ['WAT']
+
+    def test_unknown_dedup(self):
+        out, unresolved = _translate_command_env_vars('echo $WAT $WAT $OTHER', set())
+        assert unresolved == ['WAT', 'OTHER']
+
+
+class TestWindowsToDenoShell:
+    def test_path_with_var(self):
+        assert _windows_to_deno_shell('python %PROJECT_DIR%\\hello.py') == \
+            'python %PROJECT_DIR%/hello.py'
+
+    def test_dot_relative(self):
+        assert _windows_to_deno_shell('python .\\hello.py') == 'python ./hello.py'
+
+    def test_leaves_non_path_tokens_alone(self):
+        # A regex literal containing backslashes shouldn't be touched.
+        assert _windows_to_deno_shell('grep "a\\nb"') == 'grep "a\\nb"'
+
+
+class TestUnixWindowsUnification:
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    def test_matching_unix_and_windows_emit_one_task(self):
+        project = self._make_project("""
+name: Match
+packages: []
+platforms:
+  - linux-64
+commands:
+  run:
+    unix: python ${PROJECT_DIR}/hello.py
+    windows: python %PROJECT_DIR%\\hello.py
+""")
+        result = export_pixi_toml(project)
+        assert 'run = "python ${PIXI_PROJECT_ROOT}/hello.py"' in result
+        assert 'windows command differs' not in result
+
+    def test_diverging_unix_and_windows_flags_comment(self):
+        project = self._make_project("""
+name: Diverge
+packages: []
+platforms:
+  - linux-64
+commands:
+  run:
+    unix: python ${PROJECT_DIR}/hello.py
+    windows: python %PROJECT_DIR%\\hello_win.py
+""")
+        result = export_pixi_toml(project)
+        assert 'run = "python ${PIXI_PROJECT_ROOT}/hello.py"' in result
+        assert 'windows command differs from unix' in result
+        assert 'hello_win.py' in result
+
+    def test_windows_only_command_translates(self):
+        project = self._make_project("""
+name: WinOnly
+packages: []
+platforms:
+  - linux-64
+commands:
+  run:
+    windows: python %PROJECT_DIR%\\hello.py
+""")
+        result = export_pixi_toml(project)
+        assert 'run = "python ${PIXI_PROJECT_ROOT}/hello.py"' in result
+        assert 'translated from windows-only command' in result
+
+
+class TestStripCondaPrefixPaths:
+    def test_unix_bin(self):
+        assert _strip_conda_prefix_paths('${CONDA_PREFIX}/bin/python x.py') == 'python x.py'
+
+    def test_windows_root_exe(self):
+        assert _strip_conda_prefix_paths('${CONDA_PREFIX}/python.exe x.py') == 'python x.py'
+
+    def test_windows_scripts(self):
+        assert _strip_conda_prefix_paths('${CONDA_PREFIX}/Scripts/jupyter notebook') == \
+            'jupyter notebook'
+
+    def test_windows_library_bin(self):
+        assert _strip_conda_prefix_paths('${CONDA_PREFIX}/Library/bin/openssl version') == \
+            'openssl version'
+
+    def test_unix_root_without_extension_left_alone(self):
+        # ${CONDA_PREFIX}/something — without bin/Scripts/Library and without
+        # a .exe-style extension — could be a data file; don't touch it.
+        assert _strip_conda_prefix_paths('cat ${CONDA_PREFIX}/conda-meta/history') == \
+            'cat ${CONDA_PREFIX}/conda-meta/history'
+
+    def test_pixi_project_root_left_alone(self):
+        assert _strip_conda_prefix_paths('python ${PIXI_PROJECT_ROOT}/hello.py') == \
+            'python ${PIXI_PROJECT_ROOT}/hello.py'
+
+    def test_strips_at_end_of_string(self):
+        assert _strip_conda_prefix_paths('exec ${CONDA_PREFIX}/bin/python') == 'exec python'
+
+
+class TestEndToEndCondaPrefixUnification:
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    def test_explicit_conda_prefix_paths_unify_across_platforms(self):
+        # ${CONDA_PREFIX}/bin/python on unix and %CONDA_PREFIX%\python.exe on
+        # windows should both reduce to bare `python`, so we emit one task
+        # with no divergence comment.
+        project = self._make_project("""
+name: PrefixUnify
+packages: []
+platforms:
+  - linux-64
+commands:
+  run:
+    unix: ${CONDA_PREFIX}/bin/python ${PROJECT_DIR}/hello.py
+    windows: '%CONDA_PREFIX%\\python.exe %PROJECT_DIR%\\hello.py'
+""")
+        result = export_pixi_toml(project)
+        assert 'run = "python ${PIXI_PROJECT_ROOT}/hello.py"' in result
+        assert 'windows command differs' not in result
