@@ -14,4 +14,5 @@ Tasks
    clean-project
    prepare-project
    create-project-archive
+   share-project
    docker-image
