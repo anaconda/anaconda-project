@@ -292,6 +292,134 @@ class TestPublicationInfoTasks:
             assert info['commands']['serve']['env_spec'] == 'prod'
 
 
+class TestPublicationInfoEnvResolution:
+    """env_spec should always name an env that supports the task — never
+    a placeholder like 'default' when the project's only env has another
+    name, and never the bare feature name when a real env carries it."""
+
+    def test_top_level_task_resolves_to_first_env_when_no_default(self):
+        # Single declared env named 'sampleproj'. Top-level [tasks.X] runs
+        # in the resolved default env, which is the first declared.
+        # `default` is also surfaced unconditionally because pixi
+        # materializes it at runtime regardless.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+
+                [tasks.run]
+                cmd = "echo hi"
+            """))
+            info = publication_info(td)
+            assert info['commands']['run']['env_spec'] == 'sampleproj'
+            assert set(info['env_specs']) == {'default', 'sampleproj'}
+
+    def test_top_level_task_keeps_default_when_explicitly_declared(self):
+        # When the user *does* declare `default` in [environments], use
+        # that name verbatim — don't promote a sibling env.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                default = { features = [] }
+                ml = { features = ["ml"] }
+
+                [tasks.run]
+                cmd = "echo hi"
+            """))
+            info = publication_info(td)
+            assert info['commands']['run']['env_spec'] == 'default'
+            assert 'default' in info['env_specs']
+            assert 'ml' in info['env_specs']
+
+    def test_feature_task_resolves_to_env_carrying_feature(self):
+        # [feature.ml.tasks.train] should report env_spec='ml' because
+        # the env named `ml` includes feature `ml`. The exporter's
+        # convention (feature name == env name) makes this trivial, but
+        # the resolution logic doesn't assume that — it walks
+        # [environments] entries to find which envs include the feature.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                ml = { features = ["ml"] }
+
+                [feature.ml.tasks.train]
+                cmd = "python train.py"
+            """))
+            info = publication_info(td)
+            assert info['commands']['train']['env_spec'] == 'ml'
+
+    def test_feature_task_picks_default_env_when_multiple_match(self):
+        # If the same feature is included in multiple envs, the resolved
+        # default wins (so `pixi run task` matches the env publication
+        # picks).
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                primary = { features = ["common"] }
+                secondary = { features = ["common"] }
+
+                [feature.common.tasks.run]
+                cmd = "echo hi"
+            """))
+            info = publication_info(td)
+            # primary is first declared → resolved default → wins.
+            assert info['commands']['run']['env_spec'] == 'primary'
+
+    def test_default_env_always_surfaced_alongside_named_envs(self):
+        # Pixi always materializes a `default` env at runtime, so
+        # publication_info surfaces it unconditionally. Default-feature
+        # packages flow into the `default` env_spec; feature-specific
+        # deps flow into the named env. Each env carries the right
+        # packages (no cross-pollination).
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [dependencies]
+                python = "*"
+
+                [feature.sampleproj.dependencies]
+                pandas = "*"
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+            """))
+            info = publication_info(td)
+            assert set(info['env_specs']) == {'default', 'sampleproj'}
+            # `default` carries only the default-feature packages.
+            assert info['env_specs']['default']['packages'] == ['python']
+            # `sampleproj` inherits the default feature plus its own.
+            sample = info['env_specs']['sampleproj']['packages']
+            assert 'python' in sample
+            assert 'pandas' in sample
+            # Both default-feature and sampleproj-feature packages roll up.
+            assert 'python' in info['env_specs']['sampleproj']['packages']
+            assert 'pandas' in info['env_specs']['sampleproj']['packages']
+
+
 class TestPublicationInfoFeatures:
     def test_feature_tasks_included(self):
         with tempfile.TemporaryDirectory() as td:
