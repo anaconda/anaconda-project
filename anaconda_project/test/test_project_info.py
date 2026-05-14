@@ -215,6 +215,36 @@ class TestPublicationInfoTasks:
             assert info['commands']['serve']['unix'] == 'flask run'
             assert info['commands']['serve']['supports_http_options'] is True
 
+    def test_args_extracted_from_pixi_task(self):
+        # The exporter emits `args = [{ arg = "host", default = "" }, ...]`
+        # for tasks that take http options. publication_info should
+        # surface those arg names (in declaration order) so callers can
+        # know what positional values `pixi run <task>` expects.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [tasks.serve]
+                cmd = "panel serve foo.ipynb {% if port %}--port {{ port }}{% endif %}"
+                args = [{ arg = "host", default = "" }, { arg = "port", default = "" }]
+            """))
+            info = publication_info(td)
+            assert info['commands']['serve']['args'] == ['host', 'port']
+
+    def test_args_empty_for_string_task(self):
+        # A bare string task (no `args` key) gets an empty `args` list,
+        # not a missing key — keeps the schema uniform for callers.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(
+                td,
+                '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n\n[tasks]\nrun = "echo hi"\n',
+            )
+            info = publication_info(td)
+            assert info['commands']['run']['args'] == []
+
     def test_first_task_is_default(self):
         with tempfile.TemporaryDirectory() as td:
             _write_pixi_toml(

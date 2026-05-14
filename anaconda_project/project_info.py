@@ -171,12 +171,29 @@ def _pixi_publication_info(project_dir):
 def _build_command(task_name, task_def, env_spec, tool_commands, state):
     if isinstance(task_def, str):
         cmd_str = task_def
+        raw_args = []
     elif isinstance(task_def, dict):
         cmd_str = task_def.get('cmd', '')
         if task_def.get('environment'):
             env_spec = task_def['environment']
+        raw_args = task_def.get('args') or []
     else:
         return None
+
+    # Pixi `args` entries are inline tables like { arg = "port", default = "" }
+    # or bare strings like "name". Pull just the names, in declaration order;
+    # downstream tooling uses this to know which positional values to supply
+    # to `pixi run <task>`.
+    args = []
+    for entry in raw_args:
+        if isinstance(entry, dict):
+            name = entry.get('arg')
+        elif isinstance(entry, str):
+            name = entry
+        else:
+            name = None
+        if name:
+            args.append(name)
 
     tool_meta = tool_commands.get(task_name, {})
 
@@ -203,6 +220,7 @@ def _build_command(task_name, task_def, env_spec, tool_commands, state):
         'notebook': notebook,
         'default': is_default,
         'description': description,
+        'args': args,
     }
 
 
