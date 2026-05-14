@@ -131,7 +131,9 @@ class TestPublicationInfoBasic:
             assert info['name'] == 'test'
             assert info['description'] == ''
             assert info['commands'] == {}
-            assert info['env_specs'] == {'default': {'packages': [], 'channels': ['conda-forge']}}
+            assert info['env_specs'] == {
+                'default': {'packages': [], 'channels': ['conda-forge'], 'locked': False},
+            }
             assert info['variables'] == {}
             assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
 
@@ -418,6 +420,65 @@ class TestPublicationInfoEnvResolution:
             # Both default-feature and sampleproj-feature packages roll up.
             assert 'python' in info['env_specs']['sampleproj']['packages']
             assert 'pandas' in info['env_specs']['sampleproj']['packages']
+
+
+class TestPublicationInfoLocked:
+    def test_locked_false_when_no_lockfile(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+            """))
+            info = publication_info(td)
+            assert info['env_specs']['sampleproj']['locked'] is False
+
+    def test_locked_true_when_env_in_pixi_lock(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+                test = { features = ["test"] }
+            """))
+            with open(os.path.join(td, 'pixi.lock'), 'w') as f:
+                f.write(textwrap.dedent("""\
+                    version: 6
+                    environments:
+                      sampleproj:
+                        channels:
+                        - url: https://example/
+                        packages: {}
+                """))
+            info = publication_info(td)
+            # sampleproj is in the lock — locked. test is not — unlocked.
+            assert info['env_specs']['sampleproj']['locked'] is True
+            assert info['env_specs']['test']['locked'] is False
+
+    def test_malformed_lockfile_falls_back_to_unlocked(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+            """))
+            with open(os.path.join(td, 'pixi.lock'), 'w') as f:
+                # Not valid YAML — should silently fall back, not raise.
+                f.write('this is not: { valid yaml: at all\n')
+            info = publication_info(td)
+            assert info['env_specs']['sampleproj']['locked'] is False
 
 
 class TestPublicationInfoFeatures:
