@@ -197,7 +197,23 @@ def _format_dep(name, spec):
     return name
 
 
+# Commands we recognize as actual Jupyter notebook launchers. Anything
+# else that mentions an .ipynb file (e.g. `panel serve foo.ipynb`,
+# `voila foo.ipynb`, `streamlit run foo.ipynb`) is a different kind of
+# app — it happens to consume an .ipynb as its source but isn't
+# something a notebook viewer should render.
+_NOTEBOOK_LAUNCHERS = (
+    'jupyter notebook',
+    'jupyter lab',
+    'jupyter-lab',
+    'jupyter-notebook',
+)
+
+
 def _infer_notebook(cmd_str):
+    cmd_lower = cmd_str.lower()
+    if not any(launcher in cmd_lower for launcher in _NOTEBOOK_LAUNCHERS):
+        return None
     for token in cmd_str.split():
         if token.endswith('.ipynb'):
             return token
