@@ -111,6 +111,31 @@ def _toml_multiline_string(value):
     return '"""\n{}\n"""'.format(escaped)
 
 
+def _toml_wrapped_string(parts, separator=' '):
+    """Format a long single-line string as a TOML triple-quoted block where
+    every line is joined with ``separator`` at parse time.
+
+    Uses TOML's ``\\`` line-continuation: a backslash at the end of a line
+    inside a multi-line basic string strips the line terminator and any
+    leading whitespace on the next line. We separate the chunks with
+    ``\\<newline><spaces><continuation>`` so a TOML parser reconstructs
+    the original ``separator``-joined string while a human sees one chunk
+    per line in the source.
+    """
+    if not parts:
+        return _toml_string('')
+    # Each chunk is escaped just like _toml_string would, but we keep
+    # newlines intact (they're explicit \\<newline>s in our output, not
+    # data). Triple-quoted strings interpret backslash escapes the same
+    # way basic strings do.
+    escaped_parts = [
+        p.replace('\\', '\\\\').replace('"""', '\\"\\"\\"')
+        for p in parts
+    ]
+    body = '{sep}\\\n'.format(sep=separator).join(escaped_parts)
+    return '"""\\\n{body}\\\n"""'.format(body=body)
+
+
 def _toml_inline_array(items):
     return '[{}]'.format(', '.join(_toml_string(i) for i in items))
 
@@ -396,6 +421,151 @@ def _build_prepare_command(downloads):
     return '\n'.join(lines)
 
 
+# Per-mode HTTP option tables. Each entry is (jinja_var, gate, body):
+#   * jinja_var: variable name declared in pixi `args` and referenced by
+#     {% if %} gates and {{ }} substitutions in the body.
+#   * gate: 'pos' renders body when the var is truthy ({% if var %}),
+#     'neg' renders body when the var is falsy ({% if not var %}). The
+#     latter is for bokeh's --show flag, which is the *inverse* of the
+#     anaconda-project --no-browser semantics.
+#   * body: the rendered chunk; may contain {{ var }} for value
+#     substitution. Templated and gated by _wrap_gate at emit time.
+#
+# Each table is curated to match the per-tool transforms in
+# anaconda_project/project_commands.py (_BokehArgsTransformer and
+# _NotebookArgsTransformer); see HTTP_SPECS there for the source list.
+_HTTP_GENERIC = (
+    ('host',         'pos', '--anaconda-project-host {{ host }}'),
+    ('port',         'pos', '--anaconda-project-port {{ port }}'),
+    ('address',      'pos', '--anaconda-project-address {{ address }}'),
+    ('iframe_hosts', 'pos', '--anaconda-project-iframe-hosts {{ iframe_hosts }}'),
+    ('no_browser',   'pos', '--anaconda-project-no-browser'),
+    ('use_xheaders', 'pos', '--anaconda-project-use-xheaders'),
+)
+
+_HTTP_BOKEH = (
+    ('host',         'pos', '--host {{ host }}'),
+    ('port',         'pos', '--port {{ port }}'),
+    ('address',      'pos', '--address {{ address }}'),
+    # iframe_hosts: bokeh has no equivalent; the original transformer
+    # drops it silently, so we omit it from the args declaration too.
+    # `--show` is bokeh's "open browser" flag — the inverse of
+    # anaconda-project's --no-browser, hence the negative gate.
+    ('no_browser',   'neg', '--show'),
+    ('use_xheaders', 'pos', '--use-xheaders'),
+)
+
+# Notebook iframe_hosts requires a Python dict literal embedded as a
+# tornado_settings value carrying a Content-Security-Policy header. The
+# original transformer prepends 'self' to the host list; we mirror that.
+_NOTEBOOK_IFRAME_BODY = (
+    "--NotebookApp.tornado_settings="
+    "{ 'headers': { 'Content-Security-Policy': "
+    "\"frame-ancestors 'self' {{ iframe_hosts }}\" } }"
+)
+
+_HTTP_NOTEBOOK = (
+    # host: jupyter has no host-restrict equivalent; original drops it.
+    ('port',         'pos', '--port {{ port }}'),
+    ('address',      'pos', '--ip {{ address }}'),
+    ('iframe_hosts', 'pos', _NOTEBOOK_IFRAME_BODY),
+    ('no_browser',   'pos', '--no-browser'),
+    ('use_xheaders', 'pos', '--NotebookApp.trust_xheaders=True'),
+)
+
+
+def _wrap_gate(gate, var, body):
+    """Wrap a chunk body in the appropriate Jinja conditional."""
+    if gate == 'pos':
+        return '{{% if {var} %}}{body}{{% endif %}}'.format(var=var, body=body)
+    if gate == 'neg':
+        return '{{% if not {var} %}}{body}{{% endif %}}'.format(var=var, body=body)
+    return body
+
+
+def _notebook_default_url_chunk(notebook_path):
+    """Build the unconditional --NotebookApp.default_url=... prefix that
+    anaconda-project's _NotebookArgsTransformer prepends to every jupyter
+    invocation. URL-quoted basename, matching the original behavior."""
+    from urllib.parse import quote
+    basename = os.path.basename(notebook_path)
+    return '--NotebookApp.default_url=/notebooks/{}'.format(quote(basename))
+
+# Match `{{ name }}` / `{{name}}` Jinja variable references. Used when
+# supports_http_options is false to discover which HTTP vars the user's
+# templated unix line actually consumes; we only declare pixi args for
+# those, not the full set.
+_JINJA_VAR_RE = re.compile(r'\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}')
+
+
+def _http_args_for_command(command):
+    """Return the list of jinja var names to emit as pixi ``args``,
+    plus a list of cmd chunks to append.
+
+    Three dispatch paths, mirroring anaconda-project's per-tool
+    transformers in ``project_commands.py``:
+
+    * ``command.notebook is not None`` → the command was a converted
+      ``notebook:`` shorthand (now ``jupyter notebook <file>``). Use
+      the Jupyter-specific flag mapping (``--ip`` for address,
+      ``--NotebookApp.*`` for prefix/iframe/xheaders, drop host).
+    * ``command.bokeh_app is not None`` → converted ``bokeh_app:``
+      shorthand (now ``bokeh serve <app>``). Use bokeh's bare flags
+      (``--host``, ``--port``, ``--address``, ``--show`` as the
+      *inverse* of ``--no-browser``, ``--use-xheaders``).
+    * Otherwise (``supports_http_options: true`` on a plain
+      ``unix:`` command) → pass ``--anaconda-project-X`` through
+      verbatim so the underlying tool can pick up what it understands.
+
+    For ``supports_http_options: false``, scan the user's templated
+    unix line for HTTP Jinja vars and declare pixi args only for those;
+    the cmd template is left unchanged.
+    """
+    if command.supports_http_options:
+        if command.notebook is not None:
+            table = _HTTP_NOTEBOOK
+            preamble = [_notebook_default_url_chunk(command.notebook)]
+        elif command.bokeh_app is not None:
+            table = _HTTP_BOKEH
+            preamble = []
+        else:
+            table = _HTTP_GENERIC
+            preamble = []
+
+        chunks = list(preamble)
+        for var, gate, body in table:
+            chunks.append(_wrap_gate(gate, var, body))
+        args = [var for var, _, _ in table]
+        return args, chunks
+
+    # supports_http_options is false — only declare pixi args for vars
+    # the templated unix line actually references.
+    cmd = command.unix_shell_commandline or ''
+    # The full superset of HTTP-related Jinja var names a user might
+    # reference. Drawn from every per-tool table.
+    all_http_vars = {var for var, _, _ in _HTTP_GENERIC}
+    referenced = []
+    seen = set()
+    for match in _JINJA_VAR_RE.finditer(cmd):
+        name = match.group(1)
+        if name in seen or name not in all_http_vars:
+            continue
+        seen.add(name)
+        referenced.append(name)
+    return referenced, []
+
+
+def _format_args_block(args):
+    """Render a pixi ``args = [...]`` line. Defaults are always empty —
+    the cmd template uses ``{% if var %}`` gating, so an empty value means
+    the flag is omitted at run time. ``pixi run task value-for-port`` (or
+    similar positional override) sets the var."""
+    if not args:
+        return None
+    parts = ['{{ arg = "{}", default = "" }}'.format(var) for var in args]
+    return 'args = [{}]'.format(', '.join(parts))
+
+
 def _command_to_task(command, declared_vars):
     """Convert a ProjectCommand to a pixi task string or None.
 
@@ -406,10 +576,11 @@ def _command_to_task(command, declared_vars):
     keep the unix form (the deno_task_shell-native one) and surface the
     divergence in a comment so a maintainer can review.
 
-    Returns ``(task_cmd_string, raw_cmd_string, comments)``. ``raw_cmd_string``
-    is the pre-translation form, useful for comparing against
-    ``command.description`` (which anaconda-project synthesizes from the raw
-    command when the user hasn't supplied one).
+    Returns ``(task_cmd_string, raw_cmd_string, comments, args_line)``.
+    ``raw_cmd_string`` is the pre-translation form, useful for comparing
+    against ``command.description``. ``args_line`` is the formatted
+    pixi ``args = [...]`` declaration (or None if the command needs no
+    pixi args).
     """
     comments = []
     # raw_forms holds every string that anaconda-project might use as the
@@ -434,10 +605,26 @@ def _command_to_task(command, declared_vars):
         raw_forms.append(raw_cmd)
         comments.append('translated from windows-only command')
     else:
-        return None, None, comments
+        return None, None, comments, None
 
     translated, unresolved = _translate_command_env_vars(raw_cmd, declared_vars)
     translated = _strip_conda_prefix_paths(translated)
+
+    # Compose http-options support: append --anaconda-project-* flags
+    # (gated by Jinja conditionals) when supports_http_options is true,
+    # or just declare pixi args for whatever {{vars}} the user already
+    # referenced when it's false. Append-chunks render as a wrapped
+    # multi-line TOML string so the file stays readable, but parse to a
+    # single shell command at run time.
+    http_arg_vars, http_chunks = _http_args_for_command(command)
+    if http_chunks:
+        cmd_rendered = _toml_wrapped_string([translated, *http_chunks])
+        # For windows-divergence comparison and any other plain-text use,
+        # keep `translated` as the already-joined single-line form.
+        translated = ' '.join([translated, *http_chunks])
+    else:
+        cmd_rendered = _toml_string(translated)
+    args_line = _format_args_block(http_arg_vars)
 
     # If both forms exist, check that the windows line doesn't say something
     # the unix line doesn't — pixi can't run two variants of the same task,
@@ -458,7 +645,7 @@ def _command_to_task(command, declared_vars):
         comments.append(
             'unresolved env var(s): {} — set them via [activation.env] or '
             'before running pixi'.format(', '.join(unresolved)))
-    return translated, raw_forms, comments
+    return cmd_rendered, raw_forms, comments, args_line
 
 
 def export_pixi_toml(project):
@@ -697,26 +884,30 @@ def export_pixi_toml(project):
             else:
                 global_tasks.append((cmd_name, command))
 
-        if global_tasks:
-            lines.append('[tasks]')
-            for cmd_name, command in global_tasks:
-                task_cmd, raw_forms, comments = _command_to_task(command, declared_vars)
-                if task_cmd is None:
-                    lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
-                    continue
-                desc = command.description
-                has_desc = desc and desc != cmd_name and desc not in (raw_forms or [])
-                for comment in comments:
-                    lines.append('# {}'.format(comment))
-                if has_desc:
-                    lines.append('{} = {{ cmd = {}, description = {} }}'.format(
-                        cmd_name, _toml_string(task_cmd), _toml_string(desc)))
-                else:
-                    lines.append('{} = {}'.format(cmd_name, _toml_string(task_cmd)))
+        for cmd_name, command in global_tasks:
+            task_cmd, raw_forms, comments, args_line = _command_to_task(
+                command, declared_vars)
+            if task_cmd is None:
+                lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
+                continue
+            desc = command.description
+            has_desc = desc and desc != cmd_name and desc not in (raw_forms or [])
+            for comment in comments:
+                lines.append('# {}'.format(comment))
+            # Always use the explicit [tasks.X] form. The shorthand
+            # `name = "cmd"` doesn't allow args, and consistency reads
+            # better than mixing two forms.
+            lines.append('[tasks.{}]'.format(cmd_name))
+            lines.append('cmd = {}'.format(task_cmd))
+            if has_desc:
+                lines.append('description = {}'.format(_toml_string(desc)))
+            if args_line:
+                lines.append(args_line)
             lines.append('')
 
         for cmd_name, command in feature_tasks:
-            task_cmd, raw_forms, comments = _command_to_task(command, declared_vars)
+            task_cmd, raw_forms, comments, args_line = _command_to_task(
+                command, declared_vars)
             if task_cmd is None:
                 lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
                 continue
@@ -726,9 +917,11 @@ def export_pixi_toml(project):
             has_desc = desc and desc != cmd_name and desc not in (raw_forms or [])
             section = 'feature.{}.tasks.{}'.format(pixi_env_name, cmd_name)
             lines.append('[{}]'.format(section))
-            lines.append('cmd = {}'.format(_toml_string(task_cmd)))
+            lines.append('cmd = {}'.format(task_cmd))
             if has_desc:
                 lines.append('description = {}'.format(_toml_string(desc)))
+            if args_line:
+                lines.append(args_line)
             for comment in comments:
                 lines.append('# {}'.format(comment))
             lines.append('')
