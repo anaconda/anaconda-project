@@ -86,6 +86,29 @@ def _anaconda_project_publication_info(project_dir):
     return Project(project_dir).publication_info()
 
 
+def _read_pixi_lock_envs(project_dir):
+    """Return the set of environment names that appear in pixi.lock, or
+    empty if the lockfile is missing, malformed, or can't be loaded.
+
+    Failure is silent by design: lock detection is informational; the
+    rest of publication_info should never break because of a corrupt
+    lockfile.
+    """
+    lock_path = os.path.join(project_dir, 'pixi.lock')
+    try:
+        import yaml
+        with open(lock_path, 'r') as f:
+            lock = yaml.safe_load(f)
+    except Exception:
+        return set()
+    if not isinstance(lock, dict):
+        return set()
+    envs = lock.get('environments')
+    if not isinstance(envs, dict):
+        return set()
+    return set(envs.keys())
+
+
 def _pixi_publication_info(project_dir):
     pixi_path = os.path.join(project_dir, PIXI_MANIFEST)
     try:
@@ -93,6 +116,8 @@ def _pixi_publication_info(project_dir):
             data = tomllib.load(f)
     except (OSError, tomllib.TOMLDecodeError) as e:
         raise ValueError('Failed to parse {}: {}'.format(pixi_path, e)) from e
+
+    locked_envs = _read_pixi_lock_envs(project_dir)
 
     workspace = data.get('workspace', {})
     project_meta = data.get('project', {})
@@ -182,6 +207,7 @@ def _pixi_publication_info(project_dir):
         'default': {
             'packages': _packages_for_env(declared_envs.get('default')),
             'channels': channels,
+            'locked': default_env_name in locked_envs,
         },
     }
     for env_name, env_def in declared_envs.items():
@@ -190,6 +216,7 @@ def _pixi_publication_info(project_dir):
         env_specs[env_name] = {
             'packages': _packages_for_env(env_def),
             'channels': channels,
+            'locked': env_name in locked_envs,
         }
 
     variables = dict(data.get('activation', {}).get('env', {}))
