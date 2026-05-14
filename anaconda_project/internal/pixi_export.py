@@ -438,6 +438,7 @@ _HTTP_GENERIC = (
     ('host',         'pos', '--anaconda-project-host {{ host }}'),
     ('port',         'pos', '--anaconda-project-port {{ port }}'),
     ('address',      'pos', '--anaconda-project-address {{ address }}'),
+    ('url_prefix',   'pos', '--anaconda-project-url-prefix {{ url_prefix }}'),
     ('iframe_hosts', 'pos', '--anaconda-project-iframe-hosts {{ iframe_hosts }}'),
     ('no_browser',   'pos', '--anaconda-project-no-browser'),
     ('use_xheaders', 'pos', '--anaconda-project-use-xheaders'),
@@ -447,6 +448,8 @@ _HTTP_BOKEH = (
     ('host',         'pos', '--host {{ host }}'),
     ('port',         'pos', '--port {{ port }}'),
     ('address',      'pos', '--address {{ address }}'),
+    # bokeh renames --anaconda-project-url-prefix to --prefix.
+    ('url_prefix',   'pos', '--prefix {{ url_prefix }}'),
     # iframe_hosts: bokeh has no equivalent; the original transformer
     # drops it silently, so we omit it from the args declaration too.
     # `--show` is bokeh's "open browser" flag — the inverse of
@@ -468,6 +471,11 @@ _HTTP_NOTEBOOK = (
     # host: jupyter has no host-restrict equivalent; original drops it.
     ('port',         'pos', '--port {{ port }}'),
     ('address',      'pos', '--ip {{ address }}'),
+    # url_prefix renames to --NotebookApp.base_url. The original
+    # transformer comments that the two-arg (space-separated) form is
+    # rejected here — only the `--key=value` form works — so we render
+    # it that way.
+    ('url_prefix',   'pos', '--NotebookApp.base_url={{ url_prefix }}'),
     ('iframe_hosts', 'pos', _NOTEBOOK_IFRAME_BODY),
     ('no_browser',   'pos', '--no-browser'),
     ('use_xheaders', 'pos', '--NotebookApp.trust_xheaders=True'),
