@@ -102,11 +102,45 @@ def _pixi_publication_info(project_dir):
 
     tool_commands = data.get('tool', {}).get('anaconda', {}).get('commands', {})
 
+    # Resolve the name of pixi's implicit `default` environment to the
+    # user-meaningful env_spec it actually represents. Pixi always
+    # materializes a `default` env from the default feature; the
+    # exporter (and anaconda-project's own publication_info) report the
+    # resolved name, not the placeholder. Logic mirrors the exporter:
+    # a literal `default` in [environments] wins; otherwise fall back
+    # to the first declared environment.
+    declared_envs = data.get('environments', {})
+    if 'default' in declared_envs:
+        default_env_name = 'default'
+    elif declared_envs:
+        default_env_name = next(iter(declared_envs))
+    else:
+        default_env_name = 'default'
+
+    # For tasks defined under [feature.X.tasks.Y], pixi runs them in any
+    # env that includes feature X. publication_info should report a
+    # specific env that "supports this task": prefer the resolved
+    # default if it includes the feature, else the first declared env
+    # that does, else fall back to the feature name itself (which is
+    # what our own exporter uses — feature name matches env name in the
+    # converted manifests).
+    def _env_for_feature(feat_name):
+        candidate_envs = []
+        for env_name, env_def in declared_envs.items():
+            features = env_def if isinstance(env_def, list) else env_def.get('features', [])
+            if feat_name in features:
+                candidate_envs.append(env_name)
+        if not candidate_envs:
+            return feat_name
+        if default_env_name in candidate_envs:
+            return default_env_name
+        return candidate_envs[0]
+
     commands = {}
     state = {'first': True}
 
     for task_name, task_def in data.get('tasks', {}).items():
-        cmd = _build_command(task_name, task_def, 'default', tool_commands, state)
+        cmd = _build_command(task_name, task_def, default_env_name, tool_commands, state)
         if cmd is not None:
             commands[task_name] = cmd
 
@@ -114,7 +148,9 @@ def _pixi_publication_info(project_dir):
         for task_name, task_def in feat_def.get('tasks', {}).items():
             if task_name in commands:
                 continue
-            cmd = _build_command(task_name, task_def, feat_name, tool_commands, state)
+            cmd = _build_command(task_name, task_def,
+                                 _env_for_feature(feat_name),
+                                 tool_commands, state)
             if cmd is not None:
                 commands[task_name] = cmd
 
@@ -139,10 +175,9 @@ def _pixi_publication_info(project_dir):
             pkgs.extend(_format_dep(n, s) for n, s in feat_deps.items())
         return pkgs
 
-    # Pixi always materializes a `default` env, even when not declared in
-    # [environments]. Surface it unconditionally; honor the user's
+    # Pixi always materializes a `default` env, even when [environments]
+    # only declares others. Surface it unconditionally; honor the user's
     # declaration if one exists.
-    declared_envs = data.get('environments', {})
     env_specs = {
         'default': {
             'packages': _packages_for_env(declared_envs.get('default')),
