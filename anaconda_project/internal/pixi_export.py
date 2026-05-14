@@ -354,8 +354,6 @@ def _windows_to_deno_shell(command_str):
     return ''.join(out)
 
 
-_PREPARE_MARKER_ECHO = 'echo "Running migrated anaconda-project prepare task..."'
-
 # Helper script written next to pixi.toml during conversion; see
 # anaconda_project/internal/ap_download.py for the source. Prepare tasks
 # invoke it via `python ap_download.py <url> <filename> [<description>]`
@@ -936,15 +934,11 @@ def export_pixi_toml(project):
 
     # -- `prepare` task
     # Mirror anaconda-project's prepare semantics for the default env:
-    # fetch any declared downloads. Emit exactly one `prepare` task,
-    # scoped to the default env_spec's feature when there is one (so it
-    # only resolves under that env), or at the top level when the manifest
-    # has no [environments] table.
-    #
-    # The presence of `prepare` is itself the canonical signal that this
-    # pixi.toml was converted from anaconda-project.yml. Other env_specs
-    # don't get a prepare task — keeps the manifest small and avoids
-    # pixi's env-selection prompt entirely.
+    # fetch any declared downloads. Emit only when there's real work to
+    # do — downstream tooling that runs `pixi run prepare` after install
+    # checks for the task's existence and skips when absent. A no-op
+    # marker would force every consumer to detect-and-skip when running
+    # against non-converted projects, which is more code for no benefit.
     if 'default' in env_specs:
         default_source = 'default'
     elif project.default_env_spec_name in env_specs:
@@ -957,20 +951,17 @@ def export_pixi_toml(project):
     if default_source in downloads_per_env:
         prepare_body = _toml_multiline_string(
             _build_prepare_command(downloads_per_env[default_source]))
-    else:
-        prepare_body = _toml_string(_PREPARE_MARKER_ECHO)
-
-    # Multi-env: scope to the default env's feature so `pixi run prepare`
-    # auto-resolves to that env. (When the default is the literal
-    # `default`, fold to the global default feature — pixi's implicit
-    # default env picks it up.)
-    if has_multiple_envs and default_source and default_source != 'default':
-        pixi_env_name = _sanitize_env_name(default_source)
-        lines.append('[feature.{}.tasks.prepare]'.format(pixi_env_name))
-    else:
-        lines.append('[tasks.prepare]')
-    lines.append('cmd = {}'.format(prepare_body))
-    lines.append('')
+        # Multi-env: scope to the default env's feature so
+        # `pixi run prepare` auto-resolves to that env. When the default
+        # is the literal `default`, fold to the global default feature —
+        # pixi's implicit default env picks it up.
+        if has_multiple_envs and default_source != 'default':
+            pixi_env_name = _sanitize_env_name(default_source)
+            lines.append('[feature.{}.tasks.prepare]'.format(pixi_env_name))
+        else:
+            lines.append('[tasks.prepare]')
+        lines.append('cmd = {}'.format(prepare_body))
+        lines.append('')
 
     # -- Services as comments
     services = {}
