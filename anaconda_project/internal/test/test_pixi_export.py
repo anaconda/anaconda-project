@@ -720,6 +720,50 @@ commands:
         # Generic --anaconda-project-* flags shouldn't appear.
         assert '--anaconda-project-' not in result
 
+    def test_url_prefix_renamed_per_tool(self):
+        # --anaconda-project-url-prefix maps differently in each tool:
+        #   generic  -> --anaconda-project-url-prefix VALUE  (passthrough)
+        #   bokeh    -> --prefix VALUE
+        #   notebook -> --NotebookApp.base_url=VALUE  (single-arg form,
+        #               original transformer notes the two-arg form is
+        #               rejected by jupyter)
+        # Mirror those mappings here so converted commands carry the
+        # right flag for the tool that will receive them.
+        for label, yml, expected_flag in [
+            ('generic',
+             """name: t
+packages: [python]
+platforms: [linux-64]
+commands:
+  serve:
+    unix: panel serve foo.ipynb
+    supports_http_options: true
+""",
+             '--anaconda-project-url-prefix {{ url_prefix }}'),
+            ('bokeh',
+             """name: t
+packages: [python, bokeh]
+platforms: [linux-64]
+commands:
+  app:
+    bokeh_app: myapp
+""",
+             '--prefix {{ url_prefix }}'),
+            ('notebook',
+             """name: t
+packages: [python]
+platforms: [linux-64]
+commands:
+  nb:
+    notebook: report.ipynb
+""",
+             '--NotebookApp.base_url={{ url_prefix }}'),
+        ]:
+            project = self._make_project(yml)
+            result = export_pixi_toml(project)
+            assert expected_flag in result, '{}: missing {!r}'.format(label, expected_flag)
+            assert 'arg = "url_prefix"' in result, '{}: arg not declared'.format(label)
+
     def test_bokeh_app_uses_bokeh_flags(self):
         # bokeh_app: commands translate to bokeh's flag names: bare
         # --host/--port/--address, and --show as the *inverse* of
