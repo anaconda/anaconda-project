@@ -274,10 +274,12 @@ downloads:
         # Old comment-only path is gone.
         assert '# Downloads from anaconda-project.yml' not in result
 
-    def test_marker_echo_only_when_no_downloads(self):
-        # The no-op prepare body still uses the marker echo so the task
-        # has *something* to print and so anyone reading the manifest
-        # immediately sees what it came from.
+    def test_no_prepare_task_when_no_downloads(self):
+        # If there's no real work for prepare to do, omit it entirely.
+        # Downstream tooling looks for `prepare` and runs it when
+        # present; an absent task is the same signal as "nothing to
+        # prepare for this project," and skipping it costs no logic on
+        # the consumer side.
         project = self._make_project("""
 name: NoDl
 packages:
@@ -286,7 +288,7 @@ platforms:
   - linux-64
 """)
         result = export_pixi_toml(project)
-        assert 'Running migrated anaconda-project prepare task' in result
+        assert 'prepare' not in result
 
     def test_only_default_env_gets_prepare(self):
         # anaconda-project's top-level downloads: apply to every env, but
@@ -355,10 +357,10 @@ env_specs:
         # No prepare-all either — single prepare keeps things simple.
         assert 'prepare-all' not in result
 
-    def test_marker_prepare_when_no_downloads(self):
-        # Every converted project gets a prepare task — even when there are
-        # no downloads to fetch. Detection of "is this a converted project?"
-        # relies on the presence of `prepare`.
+    def test_no_prepare_when_yml_has_no_downloads(self):
+        # Mirror of test_no_prepare_task_when_no_downloads but at this
+        # level of the suite — keeping coverage close to the related
+        # single-named-env test below.
         project = self._make_project("""
 name: Plain
 packages:
@@ -367,10 +369,9 @@ platforms:
   - linux-64
 """)
         result = export_pixi_toml(project)
-        assert '[tasks.prepare]' in result
-        assert 'Running migrated anaconda-project prepare task' in result
-        # No downloads, so no urllib invocation.
-        assert 'urllib.request' not in result
+        assert 'prepare' not in result
+        # And no helper invocation either, of course.
+        assert 'ap_download.py' not in result
 
     def test_project_dir_translated(self):
         project = self._make_project("""
