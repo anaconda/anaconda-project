@@ -274,12 +274,16 @@ downloads:
         # Old comment-only path is gone.
         assert '# Downloads from anaconda-project.yml' not in result
 
-    def test_no_prepare_task_when_no_downloads(self):
-        # If there's no real work for prepare to do, omit it entirely.
-        # Downstream tooling looks for `prepare` and runs it when
-        # present; an absent task is the same signal as "nothing to
-        # prepare for this project," and skipping it costs no logic on
-        # the consumer side.
+    def test_marker_prepare_when_no_downloads(self):
+        # Even without downloads, every converted project gets a
+        # `prepare` task. It does double duty:
+        #   * Marks the file as converted from anaconda-project.yml,
+        #     for downstream tooling that detects converted projects
+        #     by task name.
+        #   * When scoped to a non-default env's feature, gives
+        #     `pixi run prepare` an entry point that auto-resolves to
+        #     that env — useful when the default env_spec is named
+        #     something other than `default`.
         project = self._make_project("""
 name: NoDl
 packages:
@@ -288,7 +292,10 @@ platforms:
   - linux-64
 """)
         result = export_pixi_toml(project)
-        assert 'prepare' not in result
+        assert '[tasks.prepare]' in result
+        assert 'Running migrated anaconda-project prepare task' in result
+        # No downloads, so no helper invocation.
+        assert 'ap_download.py' not in result
 
     def test_only_default_env_gets_prepare(self):
         # anaconda-project's top-level downloads: apply to every env, but
@@ -357,20 +364,24 @@ env_specs:
         # No prepare-all either — single prepare keeps things simple.
         assert 'prepare-all' not in result
 
-    def test_no_prepare_when_yml_has_no_downloads(self):
-        # Mirror of test_no_prepare_task_when_no_downloads but at this
-        # level of the suite — keeping coverage close to the related
-        # single-named-env test below.
+    def test_prepare_scoped_to_named_default_env(self):
+        # When the default env_spec has a non-default name (sampleproj),
+        # the prepare task is scoped to that feature so `pixi run prepare`
+        # auto-resolves to the right env. This is the second job of the
+        # always-emit-prepare convention: it's an env-selection entry
+        # point even when there's nothing to download.
         project = self._make_project("""
 name: Plain
 packages:
   - python
 platforms:
   - linux-64
+env_specs:
+  sampleproj: {}
 """)
         result = export_pixi_toml(project)
-        assert 'prepare' not in result
-        # And no helper invocation either, of course.
+        assert '[feature.sampleproj.tasks.prepare]' in result
+        # No downloads → no helper invocation.
         assert 'ap_download.py' not in result
 
     def test_project_dir_translated(self):
