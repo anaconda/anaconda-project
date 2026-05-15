@@ -25,13 +25,3 @@ For new project work, we encourage users to evaluate
 `conda-workspaces <https://github.com/conda-incubator/conda-workspaces>`_,
 or `uv <https://docs.astral.sh/uv/>`_ directly.
 
-Send feedback
-=============
-
-Suggestions for documentation or code fixes belong in the
-`Github Issue Tracker`_. Anaconda, Inc.\ |reg| (formerly Continuum
-Analytics) no longer monitors the legacy ``documentation@continuum.io``
-address; please use GitHub issues so the discussion stays attached to
-the codebase.
-
-.. |reg|    unicode:: U+000AE .. REGISTERED SIGN

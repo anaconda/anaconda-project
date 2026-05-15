@@ -57,7 +57,7 @@ Projects are affected by 3 configuration files:
   ``anaconda-project.yml``. For more information on
   ``anaconda-project-lock.yml``, see :doc:`reference`.
 
-To modify these files, use Project commands, Anaconda Navigator,
+To modify these files, use anaconda-project commands, Anaconda Navigator,
 or any text editor.
 
 
@@ -75,7 +75,7 @@ file that specifies 2 variables::
     - AMAZON_EC2_USERNAME
     - AMAZON_EC2_PASSWORD
 
-When a user runs your project, Project asks them for values to
+When a user runs your project, anaconda-project asks them for values to
 assign to these variables.
 
 In your script, you can use ``os.getenv()`` to obtain these
@@ -83,12 +83,12 @@ variables. This is a much better option than hardcoding passwords
 into your script, which can be a security risk.
 
 
-Comparing Project to conda env and environment.yml
-==================================================
+Comparing anaconda-project to conda env and environment.yml
+===========================================================
 
-Project has similar functionality to the ``conda env`` command
+anaconda-project has similar functionality to the ``conda env`` command
 and the ``environment.yml`` file, but it may be more convenient.
-The advantage of Project for environment handling is that it
+The advantage of anaconda-project for environment handling is that it
 performs conda operations and records them in a configuration
 file for reproducibility, all in one step.
 
@@ -103,7 +103,7 @@ The effect is comparable to adding the environment spec to
 environment and your configuration to be shared with others will
 not get out of sync.
 
-Project also automatically sets up environments for other users
+anaconda-project also automatically sets up environments for other users
 when they type ``anaconda-project run`` on their machines. They
 do not have to separately create, update or activate environments
 before they run the code. This may be especially useful when you
@@ -112,6 +112,6 @@ forget to rerun it and update their packages, while
 ``anaconda-project run`` automatically adds missing packages
 every time.
 
-In addition to creating environments, Project can perform other
+In addition to creating environments, anaconda-project can perform other
 kinds of setup, such as adding data files and running a database
 server. In that sense, it is a superset of ``conda env``.
