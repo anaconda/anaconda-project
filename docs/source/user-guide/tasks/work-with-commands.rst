@@ -22,7 +22,7 @@ You could run your Python code with the command::
 
 NOTE: Replace ``file`` with the name of your file.
 
-However, to gain the benefits of Anaconda Project, use Project
+However, to gain the benefits of Anaconda Project, use anaconda-project
 to add code files to your project:
 
 #. Put the code file, application file, or notebook file into
@@ -98,11 +98,11 @@ dependencies. Add these environment specs with
 Using commands to automatically start processes
 ===============================================
 
-Project can automatically start processes that your commands
+anaconda-project can automatically start processes that your commands
 depend on. Currently it only supports starting Redis, for
 demonstration purposes.
 
-To see Project automatically start the Redis process::
+To see anaconda-project automatically start the Redis process::
 
   anaconda-project add-service redis
 
