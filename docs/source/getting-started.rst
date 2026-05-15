@@ -11,7 +11,7 @@ After completing this guide, you will be able to:
 * Run the project with a single command.
 * Package and share the project.
 
-If you have not yet installed and started Project,
+If you have not yet installed and started anaconda-project,
 follow the :doc:`Installation instructions <install>`.
 
 
@@ -113,9 +113,9 @@ To share this project with a colleague:
 
 For more information, see :doc:`user-guide/tasks/share-project`.
 
-Anyone with Project can run your project by unzipping the
-project archive file and then running a single command, without
-having to do any setup::
+Anyone with anaconda-project installed can run your project by
+unzipping the project archive file and then running a single command,
+without having to do any setup::
 
      $ anaconda-project unarchive interactive.zip
      $ cd demo_app
@@ -125,14 +125,14 @@ having to do any setup::
    using your project will need to specify which command to run.
    For more information, see :doc:`user-guide/tasks/run-project`.
 
-Project downloads the data, installs the necessary packages and
+anaconda-project downloads the data, installs the necessary packages and
 runs the command.
 
 
 Next steps
 ==========
 
-* Learn more about :doc:`what you can do in Project
+* Learn more about :doc:`what you can do with anaconda-project
   <user-guide/tasks/index>`, including how to :doc:`download data
   <user-guide/tasks/download-data>` with your project and how to
   :doc:`configure your project with environment variables
