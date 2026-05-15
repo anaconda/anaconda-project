@@ -354,6 +354,12 @@ def _windows_to_deno_shell(command_str):
     return ''.join(out)
 
 
+# Body for the no-op prepare task. Doubles as the
+# converted-from-anaconda-project marker (downstream tooling looks for
+# the `prepare` task name to detect a converted project) and gives the
+# task something visible to print when there are no downloads to fetch.
+_PREPARE_MARKER_ECHO = 'echo "Running migrated anaconda-project prepare task..."'
+
 # Helper script written next to pixi.toml during conversion; see
 # anaconda_project/internal/ap_download.py for the source. Prepare tasks
 # invoke it via `python ap_download.py <url> <filename> [<description>]`
@@ -933,12 +939,18 @@ def export_pixi_toml(project):
             lines.append('')
 
     # -- `prepare` task
-    # Mirror anaconda-project's prepare semantics for the default env:
-    # fetch any declared downloads. Emit only when there's real work to
-    # do — downstream tooling that runs `pixi run prepare` after install
-    # checks for the task's existence and skips when absent. A no-op
-    # marker would force every consumer to detect-and-skip when running
-    # against non-converted projects, which is more code for no benefit.
+    # Always emit a `prepare` task on a converted project. Two reasons:
+    #   1. Mirror anaconda-project's `prepare` semantics for the default
+    #      env: fetch any declared downloads.
+    #   2. When the default env_spec has a non-default name (e.g.
+    #      `sampleproj`), pixi has no native way to bind a default
+    #      task to that env. Scoping `prepare` to the env's feature
+    #      forces `pixi run prepare` to resolve to that env, which
+    #      makes it a useful "select the right env" entry point even
+    #      when there are no downloads to fetch.
+    # The task name itself doubles as a marker — downstream tooling can
+    # detect "this pixi.toml was converted from anaconda-project.yml"
+    # by looking for the `prepare` task.
     if 'default' in env_specs:
         default_source = 'default'
     elif project.default_env_spec_name in env_specs:
@@ -951,17 +963,23 @@ def export_pixi_toml(project):
     if default_source in downloads_per_env:
         prepare_body = _toml_multiline_string(
             _build_prepare_command(downloads_per_env[default_source]))
-        # Multi-env: scope to the default env's feature so
-        # `pixi run prepare` auto-resolves to that env. When the default
-        # is the literal `default`, fold to the global default feature —
-        # pixi's implicit default env picks it up.
-        if has_multiple_envs and default_source != 'default':
-            pixi_env_name = _sanitize_env_name(default_source)
-            lines.append('[feature.{}.tasks.prepare]'.format(pixi_env_name))
-        else:
-            lines.append('[tasks.prepare]')
-        lines.append('cmd = {}'.format(prepare_body))
-        lines.append('')
+    else:
+        # No downloads — the task is a no-op echo. Acts as the
+        # converted-project marker and (when scoped to a feature) as
+        # the env-selection entry point.
+        prepare_body = _toml_string(_PREPARE_MARKER_ECHO)
+
+    # Multi-env: scope to the default env's feature so `pixi run prepare`
+    # auto-resolves to that env. When the default is the literal
+    # `default`, fold to the global default feature — pixi's implicit
+    # default env picks it up.
+    if has_multiple_envs and default_source and default_source != 'default':
+        pixi_env_name = _sanitize_env_name(default_source)
+        lines.append('[feature.{}.tasks.prepare]'.format(pixi_env_name))
+    else:
+        lines.append('[tasks.prepare]')
+    lines.append('cmd = {}'.format(prepare_body))
+    lines.append('')
 
     # -- Services as comments
     services = {}
