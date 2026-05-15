@@ -22,8 +22,27 @@ them.
 
 You can use Project on Windows, macOS and Linux.
 
-Project is supported and offered by Anaconda, Inc\ |reg| 
+Project is supported and offered by Anaconda, Inc\ |reg|
 and contributors under a 3-clause BSD license.
+
+Project status
+==============
+
+Anaconda Project has not been actively developed in some time and has
+largely been superseded by newer alternatives.
+`conda-project <https://conda-incubator.github.io/conda-project/>`_
+was the first follow-on effort; today,
+`pixi <https://pixi.sh/>`_ and
+`uv <https://docs.astral.sh/uv/>`_ represent the first truly successful
+successors.
+`conda-workspaces <https://github.com/conda-incubator/conda-workspaces>`_
+is a promising pixi-compatible alternative for users who prefer to
+stay closer to the conda ecosystem.
+
+For that reason, recent work on this repository has been (and will
+remain) focused on critical bug fixes and on the ability to convert
+existing Anaconda Project projects into the pixi and conda-workspaces
+formats. See :doc:`pixi-support` for details on the conversion tooling.
 
 Quick Start
 ===========
@@ -107,6 +126,13 @@ able to rely on long-term interface stability.
    user-guide/concepts
    user-guide/tasks/index
    user-guide/reference
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: Pixi support
+
+   pixi-support
 
 .. toctree::
    :maxdepth: 1
