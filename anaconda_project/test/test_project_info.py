@@ -745,3 +745,51 @@ class TestProjectTypeKey:
         with tempfile.TemporaryDirectory() as td:
             _write_pixi_toml(td, '[workspace]\nname = "t"\n')
             assert publication_info(td)[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
+
+
+class TestExplicitProjectType:
+    """Caller-supplied `project_type` overrides the pixi-wins-by-default
+    detection. Asking for a format whose manifest is absent is an error."""
+
+    def test_force_anaconda_project_when_both_present(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "from-pixi"\n')
+            _write_anaconda_project(td, textwrap.dedent("""\
+                name: from-yml
+                env_specs:
+                  default:
+                    channels: [defaults]
+                    packages: [python=3.12]
+            """))
+            info = publication_info(td, project_type=PROJECT_TYPE_ANACONDA_PROJECT)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_ANACONDA_PROJECT
+            assert info['name'] == 'from-yml'
+
+    def test_force_pixi_when_both_present(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "from-pixi"\n')
+            _write_anaconda_project(td, 'name: from-yml\n')
+            info = publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
+            assert info['name'] == 'from-pixi'
+
+    def test_force_pixi_without_pixi_toml_raises(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_anaconda_project(td, 'name: t\n')
+            with pytest.raises(FileNotFoundError) as exc:
+                publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            assert 'pixi.toml' in str(exc.value)
+
+    def test_force_anaconda_project_without_yml_raises(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            with pytest.raises(FileNotFoundError) as exc:
+                publication_info(td, project_type=PROJECT_TYPE_ANACONDA_PROJECT)
+            assert 'anaconda-project.yml' in str(exc.value)
+
+    def test_unknown_project_type_raises(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            with pytest.raises(ValueError) as exc:
+                publication_info(td, project_type='conda-workspaces')
+            assert 'conda-workspaces' in str(exc.value)

@@ -54,29 +54,52 @@ def detect_project_type(project_dir):
     return None
 
 
-def publication_info(project_dir):
+def publication_info(project_dir, project_type=None):
     """Return a publication-info dict for the project at *project_dir*.
 
-    If ``pixi.toml`` is present, the pixi manifest is parsed directly. Otherwise
-    ``anaconda-project.yml`` is loaded through :class:`Project`. The returned
-    dict always includes a ``project_type`` key identifying which manifest
-    format was used.
+    With *project_type* unset (the default), ``pixi.toml`` is preferred when
+    present and ``anaconda-project.yml`` is loaded through :class:`Project`
+    otherwise. Pass ``project_type='pixi'`` or ``'anaconda-project'`` to force
+    a specific manifest format; it is an error to ask for a format whose
+    manifest is not present in *project_dir*. The returned dict always
+    includes a ``project_type`` key identifying which manifest format was
+    used.
 
     Raises:
-        ValueError: the pixi manifest cannot be parsed.
-        FileNotFoundError: neither manifest is present.
+        ValueError: *project_type* is not a recognized value, or the pixi
+            manifest cannot be parsed.
+        FileNotFoundError: the requested manifest (or, with no
+            *project_type*, neither manifest) is not present.
     """
-    project_type = detect_project_type(project_dir)
-    if project_type == PROJECT_TYPE_PIXI:
-        info = _pixi_publication_info(project_dir)
+    if project_type is None:
+        project_type = detect_project_type(project_dir)
+        if project_type is None:
+            raise FileNotFoundError(
+                'No {} or {} found in {}'.format(
+                    PIXI_MANIFEST, ANACONDA_PROJECT_MANIFEST, project_dir
+                )
+            )
+    elif project_type == PROJECT_TYPE_PIXI:
+        if not os.path.isfile(os.path.join(project_dir, PIXI_MANIFEST)):
+            raise FileNotFoundError(
+                'No {} found in {}'.format(PIXI_MANIFEST, project_dir)
+            )
     elif project_type == PROJECT_TYPE_ANACONDA_PROJECT:
-        info = _anaconda_project_publication_info(project_dir)
+        if not os.path.isfile(os.path.join(project_dir, ANACONDA_PROJECT_MANIFEST)):
+            raise FileNotFoundError(
+                'No {} found in {}'.format(ANACONDA_PROJECT_MANIFEST, project_dir)
+            )
     else:
-        raise FileNotFoundError(
-            'No {} or {} found in {}'.format(
-                PIXI_MANIFEST, ANACONDA_PROJECT_MANIFEST, project_dir
+        raise ValueError(
+            'Unknown project_type {!r}; expected {!r} or {!r}'.format(
+                project_type, PROJECT_TYPE_PIXI, PROJECT_TYPE_ANACONDA_PROJECT
             )
         )
+
+    if project_type == PROJECT_TYPE_PIXI:
+        info = _pixi_publication_info(project_dir)
+    else:
+        info = _anaconda_project_publication_info(project_dir)
     info[PROJECT_TYPE_KEY] = project_type
     return info
 
