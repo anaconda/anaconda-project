@@ -747,6 +747,99 @@ class TestProjectTypeKey:
             assert publication_info(td)[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
 
 
+class TestEnvPaths:
+    """`env_paths=True` populates `info['env_specs'][name]['path']`. The
+    anaconda-project branch derives paths from each EnvSpec; the pixi branch
+    shells out to `pixi info --json`."""
+
+    def test_default_does_not_include_path(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(
+                td,
+                '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td)
+            assert 'path' not in info['env_specs']['default']
+
+    def test_pixi_env_paths_via_subprocess(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(
+                td,
+                '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            fake_json = (
+                '{"environments_info": ['
+                '{"name": "default", "prefix": "/fake/path/.pixi/envs/default"}'
+                ']}'
+            ).encode('utf-8')
+
+            def fake_check_output(cmd, stderr=None):
+                assert cmd[0] == 'pixi'
+                assert '--json' in cmd
+                return fake_json
+
+            import subprocess
+            monkeypatch.setattr(subprocess, 'check_output', fake_check_output)
+            info = publication_info(td, env_paths=True)
+            assert info['env_specs']['default']['path'] == '/fake/path/.pixi/envs/default'
+
+    def test_pixi_env_paths_subprocess_failure_raises(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+
+            import subprocess
+
+            def fake_check_output(cmd, stderr=None):
+                raise subprocess.CalledProcessError(1, cmd, stderr=b'pixi: bad manifest')
+
+            monkeypatch.setattr(subprocess, 'check_output', fake_check_output)
+            with pytest.raises(RuntimeError) as exc:
+                publication_info(td, env_paths=True)
+            assert 'pixi info' in str(exc.value)
+
+    def test_pixi_env_paths_pixi_missing_raises(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            import subprocess
+
+            def fake_check_output(cmd, stderr=None):
+                raise OSError(2, 'No such file or directory: pixi')
+
+            monkeypatch.setattr(subprocess, 'check_output', fake_check_output)
+            with pytest.raises(RuntimeError) as exc:
+                publication_info(td, env_paths=True)
+            assert 'pixi info' in str(exc.value)
+
+    def test_pixi_env_paths_invalid_json_raises(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            import subprocess
+
+            monkeypatch.setattr(subprocess, 'check_output',
+                                lambda cmd, stderr=None: b'not actually json')
+            with pytest.raises(RuntimeError) as exc:
+                publication_info(td, env_paths=True)
+            assert 'parse' in str(exc.value)
+
+    def test_anaconda_project_env_paths(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_anaconda_project(td, textwrap.dedent("""\
+                name: sample
+                env_specs:
+                  default:
+                    channels: [defaults]
+                    packages: [python=3.12]
+                  alt:
+                    channels: [defaults]
+                    packages: [python=3.12, flask]
+            """))
+            info = publication_info(td, env_paths=True)
+            for name in ('default', 'alt'):
+                path = info['env_specs'][name]['path']
+                assert path.endswith(os.path.join('envs', name))
+                assert os.path.isabs(path)
+
+
 class TestExplicitProjectType:
     """Caller-supplied `project_type` overrides the pixi-wins-by-default
     detection. Asking for a format whose manifest is absent is an error."""

@@ -54,7 +54,7 @@ def detect_project_type(project_dir):
     return None
 
 
-def publication_info(project_dir, project_type=None):
+def publication_info(project_dir, project_type=None, env_paths=False):
     """Return a publication-info dict for the project at *project_dir*.
 
     With *project_type* unset (the default), ``pixi.toml`` is preferred when
@@ -65,11 +65,19 @@ def publication_info(project_dir, project_type=None):
     includes a ``project_type`` key identifying which manifest format was
     used.
 
+    Pass ``env_paths=True`` to populate ``info['env_specs'][name]['path']``
+    with the filesystem prefix for each declared environment. For
+    anaconda-project this is computed from each :class:`EnvSpec` and is
+    free; for pixi we shell out to ``pixi info --json`` (so it costs a
+    subprocess) and surface any error from that call.
+
     Raises:
         ValueError: *project_type* is not a recognized value, or the pixi
             manifest cannot be parsed.
         FileNotFoundError: the requested manifest (or, with no
             *project_type*, neither manifest) is not present.
+        RuntimeError: ``env_paths=True`` was requested for a pixi project
+            and ``pixi info --json`` failed.
     """
     if project_type is None:
         project_type = detect_project_type(project_dir)
@@ -98,15 +106,52 @@ def publication_info(project_dir, project_type=None):
 
     if project_type == PROJECT_TYPE_PIXI:
         info = _pixi_publication_info(project_dir)
+        if env_paths:
+            _attach_pixi_env_paths(info, project_dir)
     else:
-        info = _anaconda_project_publication_info(project_dir)
+        info = _anaconda_project_publication_info(project_dir, env_paths=env_paths)
     info[PROJECT_TYPE_KEY] = project_type
     return info
 
 
-def _anaconda_project_publication_info(project_dir):
+def _anaconda_project_publication_info(project_dir, env_paths=False):
     from anaconda_project.project import Project
-    return Project(project_dir).publication_info()
+    project = Project(project_dir)
+    info = project.publication_info()
+    if env_paths:
+        for name, env in project.env_specs.items():
+            if name in info['env_specs']:
+                info['env_specs'][name]['path'] = env.path(project_dir)
+    return info
+
+
+def _attach_pixi_env_paths(info, project_dir):
+    """Fill in ``info['env_specs'][name]['path']`` from ``pixi info --json``.
+
+    Pixi reports prefixes in ``environments_info[].prefix``. Any failure to
+    invoke pixi or parse its output raises :class:`RuntimeError` — callers
+    only ask for env paths explicitly via ``env_paths=True``, so silent
+    fallback would hide bugs.
+    """
+    import json
+    import subprocess
+    pixi_path = os.path.join(project_dir, PIXI_MANIFEST)
+    try:
+        out = subprocess.check_output(
+            ['pixi', 'info', '--json', '--manifest-path', pixi_path],
+            stderr=subprocess.PIPE,
+        )
+    except (OSError, subprocess.CalledProcessError) as e:
+        raise RuntimeError('Failed to run `pixi info --json`: {}'.format(e)) from e
+    try:
+        data = json.loads(out)
+    except ValueError as e:
+        raise RuntimeError('Could not parse `pixi info --json` output: {}'.format(e)) from e
+    for env in data.get('environments_info', []):
+        name = env.get('name')
+        prefix = env.get('prefix')
+        if name in info['env_specs'] and prefix:
+            info['env_specs'][name]['path'] = prefix
 
 
 def _read_pixi_lock_envs(project_dir):
