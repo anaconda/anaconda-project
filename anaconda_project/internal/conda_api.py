@@ -72,6 +72,13 @@ def _call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None
     if platform is not None:
         env = os.environ.copy()
         env['CONDA_SUBDIR'] = platform
+        # When solving for a non-host platform, conda has no host-side
+        # virtual package to satisfy specs like `libgcc-ng -> __glibc`.
+        # Default __glibc to 2.28 (matching conda-lock and pixi's current
+        # defaults) when cross-resolving any linux subdir, unless the
+        # caller has set CONDA_OVERRIDE_GLIBC themselves.
+        if 'linux' in platform and 'CONDA_OVERRIDE_GLIBC' not in env:
+            env['CONDA_OVERRIDE_GLIBC'] = '2.28'
 
     try:
         (p, stdout_lines, stderr_lines) = streaming_popen.popen(cmd_list,
