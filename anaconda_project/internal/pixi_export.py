@@ -10,11 +10,82 @@ from __future__ import absolute_import, print_function
 
 import os
 import re
+import shutil
+import subprocess
 
 from anaconda_project.requirements_registry.requirement import EnvVarRequirement
 from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
 from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
+
+
+class CondaNotAvailableError(Exception):
+    """Raised when the exporter needs `conda` for channel resolution but
+    can't find or invoke it. Wraps the underlying reason so the CLI can
+    surface a useful failure status."""
+
+
+def _resolve_default_channels():
+    """Return the list of URLs that `defaults` expands to, taken from the
+    user's local ``conda config --show default_channels``.
+
+    Pixi has no notion of a `defaults` meta-channel, so we have to rewrite
+    every occurrence to the URLs it would resolve to under conda. We avoid
+    `--json` because conda renders URL fields as nested urlparse dicts in
+    that mode; the plain YAML-ish output is easier to parse and is what
+    `conda config --show` emits by default.
+    """
+    if not shutil.which('conda'):
+        raise CondaNotAvailableError(
+            "`conda` not found on PATH; required to expand the `defaults` "
+            "channel into concrete URLs.")
+    try:
+        proc = subprocess.run(
+            ['conda', 'config', '--show', 'default_channels'],
+            check=True, capture_output=True, text=True)
+    except (OSError, subprocess.CalledProcessError) as e:
+        raise CondaNotAvailableError(
+            "Failed to invoke `conda config --show default_channels`: {}".format(e))
+
+    urls = []
+    in_block = False
+    for line in proc.stdout.splitlines():
+        if line.startswith('default_channels:'):
+            in_block = True
+            continue
+        if in_block:
+            stripped = line.strip()
+            if stripped.startswith('- '):
+                urls.append(stripped[2:].strip())
+            elif stripped == '':
+                continue
+            else:
+                # A non-list, non-blank line means we've fallen out of
+                # the default_channels block (a sibling key, etc.).
+                break
+    if not urls:
+        raise CondaNotAvailableError(
+            "`conda config --show default_channels` returned no entries.")
+    return urls
+
+
+def _expand_defaults_in_channels(channels, default_channels):
+    """Replace every `defaults` entry in ``channels`` with ``default_channels``.
+
+    Order is preserved; duplicates are removed (first wins).
+    """
+    out = []
+    seen = set()
+    for ch in channels:
+        if ch == 'defaults':
+            for d in default_channels:
+                if d not in seen:
+                    seen.add(d)
+                    out.append(d)
+        elif ch not in seen:
+            seen.add(ch)
+            out.append(ch)
+    return out
 
 
 def _sanitize_env_name(name):
@@ -26,6 +97,43 @@ def _toml_string(value):
     escaped = value.replace('\\', '\\\\').replace('"', '\\"')
     escaped = escaped.replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
     return '"{}"'.format(escaped)
+
+
+def _toml_multiline_string(value):
+    """Format a multi-line shell command as a TOML triple-quoted string.
+
+    The leading newline after ``\"\"\"`` is stripped by TOML, so we add one
+    so the body starts on its own line for readability. Triple-quoted
+    strings still process backslash escapes; we only need to escape any
+    literal triple-quote sequence in the body.
+    """
+    escaped = value.replace('\\', '\\\\').replace('"""', '\\"\\"\\"')
+    return '"""\n{}\n"""'.format(escaped)
+
+
+def _toml_wrapped_string(parts, separator=' '):
+    """Format a long single-line string as a TOML triple-quoted block where
+    every line is joined with ``separator`` at parse time.
+
+    Uses TOML's ``\\`` line-continuation: a backslash at the end of a line
+    inside a multi-line basic string strips the line terminator and any
+    leading whitespace on the next line. We separate the chunks with
+    ``\\<newline><spaces><continuation>`` so a TOML parser reconstructs
+    the original ``separator``-joined string while a human sees one chunk
+    per line in the source.
+    """
+    if not parts:
+        return _toml_string('')
+    # Each chunk is escaped just like _toml_string would, but we keep
+    # newlines intact (they're explicit \\<newline>s in our output, not
+    # data). Triple-quoted strings interpret backslash escapes the same
+    # way basic strings do.
+    escaped_parts = [
+        p.replace('\\', '\\\\').replace('"""', '\\"\\"\\"')
+        for p in parts
+    ]
+    body = '{sep}\\\n'.format(sep=separator).join(escaped_parts)
+    return '"""\\\n{body}\\\n"""'.format(body=body)
 
 
 def _toml_inline_array(items):
@@ -246,6 +354,230 @@ def _windows_to_deno_shell(command_str):
     return ''.join(out)
 
 
+# Body for the no-op prepare task. Doubles as the
+# converted-from-anaconda-project marker (downstream tooling looks for
+# the `prepare` task name to detect a converted project) and gives the
+# task something visible to print when there are no downloads to fetch.
+_PREPARE_MARKER_ECHO = 'echo "Running migrated anaconda-project prepare task..."'
+
+# Helper script written next to pixi.toml during conversion; see
+# anaconda_project/internal/ap_download.py for the source. Prepare tasks
+# invoke it via `python ap_download.py <url> <filename> [<description>]`
+# rather than inlining the urllib calls — keeps the TOML readable, and the
+# script can grow over time without bloating the manifest.
+DOWNLOAD_HELPER_FILENAME = 'ap_download.py'
+
+
+def _has_python(specs):
+    """Return True if any spec in ``specs`` declares the ``python`` package.
+
+    Specs may be channel-prefixed (``conda-forge::python``) or version-
+    constrained (``python=3.11``, ``python>=3.10``) — strip the metadata
+    before comparing.
+    """
+    for spec in specs:
+        name, _ = _conda_spec_to_pixi(spec)
+        if name == 'python':
+            return True
+    return False
+
+
+def _shell_quote(value):
+    """Quote a string for safe inclusion in a deno_task_shell argv.
+
+    Wrap with double quotes and escape only the characters that have
+    special meaning inside a double-quoted token: ``"``, ``\\``, ``$``,
+    and backtick. Anything else (including spaces, single quotes, and
+    glob characters) survives unchanged.
+    """
+    escaped = (value
+               .replace('\\', '\\\\')
+               .replace('"', '\\"')
+               .replace('$', '\\$')
+               .replace('`', '\\`'))
+    return '"{}"'.format(escaped)
+
+
+def _build_prepare_command(downloads):
+    """Build a multi-line shell command that runs the download helper script
+    once per anaconda-project download entry.
+
+    The helper (``ap_download.py``) is written alongside the pixi.toml at
+    conversion time; we just emit ``python ap_download.py <args>`` for each
+    download. The marker echo is omitted here because the helper's own
+    ``[prepare] ...`` log lines are more informative — and because pixi
+    bundles the marker echo and the first python invocation onto a single
+    banner line, smashing them visually. Detection of "is this a converted
+    anaconda-project?" still works via the task name `prepare`.
+    """
+    lines = []
+    for description, url, filename in downloads:
+        # `python3` (not `python`) so the helper resolves to system python
+        # when the env doesn't declare its own. anaconda-project's yml may
+        # not include python in every env_spec, and ap_download.py is pure
+        # stdlib, so we don't need a project-specific interpreter.
+        lines.append('python3 {script} {url} {path} {desc}'.format(
+            script=DOWNLOAD_HELPER_FILENAME,
+            url=_shell_quote(url),
+            path=_shell_quote(filename),
+            desc=_shell_quote(description),
+        ))
+    return '\n'.join(lines)
+
+
+# Per-mode HTTP option tables. Each entry is (jinja_var, gate, body):
+#   * jinja_var: variable name declared in pixi `args` and referenced by
+#     {% if %} gates and {{ }} substitutions in the body.
+#   * gate: 'pos' renders body when the var is truthy ({% if var %}),
+#     'neg' renders body when the var is falsy ({% if not var %}). The
+#     latter is for bokeh's --show flag, which is the *inverse* of the
+#     anaconda-project --no-browser semantics.
+#   * body: the rendered chunk; may contain {{ var }} for value
+#     substitution. Templated and gated by _wrap_gate at emit time.
+#
+# Each table is curated to match the per-tool transforms in
+# anaconda_project/project_commands.py (_BokehArgsTransformer and
+# _NotebookArgsTransformer); see HTTP_SPECS there for the source list.
+_HTTP_GENERIC = (
+    ('host',         'pos', '--anaconda-project-host {{ host }}'),
+    ('port',         'pos', '--anaconda-project-port {{ port }}'),
+    ('address',      'pos', '--anaconda-project-address {{ address }}'),
+    ('url_prefix',   'pos', '--anaconda-project-url-prefix {{ url_prefix }}'),
+    ('iframe_hosts', 'pos', '--anaconda-project-iframe-hosts {{ iframe_hosts }}'),
+    ('no_browser',   'pos', '--anaconda-project-no-browser'),
+    ('use_xheaders', 'pos', '--anaconda-project-use-xheaders'),
+)
+
+_HTTP_BOKEH = (
+    ('host',         'pos', '--host {{ host }}'),
+    ('port',         'pos', '--port {{ port }}'),
+    ('address',      'pos', '--address {{ address }}'),
+    # bokeh renames --anaconda-project-url-prefix to --prefix.
+    ('url_prefix',   'pos', '--prefix {{ url_prefix }}'),
+    # iframe_hosts: bokeh has no equivalent; the original transformer
+    # drops it silently, so we omit it from the args declaration too.
+    # `--show` is bokeh's "open browser" flag — the inverse of
+    # anaconda-project's --no-browser, hence the negative gate.
+    ('no_browser',   'neg', '--show'),
+    ('use_xheaders', 'pos', '--use-xheaders'),
+)
+
+# Notebook iframe_hosts requires a Python dict literal embedded as a
+# tornado_settings value carrying a Content-Security-Policy header. The
+# original transformer prepends 'self' to the host list; we mirror that.
+_NOTEBOOK_IFRAME_BODY = (
+    "--NotebookApp.tornado_settings="
+    "{ 'headers': { 'Content-Security-Policy': "
+    "\"frame-ancestors 'self' {{ iframe_hosts }}\" } }"
+)
+
+_HTTP_NOTEBOOK = (
+    # host: jupyter has no host-restrict equivalent; original drops it.
+    ('port',         'pos', '--port {{ port }}'),
+    ('address',      'pos', '--ip {{ address }}'),
+    # url_prefix renames to --NotebookApp.base_url. The original
+    # transformer comments that the two-arg (space-separated) form is
+    # rejected here — only the `--key=value` form works — so we render
+    # it that way.
+    ('url_prefix',   'pos', '--NotebookApp.base_url={{ url_prefix }}'),
+    ('iframe_hosts', 'pos', _NOTEBOOK_IFRAME_BODY),
+    ('no_browser',   'pos', '--no-browser'),
+    ('use_xheaders', 'pos', '--NotebookApp.trust_xheaders=True'),
+)
+
+
+def _wrap_gate(gate, var, body):
+    """Wrap a chunk body in the appropriate Jinja conditional."""
+    if gate == 'pos':
+        return '{{% if {var} %}}{body}{{% endif %}}'.format(var=var, body=body)
+    if gate == 'neg':
+        return '{{% if not {var} %}}{body}{{% endif %}}'.format(var=var, body=body)
+    return body
+
+
+def _notebook_default_url_chunk(notebook_path):
+    """Build the unconditional --NotebookApp.default_url=... prefix that
+    anaconda-project's _NotebookArgsTransformer prepends to every jupyter
+    invocation. URL-quoted basename, matching the original behavior."""
+    from urllib.parse import quote
+    basename = os.path.basename(notebook_path)
+    return '--NotebookApp.default_url=/notebooks/{}'.format(quote(basename))
+
+# Match `{{ name }}` / `{{name}}` Jinja variable references. Used when
+# supports_http_options is false to discover which HTTP vars the user's
+# templated unix line actually consumes; we only declare pixi args for
+# those, not the full set.
+_JINJA_VAR_RE = re.compile(r'\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}')
+
+
+def _http_args_for_command(command):
+    """Return the list of jinja var names to emit as pixi ``args``,
+    plus a list of cmd chunks to append.
+
+    Three dispatch paths, mirroring anaconda-project's per-tool
+    transformers in ``project_commands.py``:
+
+    * ``command.notebook is not None`` → the command was a converted
+      ``notebook:`` shorthand (now ``jupyter notebook <file>``). Use
+      the Jupyter-specific flag mapping (``--ip`` for address,
+      ``--NotebookApp.*`` for prefix/iframe/xheaders, drop host).
+    * ``command.bokeh_app is not None`` → converted ``bokeh_app:``
+      shorthand (now ``bokeh serve <app>``). Use bokeh's bare flags
+      (``--host``, ``--port``, ``--address``, ``--show`` as the
+      *inverse* of ``--no-browser``, ``--use-xheaders``).
+    * Otherwise (``supports_http_options: true`` on a plain
+      ``unix:`` command) → pass ``--anaconda-project-X`` through
+      verbatim so the underlying tool can pick up what it understands.
+
+    For ``supports_http_options: false``, scan the user's templated
+    unix line for HTTP Jinja vars and declare pixi args only for those;
+    the cmd template is left unchanged.
+    """
+    if command.supports_http_options:
+        if command.notebook is not None:
+            table = _HTTP_NOTEBOOK
+            preamble = [_notebook_default_url_chunk(command.notebook)]
+        elif command.bokeh_app is not None:
+            table = _HTTP_BOKEH
+            preamble = []
+        else:
+            table = _HTTP_GENERIC
+            preamble = []
+
+        chunks = list(preamble)
+        for var, gate, body in table:
+            chunks.append(_wrap_gate(gate, var, body))
+        args = [var for var, _, _ in table]
+        return args, chunks
+
+    # supports_http_options is false — only declare pixi args for vars
+    # the templated unix line actually references.
+    cmd = command.unix_shell_commandline or ''
+    # The full superset of HTTP-related Jinja var names a user might
+    # reference. Drawn from every per-tool table.
+    all_http_vars = {var for var, _, _ in _HTTP_GENERIC}
+    referenced = []
+    seen = set()
+    for match in _JINJA_VAR_RE.finditer(cmd):
+        name = match.group(1)
+        if name in seen or name not in all_http_vars:
+            continue
+        seen.add(name)
+        referenced.append(name)
+    return referenced, []
+
+
+def _format_args_block(args):
+    """Render a pixi ``args = [...]`` line. Defaults are always empty —
+    the cmd template uses ``{% if var %}`` gating, so an empty value means
+    the flag is omitted at run time. ``pixi run task value-for-port`` (or
+    similar positional override) sets the var."""
+    if not args:
+        return None
+    parts = ['{{ arg = "{}", default = "" }}'.format(var) for var in args]
+    return 'args = [{}]'.format(', '.join(parts))
+
+
 def _command_to_task(command, declared_vars):
     """Convert a ProjectCommand to a pixi task string or None.
 
@@ -256,10 +588,11 @@ def _command_to_task(command, declared_vars):
     keep the unix form (the deno_task_shell-native one) and surface the
     divergence in a comment so a maintainer can review.
 
-    Returns ``(task_cmd_string, raw_cmd_string, comments)``. ``raw_cmd_string``
-    is the pre-translation form, useful for comparing against
-    ``command.description`` (which anaconda-project synthesizes from the raw
-    command when the user hasn't supplied one).
+    Returns ``(task_cmd_string, raw_cmd_string, comments, args_line)``.
+    ``raw_cmd_string`` is the pre-translation form, useful for comparing
+    against ``command.description``. ``args_line`` is the formatted
+    pixi ``args = [...]`` declaration (or None if the command needs no
+    pixi args).
     """
     comments = []
     # raw_forms holds every string that anaconda-project might use as the
@@ -284,10 +617,26 @@ def _command_to_task(command, declared_vars):
         raw_forms.append(raw_cmd)
         comments.append('translated from windows-only command')
     else:
-        return None, None, comments
+        return None, None, comments, None
 
     translated, unresolved = _translate_command_env_vars(raw_cmd, declared_vars)
     translated = _strip_conda_prefix_paths(translated)
+
+    # Compose http-options support: append --anaconda-project-* flags
+    # (gated by Jinja conditionals) when supports_http_options is true,
+    # or just declare pixi args for whatever {{vars}} the user already
+    # referenced when it's false. Append-chunks render as a wrapped
+    # multi-line TOML string so the file stays readable, but parse to a
+    # single shell command at run time.
+    http_arg_vars, http_chunks = _http_args_for_command(command)
+    if http_chunks:
+        cmd_rendered = _toml_wrapped_string([translated, *http_chunks])
+        # For windows-divergence comparison and any other plain-text use,
+        # keep `translated` as the already-joined single-line form.
+        translated = ' '.join([translated, *http_chunks])
+    else:
+        cmd_rendered = _toml_string(translated)
+    args_line = _format_args_block(http_arg_vars)
 
     # If both forms exist, check that the windows line doesn't say something
     # the unix line doesn't — pixi can't run two variants of the same task,
@@ -308,7 +657,7 @@ def _command_to_task(command, declared_vars):
         comments.append(
             'unresolved env var(s): {} — set them via [activation.env] or '
             'before running pixi'.format(', '.join(unresolved)))
-    return translated, raw_forms, comments
+    return cmd_rendered, raw_forms, comments, args_line
 
 
 def export_pixi_toml(project):
@@ -323,7 +672,14 @@ def export_pixi_toml(project):
     lines = []
 
     # -- [workspace] metadata, channels, and platforms
-    # Collect channels from all env specs (union, preserving order)
+    # Collect channels from all env specs (union, preserving order). Pixi
+    # has no `defaults` meta-channel and no notion of channel aliases that
+    # match conda's, so we expand any `defaults` reference into the URLs
+    # that conda would resolve it to. When the project declares no
+    # channels at all, we fall back to those same default URLs rather
+    # than hard-coding conda-forge — that preserves whatever the user's
+    # conda environment treats as default (which may be an enterprise
+    # mirror configured via .condarc).
     all_channels = []
     seen_channels = set()
     for env in project.env_specs.values():
@@ -332,6 +688,13 @@ def export_pixi_toml(project):
                 all_channels.append(ch)
                 seen_channels.add(ch)
 
+    needs_defaults = (not all_channels) or ('defaults' in all_channels)
+    default_channels = _resolve_default_channels() if needs_defaults else None
+    if not all_channels:
+        all_channels = list(default_channels)
+    elif 'defaults' in all_channels:
+        all_channels = _expand_defaults_in_channels(all_channels, default_channels)
+
     # Collect platforms (union)
     all_platforms = set()
     for env in project.env_specs.values():
@@ -339,27 +702,29 @@ def export_pixi_toml(project):
     if not all_platforms:
         all_platforms = {'linux-64'}
 
-    lines.append('[workspace]')
-    lines.append('name = {}'.format(_toml_string(project.name)))
-    if project.description:
-        lines.append('description = {}'.format(_toml_string(project.description)))
-    if all_channels:
-        lines.append('channels = {}'.format(_toml_inline_array(all_channels)))
-    else:
-        lines.append('channels = ["conda-forge"]')
-    lines.append('platforms = {}'.format(_toml_inline_array(sorted(all_platforms))))
-    lines.append('')
-
     # -- Determine if we need features (multiple env specs)
     env_specs = project.env_specs
     has_multiple_envs = len(env_specs) > 1 or (len(env_specs) == 1 and 'default' not in env_specs)
 
+    # Placeholder for a warning prefix; populated below once we know
+    # whether any download-needing env lacks python. We insert it at the
+    # top of the file so it's the first thing a maintainer sees.
+    warning_prefix_index = len(lines)
+
+    lines.append('[workspace]')
+    lines.append('name = {}'.format(_toml_string(project.name)))
+    if project.description:
+        lines.append('description = {}'.format(_toml_string(project.description)))
+    lines.append('channels = {}'.format(_toml_inline_array(all_channels)))
+    lines.append('platforms = {}'.format(_toml_inline_array(sorted(all_platforms))))
+    lines.append('')
+
     # -- Collect global (inherited by all) packages
-    # The anonymous base spec's packages are the global ones.
-    # In the project model, these are the top-level packages/channels.
-    # env_spec.conda_packages includes inherited, so we find the common set.
+    # Find packages common to every env_spec — these go in the top-level
+    # [dependencies] (i.e. pixi's default feature) and every named env
+    # inherits them. Anything env-specific lands in [feature.X.dependencies]
+    # below.
     if has_multiple_envs:
-        # Find packages common to all env specs (the global/inherited ones)
         all_conda = None
         all_pip = None
         for env in env_specs.values():
@@ -371,17 +736,67 @@ def export_pixi_toml(project):
             else:
                 all_conda &= conda_set
                 all_pip &= pip_set
-
         global_conda = sorted(all_conda) if all_conda else []
         global_pip = sorted(all_pip) if all_pip else []
     elif env_specs:
-        # Single env — everything is global
         env = list(env_specs.values())[0]
         global_conda = list(env.conda_packages)
         global_pip = list(env.pip_packages)
     else:
         global_conda = []
         global_pip = []
+
+    # If the user has an env_spec literally named `default`, fold its
+    # packages into the global set — they belong to pixi's default feature,
+    # not a separate `[feature.default.dependencies]` block (which would
+    # be unreachable since we don't redeclare the default env below).
+    if has_multiple_envs and 'default' in env_specs:
+        default_env = env_specs['default']
+        for spec in default_env.conda_packages:
+            if spec not in global_conda:
+                global_conda.append(spec)
+        for spec in default_env.pip_packages:
+            if spec not in global_pip:
+                global_pip.append(spec)
+
+    # Compute downloads per env now so we can both emit prepare task
+    # bodies below and warn the caller about envs that lack python.
+    downloads_per_env = {}
+    for env_name in env_specs:
+        env_downloads = []
+        for req in project.requirements(env_name):
+            if isinstance(req, DownloadRequirement):
+                # Prefer the user-supplied description from the yml; fall
+                # back to the env_var name when the user didn't write one.
+                description = req.options.get('description') or req.env_var
+                env_downloads.append((description, req.url, req.filename))
+        if env_downloads:
+            downloads_per_env[env_name] = env_downloads
+
+    # Identify envs that need ap_download.py but don't declare python.
+    # The helper is pure stdlib so it'll work with system `python3`, but
+    # the user should know they're depending on something outside the
+    # env. Insert a warning comment at the top of the file (above
+    # [workspace]) so it's the first thing a maintainer sees.
+    envs_relying_on_system_python = []
+    if downloads_per_env and not _has_python(global_conda):
+        for env_name in downloads_per_env:
+            env = env_specs[env_name]
+            if not _has_python(env.conda_packages):
+                envs_relying_on_system_python.append(env_name)
+
+    if envs_relying_on_system_python:
+        warning = [
+            '# WARNING: prepare task uses system python3 to run ap_download.py.',
+            '# The following env(s) declare downloads but no python package:',
+        ]
+        for env_name in envs_relying_on_system_python:
+            warning.append('#   {}'.format(env_name))
+        warning.append(
+            '# Add `python` to the env_spec(s) above if you want a sandboxed '
+            'interpreter.')
+        warning.append('')
+        lines[warning_prefix_index:warning_prefix_index] = warning
 
     # Write global dependencies
     _write_dependencies(lines, global_conda, global_pip)
@@ -407,8 +822,10 @@ def export_pixi_toml(project):
         global_conda_set = set(global_conda)
         global_pip_set = set(global_pip)
 
-        for env_name, env in sorted(env_specs.items()):
-            if env_name == 'default' and not (set(env.conda_packages) - global_conda_set):
+        for env_name, env in env_specs.items():
+            # `default` is folded into the global default feature above —
+            # nothing to emit as a separate [feature.default.X] block.
+            if env_name == 'default':
                 continue
 
             extra_conda = [p for p in env.conda_packages if p not in global_conda_set]
@@ -434,13 +851,25 @@ def export_pixi_toml(project):
                     lines.append('')
 
         # -- [environments] section
+        # Emit envs in the order they appear in anaconda-project.yml so
+        # downstream tooling can identify the project's intended default
+        # env_spec by reading the first entry. Common packages live in
+        # top-level [dependencies] (the default feature) and every named
+        # env inherits them.
+        #
+        # If the user happened to name one of their env_specs `default`,
+        # we comment its slot rather than declare it — pixi already
+        # materializes a `default` environment from the default feature,
+        # and re-declaring it would either no-op or fight that machinery.
+        # The comment preserves position so callers reading the first
+        # uncommented entry still get the user's first non-default env.
         lines.append('[environments]')
-        for env_name in sorted(env_specs):
+        for env_name in env_specs:
             if env_name == 'default':
-                lines.append('default = { solve-group = "default" }')
+                lines.append('# default  (pixi creates this implicitly from the default feature)')
             else:
                 pixi_env_name = _sanitize_env_name(env_name)
-                lines.append('{name} = {{ features = ["{name}"], solve-group = "default" }}'.format(name=pixi_env_name))
+                lines.append('{name} = {{ features = ["{name}"] }}'.format(name=pixi_env_name))
         lines.append('')
 
     # -- Collect every env var the project declares, so command-string
@@ -467,26 +896,30 @@ def export_pixi_toml(project):
             else:
                 global_tasks.append((cmd_name, command))
 
-        if global_tasks:
-            lines.append('[tasks]')
-            for cmd_name, command in global_tasks:
-                task_cmd, raw_forms, comments = _command_to_task(command, declared_vars)
-                if task_cmd is None:
-                    lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
-                    continue
-                desc = command.description
-                has_desc = desc and desc != cmd_name and desc not in (raw_forms or [])
-                for comment in comments:
-                    lines.append('# {}'.format(comment))
-                if has_desc:
-                    lines.append('{} = {{ cmd = {}, description = {} }}'.format(
-                        cmd_name, _toml_string(task_cmd), _toml_string(desc)))
-                else:
-                    lines.append('{} = {}'.format(cmd_name, _toml_string(task_cmd)))
+        for cmd_name, command in global_tasks:
+            task_cmd, raw_forms, comments, args_line = _command_to_task(
+                command, declared_vars)
+            if task_cmd is None:
+                lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
+                continue
+            desc = command.description
+            has_desc = desc and desc != cmd_name and desc not in (raw_forms or [])
+            for comment in comments:
+                lines.append('# {}'.format(comment))
+            # Always use the explicit [tasks.X] form. The shorthand
+            # `name = "cmd"` doesn't allow args, and consistency reads
+            # better than mixing two forms.
+            lines.append('[tasks.{}]'.format(cmd_name))
+            lines.append('cmd = {}'.format(task_cmd))
+            if has_desc:
+                lines.append('description = {}'.format(_toml_string(desc)))
+            if args_line:
+                lines.append(args_line)
             lines.append('')
 
         for cmd_name, command in feature_tasks:
-            task_cmd, raw_forms, comments = _command_to_task(command, declared_vars)
+            task_cmd, raw_forms, comments, args_line = _command_to_task(
+                command, declared_vars)
             if task_cmd is None:
                 lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
                 continue
@@ -496,26 +929,57 @@ def export_pixi_toml(project):
             has_desc = desc and desc != cmd_name and desc not in (raw_forms or [])
             section = 'feature.{}.tasks.{}'.format(pixi_env_name, cmd_name)
             lines.append('[{}]'.format(section))
-            lines.append('cmd = {}'.format(_toml_string(task_cmd)))
+            lines.append('cmd = {}'.format(task_cmd))
             if has_desc:
                 lines.append('description = {}'.format(_toml_string(desc)))
+            if args_line:
+                lines.append(args_line)
             for comment in comments:
                 lines.append('# {}'.format(comment))
             lines.append('')
 
-    # -- Downloads as comments (no pixi equivalent)
-    downloads = {}
-    for env_name in env_specs:
-        for req in project.requirements(env_name):
-            if isinstance(req, DownloadRequirement):
-                downloads[req.env_var] = req.url
+    # -- `prepare` task
+    # Always emit a `prepare` task on a converted project. Two reasons:
+    #   1. Mirror anaconda-project's `prepare` semantics for the default
+    #      env: fetch any declared downloads.
+    #   2. When the default env_spec has a non-default name (e.g.
+    #      `sampleproj`), pixi has no native way to bind a default
+    #      task to that env. Scoping `prepare` to the env's feature
+    #      forces `pixi run prepare` to resolve to that env, which
+    #      makes it a useful "select the right env" entry point even
+    #      when there are no downloads to fetch.
+    # The task name itself doubles as a marker — downstream tooling can
+    # detect "this pixi.toml was converted from anaconda-project.yml"
+    # by looking for the `prepare` task.
+    if 'default' in env_specs:
+        default_source = 'default'
+    elif project.default_env_spec_name in env_specs:
+        default_source = project.default_env_spec_name
+    elif env_specs:
+        default_source = next(iter(env_specs))
+    else:
+        default_source = None
 
-    if downloads:
-        lines.append('# Downloads from anaconda-project.yml (no pixi equivalent).')
-        lines.append('# Consider adding setup tasks to fetch these:')
-        for var_name, url in sorted(downloads.items()):
-            lines.append('#   {} = {}'.format(var_name, url))
-        lines.append('')
+    if default_source in downloads_per_env:
+        prepare_body = _toml_multiline_string(
+            _build_prepare_command(downloads_per_env[default_source]))
+    else:
+        # No downloads — the task is a no-op echo. Acts as the
+        # converted-project marker and (when scoped to a feature) as
+        # the env-selection entry point.
+        prepare_body = _toml_string(_PREPARE_MARKER_ECHO)
+
+    # Multi-env: scope to the default env's feature so `pixi run prepare`
+    # auto-resolves to that env. When the default is the literal
+    # `default`, fold to the global default feature — pixi's implicit
+    # default env picks it up.
+    if has_multiple_envs and default_source and default_source != 'default':
+        pixi_env_name = _sanitize_env_name(default_source)
+        lines.append('[feature.{}.tasks.prepare]'.format(pixi_env_name))
+    else:
+        lines.append('[tasks.prepare]')
+    lines.append('cmd = {}'.format(prepare_body))
+    lines.append('')
 
     # -- Services as comments
     services = {}
