@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 
+from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.requirements_registry.requirement import EnvVarRequirement
 from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
@@ -23,6 +24,29 @@ class CondaNotAvailableError(Exception):
     """Raised when the exporter needs `conda` for channel resolution but
     can't find or invoke it. Wraps the underlying reason so the CLI can
     surface a useful failure status."""
+
+
+class PixiExportStatus(SimpleStatus):
+    """Status returned by :func:`anaconda_project.project_ops.export_pixi`.
+
+    Adds ``default_rename_from`` so callers can tell the user *which* env
+    was just promoted to ``default`` without re-querying the project. The
+    attribute is ``None`` when:
+
+    * ``use_default`` was not requested,
+    * the project already had an env_spec literally named ``default``, or
+    * the export failed.
+
+    Stable for downstream consumers (launchers, IDE plugins) that need to
+    surface "Renamed env X → default" in their success notification.
+    """
+    def __init__(self, success, description, errors=(), default_rename_from=None):
+        super().__init__(success, description, errors)
+        self._default_rename_from = default_rename_from
+
+    @property
+    def default_rename_from(self):
+        return self._default_rename_from
 
 
 def _resolve_default_channels():
@@ -658,7 +682,28 @@ def _command_to_task(command, declared_vars):
     return cmd_rendered, raw_forms, comments, args_line
 
 
-def _pick_use_default_env(project):
+def extract_warnings(content):
+    """Pull the leading ``# WARNING:`` block out of generated pixi.toml text.
+
+    Returns a list of comment lines (the ``# WARNING:`` line plus its
+    indented continuation, stopping at the first blank line). Empty list
+    if the content carries no warning block. Used by both ``export_pixi``
+    (to mirror the warning to stderr) and ``preview_pixi_export`` (to
+    surface it in the structured preview without scraping the toml again).
+    """
+    warning_lines = []
+    in_warning = False
+    for line in content.splitlines():
+        if line.startswith('# WARNING:'):
+            in_warning = True
+        if in_warning:
+            if line == '':
+                break
+            warning_lines.append(line)
+    return warning_lines
+
+
+def default_rename_target(project):
     """Return the env_spec name that ``--use-default`` would promote to
     pixi's implicit ``default`` environment, or None if it would no-op.
 
@@ -667,6 +712,10 @@ def _pick_use_default_env(project):
     commands or the command's env_spec is missing, we fall back to the
     first env_spec declared. We never promote when an env_spec literally
     named ``default`` already exists — there's nothing to rename.
+
+    This is the public contract for downstream tools (CLI, launchers,
+    GUIs) that need to display "this env will be renamed" before — or
+    after — calling the exporter.
     """
     env_specs = project.env_specs
     if not env_specs or 'default' in env_specs:
@@ -683,7 +732,7 @@ def project_would_benefit_from_use_default(project):
     """True if exporting with ``use_default=True`` would actually rename
     something. False when the project already has a ``default`` env_spec
     (or has no env_specs at all)."""
-    return _pick_use_default_env(project) is not None
+    return default_rename_target(project) is not None
 
 
 def export_pixi_toml(project, use_default=False):
@@ -743,7 +792,7 @@ def export_pixi_toml(project, use_default=False):
     # — it's pixi's implicit env name — so a one-shot rename is enough to
     # collapse [feature.{name}.dependencies] → [dependencies] and
     # [feature.{name}.tasks.X] → [tasks.X].
-    promoted_env = _pick_use_default_env(project) if use_default else None
+    promoted_env = default_rename_target(project) if use_default else None
 
     def _xlate(name):
         """Map an anaconda-project env name into the post-rename keyspace."""

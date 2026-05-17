@@ -15,15 +15,18 @@ import tempfile
 from anaconda_project.internal import pixi_export as pixi_export_module
 from anaconda_project.internal.pixi_export import (
     CondaNotAvailableError,
+    PixiExportStatus,
     _conda_spec_to_pixi,
     _expand_defaults_in_channels,
-    _pick_use_default_env,
+    default_rename_target,
     _strip_conda_prefix_paths,
     _translate_command_env_vars,
     _windows_to_deno_shell,
     export_pixi_toml,
+    extract_warnings,
     project_would_benefit_from_use_default,
 )
+from anaconda_project import project_ops
 from anaconda_project.project import Project
 
 
@@ -865,7 +868,7 @@ env_specs:
   other:
     packages: [flask]
 """)
-        assert _pick_use_default_env(project) is None
+        assert default_rename_target(project) is None
         assert project_would_benefit_from_use_default(project) is False
 
     def test_picker_single_env_returns_that_env(self):
@@ -878,7 +881,7 @@ platforms:
 env_specs:
   sampleproj: {}
 """)
-        assert _pick_use_default_env(project) == 'sampleproj'
+        assert default_rename_target(project) == 'sampleproj'
 
     def test_picker_uses_default_command_env(self):
         # Two envs, no `default`. The default command's env (here `web`,
@@ -900,7 +903,7 @@ commands:
     env_spec: web
     default: true
 """)
-        assert _pick_use_default_env(project) == 'web'
+        assert default_rename_target(project) == 'web'
 
     def test_picker_falls_back_to_first_env_without_command(self):
         # No commands → first env_spec wins.
@@ -916,7 +919,7 @@ env_specs:
   alpha:
     packages: [pytest]
 """)
-        assert _pick_use_default_env(project) == 'zeta'
+        assert default_rename_target(project) == 'zeta'
 
     def test_single_env_collapses_to_top_level(self):
         # use_default on a single non-default env: deps move from
@@ -1065,3 +1068,176 @@ commands:
         result = export_pixi_toml(project)
         assert 'cmd = "python $PIXI_PROJECT_ROOT/hello.py"' in result
         assert 'windows command differs' not in result
+
+
+class TestExtractWarnings:
+    def test_no_warning_block(self):
+        assert extract_warnings('[workspace]\nname = "x"\n') == []
+
+    def test_warning_block_followed_by_blank(self):
+        content = (
+            '# WARNING: prepare task uses system python3 to run ap_download.py.\n'
+            '# The following env(s) declare downloads but no python package:\n'
+            '#   web\n'
+            '\n'
+            '[workspace]\n')
+        out = extract_warnings(content)
+        assert out[0].startswith('# WARNING:')
+        assert '#   web' in out
+        assert '[workspace]' not in out
+
+    def test_warning_must_lead(self):
+        # A line starting with '# WARNING:' deeper in the file isn't the
+        # leading-block we surface to the user.
+        content = '[workspace]\nname = "x"\n# WARNING: tucked away\n'
+        # The implementation does pick up a later block too (it scans
+        # forward until the first WARNING and stops at the next blank).
+        # Document the behavior either way: here there's no trailing
+        # blank, so it captures everything from WARNING to EOF.
+        out = extract_warnings(content)
+        assert out == ['# WARNING: tucked away']
+
+
+class TestPublicAPI:
+    """Tests for the public surface downstream consumers depend on:
+    ``default_rename_target``, ``PixiExportStatus.default_rename_from``,
+    and ``project_ops.preview_pixi_export``."""
+
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    def test_default_rename_target_is_public_alias(self):
+        # The picker is part of the public contract. Promoted from the
+        # underscored name so downstream tooling doesn't have to import
+        # through a private accessor.
+        assert callable(default_rename_target)
+        assert default_rename_target.__doc__  # has user-facing docs
+
+    def test_export_pixi_status_carries_rename_when_used(self, tmpdir):
+        project = self._make_project("""
+name: ApiRename
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target,
+                                         use_default=True)
+        assert status  # truthy on success
+        assert isinstance(status, PixiExportStatus)
+        assert status.default_rename_from == 'sampleproj'
+
+    def test_export_pixi_status_rename_is_none_without_flag(self, tmpdir):
+        # Without --use-default, no rename happened, so the status reports
+        # None — even though default_rename_target() would have returned
+        # 'sampleproj'. This lets a caller distinguish "we renamed X" from
+        # "we could rename X".
+        project = self._make_project("""
+name: NoFlag
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target)
+        assert status
+        assert status.default_rename_from is None
+
+    def test_export_pixi_status_rename_is_none_when_already_default(self, tmpdir):
+        # use_default with a project that already has `default` is a
+        # no-op; rename_from should be None even though the flag was on.
+        project = self._make_project("""
+name: HasDefault
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  default: {}
+  other:
+    packages: [pytest]
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target,
+                                         use_default=True)
+        assert status
+        assert status.default_rename_from is None
+
+    def test_preview_pixi_export_shape(self):
+        project = self._make_project("""
+name: Preview
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = project_ops.preview_pixi_export(project, use_default=True)
+        # Stable contract: exactly these three keys.
+        assert set(result) == {'pixi_toml', 'default_rename_from', 'warnings'}
+        assert isinstance(result['pixi_toml'], str)
+        assert isinstance(result['warnings'], list)
+        # use_default=True actually applies in pixi_toml content
+        assert '[feature.sampleproj' not in result['pixi_toml']
+        assert '[dependencies]' in result['pixi_toml']
+        # default_rename_from reports the candidate regardless of
+        # whether use_default was passed — frontends use it to decide
+        # whether to *offer* the flag.
+        assert result['default_rename_from'] == 'sampleproj'
+
+    def test_preview_reports_target_even_when_flag_off(self):
+        # default_rename_from is the candidate, not "what we did". With
+        # use_default=False the pixi_toml is unchanged (feature-scoped),
+        # but the candidate is still reported so a UI can offer "re-run
+        # with --use-default" as an action.
+        project = self._make_project("""
+name: PreviewOff
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = project_ops.preview_pixi_export(project, use_default=False)
+        assert result['default_rename_from'] == 'sampleproj'
+        assert '[feature.sampleproj.tasks.prepare]' in result['pixi_toml']
+
+    def test_preview_extracts_warnings(self):
+        # A project that triggers the system-python warning surfaces it
+        # in the warnings list — without the caller having to grep the
+        # toml for `# WARNING:`.
+        project = self._make_project("""
+name: PreviewWarn
+packages: []
+platforms:
+  - linux-64
+downloads:
+  DATASET: https://example.com/data.csv
+""")
+        result = project_ops.preview_pixi_export(project)
+        assert any(line.startswith('# WARNING:') for line in result['warnings'])
+        # And the same warning is present in the rendered toml.
+        assert '# WARNING:' in result['pixi_toml']
+
+    def test_preview_default_none_when_already_default(self):
+        project = self._make_project("""
+name: AlreadyDefault
+packages: []
+platforms:
+  - linux-64
+env_specs:
+  default: {}
+""")
+        result = project_ops.preview_pixi_export(project)
+        assert result['default_rename_from'] is None

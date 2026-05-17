@@ -22,23 +22,21 @@ def export_pixi(project_dir, filename, use_default=False):
     # Default to writing pixi.toml in the project directory
     if filename == 'pixi.toml' and not os.path.isabs(filename):
         filename = os.path.join(project_dir, filename)
-    from anaconda_project.internal.pixi_export import _pick_use_default_env
-    promoted = _pick_use_default_env(project)
     status = project_ops.export_pixi(project, filename=filename, use_default=use_default)
     if status:
         print(status.status_description)
-        # When the project has no env_spec literally named `default`, the
-        # exporter wraps every dep/task/prepare in [feature.{name}.*]
-        # blocks. Renaming the project's "primary" env (the default
-        # command's, or the first declared env_spec) to `default` collapses
-        # those into top-level pixi sections — much cleaner. Tell the user
-        # what we did when the flag is on; recommend it when it's off.
-        if promoted is not None:
-            if use_default:
-                print(
-                    'The "{}" environment has been renamed "default" in the '
-                    'exported Pixi specification.'.format(promoted))
-            else:
+        # When --use-default actually promoted an env, the status carries
+        # the original name in default_rename_from; surface it so the user
+        # can see what we did. When the user didn't pass the flag but the
+        # project would benefit, recommend it.
+        if use_default and status.default_rename_from:
+            print(
+                'The "{}" environment has been renamed "default" in the '
+                'exported Pixi specification.'.format(status.default_rename_from))
+        elif not use_default:
+            from anaconda_project.internal.pixi_export import default_rename_target
+            promoted = default_rename_target(project)
+            if promoted is not None:
                 print(
                     'Recommendation: re-run using the --use-default flag to '
                     'rename the "{}" environment to "default". This will '
