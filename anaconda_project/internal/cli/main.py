@@ -406,6 +406,14 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser('export-pixi', help="Export the project as a pixi.toml file")
     add_directory_arg(preset)
     preset.add_argument('filename', metavar='PIXI_TOML_FILE', nargs='?', default='pixi.toml')
+    preset.add_argument('--use-default',
+                        action='store_true',
+                        default=False,
+                        help=("If the project has no env_spec named 'default', rename the "
+                              "default-command's env_spec (or the first one declared) to "
+                              "'default' on export. Collapses [feature.{name}.*] blocks "
+                              "into top-level [dependencies] / [tasks.X] for a cleaner "
+                              "pixi.toml."))
     preset.set_defaults(main=pixi_commands.main_export_pixi)
 
     preset = subparsers.add_parser(
