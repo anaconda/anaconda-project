@@ -625,7 +625,7 @@ def export_env_spec(project, name, filename):
     return SimpleStatus(success=True, description="Exported environment spec {} to {}.".format(name, filename))
 
 
-def export_pixi(project, filename):
+def export_pixi(project, filename, use_default=False):
     """Export the project as a pixi.toml file.
 
     Returns a ``Status`` subtype.
@@ -633,6 +633,13 @@ def export_pixi(project, filename):
     Args:
         project (Project): the project
         filename (str): file to export to
+        use_default (bool): if True and the project has no env_spec literally
+            named ``default``, rename the env_spec attached to the default
+            command (or, failing that, the first declared env_spec) to
+            ``default`` on export, so it materializes as pixi's implicit
+            default environment with packages, commands, and the prepare
+            task at the top level instead of inside a ``[feature.{name}.*]``
+            block.
 
     Returns:
         ``Status`` instance
@@ -646,7 +653,7 @@ def export_pixi(project, filename):
     )
     import sys
     try:
-        content = export_pixi_toml(project)
+        content = export_pixi_toml(project, use_default=use_default)
     except CondaNotAvailableError as e:
         return SimpleStatus(
             success=False,

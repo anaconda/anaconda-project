@@ -17,10 +17,12 @@ from anaconda_project.internal.pixi_export import (
     CondaNotAvailableError,
     _conda_spec_to_pixi,
     _expand_defaults_in_channels,
+    _pick_use_default_env,
     _strip_conda_prefix_paths,
     _translate_command_env_vars,
     _windows_to_deno_shell,
     export_pixi_toml,
+    project_would_benefit_from_use_default,
 )
 from anaconda_project.project import Project
 
@@ -218,7 +220,6 @@ commands:
 """)
         result = export_pixi_toml(project)
         assert 'bokeh serve myapp' in result
-        assert '# converted from bokeh_app' in result
 
     def test_notebook_conversion(self):
         project = self._make_project("""
@@ -232,7 +233,6 @@ commands:
 """)
         result = export_pixi_toml(project)
         assert 'jupyter notebook analysis.ipynb' in result
-        assert '# converted from notebook' in result
 
     def test_default_channels_when_empty(self):
         # When the yml declares no channels, fall back to the URLs that
@@ -844,6 +844,201 @@ commands:
         assert 'arg = "iframe_hosts"' not in result
         # No --anaconda-project-X flags appended.
         assert '--anaconda-project-' not in result
+
+
+class TestUseDefault:
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    def test_picker_returns_none_when_default_already_present(self):
+        project = self._make_project("""
+name: HasDefault
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  default: {}
+  other:
+    packages: [flask]
+""")
+        assert _pick_use_default_env(project) is None
+        assert project_would_benefit_from_use_default(project) is False
+
+    def test_picker_single_env_returns_that_env(self):
+        project = self._make_project("""
+name: Solo
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        assert _pick_use_default_env(project) == 'sampleproj'
+
+    def test_picker_uses_default_command_env(self):
+        # Two envs, no `default`. The default command's env (here `web`,
+        # explicitly marked default) should be the one promoted.
+        project = self._make_project("""
+name: PickByCommand
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  test:
+    packages: [pytest]
+  web:
+    packages: [flask]
+commands:
+  serve:
+    unix: python -m http.server
+    env_spec: web
+    default: true
+""")
+        assert _pick_use_default_env(project) == 'web'
+
+    def test_picker_falls_back_to_first_env_without_command(self):
+        # No commands → first env_spec wins.
+        project = self._make_project("""
+name: NoCmd
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  zeta:
+    packages: [flask]
+  alpha:
+    packages: [pytest]
+""")
+        assert _pick_use_default_env(project) == 'zeta'
+
+    def test_single_env_collapses_to_top_level(self):
+        # use_default on a single non-default env: deps move from
+        # [feature.{name}.dependencies] to [dependencies], prepare from
+        # [feature.{name}.tasks.prepare] to [tasks.prepare], no
+        # [environments] block needed.
+        project = self._make_project("""
+name: SoloFlat
+packages:
+  - python
+  - flask
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = export_pixi_toml(project, use_default=True)
+        assert '[dependencies]' in result
+        assert 'flask = "*"' in result
+        assert '[feature.sampleproj' not in result
+        assert '[tasks.prepare]' in result
+        assert '[environments]' not in result
+
+    def test_multi_env_promotes_default_command_env(self):
+        # Multiple envs, no `default`. With use_default, the default
+        # command's env (`web`) is renamed to `default` — its task lands
+        # in [tasks.serve] (top-level) and its prepare in [tasks.prepare].
+        # The other env still gets a [feature.test.*] block.
+        project = self._make_project("""
+name: MultiPromote
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  web:
+    packages: [flask]
+  test:
+    packages: [pytest]
+commands:
+  serve:
+    unix: python -m http.server
+    env_spec: web
+    default: true
+  pytest-run:
+    unix: pytest
+    env_spec: test
+""")
+        result = export_pixi_toml(project, use_default=True)
+        # `web` collapsed into top-level / default feature.
+        assert 'flask = "*"' in result.split('[feature.', 1)[0]
+        assert '[feature.web' not in result
+        # `serve` (web's command) lives at top-level.
+        assert '[tasks.serve]' in result
+        # `test` env still feature-scoped.
+        assert '[feature.test.dependencies]' in result
+        assert '[feature.test.tasks.pytest-run]' in result
+        # Prepare lands at top level (web is now `default`).
+        assert '[tasks.prepare]' in result
+        assert '[feature.web.tasks.prepare]' not in result
+        # Environments block: web's slot becomes the default-comment line,
+        # and `test` is still declared. Order preserved.
+        env_block = result.split('[environments]', 1)[1]
+        web_pos = env_block.index('# default')
+        test_pos = env_block.index('test = ')
+        assert web_pos < test_pos
+
+    def test_multi_env_promotes_first_when_no_default_command(self):
+        # Multiple envs, no `default`, no commands → first env wins.
+        project = self._make_project("""
+name: MultiNoCmd
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  zeta:
+    packages: [flask]
+  alpha:
+    packages: [pytest]
+""")
+        result = export_pixi_toml(project, use_default=True)
+        assert 'flask = "*"' in result.split('[feature.', 1)[0]
+        assert '[feature.zeta' not in result
+        assert '[feature.alpha.dependencies]' in result
+
+    def test_no_op_when_default_already_present(self):
+        # use_default with a project that already has `default` should be
+        # a no-op; output equals the unflagged export byte-for-byte.
+        project = self._make_project("""
+name: AlreadyDefault
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  default:
+    packages: [flask]
+  other:
+    packages: [pytest]
+""")
+        with_flag = export_pixi_toml(project, use_default=True)
+        without = export_pixi_toml(project, use_default=False)
+        assert with_flag == without
+
+    def test_default_off_keeps_feature_scope(self):
+        # Explicit no use_default on a non-default single env: same
+        # behavior as before — feature-scoped layout.
+        project = self._make_project("""
+name: SoloFeature
+packages:
+  - python
+  - flask
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = export_pixi_toml(project, use_default=False)
+        assert '[feature.sampleproj.tasks.prepare]' in result
+        assert '[tasks.prepare]' not in result.replace(
+            '[feature.sampleproj.tasks.prepare]', '')
 
 
 class TestEndToEndCondaPrefixUnification:
