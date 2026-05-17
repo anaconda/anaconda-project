@@ -66,6 +66,65 @@ Environment layout
   not assume environments solve together, and pixi shouldn't be told
   otherwise on import.
 
+The ``--use-default`` flag
+--------------------------
+
+Projects that have no env_spec literally named ``default`` route every
+dependency, task, and prepare body through ``[feature.{name}.*]``
+indirection — clean for projects that need explicit fan-out, but verbose
+for the common case of a single env (or a default command bound to one
+specific env in a multi-env project). Passing ``--use-default`` to
+``export-pixi`` collapses that:
+
+* The exporter picks one env_spec to promote to ``default``: the env_spec
+  attached to the project's default command (the one a bare
+  ``anaconda-project run`` would invoke), or — if there are no commands —
+  the first ``env_specs:`` entry declared.
+* That env_spec's packages, tasks, and prepare body land in top-level
+  ``[dependencies]`` / ``[tasks.X]`` / ``[tasks.prepare]`` instead of
+  inside ``[feature.{name}.*]`` blocks. Other env_specs (in a multi-env
+  project) keep their ``[feature.{name}.*]`` scoping unchanged.
+* The flag is a no-op when an env_spec literally named ``default``
+  already exists — there's nothing to rename.
+* Under ``--use-default`` the no-op ``prepare`` task is dropped. When
+  there are no ``downloads:`` to fetch, the unflagged export emits an
+  ``echo`` placeholder in ``[feature.{name}.tasks.prepare]`` so
+  ``pixi run prepare`` resolves to the project's intended env even
+  when that env's name isn't ``default``. Under ``--use-default`` the
+  promoted env *is* the implicit default, so the placeholder loses
+  its purpose; ``prepare`` is only emitted when there's real work to
+  do.
+
+When the user runs ``export-pixi`` without the flag and the project would
+benefit, the CLI prints a recommendation naming the env that would be
+promoted. With the flag on, the CLI confirms which env was renamed.
+The renaming applies only to the exported ``pixi.toml``; the source
+``anaconda-project.yml`` is not modified.
+
+The ``--add-current-platform`` flag
+-----------------------------------
+
+Pixi rejects an env that doesn't list the host platform; anaconda-project
+is more forgiving, so it's common to find a ported project with a
+``platforms:`` list that worked under conda but breaks at pixi install
+time on the developer's machine. Passing ``--add-current-platform`` to
+``export-pixi`` widens the converted manifest's ``platforms`` list to
+include the host's conda subdir (e.g. ``osx-arm64``) when it isn't
+already declared.
+
+Behavior mirrors ``--use-default``:
+
+* Off by default. The exporter does not silently mutate the user's
+  platforms list — the user explicitly chose what to support.
+* When omitted, the CLI prints a recommendation if the host platform
+  is missing.
+* When passed, the CLI prints a confirmation listing the platform
+  that was added — or stays quiet when the platform was already
+  present.
+
+The change applies only to the exported ``pixi.toml``; the source
+``anaconda-project.yml`` is not modified.
+
 Channel handling
 ================
 
@@ -243,6 +302,54 @@ Optional arguments:
   source is pixi, the full ``pixi info --json`` payload is also
   stored under the top-level ``_pixi`` key so callers that want
   richer pixi-specific data don't pay for a second subprocess.
+
+Programmatic export API
+=======================
+
+For tools that wrap the conversion (launchers, IDE plugins, custom CLIs),
+the export pipeline is exposed so downstream code never has to scrape
+generated TOML or re-implement the conversion rules.
+
+* ``project_ops.export_pixi(project, filename, use_default=False,
+  add_current_platform=False)`` writes ``pixi.toml`` to disk and returns
+  a ``PixiExportStatus``. On success the status carries:
+
+  - ``default_rename_from`` — the env_spec promoted to ``default`` by
+    ``use_default``, or ``None`` when the flag was off, no-op'd
+    (because ``default`` already existed), or the export failed.
+  - ``current_platform_added`` — the platform string added to the
+    ``platforms`` list by ``add_current_platform``, or ``None`` when
+    the flag was off, no-op'd (the platform was already declared), or
+    the export failed.
+
+  Callers use these to surface "Renamed env X → default" or "Added
+  platform Y" in their success notification without re-querying the
+  project.
+* ``project_ops.preview_pixi_export(project, use_default=False,
+  add_current_platform=False)`` runs the conversion in memory and
+  returns a dict
+  ``{pixi_toml, default_rename_from, current_platform_addition_target,
+  warnings}``. The ``pixi_toml`` entry is the would-be file content;
+  the rename / platform-addition fields report the *candidates*
+  (whether or not their flag was passed), so a confirmation dialog
+  can offer "re-render with --use-default" or "re-render with
+  --add-current-platform" as actions; ``warnings`` is the leading
+  ``# WARNING:`` block already extracted from the rendered TOML, so
+  callers don't have to grep for it themselves. Raises
+  ``CondaNotAvailableError`` if the conversion needs ``conda config
+  --show default_channels`` and conda isn't reachable.
+* ``anaconda_project.internal.pixi_export.default_rename_target(project)``
+  returns the env_spec name that ``--use-default`` would promote, or
+  ``None`` when promotion is a no-op (project already has a
+  ``default`` env_spec, or has no env_specs at all). Stable contract;
+  the underlying selection rule (default-command's env, else first
+  declared env_spec) lives in this one function.
+* ``anaconda_project.internal.pixi_export.current_platform_addition_target(project)``
+  returns the host's conda subdir if it would be added by
+  ``--add-current-platform``, or ``None`` when it's already in the
+  union of declared platforms. Same shape as
+  ``default_rename_target`` so callers can decide both flags
+  symmetrically.
 
 Limitations
 ===========
