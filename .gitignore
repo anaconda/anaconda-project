@@ -84,3 +84,11 @@ Thumbs.db
 # Project-specific
 anaconda-project-local.yml
 anaconda-project-prs/
+
+# Local AI tooling settings
+.claude/
+
+# Test artifacts produced by the local test runner
+cov.xml
+fake_project/
+fake_project.zip

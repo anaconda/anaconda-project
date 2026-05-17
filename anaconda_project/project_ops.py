@@ -326,6 +326,19 @@ def _map_inplace(f, items):
         i += 1
 
 
+def _packages_key(env_dict):
+    """Return the key 'dependencies' or 'packages' that env_dict already uses.
+
+    Anaconda Project accepts either name; project files imported from
+    ``environment.yml`` use ``dependencies``. Mutations should write back
+    to whichever key was already present so we don't end up with both.
+    Defaults to ``'packages'`` for newly-created env dicts.
+    """
+    if 'dependencies' in env_dict:
+        return 'dependencies'
+    return 'packages'
+
+
 class _StatusHolder(object):
     def __init__(self):
         self.status = None
@@ -424,7 +437,8 @@ def _update_env_spec(project, name, packages, channels, create, pip=False):
 
         # packages may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
-        old_packages = env_dict.get('packages', [])
+        pkg_key = _packages_key(env_dict)
+        old_packages = env_dict.get(pkg_key, [])
         if pip:
             pip_idx = None
             for idx, dep in enumerate(old_packages):
@@ -480,7 +494,7 @@ def _update_env_spec(project, name, packages, channels, create, pip=False):
         else:
             old_packages.extend(new_specs)
 
-        env_dict['packages'] = old_packages
+        env_dict[pkg_key] = old_packages
 
         # channels may be a "CommentedSeq" and we don't want to lose the comments,
         # so don't convert this thing to a regular list.
@@ -627,11 +641,40 @@ def export_pixi(project, filename):
     if failed is not None:
         return failed
 
-    from anaconda_project.internal.pixi_export import export_pixi_toml
+    from anaconda_project.internal.pixi_export import (
+        CondaNotAvailableError, DOWNLOAD_HELPER_FILENAME, export_pixi_toml,
+    )
+    import sys
     try:
         content = export_pixi_toml(project)
+    except CondaNotAvailableError as e:
+        return SimpleStatus(
+            success=False,
+            description="Cannot export to pixi: {}".format(e))
+    try:
         with open(filename, 'w') as f:
             f.write(content)
+        # If the converted manifest invokes ap_download.py, drop the helper
+        # next to pixi.toml so `pixi run prepare` has the script available.
+        if DOWNLOAD_HELPER_FILENAME in content:
+            helper_src = os.path.join(os.path.dirname(__file__),
+                                      'internal', DOWNLOAD_HELPER_FILENAME)
+            helper_dst = os.path.join(os.path.dirname(filename) or '.',
+                                      DOWNLOAD_HELPER_FILENAME)
+            shutil.copyfile(helper_src, helper_dst)
+        # Surface any warnings the exporter wrote to the file so the user
+        # sees them immediately rather than only on later inspection.
+        warning_lines = []
+        in_warning = False
+        for line in content.splitlines():
+            if line.startswith('# WARNING:'):
+                in_warning = True
+            if in_warning:
+                if line == '':
+                    break
+                warning_lines.append(line)
+        if warning_lines:
+            print('\n'.join(warning_lines), file=sys.stderr)
     except Exception as e:
         return SimpleStatus(success=False, description="Failed to save {}: {}.".format(filename, str(e)))
 
@@ -756,7 +799,7 @@ def remove_packages(project, env_spec_name, packages, pip=False):
         assert len(env_dicts) > 0
 
         def _get_deps(env_dict, pip=False):
-            _pkgs = env_dict.get('packages', [])
+            _pkgs = env_dict.get(_packages_key(env_dict), [])
             if pip:
                 pip_dicts = [dep for dep in _pkgs if is_dict(dep) and 'pip' in dep]
                 assert len(pip_dicts) == 1, 'There should only be one pip: key'
@@ -769,7 +812,8 @@ def remove_packages(project, env_spec_name, packages, pip=False):
         for env_dict in env_dicts:
             # packages may be a "CommentedSeq" and we don't want to lose the comments,
             # so don't convert this thing to a regular list.
-            old_packages = env_dict.get('packages', [])
+            pkg_key = _packages_key(env_dict)
+            old_packages = env_dict.get(pkg_key, [])
             removed_set = set(packages)
 
             if pip:
@@ -780,16 +824,16 @@ def remove_packages(project, env_spec_name, packages, pip=False):
 
                 if pip_idx is None:
                     if len(old_packages):
-                        env_dict['packages'].append({'pip': []})
+                        env_dict[pkg_key].append({'pip': []})
                     else:
-                        env_dict['packages'] = [{'pip': []}]
+                        env_dict[pkg_key] = [{'pip': []}]
                 else:
                     pip_packages = old_packages.pop(pip_idx)['pip']
                     _filter_inplace(lambda dep: not (is_string(dep) and dep in removed_set), pip_packages)
-                    env_dict['packages'].append({'pip': pip_packages})
+                    env_dict[pkg_key].append({'pip': pip_packages})
             else:
                 _filter_inplace(lambda dep: not (is_string(dep) and dep in removed_set), old_packages)
-                env_dict['packages'] = old_packages
+                env_dict[pkg_key] = old_packages
 
         # if we removed any deps from global, add them to the
         # individual envs that were not supposed to be affected.
@@ -798,7 +842,8 @@ def remove_packages(project, env_spec_name, packages, pip=False):
         for env_dict in unaffected_env_dicts:
             # old_packages may be a "CommentedSeq" and we don't want to lose the comments,
             # so don't convert this thing to a regular list.
-            old_packages = env_dict.get('packages', [])
+            pkg_key = _packages_key(env_dict)
+            old_packages = env_dict.get(pkg_key, [])
             if pip:
                 pip_idx = None
                 for idx, dep in enumerate(old_packages):
@@ -810,7 +855,7 @@ def remove_packages(project, env_spec_name, packages, pip=False):
                     old_packages[pip_idx]['pip'].extend(list(removed_from_global))
             else:
                 old_packages.extend(list(removed_from_global))
-            env_dict['packages'] = old_packages
+            env_dict[pkg_key] = old_packages
 
     if status_holder.status is not None:
         project.load()  # revert

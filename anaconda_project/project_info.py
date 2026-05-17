@@ -54,36 +54,127 @@ def detect_project_type(project_dir):
     return None
 
 
-def publication_info(project_dir):
+def publication_info(project_dir, project_type=None, env_paths=False):
     """Return a publication-info dict for the project at *project_dir*.
 
-    If ``pixi.toml`` is present, the pixi manifest is parsed directly. Otherwise
-    ``anaconda-project.yml`` is loaded through :class:`Project`. The returned
-    dict always includes a ``project_type`` key identifying which manifest
-    format was used.
+    With *project_type* unset (the default), ``pixi.toml`` is preferred when
+    present and ``anaconda-project.yml`` is loaded through :class:`Project`
+    otherwise. Pass ``project_type='pixi'`` or ``'anaconda-project'`` to force
+    a specific manifest format; it is an error to ask for a format whose
+    manifest is not present in *project_dir*. The returned dict always
+    includes a ``project_type`` key identifying which manifest format was
+    used.
+
+    Pass ``env_paths=True`` to populate ``info['env_specs'][name]['path']``
+    with the filesystem prefix for each declared environment. For
+    anaconda-project this is computed from each :class:`EnvSpec` and is
+    free; for pixi we shell out to ``pixi info --json`` (so it costs a
+    subprocess) and surface any error from that call.
 
     Raises:
-        ValueError: the pixi manifest cannot be parsed.
-        FileNotFoundError: neither manifest is present.
+        ValueError: *project_type* is not a recognized value, or the pixi
+            manifest cannot be parsed.
+        FileNotFoundError: the requested manifest (or, with no
+            *project_type*, neither manifest) is not present.
+        RuntimeError: ``env_paths=True`` was requested for a pixi project
+            and ``pixi info --json`` failed.
     """
-    project_type = detect_project_type(project_dir)
-    if project_type == PROJECT_TYPE_PIXI:
-        info = _pixi_publication_info(project_dir)
+    if project_type is None:
+        project_type = detect_project_type(project_dir)
+        if project_type is None:
+            raise FileNotFoundError(
+                'No {} or {} found in {}'.format(
+                    PIXI_MANIFEST, ANACONDA_PROJECT_MANIFEST, project_dir
+                )
+            )
+    elif project_type == PROJECT_TYPE_PIXI:
+        if not os.path.isfile(os.path.join(project_dir, PIXI_MANIFEST)):
+            raise FileNotFoundError(
+                'No {} found in {}'.format(PIXI_MANIFEST, project_dir)
+            )
     elif project_type == PROJECT_TYPE_ANACONDA_PROJECT:
-        info = _anaconda_project_publication_info(project_dir)
+        if not os.path.isfile(os.path.join(project_dir, ANACONDA_PROJECT_MANIFEST)):
+            raise FileNotFoundError(
+                'No {} found in {}'.format(ANACONDA_PROJECT_MANIFEST, project_dir)
+            )
     else:
-        raise FileNotFoundError(
-            'No {} or {} found in {}'.format(
-                PIXI_MANIFEST, ANACONDA_PROJECT_MANIFEST, project_dir
+        raise ValueError(
+            'Unknown project_type {!r}; expected {!r} or {!r}'.format(
+                project_type, PROJECT_TYPE_PIXI, PROJECT_TYPE_ANACONDA_PROJECT
             )
         )
+
+    if project_type == PROJECT_TYPE_PIXI:
+        info = _pixi_publication_info(project_dir)
+        if env_paths:
+            _attach_pixi_env_paths(info, project_dir)
+    else:
+        info = _anaconda_project_publication_info(project_dir, env_paths=env_paths)
     info[PROJECT_TYPE_KEY] = project_type
     return info
 
 
-def _anaconda_project_publication_info(project_dir):
+def _anaconda_project_publication_info(project_dir, env_paths=False):
     from anaconda_project.project import Project
-    return Project(project_dir).publication_info()
+    project = Project(project_dir)
+    info = project.publication_info()
+    if env_paths:
+        for name, env in project.env_specs.items():
+            if name in info['env_specs']:
+                info['env_specs'][name]['path'] = env.path(project_dir)
+    return info
+
+
+def _attach_pixi_env_paths(info, project_dir):
+    """Fill in ``info['env_specs'][name]['path']`` from ``pixi info --json``.
+
+    Pixi reports prefixes in ``environments_info[].prefix``. Any failure to
+    invoke pixi or parse its output raises :class:`RuntimeError` — callers
+    only ask for env paths explicitly via ``env_paths=True``, so silent
+    fallback would hide bugs.
+    """
+    import json
+    import subprocess
+    pixi_path = os.path.join(project_dir, PIXI_MANIFEST)
+    try:
+        out = subprocess.check_output(
+            ['pixi', 'info', '--json', '--manifest-path', pixi_path],
+            stderr=subprocess.PIPE,
+        )
+    except (OSError, subprocess.CalledProcessError) as e:
+        raise RuntimeError('Failed to run `pixi info --json`: {}'.format(e)) from e
+    try:
+        data = json.loads(out)
+    except ValueError as e:
+        raise RuntimeError('Could not parse `pixi info --json` output: {}'.format(e)) from e
+    for env in data.get('environments_info', []):
+        name = env.get('name')
+        prefix = env.get('prefix')
+        if name in info['env_specs'] and prefix:
+            info['env_specs'][name]['path'] = prefix
+
+
+def _read_pixi_lock_envs(project_dir):
+    """Return the set of environment names that appear in pixi.lock, or
+    empty if the lockfile is missing, malformed, or can't be loaded.
+
+    Failure is silent by design: lock detection is informational; the
+    rest of publication_info should never break because of a corrupt
+    lockfile.
+    """
+    lock_path = os.path.join(project_dir, 'pixi.lock')
+    try:
+        import yaml
+        with open(lock_path, 'r') as f:
+            lock = yaml.safe_load(f)
+    except Exception:
+        return set()
+    if not isinstance(lock, dict):
+        return set()
+    envs = lock.get('environments')
+    if not isinstance(envs, dict):
+        return set()
+    return set(envs.keys())
 
 
 def _pixi_publication_info(project_dir):
@@ -94,6 +185,8 @@ def _pixi_publication_info(project_dir):
     except (OSError, tomllib.TOMLDecodeError) as e:
         raise ValueError('Failed to parse {}: {}'.format(pixi_path, e)) from e
 
+    locked_envs = _read_pixi_lock_envs(project_dir)
+
     workspace = data.get('workspace', {})
     project_meta = data.get('project', {})
     name = workspace.get('name', project_meta.get('name', os.path.basename(project_dir)))
@@ -102,11 +195,45 @@ def _pixi_publication_info(project_dir):
 
     tool_commands = data.get('tool', {}).get('anaconda', {}).get('commands', {})
 
+    # Resolve the name of pixi's implicit `default` environment to the
+    # user-meaningful env_spec it actually represents. Pixi always
+    # materializes a `default` env from the default feature; the
+    # exporter (and anaconda-project's own publication_info) report the
+    # resolved name, not the placeholder. Logic mirrors the exporter:
+    # a literal `default` in [environments] wins; otherwise fall back
+    # to the first declared environment.
+    declared_envs = data.get('environments', {})
+    if 'default' in declared_envs:
+        default_env_name = 'default'
+    elif declared_envs:
+        default_env_name = next(iter(declared_envs))
+    else:
+        default_env_name = 'default'
+
+    # For tasks defined under [feature.X.tasks.Y], pixi runs them in any
+    # env that includes feature X. publication_info should report a
+    # specific env that "supports this task": prefer the resolved
+    # default if it includes the feature, else the first declared env
+    # that does, else fall back to the feature name itself (which is
+    # what our own exporter uses — feature name matches env name in the
+    # converted manifests).
+    def _env_for_feature(feat_name):
+        candidate_envs = []
+        for env_name, env_def in declared_envs.items():
+            features = env_def if isinstance(env_def, list) else env_def.get('features', [])
+            if feat_name in features:
+                candidate_envs.append(env_name)
+        if not candidate_envs:
+            return feat_name
+        if default_env_name in candidate_envs:
+            return default_env_name
+        return candidate_envs[0]
+
     commands = {}
     state = {'first': True}
 
     for task_name, task_def in data.get('tasks', {}).items():
-        cmd = _build_command(task_name, task_def, 'default', tool_commands, state)
+        cmd = _build_command(task_name, task_def, default_env_name, tool_commands, state)
         if cmd is not None:
             commands[task_name] = cmd
 
@@ -114,30 +241,50 @@ def _pixi_publication_info(project_dir):
         for task_name, task_def in feat_def.get('tasks', {}).items():
             if task_name in commands:
                 continue
-            cmd = _build_command(task_name, task_def, feat_name, tool_commands, state)
+            cmd = _build_command(task_name, task_def,
+                                 _env_for_feature(feat_name),
+                                 tool_commands, state)
             if cmd is not None:
                 commands[task_name] = cmd
 
     top_packages = [
         _format_dep(pkg, spec) for pkg, spec in data.get('dependencies', {}).items()
     ]
-    env_specs = {
-        'default': {
-            'packages': top_packages,
-            'channels': channels,
-        },
-    }
-    for env_name, env_def in data.get('environments', {}).items():
-        if env_name == 'default':
-            continue
+
+    def _packages_for_env(env_def):
+        """Resolve effective package list for a declared env: top-level
+        [dependencies] (the default feature) plus each feature listed in
+        the env's `features = [...]`. An env declared with
+        `no-default-feature = true` does not inherit the default feature."""
+        if env_def is None:
+            return list(top_packages)
         features = env_def if isinstance(env_def, list) else env_def.get('features', [])
-        feature_pkgs = list(top_packages)
+        no_default = (
+            isinstance(env_def, dict) and env_def.get('no-default-feature', False)
+        )
+        pkgs = [] if no_default else list(top_packages)
         for feat in features:
             feat_deps = data.get('feature', {}).get(feat, {}).get('dependencies', {})
-            feature_pkgs.extend(_format_dep(n, s) for n, s in feat_deps.items())
-        env_specs[env_name] = {
-            'packages': feature_pkgs,
+            pkgs.extend(_format_dep(n, s) for n, s in feat_deps.items())
+        return pkgs
+
+    # Pixi always materializes a `default` env, even when [environments]
+    # only declares others. Surface it unconditionally; honor the user's
+    # declaration if one exists.
+    env_specs = {
+        'default': {
+            'packages': _packages_for_env(declared_envs.get('default')),
             'channels': channels,
+            'locked': default_env_name in locked_envs,
+        },
+    }
+    for env_name, env_def in declared_envs.items():
+        if env_name == 'default':
+            continue
+        env_specs[env_name] = {
+            'packages': _packages_for_env(env_def),
+            'channels': channels,
+            'locked': env_name in locked_envs,
         }
 
     variables = dict(data.get('activation', {}).get('env', {}))
@@ -154,12 +301,29 @@ def _pixi_publication_info(project_dir):
 def _build_command(task_name, task_def, env_spec, tool_commands, state):
     if isinstance(task_def, str):
         cmd_str = task_def
+        raw_args = []
     elif isinstance(task_def, dict):
         cmd_str = task_def.get('cmd', '')
         if task_def.get('environment'):
             env_spec = task_def['environment']
+        raw_args = task_def.get('args') or []
     else:
         return None
+
+    # Pixi `args` entries are inline tables like { arg = "port", default = "" }
+    # or bare strings like "name". Pull just the names, in declaration order;
+    # downstream tooling uses this to know which positional values to supply
+    # to `pixi run <task>`.
+    args = []
+    for entry in raw_args:
+        if isinstance(entry, dict):
+            name = entry.get('arg')
+        elif isinstance(entry, str):
+            name = entry
+        else:
+            name = None
+        if name:
+            args.append(name)
 
     tool_meta = tool_commands.get(task_name, {})
 
@@ -186,6 +350,7 @@ def _build_command(task_name, task_def, env_spec, tool_commands, state):
         'notebook': notebook,
         'default': is_default,
         'description': description,
+        'args': args,
     }
 
 
@@ -197,7 +362,23 @@ def _format_dep(name, spec):
     return name
 
 
+# Commands we recognize as actual Jupyter notebook launchers. Anything
+# else that mentions an .ipynb file (e.g. `panel serve foo.ipynb`,
+# `voila foo.ipynb`, `streamlit run foo.ipynb`) is a different kind of
+# app — it happens to consume an .ipynb as its source but isn't
+# something a notebook viewer should render.
+_NOTEBOOK_LAUNCHERS = (
+    'jupyter notebook',
+    'jupyter lab',
+    'jupyter-lab',
+    'jupyter-notebook',
+)
+
+
 def _infer_notebook(cmd_str):
+    cmd_lower = cmd_str.lower()
+    if not any(launcher in cmd_lower for launcher in _NOTEBOOK_LAUNCHERS):
+        return None
     for token in cmd_str.split():
         if token.endswith('.ipynb'):
             return token

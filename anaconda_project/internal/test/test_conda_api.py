@@ -312,6 +312,50 @@ def test_conda_install_with_defaults(monkeypatch):
     conda_api.install(prefix='/prefix', pkgs=['python'], channels=['defaults', 'foo'])
 
 
+def _capture_popen_env(monkeypatch):
+    """Mock streaming_popen.popen and return a list that captures env= per call."""
+    captured = []
+
+    class _FakeProcess(object):
+        returncode = 0
+
+    def mock_popen(args, env=None, stdout_callback=None, stderr_callback=None):
+        captured.append(env.copy() if env is not None else None)
+        return (_FakeProcess(), [], [])
+
+    monkeypatch.setattr('anaconda_project.internal.streaming_popen.popen', mock_popen)
+    return captured
+
+
+def test_call_conda_no_platform_does_not_set_overrides(monkeypatch):
+    captured = _capture_popen_env(monkeypatch)
+    conda_api._call_conda(['info'])
+    assert captured == [None]
+
+
+def test_call_conda_linux_platform_injects_glibc_override(monkeypatch):
+    captured = _capture_popen_env(monkeypatch)
+    monkeypatch.delenv('CONDA_OVERRIDE_GLIBC', raising=False)
+    conda_api._call_conda(['info'], platform='linux-64')
+    assert captured[0]['CONDA_SUBDIR'] == 'linux-64'
+    assert captured[0]['CONDA_OVERRIDE_GLIBC'] == '2.28'
+
+
+def test_call_conda_non_linux_platform_does_not_inject_glibc(monkeypatch):
+    captured = _capture_popen_env(monkeypatch)
+    monkeypatch.delenv('CONDA_OVERRIDE_GLIBC', raising=False)
+    conda_api._call_conda(['info'], platform='osx-arm64')
+    assert captured[0]['CONDA_SUBDIR'] == 'osx-arm64'
+    assert 'CONDA_OVERRIDE_GLIBC' not in captured[0]
+
+
+def test_call_conda_caller_glibc_override_wins(monkeypatch):
+    captured = _capture_popen_env(monkeypatch)
+    monkeypatch.setenv('CONDA_OVERRIDE_GLIBC', '2.34')
+    conda_api._call_conda(['info'], platform='linux-aarch64')
+    assert captured[0]['CONDA_OVERRIDE_GLIBC'] == '2.34'
+
+
 def test_resolve_root_prefix():
     prefix = conda_api.resolve_env_to_prefix('root')
     assert prefix is not None

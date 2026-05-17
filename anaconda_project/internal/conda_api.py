@@ -14,6 +14,7 @@ import os
 import platform
 import re
 import shutil
+import struct
 import sys
 import tempfile
 import yaml
@@ -72,6 +73,13 @@ def _call_conda(extra_args, json_mode=False, platform=None, stdout_callback=None
     if platform is not None:
         env = os.environ.copy()
         env['CONDA_SUBDIR'] = platform
+        # When solving for a non-host platform, conda has no host-side
+        # virtual package to satisfy specs like `libgcc-ng -> __glibc`.
+        # Default __glibc to 2.28 (matching conda-lock and pixi's current
+        # defaults) when cross-resolving any linux subdir, unless the
+        # caller has set CONDA_OVERRIDE_GLIBC themselves.
+        if 'linux' in platform and 'CONDA_OVERRIDE_GLIBC' not in env:
+            env['CONDA_OVERRIDE_GLIBC'] = '2.28'
 
     try:
         (p, stdout_lines, stderr_lines) = streaming_popen.popen(cmd_list,
@@ -577,9 +585,11 @@ def environ_set_prefix(environ, prefix, varname=conda_prefix_variable()):
         environ['CONDA_DEFAULT_ENV'] = name
 
 
-# This isn't all (e.g. leaves out arm, power).  it's sort of "all
-# that people typically publish for"
-default_platforms = ('linux-64', 'osx-64', 'win-64')
+# Platforms a project is assumed to target by default if the manifest
+# doesn't list any. Covers the four subdirs that account for the
+# overwhelming majority of conda traffic in 2026 (x86_64 Linux/Windows,
+# aarch64 Linux, Apple Silicon macOS).
+default_platforms = ('linux-64', 'linux-aarch64', 'osx-arm64', 'win-64')
 assert tuple(sorted(default_platforms)) == default_platforms
 
 # osx-32 isn't in here since it isn't much used
@@ -592,8 +602,9 @@ _non_x86_osx_machines = {'arm64'}
 # this list will get outdated, unfortunately.
 _known_platforms = tuple(
     sorted(
-        list(default_platforms_plus_32_bit) + ['osx-32'] + [("linux-%s" % m) for m in _non_x86_linux_machines] +
-        [("osx-%s" % m) for m in _non_x86_osx_machines]))
+        set(list(default_platforms_plus_32_bit) + list(default_platforms) + ['osx-32'] +
+            [("linux-%s" % m) for m in _non_x86_linux_machines] +
+            [("osx-%s" % m) for m in _non_x86_osx_machines])))
 
 known_platform_names = ('linux', 'osx', 'win')
 assert tuple(sorted(known_platform_names)) == known_platform_names
@@ -635,16 +646,47 @@ _known_platform_groups_keys = ('all', 'unix') + known_platform_names
 assert set(_known_platform_groups_keys) == set(_known_platform_groups.keys())
 
 
+# Mirrors conda.base.context._platform_map / non_x86_machines so we can
+# compute the current subdir without spawning `conda info`. The original
+# implementation invoked the conda subprocess at module-import time,
+# which made `import anaconda_project` ~1s slower than necessary for
+# every consumer (publication_info, project_info, CLI tools).
+_PLATFORM_MAP = {
+    'linux': 'linux',
+    'linux2': 'linux',
+    'darwin': 'osx',
+    'win32': 'win',
+    'zos': 'zos',
+}
+_NON_X86_MACHINES = frozenset({
+    'armv6l', 'armv7l', 'aarch64', 'arm64', 'ppc64', 'ppc64le', 'riscv64', 's390x',
+})
+
+
 def current_platform():
-    conda_info = info()
-    return conda_info.get('platform')
+    """Return the conda subdir for the current interpreter (e.g. ``'osx-arm64'``).
 
-
-_default_platforms_with_current = tuple(sorted(list(set(default_platforms + (current_platform(), )))))
+    Honors ``CONDA_SUBDIR`` if set, matching conda's own precedence.
+    Otherwise derives the value from :data:`sys.platform`,
+    :func:`platform.machine`, and the pointer size — a reimplementation
+    of conda's :py:meth:`Context._native_subdir` so we don't have to
+    shell out to ``conda info``.
+    """
+    override = os.environ.get('CONDA_SUBDIR')
+    if override:
+        return override
+    plat = _PLATFORM_MAP.get(sys.platform, 'unknown')
+    if plat == 'zos':
+        return 'zos-z'
+    machine = platform.machine().lower()
+    if machine in _NON_X86_MACHINES:
+        return '{}-{}'.format(plat, machine)
+    bits = 8 * struct.calcsize('P')
+    return '{}-{}'.format(plat, bits)
 
 
 def default_platforms_with_current():
-    return _default_platforms_with_current
+    return tuple(sorted(set(default_platforms + (current_platform(), ))))
 
 
 def parse_platform(platform):

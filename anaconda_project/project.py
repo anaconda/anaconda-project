@@ -1112,7 +1112,15 @@ class _ConfigCache(object):
                 for f in no_add_funcs:
                     f(project)
 
-            problem = ProjectProblem(text="No commands run notebooks %s" % (", ".join(need_to_import)),
+            _MAX_LISTED = 10
+            if len(need_to_import) > _MAX_LISTED:
+                listed = ", ".join(need_to_import[:_MAX_LISTED])
+                remaining = len(need_to_import) - _MAX_LISTED
+                notebooks_text = "%s, and %d more" % (listed, remaining)
+            else:
+                notebooks_text = ", ".join(need_to_import)
+
+            problem = ProjectProblem(text="No commands run notebooks %s" % notebooks_text,
                                      filename=project_file.filename,
                                      fix_prompt="Create commands in %s for all missing notebooks?" %
                                      (os.path.basename(project_file.filename)),
