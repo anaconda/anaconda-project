@@ -331,6 +331,86 @@ class TestPublicationInfoFeatures:
             assert 'pytorch' in info['env_specs']['gpu']['packages']
             assert 'python>=3.12' in info['env_specs']['gpu']['packages']
 
+    def test_no_default_feature_excludes_top_level_deps(self):
+        # An env declared with `no-default-feature = true` must not inherit
+        # the top-level [dependencies] (the default feature).
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [dependencies]
+                pandas = "*"
+                python = ">=3.12"
+
+                [feature.testenv.dependencies]
+                ipykernel = "*"
+                pandas = "*"
+
+                [environments]
+                sampleproj = { features = ["testenv"] }
+                testenv = { features = ["testenv"], no-default-feature = true }
+            """))
+            info = publication_info(td)
+            sample = info['env_specs']['sampleproj']['packages']
+            test = info['env_specs']['testenv']['packages']
+            # sampleproj inherits the default feature -> python is present
+            assert 'python>=3.12' in sample
+            assert 'pandas' in sample
+            assert 'ipykernel' in sample
+            # testenv opts out of the default feature -> python is absent
+            assert 'python>=3.12' not in test
+            assert 'ipykernel' in test
+            assert 'pandas' in test
+
+    def test_default_env_always_present(self):
+        # Pixi always materializes a `default` env. publication_info must
+        # surface it even when [environments] only declares other envs.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [dependencies]
+                python = ">=3.12"
+
+                [feature.alt.dependencies]
+                numpy = "*"
+
+                [environments]
+                alt = { features = ["alt"] }
+            """))
+            info = publication_info(td)
+            assert 'default' in info['env_specs']
+            assert 'python>=3.12' in info['env_specs']['default']['packages']
+
+    def test_default_env_honors_declaration(self):
+        # When the user explicitly declares `default = { features = [...] }`,
+        # the resulting default env_spec must include those feature deps.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [dependencies]
+                python = ">=3.12"
+
+                [feature.extras.dependencies]
+                requests = "*"
+
+                [environments]
+                default = { features = ["extras"] }
+            """))
+            info = publication_info(td)
+            assert 'requests' in info['env_specs']['default']['packages']
+            assert 'python>=3.12' in info['env_specs']['default']['packages']
+
 
 class TestPublicationInfoVariables:
     def test_activation_env(self):
