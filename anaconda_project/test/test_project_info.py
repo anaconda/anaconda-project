@@ -768,7 +768,7 @@ class TestEnvPaths:
                 '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
             )
             fake_json = (
-                '{"environments_info": ['
+                '{"platform": "osx-arm64", "environments_info": ['
                 '{"name": "default", "prefix": "/fake/path/.pixi/envs/default"}'
                 ']}'
             ).encode('utf-8')
@@ -782,6 +782,19 @@ class TestEnvPaths:
             monkeypatch.setattr(subprocess, 'check_output', fake_check_output)
             info = publication_info(td, env_paths=True)
             assert info['env_specs']['default']['path'] == '/fake/path/.pixi/envs/default'
+            # Full pixi info --json output is stashed under `_pixi`.
+            assert info['_pixi']['platform'] == 'osx-arm64'
+            assert info['_pixi']['environments_info'][0]['prefix'] == \
+                '/fake/path/.pixi/envs/default'
+
+    def test_pixi_env_paths_no_pixi_field_when_not_requested(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(
+                td,
+                '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td)
+            assert '_pixi' not in info
 
     def test_pixi_env_paths_subprocess_failure_raises(self, monkeypatch):
         with tempfile.TemporaryDirectory() as td:
