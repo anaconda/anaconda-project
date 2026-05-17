@@ -625,7 +625,7 @@ def export_env_spec(project, name, filename):
     return SimpleStatus(success=True, description="Exported environment spec {} to {}.".format(name, filename))
 
 
-def export_pixi(project, filename, use_default=False):
+def export_pixi(project, filename, use_default=False, add_current_platform=False):
     """Export the project as a pixi.toml file.
 
     Returns a ``Status`` subtype.
@@ -640,10 +640,15 @@ def export_pixi(project, filename, use_default=False):
             default environment with packages, commands, and the prepare
             task at the top level instead of inside a ``[feature.{name}.*]``
             block.
+        add_current_platform (bool): if True, ensure the host's conda subdir
+            is in the emitted ``platforms`` list. Pixi rejects an env that
+            doesn't list the host platform; anaconda-project is more
+            forgiving, so this prevents a pixi install error on a project
+            whose ``platforms:`` list happens to omit the developer's box.
 
     Returns:
-        ``PixiExportStatus`` on success (carries ``default_rename_from``);
-        a plain ``Status`` on failure.
+        ``PixiExportStatus`` on success (carries ``default_rename_from``
+        and ``current_platform_added``); a plain ``Status`` on failure.
     """
     failed = _check_problems(project)
     if failed is not None:
@@ -651,12 +656,16 @@ def export_pixi(project, filename, use_default=False):
 
     from anaconda_project.internal.pixi_export import (
         CondaNotAvailableError, DOWNLOAD_HELPER_FILENAME, PixiExportStatus,
-        default_rename_target, export_pixi_toml, extract_warnings,
+        current_platform_addition_target, default_rename_target,
+        export_pixi_toml, extract_warnings,
     )
     import sys
     rename_from = default_rename_target(project) if use_default else None
+    platform_added = (current_platform_addition_target(project)
+                      if add_current_platform else None)
     try:
-        content = export_pixi_toml(project, use_default=use_default)
+        content = export_pixi_toml(project, use_default=use_default,
+                                   add_current_platform=add_current_platform)
     except CondaNotAvailableError as e:
         return SimpleStatus(
             success=False,
@@ -683,13 +692,14 @@ def export_pixi(project, filename, use_default=False):
     return PixiExportStatus(
         success=True,
         description="Exported project to {}.".format(filename),
-        default_rename_from=rename_from)
+        default_rename_from=rename_from,
+        current_platform_added=platform_added)
 
 
-def preview_pixi_export(project, use_default=False):
+def preview_pixi_export(project, use_default=False, add_current_platform=False):
     """Render the pixi.toml conversion in memory without writing to disk.
 
-    Returns a dict with three keys, suitable for driving a preview UI
+    Returns a dict with four keys, suitable for driving a preview UI
     (CLI ``--dry-run``, IDE plugin dialog, launcher confirmation, etc.):
 
     * ``pixi_toml`` (str): the full ``pixi.toml`` content the exporter
@@ -700,6 +710,12 @@ def preview_pixi_export(project, use_default=False):
       ``None`` when the project already has a ``default`` env_spec, has
       no env_specs, or has nothing to rename. Frontends use this to
       offer "re-render with --use-default" as an action.
+    * ``current_platform_addition_target`` (str or None): the host's conda
+      subdir if it would be added to the platform list by
+      ``add_current_platform`` (regardless of whether the flag was
+      passed), or ``None`` when it's already declared. Frontends use
+      this to offer "re-render with --add-current-platform" as an
+      action — pixi rejects envs that don't list the host platform.
     * ``warnings`` (list of str): the lines of the leading
       ``# WARNING:`` block the exporter included at the top of the file,
       or ``[]`` if there are none. Already extracted so the caller
@@ -715,17 +731,25 @@ def preview_pixi_export(project, use_default=False):
         use_default (bool): same semantics as ``export_pixi``; controls
             the content of ``pixi_toml`` but not ``default_rename_from``
             (which is reported regardless).
+        add_current_platform (bool): same semantics as ``export_pixi``;
+            controls the content of ``pixi_toml`` but not
+            ``current_platform_addition_target`` (which is reported
+            regardless).
 
     Returns:
         dict
     """
     from anaconda_project.internal.pixi_export import (
-        default_rename_target, export_pixi_toml, extract_warnings,
+        current_platform_addition_target, default_rename_target,
+        export_pixi_toml, extract_warnings,
     )
-    pixi_toml = export_pixi_toml(project, use_default=use_default)
+    pixi_toml = export_pixi_toml(project, use_default=use_default,
+                                 add_current_platform=add_current_platform)
     return {
         'pixi_toml': pixi_toml,
         'default_rename_from': default_rename_target(project),
+        'current_platform_addition_target':
+            current_platform_addition_target(project),
         'warnings': extract_warnings(pixi_toml),
     }
 

@@ -414,6 +414,14 @@ def _parse_args_and_run_subcommand(argv):
                               "'default' on export. Collapses [feature.{name}.*] blocks "
                               "into top-level [dependencies] / [tasks.X] for a cleaner "
                               "pixi.toml."))
+    preset.add_argument('--add-current-platform',
+                        action='store_true',
+                        default=False,
+                        help=("If the host's conda subdir (e.g. osx-arm64) isn't already in "
+                              "the project's platforms list, add it on export. Pixi rejects "
+                              "envs that don't list the host platform; anaconda-project is "
+                              "more forgiving, so this prevents a pixi install error after "
+                              "conversion."))
     preset.set_defaults(main=pixi_commands.main_export_pixi)
 
     preset = subparsers.add_parser(

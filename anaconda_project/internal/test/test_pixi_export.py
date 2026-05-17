@@ -18,6 +18,7 @@ from anaconda_project.internal.pixi_export import (
     PixiExportStatus,
     _conda_spec_to_pixi,
     _expand_defaults_in_channels,
+    current_platform_addition_target,
     default_rename_target,
     _strip_conda_prefix_paths,
     _translate_command_env_vars,
@@ -1183,8 +1184,11 @@ env_specs:
   sampleproj: {}
 """)
         result = project_ops.preview_pixi_export(project, use_default=True)
-        # Stable contract: exactly these three keys.
-        assert set(result) == {'pixi_toml', 'default_rename_from', 'warnings'}
+        # Stable contract: exactly these four keys.
+        assert set(result) == {
+            'pixi_toml', 'default_rename_from',
+            'current_platform_addition_target', 'warnings',
+        }
         assert isinstance(result['pixi_toml'], str)
         assert isinstance(result['warnings'], list)
         # use_default=True actually applies in pixi_toml content
@@ -1241,3 +1245,145 @@ env_specs:
 """)
         result = project_ops.preview_pixi_export(project)
         assert result['default_rename_from'] is None
+
+
+class TestAddCurrentPlatform:
+    """``--add-current-platform`` ensures the host's conda subdir is in the
+    emitted ``platforms`` list. Pixi rejects an env that doesn't list the
+    host platform; anaconda-project is more forgiving."""
+
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    @pytest.fixture
+    def fake_platform(self, monkeypatch):
+        """Force current_platform() to return a known value so tests are
+        deterministic across developer machines and CI runners."""
+        from anaconda_project.internal import conda_api
+        monkeypatch.setattr(conda_api, 'current_platform', lambda: 'osx-arm64')
+        return 'osx-arm64'
+
+    def test_picker_returns_platform_when_missing(self, fake_platform):
+        project = self._make_project("""
+name: NotHere
+packages: []
+platforms:
+  - linux-64
+""")
+        assert current_platform_addition_target(project) == 'osx-arm64'
+
+    def test_picker_returns_none_when_already_present(self, fake_platform):
+        project = self._make_project("""
+name: AlreadyHere
+packages: []
+platforms:
+  - linux-64
+  - osx-arm64
+""")
+        assert current_platform_addition_target(project) is None
+
+    def test_export_adds_platform_when_flag_on(self, fake_platform):
+        project = self._make_project("""
+name: AddPlat
+packages: []
+platforms:
+  - linux-64
+""")
+        result = export_pixi_toml(project, add_current_platform=True)
+        # Sorted alphabetically, both present.
+        assert 'platforms = ["linux-64", "osx-arm64"]' in result
+
+    def test_export_leaves_platforms_alone_by_default(self, fake_platform):
+        project = self._make_project("""
+name: NoFlag
+packages: []
+platforms:
+  - linux-64
+""")
+        result = export_pixi_toml(project)
+        # Without the flag the host platform is not added — even if pixi
+        # would later refuse it. anaconda-project doesn't silently mutate
+        # the user's platforms list.
+        assert 'osx-arm64' not in result
+
+    def test_export_no_op_when_already_present(self, fake_platform):
+        project = self._make_project("""
+name: AlreadyOk
+packages: []
+platforms:
+  - linux-64
+  - osx-arm64
+""")
+        result = export_pixi_toml(project, add_current_platform=True)
+        # Still appears exactly once in the platforms list.
+        assert result.count('"osx-arm64"') == 1
+
+    def test_status_carries_platform_added(self, fake_platform, tmpdir):
+        project = self._make_project("""
+name: StatusAdd
+packages: []
+platforms:
+  - linux-64
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target,
+                                         add_current_platform=True)
+        assert status
+        assert isinstance(status, PixiExportStatus)
+        assert status.current_platform_added == 'osx-arm64'
+
+    def test_status_platform_added_is_none_without_flag(self, fake_platform, tmpdir):
+        project = self._make_project("""
+name: StatusOff
+packages: []
+platforms:
+  - linux-64
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target)
+        assert status
+        assert status.current_platform_added is None
+
+    def test_status_platform_added_is_none_when_already_present(self, fake_platform, tmpdir):
+        # Flag is on, but the platform is already there — the status
+        # reports None to distinguish "we added X" from "X was there".
+        project = self._make_project("""
+name: StatusNoOp
+packages: []
+platforms:
+  - linux-64
+  - osx-arm64
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target,
+                                         add_current_platform=True)
+        assert status
+        assert status.current_platform_added is None
+
+    def test_preview_reports_target_even_when_flag_off(self, fake_platform):
+        project = self._make_project("""
+name: PreviewPlat
+packages: []
+platforms:
+  - linux-64
+""")
+        result = project_ops.preview_pixi_export(project)
+        # Candidate is reported regardless of flag — frontends use it to
+        # offer "re-render with --add-current-platform" as an action.
+        assert result['current_platform_addition_target'] == 'osx-arm64'
+        # pixi_toml itself wasn't widened (flag is off).
+        assert 'osx-arm64' not in result['pixi_toml']
+
+    def test_preview_target_none_when_already_present(self, fake_platform):
+        project = self._make_project("""
+name: PreviewOk
+packages: []
+platforms:
+  - linux-64
+  - osx-arm64
+""")
+        result = project_ops.preview_pixi_export(project)
+        assert result['current_platform_addition_target'] is None
