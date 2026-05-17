@@ -627,10 +627,17 @@ def export_pixi(project, filename):
     if failed is not None:
         return failed
 
-    from anaconda_project.internal.pixi_export import export_pixi_toml, DOWNLOAD_HELPER_FILENAME
+    from anaconda_project.internal.pixi_export import (
+        CondaNotAvailableError, DOWNLOAD_HELPER_FILENAME, export_pixi_toml,
+    )
     import sys
     try:
         content = export_pixi_toml(project)
+    except CondaNotAvailableError as e:
+        return SimpleStatus(
+            success=False,
+            description="Cannot export to pixi: {}".format(e))
+    try:
         with open(filename, 'w') as f:
             f.write(content)
         # If the converted manifest invokes ap_download.py, drop the helper
