@@ -628,16 +628,19 @@ def export_pixi(project, filename, use_default=False):
             block.
 
     Returns:
-        ``Status`` instance
+        ``PixiExportStatus`` on success (carries ``default_rename_from``);
+        a plain ``Status`` on failure.
     """
     failed = _check_problems(project)
     if failed is not None:
         return failed
 
     from anaconda_project.internal.pixi_export import (
-        CondaNotAvailableError, DOWNLOAD_HELPER_FILENAME, export_pixi_toml,
+        CondaNotAvailableError, DOWNLOAD_HELPER_FILENAME, PixiExportStatus,
+        default_rename_target, export_pixi_toml, extract_warnings,
     )
     import sys
+    rename_from = default_rename_target(project) if use_default else None
     try:
         content = export_pixi_toml(project, use_default=use_default)
     except CondaNotAvailableError as e:
@@ -657,21 +660,60 @@ def export_pixi(project, filename, use_default=False):
             shutil.copyfile(helper_src, helper_dst)
         # Surface any warnings the exporter wrote to the file so the user
         # sees them immediately rather than only on later inspection.
-        warning_lines = []
-        in_warning = False
-        for line in content.splitlines():
-            if line.startswith('# WARNING:'):
-                in_warning = True
-            if in_warning:
-                if line == '':
-                    break
-                warning_lines.append(line)
+        warning_lines = extract_warnings(content)
         if warning_lines:
             print('\n'.join(warning_lines), file=sys.stderr)
     except Exception as e:
         return SimpleStatus(success=False, description="Failed to save {}: {}.".format(filename, str(e)))
 
-    return SimpleStatus(success=True, description="Exported project to {}.".format(filename))
+    return PixiExportStatus(
+        success=True,
+        description="Exported project to {}.".format(filename),
+        default_rename_from=rename_from)
+
+
+def preview_pixi_export(project, use_default=False):
+    """Render the pixi.toml conversion in memory without writing to disk.
+
+    Returns a dict with three keys, suitable for driving a preview UI
+    (CLI ``--dry-run``, IDE plugin dialog, launcher confirmation, etc.):
+
+    * ``pixi_toml`` (str): the full ``pixi.toml`` content the exporter
+      would write.
+    * ``default_rename_from`` (str or None): the env_spec name that would
+      be promoted to ``default`` if ``use_default`` were passed
+      (regardless of whether ``use_default`` was actually requested) —
+      ``None`` when the project already has a ``default`` env_spec, has
+      no env_specs, or has nothing to rename. Frontends use this to
+      offer "re-render with --use-default" as an action.
+    * ``warnings`` (list of str): the lines of the leading
+      ``# WARNING:`` block the exporter included at the top of the file,
+      or ``[]`` if there are none. Already extracted so the caller
+      doesn't have to scan the toml again.
+
+    Raises ``CondaNotAvailableError`` if the conversion needs ``conda
+    config --show default_channels`` and conda isn't reachable. Failure
+    of project-problem checks raises through the caller's normal channel
+    for that — a project with problems is not previewable.
+
+    Args:
+        project (Project): the project
+        use_default (bool): same semantics as ``export_pixi``; controls
+            the content of ``pixi_toml`` but not ``default_rename_from``
+            (which is reported regardless).
+
+    Returns:
+        dict
+    """
+    from anaconda_project.internal.pixi_export import (
+        default_rename_target, export_pixi_toml, extract_warnings,
+    )
+    pixi_toml = export_pixi_toml(project, use_default=use_default)
+    return {
+        'pixi_toml': pixi_toml,
+        'default_rename_from': default_rename_target(project),
+        'warnings': extract_warnings(pixi_toml),
+    }
 
 
 def add_packages(project, env_spec_name, packages, channels, pip=False):
