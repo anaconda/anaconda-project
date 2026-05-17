@@ -1,9 +1,11 @@
 name: anaconda-project-docs
 dependencies:
 - sphinx
-- pydata-sphinx-theme=0.14.4
+- pydata-sphinx-theme
 - sphinx-copybutton
 - sphinx-notfound-page
 channels:
-- defaults
+# `defaults` is intentionally omitted: Read the Docs build images
+# can't accept the Anaconda ToS gate that channel now requires, and
+# every package listed above is available on conda-forge.
 - conda-forge

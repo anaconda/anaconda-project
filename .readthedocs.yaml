@@ -1,0 +1,20 @@
+# Read the Docs configuration. See:
+# https://docs.readthedocs.com/platform/stable/config-file/v2.html
+#
+# Read the Docs requires this file (in the repository root) to build
+# the docs. Sphinx config and dependencies live under docs/.
+
+version: 2
+
+build:
+  os: ubuntu-24.04
+  tools:
+    # miniforge3 supplies conda + the conda-forge channel by default,
+    # which matches the resolution we get locally with the env file.
+    python: "miniforge3-latest"
+
+conda:
+  environment: docs/environment.yml
+
+sphinx:
+  configuration: docs/source/conf.py
