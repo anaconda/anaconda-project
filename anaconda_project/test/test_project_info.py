@@ -131,7 +131,9 @@ class TestPublicationInfoBasic:
             assert info['name'] == 'test'
             assert info['description'] == ''
             assert info['commands'] == {}
-            assert info['env_specs'] == {'default': {'packages': [], 'channels': ['conda-forge']}}
+            assert info['env_specs'] == {
+                'default': {'packages': [], 'channels': ['conda-forge'], 'locked': False},
+            }
             assert info['variables'] == {}
             assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
 
@@ -215,6 +217,36 @@ class TestPublicationInfoTasks:
             assert info['commands']['serve']['unix'] == 'flask run'
             assert info['commands']['serve']['supports_http_options'] is True
 
+    def test_args_extracted_from_pixi_task(self):
+        # The exporter emits `args = [{ arg = "host", default = "" }, ...]`
+        # for tasks that take http options. publication_info should
+        # surface those arg names (in declaration order) so callers can
+        # know what positional values `pixi run <task>` expects.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [tasks.serve]
+                cmd = "panel serve foo.ipynb {% if port %}--port {{ port }}{% endif %}"
+                args = [{ arg = "host", default = "" }, { arg = "port", default = "" }]
+            """))
+            info = publication_info(td)
+            assert info['commands']['serve']['args'] == ['host', 'port']
+
+    def test_args_empty_for_string_task(self):
+        # A bare string task (no `args` key) gets an empty `args` list,
+        # not a missing key — keeps the schema uniform for callers.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(
+                td,
+                '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n\n[tasks]\nrun = "echo hi"\n',
+            )
+            info = publication_info(td)
+            assert info['commands']['run']['args'] == []
+
     def test_first_task_is_default(self):
         with tempfile.TemporaryDirectory() as td:
             _write_pixi_toml(
@@ -260,6 +292,193 @@ class TestPublicationInfoTasks:
             )
             info = publication_info(td)
             assert info['commands']['serve']['env_spec'] == 'prod'
+
+
+class TestPublicationInfoEnvResolution:
+    """env_spec should always name an env that supports the task — never
+    a placeholder like 'default' when the project's only env has another
+    name, and never the bare feature name when a real env carries it."""
+
+    def test_top_level_task_resolves_to_first_env_when_no_default(self):
+        # Single declared env named 'sampleproj'. Top-level [tasks.X] runs
+        # in the resolved default env, which is the first declared.
+        # `default` is also surfaced unconditionally because pixi
+        # materializes it at runtime regardless.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+
+                [tasks.run]
+                cmd = "echo hi"
+            """))
+            info = publication_info(td)
+            assert info['commands']['run']['env_spec'] == 'sampleproj'
+            assert set(info['env_specs']) == {'default', 'sampleproj'}
+
+    def test_top_level_task_keeps_default_when_explicitly_declared(self):
+        # When the user *does* declare `default` in [environments], use
+        # that name verbatim — don't promote a sibling env.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                default = { features = [] }
+                ml = { features = ["ml"] }
+
+                [tasks.run]
+                cmd = "echo hi"
+            """))
+            info = publication_info(td)
+            assert info['commands']['run']['env_spec'] == 'default'
+            assert 'default' in info['env_specs']
+            assert 'ml' in info['env_specs']
+
+    def test_feature_task_resolves_to_env_carrying_feature(self):
+        # [feature.ml.tasks.train] should report env_spec='ml' because
+        # the env named `ml` includes feature `ml`. The exporter's
+        # convention (feature name == env name) makes this trivial, but
+        # the resolution logic doesn't assume that — it walks
+        # [environments] entries to find which envs include the feature.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                ml = { features = ["ml"] }
+
+                [feature.ml.tasks.train]
+                cmd = "python train.py"
+            """))
+            info = publication_info(td)
+            assert info['commands']['train']['env_spec'] == 'ml'
+
+    def test_feature_task_picks_default_env_when_multiple_match(self):
+        # If the same feature is included in multiple envs, the resolved
+        # default wins (so `pixi run task` matches the env publication
+        # picks).
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                primary = { features = ["common"] }
+                secondary = { features = ["common"] }
+
+                [feature.common.tasks.run]
+                cmd = "echo hi"
+            """))
+            info = publication_info(td)
+            # primary is first declared → resolved default → wins.
+            assert info['commands']['run']['env_spec'] == 'primary'
+
+    def test_default_env_always_surfaced_alongside_named_envs(self):
+        # Pixi always materializes a `default` env at runtime, so
+        # publication_info surfaces it unconditionally. Default-feature
+        # packages flow into the `default` env_spec; feature-specific
+        # deps flow into the named env. Each env carries the right
+        # packages (no cross-pollination).
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [dependencies]
+                python = "*"
+
+                [feature.sampleproj.dependencies]
+                pandas = "*"
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+            """))
+            info = publication_info(td)
+            assert set(info['env_specs']) == {'default', 'sampleproj'}
+            # `default` carries only the default-feature packages.
+            assert info['env_specs']['default']['packages'] == ['python']
+            # `sampleproj` inherits the default feature plus its own.
+            sample = info['env_specs']['sampleproj']['packages']
+            assert 'python' in sample
+            assert 'pandas' in sample
+            # Both default-feature and sampleproj-feature packages roll up.
+            assert 'python' in info['env_specs']['sampleproj']['packages']
+            assert 'pandas' in info['env_specs']['sampleproj']['packages']
+
+
+class TestPublicationInfoLocked:
+    def test_locked_false_when_no_lockfile(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+            """))
+            info = publication_info(td)
+            assert info['env_specs']['sampleproj']['locked'] is False
+
+    def test_locked_true_when_env_in_pixi_lock(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+                test = { features = ["test"] }
+            """))
+            with open(os.path.join(td, 'pixi.lock'), 'w') as f:
+                f.write(textwrap.dedent("""\
+                    version: 6
+                    environments:
+                      sampleproj:
+                        channels:
+                        - url: https://example/
+                        packages: {}
+                """))
+            info = publication_info(td)
+            # sampleproj is in the lock — locked. test is not — unlocked.
+            assert info['env_specs']['sampleproj']['locked'] is True
+            assert info['env_specs']['test']['locked'] is False
+
+    def test_malformed_lockfile_falls_back_to_unlocked(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+            """))
+            with open(os.path.join(td, 'pixi.lock'), 'w') as f:
+                # Not valid YAML — should silently fall back, not raise.
+                f.write('this is not: { valid yaml: at all\n')
+            info = publication_info(td)
+            assert info['env_specs']['sampleproj']['locked'] is False
 
 
 class TestPublicationInfoFeatures:
@@ -526,3 +745,144 @@ class TestProjectTypeKey:
         with tempfile.TemporaryDirectory() as td:
             _write_pixi_toml(td, '[workspace]\nname = "t"\n')
             assert publication_info(td)[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
+
+
+class TestEnvPaths:
+    """`env_paths=True` populates `info['env_specs'][name]['path']`. The
+    anaconda-project branch derives paths from each EnvSpec; the pixi branch
+    shells out to `pixi info --json`."""
+
+    def test_default_does_not_include_path(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(
+                td,
+                '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td)
+            assert 'path' not in info['env_specs']['default']
+
+    def test_pixi_env_paths_via_subprocess(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(
+                td,
+                '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            fake_json = (
+                '{"environments_info": ['
+                '{"name": "default", "prefix": "/fake/path/.pixi/envs/default"}'
+                ']}'
+            ).encode('utf-8')
+
+            def fake_check_output(cmd, stderr=None):
+                assert cmd[0] == 'pixi'
+                assert '--json' in cmd
+                return fake_json
+
+            import subprocess
+            monkeypatch.setattr(subprocess, 'check_output', fake_check_output)
+            info = publication_info(td, env_paths=True)
+            assert info['env_specs']['default']['path'] == '/fake/path/.pixi/envs/default'
+
+    def test_pixi_env_paths_subprocess_failure_raises(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+
+            import subprocess
+
+            def fake_check_output(cmd, stderr=None):
+                raise subprocess.CalledProcessError(1, cmd, stderr=b'pixi: bad manifest')
+
+            monkeypatch.setattr(subprocess, 'check_output', fake_check_output)
+            with pytest.raises(RuntimeError) as exc:
+                publication_info(td, env_paths=True)
+            assert 'pixi info' in str(exc.value)
+
+    def test_pixi_env_paths_pixi_missing_raises(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            import subprocess
+
+            def fake_check_output(cmd, stderr=None):
+                raise OSError(2, 'No such file or directory: pixi')
+
+            monkeypatch.setattr(subprocess, 'check_output', fake_check_output)
+            with pytest.raises(RuntimeError) as exc:
+                publication_info(td, env_paths=True)
+            assert 'pixi info' in str(exc.value)
+
+    def test_pixi_env_paths_invalid_json_raises(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            import subprocess
+
+            monkeypatch.setattr(subprocess, 'check_output',
+                                lambda cmd, stderr=None: b'not actually json')
+            with pytest.raises(RuntimeError) as exc:
+                publication_info(td, env_paths=True)
+            assert 'parse' in str(exc.value)
+
+    def test_anaconda_project_env_paths(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_anaconda_project(td, textwrap.dedent("""\
+                name: sample
+                env_specs:
+                  default:
+                    channels: [defaults]
+                    packages: [python=3.12]
+                  alt:
+                    channels: [defaults]
+                    packages: [python=3.12, flask]
+            """))
+            info = publication_info(td, env_paths=True)
+            for name in ('default', 'alt'):
+                path = info['env_specs'][name]['path']
+                assert path.endswith(os.path.join('envs', name))
+                assert os.path.isabs(path)
+
+
+class TestExplicitProjectType:
+    """Caller-supplied `project_type` overrides the pixi-wins-by-default
+    detection. Asking for a format whose manifest is absent is an error."""
+
+    def test_force_anaconda_project_when_both_present(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "from-pixi"\n')
+            _write_anaconda_project(td, textwrap.dedent("""\
+                name: from-yml
+                env_specs:
+                  default:
+                    channels: [defaults]
+                    packages: [python=3.12]
+            """))
+            info = publication_info(td, project_type=PROJECT_TYPE_ANACONDA_PROJECT)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_ANACONDA_PROJECT
+            assert info['name'] == 'from-yml'
+
+    def test_force_pixi_when_both_present(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "from-pixi"\n')
+            _write_anaconda_project(td, 'name: from-yml\n')
+            info = publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
+            assert info['name'] == 'from-pixi'
+
+    def test_force_pixi_without_pixi_toml_raises(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_anaconda_project(td, 'name: t\n')
+            with pytest.raises(FileNotFoundError) as exc:
+                publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            assert 'pixi.toml' in str(exc.value)
+
+    def test_force_anaconda_project_without_yml_raises(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            with pytest.raises(FileNotFoundError) as exc:
+                publication_info(td, project_type=PROJECT_TYPE_ANACONDA_PROJECT)
+            assert 'anaconda-project.yml' in str(exc.value)
+
+    def test_unknown_project_type_raises(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            with pytest.raises(ValueError) as exc:
+                publication_info(td, project_type='conda-workspaces')
+            assert 'conda-workspaces' in str(exc.value)

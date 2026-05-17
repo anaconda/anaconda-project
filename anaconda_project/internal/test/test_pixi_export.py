@@ -150,7 +150,7 @@ commands:
         assert 'https://example.test/main' in result
         assert 'https://example.test/r' in result
         assert '"linux-64"' in result
-        assert 'run = "python main.py"' in result
+        assert 'cmd = "python main.py"' in result
 
     def test_pip_packages(self):
         project = self._make_project("""
@@ -274,10 +274,16 @@ downloads:
         # Old comment-only path is gone.
         assert '# Downloads from anaconda-project.yml' not in result
 
-    def test_marker_echo_only_when_no_downloads(self):
-        # The no-op prepare body still uses the marker echo so the task
-        # has *something* to print and so anyone reading the manifest
-        # immediately sees what it came from.
+    def test_marker_prepare_when_no_downloads(self):
+        # Even without downloads, every converted project gets a
+        # `prepare` task. It does double duty:
+        #   * Marks the file as converted from anaconda-project.yml,
+        #     for downstream tooling that detects converted projects
+        #     by task name.
+        #   * When scoped to a non-default env's feature, gives
+        #     `pixi run prepare` an entry point that auto-resolves to
+        #     that env — useful when the default env_spec is named
+        #     something other than `default`.
         project = self._make_project("""
 name: NoDl
 packages:
@@ -286,7 +292,10 @@ platforms:
   - linux-64
 """)
         result = export_pixi_toml(project)
+        assert '[tasks.prepare]' in result
         assert 'Running migrated anaconda-project prepare task' in result
+        # No downloads, so no helper invocation.
+        assert 'ap_download.py' not in result
 
     def test_only_default_env_gets_prepare(self):
         # anaconda-project's top-level downloads: apply to every env, but
@@ -355,22 +364,25 @@ env_specs:
         # No prepare-all either — single prepare keeps things simple.
         assert 'prepare-all' not in result
 
-    def test_marker_prepare_when_no_downloads(self):
-        # Every converted project gets a prepare task — even when there are
-        # no downloads to fetch. Detection of "is this a converted project?"
-        # relies on the presence of `prepare`.
+    def test_prepare_scoped_to_named_default_env(self):
+        # When the default env_spec has a non-default name (sampleproj),
+        # the prepare task is scoped to that feature so `pixi run prepare`
+        # auto-resolves to the right env. This is the second job of the
+        # always-emit-prepare convention: it's an env-selection entry
+        # point even when there's nothing to download.
         project = self._make_project("""
 name: Plain
 packages:
   - python
 platforms:
   - linux-64
+env_specs:
+  sampleproj: {}
 """)
         result = export_pixi_toml(project)
-        assert '[tasks.prepare]' in result
-        assert 'Running migrated anaconda-project prepare task' in result
-        # No downloads, so no urllib invocation.
-        assert 'urllib.request' not in result
+        assert '[feature.sampleproj.tasks.prepare]' in result
+        # No downloads → no helper invocation.
+        assert 'ap_download.py' not in result
 
     def test_project_dir_translated(self):
         project = self._make_project("""
@@ -596,7 +608,7 @@ commands:
     windows: python %PROJECT_DIR%\\hello.py
 """)
         result = export_pixi_toml(project)
-        assert 'run = "python $PIXI_PROJECT_ROOT/hello.py"' in result
+        assert 'cmd = "python $PIXI_PROJECT_ROOT/hello.py"' in result
         assert 'windows command differs' not in result
 
     def test_diverging_unix_and_windows_flags_comment(self):
@@ -611,7 +623,7 @@ commands:
     windows: python %PROJECT_DIR%\\hello_win.py
 """)
         result = export_pixi_toml(project)
-        assert 'run = "python $PIXI_PROJECT_ROOT/hello.py"' in result
+        assert 'cmd = "python $PIXI_PROJECT_ROOT/hello.py"' in result
         assert 'windows command differs from unix' in result
         assert 'hello_win.py' in result
 
@@ -626,7 +638,7 @@ commands:
     windows: python %PROJECT_DIR%\\hello.py
 """)
         result = export_pixi_toml(project)
-        assert 'run = "python $PIXI_PROJECT_ROOT/hello.py"' in result
+        assert 'cmd = "python $PIXI_PROJECT_ROOT/hello.py"' in result
         assert 'translated from windows-only command' in result
 
 
@@ -659,6 +671,181 @@ class TestStripCondaPrefixPaths:
         assert _strip_conda_prefix_paths('exec ${CONDA_PREFIX}/bin/python') == 'exec python'
 
 
+class TestHttpOptions:
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    def test_supports_http_options_appends_all_flags(self):
+        # supports_http_options=true → cmd gets all six --anaconda-project-X
+        # flags appended (gated by Jinja so empty args drop the flag), and
+        # pixi args declared with empty defaults.
+        project = self._make_project("""
+name: Http
+packages:
+  - python
+platforms:
+  - linux-64
+commands:
+  serve:
+    unix: panel serve foo.ipynb
+    supports_http_options: true
+""")
+        result = export_pixi_toml(project)
+        # All six flags appear in the cmd, gated.
+        for flag in ('--anaconda-project-host', '--anaconda-project-port',
+                     '--anaconda-project-address', '--anaconda-project-iframe-hosts',
+                     '--anaconda-project-no-browser', '--anaconda-project-use-xheaders'):
+            assert flag in result, "missing %s" % flag
+        # Each is gated by an `{% if var %}` so empty args don't render.
+        assert '{% if port %}' in result
+        assert '{% if no_browser %}' in result
+        # Pixi args block declares all six with empty defaults.
+        assert 'arg = "port", default = ""' in result
+        assert 'arg = "no_browser", default = ""' in result
+
+    def test_notebook_command_uses_jupyter_flags(self):
+        # notebook: commands have supports_http_options=true by default,
+        # and translate to Jupyter's specific flag names — `--port` (not
+        # `--anaconda-project-port`), `--ip` for address, etc., plus the
+        # unconditional --NotebookApp.default_url prefix that
+        # anaconda-project's _NotebookArgsTransformer emits.
+        project = self._make_project("""
+name: NbHttp
+packages:
+  - python
+platforms:
+  - linux-64
+commands:
+  nb:
+    notebook: report.ipynb
+""")
+        result = export_pixi_toml(project)
+        assert '--NotebookApp.default_url=/notebooks/report.ipynb' in result
+        assert '--port {{ port }}' in result
+        assert '--ip {{ address }}' in result
+        assert 'arg = "port"' in result
+        # Notebook drops host entirely (jupyter has no equivalent).
+        assert 'arg = "host"' not in result
+        # Generic --anaconda-project-* flags shouldn't appear.
+        assert '--anaconda-project-' not in result
+
+    def test_url_prefix_renamed_per_tool(self):
+        # --anaconda-project-url-prefix maps differently in each tool:
+        #   generic  -> --anaconda-project-url-prefix VALUE  (passthrough)
+        #   bokeh    -> --prefix VALUE
+        #   notebook -> --NotebookApp.base_url=VALUE  (single-arg form,
+        #               original transformer notes the two-arg form is
+        #               rejected by jupyter)
+        # Mirror those mappings here so converted commands carry the
+        # right flag for the tool that will receive them.
+        for label, yml, expected_flag in [
+            ('generic',
+             """name: t
+packages: [python]
+platforms: [linux-64]
+commands:
+  serve:
+    unix: panel serve foo.ipynb
+    supports_http_options: true
+""",
+             '--anaconda-project-url-prefix {{ url_prefix }}'),
+            ('bokeh',
+             """name: t
+packages: [python, bokeh]
+platforms: [linux-64]
+commands:
+  app:
+    bokeh_app: myapp
+""",
+             '--prefix {{ url_prefix }}'),
+            ('notebook',
+             """name: t
+packages: [python]
+platforms: [linux-64]
+commands:
+  nb:
+    notebook: report.ipynb
+""",
+             '--NotebookApp.base_url={{ url_prefix }}'),
+        ]:
+            project = self._make_project(yml)
+            result = export_pixi_toml(project)
+            assert expected_flag in result, '{}: missing {!r}'.format(label, expected_flag)
+            assert 'arg = "url_prefix"' in result, '{}: arg not declared'.format(label)
+
+    def test_bokeh_app_uses_bokeh_flags(self):
+        # bokeh_app: commands translate to bokeh's flag names: bare
+        # --host/--port/--address, and --show as the *inverse* of
+        # --no-browser. iframe_hosts is dropped (bokeh has no equivalent).
+        project = self._make_project("""
+name: BokehHttp
+packages:
+  - python
+  - bokeh
+platforms:
+  - linux-64
+commands:
+  app:
+    bokeh_app: myapp
+""")
+        result = export_pixi_toml(project)
+        assert '--host {{ host }}' in result
+        assert '--port {{ port }}' in result
+        assert '--address {{ address }}' in result
+        # --show is gated by `not no_browser` (negative gate).
+        assert '{% if not no_browser %}--show{% endif %}' in result
+        assert '--use-xheaders' in result
+        # iframe_hosts is not declared as an arg or referenced.
+        assert 'arg = "iframe_hosts"' not in result
+        assert '--anaconda-project-' not in result
+
+    def test_supports_http_options_false_no_jinja_no_args(self):
+        # supports_http_options=false and the unix line has no {{var}}
+        # references → no http args at all, cmd unchanged.
+        project = self._make_project("""
+name: Plain
+packages:
+  - python
+platforms:
+  - linux-64
+commands:
+  run:
+    unix: python app.py
+""")
+        result = export_pixi_toml(project)
+        assert '--anaconda-project-' not in result
+        assert 'args = [' not in result
+
+    def test_supports_http_options_false_picks_up_referenced_jinja(self):
+        # User wrote a templated unix: command with {{port}} and {{host}}.
+        # We declare pixi args only for those, leave the cmd alone.
+        project = self._make_project("""
+name: Tmpl
+packages:
+  - python
+platforms:
+  - linux-64
+commands:
+  run:
+    unix: "myserver --port={{ port }} --host={{ host }}"
+""")
+        result = export_pixi_toml(project)
+        # Cmd preserved verbatim (env-var translation doesn't touch
+        # Jinja vars).
+        assert '--port={{ port }}' in result
+        assert '--host={{ host }}' in result
+        # Only port and host declared; not the other four http vars.
+        assert 'arg = "port"' in result
+        assert 'arg = "host"' in result
+        assert 'arg = "address"' not in result
+        assert 'arg = "iframe_hosts"' not in result
+        # No --anaconda-project-X flags appended.
+        assert '--anaconda-project-' not in result
+
+
 class TestEndToEndCondaPrefixUnification:
     def _make_project(self, yml_content):
         tmpdir = tempfile.mkdtemp()
@@ -681,5 +868,5 @@ commands:
     windows: '%CONDA_PREFIX%\\python.exe %PROJECT_DIR%\\hello.py'
 """)
         result = export_pixi_toml(project)
-        assert 'run = "python $PIXI_PROJECT_ROOT/hello.py"' in result
+        assert 'cmd = "python $PIXI_PROJECT_ROOT/hello.py"' in result
         assert 'windows command differs' not in result
