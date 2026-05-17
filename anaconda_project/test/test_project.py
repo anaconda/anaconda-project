@@ -1735,6 +1735,22 @@ def test_notebook_command_jupyter_not_on_path(monkeypatch):
         {DEFAULT_PROJECT_FILENAME: "commands:\n default:\n    notebook: test.ipynb\n"}, check_notebook_command)
 
 
+def test_many_notebooks_suggestion_truncated():
+    def check(dirname):
+        project = project_no_dedicated_env(dirname)
+        assert len(project.suggestions) == 1
+        msg = project.suggestions[0]
+        assert "and 5 more" in msg
+        # only the first 10 notebooks should be listed by name
+        assert "n09.ipynb" in msg
+        assert "n10.ipynb" not in msg
+
+    files = {DEFAULT_PROJECT_FILENAME: "packages: ['notebook']\n"}
+    for i in range(15):
+        files["n%02d.ipynb" % i] = '{}'
+    with_directory_contents_completing_project_file(files, check)
+
+
 def test_multiple_notebooks_suggestion_rejected():
     def check(dirname):
         project = project_no_dedicated_env(dirname)

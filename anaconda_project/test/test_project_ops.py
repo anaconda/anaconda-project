@@ -1985,6 +1985,55 @@ packages:
         }, check)
 
 
+def test_add_packages_preserves_dependencies_key():
+    # Regression for #337: when the project file uses the `dependencies:`
+    # alias instead of `packages:`, add_packages must mutate the existing
+    # key rather than creating a separate `packages:` block alongside it.
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.add_packages(project,
+                                              env_spec_name=None,
+                                              packages=['foo', 'bar'],
+                                              channels=[])
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        project2 = Project(dirname)
+        assert ['numpy', 'foo', 'bar'] == list(project2.project_file.get_value('dependencies'))
+        assert project2.project_file.get_value('packages') is None
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: "dependencies:\n  - numpy\n",
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
+def test_remove_packages_preserves_dependencies_key():
+    # Regression for #337: same as add_packages, on the remove path.
+    def check(dirname):
+        def attempt():
+            project = Project(dirname)
+            status = project_ops.remove_packages(project, env_spec_name=None, packages=['bar'])
+            assert status
+            assert [] == status.errors
+
+        _with_conda_test(attempt)
+
+        project2 = Project(dirname)
+        assert ['foo'] == list(project2.project_file.get_value('dependencies'))
+        assert project2.project_file.get_value('packages') is None
+
+    with_directory_contents_completing_project_file(
+        {
+            DEFAULT_PROJECT_FILENAME: "dependencies:\n  - foo\n  - bar\n",
+            DEFAULT_PROJECT_LOCK_FILENAME: "locking_enabled: true\n"
+        }, check)
+
+
 def test_add_pip_packages_to_all_environments():
     def check(dirname):
         def attempt():

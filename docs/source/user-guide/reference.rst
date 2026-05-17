@@ -174,6 +174,39 @@ If your notebook contains ``@fusion.register`` when you
 ``anaconda-project init`` or ``anaconda-project add-command``,
 ``registers_fusion_function: true`` will be added automatically.
 
+Suppressing notebook auto-import
+--------------------------------
+
+When ``anaconda-project`` loads a project, it scans the project
+directory for ``.ipynb`` files that don't already have a matching
+command and emits a suggestion to add commands for them. If you don't
+want this — for example, your project ships notebooks intended only
+as data or examples, or the scan picks up notebooks shipped by an
+installed package — you can suppress it with the ``skip_imports``
+key.
+
+To suppress the suggestion entirely:
+
+.. code-block:: yaml
+
+  skip_imports:
+    notebooks: true
+
+To suppress it only for specific notebooks (still suggest commands
+for any new ones added later):
+
+.. code-block:: yaml
+
+  skip_imports:
+    notebooks:
+      - examples/intro.ipynb
+      - examples/quickstart.ipynb
+
+The "skip" form is what ``anaconda-project`` writes to the project
+file when you answer "no" at the interactive auto-import prompt, so
+this is the same configuration produced by saying "no" once for each
+notebook.
+
 
 .. _http-commands:
 
