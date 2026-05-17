@@ -29,24 +29,32 @@ class CondaNotAvailableError(Exception):
 class PixiExportStatus(SimpleStatus):
     """Status returned by :func:`anaconda_project.project_ops.export_pixi`.
 
-    Adds ``default_rename_from`` so callers can tell the user *which* env
-    was just promoted to ``default`` without re-querying the project. The
-    attribute is ``None`` when:
+    Carries fields downstream consumers (launchers, IDE plugins) use to
+    surface what the export actually changed without re-querying the
+    project:
 
-    * ``use_default`` was not requested,
-    * the project already had an env_spec literally named ``default``, or
-    * the export failed.
-
-    Stable for downstream consumers (launchers, IDE plugins) that need to
-    surface "Renamed env X → default" in their success notification.
+    * ``default_rename_from`` — the env_spec name promoted to ``default``
+      by ``use_default``, or ``None`` when ``use_default`` was off, was
+      a no-op (project already had a ``default`` env_spec), or the
+      export failed.
+    * ``current_platform_added`` — the platform string (e.g.
+      ``'osx-arm64'``) that was added to the platform list by
+      ``add_current_platform``, or ``None`` when the flag was off, the
+      platform was already declared, or the export failed.
     """
-    def __init__(self, success, description, errors=(), default_rename_from=None):
+    def __init__(self, success, description, errors=(),
+                 default_rename_from=None, current_platform_added=None):
         super().__init__(success, description, errors)
         self._default_rename_from = default_rename_from
+        self._current_platform_added = current_platform_added
 
     @property
     def default_rename_from(self):
         return self._default_rename_from
+
+    @property
+    def current_platform_added(self):
+        return self._current_platform_added
 
 
 def _resolve_default_channels():
@@ -735,7 +743,26 @@ def project_would_benefit_from_use_default(project):
     return default_rename_target(project) is not None
 
 
-def export_pixi_toml(project, use_default=False):
+def current_platform_addition_target(project):
+    """Return the current conda subdir (e.g. ``'osx-arm64'``) if exporting
+    with ``add_current_platform=True`` would actually add it to the
+    project's platform union, or ``None`` when it's already present.
+
+    Pixi rejects an env that doesn't list the host platform; anaconda-
+    project is more forgiving. This picker is the public contract for
+    deciding whether the platform list needs widening — frontends use it
+    to recommend ``--add-current-platform`` before the user hits a pixi
+    error at install time.
+    """
+    from anaconda_project.internal.conda_api import current_platform
+    declared = set()
+    for env in project.env_specs.values():
+        declared.update(env.platforms)
+    here = current_platform()
+    return None if here in declared else here
+
+
+def export_pixi_toml(project, use_default=False, add_current_platform=False):
     """Convert an anaconda-project Project to pixi.toml content.
 
     Args:
@@ -747,6 +774,12 @@ def export_pixi_toml(project, use_default=False):
             implicit default environment with packages, commands, and
             the prepare task at the top level instead of inside a
             ``[feature.{name}.*]`` block.
+        add_current_platform: if True, ensure the host's conda subdir
+            (e.g. ``'osx-arm64'``) appears in the emitted ``platforms``
+            list. anaconda-project is forgiving about platform mismatch
+            but pixi refuses to install an env whose declared platforms
+            don't include the host, so adding the current platform on
+            export prevents that foot-gun.
 
     Returns:
         A string containing the pixi.toml file content.
@@ -783,6 +816,14 @@ def export_pixi_toml(project, use_default=False):
         all_platforms.update(env.platforms)
     if not all_platforms:
         all_platforms = {'linux-64'}
+    # add_current_platform widens the platform list to cover the host
+    # subdir if it isn't already present. Pixi refuses to install an env
+    # whose declared platforms don't include the host; anaconda-project
+    # is more forgiving, so it's common to find a ported project with a
+    # platforms list that worked under conda but not under pixi.
+    if add_current_platform:
+        from anaconda_project.internal.conda_api import current_platform
+        all_platforms.add(current_platform())
 
     # -- Determine if we need features (multiple env specs)
     # When the user passes use_default and there's no env_spec already
