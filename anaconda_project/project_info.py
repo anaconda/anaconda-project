@@ -126,7 +126,8 @@ def _anaconda_project_publication_info(project_dir, env_paths=False):
 
 
 def _attach_pixi_env_paths(info, project_dir):
-    """Fill in ``info['env_specs'][name]['path']`` from ``pixi info --json``.
+    """Fill in ``info['env_specs'][name]['path']`` and stash the full
+    ``pixi info --json`` payload at ``info['_pixi']``.
 
     Pixi reports prefixes in ``environments_info[].prefix``. Any failure to
     invoke pixi or parse its output raises :class:`RuntimeError` — callers
@@ -152,6 +153,7 @@ def _attach_pixi_env_paths(info, project_dir):
         prefix = env.get('prefix')
         if name in info['env_specs'] and prefix:
             info['env_specs'][name]['path'] = prefix
+    info['_pixi'] = data
 
 
 def _read_pixi_lock_envs(project_dir):
