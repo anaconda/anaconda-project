@@ -19,6 +19,9 @@ These are the focus of recent maintenance on this repository:
   dictionary describing the project's commands, environments, and
   variables. Downstream deployment tooling that ingests both formats
   uses this as its single integration point.
+* The ``anaconda-project info`` command, a human-readable view of the
+  same data — modeled on ``pixi info`` — that works on either
+  manifest format.
 
 The rest of this page documents the conventions the conversion uses
 to preserve as much of the original project's behavior as possible.
@@ -160,6 +163,50 @@ Each flag is wrapped in a Jinja conditional, so a blank pixi arg
 omits the flag entirely (rather than passing an empty value the
 underlying tool might reject).
 
+The ``info`` command
+====================
+
+``anaconda-project info`` prints a human-readable summary of the
+project, modeled on ``pixi info``::
+
+    $ anaconda-project info --directory .
+    Project
+    ------------
+                  Type: pixi
+                  Name: Attractors
+           Description: A panel dashboard using datashader ...
+             Directory: /path/to/project
+
+    Commands
+    ------------
+               Command: dashboard  [default, http]
+                      : env_spec: sampleproj
+                      : cmd: panel serve attractors.ipynb {% if host %}...
+                      : args: host, port, address, url_prefix, ...
+
+    Environments
+    ------------
+           Environment: default
+              Channels: https://repo.anaconda.com/pkgs/main, ...
+      Dependency count: 12
+          Dependencies: colorcet, datashader, fiona, geoviews, ...
+                Locked: yes
+
+The command works on either manifest format — ``pixi.toml`` is
+preferred when both are present.
+
+Flags:
+
+* ``--json`` emits the underlying ``publication_info`` dict as
+  indented JSON, mirroring ``pixi info --json``.
+* ``--env-paths`` includes the on-disk prefix path for each
+  environment. For pixi projects this shells out to
+  ``pixi info --json``; the full pixi payload is also stashed
+  under an ``_pixi`` key in ``--json`` mode so callers don't have
+  to repeat the subprocess.
+* ``--project-type {pixi,anaconda-project}`` forces a manifest
+  format when both are present in the directory (e.g. mid-conversion).
+
 publication_info
 ================
 
@@ -181,6 +228,21 @@ the anaconda-project side; relevant additions for the pixi side:
 * ``env_specs[name]['locked']`` — ``True`` when ``pixi.lock`` has an
   ``environments[<name>]`` entry. Best-effort: any read or parse
   failure silently falls back to ``False``.
+
+Optional arguments:
+
+* ``project_type='pixi' | 'anaconda-project'`` forces a specific
+  manifest format. Default behavior is auto-detect, with ``pixi.toml``
+  winning when both are present. It is an error to ask for a format
+  whose manifest is not in the directory.
+* ``env_paths=True`` populates ``env_specs[name]['path']`` with the
+  on-disk prefix for each declared environment. For anaconda-project
+  this is derived from each ``EnvSpec``; for pixi it requires a
+  ``pixi info --json`` subprocess (so it is opt-in). Failure to
+  invoke pixi or parse its output raises ``RuntimeError``. When the
+  source is pixi, the full ``pixi info --json`` payload is also
+  stored under the top-level ``_pixi`` key so callers that want
+  richer pixi-specific data don't pay for a second subprocess.
 
 Limitations
 ===========
