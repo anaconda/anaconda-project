@@ -20,8 +20,12 @@ import tempfile
 import uuid
 import zipfile
 from io import BytesIO
-from conda_pack._progress import progressbar
-from tqdm import tqdm
+
+# `conda_pack` and `tqdm` are deferred to the call sites below
+# (`_archive_project_dir`, `_extract_files`). Importing them eagerly
+# adds tens of milliseconds to every `import anaconda_project.project`,
+# which `publication_info` and other lightweight consumers pay for no
+# reason — neither package is touched on the read path.
 
 from anaconda_project.frontend import NullFrontend, _new_error_recorder
 from anaconda_project.internal import logged_subprocess
@@ -259,6 +263,7 @@ def _leaf_infos(infos):
 
 
 def _write_tar(archive_root_name, infos, filename, compression, packed_envs, frontend):
+    from conda_pack._progress import progressbar
     if compression is None:
         compression = ""
     else:
@@ -294,6 +299,7 @@ def _write_tar(archive_root_name, infos, filename, compression, packed_envs, fro
 
 
 def _write_zip(archive_root_name, infos, filename, packed_envs, frontend):
+    from conda_pack._progress import progressbar
     with zipfile.ZipFile(filename, 'w') as zf:
         for info in _leaf_infos(infos):
             arcname = os.path.join(archive_root_name, info.relative_path)
@@ -446,6 +452,7 @@ def _extractall_chmod(zf, destination):
 
 
 def _extract_files_zip(zip_path, src_and_dest, frontend):
+    from tqdm import tqdm
     # the zipfile API has no way to extract to a filename of
     # our choice, so we have to unpack to a temporary location,
     # then copy those files over.
@@ -472,6 +479,7 @@ def _extract_files_zip(zip_path, src_and_dest, frontend):
 
 
 def _extract_files_tar(tar_path, src_and_dest, frontend):
+    from tqdm import tqdm
     with tarfile.open(tar_path, mode='r') as tf:
         if isinstance(frontend.underlying, NullFrontend):
             src_and_dest = tqdm(src_and_dest, desc='Extract ')

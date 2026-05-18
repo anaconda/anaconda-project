@@ -12,7 +12,7 @@ Excluding files from the archive
 ================================
 
 The ``anaconda-project archive`` command automatically omits the
-files that Project can reproduce automatically, which includes
+files that anaconda-project can reproduce automatically, which includes
 the ``envs/`` directory and any downloaded data files defined in the
 :ref:`downloads <downloads>` section of the ``anaconda-project.yml`` file.
 
@@ -49,7 +49,7 @@ EXAMPLE: To create a zip archive called "iris"::
 
   anaconda-project archive iris.zip
 
-Project creates the archive file.
+anaconda-project creates the archive file.
 
 If you list the files in the archive, you will see that
 automatically generated files are not listed.

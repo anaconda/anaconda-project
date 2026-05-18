@@ -1,9 +1,17 @@
 name: anaconda-project-docs
 dependencies:
 - sphinx
-- pydata-sphinx-theme=0.14.4
+- pydata-sphinx-theme
 - sphinx-copybutton
 - sphinx-notfound-page
 channels:
-- defaults
+# `defaults` is intentionally omitted: Read the Docs build images
+# can't accept the Anaconda ToS gate that channel now requires, and
+# every package listed above is available on conda-forge.
+#
+# This applies only to the docs build environment. Projects exported
+# via `anaconda-project export-pixi` still resolve against the user's
+# configured `default_channels` (typically `pkgs/main` + `pkgs/r`);
+# the conda-forge-only choice here is a build-tooling decision, not
+# a project-level default.
 - conda-forge

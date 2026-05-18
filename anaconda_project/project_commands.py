@@ -14,7 +14,11 @@ from collections import namedtuple
 import os
 import platform
 import sys
-from jinja2 import Template
+
+# `jinja2.Template` is only used inside `_TemplateArgsTransformer.parse_and_template`
+# at command-execution time. Importing it eagerly costs ~20 ms on every
+# `import anaconda_project.project`, which `publication_info` and other
+# read-only consumers don't need to pay for.
 
 from anaconda_project.verbose import _verbose_logger
 from anaconda_project.internal import (conda_api, logged_subprocess, py2_compat)
@@ -155,6 +159,7 @@ class _TemplateArgsTransformer(_ArgsTransformer):
         items.update(replacements)
         items.update(environ)
 
+        from jinja2 import Template
         normalized = {self.arg_to_identifier(k): v for k, v in items.items()}
         templated_command = Template(command).render(normalized)
         return [_append_extra_args_to_command_line(templated_command, extra_args)]
