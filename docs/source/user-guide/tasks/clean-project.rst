@@ -13,7 +13,7 @@ Run the following command from within the project directory::
 
   anaconda-project clean
 
-Project removes automatically created files and downloaded data.
+anaconda-project removes automatically created files and downloaded data.
 
 To restore these files:
 
