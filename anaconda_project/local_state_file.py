@@ -58,18 +58,19 @@ __dummy__: dummy
             a new ``LocalStateFile``
 
         """
-        current_dir = directory
-        while current_dir != os.path.realpath(os.path.dirname(current_dir)):
+        current_dir = os.path.abspath(directory)
+        while True:
             for name in possible_local_state_file_names:
                 path = os.path.join(current_dir, name)
                 if os.path.isfile(path):
                     return LocalStateFile(path)
 
-            if scan_parents:
-                current_dir = os.path.dirname(os.path.abspath(current_dir))
-                continue
-            else:
+            if not scan_parents:
                 break
+            parent = os.path.dirname(current_dir)
+            if parent == current_dir:
+                break
+            current_dir = parent
 
         # No file was found, create a new one
         return LocalStateFile(os.path.join(directory, DEFAULT_LOCAL_STATE_FILENAME))
