@@ -121,22 +121,39 @@ def _pixi_publication_info(project_dir):
     top_packages = [
         _format_dep(pkg, spec) for pkg, spec in data.get('dependencies', {}).items()
     ]
+
+    def _packages_for_env(env_def):
+        """Resolve effective package list for a declared env: top-level
+        [dependencies] (the default feature) plus each feature listed in
+        the env's `features = [...]`. An env declared with
+        `no-default-feature = true` does not inherit the default feature."""
+        if env_def is None:
+            return list(top_packages)
+        features = env_def if isinstance(env_def, list) else env_def.get('features', [])
+        no_default = (
+            isinstance(env_def, dict) and env_def.get('no-default-feature', False)
+        )
+        pkgs = [] if no_default else list(top_packages)
+        for feat in features:
+            feat_deps = data.get('feature', {}).get(feat, {}).get('dependencies', {})
+            pkgs.extend(_format_dep(n, s) for n, s in feat_deps.items())
+        return pkgs
+
+    # Pixi always materializes a `default` env, even when not declared in
+    # [environments]. Surface it unconditionally; honor the user's
+    # declaration if one exists.
+    declared_envs = data.get('environments', {})
     env_specs = {
         'default': {
-            'packages': top_packages,
+            'packages': _packages_for_env(declared_envs.get('default')),
             'channels': channels,
         },
     }
-    for env_name, env_def in data.get('environments', {}).items():
+    for env_name, env_def in declared_envs.items():
         if env_name == 'default':
             continue
-        features = env_def if isinstance(env_def, list) else env_def.get('features', [])
-        feature_pkgs = list(top_packages)
-        for feat in features:
-            feat_deps = data.get('feature', {}).get(feat, {}).get('dependencies', {})
-            feature_pkgs.extend(_format_dep(n, s) for n, s in feat_deps.items())
         env_specs[env_name] = {
-            'packages': feature_pkgs,
+            'packages': _packages_for_env(env_def),
             'channels': channels,
         }
 
@@ -197,7 +214,23 @@ def _format_dep(name, spec):
     return name
 
 
+# Commands we recognize as actual Jupyter notebook launchers. Anything
+# else that mentions an .ipynb file (e.g. `panel serve foo.ipynb`,
+# `voila foo.ipynb`, `streamlit run foo.ipynb`) is a different kind of
+# app — it happens to consume an .ipynb as its source but isn't
+# something a notebook viewer should render.
+_NOTEBOOK_LAUNCHERS = (
+    'jupyter notebook',
+    'jupyter lab',
+    'jupyter-lab',
+    'jupyter-notebook',
+)
+
+
 def _infer_notebook(cmd_str):
+    cmd_lower = cmd_str.lower()
+    if not any(launcher in cmd_lower for launcher in _NOTEBOOK_LAUNCHERS):
+        return None
     for token in cmd_str.split():
         if token.endswith('.ipynb'):
             return token

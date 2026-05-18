@@ -64,13 +64,27 @@ class TestFormatDep:
 
 
 class TestInferNotebook:
-    def test_notebook_detected(self):
+    def test_jupyter_notebook_detected(self):
         assert _infer_notebook('jupyter notebook analysis.ipynb') == 'analysis.ipynb'
 
-    def test_notebook_with_path(self):
-        assert _infer_notebook('voila notebooks/demo.ipynb') == 'notebooks/demo.ipynb'
+    def test_jupyter_lab_detected(self):
+        assert _infer_notebook('jupyter lab notebooks/demo.ipynb') == 'notebooks/demo.ipynb'
 
-    def test_no_notebook(self):
+    def test_jupyter_notebook_dash_form(self):
+        assert _infer_notebook('jupyter-notebook foo.ipynb') == 'foo.ipynb'
+
+    def test_panel_serve_ipynb_is_not_a_notebook(self):
+        # panel serve consumes the .ipynb but renders a web app, not a
+        # notebook view. Only commands that explicitly launch Jupyter
+        # should be classified as notebooks.
+        assert _infer_notebook('panel serve glaciers.ipynb') is None
+
+    def test_voila_ipynb_is_not_a_notebook(self):
+        # voila publishes notebooks as web apps. Same rule: not a
+        # notebook command in the publication-info sense.
+        assert _infer_notebook('voila notebooks/demo.ipynb') is None
+
+    def test_python_script_not_a_notebook(self):
         assert _infer_notebook('python app.py') is None
 
     def test_ipynb_substring_not_matched(self):
@@ -211,15 +225,32 @@ class TestPublicationInfoTasks:
             assert info['commands']['first']['default'] is True
             assert info['commands']['second']['default'] is False
 
-    def test_notebook_inference(self):
+    def test_notebook_inference_jupyter(self):
+        # Direct conversions of `notebook:` commands become
+        # `jupyter notebook ...`; those are what publication_info should
+        # report as a notebook.
         with tempfile.TemporaryDirectory() as td:
             _write_pixi_toml(
                 td,
-                '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n\n[tasks]\nnb = "voila report.ipynb"\n',
+                '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n\n[tasks]\nnb = "jupyter notebook report.ipynb"\n',
             )
             info = publication_info(td)
             assert info['commands']['nb']['notebook'] == 'report.ipynb'
             assert info['commands']['nb']['supports_http_options'] is True
+
+    def test_app_serving_ipynb_is_not_a_notebook(self):
+        # `panel serve foo.ipynb` happens to consume an .ipynb but is a
+        # web app, not a notebook view. The publication info should
+        # reflect that — supports_http_options stays True (it IS an HTTP
+        # service), but `notebook` must be None.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(
+                td,
+                '[workspace]\nname = "t"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n\n[tasks]\ndashboard = "panel serve glaciers.ipynb"\n',
+            )
+            info = publication_info(td)
+            assert info['commands']['dashboard']['notebook'] is None
+            assert info['commands']['dashboard']['supports_http_options'] is True
 
     def test_task_with_environment(self):
         with tempfile.TemporaryDirectory() as td:
@@ -299,6 +330,86 @@ class TestPublicationInfoFeatures:
             assert 'gpu' in info['env_specs']
             assert 'pytorch' in info['env_specs']['gpu']['packages']
             assert 'python>=3.12' in info['env_specs']['gpu']['packages']
+
+    def test_no_default_feature_excludes_top_level_deps(self):
+        # An env declared with `no-default-feature = true` must not inherit
+        # the top-level [dependencies] (the default feature).
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [dependencies]
+                pandas = "*"
+                python = ">=3.12"
+
+                [feature.testenv.dependencies]
+                ipykernel = "*"
+                pandas = "*"
+
+                [environments]
+                sampleproj = { features = ["testenv"] }
+                testenv = { features = ["testenv"], no-default-feature = true }
+            """))
+            info = publication_info(td)
+            sample = info['env_specs']['sampleproj']['packages']
+            test = info['env_specs']['testenv']['packages']
+            # sampleproj inherits the default feature -> python is present
+            assert 'python>=3.12' in sample
+            assert 'pandas' in sample
+            assert 'ipykernel' in sample
+            # testenv opts out of the default feature -> python is absent
+            assert 'python>=3.12' not in test
+            assert 'ipykernel' in test
+            assert 'pandas' in test
+
+    def test_default_env_always_present(self):
+        # Pixi always materializes a `default` env. publication_info must
+        # surface it even when [environments] only declares other envs.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [dependencies]
+                python = ">=3.12"
+
+                [feature.alt.dependencies]
+                numpy = "*"
+
+                [environments]
+                alt = { features = ["alt"] }
+            """))
+            info = publication_info(td)
+            assert 'default' in info['env_specs']
+            assert 'python>=3.12' in info['env_specs']['default']['packages']
+
+    def test_default_env_honors_declaration(self):
+        # When the user explicitly declares `default = { features = [...] }`,
+        # the resulting default env_spec must include those feature deps.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [dependencies]
+                python = ">=3.12"
+
+                [feature.extras.dependencies]
+                requests = "*"
+
+                [environments]
+                default = { features = ["extras"] }
+            """))
+            info = publication_info(td)
+            assert 'requests' in info['env_specs']['default']['packages']
+            assert 'python>=3.12' in info['env_specs']['default']['packages']
 
 
 class TestPublicationInfoVariables:

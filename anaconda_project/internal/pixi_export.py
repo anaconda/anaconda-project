@@ -10,11 +10,82 @@ from __future__ import absolute_import, print_function
 
 import os
 import re
+import shutil
+import subprocess
 
 from anaconda_project.requirements_registry.requirement import EnvVarRequirement
 from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
 from anaconda_project.requirements_registry.requirements.service import ServiceRequirement
+
+
+class CondaNotAvailableError(Exception):
+    """Raised when the exporter needs `conda` for channel resolution but
+    can't find or invoke it. Wraps the underlying reason so the CLI can
+    surface a useful failure status."""
+
+
+def _resolve_default_channels():
+    """Return the list of URLs that `defaults` expands to, taken from the
+    user's local ``conda config --show default_channels``.
+
+    Pixi has no notion of a `defaults` meta-channel, so we have to rewrite
+    every occurrence to the URLs it would resolve to under conda. We avoid
+    `--json` because conda renders URL fields as nested urlparse dicts in
+    that mode; the plain YAML-ish output is easier to parse and is what
+    `conda config --show` emits by default.
+    """
+    if not shutil.which('conda'):
+        raise CondaNotAvailableError(
+            "`conda` not found on PATH; required to expand the `defaults` "
+            "channel into concrete URLs.")
+    try:
+        proc = subprocess.run(
+            ['conda', 'config', '--show', 'default_channels'],
+            check=True, capture_output=True, text=True)
+    except (OSError, subprocess.CalledProcessError) as e:
+        raise CondaNotAvailableError(
+            "Failed to invoke `conda config --show default_channels`: {}".format(e))
+
+    urls = []
+    in_block = False
+    for line in proc.stdout.splitlines():
+        if line.startswith('default_channels:'):
+            in_block = True
+            continue
+        if in_block:
+            stripped = line.strip()
+            if stripped.startswith('- '):
+                urls.append(stripped[2:].strip())
+            elif stripped == '':
+                continue
+            else:
+                # A non-list, non-blank line means we've fallen out of
+                # the default_channels block (a sibling key, etc.).
+                break
+    if not urls:
+        raise CondaNotAvailableError(
+            "`conda config --show default_channels` returned no entries.")
+    return urls
+
+
+def _expand_defaults_in_channels(channels, default_channels):
+    """Replace every `defaults` entry in ``channels`` with ``default_channels``.
+
+    Order is preserved; duplicates are removed (first wins).
+    """
+    out = []
+    seen = set()
+    for ch in channels:
+        if ch == 'defaults':
+            for d in default_channels:
+                if d not in seen:
+                    seen.add(d)
+                    out.append(d)
+        elif ch not in seen:
+            seen.add(ch)
+            out.append(ch)
+    return out
 
 
 def _sanitize_env_name(name):
@@ -402,7 +473,14 @@ def export_pixi_toml(project):
     lines = []
 
     # -- [workspace] metadata, channels, and platforms
-    # Collect channels from all env specs (union, preserving order)
+    # Collect channels from all env specs (union, preserving order). Pixi
+    # has no `defaults` meta-channel and no notion of channel aliases that
+    # match conda's, so we expand any `defaults` reference into the URLs
+    # that conda would resolve it to. When the project declares no
+    # channels at all, we fall back to those same default URLs rather
+    # than hard-coding conda-forge — that preserves whatever the user's
+    # conda environment treats as default (which may be an enterprise
+    # mirror configured via .condarc).
     all_channels = []
     seen_channels = set()
     for env in project.env_specs.values():
@@ -410,6 +488,13 @@ def export_pixi_toml(project):
             if ch not in seen_channels:
                 all_channels.append(ch)
                 seen_channels.add(ch)
+
+    needs_defaults = (not all_channels) or ('defaults' in all_channels)
+    default_channels = _resolve_default_channels() if needs_defaults else None
+    if not all_channels:
+        all_channels = list(default_channels)
+    elif 'defaults' in all_channels:
+        all_channels = _expand_defaults_in_channels(all_channels, default_channels)
 
     # Collect platforms (union)
     all_platforms = set()
@@ -431,10 +516,7 @@ def export_pixi_toml(project):
     lines.append('name = {}'.format(_toml_string(project.name)))
     if project.description:
         lines.append('description = {}'.format(_toml_string(project.description)))
-    if all_channels:
-        lines.append('channels = {}'.format(_toml_inline_array(all_channels)))
-    else:
-        lines.append('channels = ["conda-forge"]')
+    lines.append('channels = {}'.format(_toml_inline_array(all_channels)))
     lines.append('platforms = {}'.format(_toml_inline_array(sorted(all_platforms))))
     lines.append('')
 
