@@ -39,6 +39,7 @@ import anaconda_project.internal.cli.service_commands as service_commands
 import anaconda_project.internal.cli.environment_commands as environment_commands
 import anaconda_project.internal.cli.command_commands as command_commands
 import anaconda_project.internal.cli.pixi_commands as pixi_commands
+import anaconda_project.internal.cli.info as info_cli
 
 
 def _parse_args_and_run_subcommand(argv):
@@ -406,6 +407,30 @@ def _parse_args_and_run_subcommand(argv):
     add_directory_arg(preset)
     preset.add_argument('filename', metavar='PIXI_TOML_FILE', nargs='?', default='pixi.toml')
     preset.set_defaults(main=pixi_commands.main_export_pixi)
+
+    preset = subparsers.add_parser(
+        'info',
+        help=("Show a summary of the project: name, environments, commands, "
+              "variables. Reads pixi.toml when present (and an "
+              "anaconda-project.yml otherwise) and can also surface env "
+              "prefix locations."))
+    add_directory_arg(preset)
+    preset.add_argument('--json',
+                        action='store_true',
+                        default=False,
+                        help="Emit the publication_info dict as indented JSON instead of formatted text")
+    preset.add_argument('--env-paths',
+                        action='store_true',
+                        default=False,
+                        help=("Include filesystem prefix paths for each environment. "
+                              "For pixi projects this shells out to `pixi info --json` "
+                              "and stashes its full output under `_pixi` in --json mode."))
+    preset.add_argument('--project-type',
+                        choices=('pixi', 'anaconda-project'),
+                        default=None,
+                        help=("Force a manifest format. The default behavior reads "
+                              "pixi.toml if present, otherwise anaconda-project.yml."))
+    preset.set_defaults(main=info_cli.main)
 
     # argparse doesn't do this for us for whatever reason
     if len(argv) < 2:
