@@ -175,6 +175,36 @@ def test_load_directory_without_project_file():
     with_directory_contents(dict(), read_missing_file)
 
 
+def test_load_for_directory_terminates_at_case_insensitive_root(monkeypatch):
+    # Regression for #379: on Windows the parent-walk loop compared
+    # `current_dir` to `os.path.realpath(os.path.dirname(current_dir))`.
+    # At the drive root (e.g. C:\) dirname() is a fixed point, but
+    # realpath() may return a different case for the drive letter, so
+    # the comparison never matches and the loop spins forever.
+    real_dirname = os.path.dirname
+
+    def fake_dirname(p):
+        # Simulate Windows root behavior on POSIX: a fake "drive root"
+        # that's its own dirname.
+        if p == '/FAKEROOT':
+            return '/FAKEROOT'
+        return real_dirname(p)
+
+    def fake_realpath(p):
+        # Simulate Windows returning a case-mangled root.
+        if p == '/FAKEROOT':
+            return '/fakeroot'
+        return p
+
+    monkeypatch.setattr(os.path, 'dirname', fake_dirname)
+    monkeypatch.setattr(os.path, 'realpath', fake_realpath)
+    monkeypatch.setattr(os.path, 'abspath', lambda p: p)
+
+    project_file = ProjectFile.load_for_directory('/FAKEROOT')
+    assert project_file is not None
+    assert project_file.get_value(["a", "b"]) is None
+
+
 anaconda_global_packages = """#
 # In the packages section, list any packages that must be installed
 # before your code runs.

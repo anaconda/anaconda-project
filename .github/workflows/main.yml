@@ -109,7 +109,7 @@ jobs:
       uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: package-${{ github.sha }}
-        path: conda-bld
+        path: ./conda-bld
     - name: Upload to anaconda.org
       shell: bash -el {0}
       env:
@@ -118,4 +118,4 @@ jobs:
       run: |
         conda install -y anaconda-client
         [[ "$GITHUB_REF" =~ ^refs/tags/ ]] || export LABEL="--label dev"
-        anaconda --verbose --token $ANACONDA_TOKEN upload --user ctools $LABEL conda-bld/*/anaconda-project-* --force
+        anaconda --verbose --token $ANACONDA_TOKEN upload --user ctools $LABEL ./conda-bld/*/anaconda-project* --force
