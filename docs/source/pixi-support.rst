@@ -222,6 +222,16 @@ Each flag is wrapped in a Jinja conditional, so a blank pixi arg
 omits the flag entirely (rather than passing an empty value the
 underlying tool might reject).
 
+The ``{% if var %}...{% endif %}`` and ``{{ var }}`` template syntax
+inside task ``cmd`` strings is intentional, not accidental — pixi
+renders task commands through MiniJinja against the positional values
+passed to ``pixi run <task> <values...>`` (with ``args`` defaults
+filling in the rest), and only then hands the rendered command to
+``deno_task_shell`` for execution. The syntax is supported but not
+prominently documented in pixi's own docs; the converted ``pixi.toml``
+is exercising a real pixi feature, and editing the gates by hand is
+fine.
+
 The ``info`` command
 ====================
 
