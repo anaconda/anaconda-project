@@ -15,13 +15,19 @@ import tempfile
 from anaconda_project.internal import pixi_export as pixi_export_module
 from anaconda_project.internal.pixi_export import (
     CondaNotAvailableError,
+    PixiExportStatus,
     _conda_spec_to_pixi,
     _expand_defaults_in_channels,
+    current_platform_addition_target,
+    default_rename_target,
     _strip_conda_prefix_paths,
     _translate_command_env_vars,
     _windows_to_deno_shell,
     export_pixi_toml,
+    extract_warnings,
+    project_would_benefit_from_use_default,
 )
+from anaconda_project import project_ops
 from anaconda_project.project import Project
 
 
@@ -218,7 +224,6 @@ commands:
 """)
         result = export_pixi_toml(project)
         assert 'bokeh serve myapp' in result
-        assert '# converted from bokeh_app' in result
 
     def test_notebook_conversion(self):
         project = self._make_project("""
@@ -232,7 +237,6 @@ commands:
 """)
         result = export_pixi_toml(project)
         assert 'jupyter notebook analysis.ipynb' in result
-        assert '# converted from notebook' in result
 
     def test_default_channels_when_empty(self):
         # When the yml declares no channels, fall back to the URLs that
@@ -846,6 +850,242 @@ commands:
         assert '--anaconda-project-' not in result
 
 
+class TestUseDefault:
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    def test_picker_returns_none_when_default_already_present(self):
+        project = self._make_project("""
+name: HasDefault
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  default: {}
+  other:
+    packages: [flask]
+""")
+        assert default_rename_target(project) is None
+        assert project_would_benefit_from_use_default(project) is False
+
+    def test_picker_single_env_returns_that_env(self):
+        project = self._make_project("""
+name: Solo
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        assert default_rename_target(project) == 'sampleproj'
+
+    def test_picker_uses_default_command_env(self):
+        # Two envs, no `default`. The default command's env (here `web`,
+        # explicitly marked default) should be the one promoted.
+        project = self._make_project("""
+name: PickByCommand
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  test:
+    packages: [pytest]
+  web:
+    packages: [flask]
+commands:
+  serve:
+    unix: python -m http.server
+    env_spec: web
+    default: true
+""")
+        assert default_rename_target(project) == 'web'
+
+    def test_picker_falls_back_to_first_env_without_command(self):
+        # No commands → first env_spec wins.
+        project = self._make_project("""
+name: NoCmd
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  zeta:
+    packages: [flask]
+  alpha:
+    packages: [pytest]
+""")
+        assert default_rename_target(project) == 'zeta'
+
+    def test_single_env_collapses_to_top_level(self):
+        # use_default on a single non-default env: deps move from
+        # [feature.{name}.dependencies] to [dependencies], no
+        # [environments] block needed, and the no-op prepare task is
+        # dropped (under use_default the marker echo is unnecessary —
+        # see test_use_default_omits_prepare_when_no_downloads).
+        project = self._make_project("""
+name: SoloFlat
+packages:
+  - python
+  - flask
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = export_pixi_toml(project, use_default=True)
+        assert '[dependencies]' in result
+        assert 'flask = "*"' in result
+        assert '[feature.sampleproj' not in result
+        assert '[environments]' not in result
+        # No prepare task at all when use_default + no downloads.
+        assert 'prepare' not in result
+
+    def test_multi_env_promotes_default_command_env(self):
+        # Multiple envs, no `default`. With use_default, the default
+        # command's env (`web`) is renamed to `default` — its task lands
+        # in [tasks.serve] (top-level) and its prepare in [tasks.prepare].
+        # The other env still gets a [feature.test.*] block.
+        project = self._make_project("""
+name: MultiPromote
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  web:
+    packages: [flask]
+  test:
+    packages: [pytest]
+commands:
+  serve:
+    unix: python -m http.server
+    env_spec: web
+    default: true
+  pytest-run:
+    unix: pytest
+    env_spec: test
+""")
+        result = export_pixi_toml(project, use_default=True)
+        # `web` collapsed into top-level / default feature.
+        assert 'flask = "*"' in result.split('[feature.', 1)[0]
+        assert '[feature.web' not in result
+        # `serve` (web's command) lives at top-level.
+        assert '[tasks.serve]' in result
+        # `test` env still feature-scoped.
+        assert '[feature.test.dependencies]' in result
+        assert '[feature.test.tasks.pytest-run]' in result
+        # No prepare task at all under use_default + no downloads.
+        assert 'prepare' not in result
+        # Environments block: web's slot becomes the default-comment line,
+        # and `test` is still declared. Order preserved.
+        env_block = result.split('[environments]', 1)[1]
+        web_pos = env_block.index('# default')
+        test_pos = env_block.index('test = ')
+        assert web_pos < test_pos
+
+    def test_multi_env_promotes_first_when_no_default_command(self):
+        # Multiple envs, no `default`, no commands → first env wins.
+        project = self._make_project("""
+name: MultiNoCmd
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  zeta:
+    packages: [flask]
+  alpha:
+    packages: [pytest]
+""")
+        result = export_pixi_toml(project, use_default=True)
+        assert 'flask = "*"' in result.split('[feature.', 1)[0]
+        assert '[feature.zeta' not in result
+        assert '[feature.alpha.dependencies]' in result
+
+    def test_no_op_when_default_already_present(self):
+        # use_default with a project that already has `default` should be
+        # a no-op; output equals the unflagged export byte-for-byte.
+        project = self._make_project("""
+name: AlreadyDefault
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  default:
+    packages: [flask]
+  other:
+    packages: [pytest]
+""")
+        with_flag = export_pixi_toml(project, use_default=True)
+        without = export_pixi_toml(project, use_default=False)
+        assert with_flag == without
+
+    def test_default_off_keeps_feature_scope(self):
+        # Explicit no use_default on a non-default single env: same
+        # behavior as before — feature-scoped layout.
+        project = self._make_project("""
+name: SoloFeature
+packages:
+  - python
+  - flask
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = export_pixi_toml(project, use_default=False)
+        assert '[feature.sampleproj.tasks.prepare]' in result
+        assert '[tasks.prepare]' not in result.replace(
+            '[feature.sampleproj.tasks.prepare]', '')
+
+    def test_use_default_omits_prepare_when_no_downloads(self):
+        # The two reasons we *normally* emit a no-op prepare task —
+        #   (1) env-selection entry point for non-default-named envs,
+        #   (2) marker for "this came from anaconda-project.yml" —
+        # both lose force under use_default: the renamed env *is* the
+        # implicit default, top-level tasks already resolve to it, and
+        # the marker isn't load-bearing. So drop the empty prepare
+        # rather than carry a redundant `echo` task.
+        project = self._make_project("""
+name: NoPrepare
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = export_pixi_toml(project, use_default=True)
+        assert 'prepare' not in result
+
+    def test_use_default_keeps_prepare_when_downloads_exist(self):
+        # Downloads still need to be fetched. use_default doesn't change
+        # that — the prepare task is real work, not a marker, so it must
+        # be emitted regardless.
+        project = self._make_project("""
+name: WithDownload
+packages:
+  - python
+platforms:
+  - linux-64
+downloads:
+  DATA: https://example.com/data.csv
+env_specs:
+  sampleproj: {}
+""")
+        result = export_pixi_toml(project, use_default=True)
+        assert '[tasks.prepare]' in result
+        assert 'python3 ap_download.py' in result
+        assert 'data.csv' in result
+
+
 class TestEndToEndCondaPrefixUnification:
     def _make_project(self, yml_content):
         tmpdir = tempfile.mkdtemp()
@@ -870,3 +1110,321 @@ commands:
         result = export_pixi_toml(project)
         assert 'cmd = "python $PIXI_PROJECT_ROOT/hello.py"' in result
         assert 'windows command differs' not in result
+
+
+class TestExtractWarnings:
+    def test_no_warning_block(self):
+        assert extract_warnings('[workspace]\nname = "x"\n') == []
+
+    def test_warning_block_followed_by_blank(self):
+        content = (
+            '# WARNING: prepare task uses system python3 to run ap_download.py.\n'
+            '# The following env(s) declare downloads but no python package:\n'
+            '#   web\n'
+            '\n'
+            '[workspace]\n')
+        out = extract_warnings(content)
+        assert out[0].startswith('# WARNING:')
+        assert '#   web' in out
+        assert '[workspace]' not in out
+
+    def test_warning_must_lead(self):
+        # A line starting with '# WARNING:' deeper in the file isn't the
+        # leading-block we surface to the user.
+        content = '[workspace]\nname = "x"\n# WARNING: tucked away\n'
+        # The implementation does pick up a later block too (it scans
+        # forward until the first WARNING and stops at the next blank).
+        # Document the behavior either way: here there's no trailing
+        # blank, so it captures everything from WARNING to EOF.
+        out = extract_warnings(content)
+        assert out == ['# WARNING: tucked away']
+
+
+class TestPublicAPI:
+    """Tests for the public surface downstream consumers depend on:
+    ``default_rename_target``, ``PixiExportStatus.default_rename_from``,
+    and ``project_ops.preview_pixi_export``."""
+
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    def test_default_rename_target_is_public_alias(self):
+        # The picker is part of the public contract. Promoted from the
+        # underscored name so downstream tooling doesn't have to import
+        # through a private accessor.
+        assert callable(default_rename_target)
+        assert default_rename_target.__doc__  # has user-facing docs
+
+    def test_export_pixi_status_carries_rename_when_used(self, tmpdir):
+        project = self._make_project("""
+name: ApiRename
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target,
+                                         use_default=True)
+        assert status  # truthy on success
+        assert isinstance(status, PixiExportStatus)
+        assert status.default_rename_from == 'sampleproj'
+
+    def test_export_pixi_status_rename_is_none_without_flag(self, tmpdir):
+        # Without --use-default, no rename happened, so the status reports
+        # None — even though default_rename_target() would have returned
+        # 'sampleproj'. This lets a caller distinguish "we renamed X" from
+        # "we could rename X".
+        project = self._make_project("""
+name: NoFlag
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target)
+        assert status
+        assert status.default_rename_from is None
+
+    def test_export_pixi_status_rename_is_none_when_already_default(self, tmpdir):
+        # use_default with a project that already has `default` is a
+        # no-op; rename_from should be None even though the flag was on.
+        project = self._make_project("""
+name: HasDefault
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  default: {}
+  other:
+    packages: [pytest]
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target,
+                                         use_default=True)
+        assert status
+        assert status.default_rename_from is None
+
+    def test_preview_pixi_export_shape(self):
+        project = self._make_project("""
+name: Preview
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = project_ops.preview_pixi_export(project, use_default=True)
+        # Stable contract: exactly these four keys.
+        assert set(result) == {
+            'pixi_toml', 'default_rename_from',
+            'current_platform_addition_target', 'warnings',
+        }
+        assert isinstance(result['pixi_toml'], str)
+        assert isinstance(result['warnings'], list)
+        # use_default=True actually applies in pixi_toml content
+        assert '[feature.sampleproj' not in result['pixi_toml']
+        assert '[dependencies]' in result['pixi_toml']
+        # default_rename_from reports the candidate regardless of
+        # whether use_default was passed — frontends use it to decide
+        # whether to *offer* the flag.
+        assert result['default_rename_from'] == 'sampleproj'
+
+    def test_preview_reports_target_even_when_flag_off(self):
+        # default_rename_from is the candidate, not "what we did". With
+        # use_default=False the pixi_toml is unchanged (feature-scoped),
+        # but the candidate is still reported so a UI can offer "re-run
+        # with --use-default" as an action.
+        project = self._make_project("""
+name: PreviewOff
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = project_ops.preview_pixi_export(project, use_default=False)
+        assert result['default_rename_from'] == 'sampleproj'
+        assert '[feature.sampleproj.tasks.prepare]' in result['pixi_toml']
+
+    def test_preview_extracts_warnings(self):
+        # A project that triggers the system-python warning surfaces it
+        # in the warnings list — without the caller having to grep the
+        # toml for `# WARNING:`.
+        project = self._make_project("""
+name: PreviewWarn
+packages: []
+platforms:
+  - linux-64
+downloads:
+  DATASET: https://example.com/data.csv
+""")
+        result = project_ops.preview_pixi_export(project)
+        assert any(line.startswith('# WARNING:') for line in result['warnings'])
+        # And the same warning is present in the rendered toml.
+        assert '# WARNING:' in result['pixi_toml']
+
+    def test_preview_default_none_when_already_default(self):
+        project = self._make_project("""
+name: AlreadyDefault
+packages: []
+platforms:
+  - linux-64
+env_specs:
+  default: {}
+""")
+        result = project_ops.preview_pixi_export(project)
+        assert result['default_rename_from'] is None
+
+
+class TestAddCurrentPlatform:
+    """``--add-current-platform`` ensures the host's conda subdir is in the
+    emitted ``platforms`` list. Pixi rejects an env that doesn't list the
+    host platform; anaconda-project is more forgiving."""
+
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    @pytest.fixture
+    def fake_platform(self, monkeypatch):
+        """Force current_platform() to return a known value so tests are
+        deterministic across developer machines and CI runners."""
+        from anaconda_project.internal import conda_api
+        monkeypatch.setattr(conda_api, 'current_platform', lambda: 'osx-arm64')
+        return 'osx-arm64'
+
+    def test_picker_returns_platform_when_missing(self, fake_platform):
+        project = self._make_project("""
+name: NotHere
+packages: []
+platforms:
+  - linux-64
+""")
+        assert current_platform_addition_target(project) == 'osx-arm64'
+
+    def test_picker_returns_none_when_already_present(self, fake_platform):
+        project = self._make_project("""
+name: AlreadyHere
+packages: []
+platforms:
+  - linux-64
+  - osx-arm64
+""")
+        assert current_platform_addition_target(project) is None
+
+    def test_export_adds_platform_when_flag_on(self, fake_platform):
+        project = self._make_project("""
+name: AddPlat
+packages: []
+platforms:
+  - linux-64
+""")
+        result = export_pixi_toml(project, add_current_platform=True)
+        # Sorted alphabetically, both present.
+        assert 'platforms = ["linux-64", "osx-arm64"]' in result
+
+    def test_export_leaves_platforms_alone_by_default(self, fake_platform):
+        project = self._make_project("""
+name: NoFlag
+packages: []
+platforms:
+  - linux-64
+""")
+        result = export_pixi_toml(project)
+        # Without the flag the host platform is not added — even if pixi
+        # would later refuse it. anaconda-project doesn't silently mutate
+        # the user's platforms list.
+        assert 'osx-arm64' not in result
+
+    def test_export_no_op_when_already_present(self, fake_platform):
+        project = self._make_project("""
+name: AlreadyOk
+packages: []
+platforms:
+  - linux-64
+  - osx-arm64
+""")
+        result = export_pixi_toml(project, add_current_platform=True)
+        # Still appears exactly once in the platforms list.
+        assert result.count('"osx-arm64"') == 1
+
+    def test_status_carries_platform_added(self, fake_platform, tmpdir):
+        project = self._make_project("""
+name: StatusAdd
+packages: []
+platforms:
+  - linux-64
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target,
+                                         add_current_platform=True)
+        assert status
+        assert isinstance(status, PixiExportStatus)
+        assert status.current_platform_added == 'osx-arm64'
+
+    def test_status_platform_added_is_none_without_flag(self, fake_platform, tmpdir):
+        project = self._make_project("""
+name: StatusOff
+packages: []
+platforms:
+  - linux-64
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target)
+        assert status
+        assert status.current_platform_added is None
+
+    def test_status_platform_added_is_none_when_already_present(self, fake_platform, tmpdir):
+        # Flag is on, but the platform is already there — the status
+        # reports None to distinguish "we added X" from "X was there".
+        project = self._make_project("""
+name: StatusNoOp
+packages: []
+platforms:
+  - linux-64
+  - osx-arm64
+""")
+        target = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(project, filename=target,
+                                         add_current_platform=True)
+        assert status
+        assert status.current_platform_added is None
+
+    def test_preview_reports_target_even_when_flag_off(self, fake_platform):
+        project = self._make_project("""
+name: PreviewPlat
+packages: []
+platforms:
+  - linux-64
+""")
+        result = project_ops.preview_pixi_export(project)
+        # Candidate is reported regardless of flag — frontends use it to
+        # offer "re-render with --add-current-platform" as an action.
+        assert result['current_platform_addition_target'] == 'osx-arm64'
+        # pixi_toml itself wasn't widened (flag is off).
+        assert 'osx-arm64' not in result['pixi_toml']
+
+    def test_preview_target_none_when_already_present(self, fake_platform):
+        project = self._make_project("""
+name: PreviewOk
+packages: []
+platforms:
+  - linux-64
+  - osx-arm64
+""")
+        result = project_ops.preview_pixi_export(project)
+        assert result['current_platform_addition_target'] is None

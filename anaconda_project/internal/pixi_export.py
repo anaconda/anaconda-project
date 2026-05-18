@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 
+from anaconda_project.internal.simple_status import SimpleStatus
 from anaconda_project.requirements_registry.requirement import EnvVarRequirement
 from anaconda_project.requirements_registry.requirements.conda_env import CondaEnvRequirement
 from anaconda_project.requirements_registry.requirements.download import DownloadRequirement
@@ -23,6 +24,37 @@ class CondaNotAvailableError(Exception):
     """Raised when the exporter needs `conda` for channel resolution but
     can't find or invoke it. Wraps the underlying reason so the CLI can
     surface a useful failure status."""
+
+
+class PixiExportStatus(SimpleStatus):
+    """Status returned by :func:`anaconda_project.project_ops.export_pixi`.
+
+    Carries fields downstream consumers (launchers, IDE plugins) use to
+    surface what the export actually changed without re-querying the
+    project:
+
+    * ``default_rename_from`` — the env_spec name promoted to ``default``
+      by ``use_default``, or ``None`` when ``use_default`` was off, was
+      a no-op (project already had a ``default`` env_spec), or the
+      export failed.
+    * ``current_platform_added`` — the platform string (e.g.
+      ``'osx-arm64'``) that was added to the platform list by
+      ``add_current_platform``, or ``None`` when the flag was off, the
+      platform was already declared, or the export failed.
+    """
+    def __init__(self, success, description, errors=(),
+                 default_rename_from=None, current_platform_added=None):
+        super().__init__(success, description, errors)
+        self._default_rename_from = default_rename_from
+        self._current_platform_added = current_platform_added
+
+    @property
+    def default_rename_from(self):
+        return self._default_rename_from
+
+    @property
+    def current_platform_added(self):
+        return self._current_platform_added
 
 
 def _resolve_default_channels():
@@ -605,10 +637,8 @@ def _command_to_task(command, declared_vars):
         raw_forms.append(raw_cmd)
     elif command.notebook is not None:
         raw_cmd = 'jupyter notebook {}'.format(command.notebook)
-        comments.append('converted from notebook command')
     elif command.bokeh_app is not None:
         raw_cmd = 'bokeh serve {}'.format(command.bokeh_app)
-        comments.append('converted from bokeh_app command')
     elif command.windows_cmd_commandline:
         # No unix variant — normalize the windows form so it runs under
         # deno_task_shell on every platform pixi targets.
@@ -660,11 +690,96 @@ def _command_to_task(command, declared_vars):
     return cmd_rendered, raw_forms, comments, args_line
 
 
-def export_pixi_toml(project):
+def extract_warnings(content):
+    """Pull the leading ``# WARNING:`` block out of generated pixi.toml text.
+
+    Returns a list of comment lines (the ``# WARNING:`` line plus its
+    indented continuation, stopping at the first blank line). Empty list
+    if the content carries no warning block. Used by both ``export_pixi``
+    (to mirror the warning to stderr) and ``preview_pixi_export`` (to
+    surface it in the structured preview without scraping the toml again).
+    """
+    warning_lines = []
+    in_warning = False
+    for line in content.splitlines():
+        if line.startswith('# WARNING:'):
+            in_warning = True
+        if in_warning:
+            if line == '':
+                break
+            warning_lines.append(line)
+    return warning_lines
+
+
+def default_rename_target(project):
+    """Return the env_spec name that ``--use-default`` would promote to
+    pixi's implicit ``default`` environment, or None if it would no-op.
+
+    We promote the env_spec attached to the project's default command (the
+    one a bare ``anaconda-project run`` would invoke); if there are no
+    commands or the command's env_spec is missing, we fall back to the
+    first env_spec declared. We never promote when an env_spec literally
+    named ``default`` already exists — there's nothing to rename.
+
+    This is the public contract for downstream tools (CLI, launchers,
+    GUIs) that need to display "this env will be renamed" before — or
+    after — calling the exporter.
+    """
+    env_specs = project.env_specs
+    if not env_specs or 'default' in env_specs:
+        return None
+    candidate = None
+    if project.default_command is not None:
+        candidate = project.default_command.default_env_spec_name
+    if candidate is None or candidate not in env_specs:
+        candidate = next(iter(env_specs))
+    return candidate
+
+
+def project_would_benefit_from_use_default(project):
+    """True if exporting with ``use_default=True`` would actually rename
+    something. False when the project already has a ``default`` env_spec
+    (or has no env_specs at all)."""
+    return default_rename_target(project) is not None
+
+
+def current_platform_addition_target(project):
+    """Return the current conda subdir (e.g. ``'osx-arm64'``) if exporting
+    with ``add_current_platform=True`` would actually add it to the
+    project's platform union, or ``None`` when it's already present.
+
+    Pixi rejects an env that doesn't list the host platform; anaconda-
+    project is more forgiving. This picker is the public contract for
+    deciding whether the platform list needs widening — frontends use it
+    to recommend ``--add-current-platform`` before the user hits a pixi
+    error at install time.
+    """
+    from anaconda_project.internal.conda_api import current_platform
+    declared = set()
+    for env in project.env_specs.values():
+        declared.update(env.platforms)
+    here = current_platform()
+    return None if here in declared else here
+
+
+def export_pixi_toml(project, use_default=False, add_current_platform=False):
     """Convert an anaconda-project Project to pixi.toml content.
 
     Args:
         project: an anaconda_project.project.Project instance
+        use_default: if True and the project has no env_spec literally
+            named ``default``, rename the env_spec attached to the
+            default command (or, failing that, the first declared
+            env_spec) to ``default`` — so it materializes as pixi's
+            implicit default environment with packages, commands, and
+            the prepare task at the top level instead of inside a
+            ``[feature.{name}.*]`` block.
+        add_current_platform: if True, ensure the host's conda subdir
+            (e.g. ``'osx-arm64'``) appears in the emitted ``platforms``
+            list. anaconda-project is forgiving about platform mismatch
+            but pixi refuses to install an env whose declared platforms
+            don't include the host, so adding the current platform on
+            export prevents that foot-gun.
 
     Returns:
         A string containing the pixi.toml file content.
@@ -701,9 +816,42 @@ def export_pixi_toml(project):
         all_platforms.update(env.platforms)
     if not all_platforms:
         all_platforms = {'linux-64'}
+    # add_current_platform widens the platform list to cover the host
+    # subdir if it isn't already present. Pixi refuses to install an env
+    # whose declared platforms don't include the host; anaconda-project
+    # is more forgiving, so it's common to find a ported project with a
+    # platforms list that worked under conda but not under pixi.
+    if add_current_platform:
+        from anaconda_project.internal.conda_api import current_platform
+        all_platforms.add(current_platform())
 
     # -- Determine if we need features (multiple env specs)
-    env_specs = project.env_specs
+    # When the user passes use_default and there's no env_spec already
+    # called `default`, alias the promoted env (the default command's
+    # env_spec, or the first one declared) to `default` for the rest of
+    # this function. Every code path below already special-cases `default`
+    # — it's pixi's implicit env name — so a one-shot rename is enough to
+    # collapse [feature.{name}.dependencies] → [dependencies] and
+    # [feature.{name}.tasks.X] → [tasks.X].
+    promoted_env = default_rename_target(project) if use_default else None
+
+    def _xlate(name):
+        """Map an anaconda-project env name into the post-rename keyspace."""
+        if promoted_env is not None and name == promoted_env:
+            return 'default'
+        return name
+
+    if promoted_env is not None:
+        # Preserve order so [environments] still emits envs in source order.
+        env_specs = {_xlate(n): spec for n, spec in project.env_specs.items()}
+        # When iterating env_specs (renamed-keyspace), API calls into the
+        # Project (e.g. `project.requirements(name)`) still expect the
+        # original name. This inverse map lets us look it up.
+        original_name_for = {_xlate(n): n for n in project.env_specs}
+    else:
+        env_specs = project.env_specs
+        original_name_for = {n: n for n in env_specs}
+
     has_multiple_envs = len(env_specs) > 1 or (len(env_specs) == 1 and 'default' not in env_specs)
 
     # Placeholder for a warning prefix; populated below once we know
@@ -764,7 +912,7 @@ def export_pixi_toml(project):
     downloads_per_env = {}
     for env_name in env_specs:
         env_downloads = []
-        for req in project.requirements(env_name):
+        for req in project.requirements(original_name_for[env_name]):
             if isinstance(req, DownloadRequirement):
                 # Prefer the user-supplied description from the yml; fall
                 # back to the env_var name when the user didn't write one.
@@ -802,8 +950,16 @@ def export_pixi_toml(project):
     _write_dependencies(lines, global_conda, global_pip)
 
     # -- [activation] for variables
+    # When use_default is in effect we want to read the requirements of
+    # the env we just renamed to `default` (which may not be the project's
+    # current default_env_spec_name); otherwise the project's default is
+    # the right source.
+    if 'default' in env_specs:
+        activation_source_env = original_name_for['default']
+    else:
+        activation_source_env = project.default_env_spec_name
     variables_with_defaults = {}
-    for req in project.requirements(project.default_env_spec_name):
+    for req in project.requirements(activation_source_env):
         if isinstance(req, (CondaEnvRequirement, DownloadRequirement, ServiceRequirement)):
             continue
         if isinstance(req, EnvVarRequirement):
@@ -877,7 +1033,7 @@ def export_pixi_toml(project):
     # `variables:` (with or without defaults), `downloads:`, and `services:`.
     declared_vars = set()
     for env_name in env_specs:
-        for req in project.requirements(env_name):
+        for req in project.requirements(original_name_for[env_name]):
             if isinstance(req, CondaEnvRequirement):
                 continue
             if isinstance(req, EnvVarRequirement):
@@ -890,7 +1046,11 @@ def export_pixi_toml(project):
         global_tasks = []
         feature_tasks = []
         for cmd_name, command in sorted(commands.items()):
-            env_spec_name = command.default_env_spec_name
+            # Translate the command's env_spec name into the renamed
+            # keyspace — so a command bound to the promoted env sees
+            # `default` and ends up in [tasks.X] rather than
+            # [feature.{old}.tasks.X].
+            env_spec_name = _xlate(command.default_env_spec_name)
             if has_multiple_envs and env_spec_name and env_spec_name != 'default':
                 feature_tasks.append((cmd_name, command))
             else:
@@ -924,7 +1084,7 @@ def export_pixi_toml(project):
                 lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
                 continue
             desc = command.description
-            env_spec_name = command.default_env_spec_name
+            env_spec_name = _xlate(command.default_env_spec_name)
             pixi_env_name = _sanitize_env_name(env_spec_name)
             has_desc = desc and desc != cmd_name and desc not in (raw_forms or [])
             section = 'feature.{}.tasks.{}'.format(pixi_env_name, cmd_name)
@@ -939,7 +1099,8 @@ def export_pixi_toml(project):
             lines.append('')
 
     # -- `prepare` task
-    # Always emit a `prepare` task on a converted project. Two reasons:
+    # By default, always emit a `prepare` task on a converted project.
+    # Two reasons:
     #   1. Mirror anaconda-project's `prepare` semantics for the default
     #      env: fetch any declared downloads.
     #   2. When the default env_spec has a non-default name (e.g.
@@ -951,40 +1112,51 @@ def export_pixi_toml(project):
     # The task name itself doubles as a marker — downstream tooling can
     # detect "this pixi.toml was converted from anaconda-project.yml"
     # by looking for the `prepare` task.
+    #
+    # Exception: under `use_default`, reason 2 evaporates (the renamed
+    # env *is* the default, so top-level tasks already resolve to it),
+    # and the marker isn't load-bearing enough to justify a no-op echo.
+    # In that mode we only emit prepare when there's actual work
+    # (downloads) to do.
     if 'default' in env_specs:
         default_source = 'default'
-    elif project.default_env_spec_name in env_specs:
-        default_source = project.default_env_spec_name
+    elif _xlate(project.default_env_spec_name) in env_specs:
+        default_source = _xlate(project.default_env_spec_name)
     elif env_specs:
         default_source = next(iter(env_specs))
     else:
         default_source = None
 
-    if default_source in downloads_per_env:
+    has_downloads = default_source in downloads_per_env
+    if has_downloads:
         prepare_body = _toml_multiline_string(
             _build_prepare_command(downloads_per_env[default_source]))
+    elif promoted_env is not None:
+        # `use_default` mode + no downloads → skip the prepare task.
+        prepare_body = None
     else:
         # No downloads — the task is a no-op echo. Acts as the
         # converted-project marker and (when scoped to a feature) as
         # the env-selection entry point.
         prepare_body = _toml_string(_PREPARE_MARKER_ECHO)
 
-    # Multi-env: scope to the default env's feature so `pixi run prepare`
-    # auto-resolves to that env. When the default is the literal
-    # `default`, fold to the global default feature — pixi's implicit
-    # default env picks it up.
-    if has_multiple_envs and default_source and default_source != 'default':
-        pixi_env_name = _sanitize_env_name(default_source)
-        lines.append('[feature.{}.tasks.prepare]'.format(pixi_env_name))
-    else:
-        lines.append('[tasks.prepare]')
-    lines.append('cmd = {}'.format(prepare_body))
-    lines.append('')
+    if prepare_body is not None:
+        # Multi-env: scope to the default env's feature so `pixi run prepare`
+        # auto-resolves to that env. When the default is the literal
+        # `default`, fold to the global default feature — pixi's implicit
+        # default env picks it up.
+        if has_multiple_envs and default_source and default_source != 'default':
+            pixi_env_name = _sanitize_env_name(default_source)
+            lines.append('[feature.{}.tasks.prepare]'.format(pixi_env_name))
+        else:
+            lines.append('[tasks.prepare]')
+        lines.append('cmd = {}'.format(prepare_body))
+        lines.append('')
 
     # -- Services as comments
     services = {}
     for env_name in env_specs:
-        for req in project.requirements(env_name):
+        for req in project.requirements(original_name_for[env_name]):
             if isinstance(req, ServiceRequirement):
                 services[req.env_var] = req.service_type
 
@@ -996,7 +1168,7 @@ def export_pixi_toml(project):
 
     # -- Variables without defaults as comments
     vars_without_defaults = {}
-    for req in project.requirements(project.default_env_spec_name):
+    for req in project.requirements(activation_source_env):
         if isinstance(req, (CondaEnvRequirement, DownloadRequirement, ServiceRequirement)):
             continue
         if isinstance(req, EnvVarRequirement) and req.default_as_string is None:
