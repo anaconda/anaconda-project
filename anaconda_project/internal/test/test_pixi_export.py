@@ -924,9 +924,10 @@ env_specs:
 
     def test_single_env_collapses_to_top_level(self):
         # use_default on a single non-default env: deps move from
-        # [feature.{name}.dependencies] to [dependencies], prepare from
-        # [feature.{name}.tasks.prepare] to [tasks.prepare], no
-        # [environments] block needed.
+        # [feature.{name}.dependencies] to [dependencies], no
+        # [environments] block needed, and the no-op prepare task is
+        # dropped (under use_default the marker echo is unnecessary —
+        # see test_use_default_omits_prepare_when_no_downloads).
         project = self._make_project("""
 name: SoloFlat
 packages:
@@ -941,8 +942,9 @@ env_specs:
         assert '[dependencies]' in result
         assert 'flask = "*"' in result
         assert '[feature.sampleproj' not in result
-        assert '[tasks.prepare]' in result
         assert '[environments]' not in result
+        # No prepare task at all when use_default + no downloads.
+        assert 'prepare' not in result
 
     def test_multi_env_promotes_default_command_env(self):
         # Multiple envs, no `default`. With use_default, the default
@@ -978,9 +980,8 @@ commands:
         # `test` env still feature-scoped.
         assert '[feature.test.dependencies]' in result
         assert '[feature.test.tasks.pytest-run]' in result
-        # Prepare lands at top level (web is now `default`).
-        assert '[tasks.prepare]' in result
-        assert '[feature.web.tasks.prepare]' not in result
+        # No prepare task at all under use_default + no downloads.
+        assert 'prepare' not in result
         # Environments block: web's slot becomes the default-comment line,
         # and `test` is still declared. Order preserved.
         env_block = result.split('[environments]', 1)[1]
@@ -1043,6 +1044,46 @@ env_specs:
         assert '[feature.sampleproj.tasks.prepare]' in result
         assert '[tasks.prepare]' not in result.replace(
             '[feature.sampleproj.tasks.prepare]', '')
+
+    def test_use_default_omits_prepare_when_no_downloads(self):
+        # The two reasons we *normally* emit a no-op prepare task —
+        #   (1) env-selection entry point for non-default-named envs,
+        #   (2) marker for "this came from anaconda-project.yml" —
+        # both lose force under use_default: the renamed env *is* the
+        # implicit default, top-level tasks already resolve to it, and
+        # the marker isn't load-bearing. So drop the empty prepare
+        # rather than carry a redundant `echo` task.
+        project = self._make_project("""
+name: NoPrepare
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        result = export_pixi_toml(project, use_default=True)
+        assert 'prepare' not in result
+
+    def test_use_default_keeps_prepare_when_downloads_exist(self):
+        # Downloads still need to be fetched. use_default doesn't change
+        # that — the prepare task is real work, not a marker, so it must
+        # be emitted regardless.
+        project = self._make_project("""
+name: WithDownload
+packages:
+  - python
+platforms:
+  - linux-64
+downloads:
+  DATA: https://example.com/data.csv
+env_specs:
+  sampleproj: {}
+""")
+        result = export_pixi_toml(project, use_default=True)
+        assert '[tasks.prepare]' in result
+        assert 'python3 ap_download.py' in result
+        assert 'data.csv' in result
 
 
 class TestEndToEndCondaPrefixUnification:
