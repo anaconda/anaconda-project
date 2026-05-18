@@ -278,6 +278,39 @@ downloads:
         # Old comment-only path is gone.
         assert '# Downloads from anaconda-project.yml' not in result
 
+    def test_downloads_with_checksum_emit_hash_flag(self):
+        # When the yml declares a checksum, the helper invocation passes
+        # it as `--<algo> <hex>` so the helper verifies post-download.
+        project = self._make_project("""
+name: DlChecksum
+packages: []
+platforms:
+  - linux-64
+downloads:
+  DATASET:
+    url: https://example.com/data.csv
+    sha256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+""")
+        result = export_pixi_toml(project)
+        assert 'python3 ap_download.py' in result
+        assert ('--sha256 "0123456789abcdef0123456789abcdef'
+                '0123456789abcdef0123456789abcdef"') in result
+
+    def test_downloads_without_checksum_omit_hash_flag(self):
+        # Bare-url download (no checksum block) must not emit a flag.
+        project = self._make_project("""
+name: DlNoChecksum
+packages: []
+platforms:
+  - linux-64
+downloads:
+  DATASET: https://example.com/data.csv
+""")
+        result = export_pixi_toml(project)
+        assert 'python3 ap_download.py' in result
+        for algo in ('md5', 'sha1', 'sha224', 'sha256', 'sha384', 'sha512'):
+            assert '--{}'.format(algo) not in result
+
     def test_marker_prepare_when_no_downloads(self):
         # Even without downloads, every converted project gets a
         # `prepare` task. It does double duty:

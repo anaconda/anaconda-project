@@ -53,8 +53,25 @@ class TestFormatDep:
     def test_bare_version_number(self):
         assert _format_dep('flask', '3.0.*') == 'flask=3.0.*'
 
-    def test_dict_spec(self):
-        assert _format_dep('torch', {'version': '>=2.0'}) == 'torch'
+    def test_dict_spec_with_operator(self):
+        assert _format_dep('torch', {'version': '>=2.0'}) == 'torch>=2.0'
+
+    def test_dict_spec_bare_version(self):
+        assert _format_dep('numpy', {'version': '1.20.*'}) == 'numpy=1.20.*'
+
+    def test_dict_spec_wildcard(self):
+        assert _format_dep('pandas', {'version': '*'}) == 'pandas'
+
+    def test_dict_spec_no_version(self):
+        # channel-only specs have no version constraint to express;
+        # fall back to a bare name rather than emitting bogus syntax.
+        assert _format_dep('jax', {'channel': 'conda-forge'}) == 'jax'
+
+    def test_dict_spec_extra_keys_ignored(self):
+        # build, channel, and other inline-table keys don't fit the
+        # conda spec string form, so we keep just the version.
+        assert _format_dep('scipy', {'version': '1.11.*', 'build': 'py311_0',
+                                     'channel': 'conda-forge'}) == 'scipy=1.11.*'
 
     def test_none_spec(self):
         assert _format_dep('requests', None) == 'requests'

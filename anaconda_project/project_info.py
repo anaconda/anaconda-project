@@ -357,6 +357,13 @@ def _build_command(task_name, task_def, env_spec, tool_commands, state):
 
 
 def _format_dep(name, spec):
+    # Pixi inline-table specs like `numpy = { version = ">=2.0" }` arrive
+    # as a dict; pull the version out so the round-trip keeps the
+    # constraint instead of dropping to a bare package name. Other dict
+    # keys (channel, build, etc.) don't have a place in the conda spec
+    # string form we emit, so we ignore them.
+    if isinstance(spec, dict):
+        spec = spec.get('version')
     if isinstance(spec, str) and spec not in ('*', ''):
         if spec[0].isdigit():
             return '{}={}'.format(name, spec)

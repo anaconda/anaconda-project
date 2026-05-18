@@ -441,19 +441,30 @@ def _build_prepare_command(downloads):
     bundles the marker echo and the first python invocation onto a single
     banner line, smashing them visually. Detection of "is this a converted
     anaconda-project?" still works via the task name `prepare`.
+
+    Each download entry is ``(description, url, filename, hash_algorithm,
+    hash_value)``; the trailing two are ``None`` when the user didn't
+    supply a checksum. When present, they're passed as ``--<algo> <hex>``
+    flags so the helper verifies the file post-download.
     """
     lines = []
-    for description, url, filename in downloads:
+    for description, url, filename, hash_algorithm, hash_value in downloads:
         # `python3` (not `python`) so the helper resolves to system python
         # when the env doesn't declare its own. anaconda-project's yml may
         # not include python in every env_spec, and ap_download.py is pure
         # stdlib, so we don't need a project-specific interpreter.
-        lines.append('python3 {script} {url} {path} {desc}'.format(
+        cmd = 'python3 {script} {url} {path} {desc}'.format(
             script=DOWNLOAD_HELPER_FILENAME,
             url=_shell_quote(url),
             path=_shell_quote(filename),
             desc=_shell_quote(description),
-        ))
+        )
+        if hash_algorithm is not None and hash_value is not None:
+            cmd += ' --{algo} {value}'.format(
+                algo=hash_algorithm,
+                value=_shell_quote(hash_value),
+            )
+        lines.append(cmd)
     return '\n'.join(lines)
 
 
@@ -917,7 +928,8 @@ def export_pixi_toml(project, use_default=False, add_current_platform=False):
                 # Prefer the user-supplied description from the yml; fall
                 # back to the env_var name when the user didn't write one.
                 description = req.options.get('description') or req.env_var
-                env_downloads.append((description, req.url, req.filename))
+                env_downloads.append((description, req.url, req.filename,
+                                      req.hash_algorithm, req.hash_value))
         if env_downloads:
             downloads_per_env[env_name] = env_downloads
 
