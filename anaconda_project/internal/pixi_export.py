@@ -779,7 +779,7 @@ def current_platform_addition_target(project):
     return None if here in declared else here
 
 
-def export_pixi_toml(project, use_default=False, add_current_platform=False):
+def export_pixi_toml(project, use_default=False, add_current_platform=False, default_channels=None):
     """Convert an anaconda-project Project to pixi.toml content.
 
     Args:
@@ -797,6 +797,15 @@ def export_pixi_toml(project, use_default=False, add_current_platform=False):
             but pixi refuses to install an env whose declared platforms
             don't include the host, so adding the current platform on
             export prevents that foot-gun.
+        default_channels: optional list of concrete channel URLs that the
+            ``defaults`` meta-channel should expand to (and the fallback
+            when the project declares no channels). When provided, it is
+            used as-is and the local ``conda config --show
+            default_channels`` lookup is skipped entirely — so a caller
+            that already knows its channels (e.g. one running where
+            shelling out to ``conda`` is slow or unavailable) can export
+            without any subprocess. When None (the default), the channels
+            are resolved from the local conda configuration as before.
 
     Returns:
         A string containing the pixi.toml file content.
@@ -820,8 +829,12 @@ def export_pixi_toml(project, use_default=False, add_current_platform=False):
                 all_channels.append(ch)
                 seen_channels.add(ch)
 
+    # Resolve what `defaults` (or an empty channel list) expands to. Prefer a
+    # caller-supplied list and only fall back to the local conda lookup — which
+    # shells out — when one wasn't given and is actually needed.
     needs_defaults = (not all_channels) or ('defaults' in all_channels)
-    default_channels = _resolve_default_channels() if needs_defaults else None
+    if needs_defaults and default_channels is None:
+        default_channels = _resolve_default_channels()
     if not all_channels:
         all_channels = list(default_channels)
     elif 'defaults' in all_channels:

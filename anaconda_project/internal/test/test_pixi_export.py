@@ -90,6 +90,127 @@ platforms:
             export_pixi_toml(project)
 
 
+class TestDefaultChannelsParam:
+    """The ``default_channels=`` seam lets a caller supply the concrete
+    URLs that ``defaults`` expands to, so the export never shells out to
+    ``conda config`` — the path used by frontends (e.g. the editor
+    launcher) running where conda is slow or unavailable.
+    """
+
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    @pytest.fixture
+    def _resolve_must_not_be_called(self, monkeypatch):
+        # Make the conda lookup explode: if a code path reaches it despite a
+        # supplied default_channels, the test fails loudly instead of silently
+        # falling back to the (stubbed) resolver.
+        def boom():
+            raise AssertionError(
+                "_resolve_default_channels() was called even though "
+                "default_channels= was supplied")
+        monkeypatch.setattr(
+            pixi_export_module, '_resolve_default_channels', boom)
+
+    def test_supplied_channels_expand_defaults_without_conda(self, _resolve_must_not_be_called):
+        project = self._make_project("""
+name: Supplied
+packages: []
+channels:
+  - defaults
+  - conda-forge
+platforms:
+  - linux-64
+""")
+        result = export_pixi_toml(
+            project,
+            default_channels=['https://mirror.test/main', 'https://mirror.test/r'])
+        assert ('channels = ["https://mirror.test/main", '
+                '"https://mirror.test/r", "conda-forge"]') in result
+        assert '"defaults"' not in result
+
+    def test_supplied_channels_used_as_fallback_when_empty(self, _resolve_must_not_be_called):
+        # No channels declared: the supplied list is the fallback (and conda
+        # is still never consulted).
+        project = self._make_project("""
+name: SuppliedEmpty
+packages: []
+platforms:
+  - linux-64
+""")
+        result = export_pixi_toml(
+            project, default_channels=['https://mirror.test/main'])
+        assert 'channels = ["https://mirror.test/main"]' in result
+
+    def test_supplied_channels_ignored_when_no_defaults_token(self, _resolve_must_not_be_called):
+        # When the project lists only concrete channels (no `defaults` and
+        # not empty), default_channels is irrelevant and, again, conda is not
+        # consulted.
+        project = self._make_project("""
+name: NoDefaultsToken
+packages: []
+channels:
+  - conda-forge
+platforms:
+  - linux-64
+""")
+        result = export_pixi_toml(
+            project, default_channels=['https://mirror.test/main'])
+        assert 'channels = ["conda-forge"]' in result
+
+    def test_none_falls_back_to_conda_lookup(self):
+        # Default (None) preserves the original behavior: the autouse stub's
+        # FAKE_DEFAULTS are used, proving the conda path still runs.
+        project = self._make_project("""
+name: DefaultNone
+packages: []
+channels:
+  - defaults
+platforms:
+  - linux-64
+""")
+        result = export_pixi_toml(project, default_channels=None)
+        assert ('channels = ["https://example.test/main", '
+                '"https://example.test/r"]') in result
+
+    def test_export_pixi_threads_default_channels(self, _resolve_must_not_be_called, tmpdir):
+        # The public project_ops.export_pixi wrapper must pass the kwarg
+        # through to export_pixi_toml.
+        src = tmpdir.mkdir('proj')
+        src.join('anaconda-project.yml').write("""
+name: ThreadExport
+packages: []
+channels:
+  - defaults
+platforms:
+  - linux-64
+""")
+        project = Project(str(src))
+        out = str(tmpdir.join('pixi.toml'))
+        status = project_ops.export_pixi(
+            project, out, default_channels=['https://mirror.test/main'])
+        assert bool(status)
+        with open(out) as f:
+            content = f.read()
+        assert 'channels = ["https://mirror.test/main"]' in content
+
+    def test_preview_pixi_export_threads_default_channels(self, _resolve_must_not_be_called):
+        project = self._make_project("""
+name: ThreadPreview
+packages: []
+channels:
+  - defaults
+platforms:
+  - linux-64
+""")
+        preview = project_ops.preview_pixi_export(
+            project, default_channels=['https://mirror.test/main'])
+        assert 'channels = ["https://mirror.test/main"]' in preview['pixi_toml']
+
+
 class TestCondaSpecToPixi:
     def test_bare_name(self):
         assert _conda_spec_to_pixi('numpy') == ('numpy', '*')
