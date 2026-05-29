@@ -647,9 +647,15 @@ def _command_to_task(command, declared_vars):
         raw_cmd = command.unix_shell_commandline
         raw_forms.append(raw_cmd)
     elif command.notebook is not None:
-        raw_cmd = 'jupyter notebook {}'.format(command.notebook)
+        # Quote the path: anaconda-project runs notebooks as an argv list
+        # (['jupyter-notebook', path], no shell), so a notebook field
+        # containing shell metacharacters is inert there. Here we synthesize a
+        # deno_task_shell command string, so an unquoted path would let
+        # metacharacters (;, |, $(), backtick) break out and execute when a
+        # user later runs `pixi run`. _shell_quote neutralizes them.
+        raw_cmd = 'jupyter notebook {}'.format(_shell_quote(command.notebook))
     elif command.bokeh_app is not None:
-        raw_cmd = 'bokeh serve {}'.format(command.bokeh_app)
+        raw_cmd = 'bokeh serve {}'.format(_shell_quote(command.bokeh_app))
     elif command.windows_cmd_commandline:
         # No unix variant — normalize the windows form so it runs under
         # deno_task_shell on every platform pixi targets.

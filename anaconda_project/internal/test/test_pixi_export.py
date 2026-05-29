@@ -223,7 +223,8 @@ commands:
     bokeh_app: myapp
 """)
         result = export_pixi_toml(project)
-        assert 'bokeh serve myapp' in result
+        # The app path is shell-quoted (harmless for a clean name).
+        assert 'bokeh serve "myapp"' in result
 
     def test_notebook_conversion(self):
         project = self._make_project("""
@@ -236,7 +237,51 @@ commands:
     notebook: analysis.ipynb
 """)
         result = export_pixi_toml(project)
-        assert 'jupyter notebook analysis.ipynb' in result
+        # The notebook path is shell-quoted (harmless for a clean name).
+        assert 'jupyter notebook "analysis.ipynb"' in result
+
+    def test_notebook_path_shell_metacharacters_neutralized(self):
+        # A notebook field carrying shell metacharacters must not break out of
+        # the generated deno_task_shell command. anaconda-project's own runner
+        # execs notebooks as an argv list (no shell), so this injection is one
+        # the converter would otherwise introduce.
+        project = self._make_project("""
+name: NbInjection
+packages: []
+platforms:
+  - linux-64
+commands:
+  analysis:
+    notebook: "x.ipynb; touch PWNED"
+""")
+        result = export_pixi_toml(project)
+        # The whole path stays inside one double-quoted token; the ';' is data,
+        # not a command separator. No bare `; touch PWNED` escapes the quotes.
+        assert 'jupyter notebook "x.ipynb; touch PWNED"' in result
+        assert '.ipynb; touch PWNED\n' not in result
+        assert 'notebook x.ipynb;' not in result
+
+    def test_bokeh_app_shell_metacharacters_neutralized(self):
+        project = self._make_project("""
+name: BokehInjection
+packages:
+  - bokeh
+platforms:
+  - linux-64
+commands:
+  app:
+    bokeh_app: "app$(touch PWNED)"
+""")
+        result = export_pixi_toml(project)
+        # In the task command, the path is shell-quoted AND the '$' is escaped,
+        # so after TOML parsing deno_task_shell sees `"app\$(touch PWNED)"` and
+        # does NOT perform command substitution. At the TOML layer the backslash
+        # is itself escaped, so the serve line contains the doubled form.
+        task_lines = [ln for ln in result.splitlines() if 'serve' in ln]
+        assert task_lines, "expected a bokeh serve task line"
+        assert 'app\\\\$(touch PWNED)' in task_lines[0]
+        # No serve task line carries a bare, unescaped command-substitution.
+        assert not any('serve "app$(touch PWNED)"' in ln for ln in task_lines)
 
     def test_default_channels_when_empty(self):
         # When the yml declares no channels, fall back to the URLs that
@@ -706,6 +751,38 @@ class TestStripCondaPrefixPaths:
 
     def test_strips_at_end_of_string(self):
         assert _strip_conda_prefix_paths('exec ${CONDA_PREFIX}/bin/python') == 'exec python'
+
+
+class TestShellQuote:
+    # _shell_quote is the neutralizer for any path/value interpolated into a
+    # generated deno_task_shell command. Pin its escaping directly so a
+    # regression in the escape set is caught regardless of caller.
+    _shell_quote = staticmethod(pixi_export_module._shell_quote)
+
+    def test_plain_value_is_wrapped(self):
+        assert self._shell_quote('analysis.ipynb') == '"analysis.ipynb"'
+
+    def test_double_quote_escaped(self):
+        assert self._shell_quote('a"b') == '"a\\"b"'
+
+    def test_backslash_escaped(self):
+        assert self._shell_quote('a\\b') == '"a\\\\b"'
+
+    def test_dollar_escaped(self):
+        # prevents deno_task_shell command/var substitution
+        assert self._shell_quote('$(touch x)') == '"\\$(touch x)"'
+
+    def test_backtick_escaped(self):
+        assert self._shell_quote('a`b`') == '"a\\`b\\`"'
+
+    def test_separators_survive_as_data_inside_quotes(self):
+        # ; | & are NOT escaped because, inside double quotes, deno_task_shell
+        # treats them as literal data — they only matter unquoted.
+        out = self._shell_quote('x.ipynb; rm -rf ~ | cat & echo')
+        assert out.startswith('"') and out.endswith('"')
+        assert '\\$' not in out  # nothing to escape here
+        # the dangerous chars are contained within the single quoted token
+        assert out == '"x.ipynb; rm -rf ~ | cat & echo"'
 
 
 class TestHttpOptions:
