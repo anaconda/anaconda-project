@@ -625,7 +625,7 @@ def export_env_spec(project, name, filename):
     return SimpleStatus(success=True, description="Exported environment spec {} to {}.".format(name, filename))
 
 
-def export_pixi(project, filename, use_default=False, add_current_platform=False):
+def export_pixi(project, filename, use_default=False, add_current_platform=False, default_channels=None):
     """Export the project as a pixi.toml file.
 
     Returns a ``Status`` subtype.
@@ -645,6 +645,11 @@ def export_pixi(project, filename, use_default=False, add_current_platform=False
             doesn't list the host platform; anaconda-project is more
             forgiving, so this prevents a pixi install error on a project
             whose ``platforms:`` list happens to omit the developer's box.
+        default_channels (list or None): optional concrete channel URLs to
+            expand ``defaults`` to (and to fall back on when the project
+            declares no channels). When provided, the local ``conda config``
+            lookup is skipped — letting a caller export without shelling out
+            to conda. See :func:`export_pixi_toml`.
 
     Returns:
         ``PixiExportStatus`` on success (carries ``default_rename_from``
@@ -665,7 +670,8 @@ def export_pixi(project, filename, use_default=False, add_current_platform=False
                       if add_current_platform else None)
     try:
         content = export_pixi_toml(project, use_default=use_default,
-                                   add_current_platform=add_current_platform)
+                                   add_current_platform=add_current_platform,
+                                   default_channels=default_channels)
     except CondaNotAvailableError as e:
         return SimpleStatus(
             success=False,
@@ -696,7 +702,7 @@ def export_pixi(project, filename, use_default=False, add_current_platform=False
         current_platform_added=platform_added)
 
 
-def preview_pixi_export(project, use_default=False, add_current_platform=False):
+def preview_pixi_export(project, use_default=False, add_current_platform=False, default_channels=None):
     """Render the pixi.toml conversion in memory without writing to disk.
 
     Returns a dict with four keys, suitable for driving a preview UI
@@ -735,6 +741,9 @@ def preview_pixi_export(project, use_default=False, add_current_platform=False):
             controls the content of ``pixi_toml`` but not
             ``current_platform_addition_target`` (which is reported
             regardless).
+        default_channels (list or None): same semantics as
+            ``export_pixi`` — when provided, ``defaults`` is expanded from
+            this list and the conda lookup is skipped.
 
     Returns:
         dict
@@ -744,7 +753,8 @@ def preview_pixi_export(project, use_default=False, add_current_platform=False):
         export_pixi_toml, extract_warnings,
     )
     pixi_toml = export_pixi_toml(project, use_default=use_default,
-                                 add_current_platform=add_current_platform)
+                                 add_current_platform=add_current_platform,
+                                 default_channels=default_channels)
     return {
         'pixi_toml': pixi_toml,
         'default_rename_from': default_rename_target(project),
