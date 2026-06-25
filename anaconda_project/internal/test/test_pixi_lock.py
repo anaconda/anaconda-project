@@ -346,3 +346,28 @@ def test_default_query_backend_shape_against_real_conda():
     r = recs[0]
     for field in ("url", "sha256", "md5", "depends"):
         assert hasattr(r, field), "PackageRecord missing %r (conda API changed)" % field
+
+
+def test_enrich_finds_noarch_package_when_platform_subdir_empty():
+    # A platform closure includes noarch packages (tzdata, pip, pure-python
+    # deps). Enrichment must search noarch in addition to the platform subdir,
+    # and record the package's ACTUAL subdir (noarch), not the platform.
+    def _query(name, channels, subdir):
+        if name == "tzdata" and subdir == "noarch":
+            return (_FakeRecord("tzdata", "2024a", "h0", "noarch",
+                                "https://m/noarch/tzdata-2024a-h0.conda", "s", "m", []),)
+        return ()   # nothing under the platform subdir
+    enriched = pixi_lock.enrich_locked_packages(
+        [("tzdata", "2024a", "h0")], channels=["pkgs/main"], subdir="osx-arm64", query=_query)
+    assert enriched[0]["subdir"] == "noarch"
+    assert "/noarch/" in enriched[0]["url"]
+
+
+def test_enrich_noarch_target_does_not_double_search():
+    # When the target IS noarch, don't search noarch twice; a miss is a miss.
+    def _query(name, channels, subdir):
+        assert subdir == "noarch"   # only ever queried for noarch
+        return ()
+    with pytest.raises(pixi_lock.BuildNotFoundError):
+        pixi_lock.enrich_locked_packages(
+            [("x", "1", "b")], channels=["pkgs/main"], subdir="noarch", query=_query)

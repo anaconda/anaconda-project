@@ -35,6 +35,16 @@ Scope of this module (v1):
   ``conda_api.ParsedSpec`` — there is no per-package hash), so there is no
   lock-time hash to validate the enriched ``sha256`` against. Integrity rests
   on the channels being trusted/pinned (in AE5: the airgap mirror).
+* Same limit applies to ``depends``/``sha256``/``md5``: the anaconda-project
+  lock carries NONE of them, so we read them from the channel's CURRENT
+  repodata. For the same ``name=version=build`` a channel's recorded
+  ``depends`` can drift over time (this is the very metadata drift that breaks
+  a re-solve), so the emitted ``depends`` reflects the mirror's metadata at
+  translate-time, not necessarily lock-time. This does not affect WHICH
+  artifacts install (those are pinned by url+build), only the recorded
+  dependency edges; ``pixi install --locked`` verifies the artifact closure,
+  which is exact. Faithfully reproducing lock-time ``depends`` is impossible
+  from a lock that never recorded them.
 
 This module is intentionally host-agnostic — it lives in anaconda-project and
 shells out to nothing AE5-specific, so any consumer of anaconda-project (the
@@ -230,36 +240,48 @@ def enrich_locked_packages(locked, channels, subdir, query=None):
     if query is None:
         query = _default_query
 
+    # A platform's closure mixes packages built for that platform with noarch
+    # packages (Python-only deps, tzdata, etc.). A package lives in EXACTLY one
+    # of {<platform>, noarch}, so we search both. The matched record's own
+    # subdir is recorded (each enriched dict carries "subdir") so the caller
+    # can place it in the right pixi.lock section — a noarch package must be
+    # emitted under noarch, not under the platform.
+    search_subdirs = [subdir] if subdir == "noarch" else [subdir, "noarch"]
+
     enriched = []
     for (name, version, build) in locked:
-        try:
-            records = query(name, channels, subdir)
-        except Exception as e:  # noqa: BLE001 - we re-raise as a typed transport error
-            # Any failure to READ the index is a transport/mirror problem, not
-            # evidence the build is gone. Distinguish it loud; never fall
-            # through to substitution or to a BuildNotFound.
-            raise MirrorUnavailableError(
-                "could not reach channel(s) %r for %s=%s=%s on subdir %r: %s" %
-                (list(channels), name, version, build, subdir, e))
-
         match = None
-        for rec in records or ():
-            # Exact identity: name+version+build, and the record must be for
-            # the requested subdir (query_all can return multiple subdirs).
-            if (rec.name == name and rec.version == version and rec.build == build
-                    and getattr(rec, "subdir", subdir) == subdir):
-                match = rec
+        for sd in search_subdirs:
+            try:
+                records = query(name, channels, sd)
+            except Exception as e:  # noqa: BLE001 - re-raise as a typed transport error
+                # Any failure to READ the index is a transport/mirror problem,
+                # not evidence the build is gone. Distinguish it loud; never
+                # fall through to substitution or to a BuildNotFound.
+                raise MirrorUnavailableError(
+                    "could not reach channel(s) %r for %s=%s=%s on subdir %r: %s" %
+                    (list(channels), name, version, build, sd, e))
+            for rec in records or ():
+                # Exact identity: name+version+build, for the subdir queried
+                # (query_all can return multiple subdirs).
+                if (rec.name == name and rec.version == version and rec.build == build
+                        and getattr(rec, "subdir", sd) == sd):
+                    match = rec
+                    break
+            if match is not None:
                 break
 
         if match is None:
             raise BuildNotFoundError(
-                "exact build not found in channel(s) %r: %s=%s=%s on subdir %r "
-                "(strict mode does not substitute)" % (list(channels), name, version, build, subdir))
+                "exact build not found in channel(s) %r: %s=%s=%s on subdir(s) %r "
+                "(strict mode does not substitute)" % (list(channels), name, version, build, search_subdirs))
 
         enriched.append({
             "name": name,
             "version": version,
             "build": build,
+            # the subdir the package was ACTUALLY found in (platform or noarch)
+            "subdir": getattr(match, "subdir", subdir),
             # Trust-on-first-use: the lock carries no hash, so we record the
             # channel's CURRENT sha256/md5. Integrity rests on a trusted/pinned
             # channel (the airgap mirror in AE5).
