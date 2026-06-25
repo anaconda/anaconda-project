@@ -297,6 +297,17 @@ def test_write_pixi_lock_does_not_wrap_long_urls(tmpdir):
 
 # --- Item 5: SubdirData private-API guards ----------------------------------
 
+# conda-the-LIBRARY is not a dependency of anaconda-project (it shells out to a
+# conda BINARY), so the import may be absent in this test env. pixi_lock's
+# enrichment requires conda importable in-process (true in the editor image);
+# tests that need the real conda module skip cleanly where it isn't present.
+try:
+    import conda.core.subdir_data as _conda_subdir_data  # noqa: F401
+    _HAS_CONDA = True
+except Exception:  # noqa: BLE001
+    _HAS_CONDA = False
+
+
 def test_resolve_subdir_data_raises_typed_error_when_api_missing(monkeypatch):
     # Simulate a conda where the import path moved: _resolve_subdir_data must
     # raise our typed CondaIndexAPIError (with version context), not an opaque
@@ -315,6 +326,7 @@ def test_resolve_subdir_data_raises_typed_error_when_api_missing(monkeypatch):
     assert "subdir_data" in str(exc.value).lower()
 
 
+@pytest.mark.skipif(not _HAS_CONDA, reason="conda library not importable in this env")
 def test_resolve_subdir_data_raises_when_query_all_removed(monkeypatch):
     # conda imports fine, but query_all is gone (API renamed) -> typed error.
     class _NoQueryAll(object):
@@ -326,8 +338,8 @@ def test_resolve_subdir_data_raises_when_query_all_removed(monkeypatch):
     assert "query_all" in str(exc.value)
 
 
-@pytest.mark.skipif("CI_OFFLINE" in __import__("os").environ,
-                    reason="repodata canary needs network/mirror; skipped offline")
+@pytest.mark.skipif(not _HAS_CONDA or "CI_OFFLINE" in __import__("os").environ,
+                    reason="repodata canary needs conda + network/mirror; skipped without them")
 def test_default_query_backend_shape_against_real_conda():
     # CI CANARY (gated on editor-image build): against the installed/pinned
     # conda, SubdirData.query_all must import AND return records exposing the
