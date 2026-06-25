@@ -228,3 +228,117 @@ def enrich_locked_packages(locked, channels, subdir, query=None):
             "depends": list(getattr(match, "depends", ()) or ()),
         })
     return enriched
+
+
+def build_pixi_lock(enriched_by_subdir, channels, env_name="default"):
+    """Assemble a pixi.lock (schema version 6) dict from enriched packages.
+
+    Parameters
+    ----------
+    enriched_by_subdir : {subdir: [enriched-pkg-dict, ...]} where each dict is
+        the output of enrich_locked_packages (name/version/build/url/sha256/
+        md5/depends). Every subdir's full closure must be present (pixi
+        rejects an incomplete closure with "lock-file not up-to-date").
+    channels : ordered channel URLs for the environment.
+    env_name : the pixi environment name (default "default").
+
+    Returns a plain dict matching pixi.lock v6:
+      version: 6
+      environments: {<env>: {channels: [{url}], packages: {<subdir>: [{conda: url}]}}}
+      packages: [{conda: url, sha256, md5, depends}]   # deduped, by url
+
+    The per-environment `packages.<subdir>` entries REFERENCE packages by url;
+    the top-level `packages` list holds each unique record once. We emit only
+    the minimal 4 fields (conda/sha256/md5/depends) which pixi accepts for
+    `pixi install --locked` (verified: pixi's own lock stripped to these still
+    installs). license/size/timestamp are intentionally omitted — not needed
+    for a faithful locked install, and we don't have authoritative values.
+    """
+    # Per-subdir reference lists for the environment.
+    env_packages = {}
+    # Top-level package records, deduped by url (a noarch package shared across
+    # subdirs appears once in `packages` but is referenced from each subdir).
+    records_by_url = {}
+    for subdir in sorted(enriched_by_subdir):
+        refs = []
+        for pkg in enriched_by_subdir[subdir]:
+            url = pkg["url"]
+            refs.append({"conda": url})
+            if url not in records_by_url:
+                rec = {"conda": url}
+                if pkg.get("sha256") is not None:
+                    rec["sha256"] = pkg["sha256"]
+                if pkg.get("md5") is not None:
+                    rec["md5"] = pkg["md5"]
+                if pkg.get("depends"):
+                    rec["depends"] = list(pkg["depends"])
+                records_by_url[url] = rec
+        env_packages[subdir] = refs
+
+    document = {
+        "version": 6,
+        "environments": {
+            env_name: {
+                "channels": [{"url": c} for c in channels],
+                "packages": env_packages,
+            }
+        },
+        # Stable order: sort the top-level package list by url for a
+        # deterministic lock (pixi doesn't require a particular order, but a
+        # stable emit makes diffs/tests reproducible).
+        "packages": [records_by_url[u] for u in sorted(records_by_url)],
+    }
+    return document
+
+
+def write_pixi_lock(document, path):
+    """Write the pixi.lock dict to ``path`` ATOMICALLY.
+
+    Full closure is already assembled in memory by build_pixi_lock; we
+    serialize to a temp file in the same directory and os.replace() it into
+    place, so a crash/interruption mid-write can never leave a half-written
+    (incomplete-closure) pixi.lock that pixi would reject with a confusing
+    "lock-file not up-to-date" error. Either the complete lock appears, or the
+    previous file is untouched.
+    """
+    import os
+    import tempfile
+    from ruamel.yaml import YAML
+
+    directory = os.path.dirname(os.path.abspath(path))
+    yaml = YAML()
+    # Package URLs are long; ruamel's default 80-col wrap folds them onto a
+    # continuation line ("conda:\n    https://...") which, while pixi tolerates
+    # it, is fragile for diffs/other readers and looks broken. Disable wrapping
+    # so each url stays on one line (matches how pixi writes its own lock).
+    yaml.width = 4096
+    fd, tmp_path = tempfile.mkstemp(prefix=".pixi.lock.", dir=directory, text=True)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            yaml.dump(document, f)
+        os.replace(tmp_path, path)
+    except BaseException:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def translate_lock_set(lock_set, channels, path, env_name="default", query=None):
+    """End-to-end: anaconda-project CondaLockSet -> faithful pixi.lock on disk.
+
+    Ties Items 1+2+4 together: fail-fast on pip, parse the exact closure for
+    every platform, enrich each via repodata (no solver), assemble the v6
+    document, and write it atomically. Strict mode throughout — any missing
+    build (BuildNotFoundError) or unreachable mirror (MirrorUnavailableError)
+    aborts BEFORE any file is written.
+    """
+    assert_no_pip_packages(lock_set)
+    enriched_by_subdir = {}
+    for platform in lock_set.platforms:
+        locked = parse_locked_specs(lock_set, platform)
+        enriched_by_subdir[platform] = enrich_locked_packages(locked, channels, platform, query=query)
+    document = build_pixi_lock(enriched_by_subdir, channels, env_name=env_name)
+    write_pixi_lock(document, path)
+    return document

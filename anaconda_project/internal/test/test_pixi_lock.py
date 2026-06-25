@@ -188,3 +188,108 @@ def test_module_import_graph_never_imports_conda_solver():
     importlib.import_module("anaconda_project.internal.pixi_lock")
     assert "conda.core.solve" not in sys.modules, \
         "pixi_lock must not import conda's solver at import time"
+
+
+# --- Item 4: assemble v6 doc + atomic write + pixi --locked acceptance -------
+
+def test_build_pixi_lock_v6_structure_and_noarch_dedup():
+    # tzdata is noarch -> shared across both subdirs; it must appear ONCE in
+    # the top-level packages list but be referenced from each subdir.
+    tz = {"name": "tzdata", "version": "2024a", "build": "h0c530f3_0",
+          "url": "https://m/noarch/tzdata-2024a-h0c530f3_0.conda",
+          "sha256": "tzsha", "md5": "tzmd5", "depends": []}
+    py64 = {"name": "python", "version": "3.12.2", "build": "x64",
+            "url": "https://m/linux-64/python-3.12.2-x64.conda",
+            "sha256": "p64", "md5": "m64", "depends": ["tzdata"]}
+    pyarm = {"name": "python", "version": "3.12.2", "build": "arm",
+             "url": "https://m/linux-aarch64/python-3.12.2-arm.conda",
+             "sha256": "parm", "md5": "marm", "depends": ["tzdata"]}
+    doc = pixi_lock.build_pixi_lock(
+        {"linux-64": [tz, py64], "linux-aarch64": [tz, pyarm]},
+        channels=["https://m"], env_name="default")
+
+    assert doc["version"] == 6
+    env = doc["environments"]["default"]
+    assert env["channels"] == [{"url": "https://m"}]
+    # each subdir references its own packages by url
+    assert {"conda": tz["url"]} in env["packages"]["linux-64"]
+    assert {"conda": py64["url"]} in env["packages"]["linux-64"]
+    assert {"conda": pyarm["url"]} in env["packages"]["linux-aarch64"]
+    # top-level packages: tzdata once (deduped), both pythons present = 3 total
+    urls = [p["conda"] for p in doc["packages"]]
+    assert urls.count(tz["url"]) == 1
+    assert len(doc["packages"]) == 3
+    # minimal 4-field schema only (no license/size/timestamp)
+    rec = next(p for p in doc["packages"] if p["conda"] == py64["url"])
+    assert set(rec.keys()) <= {"conda", "sha256", "md5", "depends"}
+    assert rec["sha256"] == "p64" and rec["depends"] == ["tzdata"]
+
+
+def test_write_pixi_lock_is_atomic_and_roundtrips(tmpdir):
+    import os
+    from ruamel.yaml import YAML
+    doc = {"version": 6, "environments": {}, "packages": []}
+    target = str(tmpdir.join("pixi.lock"))
+    pixi_lock.write_pixi_lock(doc, target)
+    assert os.path.exists(target)
+    # no leftover temp files in the dir
+    leftovers = [f for f in os.listdir(str(tmpdir)) if f.startswith(".pixi.lock.")]
+    assert leftovers == []
+    # reads back as the same document
+    with open(target) as f:
+        loaded = YAML().load(f)
+    assert loaded["version"] == 6
+
+
+def test_write_pixi_lock_failure_leaves_no_partial_file(tmpdir, monkeypatch):
+    import os
+    target = str(tmpdir.join("pixi.lock"))
+    # Force the serialize step to blow up AFTER the temp file is opened.
+    import anaconda_project.internal.pixi_lock as plmod
+
+    class _BoomYAML(object):
+        def dump(self, *a, **k):
+            raise RuntimeError("disk full mid-dump")
+    # monkeypatch the YAML class used inside write_pixi_lock
+    monkeypatch.setattr("ruamel.yaml.YAML", lambda *a, **k: _BoomYAML())
+    with pytest.raises(RuntimeError):
+        plmod.write_pixi_lock({"version": 6}, target)
+    assert not os.path.exists(target)                       # no partial target
+    assert [f for f in os.listdir(str(tmpdir)) if f.startswith(".pixi.lock.")] == []  # temp cleaned
+
+
+def test_translate_lock_set_end_to_end_with_injected_query(tmpdir):
+    import os
+    lock_set = CondaLockSet(
+        {"all": ["tzdata=2024a=h0c530f3_0"], "linux-64": ["python=3.12.2=x64"]},
+        platforms=["linux-64"])
+    recs = {
+        "tzdata": [_FakeRecord("tzdata", "2024a", "h0c530f3_0", "linux-64",
+                               "https://m/noarch/tzdata-2024a-h0c530f3_0.conda", "s", "m", [])],
+        "python": [_FakeRecord("python", "3.12.2", "x64", "linux-64",
+                               "https://m/linux-64/python-3.12.2-x64.conda", "s2", "m2", ["tzdata"])],
+    }
+    target = str(tmpdir.join("pixi.lock"))
+    doc = pixi_lock.translate_lock_set(lock_set, channels=["https://m"], path=target,
+                                       query=_fake_query_factory(recs))
+    assert os.path.exists(target)
+    assert len(doc["packages"]) == 2
+    assert "linux-64" in doc["environments"]["default"]["packages"]
+
+
+def test_write_pixi_lock_does_not_wrap_long_urls(tmpdir):
+    # Long package URLs must stay on one line (ruamel's default 80-col wrap
+    # folds "conda:" onto a continuation line, which is fragile for diffs and
+    # other readers). Regression for the canary finding.
+    long_url = ("https://repo.anaconda.com/pkgs/main/noarch/"
+                "some-rather-long-package-name-1.2.3-py312habcdef0_0.conda")
+    pkg = {"name": "x", "version": "1.2.3", "build": "py312habcdef0_0",
+           "url": long_url, "sha256": "s", "md5": "m", "depends": []}
+    doc = pixi_lock.build_pixi_lock({"linux-64": [pkg]}, channels=["https://repo.anaconda.com/pkgs/main"])
+    target = str(tmpdir.join("pixi.lock"))
+    pixi_lock.write_pixi_lock(doc, target)
+    with open(target) as f:
+        text = f.read()
+    # the full url appears on a single physical line (no fold)
+    assert any(long_url in line for line in text.splitlines()), \
+        "long url was wrapped onto a continuation line"
