@@ -67,6 +67,26 @@ class UnsupportedLockContentError(LockTranslationError):
     reproduce in v1 (e.g. pip packages)."""
 
 
+class BuildNotFoundError(LockTranslationError):
+    """A locked build is authoritatively absent from the channel's repodata.
+
+    This is the AUTHORITATIVE "the exact build is gone" case (the channel
+    answered, and the build is not in it) — distinct from a transport
+    failure. In strict mode this is fatal: we will not substitute.
+    """
+
+
+class MirrorUnavailableError(LockTranslationError):
+    """Enrichment could not reach the channel/mirror (transport error,
+    429, timeout, connection reset).
+
+    CRITICAL: this is NOT "the build is gone." A transient mirror failure
+    must never be mistaken for an absent build and must never trigger
+    substitution. Surfaced loud with the cause so an operator can retry,
+    rather than silently producing a wrong or partial lock.
+    """
+
+
 def parse_locked_specs(lock_set, platform):
     """Return the exact locked conda packages for ``platform`` as a list of
     ``(name, version, build)`` tuples.
@@ -118,3 +138,93 @@ def assert_no_pip_packages(lock_set):
             "lock set contains %d pip package(s) (%s%s); pip enrichment is not supported in v1 "
             "(AENT-8881 phase 2). Translating without them would silently drop packages." %
             (len(pip_specs), ", ".join(pip_specs[:3]), " ..." if len(pip_specs) > 3 else ""))
+
+
+def _default_query(name, channels, subdir):
+    """Real enrichment backend: conda's repodata index reader.
+
+    Returns a tuple of PackageRecord-like objects for ``name`` on the given
+    channels+subdir, reading repodata with ZERO solver invocation
+    (SubdirData.query_all does an index lookup, not a solve). Imported
+    locally so importing this module never imports conda's solver (the
+    import-graph assertion in the tests enforces that), and so a conda that
+    moved query_all surfaces as an ImportError at call time, not at import.
+    """
+    from conda.core.subdir_data import SubdirData
+    return SubdirData.query_all(name, channels=list(channels), subdirs=[subdir])
+
+
+def enrich_locked_packages(locked, channels, subdir, query=None):
+    """Enrich each ``(name, version, build)`` with its exact url/sha256/md5/
+    depends from repodata, by EXACT match. No solver, no substitution.
+
+    Parameters
+    ----------
+    locked : list of (name, version, build) tuples (from parse_locked_specs)
+    channels : iterable of channel names/URLs (pass the project's configured
+        channels with `defaults` already expanded to the mirror via the
+        AENT-8838 default_channels= seam — never None; query_all silently
+        falls back to context.channels when channels is empty, which would
+        read the wrong source).
+    subdir : the conda subdir these records target (e.g. "linux-64",
+        "noarch"). Passed EXPLICITLY so a lock targeting a foreign subdir
+        (aarch64 records translated on a linux-64 host) queries the right
+        repodata rather than the host's.
+    query : injectable callable(name, channels, subdir) -> records, for
+        offline testing. Defaults to the real conda index reader.
+
+    Returns a list of dicts: {name, version, build, url, sha256, md5, depends}.
+
+    Raises
+    ------
+    MirrorUnavailableError : the channel/mirror could not be reached
+        (transport error). NEVER treated as "build gone" — no substitution.
+    BuildNotFoundError : the channel answered but the exact build is absent
+        (strict mode: fatal, we do not substitute).
+    LockTranslationError : programmer error (empty channels).
+    """
+    if not channels:
+        raise LockTranslationError("enrich_locked_packages requires explicit non-empty channels "
+                                   "(passing none lets conda fall back to the wrong source)")
+    if query is None:
+        query = _default_query
+
+    enriched = []
+    for (name, version, build) in locked:
+        try:
+            records = query(name, channels, subdir)
+        except Exception as e:  # noqa: BLE001 - we re-raise as a typed transport error
+            # Any failure to READ the index is a transport/mirror problem, not
+            # evidence the build is gone. Distinguish it loud; never fall
+            # through to substitution or to a BuildNotFound.
+            raise MirrorUnavailableError(
+                "could not reach channel(s) %r for %s=%s=%s on subdir %r: %s" %
+                (list(channels), name, version, build, subdir, e))
+
+        match = None
+        for rec in records or ():
+            # Exact identity: name+version+build, and the record must be for
+            # the requested subdir (query_all can return multiple subdirs).
+            if (rec.name == name and rec.version == version and rec.build == build
+                    and getattr(rec, "subdir", subdir) == subdir):
+                match = rec
+                break
+
+        if match is None:
+            raise BuildNotFoundError(
+                "exact build not found in channel(s) %r: %s=%s=%s on subdir %r "
+                "(strict mode does not substitute)" % (list(channels), name, version, build, subdir))
+
+        enriched.append({
+            "name": name,
+            "version": version,
+            "build": build,
+            # Trust-on-first-use: the lock carries no hash, so we record the
+            # channel's CURRENT sha256/md5. Integrity rests on a trusted/pinned
+            # channel (the airgap mirror in AE5).
+            "url": match.url,
+            "sha256": getattr(match, "sha256", None),
+            "md5": getattr(match, "md5", None),
+            "depends": list(getattr(match, "depends", ()) or ()),
+        })
+    return enriched
