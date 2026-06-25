@@ -293,3 +293,56 @@ def test_write_pixi_lock_does_not_wrap_long_urls(tmpdir):
     # the full url appears on a single physical line (no fold)
     assert any(long_url in line for line in text.splitlines()), \
         "long url was wrapped onto a continuation line"
+
+
+# --- Item 5: SubdirData private-API guards ----------------------------------
+
+def test_resolve_subdir_data_raises_typed_error_when_api_missing(monkeypatch):
+    # Simulate a conda where the import path moved: _resolve_subdir_data must
+    # raise our typed CondaIndexAPIError (with version context), not an opaque
+    # ImportError, so convert-time failure is diagnosable.
+    import builtins
+    real_import = builtins.__import__
+
+    def _fake_import(name, *args, **kwargs):
+        if name == "conda.core.subdir_data":
+            raise ImportError("No module named 'conda.core.subdir_data'")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _fake_import)
+    with pytest.raises(pixi_lock.CondaIndexAPIError) as exc:
+        pixi_lock._resolve_subdir_data()
+    assert "subdir_data" in str(exc.value).lower()
+
+
+def test_resolve_subdir_data_raises_when_query_all_removed(monkeypatch):
+    # conda imports fine, but query_all is gone (API renamed) -> typed error.
+    class _NoQueryAll(object):
+        pass
+    import conda.core.subdir_data as sd
+    monkeypatch.setattr(sd, "SubdirData", _NoQueryAll, raising=True)
+    with pytest.raises(pixi_lock.CondaIndexAPIError) as exc:
+        pixi_lock._resolve_subdir_data()
+    assert "query_all" in str(exc.value)
+
+
+@pytest.mark.skipif("CI_OFFLINE" in __import__("os").environ,
+                    reason="repodata canary needs network/mirror; skipped offline")
+def test_default_query_backend_shape_against_real_conda():
+    # CI CANARY (gated on editor-image build): against the installed/pinned
+    # conda, SubdirData.query_all must import AND return records exposing the
+    # 4 fields we read (url/sha256/md5/depends). Catches a conda bump that
+    # silently breaks enrichment. Uses a tiny, stable noarch pkg on pkgs/main.
+    SubdirData = pixi_lock._resolve_subdir_data()        # import must work
+    assert hasattr(SubdirData, "query_all")
+    try:
+        recs = pixi_lock._default_query("tzdata", ["https://repo.anaconda.com/pkgs/main"], "noarch")
+    except pixi_lock.CondaIndexAPIError:
+        raise
+    except Exception:
+        pytest.skip("no network/mirror for repodata canary")
+    if not recs:
+        pytest.skip("tzdata not found on pkgs/main/noarch (channel/network)")
+    r = recs[0]
+    for field in ("url", "sha256", "md5", "depends"):
+        assert hasattr(r, field), "PackageRecord missing %r (conda API changed)" % field

@@ -140,18 +140,59 @@ def assert_no_pip_packages(lock_set):
             (len(pip_specs), ", ".join(pip_specs[:3]), " ..." if len(pip_specs) > 3 else ""))
 
 
+class CondaIndexAPIError(LockTranslationError):
+    """conda's in-process index API (SubdirData.query_all) is not importable
+    or not callable in the way this module needs.
+
+    SubdirData.query_all is a conda INTERNAL/private API; this module is the
+    only place anaconda-project imports conda as a library rather than
+    shelling out to it. A conda upgrade could move/rename/resignature it. We
+    surface that loud and diagnosably (with the installed conda version)
+    rather than letting an opaque ImportError/AttributeError leak, and a CI
+    canary (test_default_query_backend_shape) exercises the import+shape
+    against the pinned conda so a breaking bump is caught in CI, not at a
+    user's convert-time.
+    """
+
+
+def _resolve_subdir_data():
+    """Return conda's SubdirData class, or raise CondaIndexAPIError with the
+    conda version if the private import path moved.
+
+    Imported locally (never at module import) so importing pixi_lock never
+    imports conda's solver — see test_module_import_graph_never_imports_conda_solver.
+    """
+    try:
+        from conda.core.subdir_data import SubdirData
+    except Exception as e:  # noqa: BLE001
+        try:
+            import conda
+            ver = getattr(conda, "__version__", "unknown")
+        except Exception:  # noqa: BLE001
+            ver = "unknown"
+        raise CondaIndexAPIError(
+            "could not import conda.core.subdir_data.SubdirData (conda %s); the conda index "
+            "API this module relies on may have moved. %s" % (ver, e))
+    if not hasattr(SubdirData, "query_all"):
+        import conda
+        raise CondaIndexAPIError(
+            "conda.core.subdir_data.SubdirData has no query_all (conda %s); the conda index "
+            "API this module relies on changed." % getattr(conda, "__version__", "unknown"))
+    return SubdirData
+
+
 def _default_query(name, channels, subdir):
     """Real enrichment backend: conda's repodata index reader.
 
     Returns a tuple of PackageRecord-like objects for ``name`` on the given
     channels+subdir, reading repodata with ZERO solver invocation
     (SubdirData.query_all does an index lookup, not a solve). Imported
-    locally so importing this module never imports conda's solver (the
-    import-graph assertion in the tests enforces that), and so a conda that
-    moved query_all surfaces as an ImportError at call time, not at import.
+    locally so importing this module never imports conda's solver, and a conda
+    that moved/renamed the API surfaces as a typed CondaIndexAPIError (with the
+    version) at call time, not an opaque error.
     """
-    from conda.core.subdir_data import SubdirData
-    return SubdirData.query_all(name, channels=list(channels), subdirs=[subdir])
+    subdir_data = _resolve_subdir_data()
+    return subdir_data.query_all(name, channels=list(channels), subdirs=[subdir])
 
 
 def enrich_locked_packages(locked, channels, subdir, query=None):
