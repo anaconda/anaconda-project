@@ -5,23 +5,23 @@
 # Licensed under the terms of the BSD 3-Clause License.
 # The full license is in the file LICENSE.txt, distributed with this software.
 # -----------------------------------------------------------------------------
-"""Unified publication-info extraction for anaconda-project and pixi projects.
+"""Unified publication-info extraction for project formats.
 
-The top-level :func:`publication_info` accepts a project directory, detects
-whether it is a pixi project (``pixi.toml`` present) or an anaconda-project
-(``anaconda-project.yml``), parses the relevant file, and returns a metadata
-dict with a shape compatible with :meth:`Project.publication_info`.
+The top-level :func:`publication_info` accepts a project directory and auto-detects
+whether it is a pixi project (``pixi.toml``, optionally embedded in ``pyproject.toml``),
+a conda-workspaces project (``conda.toml``, optionally embedded in ``pyproject.toml``),
+or an anaconda-project (``anaconda-project.yml``). It parses the relevant manifest(s)
+and returns a metadata dict with a shape compatible with :meth:`Project.publication_info`.
 
-The pixi branch reads ``pixi.toml`` directly rather than materializing a
-full :class:`Project` — anaconda-project is an established library for the
-legacy ``.yml`` format, and this module deliberately avoids expanding
-:class:`Project` to cover pixi. Consumers that need uniform metadata (e.g.
-anaconda-platform's publishing pipeline) get one entry point that works
-across both formats.
+The pixi and conda-workspaces branches read TOML files directly rather than materializing
+a full :class:`Project` — anaconda-project is an established library for the legacy ``.yml``
+format, and this module deliberately avoids expanding :class:`Project` to cover the newer
+TOML-based formats. Consumers that need uniform metadata (e.g. anaconda-platform's
+publishing pipeline) get one entry point that works across all formats.
 
-The pixi branch also exposes a handful of pixi-native capabilities that
-anaconda-project does not support — TOML ``[feature.*]`` sections,
-``[environments]`` composition, and ``[activation.env]`` variables.
+Both pixi and conda-workspaces support TOML ``[feature.*]`` sections, ``[environments]``
+composition, ``[activation.env]`` variables, and optional ``[tool.anaconda.commands]``
+overrides when embedded in ``pyproject.toml``.
 """
 from __future__ import absolute_import, print_function
 
@@ -345,7 +345,7 @@ def _read_pixi_lock_envs(project_dir):
         import yaml
         with open(lock_path, 'r') as f:
             lock = yaml.safe_load(f)
-    except Exception:
+    except (OSError, yaml.YAMLError):
         return set()
     if not isinstance(lock, dict):
         return set()
@@ -368,7 +368,7 @@ def _read_conda_lock_envs(project_dir):
         import yaml
         with open(lock_path, 'r') as f:
             lock = yaml.safe_load(f)
-    except Exception:
+    except (OSError, yaml.YAMLError):
         return set()
     if not isinstance(lock, dict):
         return set()

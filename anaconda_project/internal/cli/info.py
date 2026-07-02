@@ -12,7 +12,6 @@ import json
 import sys
 
 from anaconda_project.project_info import (
-    PROJECT_TYPE_PIXI,
     PROJECT_TYPE_KEY,
     publication_info,
 )

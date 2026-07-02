@@ -27,7 +27,8 @@ class CondaNotAvailableError(Exception):
 
 
 class PixiExportStatus(SimpleStatus):
-    """Status returned by :func:`anaconda_project.project_ops.export_pixi`.
+    """Status returned by :func:`anaconda_project.project_ops.export_pixi` and
+    :func:`anaconda_project.project_ops.export_conda`.
 
     Carries fields downstream consumers (launchers, IDE plugins) use to
     surface what the export actually changed without re-querying the
