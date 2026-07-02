@@ -841,6 +841,91 @@ variables:
         assert keys, "expected to find at least one [workspace] key"
         assert keys <= allowed, "unexpected [workspace] key(s): {}".format(keys - allowed)
 
+    def test_conda_default_env_comment_uses_conda_workspaces_not_pixi(self):
+        # F1: verify that export_conda_toml uses conda-workspaces terminology
+        project = self._make_project("""
+name: DefaultEnvTest
+packages:
+  - python
+channels:
+  - defaults
+platforms:
+  - linux-64
+env_specs:
+  default: {}
+  extra: {}
+""")
+        result = export_conda_toml(project)
+        # Should contain conda-workspaces in the default env comment
+        assert 'conda-workspaces creates this implicitly' in result
+        # Should NOT contain 'pixi' in that comment
+        assert 'pixi creates this implicitly' not in result
+
+    def test_conda_services_comment_uses_conda_workspaces_not_pixi(self):
+        # F1: verify services comment uses correct terminology
+        project = self._make_project("""
+name: ServicesTest
+packages:
+  - python
+channels:
+  - defaults
+platforms:
+  - linux-64
+services:
+  redis:
+    type: redis
+""")
+        result = export_conda_toml(project)
+        # Should contain conda-workspaces in services comment
+        assert 'no conda-workspaces equivalent' in result
+        # Should NOT contain pixi in that comment
+        assert 'no pixi equivalent' not in result
+
+    def test_conda_unresolved_env_var_uses_conda_task_run(self):
+        # F1: verify unresolved env var message uses correct run command
+        project = self._make_project("""
+name: UnresolvedVarTest
+packages:
+  - python
+channels:
+  - defaults
+platforms:
+  - linux-64
+commands:
+  test:
+    unix: python $UNDEFINED_VAR/main.py
+""")
+        result = export_conda_toml(project)
+        # Should contain "conda task run", not "pixi run"
+        assert 'before running conda task run' in result
+        assert 'before running pixi run' not in result
+
+    def test_conda_no_pixi_substring_with_services_and_multi_env(self):
+        # F1: comprehensive check - no 'pixi' substring anywhere in output
+        # for a project that exercises all three leak sites
+        project = self._make_project("""
+name: ComprehensiveTest
+description: Full coverage test
+packages:
+  - python
+channels:
+  - defaults
+platforms:
+  - linux-64
+env_specs:
+  default: {}
+  other: {}
+services:
+  redis:
+    type: redis
+commands:
+  test:
+    unix: python $UNDEFINED/main.py
+""")
+        result = export_conda_toml(project)
+        # Verify no 'pixi' substring anywhere in the entire output
+        assert 'pixi' not in result.lower()
+
 
 class TestTranslateCommandEnvVars:
     def test_project_dir_braced(self):
