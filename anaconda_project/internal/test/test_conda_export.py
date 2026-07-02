@@ -244,7 +244,14 @@ env_specs:
         assert 'exported Pixi specification' in out
         assert 'simplify the resulting Pixi specification' not in out  # use_default was passed, not recommended
 
-    def test_export_pixi_cli_platform_recommendation_wording(self, capsys, tmpdir):
+    def test_export_pixi_cli_platform_recommendation_wording(self, capsys, tmpdir, monkeypatch):
+        # Force current_platform() so the "platforms: [linux-64]" fixture is
+        # always missing the (fake) host platform, regardless of which OS
+        # actually runs this test (linux-64 is the real host platform on
+        # Linux CI runners, which would otherwise make the recommendation
+        # never fire there).
+        from anaconda_project.internal import conda_api
+        monkeypatch.setattr(conda_api, 'current_platform', lambda: 'osx-arm64')
         project_dir = str(tmpdir)
         self._write_multi_env_project(project_dir, 'PixiPlatform')
         code = _parse_args_and_run_subcommand(
@@ -262,7 +269,9 @@ env_specs:
         out, _ = capsys.readouterr()
         assert 'exported conda-workspaces specification' in out
 
-    def test_export_conda_cli_platform_recommendation_wording(self, capsys, tmpdir):
+    def test_export_conda_cli_platform_recommendation_wording(self, capsys, tmpdir, monkeypatch):
+        from anaconda_project.internal import conda_api
+        monkeypatch.setattr(conda_api, 'current_platform', lambda: 'osx-arm64')
         project_dir = str(tmpdir)
         self._write_multi_env_project(project_dir, 'CondaPlatform')
         code = _parse_args_and_run_subcommand(
