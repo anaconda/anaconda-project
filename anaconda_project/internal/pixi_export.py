@@ -1215,3 +1215,22 @@ def export_pixi_toml(project, use_default=False, add_current_platform=False, def
         lines.append('')
 
     return '\n'.join(lines).rstrip() + '\n'
+
+
+def export_conda_toml(project, use_default=False, add_current_platform=False, default_channels=None):
+    """Convert an anaconda-project Project to conda.toml (conda-workspaces) content.
+
+    This delegates directly to :func:`export_pixi_toml` and returns its result
+    unchanged. conda-workspaces 0.7.0's TOML shape for `[workspace]`,
+    `[dependencies]`, `[feature.*]`, `[environments]`, and `[tasks]` is
+    field-for-field identical to pixi.toml's for every field this exporter
+    emits: the `args` table form the task emitter already writes is accepted
+    by `conda_workspaces.manifests.normalize.normalize_args` (both the bare
+    string and detailed table forms are supported), so no translation is
+    needed for the content this function produces today. See the Args/Returns
+    docs on :func:`export_pixi_toml` for the full parameter and output
+    semantics — they carry over unchanged.
+    """
+    return export_pixi_toml(project, use_default=use_default,
+                            add_current_platform=add_current_platform,
+                            default_channels=default_channels)

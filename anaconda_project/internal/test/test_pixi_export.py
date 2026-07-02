@@ -23,6 +23,7 @@ from anaconda_project.internal.pixi_export import (
     _strip_conda_prefix_paths,
     _translate_command_env_vars,
     _windows_to_deno_shell,
+    export_conda_toml,
     export_pixi_toml,
     extract_warnings,
     project_would_benefit_from_use_default,
@@ -732,6 +733,113 @@ commands:
 """)
         result = export_pixi_toml(project)
         assert 'unresolved env var(s): SOMETHING_RANDOM' in result
+
+
+class TestExportCondaToml:
+    """export_conda_toml delegates directly to export_pixi_toml (Item 6):
+    zero content differences, per F1. These tests confirm the delegation
+    is exact (same content for the same project/args) and exercise a
+    fuller feature surface (multi-env features, tasks with http-options
+    args, activation env vars) to guard the emitted [workspace] table's
+    keys against a hardcoded allow-list — the F2 schema safety net."""
+
+    def _make_project(self, yml_content):
+        tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(tmpdir, 'anaconda-project.yml'), 'w') as f:
+            f.write(yml_content)
+        return Project(tmpdir)
+
+    def test_delegates_to_export_pixi_toml_verbatim(self):
+        project = self._make_project("""
+name: Test
+description: A test project
+packages:
+  - numpy
+  - pandas>=2.0
+channels:
+  - defaults
+platforms:
+  - linux-64
+commands:
+  run:
+    unix: python main.py
+""")
+        conda_result = export_conda_toml(project)
+        pixi_result = export_pixi_toml(project)
+        assert conda_result == pixi_result
+
+    def test_delegates_with_all_kwargs(self):
+        project = self._make_project("""
+name: KwargTest
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {}
+""")
+        conda_result = export_conda_toml(
+            project, use_default=True, add_current_platform=True,
+            default_channels=['https://example.test/main'])
+        pixi_result = export_pixi_toml(
+            project, use_default=True, add_current_platform=True,
+            default_channels=['https://example.test/main'])
+        assert conda_result == pixi_result
+
+    def test_workspace_keys_are_subset_of_allowlist(self):
+        # F2's "still worth building" schema safety net: conda-workspaces
+        # 0.7.0 doesn't enforce `[workspace]` additionalProperties: false
+        # at runtime, but the documented JSON Schema might become
+        # enforced in a later release — this hardcoded allow-list guards
+        # against emitting a [workspace] key outside that documented set.
+        # No local schema file ships with the package, so this is the
+        # allow-list fallback the design doc sanctions rather than a live
+        # schema fetch/validate() call.
+        project = self._make_project("""
+name: FullFeature
+description: Exercise features, tasks with args, and activation env
+packages:
+  - python
+channels:
+  - defaults
+platforms:
+  - linux-64
+env_specs:
+  web:
+    packages:
+      - flask
+  ml:
+    packages:
+      - scikit-learn
+commands:
+  serve:
+    unix: panel serve foo.ipynb
+    supports_http_options: true
+variables:
+  DATA_DIR:
+    default: /data
+""")
+        result = export_conda_toml(project)
+
+        # Parse just the [workspace] table's keys via a minimal line scan
+        # (avoids adding a tomllib parse dependency to this test file for
+        # a single small table — the file already round-trips through
+        # tomllib elsewhere in the suite if that's ever needed).
+        lines = result.splitlines()
+        in_workspace = False
+        keys = set()
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('['):
+                in_workspace = stripped == '[workspace]'
+                continue
+            if in_workspace and '=' in stripped and not stripped.startswith('#'):
+                key = stripped.split('=', 1)[0].strip()
+                keys.add(key)
+
+        allowed = {'name', 'description', 'channels', 'platforms'}
+        assert keys, "expected to find at least one [workspace] key"
+        assert keys <= allowed, "unexpected [workspace] key(s): {}".format(keys - allowed)
 
 
 class TestTranslateCommandEnvVars:
