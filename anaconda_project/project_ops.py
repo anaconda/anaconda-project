@@ -764,6 +764,148 @@ def preview_pixi_export(project, use_default=False, add_current_platform=False, 
     }
 
 
+def export_conda(project, filename, use_default=False, add_current_platform=False, default_channels=None):
+    """Export the project as a conda.toml file.
+
+    Returns a ``Status`` subtype.
+
+    Args:
+        project (Project): the project
+        filename (str): file to export to
+        use_default (bool): if True and the project has no env_spec literally
+            named ``default``, rename the env_spec attached to the default
+            command (or, failing that, the first declared env_spec) to
+            ``default`` on export, so it materializes as conda-workspaces'
+            implicit default environment with packages, commands, and the
+            prepare task at the top level instead of inside a
+            ``[feature.{name}.*]`` block.
+        add_current_platform (bool): if True, ensure the host's conda subdir
+            is in the emitted ``platforms`` list. Conda-workspaces rejects an
+            env that doesn't list the host platform; anaconda-project is more
+            forgiving, so this prevents an install error on a project whose
+            ``platforms:`` list happens to omit the developer's box.
+        default_channels (list or None): optional concrete channel URLs to
+            expand ``defaults`` to (and to fall back on when the project
+            declares no channels). When provided, the local ``conda config``
+            lookup is skipped — letting a caller export without shelling out
+            to conda. See :func:`export_conda_toml`.
+
+    Returns:
+        ``PixiExportStatus`` on success (carries ``default_rename_from``
+        and ``current_platform_added``); a plain ``Status`` on failure.
+        The same status class as ``export_pixi`` is reused — its two fields
+        are generic export concepts with no pixi-specific naming baked in.
+    """
+    failed = _check_problems(project)
+    if failed is not None:
+        return failed
+
+    from anaconda_project.internal.pixi_export import (
+        CondaNotAvailableError, DOWNLOAD_HELPER_FILENAME, PixiExportStatus,
+        current_platform_addition_target, default_rename_target,
+        export_conda_toml, extract_warnings,
+    )
+    import sys
+    rename_from = default_rename_target(project) if use_default else None
+    platform_added = (current_platform_addition_target(project)
+                      if add_current_platform else None)
+    try:
+        content = export_conda_toml(project, use_default=use_default,
+                                    add_current_platform=add_current_platform,
+                                    default_channels=default_channels)
+    except CondaNotAvailableError as e:
+        return SimpleStatus(
+            success=False,
+            description="Cannot export to conda-workspaces: {}".format(e))
+    try:
+        with open(filename, 'w') as f:
+            f.write(content)
+        # If the converted manifest invokes ap_download.py, drop the helper
+        # next to conda.toml so `conda task run prepare` has the script available.
+        if DOWNLOAD_HELPER_FILENAME in content:
+            helper_src = os.path.join(os.path.dirname(__file__),
+                                      'internal', DOWNLOAD_HELPER_FILENAME)
+            helper_dst = os.path.join(os.path.dirname(filename) or '.',
+                                      DOWNLOAD_HELPER_FILENAME)
+            shutil.copyfile(helper_src, helper_dst)
+        # Surface any warnings the exporter wrote to the file so the user
+        # sees them immediately rather than only on later inspection.
+        warning_lines = extract_warnings(content)
+        if warning_lines:
+            print('\n'.join(warning_lines), file=sys.stderr)
+    except Exception as e:
+        return SimpleStatus(success=False, description="Failed to save {}: {}.".format(filename, str(e)))
+
+    return PixiExportStatus(
+        success=True,
+        description="Exported project to {}.".format(filename),
+        default_rename_from=rename_from,
+        current_platform_added=platform_added)
+
+
+def preview_conda_export(project, use_default=False, add_current_platform=False, default_channels=None):
+    """Render the conda.toml conversion in memory without writing to disk.
+
+    Returns a dict with four keys, suitable for driving a preview UI
+    (CLI ``--dry-run``, IDE plugin dialog, launcher confirmation, etc.):
+
+    * ``conda_toml`` (str): the full ``conda.toml`` content the exporter
+      would write.
+    * ``default_rename_from`` (str or None): the env_spec name that would
+      be promoted to ``default`` if ``use_default`` were passed
+      (regardless of whether ``use_default`` was actually requested) —
+      ``None`` when the project already has a ``default`` env_spec, has
+      no env_specs, or has nothing to rename. Frontends use this to
+      offer "re-render with --use-default" as an action.
+    * ``current_platform_addition_target`` (str or None): the host's conda
+      subdir if it would be added to the platform list by
+      ``add_current_platform`` (regardless of whether the flag was
+      passed), or ``None`` when it's already declared. Frontends use
+      this to offer "re-render with --add-current-platform" as an
+      action — conda-workspaces rejects envs that don't list the host
+      platform.
+    * ``warnings`` (list of str): the lines of the leading
+      ``# WARNING:`` block the exporter included at the top of the file,
+      or ``[]`` if there are none. Already extracted so the caller
+      doesn't have to scan the toml again.
+
+    Raises ``CondaNotAvailableError`` if the conversion needs ``conda
+    config --show default_channels`` and conda isn't reachable. Failure
+    of project-problem checks raises through the caller's normal channel
+    for that — a project with problems is not previewable.
+
+    Args:
+        project (Project): the project
+        use_default (bool): same semantics as ``export_conda``; controls
+            the content of ``conda_toml`` but not ``default_rename_from``
+            (which is reported regardless).
+        add_current_platform (bool): same semantics as ``export_conda``;
+            controls the content of ``conda_toml`` but not
+            ``current_platform_addition_target`` (which is reported
+            regardless).
+        default_channels (list or None): same semantics as
+            ``export_conda`` — when provided, ``defaults`` is expanded from
+            this list and the conda lookup is skipped.
+
+    Returns:
+        dict
+    """
+    from anaconda_project.internal.pixi_export import (
+        current_platform_addition_target, default_rename_target,
+        export_conda_toml, extract_warnings,
+    )
+    conda_toml = export_conda_toml(project, use_default=use_default,
+                                   add_current_platform=add_current_platform,
+                                   default_channels=default_channels)
+    return {
+        'conda_toml': conda_toml,
+        'default_rename_from': default_rename_target(project),
+        'current_platform_addition_target':
+            current_platform_addition_target(project),
+        'warnings': extract_warnings(conda_toml),
+    }
+
+
 def add_packages(project, env_spec_name, packages, channels, pip=False):
     """Attempt to install packages then add them to anaconda-project.yml.
 
