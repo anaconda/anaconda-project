@@ -274,9 +274,10 @@ class TestPublicationInfoCondaWorkspaces:
                 td,
                 '[tool.conda.workspace]\nname = "x"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
             )
-            # Explicit type only recognizes top-level conda.toml, not pyproject-embedded
-            with pytest.raises(FileNotFoundError):
-                publication_info(td, project_type=PROJECT_TYPE_CONDA_WORKSPACES)
+            # F3: Explicit type now recognizes pyproject-embedded conda projects (no longer only top-level conda.toml)
+            info = publication_info(td, project_type=PROJECT_TYPE_CONDA_WORKSPACES)
+            assert info['project_type'] == PROJECT_TYPE_CONDA_WORKSPACES
+            assert info['name'] == 'x'
 
     def test_conda_toml_tasks_produce_commands(self):
         with tempfile.TemporaryDirectory() as td:
@@ -1180,6 +1181,38 @@ class TestExplicitProjectType:
             with pytest.raises(FileNotFoundError) as exc:
                 publication_info(td, project_type=PROJECT_TYPE_ANACONDA_PROJECT)
             assert 'anaconda-project.yml' in str(exc.value)
+
+    def test_explicit_pixi_recognizes_pyproject_pixi(self):
+        # F3: explicit project_type now recognizes pyproject.toml embedding
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(
+                td,
+                '[tool.pixi.workspace]\nname = "pyproject-pixi"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            assert info['project_type'] == PROJECT_TYPE_PIXI
+            assert info['name'] == 'pyproject-pixi'
+
+    def test_explicit_conda_recognizes_pyproject_conda(self):
+        # F3: explicit project_type now recognizes pyproject.toml embedding
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(
+                td,
+                '[tool.conda.workspace]\nname = "pyproject-conda"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td, project_type=PROJECT_TYPE_CONDA_WORKSPACES)
+            assert info['project_type'] == PROJECT_TYPE_CONDA_WORKSPACES
+            assert info['name'] == 'pyproject-conda'
+
+    def test_explicit_type_absent_from_everywhere_raises(self):
+        # F3: if the requested format is absent from both top-level and pyproject.toml, raise FileNotFoundError
+        with tempfile.TemporaryDirectory() as td:
+            _write_anaconda_project(td, 'name: t\n')
+            with pytest.raises(FileNotFoundError) as exc:
+                publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            # Error message should mention both locations
+            assert 'pixi.toml' in str(exc.value)
+            assert 'pyproject.toml' in str(exc.value)
 
     def test_unknown_project_type_raises(self):
         with tempfile.TemporaryDirectory() as td:
