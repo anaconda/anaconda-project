@@ -378,24 +378,32 @@ def _read_conda_lock_envs(project_dir):
     return set(envs.keys())
 
 
-def _pixi_publication_info(project_dir, data, tool_commands=None):
-    """Return a publication-info dict for a pixi project.
+def _toml_workspace_publication_info(project_dir, data, lock_reader, tool_commands=None, use_project_alias_fallback=False):
+    """Return a publication-info dict for a TOML workspace project (pixi or conda-workspaces).
+
+    This is the shared implementation for both pixi and conda-workspaces formats,
+    which have identical TOML structure but differ in lock file location and
+    legacy [project] alias availability.
 
     Args:
         project_dir: Path to the project directory.
-        data: Pre-parsed pixi manifest dict (from tomllib.load) with top-level
+        data: Pre-parsed manifest dict (from tomllib.load) with top-level
               keys workspace/dependencies/feature/environments/tasks/etc.
+        lock_reader: Function to call to get locked environment names
+              (either _read_pixi_lock_envs or _read_conda_lock_envs).
         tool_commands: Optional dict of [tool.anaconda.commands] overrides.
               If None (the default), derives from data.get('tool', {}).get('anaconda', {}).get('commands', {}).
               When explicitly passed (even if empty dict), uses that instead of deriving.
+        use_project_alias_fallback: If True, use [project] table as fallback for name/description
+              (pixi legacy behavior); if False, skip it (conda-workspaces).
 
     Returns:
         A dict with keys: name, description, commands, env_specs, variables.
     """
-    locked_envs = _read_pixi_lock_envs(project_dir)
+    locked_envs = lock_reader(project_dir)
 
     workspace = data.get('workspace', {})
-    project_meta = data.get('project', {})
+    project_meta = data.get('project', {}) if use_project_alias_fallback else {}
     name = workspace.get('name', project_meta.get('name', os.path.basename(project_dir)))
     description = workspace.get('description', project_meta.get('description', ''))
     channels = workspace.get('channels', project_meta.get('channels', []))
@@ -403,11 +411,8 @@ def _pixi_publication_info(project_dir, data, tool_commands=None):
     if tool_commands is None:
         tool_commands = data.get('tool', {}).get('anaconda', {}).get('commands', {})
 
-    # Resolve the name of pixi's implicit `default` environment to the
-    # user-meaningful env_spec it actually represents. Pixi always
-    # materializes a `default` env from the default feature; the
-    # exporter (and anaconda-project's own publication_info) report the
-    # resolved name, not the placeholder. Logic mirrors the exporter:
+    # Resolve the default environment name. Both pixi and conda-workspaces
+    # always materialize a `default` env. Logic mirrors the exporter:
     # a literal `default` in [environments] wins; otherwise fall back
     # to the first declared environment.
     declared_envs = data.get('environments', {})
@@ -418,7 +423,7 @@ def _pixi_publication_info(project_dir, data, tool_commands=None):
     else:
         default_env_name = 'default'
 
-    # For tasks defined under [feature.X.tasks.Y], pixi runs them in any
+    # For tasks defined under [feature.X.tasks.Y], both run them in any
     # env that includes feature X. publication_info should report a
     # specific env that "supports this task": prefer the resolved
     # default if it includes the feature, else the first declared env
@@ -476,7 +481,7 @@ def _pixi_publication_info(project_dir, data, tool_commands=None):
             pkgs.extend(_format_dep(n, s) for n, s in feat_deps.items())
         return pkgs
 
-    # Pixi always materializes a `default` env, even when [environments]
+    # Both formats always materialize a `default` env, even when [environments]
     # only declares others. Surface it unconditionally; honor the user's
     # declaration if one exists.
     env_specs = {
@@ -504,131 +509,22 @@ def _pixi_publication_info(project_dir, data, tool_commands=None):
         'env_specs': env_specs,
         'variables': variables,
     }
+
+
+def _pixi_publication_info(project_dir, data, tool_commands=None):
+    """Wrapper for pixi projects that delegates to _toml_workspace_publication_info."""
+    return _toml_workspace_publication_info(
+        project_dir, data, lock_reader=_read_pixi_lock_envs,
+        tool_commands=tool_commands, use_project_alias_fallback=True
+    )
 
 
 def _conda_workspaces_publication_info(project_dir, data, tool_commands=None):
-    """Return a publication-info dict for a conda-workspaces project.
-
-    Args:
-        project_dir: Path to the project directory.
-        data: Pre-parsed conda manifest dict (from tomllib.load) with top-level
-              keys workspace/dependencies/feature/environments/tasks/etc.
-              Same shape as pixi.toml: this may be either a top-level conda.toml
-              or the sub-dict from pyproject.toml's [tool.conda].
-        tool_commands: Optional dict of [tool.anaconda.commands] overrides.
-              If None (the default), derives from data.get('tool', {}).get('anaconda', {}).get('commands', {}).
-              When explicitly passed (even if empty dict), uses that instead of deriving.
-
-    Returns:
-        A dict with keys: name, description, commands, env_specs, variables.
-
-    Note: PEP 621 [project] name/description fallback (which upstream
-    conda-workspaces itself uses for pyproject.toml) is not read; only
-    workspace.name/workspace.description are considered, falling back to the
-    directory basename. This is a deliberate omission for this plan's scope
-    (uniform read-side summary), not a gap.
-    """
-    locked_envs = _read_conda_lock_envs(project_dir)
-
-    workspace = data.get('workspace', {})
-    # Conda.toml has no [project] legacy-alias table; skip that fallback
-    name = workspace.get('name', os.path.basename(project_dir))
-    description = workspace.get('description', '')
-    channels = workspace.get('channels', [])
-
-    if tool_commands is None:
-        tool_commands = data.get('tool', {}).get('anaconda', {}).get('commands', {})
-
-    # Resolve the default environment name (same logic as pixi)
-    declared_envs = data.get('environments', {})
-    if 'default' in declared_envs:
-        default_env_name = 'default'
-    elif declared_envs:
-        default_env_name = next(iter(declared_envs))
-    else:
-        default_env_name = 'default'
-
-    # For tasks defined under [feature.X.tasks.Y], conda-workspaces runs them in any
-    # env that includes feature X. Same logic as pixi.
-    def _env_for_feature(feat_name):
-        candidate_envs = []
-        for env_name, env_def in declared_envs.items():
-            features = env_def if isinstance(env_def, list) else env_def.get('features', [])
-            if feat_name in features:
-                candidate_envs.append(env_name)
-        if not candidate_envs:
-            return feat_name
-        if default_env_name in candidate_envs:
-            return default_env_name
-        return candidate_envs[0]
-
-    commands = {}
-    state = {'first': True}
-
-    for task_name, task_def in data.get('tasks', {}).items():
-        cmd = _build_command(task_name, task_def, default_env_name, tool_commands, state)
-        if cmd is not None:
-            commands[task_name] = cmd
-
-    for feat_name, feat_def in data.get('feature', {}).items():
-        for task_name, task_def in feat_def.get('tasks', {}).items():
-            if task_name in commands:
-                continue
-            cmd = _build_command(task_name, task_def,
-                                 _env_for_feature(feat_name),
-                                 tool_commands, state)
-            if cmd is not None:
-                commands[task_name] = cmd
-
-    top_packages = [
-        _format_dep(pkg, spec) for pkg, spec in data.get('dependencies', {}).items()
-    ]
-
-    def _packages_for_env(env_def):
-        """Resolve effective package list for a declared env: top-level
-        [dependencies] (the default feature) plus each feature listed in
-        the env's `features = [...]`. An env declared with
-        `no-default-feature = true` does not inherit the default feature."""
-        if env_def is None:
-            return list(top_packages)
-        features = env_def if isinstance(env_def, list) else env_def.get('features', [])
-        no_default = (
-            isinstance(env_def, dict) and env_def.get('no-default-feature', False)
-        )
-        pkgs = [] if no_default else list(top_packages)
-        for feat in features:
-            feat_deps = data.get('feature', {}).get(feat, {}).get('dependencies', {})
-            pkgs.extend(_format_dep(n, s) for n, s in feat_deps.items())
-        return pkgs
-
-    # Conda-workspaces always materializes a `default` env, even when [environments]
-    # only declares others. Surface it unconditionally; honor the user's
-    # declaration if one exists.
-    env_specs = {
-        'default': {
-            'packages': _packages_for_env(declared_envs.get('default')),
-            'channels': channels,
-            'locked': default_env_name in locked_envs,
-        },
-    }
-    for env_name, env_def in declared_envs.items():
-        if env_name == 'default':
-            continue
-        env_specs[env_name] = {
-            'packages': _packages_for_env(env_def),
-            'channels': channels,
-            'locked': env_name in locked_envs,
-        }
-
-    variables = dict(data.get('activation', {}).get('env', {}))
-
-    return {
-        'name': name,
-        'description': description,
-        'commands': commands,
-        'env_specs': env_specs,
-        'variables': variables,
-    }
+    """Wrapper for conda-workspaces projects that delegates to _toml_workspace_publication_info."""
+    return _toml_workspace_publication_info(
+        project_dir, data, lock_reader=_read_conda_lock_envs,
+        tool_commands=tool_commands, use_project_alias_fallback=False
+    )
 
 
 def _build_command(task_name, task_def, env_spec, tool_commands, state):
