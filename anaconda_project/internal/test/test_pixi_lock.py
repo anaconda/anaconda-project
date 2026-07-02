@@ -79,6 +79,55 @@ def test_parse_locked_specs_rejects_version_without_build():
         pixi_lock.parse_locked_specs(lock_set, "linux-64")
 
 
+def test_parse_locked_specs_rejects_wildcard_build():
+    # conda_api.parse_spec's exact_version wildcard filter does NOT extend to
+    # exact_build_string, so "numpy=1.0=*" reports exact_build_string="*" --
+    # this is not a real pin and must be rejected here, not later as a
+    # misattributed BuildNotFoundError.
+    lock_set = CondaLockSet({"linux-64": ["numpy=1.0=*"]}, platforms=["linux-64"])
+    with pytest.raises(pixi_lock.LockTranslationError) as exc:
+        pixi_lock.parse_locked_specs(lock_set, "linux-64")
+    assert "not pinned to an exact version=build" in str(exc.value)
+
+
+def test_parse_locked_specs_rejects_partial_wildcard_build():
+    lock_set = CondaLockSet({"linux-64": ["numpy=1.0=py37*"]}, platforms=["linux-64"])
+    with pytest.raises(pixi_lock.LockTranslationError):
+        pixi_lock.parse_locked_specs(lock_set, "linux-64")
+
+
+def test_parse_locked_specs_rejects_disabled_lock_set():
+    # A disabled lock set means this platform was never actually locked;
+    # package_specs_for_platform's bare `assert self.enabled` must not leak
+    # as an opaque AssertionError.
+    lock_set = CondaLockSet({"linux-64": ["python=3.12.2=hab00c5b_0"]}, platforms=["linux-64"], enabled=False)
+    with pytest.raises(pixi_lock.LockTranslationError) as exc:
+        pixi_lock.parse_locked_specs(lock_set, "linux-64")
+    assert "not locked" in str(exc.value)
+
+
+def test_parse_locked_specs_rejects_duplicate_names_within_bucket():
+    # Two conflicting pins for the same name in one platform bucket must be
+    # caught here, not surfaced later as a confusing pixi-side rejection.
+    lock_set = CondaLockSet({"linux-64": ["bokeh=1.0=0", "bokeh=2.0=9"]}, platforms=["linux-64"])
+    with pytest.raises(pixi_lock.LockTranslationError) as exc:
+        pixi_lock.parse_locked_specs(lock_set, "linux-64")
+    assert "duplicate" in str(exc.value)
+    assert "bokeh" in str(exc.value)
+
+
+def test_parse_locked_specs_rejects_nested_pip_dict_as_typed_error():
+    # A nested {"pip": [...]} entry inside a platform bucket (not the
+    # top-level "pip" key) is not a valid conda spec string. This must
+    # surface as a typed LockTranslationError, not conda_api.parse_spec's
+    # raw TypeError.
+    lock_set = CondaLockSet(
+        {"linux-64": ["numpy=1.0=0", {"pip": ["flask==2.0"]}]}, platforms=["linux-64"])
+    with pytest.raises(pixi_lock.LockTranslationError) as exc:
+        pixi_lock.parse_locked_specs(lock_set, "linux-64")
+    assert "non-spec-string entry" in str(exc.value)
+
+
 def test_assert_no_pip_packages_passes_when_conda_only():
     lock_set = CondaLockSet({"linux-64": ["python=3.12.2=hab00c5b_0"]}, platforms=["linux-64"])
     # Should not raise.
@@ -96,6 +145,20 @@ def test_assert_no_pip_packages_fails_fast_on_pip_bucket():
         pixi_lock.assert_no_pip_packages(lock_set)
     assert "pip package" in str(exc.value)
     assert "phase 2" in str(exc.value)
+
+
+def test_assert_no_pip_packages_fails_fast_on_nested_pip_dict():
+    # A pip package can also appear NESTED inside a platform's spec list (the
+    # environment.yml-style {"pip": [...]} shape project.py matches via
+    # special_filter), not just under the top-level "pip" key. This function
+    # accepts any CondaLockSet -- it must not assume project.py's loader ran
+    # and stripped this shape first.
+    lock_set = CondaLockSet(
+        {"linux-64": ["numpy=1.0=0", {"pip": ["flask==2.0", "requests==2.0"]}]},
+        platforms=["linux-64"])
+    with pytest.raises(pixi_lock.UnsupportedLockContentError) as exc:
+        pixi_lock.assert_no_pip_packages(lock_set)
+    assert "pip package" in str(exc.value)
 
 
 # --- Item 2: enrichment (offline, injected query) ---------------------------
@@ -275,6 +338,28 @@ def test_translate_lock_set_end_to_end_with_injected_query(tmpdir):
     assert os.path.exists(target)
     assert len(doc["packages"]) == 2
     assert "linux-64" in doc["environments"]["default"]["packages"]
+
+
+def test_translate_lock_set_rejects_zero_platforms(tmpdir):
+    # A lock set with no platforms would otherwise assemble a valid-but-empty
+    # pixi.lock (install nothing) -- a silent no-op degradation.
+    lock_set = CondaLockSet({}, platforms=[])
+    target = str(tmpdir.join("pixi.lock"))
+    with pytest.raises(pixi_lock.LockTranslationError) as exc:
+        pixi_lock.translate_lock_set(lock_set, channels=["https://m"], path=target, query=lambda *a: ())
+    assert "no platforms" in str(exc.value)
+    assert not __import__("os").path.exists(target)
+
+
+def test_translate_lock_set_rejects_zero_packages(tmpdir):
+    # A lock set with platforms but zero locked packages on all of them would
+    # also otherwise write an empty-but-valid pixi.lock.
+    lock_set = CondaLockSet({"linux-64": []}, platforms=["linux-64"])
+    target = str(tmpdir.join("pixi.lock"))
+    with pytest.raises(pixi_lock.LockTranslationError) as exc:
+        pixi_lock.translate_lock_set(lock_set, channels=["https://m"], path=target, query=lambda *a: ())
+    assert "zero packages" in str(exc.value)
+    assert not __import__("os").path.exists(target)
 
 
 def test_write_pixi_lock_does_not_wrap_long_urls(tmpdir):

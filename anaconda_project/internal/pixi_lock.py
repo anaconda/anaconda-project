@@ -53,6 +53,7 @@ launcher in any JupyterLab host, CI, the CLI) gets it.
 from __future__ import absolute_import
 
 from anaconda_project.internal import conda_api
+from anaconda_project.internal.py2_compat import is_string, is_dict
 
 
 # anaconda-project lock files group package specs into "buckets" keyed by
@@ -116,19 +117,52 @@ def parse_locked_specs(lock_set, platform):
         raise LockTranslationError("lock set has no entry for platform %r (has %r)" %
                                    (platform, list(lock_set.platforms)))
 
+    if lock_set.disabled:
+        raise LockTranslationError("lock set for platform %r is not locked (locking disabled)" % platform)
+
+    try:
+        specs_for_platform = lock_set.package_specs_for_platform(platform)
+    except TypeError as e:
+        # package_specs_for_platform's own bucket-merge (_conda_combine_key)
+        # calls conda_api.parse_spec on every entry BEFORE we see any of
+        # them, so a non-string entry (e.g. a nested {"pip": [...]} bucket
+        # parsed alongside conda specs) raises conda_api's raw TypeError
+        # here, not in the loop below. assert_no_pip_packages only catches
+        # the top-level "pip" platform key; surface this case as our own
+        # typed error too, rather than let the TypeError leak.
+        raise LockTranslationError(
+            "locked spec list for platform %r contains a non-spec-string entry: %s" % (platform, e))
+
     locked = []
-    for spec in lock_set.package_specs_for_platform(platform):
+    for spec in specs_for_platform:
+        if not is_string(spec):
+            # Belt-and-suspenders: a non-string entry that survives the
+            # bucket merge above (e.g. from a single-bucket platform with no
+            # merge to trigger the TypeError) is caught here too.
+            raise LockTranslationError(
+                "locked spec for platform %r is not a package spec string: %r" % (platform, spec))
         parsed = conda_api.parse_spec(spec)
         if parsed is None:
             raise LockTranslationError("could not parse locked spec %r for platform %r" % (spec, platform))
-        if parsed.exact_version is None or parsed.exact_build_string is None:
-            # A real lock pins name=version=build. A spec missing the version
-            # or build means this platform isn't actually locked -> a re-solve
-            # would be required, which is precisely what we refuse to do.
+        # conda_api.parse_spec's exact_version rejects |,* -- but that filter
+        # does NOT extend to exact_build_string, so a build of e.g. "*" or
+        # "py37*" is (wrongly) reported as "exact". A wildcard/partial build
+        # is exactly the "this platform was never truly locked" condition
+        # this strict gate exists to catch -- reject it explicitly rather
+        # than let it surface later as a misattributed BuildNotFoundError.
+        build = parsed.exact_build_string
+        if (parsed.exact_version is None or build is None or
+                any(c in build for c in ('*', '|', ','))):
             raise LockTranslationError(
                 "locked spec %r for platform %r is not pinned to an exact version=build; "
                 "the lock set is not fully resolved for this platform" % (spec, platform))
-        locked.append((parsed.name, parsed.exact_version, parsed.exact_build_string))
+        locked.append((parsed.name, parsed.exact_version, build))
+
+    names = [name for (name, _version, _build) in locked]
+    if len(names) != len(set(names)):
+        dupes = sorted({n for n in names if names.count(n) > 1})
+        raise LockTranslationError(
+            "locked spec list for platform %r has duplicate/conflicting pins for: %s" % (platform, ", ".join(dupes)))
     return locked
 
 
@@ -140,9 +174,30 @@ def assert_no_pip_packages(lock_set):
     that installs but is missing packages -> a delayed runtime ImportError,
     the exact silent-degradation we refuse. So we surface it as an explicit,
     actionable error instead.
+
+    Pip packages can appear in a CondaLockSet's specs in two shapes:
+    (1) a top-level "pip" platform key (the shape ``project.py``'s loader
+    produces), and (2) a nested ``{"pip": [...]}`` dict INSIDE another
+    platform's spec list (the environment.yml-style shape ``project.py``
+    matches via ``special_filter`` elsewhere in the codebase). This function
+    must not assume the caller's CondaLockSet went through project.py's
+    loader/sanitizer -- it accepts any CondaLockSet -- so both shapes are
+    checked here.
     """
-    # CondaLockSet stores the pip bucket under the "pip" platform key.
-    pip_specs = lock_set._package_specs_by_platform.get('pip', [])
+    # Shape 1: CondaLockSet stores the pip bucket under the "pip" platform key.
+    pip_specs = list(lock_set._package_specs_by_platform.get('pip', []))
+
+    # Shape 2: a nested pip dict living inside a per-platform spec list.
+    for platform, specs in lock_set._package_specs_by_platform.items():
+        if platform == 'pip':
+            continue
+        for spec in specs:
+            if is_dict(spec) and 'pip' in spec:
+                nested = spec.get('pip') or []
+                if is_string(nested):
+                    nested = [nested]
+                pip_specs.extend(nested)
+
     if pip_specs:
         raise UnsupportedLockContentError(
             "lock set contains %d pip package(s) (%s%s); pip enrichment is not supported in v1 "
@@ -396,12 +451,23 @@ def translate_lock_set(lock_set, channels, path, env_name="default", query=None)
     document, and write it atomically. Strict mode throughout — any missing
     build (BuildNotFoundError) or unreachable mirror (MirrorUnavailableError)
     aborts BEFORE any file is written.
+
+    Raises ``LockTranslationError`` if the lock set has no platforms, or if
+    the assembled closure has zero packages on every platform — either would
+    otherwise write a valid-but-empty pixi.lock (install nothing), which is
+    a silent no-op degradation, not a faithful translation.
     """
+    if not lock_set.platforms:
+        raise LockTranslationError("lock set has no platforms; nothing to translate")
     assert_no_pip_packages(lock_set)
     enriched_by_subdir = {}
     for platform in lock_set.platforms:
         locked = parse_locked_specs(lock_set, platform)
         enriched_by_subdir[platform] = enrich_locked_packages(locked, channels, platform, query=query)
+    if not any(enriched_by_subdir.values()):
+        raise LockTranslationError(
+            "lock set for platforms %r resolved to zero packages; refusing to write an empty pixi.lock" %
+            (list(lock_set.platforms), ))
     document = build_pixi_lock(enriched_by_subdir, channels, env_name=env_name)
     write_pixi_lock(document, path)
     return document
