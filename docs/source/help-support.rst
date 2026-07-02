@@ -15,7 +15,7 @@ development focus is limited to:
 
 * Critical bug fixes against the existing ``anaconda-project``
   command-line tool and library.
-* The conversion tooling described in :doc:`pixi-support`, which
+* The conversion tooling described in :doc:`workspace-support`, which
   helps users move existing projects onto
   `pixi <https://pixi.sh/>`_ or
   `conda-workspaces <https://github.com/conda-incubator/conda-workspaces>`_.

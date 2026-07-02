@@ -42,7 +42,8 @@ stay closer to the conda ecosystem.
 For that reason, recent work on this repository has been (and will
 remain) focused on critical bug fixes and on the ability to convert
 existing Anaconda Project projects into the pixi and conda-workspaces
-formats. See :doc:`pixi-support` for details on the conversion tooling.
+formats. See :doc:`workspace-support` for details on the conversion
+tooling (pixi and conda-workspaces).
 
 Quick Start
 ===========
@@ -119,9 +120,9 @@ These conditions could include:
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: Pixi support
+   :caption: Workspace export support
 
-   pixi-support
+   workspace-support
 
 .. toctree::
    :maxdepth: 1
