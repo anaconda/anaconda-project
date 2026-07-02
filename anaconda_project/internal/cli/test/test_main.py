@@ -23,7 +23,7 @@ all_subcommands = ('init', 'run', 'prepare', 'clean', 'activate', 'archive', 'un
                    'list-services', 'add-env-spec', 'remove-env-spec', 'list-env-specs', 'export-env-spec', 'lock',
                    'unlock', 'update', 'add-packages', 'remove-packages', 'list-packages', 'add-platforms',
                    'remove-platforms', 'list-platforms', 'add-command', 'remove-command', 'list-default-command',
-                   'list-commands', 'export-pixi', 'info')
+                   'list-commands', 'export-pixi', 'export-conda', 'info')
 all_subcommands_in_curlies = "{" + ",".join(all_subcommands) + "}"
 all_subcommands_comma_space = ", ".join(["'" + s + "'" for s in all_subcommands])
 
@@ -134,9 +134,12 @@ expected_usage_msg_format = (  # noqa
     '                        List only the default command on the project\n'
     '    list-commands       List the commands on the project\n'
     '    export-pixi         Export the project as a pixi.toml file\n'
+    '    export-conda        Export the project as a conda.toml file (conda-\n'
+    '                        workspaces)\n'
     '    info                Show a summary of the project: name, environments,\n'
-    '                        commands, variables. Reads pixi.toml when present (and\n'
-    '                        an anaconda-project.yml otherwise) and can also\n'
+    '                        commands, variables. Reads conda.toml, then pixi.toml,\n'
+    '                        then anaconda-project.yml, then pyproject.toml\n'
+    '                        (tool.conda/tool.pixi), in that order, and can also\n'
     '                        surface env prefix locations.\n'
     '\n'
     'optional arguments:\n'
