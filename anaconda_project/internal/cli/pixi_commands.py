@@ -82,7 +82,7 @@ def _export_workspace(project_dir, filename, use_default, add_current_platform,
 def export_pixi(project_dir, filename, use_default=False, add_current_platform=False):
     """Export the project as a pixi.toml file."""
     return _export_workspace(project_dir, filename, use_default, add_current_platform,
-                            project_ops.export_pixi, 'pixi.toml', 'pixi')
+                            project_ops.export_pixi, 'pixi.toml', 'Pixi')
 
 
 def main_export_pixi(args):

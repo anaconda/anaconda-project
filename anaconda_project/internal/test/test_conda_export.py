@@ -211,3 +211,62 @@ platforms:
         code = _parse_args_and_run_subcommand(
             ['anaconda-project', 'export-conda', '--directory', project_dir])
         assert code == 1
+
+
+class TestExportWorkspaceSharedCliWording:
+    """`export-pixi`/`export-conda` share `_export_workspace` (Item F5). That
+    helper is parameterized by a `format_label` used in every user-facing
+    recommendation/confirmation string — a collapse-the-duplication refactor
+    that flattens either format's label (e.g. losing pixi's original
+    capitalized "Pixi" wording) silently changes CLI output with no gate
+    catching it, since neither format had an exact-wording test before this
+    class. Assert both formats keep their pre-collapse wording verbatim."""
+
+    def _write_multi_env_project(self, project_dir, name):
+        with open(os.path.join(project_dir, 'anaconda-project.yml'), 'w') as f:
+            f.write("""
+name: {}
+packages:
+  - python
+platforms:
+  - linux-64
+env_specs:
+  sampleproj: {{}}
+""".format(name))
+
+    def test_export_pixi_cli_recommendation_wording(self, capsys, tmpdir):
+        project_dir = str(tmpdir)
+        self._write_multi_env_project(project_dir, 'PixiWording')
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'export-pixi', '--directory', project_dir, '--use-default'])
+        assert code == 0
+        out, _ = capsys.readouterr()
+        assert 'exported Pixi specification' in out
+        assert 'simplify the resulting Pixi specification' not in out  # use_default was passed, not recommended
+
+    def test_export_pixi_cli_platform_recommendation_wording(self, capsys, tmpdir):
+        project_dir = str(tmpdir)
+        self._write_multi_env_project(project_dir, 'PixiPlatform')
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'export-pixi', '--directory', project_dir])
+        assert code == 0
+        out, _ = capsys.readouterr()
+        assert 'Pixi requires the host platform' in out
+
+    def test_export_conda_cli_recommendation_wording(self, capsys, tmpdir):
+        project_dir = str(tmpdir)
+        self._write_multi_env_project(project_dir, 'CondaWording')
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'export-conda', '--directory', project_dir, '--use-default'])
+        assert code == 0
+        out, _ = capsys.readouterr()
+        assert 'exported conda-workspaces specification' in out
+
+    def test_export_conda_cli_platform_recommendation_wording(self, capsys, tmpdir):
+        project_dir = str(tmpdir)
+        self._write_multi_env_project(project_dir, 'CondaPlatform')
+        code = _parse_args_and_run_subcommand(
+            ['anaconda-project', 'export-conda', '--directory', project_dir])
+        assert code == 0
+        out, _ = capsys.readouterr()
+        assert 'conda-workspaces requires the host platform' in out
