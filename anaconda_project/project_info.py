@@ -200,7 +200,9 @@ def publication_info(project_dir, project_type=None, env_paths=False):
                 raise ValueError('Failed to parse {}: {}'.format(manifest_path, e)) from e
             # Extract the [tool.conda] sub-tree
             data = pyproject_data.get('tool', {}).get('conda', {})
-            info = _conda_workspaces_publication_info(project_dir, data)
+            # Also extract the full-document [tool.anaconda.commands] for pyproject-embedded override lookup
+            tool_commands = pyproject_data.get('tool', {}).get('anaconda', {}).get('commands', {})
+            info = _conda_workspaces_publication_info(project_dir, data, tool_commands=tool_commands)
 
         elif manifest_kind == 'pyproject-pixi':
             project_type = PROJECT_TYPE_PIXI
@@ -211,7 +213,9 @@ def publication_info(project_dir, project_type=None, env_paths=False):
                 raise ValueError('Failed to parse {}: {}'.format(manifest_path, e)) from e
             # Extract the [tool.pixi] sub-tree
             data = pyproject_data.get('tool', {}).get('pixi', {})
-            info = _pixi_publication_info(project_dir, data)
+            # Also extract the full-document [tool.anaconda.commands] for pyproject-embedded override lookup
+            tool_commands = pyproject_data.get('tool', {}).get('anaconda', {}).get('commands', {})
+            info = _pixi_publication_info(project_dir, data, tool_commands=tool_commands)
             if env_paths:
                 _attach_pixi_env_paths(info, project_dir)
 
@@ -360,13 +364,16 @@ def _read_conda_lock_envs(project_dir):
     return set(envs.keys())
 
 
-def _pixi_publication_info(project_dir, data):
+def _pixi_publication_info(project_dir, data, tool_commands=None):
     """Return a publication-info dict for a pixi project.
 
     Args:
         project_dir: Path to the project directory.
         data: Pre-parsed pixi manifest dict (from tomllib.load) with top-level
               keys workspace/dependencies/feature/environments/tasks/etc.
+        tool_commands: Optional dict of [tool.anaconda.commands] overrides.
+              If None (the default), derives from data.get('tool', {}).get('anaconda', {}).get('commands', {}).
+              When explicitly passed (even if empty dict), uses that instead of deriving.
 
     Returns:
         A dict with keys: name, description, commands, env_specs, variables.
@@ -379,7 +386,8 @@ def _pixi_publication_info(project_dir, data):
     description = workspace.get('description', project_meta.get('description', ''))
     channels = workspace.get('channels', project_meta.get('channels', []))
 
-    tool_commands = data.get('tool', {}).get('anaconda', {}).get('commands', {})
+    if tool_commands is None:
+        tool_commands = data.get('tool', {}).get('anaconda', {}).get('commands', {})
 
     # Resolve the name of pixi's implicit `default` environment to the
     # user-meaningful env_spec it actually represents. Pixi always
@@ -484,7 +492,7 @@ def _pixi_publication_info(project_dir, data):
     }
 
 
-def _conda_workspaces_publication_info(project_dir, data):
+def _conda_workspaces_publication_info(project_dir, data, tool_commands=None):
     """Return a publication-info dict for a conda-workspaces project.
 
     Args:
@@ -493,6 +501,9 @@ def _conda_workspaces_publication_info(project_dir, data):
               keys workspace/dependencies/feature/environments/tasks/etc.
               Same shape as pixi.toml: this may be either a top-level conda.toml
               or the sub-dict from pyproject.toml's [tool.conda].
+        tool_commands: Optional dict of [tool.anaconda.commands] overrides.
+              If None (the default), derives from data.get('tool', {}).get('anaconda', {}).get('commands', {}).
+              When explicitly passed (even if empty dict), uses that instead of deriving.
 
     Returns:
         A dict with keys: name, description, commands, env_specs, variables.
@@ -511,7 +522,8 @@ def _conda_workspaces_publication_info(project_dir, data):
     description = workspace.get('description', '')
     channels = workspace.get('channels', [])
 
-    tool_commands = data.get('tool', {}).get('anaconda', {}).get('commands', {})
+    if tool_commands is None:
+        tool_commands = data.get('tool', {}).get('anaconda', {}).get('commands', {})
 
     # Resolve the default environment name (same logic as pixi)
     declared_envs = data.get('environments', {})

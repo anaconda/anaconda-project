@@ -861,6 +861,54 @@ class TestPublicationInfoToolAnaconda:
             assert cmd['description'] == 'Run the web app'
             assert cmd['notebook'] == 'app.ipynb'
 
+    def test_tool_anaconda_overrides_pyproject_pixi(self):
+        # F2: verify that [tool.anaconda.commands] overrides work in pyproject.toml with [tool.pixi]
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, textwrap.dedent("""\
+                [tool.pixi.workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [tool.pixi.tasks]
+                serve = "python app.py"
+
+                [tool.anaconda.commands.serve]
+                supports_http_options = true
+                description = "Run the web app in pyproject"
+                default = true
+                notebook = "app.ipynb"
+            """))
+            info = publication_info(td)
+            cmd = info['commands']['serve']
+            assert cmd['supports_http_options'] is True
+            assert cmd['description'] == 'Run the web app in pyproject'
+            assert cmd['notebook'] == 'app.ipynb'
+            assert cmd['default'] is True
+
+    def test_tool_anaconda_overrides_pyproject_conda(self):
+        # F2: verify that [tool.anaconda.commands] overrides work in pyproject.toml with [tool.conda]
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, textwrap.dedent("""\
+                [tool.conda.workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [tool.conda.tasks]
+                test = "pytest"
+
+                [tool.anaconda.commands.test]
+                supports_http_options = false
+                description = "Run tests"
+                default = false
+            """))
+            info = publication_info(td)
+            cmd = info['commands']['test']
+            assert cmd['supports_http_options'] is False
+            assert cmd['description'] == 'Run tests'
+            assert cmd['default'] is False
+
 
 class TestPublicationInfoErrors:
     def test_missing_file(self):
