@@ -28,6 +28,12 @@ def _write_anaconda_project(d, content):
         f.write(content)
 
 
+def _write_conda_toml(d, content):
+    path = os.path.join(d, 'conda.toml')
+    with open(path, 'w') as f:
+        f.write(content)
+
+
 _PIXI_TOML = textwrap.dedent("""\
     [workspace]
     name = "demo"
@@ -139,6 +145,17 @@ class TestInfoProjectType:
             assert code == 1
             _, err = capsys.readouterr()
             assert 'pixi.toml' in err
+
+    def test_project_type_conda_workspaces_accepted_by_argparse(self, capsys):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "from-conda"\n')
+            code = _parse_args_and_run_subcommand(
+                ['anaconda-project', 'info', '--directory', td,
+                 '--project-type', 'conda-workspaces', '--json'])
+            assert code == 0
+            data = json.loads(capsys.readouterr().out)
+            assert data['project_type'] == 'conda-workspaces'
+            assert data['name'] == 'from-conda'
 
 
 class TestInfoEnvPaths:

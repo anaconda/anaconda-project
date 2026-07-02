@@ -427,9 +427,9 @@ def _parse_args_and_run_subcommand(argv):
     preset = subparsers.add_parser(
         'info',
         help=("Show a summary of the project: name, environments, commands, "
-              "variables. Reads pixi.toml when present (and an "
-              "anaconda-project.yml otherwise) and can also surface env "
-              "prefix locations."))
+              "variables. Reads conda.toml, then pixi.toml, then "
+              "anaconda-project.yml, then pyproject.toml (tool.conda/tool.pixi), "
+              "in that order, and can also surface env prefix locations."))
     add_directory_arg(preset)
     preset.add_argument('--json',
                         action='store_true',
@@ -442,10 +442,11 @@ def _parse_args_and_run_subcommand(argv):
                               "For pixi projects this shells out to `pixi info --json` "
                               "and stashes its full output under `_pixi` in --json mode."))
     preset.add_argument('--project-type',
-                        choices=('pixi', 'anaconda-project'),
+                        choices=('conda-workspaces', 'pixi', 'anaconda-project'),
                         default=None,
                         help=("Force a manifest format. The default behavior reads "
-                              "pixi.toml if present, otherwise anaconda-project.yml."))
+                              "conda.toml, then pixi.toml, then anaconda-project.yml, "
+                              "then pyproject.toml (tool.conda/tool.pixi), in that order."))
     preset.set_defaults(main=info_cli.main)
 
     # argparse doesn't do this for us for whatever reason
