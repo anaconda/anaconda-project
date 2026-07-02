@@ -144,7 +144,13 @@ def publication_info(project_dir, project_type=None, env_paths=False):
         )
 
     if project_type == PROJECT_TYPE_PIXI:
-        info = _pixi_publication_info(project_dir)
+        pixi_path = os.path.join(project_dir, PIXI_MANIFEST)
+        try:
+            with open(pixi_path, 'rb') as f:
+                data = tomllib.load(f)
+        except (OSError, tomllib.TOMLDecodeError) as e:
+            raise ValueError('Failed to parse {}: {}'.format(pixi_path, e)) from e
+        info = _pixi_publication_info(project_dir, data)
         if env_paths:
             _attach_pixi_env_paths(info, project_dir)
     else:
@@ -218,14 +224,17 @@ def _read_pixi_lock_envs(project_dir):
     return set(envs.keys())
 
 
-def _pixi_publication_info(project_dir):
-    pixi_path = os.path.join(project_dir, PIXI_MANIFEST)
-    try:
-        with open(pixi_path, 'rb') as f:
-            data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as e:
-        raise ValueError('Failed to parse {}: {}'.format(pixi_path, e)) from e
+def _pixi_publication_info(project_dir, data):
+    """Return a publication-info dict for a pixi project.
 
+    Args:
+        project_dir: Path to the project directory.
+        data: Pre-parsed pixi manifest dict (from tomllib.load) with top-level
+              keys workspace/dependencies/feature/environments/tasks/etc.
+
+    Returns:
+        A dict with keys: name, description, commands, env_specs, variables.
+    """
     locked_envs = _read_pixi_lock_envs(project_dir)
 
     workspace = data.get('workspace', {})
