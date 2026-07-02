@@ -34,9 +34,12 @@ except ImportError:  # Python < 3.11
 
 
 PIXI_MANIFEST = 'pixi.toml'
+CONDA_TOML_MANIFEST = 'conda.toml'
 ANACONDA_PROJECT_MANIFEST = 'anaconda-project.yml'
+PYPROJECT_MANIFEST = 'pyproject.toml'
 
 PROJECT_TYPE_KEY = 'project_type'
+PROJECT_TYPE_CONDA_WORKSPACES = 'conda-workspaces'
 PROJECT_TYPE_PIXI = 'pixi'
 PROJECT_TYPE_ANACONDA_PROJECT = 'anaconda-project'
 
@@ -44,13 +47,49 @@ PROJECT_TYPE_ANACONDA_PROJECT = 'anaconda-project'
 def detect_project_type(project_dir):
     """Return the project type string for *project_dir*, or ``None`` if unknown.
 
-    Detection is by manifest presence; ``pixi.toml`` wins when both are present,
-    matching the dispatch used by :func:`publication_info`.
+    Detection is by manifest presence, in precedence order:
+    1. ``conda.toml`` → ``'conda-workspaces'``
+    2. ``pixi.toml`` → ``'pixi'``
+    3. ``anaconda-project.yml`` (or variants) → ``'anaconda-project'``
+    4. ``pyproject.toml`` with ``[tool.conda.workspace]`` or ``[tool.pixi.workspace]`` →
+       ``'conda-workspaces'`` or ``'pixi'`` respectively
+    5. Otherwise → ``None``
+
+    Detection errors (e.g., malformed ``pyproject.toml``) are silently treated as
+    non-matches and do not raise.
     """
+    # 1. Check for conda.toml
+    if os.path.isfile(os.path.join(project_dir, CONDA_TOML_MANIFEST)):
+        return PROJECT_TYPE_CONDA_WORKSPACES
+
+    # 2. Check for pixi.toml
     if os.path.isfile(os.path.join(project_dir, PIXI_MANIFEST)):
         return PROJECT_TYPE_PIXI
-    if os.path.isfile(os.path.join(project_dir, ANACONDA_PROJECT_MANIFEST)):
-        return PROJECT_TYPE_ANACONDA_PROJECT
+
+    # 3. Check for anaconda-project manifest files
+    from anaconda_project.project_file import possible_project_file_names
+    for filename in possible_project_file_names:
+        if os.path.isfile(os.path.join(project_dir, filename)):
+            return PROJECT_TYPE_ANACONDA_PROJECT
+
+    # 4. Check for pyproject.toml with tool.conda or tool.pixi workspace
+    pyproject_path = os.path.join(project_dir, PYPROJECT_MANIFEST)
+    if os.path.isfile(pyproject_path):
+        try:
+            with open(pyproject_path, 'rb') as f:
+                data = tomllib.load(f)
+        except (OSError, tomllib.TOMLDecodeError):
+            # Parse error or file access error — treat as non-match, don't raise
+            return None
+
+        # Check for tool.conda.workspace first
+        if data.get('tool', {}).get('conda', {}).get('workspace'):
+            return PROJECT_TYPE_CONDA_WORKSPACES
+
+        # Then check for tool.pixi.workspace
+        if data.get('tool', {}).get('pixi', {}).get('workspace'):
+            return PROJECT_TYPE_PIXI
+
     return None
 
 

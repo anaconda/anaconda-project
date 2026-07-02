@@ -16,6 +16,7 @@ import pytest
 
 from anaconda_project.project_info import (
     PROJECT_TYPE_ANACONDA_PROJECT,
+    PROJECT_TYPE_CONDA_WORKSPACES,
     PROJECT_TYPE_KEY,
     PROJECT_TYPE_PIXI,
     _format_dep,
@@ -35,6 +36,20 @@ def _write_pixi_toml(tmpdir, content):
 
 def _write_anaconda_project(tmpdir, content):
     path = os.path.join(tmpdir, 'anaconda-project.yml')
+    with open(path, 'w') as f:
+        f.write(content)
+    return tmpdir
+
+
+def _write_conda_toml(tmpdir, content):
+    path = os.path.join(tmpdir, 'conda.toml')
+    with open(path, 'w') as f:
+        f.write(content)
+    return tmpdir
+
+
+def _write_pyproject_toml(tmpdir, content):
+    path = os.path.join(tmpdir, 'pyproject.toml')
     with open(path, 'w') as f:
         f.write(content)
     return tmpdir
@@ -725,6 +740,51 @@ class TestDetectProjectType:
 
     def test_neither_returns_none(self):
         with tempfile.TemporaryDirectory() as td:
+            assert detect_project_type(td) is None
+
+    def test_detects_conda_toml(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "t"\n')
+            assert detect_project_type(td) == PROJECT_TYPE_CONDA_WORKSPACES
+
+    def test_conda_toml_wins_over_pixi(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "t"\n')
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            assert detect_project_type(td) == PROJECT_TYPE_CONDA_WORKSPACES
+
+    def test_conda_toml_wins_over_anaconda_project(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "t"\n')
+            _write_anaconda_project(td, 'name: t\n')
+            assert detect_project_type(td) == PROJECT_TYPE_CONDA_WORKSPACES
+
+    def test_pixi_wins_over_anaconda_project(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            _write_anaconda_project(td, 'name: t\n')
+            assert detect_project_type(td) == PROJECT_TYPE_PIXI
+
+    def test_pyproject_toml_with_conda_workspace(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, '[tool.conda.workspace]\nname = "t"\n')
+            assert detect_project_type(td) == PROJECT_TYPE_CONDA_WORKSPACES
+
+    def test_pyproject_toml_with_pixi_workspace(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, '[tool.pixi.workspace]\nname = "t"\n')
+            assert detect_project_type(td) == PROJECT_TYPE_PIXI
+
+    def test_pyproject_toml_without_workspace_returns_none(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, '[tool.other]\nkey = "value"\n')
+            assert detect_project_type(td) is None
+
+    def test_malformed_pyproject_toml_returns_none(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, 'pyproject.toml')
+            with open(path, 'w') as f:
+                f.write('[invalid toml\n')
             assert detect_project_type(td) is None
 
 
