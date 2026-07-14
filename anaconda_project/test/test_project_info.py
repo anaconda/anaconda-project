@@ -1257,3 +1257,18 @@ class TestExplicitProjectType:
             info = publication_info(td, project_type=PROJECT_TYPE_PIXI)
             assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
             assert info['name'] == 'pyproject-pixi'
+
+    def test_force_conda_workspaces_via_pyproject_when_pixi_toml_also_present(self):
+        # Mirror image of the test above: a top-level pixi.toml (which
+        # outranks a pyproject.toml embedding in auto-detect precedence)
+        # must not mask a conda-workspaces manifest that only exists as a
+        # [tool.conda.workspace] embedding.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "from-pixi"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            _write_pyproject_toml(
+                td,
+                '[tool.conda.workspace]\nname = "pyproject-conda"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td, project_type=PROJECT_TYPE_CONDA_WORKSPACES)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_CONDA_WORKSPACES
+            assert info['name'] == 'pyproject-conda'
