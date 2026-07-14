@@ -1220,3 +1220,40 @@ class TestExplicitProjectType:
             with pytest.raises(ValueError) as exc:
                 publication_info(td, project_type='bogus-type')
             assert 'bogus-type' in str(exc.value)
+
+    def test_force_pixi_when_conda_toml_also_present(self):
+        # Regression: explicit project_type='pixi' must not be masked by a
+        # coexisting conda.toml, which outranks pixi.toml in auto-detect
+        # precedence. The override asks "does pixi.toml exist here?", not
+        # "which format wins by precedence?" (the mid-conversion use case
+        # --project-type exists to support, per workspace-support.rst).
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "from-conda"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            _write_pixi_toml(td, '[workspace]\nname = "from-pixi"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            info = publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
+            assert info['name'] == 'from-pixi'
+
+    def test_force_conda_workspaces_when_pixi_toml_also_present(self):
+        # Reverse direction of the regression above: conda.toml outranks
+        # pixi.toml, so this direction already worked, but locking it in
+        # alongside the fix confirms the new helper didn't flip the winner.
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "from-conda"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            _write_pixi_toml(td, '[workspace]\nname = "from-pixi"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            info = publication_info(td, project_type=PROJECT_TYPE_CONDA_WORKSPACES)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_CONDA_WORKSPACES
+            assert info['name'] == 'from-conda'
+
+    def test_force_pixi_via_pyproject_when_conda_toml_also_present(self):
+        # Same regression, pyproject.toml-embedded variant: a top-level
+        # conda.toml must not mask a pixi.toml embedded in [tool.pixi.workspace].
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "from-conda"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            _write_pyproject_toml(
+                td,
+                '[tool.pixi.workspace]\nname = "pyproject-pixi"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
+            assert info['name'] == 'pyproject-pixi'
