@@ -298,10 +298,13 @@ Flags:
   effect for them.
 * ``--project-type {conda-workspaces,pixi,anaconda-project}`` forces
   a manifest format when more than one is present in the directory
-  (e.g. mid-conversion). Forcing a type only recognizes the
-  corresponding top-level manifest (``conda.toml`` or ``pixi.toml``),
-  not a ``pyproject.toml`` embedding — omit ``--project-type`` to let
-  auto-detection find a pyproject.toml-embedded manifest.
+  (e.g. mid-conversion). Forcing a type recognizes that format
+  whether it is a top-level manifest (``conda.toml`` or ``pixi.toml``)
+  or a ``pyproject.toml`` embedding (``[tool.conda.workspace]`` or
+  ``[tool.pixi.workspace]``), and it is checked independently of
+  auto-detect precedence — so a coexisting higher-precedence manifest
+  of a *different* format never masks the one you asked for. It is an
+  error only when the requested format is present in neither form.
 
 publication_info
 ================
@@ -347,10 +350,12 @@ Optional arguments:
   forces a specific manifest format. Default behavior is auto-detect,
   with ``conda.toml`` winning over ``pixi.toml``, which wins over
   ``anaconda-project.yml`` (or its aliases), which wins over a
-  ``pyproject.toml`` embedding. Forcing a type only recognizes the
-  corresponding top-level manifest; it is an error to ask for a
-  format whose top-level manifest is not in the directory, even if a
-  ``pyproject.toml`` embedding of that format exists there.
+  ``pyproject.toml`` embedding. Forcing a type recognizes that format
+  whether it is the top-level manifest or a ``pyproject.toml``
+  embedding, checked independently of that precedence order, so a
+  coexisting higher-precedence manifest of a *different* format never
+  masks it. It is an error only when the requested format is present
+  in neither form in the directory.
 * ``env_paths=True`` populates ``env_specs[name]['path']`` with the
   on-disk prefix for each declared environment. For anaconda-project
   this is derived from each ``EnvSpec``; for pixi (top-level or
