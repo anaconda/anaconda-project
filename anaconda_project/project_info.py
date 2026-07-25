@@ -97,6 +97,40 @@ def _locate_manifest(project_dir):
     return (None, None)
 
 
+def _locate_manifest_of_kind(project_dir, top_level_filename, pyproject_tool_key):
+    """Find the manifest for one specific format, ignoring precedence.
+
+    Unlike :func:`_locate_manifest` (which returns the single highest-precedence
+    manifest across *all* formats), this checks only whether *this* format's
+    manifest exists — a top-level file named *top_level_filename*, or a
+    ``pyproject.toml`` with a ``[tool.<pyproject_tool_key>.workspace]`` table.
+    This is what explicit ``project_type=`` overrides need: "does the requested
+    format exist here?", not "which format wins?" — so a coexisting
+    higher-precedence manifest of a *different* format never masks the one the
+    caller actually asked for.
+
+    Returns (manifest_kind, path) — manifest_kind is ``'top-level'`` or
+    ``'pyproject'`` — or (None, None) if not found. Parse errors in
+    pyproject.toml are silently treated as non-match (returns (None, None)),
+    matching _locate_manifest's existing convention.
+    """
+    top_level_path = os.path.join(project_dir, top_level_filename)
+    if os.path.isfile(top_level_path):
+        return ('top-level', top_level_path)
+
+    pyproject_path = os.path.join(project_dir, PYPROJECT_MANIFEST)
+    if os.path.isfile(pyproject_path):
+        try:
+            with open(pyproject_path, 'rb') as f:
+                data = tomllib.load(f)
+        except (OSError, tomllib.TOMLDecodeError):
+            return (None, None)
+        if data.get('tool', {}).get(pyproject_tool_key, {}).get('workspace'):
+            return ('pyproject', pyproject_path)
+
+    return (None, None)
+
+
 def detect_project_type(project_dir):
     """Return the project type string for *project_dir*, or ``None`` if unknown.
 
@@ -222,9 +256,11 @@ def publication_info(project_dir, project_type=None, env_paths=False):
     else:
         # Explicit project_type: recognize both top-level manifests and pyproject.toml embedding
         if project_type == PROJECT_TYPE_CONDA_WORKSPACES:
-            manifest_kind, manifest_path = _locate_manifest(project_dir)
-            # Accept both 'conda-toml' and 'pyproject-conda' as valid matches for explicit 'conda-workspaces' type
-            if manifest_kind not in ('conda-toml', 'pyproject-conda'):
+            # Look for THIS format specifically — never let a coexisting
+            # higher-precedence manifest of a different format (e.g. pixi.toml)
+            # mask a conda.toml that demonstrably exists (see _locate_manifest_of_kind).
+            manifest_kind, manifest_path = _locate_manifest_of_kind(project_dir, CONDA_TOML_MANIFEST, 'conda')
+            if manifest_kind is None:
                 raise FileNotFoundError(
                     'No conda.toml found in {} (and no [tool.conda.workspace] in pyproject.toml)'.format(project_dir)
                 )
@@ -233,18 +269,19 @@ def publication_info(project_dir, project_type=None, env_paths=False):
                     pyproject_data = tomllib.load(f)
             except (OSError, tomllib.TOMLDecodeError) as e:
                 raise ValueError('Failed to parse {}: {}'.format(manifest_path, e)) from e
-            if manifest_kind == 'conda-toml':
+            if manifest_kind == 'top-level':
                 data = pyproject_data
                 tool_commands = None  # Will be auto-derived
-            else:  # 'pyproject-conda'
+            else:  # 'pyproject'
                 data = pyproject_data.get('tool', {}).get('conda', {})
                 tool_commands = pyproject_data.get('tool', {}).get('anaconda', {}).get('commands', {})
             info = _conda_workspaces_publication_info(project_dir, data, tool_commands=tool_commands)
 
         elif project_type == PROJECT_TYPE_PIXI:
-            manifest_kind, manifest_path = _locate_manifest(project_dir)
-            # Accept both 'pixi-toml' and 'pyproject-pixi' as valid matches for explicit 'pixi' type
-            if manifest_kind not in ('pixi-toml', 'pyproject-pixi'):
+            # Same reasoning as the conda-workspaces branch above: check for
+            # pixi.toml specifically, independent of precedence.
+            manifest_kind, manifest_path = _locate_manifest_of_kind(project_dir, PIXI_MANIFEST, 'pixi')
+            if manifest_kind is None:
                 raise FileNotFoundError(
                     'No pixi.toml found in {} (and no [tool.pixi.workspace] in pyproject.toml)'.format(project_dir)
                 )
@@ -253,10 +290,10 @@ def publication_info(project_dir, project_type=None, env_paths=False):
                     pyproject_data = tomllib.load(f)
             except (OSError, tomllib.TOMLDecodeError) as e:
                 raise ValueError('Failed to parse {}: {}'.format(manifest_path, e)) from e
-            if manifest_kind == 'pixi-toml':
+            if manifest_kind == 'top-level':
                 data = pyproject_data
                 tool_commands = None  # Will be auto-derived
-            else:  # 'pyproject-pixi'
+            else:  # 'pyproject'
                 data = pyproject_data.get('tool', {}).get('pixi', {})
                 tool_commands = pyproject_data.get('tool', {}).get('anaconda', {}).get('commands', {})
             info = _pixi_publication_info(project_dir, data, tool_commands=tool_commands)
