@@ -1,30 +1,47 @@
-============
-Pixi support
-============
+========================
+Workspace export support
+========================
 
-Anaconda Project ships two pieces of tooling aimed at converting
-existing ``anaconda-project.yml`` projects into a form that can be
-managed by `pixi <https://pixi.sh/>`_ (and, by extension,
-`conda-workspaces <https://github.com/conda-incubator/conda-workspaces>`_,
-which consumes the same ``pixi.toml`` format).
+Anaconda Project ships tooling aimed at converting existing
+``anaconda-project.yml`` projects into forms that can be managed by
+`pixi <https://pixi.sh/>`_ or by
+`conda-workspaces <https://github.com/conda-incubator/conda-workspaces>`_.
+Both are independently-writable export targets: ``export-pixi``
+writes a ``pixi.toml``, and ``export-conda`` writes a ``conda.toml``.
+The two formats share almost all of their TOML shape — the same
+``[workspace]``, ``[dependencies]``, ``[feature.*]``,
+``[environments]``, and ``[tasks]`` tables — so a single conversion
+pipeline backs both commands; ``conda.toml`` is not merely something
+this repository reads because it happens to also consume
+``pixi.toml`` files, it is a first-class output of its own.
 
 These are the focus of recent maintenance on this repository:
 
 * The ``anaconda-project export-pixi`` command, which writes a
   ``pixi.toml`` (and a sibling ``ap_download.py`` helper when needed)
   alongside an existing ``anaconda-project.yml``.
+* The ``anaconda-project export-conda`` command, which writes a
+  ``conda.toml`` (and the same sibling ``ap_download.py`` helper when
+  needed) alongside an existing ``anaconda-project.yml``, using the
+  identical conversion rules as ``export-pixi``.
 * A ``publication_info`` function in
-  ``anaconda_project.project_info`` that can read either
-  ``anaconda-project.yml`` or ``pixi.toml`` and return a uniform
-  dictionary describing the project's commands, environments, and
-  variables. Downstream deployment tooling that ingests both formats
-  uses this as its single integration point.
+  ``anaconda_project.project_info`` that can read
+  ``anaconda-project.yml``, ``pixi.toml``, ``conda.toml``, or a
+  ``pyproject.toml`` embedding either format (``[tool.pixi]`` /
+  ``[tool.conda]``) and return a uniform dictionary describing the
+  project's commands, environments, and variables. Downstream
+  deployment tooling that ingests any of these formats uses this as
+  its single integration point.
 * The ``anaconda-project info`` command, a human-readable view of the
-  same data — modeled on ``pixi info`` — that works on either
-  manifest format.
+  same data — modeled on ``pixi info`` — that works on any of the
+  supported manifest formats.
 
 The rest of this page documents the conventions the conversion uses
 to preserve as much of the original project's behavior as possible.
+Except where noted, everything below applies equally to
+``export-pixi``/``pixi.toml`` and ``export-conda``/``conda.toml`` — the
+two exporters produce identical content for the same project and
+flags.
 
 Export goals
 ============
@@ -261,57 +278,95 @@ project, modeled on ``pixi info``::
           Dependencies: colorcet, datashader, fiona, geoviews, ...
                 Locked: yes
 
-The command works on either manifest format — ``pixi.toml`` is
-preferred when both are present.
+The command works on any supported manifest format. When no format is
+forced, detection follows this precedence: ``conda.toml``, then
+``pixi.toml``, then ``anaconda-project.yml`` (or its ``.yaml`` /
+``kapsel.*`` aliases), then ``pyproject.toml`` (checking
+``[tool.conda.workspace]`` before ``[tool.pixi.workspace]``).
 
 Flags:
 
 * ``--json`` emits the underlying ``publication_info`` dict as
   indented JSON, mirroring ``pixi info --json``.
 * ``--env-paths`` includes the on-disk prefix path for each
-  environment. For pixi projects this shells out to
+  environment. For pixi projects (top-level ``pixi.toml`` or a
+  ``pyproject.toml`` ``[tool.pixi]`` embedding) this shells out to
   ``pixi info --json``; the full pixi payload is also stashed
   under an ``_pixi`` key in ``--json`` mode so callers don't have
-  to repeat the subprocess.
-* ``--project-type {pixi,anaconda-project}`` forces a manifest
-  format when both are present in the directory (e.g. mid-conversion).
+  to repeat the subprocess. conda-workspaces projects have no
+  equivalent path-resolution mechanism yet, so this flag has no
+  effect for them.
+* ``--project-type {conda-workspaces,pixi,anaconda-project}`` forces
+  a manifest format when more than one is present in the directory
+  (e.g. mid-conversion). Forcing a type recognizes that format
+  whether it is a top-level manifest (``conda.toml`` or ``pixi.toml``)
+  or a ``pyproject.toml`` embedding (``[tool.conda.workspace]`` or
+  ``[tool.pixi.workspace]``), and it is checked independently of
+  auto-detect precedence — so a coexisting higher-precedence manifest
+  of a *different* format never masks the one you asked for. It is an
+  error only when the requested format is present in neither form.
 
 publication_info
 ================
 
 ``anaconda_project.project_info.publication_info(project_dir)``
 returns a uniform dictionary regardless of whether the project is
-managed by ``anaconda-project.yml`` or by a converted
-``pixi.toml``. The shape mirrors ``Project.publication_info()`` from
-the anaconda-project side; relevant additions for the pixi side:
+managed by ``anaconda-project.yml``, a converted ``pixi.toml``, a
+converted ``conda.toml``, or a ``pyproject.toml`` embedding either
+format under ``[tool.pixi]`` / ``[tool.conda]``. The shape mirrors
+``Project.publication_info()`` from the anaconda-project side;
+relevant additions for the pixi and conda-workspaces sides (field
+population is identical between the two — the only differences are
+the manifest filename and lockfile filename each reads):
 
-* ``commands[name]['args']`` — ordered list of pixi arg names
+* ``commands[name]['args']`` — ordered list of task arg names
   declared for the task. Empty for tasks without args. Lets
-  downstream tooling drive ``pixi run <task> *args`` to supply
-  positional values.
+  downstream tooling drive ``pixi run <task> *args`` (or the
+  conda-workspaces equivalent) to supply positional values.
 * ``commands[name]['env_spec']`` — resolves to the name of an env
   that supports the task. Top-level tasks resolve to the project's
   default env (literal ``default`` if declared, otherwise the first
   declared env). Feature-scoped tasks resolve to whichever env
   actually includes the feature.
-* ``env_specs[name]['locked']`` — ``True`` when ``pixi.lock`` has an
-  ``environments[<name>]`` entry. Best-effort: any read or parse
-  failure silently falls back to ``False``.
+* ``env_specs[name]['locked']`` — ``True`` when the sibling lockfile
+  (``pixi.lock`` or ``conda.lock``) has an ``environments[<name>]``
+  entry. Best-effort: any read or parse failure silently falls back
+  to ``False``.
+
+For the ``pyproject.toml``-embedded case, ``name``/``description``
+resolution has one documented gap: upstream conda-workspaces itself
+falls back to PEP 621 ``[project].name`` / ``[project].description``
+when ``[tool.conda.workspace]`` (or ``[tool.pixi.workspace]``) omits
+those fields. This plan's read-side summary does not replicate that
+PEP 621 fallback — if ``workspace.name`` is absent, the directory
+basename is used instead, matching the top-level-manifest behavior.
+This is a deliberate scope limitation (a uniform read-side summary,
+not full-fidelity mirroring of every upstream fallback path), not a
+bug.
 
 Optional arguments:
 
-* ``project_type='pixi' | 'anaconda-project'`` forces a specific
-  manifest format. Default behavior is auto-detect, with ``pixi.toml``
-  winning when both are present. It is an error to ask for a format
-  whose manifest is not in the directory.
+* ``project_type='conda-workspaces' | 'pixi' | 'anaconda-project'``
+  forces a specific manifest format. Default behavior is auto-detect,
+  with ``conda.toml`` winning over ``pixi.toml``, which wins over
+  ``anaconda-project.yml`` (or its aliases), which wins over a
+  ``pyproject.toml`` embedding. Forcing a type recognizes that format
+  whether it is the top-level manifest or a ``pyproject.toml``
+  embedding, checked independently of that precedence order, so a
+  coexisting higher-precedence manifest of a *different* format never
+  masks it. It is an error only when the requested format is present
+  in neither form in the directory.
 * ``env_paths=True`` populates ``env_specs[name]['path']`` with the
   on-disk prefix for each declared environment. For anaconda-project
-  this is derived from each ``EnvSpec``; for pixi it requires a
-  ``pixi info --json`` subprocess (so it is opt-in). Failure to
-  invoke pixi or parse its output raises ``RuntimeError``. When the
-  source is pixi, the full ``pixi info --json`` payload is also
-  stored under the top-level ``_pixi`` key so callers that want
-  richer pixi-specific data don't pay for a second subprocess.
+  this is derived from each ``EnvSpec``; for pixi (top-level or
+  pyproject.toml-embedded) it requires a ``pixi info --json``
+  subprocess (so it is opt-in). Failure to invoke pixi or parse its
+  output raises ``RuntimeError``. When the source is pixi, the full
+  ``pixi info --json`` payload is also stored under the top-level
+  ``_pixi`` key so callers that want richer pixi-specific data don't
+  pay for a second subprocess. conda-workspaces projects have no
+  equivalent mechanism yet, so ``env_paths=True`` has no effect on
+  conda-workspaces results.
 
 Programmatic export API
 =======================
@@ -348,18 +403,44 @@ generated TOML or re-implement the conversion rules.
   callers don't have to grep for it themselves. Raises
   ``CondaNotAvailableError`` if the conversion needs ``conda config
   --show default_channels`` and conda isn't reachable.
+* ``project_ops.export_conda(project, filename, use_default=False,
+  add_current_platform=False)`` writes ``conda.toml`` to disk and
+  returns a ``PixiExportStatus`` — the exact same status class
+  ``export_pixi`` returns, since ``default_rename_from`` and
+  ``current_platform_added`` are generic export concepts with nothing
+  pixi-specific baked into the class. Semantics of both fields are
+  identical to ``export_pixi``'s.
+* ``project_ops.preview_conda_export(project, use_default=False,
+  add_current_platform=False)`` runs the conversion in memory and
+  returns a dict
+  ``{conda_toml, default_rename_from, current_platform_addition_target,
+  warnings}`` — the same four concepts as ``preview_pixi_export``,
+  with only the file-content key renamed (``conda_toml`` instead of
+  ``pixi_toml``) to match the format it describes.
+* ``anaconda_project.internal.pixi_export.export_conda_toml(project,
+  use_default=False, add_current_platform=False,
+  default_channels=None)`` is the module-level function
+  ``export_conda`` calls to produce ``conda.toml`` content; it
+  delegates directly to ``export_pixi_toml`` and returns its result
+  unchanged. conda-workspaces 0.7.0's TOML shape is field-for-field
+  identical to pixi.toml's for every field this exporter emits, so no
+  translation step exists between the two — the same function
+  produces both outputs, distinguished only by which file the caller
+  writes it to.
 * ``anaconda_project.internal.pixi_export.default_rename_target(project)``
   returns the env_spec name that ``--use-default`` would promote, or
   ``None`` when promotion is a no-op (project already has a
   ``default`` env_spec, or has no env_specs at all). Stable contract;
   the underlying selection rule (default-command's env, else first
-  declared env_spec) lives in this one function.
+  declared env_spec) lives in this one function. Shared by both the
+  pixi and conda-workspaces export paths.
 * ``anaconda_project.internal.pixi_export.current_platform_addition_target(project)``
   returns the host's conda subdir if it would be added by
   ``--add-current-platform``, or ``None`` when it's already in the
   union of declared platforms. Same shape as
   ``default_rename_target`` so callers can decide both flags
-  symmetrically.
+  symmetrically. Shared by both the pixi and conda-workspaces export
+  paths.
 
 Limitations
 ===========

@@ -5,23 +5,23 @@
 # Licensed under the terms of the BSD 3-Clause License.
 # The full license is in the file LICENSE.txt, distributed with this software.
 # -----------------------------------------------------------------------------
-"""Unified publication-info extraction for anaconda-project and pixi projects.
+"""Unified publication-info extraction for project formats.
 
-The top-level :func:`publication_info` accepts a project directory, detects
-whether it is a pixi project (``pixi.toml`` present) or an anaconda-project
-(``anaconda-project.yml``), parses the relevant file, and returns a metadata
-dict with a shape compatible with :meth:`Project.publication_info`.
+The top-level :func:`publication_info` accepts a project directory and auto-detects
+whether it is a pixi project (``pixi.toml``, optionally embedded in ``pyproject.toml``),
+a conda-workspaces project (``conda.toml``, optionally embedded in ``pyproject.toml``),
+or an anaconda-project (``anaconda-project.yml``). It parses the relevant manifest(s)
+and returns a metadata dict with a shape compatible with :meth:`Project.publication_info`.
 
-The pixi branch reads ``pixi.toml`` directly rather than materializing a
-full :class:`Project` — anaconda-project is an established library for the
-legacy ``.yml`` format, and this module deliberately avoids expanding
-:class:`Project` to cover pixi. Consumers that need uniform metadata (e.g.
-anaconda-platform's publishing pipeline) get one entry point that works
-across both formats.
+The pixi and conda-workspaces branches read TOML files directly rather than materializing
+a full :class:`Project` — anaconda-project is an established library for the legacy ``.yml``
+format, and this module deliberately avoids expanding :class:`Project` to cover the newer
+TOML-based formats. Consumers that need uniform metadata (e.g. anaconda-platform's
+publishing pipeline) get one entry point that works across all formats.
 
-The pixi branch also exposes a handful of pixi-native capabilities that
-anaconda-project does not support — TOML ``[feature.*]`` sections,
-``[environments]`` composition, and ``[activation.env]`` variables.
+Both pixi and conda-workspaces support TOML ``[feature.*]`` sections, ``[environments]``
+composition, ``[activation.env]`` variables, and optional ``[tool.anaconda.commands]``
+overrides when embedded in ``pyproject.toml``.
 """
 from __future__ import absolute_import, print_function
 
@@ -34,82 +34,295 @@ except ImportError:  # Python < 3.11
 
 
 PIXI_MANIFEST = 'pixi.toml'
+CONDA_TOML_MANIFEST = 'conda.toml'
 ANACONDA_PROJECT_MANIFEST = 'anaconda-project.yml'
+PYPROJECT_MANIFEST = 'pyproject.toml'
 
 PROJECT_TYPE_KEY = 'project_type'
+PROJECT_TYPE_CONDA_WORKSPACES = 'conda-workspaces'
 PROJECT_TYPE_PIXI = 'pixi'
 PROJECT_TYPE_ANACONDA_PROJECT = 'anaconda-project'
+
+
+def _locate_manifest(project_dir):
+    """Determine which manifest is present in *project_dir*.
+
+    Returns a tuple (manifest_kind, path_or_none) where manifest_kind is one of:
+    - 'conda-toml': conda.toml present → returns path
+    - 'pixi-toml': pixi.toml present → returns path
+    - 'anaconda-project': anaconda-project.* present → returns path
+    - 'pyproject-conda': pyproject.toml with [tool.conda.workspace] → returns path
+    - 'pyproject-pixi': pyproject.toml with [tool.pixi.workspace] → returns path
+    - None: no manifest found → returns None
+
+    Checks in precedence order. For pyproject-* cases, the file is parsed to
+    determine which [tool] section has a workspace table. Parse errors in
+    pyproject.toml are silently treated as non-match (returns None).
+    """
+    # 1. Check for conda.toml
+    conda_path = os.path.join(project_dir, CONDA_TOML_MANIFEST)
+    if os.path.isfile(conda_path):
+        return ('conda-toml', conda_path)
+
+    # 2. Check for pixi.toml
+    pixi_path = os.path.join(project_dir, PIXI_MANIFEST)
+    if os.path.isfile(pixi_path):
+        return ('pixi-toml', pixi_path)
+
+    # 3. Check for anaconda-project manifest files
+    from anaconda_project.project_file import possible_project_file_names
+    for filename in possible_project_file_names:
+        ap_path = os.path.join(project_dir, filename)
+        if os.path.isfile(ap_path):
+            return ('anaconda-project', ap_path)
+
+    # 4. Check for pyproject.toml with tool.conda or tool.pixi workspace
+    pyproject_path = os.path.join(project_dir, PYPROJECT_MANIFEST)
+    if os.path.isfile(pyproject_path):
+        try:
+            with open(pyproject_path, 'rb') as f:
+                data = tomllib.load(f)
+        except (OSError, tomllib.TOMLDecodeError):
+            # Parse error or file access error — treat as non-match, don't raise
+            return (None, None)
+
+        # Check for tool.conda.workspace first
+        if data.get('tool', {}).get('conda', {}).get('workspace'):
+            return ('pyproject-conda', pyproject_path)
+
+        # Then check for tool.pixi.workspace
+        if data.get('tool', {}).get('pixi', {}).get('workspace'):
+            return ('pyproject-pixi', pyproject_path)
+
+    return (None, None)
+
+
+def _locate_manifest_of_kind(project_dir, top_level_filename, pyproject_tool_key):
+    """Find the manifest for one specific format, ignoring precedence.
+
+    Unlike :func:`_locate_manifest` (which returns the single highest-precedence
+    manifest across *all* formats), this checks only whether *this* format's
+    manifest exists — a top-level file named *top_level_filename*, or a
+    ``pyproject.toml`` with a ``[tool.<pyproject_tool_key>.workspace]`` table.
+    This is what explicit ``project_type=`` overrides need: "does the requested
+    format exist here?", not "which format wins?" — so a coexisting
+    higher-precedence manifest of a *different* format never masks the one the
+    caller actually asked for.
+
+    Returns (manifest_kind, path) — manifest_kind is ``'top-level'`` or
+    ``'pyproject'`` — or (None, None) if not found. Parse errors in
+    pyproject.toml are silently treated as non-match (returns (None, None)),
+    matching _locate_manifest's existing convention.
+    """
+    top_level_path = os.path.join(project_dir, top_level_filename)
+    if os.path.isfile(top_level_path):
+        return ('top-level', top_level_path)
+
+    pyproject_path = os.path.join(project_dir, PYPROJECT_MANIFEST)
+    if os.path.isfile(pyproject_path):
+        try:
+            with open(pyproject_path, 'rb') as f:
+                data = tomllib.load(f)
+        except (OSError, tomllib.TOMLDecodeError):
+            return (None, None)
+        if data.get('tool', {}).get(pyproject_tool_key, {}).get('workspace'):
+            return ('pyproject', pyproject_path)
+
+    return (None, None)
 
 
 def detect_project_type(project_dir):
     """Return the project type string for *project_dir*, or ``None`` if unknown.
 
-    Detection is by manifest presence; ``pixi.toml`` wins when both are present,
-    matching the dispatch used by :func:`publication_info`.
+    Detection is by manifest presence, in precedence order:
+    1. ``conda.toml`` → ``'conda-workspaces'``
+    2. ``pixi.toml`` → ``'pixi'``
+    3. ``anaconda-project.yml`` (or variants) → ``'anaconda-project'``
+    4. ``pyproject.toml`` with ``[tool.conda.workspace]`` or ``[tool.pixi.workspace]`` →
+       ``'conda-workspaces'`` or ``'pixi'`` respectively
+    5. Otherwise → ``None``
+
+    Detection errors (e.g., malformed ``pyproject.toml``) are silently treated as
+    non-matches and do not raise.
     """
-    if os.path.isfile(os.path.join(project_dir, PIXI_MANIFEST)):
+    manifest_kind, _path = _locate_manifest(project_dir)
+
+    if manifest_kind == 'conda-toml':
+        return PROJECT_TYPE_CONDA_WORKSPACES
+    elif manifest_kind == 'pixi-toml':
         return PROJECT_TYPE_PIXI
-    if os.path.isfile(os.path.join(project_dir, ANACONDA_PROJECT_MANIFEST)):
+    elif manifest_kind == 'anaconda-project':
         return PROJECT_TYPE_ANACONDA_PROJECT
-    return None
+    elif manifest_kind == 'pyproject-conda':
+        return PROJECT_TYPE_CONDA_WORKSPACES
+    elif manifest_kind == 'pyproject-pixi':
+        return PROJECT_TYPE_PIXI
+    else:
+        return None
 
 
 def publication_info(project_dir, project_type=None, env_paths=False):
     """Return a publication-info dict for the project at *project_dir*.
 
-    With *project_type* unset (the default), ``pixi.toml`` is preferred when
-    present and ``anaconda-project.yml`` is loaded through :class:`Project`
-    otherwise. Pass ``project_type='pixi'`` or ``'anaconda-project'`` to force
-    a specific manifest format; it is an error to ask for a format whose
-    manifest is not present in *project_dir*. The returned dict always
-    includes a ``project_type`` key identifying which manifest format was
-    used.
+    With *project_type* unset (the default), auto-detects by manifest presence
+    in precedence order: conda.toml, pixi.toml, anaconda-project.*, pyproject.toml.
+    Pass ``project_type='conda-workspaces'``, ``'pixi'``, or ``'anaconda-project'``
+    to force a specific format; explicit types now recognize both top-level manifests
+    (conda.toml/pixi.toml) and pyproject.toml embedding ([tool.conda.workspace] or
+    [tool.pixi.workspace]), matching auto-detect behavior. The returned dict
+    always includes a ``project_type`` key identifying which manifest format was used.
 
     Pass ``env_paths=True`` to populate ``info['env_specs'][name]['path']``
     with the filesystem prefix for each declared environment. For
     anaconda-project this is computed from each :class:`EnvSpec` and is
-    free; for pixi we shell out to ``pixi info --json`` (so it costs a
-    subprocess) and surface any error from that call.
+    free; for pixi (whether from a top-level pixi.toml or a pyproject.toml
+    ``[tool.pixi]`` embedding) we shell out to ``pixi info --json`` (so it
+    costs a subprocess) and surface any error from that call. For
+    conda-workspaces there is no equivalent path-resolution mechanism yet,
+    so ``env_paths=True`` has no effect on conda-workspaces results.
 
     Raises:
-        ValueError: *project_type* is not a recognized value, or the pixi
-            manifest cannot be parsed.
+        ValueError: *project_type* is not a recognized value, or a manifest
+            cannot be parsed.
         FileNotFoundError: the requested manifest (or, with no
-            *project_type*, neither manifest) is not present.
+            *project_type*, any manifest) is not present.
         RuntimeError: ``env_paths=True`` was requested for a pixi project
             and ``pixi info --json`` failed.
     """
     if project_type is None:
-        project_type = detect_project_type(project_dir)
-        if project_type is None:
+        # Auto-detect: use _locate_manifest to find the winning manifest,
+        # then re-derive the type from its kind
+        manifest_kind, manifest_path = _locate_manifest(project_dir)
+        if manifest_kind is None:
             raise FileNotFoundError(
-                'No {} or {} found in {}'.format(
-                    PIXI_MANIFEST, ANACONDA_PROJECT_MANIFEST, project_dir
+                'No manifest (conda.toml, pixi.toml, anaconda-project.*, or '
+                'pyproject.toml with [tool.conda.workspace] or [tool.pixi.workspace]) '
+                'found in {}'.format(project_dir)
+            )
+
+        # Determine project_type from manifest_kind and load data as needed
+        if manifest_kind == 'conda-toml':
+            project_type = PROJECT_TYPE_CONDA_WORKSPACES
+            try:
+                with open(manifest_path, 'rb') as f:
+                    data = tomllib.load(f)
+            except (OSError, tomllib.TOMLDecodeError) as e:
+                raise ValueError('Failed to parse {}: {}'.format(manifest_path, e)) from e
+            info = _conda_workspaces_publication_info(project_dir, data)
+
+        elif manifest_kind == 'pixi-toml':
+            project_type = PROJECT_TYPE_PIXI
+            try:
+                with open(manifest_path, 'rb') as f:
+                    data = tomllib.load(f)
+            except (OSError, tomllib.TOMLDecodeError) as e:
+                raise ValueError('Failed to parse {}: {}'.format(manifest_path, e)) from e
+            info = _pixi_publication_info(project_dir, data)
+            if env_paths:
+                _attach_pixi_env_paths(info, project_dir)
+
+        elif manifest_kind == 'anaconda-project':
+            project_type = PROJECT_TYPE_ANACONDA_PROJECT
+            info = _anaconda_project_publication_info(project_dir, env_paths=env_paths)
+
+        elif manifest_kind == 'pyproject-conda':
+            project_type = PROJECT_TYPE_CONDA_WORKSPACES
+            try:
+                with open(manifest_path, 'rb') as f:
+                    pyproject_data = tomllib.load(f)
+            except (OSError, tomllib.TOMLDecodeError) as e:
+                raise ValueError('Failed to parse {}: {}'.format(manifest_path, e)) from e
+            # Extract the [tool.conda] sub-tree
+            data = pyproject_data.get('tool', {}).get('conda', {})
+            # Also extract the full-document [tool.anaconda.commands] for pyproject-embedded override lookup
+            tool_commands = pyproject_data.get('tool', {}).get('anaconda', {}).get('commands', {})
+            info = _conda_workspaces_publication_info(project_dir, data, tool_commands=tool_commands)
+
+        elif manifest_kind == 'pyproject-pixi':
+            project_type = PROJECT_TYPE_PIXI
+            try:
+                with open(manifest_path, 'rb') as f:
+                    pyproject_data = tomllib.load(f)
+            except (OSError, tomllib.TOMLDecodeError) as e:
+                raise ValueError('Failed to parse {}: {}'.format(manifest_path, e)) from e
+            # Extract the [tool.pixi] sub-tree
+            data = pyproject_data.get('tool', {}).get('pixi', {})
+            # Also extract the full-document [tool.anaconda.commands] for pyproject-embedded override lookup
+            tool_commands = pyproject_data.get('tool', {}).get('anaconda', {}).get('commands', {})
+            info = _pixi_publication_info(project_dir, data, tool_commands=tool_commands)
+            if env_paths:
+                _attach_pixi_env_paths(info, project_dir)
+
+    else:
+        # Explicit project_type: recognize both top-level manifests and pyproject.toml embedding
+        if project_type == PROJECT_TYPE_CONDA_WORKSPACES:
+            # Look for THIS format specifically — never let a coexisting
+            # higher-precedence manifest of a different format (e.g. pixi.toml)
+            # mask a conda.toml that demonstrably exists (see _locate_manifest_of_kind).
+            manifest_kind, manifest_path = _locate_manifest_of_kind(project_dir, CONDA_TOML_MANIFEST, 'conda')
+            if manifest_kind is None:
+                raise FileNotFoundError(
+                    'No conda.toml found in {} (and no [tool.conda.workspace] in pyproject.toml)'.format(project_dir)
+                )
+            try:
+                with open(manifest_path, 'rb') as f:
+                    pyproject_data = tomllib.load(f)
+            except (OSError, tomllib.TOMLDecodeError) as e:
+                raise ValueError('Failed to parse {}: {}'.format(manifest_path, e)) from e
+            if manifest_kind == 'top-level':
+                data = pyproject_data
+                tool_commands = None  # Will be auto-derived
+            else:  # 'pyproject'
+                data = pyproject_data.get('tool', {}).get('conda', {})
+                tool_commands = pyproject_data.get('tool', {}).get('anaconda', {}).get('commands', {})
+            info = _conda_workspaces_publication_info(project_dir, data, tool_commands=tool_commands)
+
+        elif project_type == PROJECT_TYPE_PIXI:
+            # Same reasoning as the conda-workspaces branch above: check for
+            # pixi.toml specifically, independent of precedence.
+            manifest_kind, manifest_path = _locate_manifest_of_kind(project_dir, PIXI_MANIFEST, 'pixi')
+            if manifest_kind is None:
+                raise FileNotFoundError(
+                    'No pixi.toml found in {} (and no [tool.pixi.workspace] in pyproject.toml)'.format(project_dir)
+                )
+            try:
+                with open(manifest_path, 'rb') as f:
+                    pyproject_data = tomllib.load(f)
+            except (OSError, tomllib.TOMLDecodeError) as e:
+                raise ValueError('Failed to parse {}: {}'.format(manifest_path, e)) from e
+            if manifest_kind == 'top-level':
+                data = pyproject_data
+                tool_commands = None  # Will be auto-derived
+            else:  # 'pyproject'
+                data = pyproject_data.get('tool', {}).get('pixi', {})
+                tool_commands = pyproject_data.get('tool', {}).get('anaconda', {}).get('commands', {})
+            info = _pixi_publication_info(project_dir, data, tool_commands=tool_commands)
+            if env_paths:
+                _attach_pixi_env_paths(info, project_dir)
+
+        elif project_type == PROJECT_TYPE_ANACONDA_PROJECT:
+            # Anaconda-project uses possible_project_file_names for detection
+            from anaconda_project.project_file import possible_project_file_names
+            ap_path = None
+            for filename in possible_project_file_names:
+                candidate = os.path.join(project_dir, filename)
+                if os.path.isfile(candidate):
+                    ap_path = candidate
+                    break
+            if ap_path is None:
+                raise FileNotFoundError(
+                    'No {} found in {}'.format(ANACONDA_PROJECT_MANIFEST, project_dir)
+                )
+            info = _anaconda_project_publication_info(project_dir, env_paths=env_paths)
+
+        else:
+            raise ValueError(
+                'Unknown project_type {!r}; expected {!r}, {!r}, or {!r}'.format(
+                    project_type, PROJECT_TYPE_CONDA_WORKSPACES,
+                    PROJECT_TYPE_PIXI, PROJECT_TYPE_ANACONDA_PROJECT
                 )
             )
-    elif project_type == PROJECT_TYPE_PIXI:
-        if not os.path.isfile(os.path.join(project_dir, PIXI_MANIFEST)):
-            raise FileNotFoundError(
-                'No {} found in {}'.format(PIXI_MANIFEST, project_dir)
-            )
-    elif project_type == PROJECT_TYPE_ANACONDA_PROJECT:
-        if not os.path.isfile(os.path.join(project_dir, ANACONDA_PROJECT_MANIFEST)):
-            raise FileNotFoundError(
-                'No {} found in {}'.format(ANACONDA_PROJECT_MANIFEST, project_dir)
-            )
-    else:
-        raise ValueError(
-            'Unknown project_type {!r}; expected {!r} or {!r}'.format(
-                project_type, PROJECT_TYPE_PIXI, PROJECT_TYPE_ANACONDA_PROJECT
-            )
-        )
 
-    if project_type == PROJECT_TYPE_PIXI:
-        info = _pixi_publication_info(project_dir)
-        if env_paths:
-            _attach_pixi_env_paths(info, project_dir)
-    else:
-        info = _anaconda_project_publication_info(project_dir, env_paths=env_paths)
     info[PROJECT_TYPE_KEY] = project_type
     return info
 
@@ -169,7 +382,7 @@ def _read_pixi_lock_envs(project_dir):
         import yaml
         with open(lock_path, 'r') as f:
             lock = yaml.safe_load(f)
-    except Exception:
+    except (OSError, yaml.YAMLError):
         return set()
     if not isinstance(lock, dict):
         return set()
@@ -179,29 +392,64 @@ def _read_pixi_lock_envs(project_dir):
     return set(envs.keys())
 
 
-def _pixi_publication_info(project_dir):
-    pixi_path = os.path.join(project_dir, PIXI_MANIFEST)
-    try:
-        with open(pixi_path, 'rb') as f:
-            data = tomllib.load(f)
-    except (OSError, tomllib.TOMLDecodeError) as e:
-        raise ValueError('Failed to parse {}: {}'.format(pixi_path, e)) from e
+def _read_conda_lock_envs(project_dir):
+    """Return the set of environment names that appear in conda.lock, or
+    empty if the lockfile is missing, malformed, or can't be loaded.
 
-    locked_envs = _read_pixi_lock_envs(project_dir)
+    Failure is silent by design: lock detection is informational; the
+    rest of publication_info should never break because of a corrupt
+    lockfile.
+    """
+    lock_path = os.path.join(project_dir, 'conda.lock')
+    try:
+        import yaml
+        with open(lock_path, 'r') as f:
+            lock = yaml.safe_load(f)
+    except (OSError, yaml.YAMLError):
+        return set()
+    if not isinstance(lock, dict):
+        return set()
+    envs = lock.get('environments')
+    if not isinstance(envs, dict):
+        return set()
+    return set(envs.keys())
+
+
+def _toml_workspace_publication_info(project_dir, data, lock_reader, tool_commands=None, use_project_alias_fallback=False):
+    """Return a publication-info dict for a TOML workspace project (pixi or conda-workspaces).
+
+    This is the shared implementation for both pixi and conda-workspaces formats,
+    which have identical TOML structure but differ in lock file location and
+    legacy [project] alias availability.
+
+    Args:
+        project_dir: Path to the project directory.
+        data: Pre-parsed manifest dict (from tomllib.load) with top-level
+              keys workspace/dependencies/feature/environments/tasks/etc.
+        lock_reader: Function to call to get locked environment names
+              (either _read_pixi_lock_envs or _read_conda_lock_envs).
+        tool_commands: Optional dict of [tool.anaconda.commands] overrides.
+              If None (the default), derives from data.get('tool', {}).get('anaconda', {}).get('commands', {}).
+              When explicitly passed (even if empty dict), uses that instead of deriving.
+        use_project_alias_fallback: If True, use [project] table as fallback for name/description
+              (pixi legacy behavior); if False, skip it (conda-workspaces).
+
+    Returns:
+        A dict with keys: name, description, commands, env_specs, variables.
+    """
+    locked_envs = lock_reader(project_dir)
 
     workspace = data.get('workspace', {})
-    project_meta = data.get('project', {})
+    project_meta = data.get('project', {}) if use_project_alias_fallback else {}
     name = workspace.get('name', project_meta.get('name', os.path.basename(project_dir)))
     description = workspace.get('description', project_meta.get('description', ''))
     channels = workspace.get('channels', project_meta.get('channels', []))
 
-    tool_commands = data.get('tool', {}).get('anaconda', {}).get('commands', {})
+    if tool_commands is None:
+        tool_commands = data.get('tool', {}).get('anaconda', {}).get('commands', {})
 
-    # Resolve the name of pixi's implicit `default` environment to the
-    # user-meaningful env_spec it actually represents. Pixi always
-    # materializes a `default` env from the default feature; the
-    # exporter (and anaconda-project's own publication_info) report the
-    # resolved name, not the placeholder. Logic mirrors the exporter:
+    # Resolve the default environment name. Both pixi and conda-workspaces
+    # always materialize a `default` env. Logic mirrors the exporter:
     # a literal `default` in [environments] wins; otherwise fall back
     # to the first declared environment.
     declared_envs = data.get('environments', {})
@@ -212,7 +460,7 @@ def _pixi_publication_info(project_dir):
     else:
         default_env_name = 'default'
 
-    # For tasks defined under [feature.X.tasks.Y], pixi runs them in any
+    # For tasks defined under [feature.X.tasks.Y], both run them in any
     # env that includes feature X. publication_info should report a
     # specific env that "supports this task": prefer the resolved
     # default if it includes the feature, else the first declared env
@@ -270,7 +518,7 @@ def _pixi_publication_info(project_dir):
             pkgs.extend(_format_dep(n, s) for n, s in feat_deps.items())
         return pkgs
 
-    # Pixi always materializes a `default` env, even when [environments]
+    # Both formats always materialize a `default` env, even when [environments]
     # only declares others. Surface it unconditionally; honor the user's
     # declaration if one exists.
     env_specs = {
@@ -298,6 +546,22 @@ def _pixi_publication_info(project_dir):
         'env_specs': env_specs,
         'variables': variables,
     }
+
+
+def _pixi_publication_info(project_dir, data, tool_commands=None):
+    """Wrapper for pixi projects that delegates to _toml_workspace_publication_info."""
+    return _toml_workspace_publication_info(
+        project_dir, data, lock_reader=_read_pixi_lock_envs,
+        tool_commands=tool_commands, use_project_alias_fallback=True
+    )
+
+
+def _conda_workspaces_publication_info(project_dir, data, tool_commands=None):
+    """Wrapper for conda-workspaces projects that delegates to _toml_workspace_publication_info."""
+    return _toml_workspace_publication_info(
+        project_dir, data, lock_reader=_read_conda_lock_envs,
+        tool_commands=tool_commands, use_project_alias_fallback=False
+    )
 
 
 def _build_command(task_name, task_def, env_spec, tool_commands, state):

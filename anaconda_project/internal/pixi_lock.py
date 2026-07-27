@@ -56,6 +56,21 @@ from anaconda_project.internal import conda_api
 from anaconda_project.internal.py2_compat import is_string, is_dict
 
 
+# conda-workspaces' conda.lock is a byte-for-byte rattler-lock v6 derivative
+# (same version/environments/packages shape build_pixi_lock already emits)
+# with one on-disk difference: the top-level "version" field is stamped 1
+# instead of 6, so conda_workspaces.lockfile.CondaLockLoader.can_handle()
+# recognizes it as its own format (it does an in-memory 1->6 swap before
+# reusing the same rattler-lock v6 conversion code pixi's own loader uses).
+# Ground-truthed against the installed conda-workspaces 0.7.0 package
+# (conda_workspaces/lockfile.py: LOCKFILE_VERSION = 1, can_handle() checks
+# data.get("version") == LOCKFILE_VERSION) rather than assumed from docs.
+_LOCK_VERSION_BY_FORMAT = {
+    'pixi': 6,
+    'conda-workspaces': 1,
+}
+
+
 # anaconda-project lock files group package specs into "buckets" keyed by
 # platform OR by a cross-platform selector ("all", "unix", "linux", "osx",
 # "win"). CondaLockSet.package_specs_for_platform() already merges the right
@@ -348,8 +363,8 @@ def enrich_locked_packages(locked, channels, subdir, query=None):
     return enriched
 
 
-def build_pixi_lock(enriched_by_subdir, channels, env_name="default"):
-    """Assemble a pixi.lock (schema version 6) dict from enriched packages.
+def build_pixi_lock(enriched_by_subdir, channels, env_name="default", target_format='pixi'):
+    """Assemble a pixi.lock/conda.lock dict from enriched packages.
 
     Parameters
     ----------
@@ -359,9 +374,15 @@ def build_pixi_lock(enriched_by_subdir, channels, env_name="default"):
         rejects an incomplete closure with "lock-file not up-to-date").
     channels : ordered channel URLs for the environment.
     env_name : the pixi environment name (default "default").
+    target_format : 'pixi' (default) or 'conda-workspaces'. The two formats
+        share an identical environments/packages schema (conda-workspaces'
+        conda.lock is a rattler-lock v6 derivative); the only on-disk
+        difference this function controls is the top-level "version" stamp
+        (6 for pixi.lock, 1 for conda.lock) that each tool's own loader
+        checks to recognize its format — see ``_LOCK_VERSION_BY_FORMAT``.
 
-    Returns a plain dict matching pixi.lock v6:
-      version: 6
+    Returns a plain dict matching the target format's lock schema:
+      version: 6 (pixi) or 1 (conda-workspaces)
       environments: {<env>: {channels: [{url}], packages: {<subdir>: [{conda: url}]}}}
       packages: [{conda: url, sha256, md5, depends}]   # deduped, by url
 
@@ -372,6 +393,10 @@ def build_pixi_lock(enriched_by_subdir, channels, env_name="default"):
     installs). license/size/timestamp are intentionally omitted — not needed
     for a faithful locked install, and we don't have authoritative values.
     """
+    if target_format not in _LOCK_VERSION_BY_FORMAT:
+        raise LockTranslationError(
+            "unknown target_format %r; expected one of %r" %
+            (target_format, sorted(_LOCK_VERSION_BY_FORMAT)))
     # Per-subdir reference lists for the environment.
     env_packages = {}
     # Top-level package records, deduped by url (a noarch package shared across
@@ -394,7 +419,7 @@ def build_pixi_lock(enriched_by_subdir, channels, env_name="default"):
         env_packages[subdir] = refs
 
     document = {
-        "version": 6,
+        "version": _LOCK_VERSION_BY_FORMAT[target_format],
         "environments": {
             env_name: {
                 "channels": [{"url": c} for c in channels],
@@ -410,14 +435,19 @@ def build_pixi_lock(enriched_by_subdir, channels, env_name="default"):
 
 
 def write_pixi_lock(document, path):
-    """Write the pixi.lock dict to ``path`` ATOMICALLY.
+    """Write the lock dict to ``path`` ATOMICALLY.
+
+    Works for either pixi.lock or conda.lock content — the document's own
+    "version" field (set by build_pixi_lock's target_format) is what a
+    reading tool actually checks; this function just serializes whatever
+    dict it's given to whatever path it's given.
 
     Full closure is already assembled in memory by build_pixi_lock; we
     serialize to a temp file in the same directory and os.replace() it into
     place, so a crash/interruption mid-write can never leave a half-written
-    (incomplete-closure) pixi.lock that pixi would reject with a confusing
-    "lock-file not up-to-date" error. Either the complete lock appears, or the
-    previous file is untouched.
+    (incomplete-closure) lock file that pixi/conda-workspaces would reject
+    with a confusing "lock-file not up-to-date" error. Either the complete
+    lock appears, or the previous file is untouched.
     """
     import os
     import tempfile
@@ -430,7 +460,11 @@ def write_pixi_lock(document, path):
     # it, is fragile for diffs/other readers and looks broken. Disable wrapping
     # so each url stays on one line (matches how pixi writes its own lock).
     yaml.width = 4096
-    fd, tmp_path = tempfile.mkstemp(prefix=".pixi.lock.", dir=directory, text=True)
+    # Prefix derived from the real target filename (pixi.lock or conda.lock)
+    # rather than hardcoded, so the temp file's name still makes sense for
+    # whichever format is being written.
+    tmp_prefix = ".{}.".format(os.path.basename(path))
+    fd, tmp_path = tempfile.mkstemp(prefix=tmp_prefix, dir=directory, text=True)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             yaml.dump(document, f)
@@ -443,18 +477,24 @@ def write_pixi_lock(document, path):
         raise
 
 
-def translate_lock_set(lock_set, channels, path, env_name="default", query=None):
-    """End-to-end: anaconda-project CondaLockSet -> faithful pixi.lock on disk.
+def translate_lock_set(lock_set, channels, path, env_name="default", query=None, target_format='pixi'):
+    """End-to-end: anaconda-project CondaLockSet -> faithful pixi.lock/conda.lock on disk.
 
     Ties Items 1+2+4 together: fail-fast on pip, parse the exact closure for
-    every platform, enrich each via repodata (no solver), assemble the v6
+    every platform, enrich each via repodata (no solver), assemble the
     document, and write it atomically. Strict mode throughout — any missing
     build (BuildNotFoundError) or unreachable mirror (MirrorUnavailableError)
     aborts BEFORE any file is written.
 
+    ``target_format`` is ``'pixi'`` (default, writes a pixi.lock-shaped
+    document) or ``'conda-workspaces'`` (writes the same shape stamped as a
+    conda.lock — see ``build_pixi_lock``'s docstring for what actually
+    differs between the two). ``path`` is the caller's choice either way;
+    this function does not infer a filename from ``target_format``.
+
     Raises ``LockTranslationError`` if the lock set has no platforms, or if
     the assembled closure has zero packages on every platform — either would
-    otherwise write a valid-but-empty pixi.lock (install nothing), which is
+    otherwise write a valid-but-empty lock file (install nothing), which is
     a silent no-op degradation, not a faithful translation.
     """
     if not lock_set.platforms:
@@ -466,8 +506,8 @@ def translate_lock_set(lock_set, channels, path, env_name="default", query=None)
         enriched_by_subdir[platform] = enrich_locked_packages(locked, channels, platform, query=query)
     if not any(enriched_by_subdir.values()):
         raise LockTranslationError(
-            "lock set for platforms %r resolved to zero packages; refusing to write an empty pixi.lock" %
+            "lock set for platforms %r resolved to zero packages; refusing to write an empty lock file" %
             (list(lock_set.platforms), ))
-    document = build_pixi_lock(enriched_by_subdir, channels, env_name=env_name)
+    document = build_pixi_lock(enriched_by_subdir, channels, env_name=env_name, target_format=target_format)
     write_pixi_lock(document, path)
     return document

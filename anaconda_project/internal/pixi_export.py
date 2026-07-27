@@ -27,7 +27,8 @@ class CondaNotAvailableError(Exception):
 
 
 class PixiExportStatus(SimpleStatus):
-    """Status returned by :func:`anaconda_project.project_ops.export_pixi`.
+    """Status returned by :func:`anaconda_project.project_ops.export_pixi` and
+    :func:`anaconda_project.project_ops.export_conda`.
 
     Carries fields downstream consumers (launchers, IDE plugins) use to
     surface what the export actually changed without re-querying the
@@ -55,6 +56,12 @@ class PixiExportStatus(SimpleStatus):
     @property
     def current_platform_added(self):
         return self._current_platform_added
+
+
+_FORMAT_NAMES = {
+    'pixi': {'tool': 'pixi', 'manifest': 'pixi.toml', 'run_verb': 'pixi run'},
+    'conda-workspaces': {'tool': 'conda-workspaces', 'manifest': 'conda.toml', 'run_verb': 'conda task run'},
+}
 
 
 def _resolve_default_channels():
@@ -621,7 +628,7 @@ def _format_args_block(args):
     return 'args = [{}]'.format(', '.join(parts))
 
 
-def _command_to_task(command, declared_vars):
+def _command_to_task(command, declared_vars, target_format='pixi'):
     """Convert a ProjectCommand to a pixi task string or None.
 
     Pixi runs tasks under deno_task_shell, which speaks unix-style syntax on
@@ -703,7 +710,7 @@ def _command_to_task(command, declared_vars):
     if unresolved:
         comments.append(
             'unresolved env var(s): {} — set them via [activation.env] or '
-            'before running pixi'.format(', '.join(unresolved)))
+            'before running {}'.format(', '.join(unresolved), _FORMAT_NAMES[target_format]['run_verb']))
     return cmd_rendered, raw_forms, comments, args_line
 
 
@@ -779,7 +786,7 @@ def current_platform_addition_target(project):
     return None if here in declared else here
 
 
-def export_pixi_toml(project, use_default=False, add_current_platform=False, default_channels=None):
+def export_pixi_toml(project, use_default=False, add_current_platform=False, default_channels=None, target_format='pixi'):
     """Convert an anaconda-project Project to pixi.toml content.
 
     Args:
@@ -1053,7 +1060,7 @@ def export_pixi_toml(project, use_default=False, add_current_platform=False, def
         lines.append('[environments]')
         for env_name in env_specs:
             if env_name == 'default':
-                lines.append('# default  (pixi creates this implicitly from the default feature)')
+                lines.append('# default  ({} creates this implicitly from the default feature)'.format(_FORMAT_NAMES[target_format]['tool']))
             else:
                 pixi_env_name = _sanitize_env_name(env_name)
                 lines.append('{name} = {{ features = ["{name}"] }}'.format(name=pixi_env_name))
@@ -1089,7 +1096,7 @@ def export_pixi_toml(project, use_default=False, add_current_platform=False, def
 
         for cmd_name, command in global_tasks:
             task_cmd, raw_forms, comments, args_line = _command_to_task(
-                command, declared_vars)
+                command, declared_vars, target_format=target_format)
             if task_cmd is None:
                 lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
                 continue
@@ -1110,7 +1117,7 @@ def export_pixi_toml(project, use_default=False, add_current_platform=False, def
 
         for cmd_name, command in feature_tasks:
             task_cmd, raw_forms, comments, args_line = _command_to_task(
-                command, declared_vars)
+                command, declared_vars, target_format=target_format)
             if task_cmd is None:
                 lines.append('# {} — could not convert (no unix command)'.format(cmd_name))
                 continue
@@ -1192,7 +1199,7 @@ def export_pixi_toml(project, use_default=False, add_current_platform=False, def
                 services[req.env_var] = req.service_type
 
     if services:
-        lines.append('# Services from anaconda-project.yml (no pixi equivalent):')
+        lines.append('# Services from anaconda-project.yml (no {} equivalent):'.format(_FORMAT_NAMES[target_format]['tool']))
         for var_name, svc_type in sorted(services.items()):
             lines.append('#   {} = {}'.format(var_name, svc_type))
         lines.append('')
@@ -1215,3 +1222,19 @@ def export_pixi_toml(project, use_default=False, add_current_platform=False, def
         lines.append('')
 
     return '\n'.join(lines).rstrip() + '\n'
+
+
+def export_conda_toml(project, use_default=False, add_current_platform=False, default_channels=None):
+    """Convert an anaconda-project Project to conda.toml (conda-workspaces) content.
+
+    Delegates to :func:`export_pixi_toml` with ``target_format='conda-workspaces'``,
+    which produces conda-workspaces-native wording for the handful of prose strings
+    that differ between formats (env-materialization comment, services comment,
+    unresolved-env-var message) while keeping the TOML structure identical.
+    See the Args/Returns docs on :func:`export_pixi_toml` for the full parameter
+    and output semantics — they carry over unchanged.
+    """
+    return export_pixi_toml(project, use_default=use_default,
+                            add_current_platform=add_current_platform,
+                            default_channels=default_channels,
+                            target_format='conda-workspaces')

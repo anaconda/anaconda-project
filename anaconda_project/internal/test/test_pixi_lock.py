@@ -288,6 +288,39 @@ def test_build_pixi_lock_v6_structure_and_noarch_dedup():
     assert rec["sha256"] == "p64" and rec["depends"] == ["tzdata"]
 
 
+def test_build_pixi_lock_defaults_to_pixi_format():
+    doc = pixi_lock.build_pixi_lock({}, channels=["https://m"])
+    assert doc["version"] == 6
+
+
+def test_build_pixi_lock_conda_workspaces_format_stamps_version_1():
+    # conda-workspaces' conda.lock is a rattler-lock v6 derivative with the
+    # on-disk "version" field stamped 1 instead of 6 -- ground-truthed
+    # against the installed conda-workspaces 0.7.0 package
+    # (conda_workspaces.lockfile.LOCKFILE_VERSION == 1); everything else in
+    # the schema (environments/packages shape) is identical, which this
+    # test confirms by checking the rest of the document is unaffected by
+    # target_format.
+    py64 = {"name": "python", "version": "3.12.2", "build": "x64",
+            "url": "https://m/linux-64/python-3.12.2-x64.conda",
+            "sha256": "p64", "md5": "m64", "depends": []}
+    pixi_doc = pixi_lock.build_pixi_lock({"linux-64": [py64]}, channels=["https://m"], target_format='pixi')
+    conda_doc = pixi_lock.build_pixi_lock({"linux-64": [py64]}, channels=["https://m"],
+                                          target_format='conda-workspaces')
+    assert pixi_doc["version"] == 6
+    assert conda_doc["version"] == 1
+    # Only "version" differs -- everything else is byte-for-byte identical.
+    pixi_doc_no_version = {k: v for k, v in pixi_doc.items() if k != "version"}
+    conda_doc_no_version = {k: v for k, v in conda_doc.items() if k != "version"}
+    assert pixi_doc_no_version == conda_doc_no_version
+
+
+def test_build_pixi_lock_rejects_unknown_target_format():
+    with pytest.raises(pixi_lock.LockTranslationError) as exc:
+        pixi_lock.build_pixi_lock({}, channels=["https://m"], target_format='bogus-format')
+    assert 'bogus-format' in str(exc.value)
+
+
 def test_write_pixi_lock_is_atomic_and_roundtrips(tmpdir):
     import os
     from ruamel.yaml import YAML
@@ -302,6 +335,22 @@ def test_write_pixi_lock_is_atomic_and_roundtrips(tmpdir):
     with open(target) as f:
         loaded = YAML().load(f)
     assert loaded["version"] == 6
+
+
+def test_write_pixi_lock_derives_temp_prefix_from_target_filename(tmpdir):
+    import os
+    from ruamel.yaml import YAML
+    doc = {"version": 1, "environments": {}, "packages": []}
+    target = str(tmpdir.join("conda.lock"))
+    pixi_lock.write_pixi_lock(doc, target)
+    assert os.path.exists(target)
+    # no leftover temp files, using the conda.lock-derived prefix (not a
+    # hardcoded ".pixi.lock." one, which wouldn't match this filename)
+    leftovers = [f for f in os.listdir(str(tmpdir)) if f.startswith(".conda.lock.")]
+    assert leftovers == []
+    with open(target) as f:
+        loaded = YAML().load(f)
+    assert loaded["version"] == 1
 
 
 def test_write_pixi_lock_failure_leaves_no_partial_file(tmpdir, monkeypatch):
@@ -338,6 +387,31 @@ def test_translate_lock_set_end_to_end_with_injected_query(tmpdir):
     assert os.path.exists(target)
     assert len(doc["packages"]) == 2
     assert "linux-64" in doc["environments"]["default"]["packages"]
+
+
+def test_translate_lock_set_conda_workspaces_writes_conda_lock(tmpdir):
+    # End-to-end for the conda-workspaces target: writes to conda.lock and
+    # stamps version 1, same closure-building/enrichment path as pixi.
+    import os
+    lock_set = CondaLockSet(
+        {"all": ["tzdata=2024a=h0c530f3_0"], "linux-64": ["python=3.12.2=x64"]},
+        platforms=["linux-64"])
+    recs = {
+        "tzdata": [_FakeRecord("tzdata", "2024a", "h0c530f3_0", "linux-64",
+                               "https://m/noarch/tzdata-2024a-h0c530f3_0.conda", "s", "m", [])],
+        "python": [_FakeRecord("python", "3.12.2", "x64", "linux-64",
+                               "https://m/linux-64/python-3.12.2-x64.conda", "s2", "m2", ["tzdata"])],
+    }
+    target = str(tmpdir.join("conda.lock"))
+    doc = pixi_lock.translate_lock_set(lock_set, channels=["https://m"], path=target,
+                                       query=_fake_query_factory(recs), target_format='conda-workspaces')
+    assert os.path.exists(target)
+    assert doc["version"] == 1
+    assert len(doc["packages"]) == 2
+    # temp file cleanup used the real target filename, not a hardcoded
+    # "pixi.lock"-based prefix
+    leftovers = [f for f in os.listdir(str(tmpdir)) if f.startswith(".conda.lock.")]
+    assert leftovers == []
 
 
 def test_translate_lock_set_rejects_zero_platforms(tmpdir):

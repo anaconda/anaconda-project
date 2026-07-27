@@ -16,6 +16,7 @@ import pytest
 
 from anaconda_project.project_info import (
     PROJECT_TYPE_ANACONDA_PROJECT,
+    PROJECT_TYPE_CONDA_WORKSPACES,
     PROJECT_TYPE_KEY,
     PROJECT_TYPE_PIXI,
     _format_dep,
@@ -35,6 +36,20 @@ def _write_pixi_toml(tmpdir, content):
 
 def _write_anaconda_project(tmpdir, content):
     path = os.path.join(tmpdir, 'anaconda-project.yml')
+    with open(path, 'w') as f:
+        f.write(content)
+    return tmpdir
+
+
+def _write_conda_toml(tmpdir, content):
+    path = os.path.join(tmpdir, 'conda.toml')
+    with open(path, 'w') as f:
+        f.write(content)
+    return tmpdir
+
+
+def _write_pyproject_toml(tmpdir, content):
+    path = os.path.join(tmpdir, 'pyproject.toml')
     with open(path, 'w') as f:
         f.write(content)
     return tmpdir
@@ -188,6 +203,170 @@ class TestPublicationInfoBasic:
             )
             info = publication_info(td)
             assert info['description'] == 'A test project'
+
+
+class TestPublicationInfoCondaWorkspaces:
+    def test_conda_toml_minimal_project(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(
+                td,
+                '[workspace]\nname = "test"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td)
+            assert info['name'] == 'test'
+            assert info['description'] == ''
+            assert info['commands'] == {}
+            assert info['env_specs'] == {
+                'default': {'packages': [], 'channels': ['conda-forge'], 'locked': False},
+            }
+            assert info['variables'] == {}
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_CONDA_WORKSPACES
+
+    def test_conda_toml_workspace_name_only(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(
+                td,
+                '[workspace]\nname = "workspace-name"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td)
+            assert info['name'] == 'workspace-name'
+
+    def test_conda_toml_fallback_to_directory_name(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(
+                td, '[workspace]\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n'
+            )
+            info = publication_info(td)
+            assert info['name'] == os.path.basename(td)
+
+    def test_conda_toml_description(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(
+                td,
+                '[workspace]\nname = "x"\ndescription = "A conda workspace"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td)
+            assert info['description'] == 'A conda workspace'
+
+    def test_pyproject_toml_with_conda_workspace(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(
+                td,
+                '[tool.conda.workspace]\nname = "from-pyproject"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td)
+            assert info['name'] == 'from-pyproject'
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_CONDA_WORKSPACES
+
+    def test_pyproject_toml_with_pixi_workspace(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(
+                td,
+                '[tool.pixi.workspace]\nname = "from-pixi-pyproject"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td)
+            assert info['name'] == 'from-pixi-pyproject'
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
+
+    def test_explicit_project_type_conda_only_recognizes_conda_toml(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(
+                td,
+                '[tool.conda.workspace]\nname = "x"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            # F3: Explicit type now recognizes pyproject-embedded conda projects (no longer only top-level conda.toml)
+            info = publication_info(td, project_type=PROJECT_TYPE_CONDA_WORKSPACES)
+            assert info['project_type'] == PROJECT_TYPE_CONDA_WORKSPACES
+            assert info['name'] == 'x'
+
+    def test_conda_toml_tasks_produce_commands(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [tasks]
+                hello = "echo hi"
+
+                [tasks.serve]
+                cmd = "flask run"
+            """))
+            info = publication_info(td)
+            assert 'hello' in info['commands']
+            assert info['commands']['hello']['unix'] == 'echo hi'
+            assert info['commands']['hello']['default'] is True
+            assert info['commands']['serve']['unix'] == 'flask run'
+            assert info['commands']['serve']['supports_http_options'] is True
+
+    def test_conda_lock_populates_locked(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, textwrap.dedent("""\
+                [workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [environments]
+                sampleproj = { features = ["sampleproj"] }
+                test = { features = ["test"] }
+            """))
+            with open(os.path.join(td, 'conda.lock'), 'w') as f:
+                f.write(textwrap.dedent("""\
+                    version: 1
+                    environments:
+                      sampleproj:
+                        packages: {}
+                """))
+            info = publication_info(td)
+            # sampleproj is in the lock — locked. test is not — unlocked.
+            assert info['env_specs']['sampleproj']['locked'] is True
+            assert info['env_specs']['test']['locked'] is False
+
+    def test_pyproject_pixi_dependencies_and_tasks(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, textwrap.dedent("""\
+                [tool.pixi.workspace]
+                name = "from-pixi-pyproject"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [tool.pixi.dependencies]
+                python = ">=3.12"
+                numpy = "*"
+
+                [tool.pixi.tasks]
+                hello = "echo hi"
+            """))
+            info = publication_info(td)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
+            pkgs = info['env_specs']['default']['packages']
+            assert 'python>=3.12' in pkgs
+            assert 'numpy' in pkgs
+            assert info['commands']['hello']['unix'] == 'echo hi'
+
+    def test_pyproject_conda_dependencies_and_tasks(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, textwrap.dedent("""\
+                [tool.conda.workspace]
+                name = "from-conda-pyproject"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [tool.conda.dependencies]
+                python = ">=3.12"
+                numpy = "*"
+
+                [tool.conda.tasks]
+                hello = "echo hi"
+            """))
+            info = publication_info(td)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_CONDA_WORKSPACES
+            pkgs = info['env_specs']['default']['packages']
+            assert 'python>=3.12' in pkgs
+            assert 'numpy' in pkgs
+            assert info['commands']['hello']['unix'] == 'echo hi'
 
 
 class TestPublicationInfoDependencies:
@@ -683,6 +862,54 @@ class TestPublicationInfoToolAnaconda:
             assert cmd['description'] == 'Run the web app'
             assert cmd['notebook'] == 'app.ipynb'
 
+    def test_tool_anaconda_overrides_pyproject_pixi(self):
+        # F2: verify that [tool.anaconda.commands] overrides work in pyproject.toml with [tool.pixi]
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, textwrap.dedent("""\
+                [tool.pixi.workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [tool.pixi.tasks]
+                serve = "python app.py"
+
+                [tool.anaconda.commands.serve]
+                supports_http_options = true
+                description = "Run the web app in pyproject"
+                default = true
+                notebook = "app.ipynb"
+            """))
+            info = publication_info(td)
+            cmd = info['commands']['serve']
+            assert cmd['supports_http_options'] is True
+            assert cmd['description'] == 'Run the web app in pyproject'
+            assert cmd['notebook'] == 'app.ipynb'
+            assert cmd['default'] is True
+
+    def test_tool_anaconda_overrides_pyproject_conda(self):
+        # F2: verify that [tool.anaconda.commands] overrides work in pyproject.toml with [tool.conda]
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, textwrap.dedent("""\
+                [tool.conda.workspace]
+                name = "t"
+                channels = ["conda-forge"]
+                platforms = ["linux-64"]
+
+                [tool.conda.tasks]
+                test = "pytest"
+
+                [tool.anaconda.commands.test]
+                supports_http_options = false
+                description = "Run tests"
+                default = false
+            """))
+            info = publication_info(td)
+            cmd = info['commands']['test']
+            assert cmd['supports_http_options'] is False
+            assert cmd['description'] == 'Run tests'
+            assert cmd['default'] is False
+
 
 class TestPublicationInfoErrors:
     def test_missing_file(self):
@@ -725,6 +952,51 @@ class TestDetectProjectType:
 
     def test_neither_returns_none(self):
         with tempfile.TemporaryDirectory() as td:
+            assert detect_project_type(td) is None
+
+    def test_detects_conda_toml(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "t"\n')
+            assert detect_project_type(td) == PROJECT_TYPE_CONDA_WORKSPACES
+
+    def test_conda_toml_wins_over_pixi(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "t"\n')
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            assert detect_project_type(td) == PROJECT_TYPE_CONDA_WORKSPACES
+
+    def test_conda_toml_wins_over_anaconda_project(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "t"\n')
+            _write_anaconda_project(td, 'name: t\n')
+            assert detect_project_type(td) == PROJECT_TYPE_CONDA_WORKSPACES
+
+    def test_pixi_wins_over_anaconda_project(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "t"\n')
+            _write_anaconda_project(td, 'name: t\n')
+            assert detect_project_type(td) == PROJECT_TYPE_PIXI
+
+    def test_pyproject_toml_with_conda_workspace(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, '[tool.conda.workspace]\nname = "t"\n')
+            assert detect_project_type(td) == PROJECT_TYPE_CONDA_WORKSPACES
+
+    def test_pyproject_toml_with_pixi_workspace(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, '[tool.pixi.workspace]\nname = "t"\n')
+            assert detect_project_type(td) == PROJECT_TYPE_PIXI
+
+    def test_pyproject_toml_without_workspace_returns_none(self):
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(td, '[tool.other]\nkey = "value"\n')
+            assert detect_project_type(td) is None
+
+    def test_malformed_pyproject_toml_returns_none(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, 'pyproject.toml')
+            with open(path, 'w') as f:
+                f.write('[invalid toml\n')
             assert detect_project_type(td) is None
 
 
@@ -910,9 +1182,93 @@ class TestExplicitProjectType:
                 publication_info(td, project_type=PROJECT_TYPE_ANACONDA_PROJECT)
             assert 'anaconda-project.yml' in str(exc.value)
 
+    def test_explicit_pixi_recognizes_pyproject_pixi(self):
+        # F3: explicit project_type now recognizes pyproject.toml embedding
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(
+                td,
+                '[tool.pixi.workspace]\nname = "pyproject-pixi"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            assert info['project_type'] == PROJECT_TYPE_PIXI
+            assert info['name'] == 'pyproject-pixi'
+
+    def test_explicit_conda_recognizes_pyproject_conda(self):
+        # F3: explicit project_type now recognizes pyproject.toml embedding
+        with tempfile.TemporaryDirectory() as td:
+            _write_pyproject_toml(
+                td,
+                '[tool.conda.workspace]\nname = "pyproject-conda"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td, project_type=PROJECT_TYPE_CONDA_WORKSPACES)
+            assert info['project_type'] == PROJECT_TYPE_CONDA_WORKSPACES
+            assert info['name'] == 'pyproject-conda'
+
+    def test_explicit_type_absent_from_everywhere_raises(self):
+        # F3: if the requested format is absent from both top-level and pyproject.toml, raise FileNotFoundError
+        with tempfile.TemporaryDirectory() as td:
+            _write_anaconda_project(td, 'name: t\n')
+            with pytest.raises(FileNotFoundError) as exc:
+                publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            # Error message should mention both locations
+            assert 'pixi.toml' in str(exc.value)
+            assert 'pyproject.toml' in str(exc.value)
+
     def test_unknown_project_type_raises(self):
         with tempfile.TemporaryDirectory() as td:
             _write_pixi_toml(td, '[workspace]\nname = "t"\n')
             with pytest.raises(ValueError) as exc:
-                publication_info(td, project_type='conda-workspaces')
-            assert 'conda-workspaces' in str(exc.value)
+                publication_info(td, project_type='bogus-type')
+            assert 'bogus-type' in str(exc.value)
+
+    def test_force_pixi_when_conda_toml_also_present(self):
+        # Regression: explicit project_type='pixi' must not be masked by a
+        # coexisting conda.toml, which outranks pixi.toml in auto-detect
+        # precedence. The override asks "does pixi.toml exist here?", not
+        # "which format wins by precedence?" (the mid-conversion use case
+        # --project-type exists to support, per workspace-support.rst).
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "from-conda"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            _write_pixi_toml(td, '[workspace]\nname = "from-pixi"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            info = publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
+            assert info['name'] == 'from-pixi'
+
+    def test_force_conda_workspaces_when_pixi_toml_also_present(self):
+        # Reverse direction of the regression above: conda.toml outranks
+        # pixi.toml, so this direction already worked, but locking it in
+        # alongside the fix confirms the new helper didn't flip the winner.
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "from-conda"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            _write_pixi_toml(td, '[workspace]\nname = "from-pixi"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            info = publication_info(td, project_type=PROJECT_TYPE_CONDA_WORKSPACES)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_CONDA_WORKSPACES
+            assert info['name'] == 'from-conda'
+
+    def test_force_pixi_via_pyproject_when_conda_toml_also_present(self):
+        # Same regression, pyproject.toml-embedded variant: a top-level
+        # conda.toml must not mask a pixi.toml embedded in [tool.pixi.workspace].
+        with tempfile.TemporaryDirectory() as td:
+            _write_conda_toml(td, '[workspace]\nname = "from-conda"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            _write_pyproject_toml(
+                td,
+                '[tool.pixi.workspace]\nname = "pyproject-pixi"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td, project_type=PROJECT_TYPE_PIXI)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_PIXI
+            assert info['name'] == 'pyproject-pixi'
+
+    def test_force_conda_workspaces_via_pyproject_when_pixi_toml_also_present(self):
+        # Mirror image of the test above: a top-level pixi.toml (which
+        # outranks a pyproject.toml embedding in auto-detect precedence)
+        # must not mask a conda-workspaces manifest that only exists as a
+        # [tool.conda.workspace] embedding.
+        with tempfile.TemporaryDirectory() as td:
+            _write_pixi_toml(td, '[workspace]\nname = "from-pixi"\nchannels = ["defaults"]\nplatforms = ["linux-64"]\n')
+            _write_pyproject_toml(
+                td,
+                '[tool.conda.workspace]\nname = "pyproject-conda"\nchannels = ["conda-forge"]\nplatforms = ["linux-64"]\n',
+            )
+            info = publication_info(td, project_type=PROJECT_TYPE_CONDA_WORKSPACES)
+            assert info[PROJECT_TYPE_KEY] == PROJECT_TYPE_CONDA_WORKSPACES
+            assert info['name'] == 'pyproject-conda'

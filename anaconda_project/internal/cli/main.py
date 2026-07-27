@@ -39,6 +39,7 @@ import anaconda_project.internal.cli.service_commands as service_commands
 import anaconda_project.internal.cli.environment_commands as environment_commands
 import anaconda_project.internal.cli.command_commands as command_commands
 import anaconda_project.internal.cli.pixi_commands as pixi_commands
+import anaconda_project.internal.cli.conda_export_commands as conda_export_commands
 import anaconda_project.internal.cli.info as info_cli
 
 
@@ -425,11 +426,33 @@ def _parse_args_and_run_subcommand(argv):
     preset.set_defaults(main=pixi_commands.main_export_pixi)
 
     preset = subparsers.add_parser(
+        'export-conda', help="Export the project as a conda.toml file (conda-workspaces)")
+    add_directory_arg(preset)
+    preset.add_argument('filename', metavar='CONDA_TOML_FILE', nargs='?', default='conda.toml')
+    preset.add_argument('--use-default',
+                        action='store_true',
+                        default=False,
+                        help=("If the project has no env_spec named 'default', rename the "
+                              "default-command's env_spec (or the first one declared) to "
+                              "'default' on export. Collapses [feature.{name}.*] blocks "
+                              "into top-level [dependencies] / [tasks.X] for a cleaner "
+                              "conda.toml."))
+    preset.add_argument('--add-current-platform',
+                        action='store_true',
+                        default=False,
+                        help=("If the host's conda subdir (e.g. osx-arm64) isn't already in "
+                              "the project's platforms list, add it on export. "
+                              "conda-workspaces rejects envs that don't list the host "
+                              "platform; anaconda-project is more forgiving, so this "
+                              "prevents an install error after conversion."))
+    preset.set_defaults(main=conda_export_commands.main_export_conda)
+
+    preset = subparsers.add_parser(
         'info',
         help=("Show a summary of the project: name, environments, commands, "
-              "variables. Reads pixi.toml when present (and an "
-              "anaconda-project.yml otherwise) and can also surface env "
-              "prefix locations."))
+              "variables. Reads conda.toml, then pixi.toml, then "
+              "anaconda-project.yml, then pyproject.toml (tool.conda/tool.pixi), "
+              "in that order, and can also surface env prefix locations."))
     add_directory_arg(preset)
     preset.add_argument('--json',
                         action='store_true',
@@ -442,10 +465,11 @@ def _parse_args_and_run_subcommand(argv):
                               "For pixi projects this shells out to `pixi info --json` "
                               "and stashes its full output under `_pixi` in --json mode."))
     preset.add_argument('--project-type',
-                        choices=('pixi', 'anaconda-project'),
+                        choices=('conda-workspaces', 'pixi', 'anaconda-project'),
                         default=None,
                         help=("Force a manifest format. The default behavior reads "
-                              "pixi.toml if present, otherwise anaconda-project.yml."))
+                              "conda.toml, then pixi.toml, then anaconda-project.yml, "
+                              "then pyproject.toml (tool.conda/tool.pixi), in that order."))
     preset.set_defaults(main=info_cli.main)
 
     # argparse doesn't do this for us for whatever reason
