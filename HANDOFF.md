@@ -30,7 +30,9 @@ Concrete numbers (17 Aug .org data): snowflake-snowpark-python 36,845 > snowflak
 
 ## Why nothing was published against .org
 
-Per the no-proxy rule ("a wrong download count published into a sales conversation is worse than a blank column"), we did **not** fake main-x downloads from PyPI stats (pepy/pypistats measure upstream popularity, not channel downloads). The main-x sheet says "not available" in words, per sheet, with the probe trail above. Repo is private; a live hosted version was floated and is off the table per Lilly.
+Per the no-proxy rule ("a wrong download count published into a sales conversation is worse than a blank column"), we did **not** fake main-x downloads from PyPI stats (pepy/pypistats measure upstream popularity, not channel downloads). Repo is private; a live hosted version was floated and is off the table per Lilly.
+
+**Data policy update (owner directive, 17 Aug):** the catalog is Anaconda-data-only. The earlier PyPI description backfill for main-x (98.7% coverage, exact-name-match) was reverted — main-x rows now show strictly what Anaconda publishes (name, latest version, license, cross-channel flag), and "what it does" is empty by design where Anaconda publishes nothing. No download columns exist on the main-x sheet; the absence is recorded here and on the Summary sheet instead of per-row filler. main's downloads remain Anaconda's own data — the anaconda.org API.
 
 ## Thread status (17-18 Aug 2026) — what's answered vs open
 
