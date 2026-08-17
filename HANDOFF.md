@@ -32,11 +32,13 @@ Concrete numbers (17 Aug .org data): snowflake-snowpark-python 36,845 > snowflak
 
 Per the no-proxy rule ("a wrong download count published into a sales conversation is worse than a blank column"), we did **not** fake main-x downloads from PyPI stats (pepy/pypistats measure upstream popularity, not channel downloads). Repo is private; a live hosted version was floated and is off the table per Lilly.
 
-**Data policy update (owner directive, 17 Aug):** the catalog is Anaconda-data-only. The earlier PyPI description backfill for main-x (98.7% coverage, exact-name-match) was reverted — main-x rows now show strictly what Anaconda publishes (name, latest version, license, cross-channel flag), and "what it does" is empty by design where Anaconda publishes nothing. No download columns exist on the main-x sheet; the absence is recorded here and on the Summary sheet instead of per-row filler. main's downloads remain Anaconda's own data — the anaconda.org API.
+It advertises `artifact_count = 14,234` (exactly matching the catalog), and every artifact carries `metadata.summary`/`metadata.description` plus a per-package `download_count`. The catalog now pulls main-x summaries from it: **14,124/14,234 packages described by anaconda.org (99.2%)** — plus 5 more via a PyPI fallback used only where anaconda.org publishes nothing (owner-approved exception; main-x builds are `pypi_*` repacks, so same upstream project). **105 packages have no description on any surface.**
+
+   *Data policy note (owner directive, 17 Aug):* the catalog is Anaconda-data-only by design; the single exception is the PyPI description fallback above, counted and dated on the Summary sheet. No PyPI-sourced numbers anywhere — PyPI download stats measure a different population and are never used.
 
 ## Correction & update (17 Aug 2026, later build): repocore exists
 
-Following the "browsable but not queryable" finding, deeper probing found the API the .org front-end itself calls: **`https://api.anaconda.org/repocore/channels/main-x`** and **`.../artifacts?limit=1000&offset=…`** — public, no auth. It advertises `artifact_count = 14,234` (exactly matching the catalog), and every artifact carries `metadata.summary`/`metadata.description` plus a per-package `download_count`. The catalog now pulls main-x summaries from it: **14,119/14,234 packages have a description (99.2%)**.
+Following the "browsable but not queryable" finding, deeper probing found the API the .org front-end itself calls: **`https://api.anaconda.org/repocore/channels/main-x`** and **`.../artifacts?limit=1000&offset=…`** — public, no auth. 
 
 Two residual observations for the .org team:
 

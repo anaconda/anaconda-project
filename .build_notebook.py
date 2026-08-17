@@ -17,14 +17,14 @@ above the column headers.
 | `main-x` | every unique package on **main-x**: same shape — name, latest version, what it does (anaconda.org `main-x` summary), license, on-main flag, download columns. Sorted by downloads descending (ties alphabetical). |
 | `Summary` | every figure with its source and retrieval date |
 
-All metadata is **Anaconda-published only**; no third-party enrichment anywhere.
+All metadata is **Anaconda-published only** with a single documented exception: description fallback to PyPI for the handful of main-x packages anaconda.org leaves blank (counted on the Summary sheet).
 
 **Data sources (Anaconda only)**
 
 - `main` channel contents/versions/summaries — public channeldata: `https://repo.anaconda.com/pkgs/main/channeldata.json`
 - `main` downloads — anaconda.org package API: `https://api.anaconda.org/package/anaconda/<name>` (package-level `ndownloads`, server-side aggregate over all files/versions/platforms; field chosen by live probe). Cached resume-safe in `download_counts_cache.json`.
 - `main-x` channel contents/versions/licenses — authenticated channel `https://repo.anaconda.cloud/repo/main-x/` (Bearer repo token). Its `channeldata.json` is a stub (`packages: {}`), so the notebook falls back to the per-subdir `repodata.json` it points at.
-- `main-x` summaries + download counts — anaconda.org repocore API (same public API the anaconda.org front-end calls): `https://api.anaconda.org/repocore/channels/main-x` and `.../artifacts`. Exact-name match to the catalog; no fuzzy matching. **As of the probe date, anaconda.org reports `download_count = 0` for every main-x package** (telemetry not populated for this channel yet) — published verbatim, flagged on the Summary sheet; do not read zeros as zero usage.
+- `main-x` summaries + download counts — anaconda.org repocore API (same public API the anaconda.org front-end calls): `https://api.anaconda.org/repocore/channels/main-x` and `.../artifacts`. Exact-name match to the catalog; no fuzzy matching. **As of the probe date, anaconda.org reports `download_count = 0` for every main-x package** (telemetry not populated for this channel yet) — published verbatim, flagged on the Summary sheet; do not read zeros as zero usage. **Exception for descriptions only:** where anaconda.org publishes no summary for a main-x package, the blank is filled from the PyPI JSON API (main-x is a `pypi_*` repack channel, so it's the same upstream project; PEP 503 exact-name match). These fallback rows are counted and dated on the Summary sheet.
 
 **Integrity policy — refuse rather than report a wrong number**
 
@@ -60,6 +60,8 @@ BROWSE_URLS = {"main": "anaconda.org/channels/main", "main-x": "anaconda.org/cha
 TOKEN_ENV_VAR = "ANACONDA_REPO_TOKEN"
 OUTPUT_XLSX = "anaconda_channel_catalog.xlsx"
 DOWNLOAD_CACHE_FILE = "download_counts_cache.json"
+PYPI_JSON_URL = "https://pypi.org/pypi/{name}/json"
+PEP503_RE = re.compile(r"[-_.]+")
 DL_WORKERS = 8
 DL_TIMEOUT = 60
 DL_MAX_RETRIES = 5
@@ -471,9 +473,34 @@ for name, it in by_name.items():
     main_x_catalog[name]["downloads_source"] = repocore_prov["source_url"] + "?limit=1000 (paginated)"
     main_x_catalog[name]["downloads_asof"] = repocore_prov["retrieved_utc"]
 
+# --- exception: PyPI fallback for descriptions where anaconda.org publishes none ---
+empty_after_repocore = sorted(n for n, e in main_x_catalog.items() if not e["summary"])
+
+
+def pypi_summary(name):
+    pn = PEP503_RE.sub("-", name).lower()
+    try:
+        data, _ = fetch_json_with_integrity(PYPI_JSON_URL.format(name=pn), f"pypi-fallback/{pn}", timeout=30)
+        return name, str((data.get("info") or {}).get("summary") or "").strip()
+    except ChannelDataError:
+        return name, ""
+
+
+pypi_fallback_stats = {"tried": len(empty_after_repocore), "filled": 0, "retrieved_utc": None}
+if empty_after_repocore:
+    print(f"anaconda.org publishes no description for {len(empty_after_repocore):,} main-x packages — PyPI exception fallback:")
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for name, summary in pool.map(pypi_summary, empty_after_repocore):
+            if summary:
+                main_x_catalog[name]["summary"] = summary
+                pypi_fallback_stats["filled"] += 1
+    pypi_fallback_stats["retrieved_utc"] = now_utc()
+    print(f"  PyPI filled {pypi_fallback_stats['filled']:,} of {pypi_fallback_stats['tried']:,}")
+
 mx_dl_all_zero = all((e["downloads_total"] or 0) == 0 for e in main_x_catalog.values())
-main_x_prov["packages_lacking_summary"] = len(main_x_catalog) - mx_summary_coverage
-print(f"main-x summaries from anaconda.org repocore: {mx_summary_coverage:,} of {len(main_x_catalog):,} ({100*mx_summary_coverage/len(main_x_catalog):.1f}%)")
+main_x_prov["packages_lacking_summary"] = sum(1 for e in main_x_catalog.values() if not e["summary"])
+print(f"main-x summaries: {mx_summary_coverage:,} from anaconda.org repocore + {pypi_fallback_stats['filled']:,} via PyPI exception; "
+      f"still empty: {main_x_prov['packages_lacking_summary']}")
 print(f"main-x download_count on anaconda.org repocore: {'ALL ZERO — telemetry not populated for this channel yet' if mx_dl_all_zero else 'populated'}")"""))
 
 cells.append(nbf.v4.new_code_cell("""# ---------- main downloads (anaconda.org package API; cached, resume-safe) ----------
@@ -582,8 +609,14 @@ summary_rows = [
            main_prov["source_url"], main_prov["retrieved_utc"], main_prov["http_last_modified"]),
     figure("main-x 'what it does' — anaconda.org repocore summaries",
            f"{mx_summary_coverage:,} of {len(main_x_names):,} have one ({100*mx_summary_coverage/len(main_x_names):.1f}%), "
-           "exact-name match to catalog, no fuzzy matching; empty = anaconda.org publishes none",
+           "exact-name match to catalog, no fuzzy matching",
            repocore_source, repocore_prov["retrieved_utc"], "n/a"),
+    figure("main-x 'what it does' — PyPI fallback (exception only)",
+           f"{pypi_fallback_stats['filled']:,} of {pypi_fallback_stats['tried']:,} blanks filled; "
+           f"{main_x_prov['packages_lacking_summary']} remain empty (neither anaconda.org nor PyPI publishes one). "
+           "Used ONLY where anaconda.org publishes nothing; PEP 503 exact-name match; main-x is a pypi_* repack so it's the same upstream project.",
+           "PyPI JSON API, https://pypi.org/pypi/<name>/json",
+           pypi_fallback_stats["retrieved_utc"] or "not run", "n/a"),
     figure("Downloads — aggregation rule",
            f"anaconda.org package-level '{DOWNLOAD_FIELD}' field: server-side aggregate across all files, all versions, all platforms "
            "(field chosen by live probe; per-file sums drift slightly from this counter)",
