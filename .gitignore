@@ -92,3 +92,10 @@ anaconda-project-prs/
 cov.xml
 fake_project/
 fake_project.zip
+
+# internal notes — never push
+HANDOFF.md
+.build_notebook.py
+.run_notebook.py
+.get-pip.py
+.pyuser/
