@@ -34,6 +34,15 @@ Per the no-proxy rule ("a wrong download count published into a sales conversati
 
 **Data policy update (owner directive, 17 Aug):** the catalog is Anaconda-data-only. The earlier PyPI description backfill for main-x (98.7% coverage, exact-name-match) was reverted — main-x rows now show strictly what Anaconda publishes (name, latest version, license, cross-channel flag), and "what it does" is empty by design where Anaconda publishes nothing. No download columns exist on the main-x sheet; the absence is recorded here and on the Summary sheet instead of per-row filler. main's downloads remain Anaconda's own data — the anaconda.org API.
 
+## Correction & update (17 Aug 2026, later build): repocore exists
+
+Following the "browsable but not queryable" finding, deeper probing found the API the .org front-end itself calls: **`https://api.anaconda.org/repocore/channels/main-x`** and **`.../artifacts?limit=1000&offset=…`** — public, no auth. It advertises `artifact_count = 14,234` (exactly matching the catalog), and every artifact carries `metadata.summary`/`metadata.description` plus a per-package `download_count`. The catalog now pulls main-x summaries from it: **14,119/14,234 packages have a description (99.2%)**.
+
+Two residual observations for the .org team:
+
+1. **Discovery problem**: `repocore` is undiscoverable from the outside — it is not linked or documented anywhere we found; we located it by reading the front-end bundle's call sites. `api.anaconda.org/package/...` (the documented surface) still 404s for every main-x package, and `/channels/main-x/*` still 401s org tokens. Worth either documenting repocore or making the package API main-x-aware.
+2. **`download_count` is 0 for every main-x package** (verified across paginated samples and the full pull). Telemetry is presumably not populated for this channel yet. The catalog publishes the zeros verbatim with an explicit "not zero usage" warning. Feedback: .org users browsing main-x see zero-popularity packages; if counts exist internally, wiring them improves exactly Ville's use case.
+
 ## Thread status (17-18 Aug 2026) — what's answered vs open
 
 Probe findings were posted to #packaging. Outcomes so far:

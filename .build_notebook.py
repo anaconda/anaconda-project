@@ -7,41 +7,34 @@ cells = []
 
 cells.append(nbf.v4.new_markdown_cell("""# Anaconda channel catalog: `main` vs `main-x`
 
-Builds `anaconda_channel_catalog.xlsx` with three sheets:
+Builds `anaconda_channel_catalog.xlsx` with three sheets. Every channel sheet opens with a header line
+("Anaconda <channel> channel — N packages — generated <date> from the official Anaconda repository. Browse online: ...")
+above the column headers.
 
 | Sheet | Contents |
 |---|---|
-| `main` | every unique package on **main**: name, latest version, what it does (Anaconda's own summary), whether the name also appears on main-x, **total downloads, download source, download as-of date** — sorted by downloads descending |
-| `main-x` | every unique package on **main-x** — only what Anaconda publishes: name, latest version, license, whether the name also appears on main — alphabetical |
+| `main` | every unique package on **main**: name, latest version, what it does (Anaconda's own channeldata summary), whether the name also appears on main-x, **total downloads, download source, download as-of date** — sorted by downloads descending |
+| `main-x` | every unique package on **main-x**: same shape — name, latest version, what it does (anaconda.org `main-x` summary), license, on-main flag, download columns. Sorted by downloads descending (ties alphabetical). |
 | `Summary` | every figure with its source and retrieval date |
 
-Every sheet has an autofilter row for ad-hoc filtering/re-sorting.
+All metadata is **Anaconda-published only**; no third-party enrichment anywhere.
 
 **Data sources (Anaconda only)**
 
-- `main` — public channeldata: `https://repo.anaconda.com/pkgs/main/channeldata.json`
-- `main-x` — authenticated channel: `https://repo.anaconda.cloud/repo/main-x/` (`Authorization: Bearer <repo token>`).
-  `channeldata.json` is tried first; when it is an empty stub (currently true — `packages: {}`, `subdirs: ["noarch"]`)
-  the notebook falls back to the per-subdir `repodata.json` the stub points at.
-- **Downloads** (main only): anaconda.org package API (`https://api.anaconda.org/package/anaconda/<name>`),
-  package-level `ndownloads` aggregate (all files, all versions, all platforms). The field is chosen by a live
-  probe cell, not assumed. Cached resume-safe in `download_counts_cache.json`, keyed by package name.
-  main-x is not exposed on anaconda.org at all (probed: 404 under every namespace, 401 on channel APIs),
-  so the main-x sheet carries **no** download columns — see the Summary sheet for that finding.
-- **No third-party enrichment.** "What it does" comes strictly from the channel's own metadata:
-  channeldata summaries for main. main-x publishes no descriptions in any Anaconda surface (repodata has
-  no summary field; its channeldata is a stub), so its "what it does" is empty by design — empty means
-  "Anaconda does not publish one", not that we failed to find one. That finding is on the Summary sheet.
+- `main` channel contents/versions/summaries — public channeldata: `https://repo.anaconda.com/pkgs/main/channeldata.json`
+- `main` downloads — anaconda.org package API: `https://api.anaconda.org/package/anaconda/<name>` (package-level `ndownloads`, server-side aggregate over all files/versions/platforms; field chosen by live probe). Cached resume-safe in `download_counts_cache.json`.
+- `main-x` channel contents/versions/licenses — authenticated channel `https://repo.anaconda.cloud/repo/main-x/` (Bearer repo token). Its `channeldata.json` is a stub (`packages: {}`), so the notebook falls back to the per-subdir `repodata.json` it points at.
+- `main-x` summaries + download counts — anaconda.org repocore API (same public API the anaconda.org front-end calls): `https://api.anaconda.org/repocore/channels/main-x` and `.../artifacts`. Exact-name match to the catalog; no fuzzy matching. **As of the probe date, anaconda.org reports `download_count = 0` for every main-x package** (telemetry not populated for this channel yet) — published verbatim, flagged on the Summary sheet; do not read zeros as zero usage.
 
 **Integrity policy — refuse rather than report a wrong number**
 
-- Content-Length is enforced when provided; early-closed connections (`IncompleteRead`) are truncation.
-- Responses must be complete valid UTF-8 JSON; structure is validated; a package-count sanity floor applies.
+- Content-Length enforced when provided; early-closed connections (`IncompleteRead`) are truncation.
+- Responses must be complete valid UTF-8 JSON; structure validated; package-count sanity floor applied; pagination totals cross-checked.
 - Counts are always **unique package names** (build variants collapsed), never artifact rows.
-- Downloads: probe finds no usable field -> notebook stops. Coverage <50% of main -> explicit Summary warning.
+- If the anaconda.org probes find no usable fields, the notebook stops. Downloads coverage <50% of main -> explicit Summary warning.
 - The xlsx is written only after all fetches and validations pass (atomically); any failure raises `ChannelDataError`.
 
-**Repo token sources**: env var `ANACONDA_REPO_TOKEN`, then `conda config --show`, then `~/.condarc`. Never printed, never persisted."""))
+**Repo token sources**: env var `ANACONDA_REPO_TOKEN`, then `conda config --show`, then `~/.condarc`. Never printed, never persisted. The anaconda.org APIs used need no auth."""))
 
 cells.append(nbf.v4.new_code_cell("""import json
 import os
@@ -60,18 +53,20 @@ MAIN_CHANNELDATA_URL = "https://repo.anaconda.com/pkgs/main/channeldata.json"
 MAIN_X_CHANNELDATA_URL = "https://repo.anaconda.cloud/repo/main-x/channeldata.json"
 MAIN_X_REPODATA_URL = "https://repo.anaconda.cloud/repo/main-x/{subdir}/repodata.json"
 ANACONDA_ORG_PACKAGE_API = "https://api.anaconda.org/package/anaconda/{name}"
-ANACONDA_ORG_MAIN_X_PROBE_API = "https://api.anaconda.org/package/main-x/{name}"
+REPOCORE_CHANNEL_API = "https://api.anaconda.org/repocore/channels/{channel}"
+REPOCORE_ARTIFACTS_API = "https://api.anaconda.org/repocore/channels/{channel}/artifacts"
+REPOCORE_PAGE_LIMIT = 1000
+BROWSE_URLS = {"main": "anaconda.org/channels/main", "main-x": "anaconda.org/channels/main-x"}
 TOKEN_ENV_VAR = "ANACONDA_REPO_TOKEN"
 OUTPUT_XLSX = "anaconda_channel_catalog.xlsx"
 DOWNLOAD_CACHE_FILE = "download_counts_cache.json"
 DL_WORKERS = 8
-DL_DELAY_SECONDS = 0.05
 DL_TIMEOUT = 60
 DL_MAX_RETRIES = 5
 MIN_DOWNLOAD_COVERAGE_WARN = 0.50
 HTTP_TIMEOUT_SECONDS = 180
 MIN_PACKAGES_EXPECTED = 100
-USER_AGENT = "anaconda-channel-catalog/3.0 (stdlib urllib)"
+USER_AGENT = "anaconda-channel-catalog/3.1 (stdlib urllib)"
 
 URL_TOKEN_RE = re.compile(r"/t/([A-Za-z0-9][A-Za-z0-9._-]*)(?:/|$)")
 
@@ -83,6 +78,10 @@ class ChannelDataError(RuntimeError):
 
 def now_utc():
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
+def today_utc():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
 def redact(text):
@@ -134,7 +133,7 @@ cells.append(nbf.v4.new_code_cell("""def fetch_json_with_integrity(url, label, e
     except urllib.error.HTTPError as e:
         hint = ""
         if e.code in (401, 403, 404):
-            hint = (" Authentication/authorization problem: token missing, invalid, expired, or not entitled.")
+            hint = " Authentication/authorization problem: token missing, invalid, expired, or not entitled."
         raise ChannelDataError(f"[{label}] HTTP {e.code} fetching {shown}.{hint} Refusing to continue.") from e
     except urllib.error.URLError as e:
         raise ChannelDataError(f"[{label}] network error fetching {shown}: {e.reason}. Refusing to continue.") from e
@@ -149,8 +148,7 @@ cells.append(nbf.v4.new_code_cell("""def fetch_json_with_integrity(url, label, e
             except IncompleteRead as e:
                 got = received + len(e.partial or b"")
                 raise ChannelDataError(
-                    f"[{label}] TRUNCATED response from {shown}: closed after {got} bytes "
-                    f"(announced {expected}). Refusing to continue."
+                    f"[{label}] TRUNCATED response from {shown}: closed after {got} bytes (announced {expected}). Refusing to continue."
                 ) from e
             if not chunk:
                 break
@@ -229,7 +227,7 @@ def parse_repodata(data, label, provenance):
 
 
 def latest_from_repodata(records, label):
-    \"\"\"Collapse build variants: {unique_name: {'version', 'summary', 'license', 'build_variants_collapsed'}}.\"\"\"
+    \"\"\"Collapse build variants -> {unique_name: {'version', 'summary', 'license', 'build_variants_collapsed'}}.\"\"\"
     if not records:
         raise ChannelDataError(f"[{label}] repodata produced zero usable records. Refusing.")
     best, counts = {}, {}
@@ -240,7 +238,7 @@ def latest_from_repodata(records, label):
         cur = best.get(name)
         if cur is None or key > cur[0]:
             best[name] = (key, rec)
-    return {name: {"version": str(rec["version"]), "summary": "",  # main-x publishes no descriptions
+    return {name: {"version": str(rec["version"]), "summary": "",
                    "license": str(rec.get("license") or ""), "build_variants_collapsed": counts[name]}
             for name, (_, rec) in best.items()}
 
@@ -260,14 +258,12 @@ def catalog_from_channeldata_packages(pkgs, label):
 
 print("validators ready")"""))
 
-cells.append(nbf.v4.new_markdown_cell("""## Downloads: probe first, then build
+cells.append(nbf.v4.new_markdown_cell("""## API probes — verify shape first, build parsers around what is observed
 
-The anaconda.org API response shape is verified live, not assumed. The next cell fetches one known package
-(`snowflake-connector-python`), prints its top-level keys, and derives the parser from what is present.
-No usable numeric download field -> the notebook raises and no xlsx is written. It also probes whether
-`main-x` packages are exposed on anaconda.org at all."""))
+1. anaconda.org package API for main downloads (`snowflake-connector-python`): print top-level keys, pick the numeric download field empirically. No usable field -> stop.
+2. anaconda.org repocore API (the public API the .org front-end calls) for main-x: print channel object keys and one artifact's keys, validate artifact count against the channel's own `artifact_count`. The artifact parser is written around these observed fields."""))
 
-cells.append(nbf.v4.new_code_cell("""# --- probe: anaconda.org package API shape ---
+cells.append(nbf.v4.new_code_cell("""# --- probe 1: main downloads on the anaconda.org package API ---
 probe_data, _ = fetch_json_with_integrity(ANACONDA_ORG_PACKAGE_API.format(name="snowflake-connector-python"), "probe/anaconda.org")
 top_keys = sorted(probe_data.keys())
 print("top-level keys of /package/anaconda/snowflake-connector-python:")
@@ -285,32 +281,29 @@ if DOWNLOAD_FIELD is None:
     )
 print(f"\\nobserved download field: {DOWNLOAD_FIELD!r} = {probe_data[DOWNLOAD_FIELD]:,} "
       f"(package-level aggregate across all files/versions/platforms; per-file sums may drift slightly)")
-files = probe_data.get("files") or []
-if files and isinstance(files[0], dict):
-    print(f"cross-check: sum of per-file {DOWNLOAD_FIELD} across {len(files)} files = {sum(f.get(DOWNLOAD_FIELD) or 0 for f in files):,}")
 
 def parse_downloads(data):
     v = data.get(DOWNLOAD_FIELD)
     return v if isinstance(v, int) and not isinstance(v, bool) and v >= 0 else None
 
-# --- probe: is main-x exposed on anaconda.org at all? (django-filter is a verified main-x package) ---
-MAIN_X_DOWNLOADS_AVAILABLE = False
-MAIN_X_PROBE_DETAIL = ""
-for probe_url in (ANACONDA_ORG_MAIN_X_PROBE_API.format(name="django-filter"),
-                  ANACONDA_ORG_PACKAGE_API.format(name="django-filter")):
-    try:
-        mx_data, _ = fetch_json_with_integrity(probe_url, "probe/main-x")
-        if parse_downloads(mx_data) is not None:
-            MAIN_X_DOWNLOADS_AVAILABLE = True
-            MAIN_X_PROBE_DETAIL = f"download data found at {redact(probe_url)}"
-            break
-        MAIN_X_PROBE_DETAIL = f"{redact(probe_url)} responded but has no {DOWNLOAD_FIELD} field"
-    except ChannelDataError as e:
-        MAIN_X_PROBE_DETAIL = str(e).split(" Refusing")[0]
-print(f"\\nmain-x on anaconda.org: {'AVAILABLE' if MAIN_X_DOWNLOADS_AVAILABLE else 'NOT AVAILABLE'} — {MAIN_X_PROBE_DETAIL}")"""))
+# --- probe 2: repocore API for main-x (public; same API the anaconda.org front-end calls) ---
+mx_channel, mx_channel_prov = fetch_json_with_integrity(REPOCORE_CHANNEL_API.format(channel="main-x"), "probe/repocore-channel")
+print("\\nrepocore channel object keys:", sorted(mx_channel.keys()))
+for k in ("artifact_count", "download_count", "description", "privacy"):
+    print(f"  channel.{k} = {repr(mx_channel.get(k))[:140]}")
+MX_ARTIFACT_COUNT_ADVERTISED = mx_channel.get("artifact_count")
+print(f"repocore advertises {MX_ARTIFACT_COUNT_ADVERTISED:,} artifacts for main-x")
+
+mx_artifact_page, _ = fetch_json_with_integrity(
+    REPOCORE_ARTIFACTS_API.format(channel="main-x") + "?limit=2&offset=0", "probe/repocore-artifacts")
+if not isinstance(mx_artifact_page, dict) or not isinstance(mx_artifact_page.get("items"), list):
+    raise ChannelDataError("repocore artifacts page shape unexpected (no 'items' list). Stopping.")
+print("\\nrepocore artifact keys:", sorted(mx_artifact_page["items"][0].keys()))
+print("artifact.metadata keys:", sorted((mx_artifact_page["items"][0].get("metadata") or {}).keys()))
+print("repocore page reports total_count =", mx_artifact_page.get("total_count"))"""))
 
 cells.append(nbf.v4.new_code_cell("""def download_fetch_one(name):
-    \"\"\"One anaconda.org package lookup with retry/backoff on 429/5xx/network.\"\"\"
+    \"\"\"One anaconda.org package-API lookup with retry/backoff on 429/5xx/network.\"\"\"
     url = ANACONDA_ORG_PACKAGE_API.format(name=name)
     for attempt in range(DL_MAX_RETRIES):
         try:
@@ -325,14 +318,14 @@ cells.append(nbf.v4.new_code_cell("""def download_fetch_one(name):
                 return name, {"status": "not_found", "downloads": None, "source_url": url, "retrieved_utc": now_utc()}
             transient = ("HTTP 429" in msg) or any(f"HTTP {c}" in msg for c in (500, 502, 503, 504)) or "network error" in msg
             if transient and attempt < DL_MAX_RETRIES - 1:
-                time.sleep(2 ** attempt + DL_DELAY_SECONDS)
+                time.sleep(2 ** attempt)
                 continue
             return name, {"status": "error", "downloads": None, "source_url": url, "retrieved_utc": now_utc()}
     return name, {"status": "error", "downloads": None, "source_url": url, "retrieved_utc": now_utc()}
 
 
 def fetch_download_counts(names):
-    \"\"\"Resume-safe download-count pass. Cache keyed by package name; errors are retried next run.\"\"\"
+    \"\"\"Resume-safe download-count pass for main. Cache keyed by package name; errors retried next run.\"\"\"
     names = sorted(set(names))
     cache = {}
     if os.path.exists(DOWNLOAD_CACHE_FILE):
@@ -349,8 +342,6 @@ def fetch_download_counts(names):
     t0, done = time.time(), 0
     with ThreadPoolExecutor(max_workers=DL_WORKERS) as pool:
         futures = {pool.submit(download_fetch_one, n): n for n in todo}
-        if DL_DELAY_SECONDS:
-            pass  # submissions are naturally staggered by the API's response latency
         for fut in as_completed(futures):
             name, entry = fut.result()
             done += 1
@@ -366,7 +357,39 @@ def fetch_download_counts(names):
                              "source_url": ANACONDA_ORG_PACKAGE_API.format(name=n),
                              "retrieved_utc": now_utc()}) for n in names}
 
-print("download-count fetcher ready")"""))
+
+def fetch_repocore_artifacts(channel):
+    \"\"\"Paginate the repocore artifacts API; validate totals and expected fields on every page.\"\"\"
+    base = REPOCORE_ARTIFACTS_API.format(channel=channel)
+    items, offset, total_count = [], 0, None
+    while True:
+        url = f"{base}?limit={REPOCORE_PAGE_LIMIT}&offset={offset}"
+        page, prov = fetch_json_with_integrity(url, f"repocore/{channel}@{offset}")
+        if not isinstance(page, dict):
+            raise ChannelDataError(f"[repocore/{channel}] page at offset {offset} is not an object. Refusing.")
+        if "items" not in page or not isinstance(page["items"], list):
+            raise ChannelDataError(f"[repocore/{channel}] page at offset {offset} lacks 'items' list. Refusing.")
+        if total_count is None:
+            total_count = page.get("total_count")
+            if not isinstance(total_count, int) or total_count <= 0:
+                raise ChannelDataError(f"[repocore/{channel}] total_count missing/invalid ({total_count}). Refusing.")
+        elif page.get("total_count") != total_count:
+            raise ChannelDataError(f"[repocore/{channel}] total_count changed mid-pagination ({total_count} -> {page.get('total_count')}). Refusing.")
+        items.extend(page["items"])
+        offset += len(page["items"])
+        print(f"  repocore/{channel}: {offset:,}/{total_count:,}")
+        if len(page["items"]) < REPOCORE_PAGE_LIMIT or not page["items"]:
+            break
+    if len(items) != total_count:
+        raise ChannelDataError(f"[repocore/{channel}] fetched {len(items):,} items but total_count={total_count:,}. Refusing.")
+    for it in items:
+        if not isinstance(it, dict) or not it.get("name"):
+            raise ChannelDataError(f"[repocore/{channel}] artifact without 'name' found. Refusing.")
+    print(f"repocore/{channel}: {len(items):,} artifacts fetched, totals cross-checked")
+    return items, {"source_url": base, "retrieved_utc": prov["retrieved_utc"],
+                   "items": len(items), "total_count": total_count}
+
+print("fetchers ready")"""))
 
 cells.append(nbf.v4.new_code_cell("""# ---------- main (public channeldata) ----------
 main_data, main_prov = fetch_json_with_integrity(MAIN_CHANNELDATA_URL, "main")
@@ -375,14 +398,14 @@ main_catalog, main_missing_summary = catalog_from_channeldata_packages(main_pkgs
 main_prov["method"] = "channeldata.json 'packages' map (already keyed by unique package name)"
 main_prov["packages_lacking_summary"] = len(main_missing_summary)
 
-# ---------- main-x (token) ----------
+# ---------- main-x channel contents (token) ----------
 token, token_origin = resolve_repo_token()
 auth = {"Authorization": f"Bearer {token}"}
 main_x_data, main_x_prov_channeldata = fetch_json_with_integrity(MAIN_X_CHANNELDATA_URL, "main-x", extra_headers=auth)
 main_x_pkgs, main_x_subdirs = validate_channeldata(main_x_data, "main-x", main_x_prov_channeldata)
 
 if len(main_x_pkgs) >= MIN_PACKAGES_EXPECTED:
-    main_x_catalog, _mx_missing = catalog_from_channeldata_packages(main_x_pkgs, "main-x")
+    main_x_catalog, _ = catalog_from_channeldata_packages(main_x_pkgs, "main-x")
     main_x_prov = main_x_prov_channeldata
     main_x_prov["method"] = "channeldata.json 'packages' map"
 else:
@@ -392,7 +415,6 @@ else:
     for subdir in sorted(set(main_x_subdirs)):
         d, p = fetch_json_with_integrity(MAIN_X_REPODATA_URL.format(subdir=subdir), f"main-x/{subdir}", extra_headers=auth)
         subdir_records = parse_repodata(d, f"main-x/{subdir}", p)
-        p["artifact_records"] = len(subdir_records)
         repodata_provs.append(p)
         records.extend(subdir_records)
     main_x_catalog = latest_from_repodata(records, "main-x")
@@ -406,14 +428,55 @@ else:
         ),
         "method": ("channeldata.json empty stub -> repodata.json per subdir; collapsed "
                    f"{len(records)} artifact records (build variants) to unique package names"),
-        "note": "main-x publishes no per-package descriptions on any Anaconda surface; 'what it does' left empty by design.",
         "subdirs_used": ", ".join(sorted(set(main_x_subdirs))),
         "raw_artifact_records": len(records),
     }
-main_x_prov["packages_lacking_summary"] = sum(1 for e in main_x_catalog.values() if not e["summary"])
 main_x_prov["token_source"] = token_origin
+print(f"main   : {len(main_catalog):,} unique packages")
+print(f"main-x : {len(main_x_catalog):,} unique packages (token from: {token_origin})")"""))
 
-# ---------- downloads (anaconda.org), main only — main-x is not exposed there (probed) ----------
+cells.append(nbf.v4.new_code_cell("""# ---------- main-x summaries + download counts from anaconda.org repocore (public API the .org front-end calls) ----------
+main_x_artifacts, repocore_prov = fetch_repocore_artifacts("main-x")
+by_name = {}
+for it in main_x_artifacts:
+    n = it["name"].strip()
+    if n in by_name:
+        raise ChannelDataError(f"[repocore/main-x] duplicate artifact name {n!r}. Refusing.")
+    by_name[n] = it
+
+repodata_names = set(main_x_catalog)
+repocore_names = set(by_name)
+if repodata_names != repocore_names:
+    only_repo = sorted(repodata_names - repocore_names)
+    only_core = sorted(repocore_names - repodata_names)
+    raise ChannelDataError(
+        f"[main-x] repodata and repocore disagree on the package set "
+        f"(repodata-only: {len(only_repo)} e.g. {only_repo[:5]}; repocore-only: {len(only_core)} e.g. {only_core[:5]}). "
+        "Refusing rather than merging mismatched catalogs.")
+
+mx_summary_coverage = 0
+for name, it in by_name.items():
+    md = it.get("metadata") or {}
+    summary = (md.get("summary") or "").strip()
+    if not summary:
+        desc = (md.get("description") or "").strip()
+        summary = re.sub(r"\\s+", " ", desc).strip()[:500] if desc else ""
+    if summary:
+        mx_summary_coverage += 1
+    lic = (md.get("license") or main_x_catalog[name]["license"] or "").strip()
+    dc = it.get("download_count")
+    main_x_catalog[name]["summary"] = summary
+    main_x_catalog[name]["license"] = lic
+    main_x_catalog[name]["downloads_total"] = dc if isinstance(dc, int) and dc >= 0 else None
+    main_x_catalog[name]["downloads_source"] = repocore_prov["source_url"] + "?limit=1000 (paginated)"
+    main_x_catalog[name]["downloads_asof"] = repocore_prov["retrieved_utc"]
+
+mx_dl_all_zero = all((e["downloads_total"] or 0) == 0 for e in main_x_catalog.values())
+main_x_prov["packages_lacking_summary"] = len(main_x_catalog) - mx_summary_coverage
+print(f"main-x summaries from anaconda.org repocore: {mx_summary_coverage:,} of {len(main_x_catalog):,} ({100*mx_summary_coverage/len(main_x_catalog):.1f}%)")
+print(f"main-x download_count on anaconda.org repocore: {'ALL ZERO — telemetry not populated for this channel yet' if mx_dl_all_zero else 'populated'}")"""))
+
+cells.append(nbf.v4.new_code_cell("""# ---------- main downloads (anaconda.org package API; cached, resume-safe) ----------
 downloads_by_name = fetch_download_counts(main_catalog.keys())
 dl_pass_utc = now_utc()
 dl_stats = {
@@ -443,54 +506,50 @@ for label, catalog, prov in (("main", main_catalog, main_prov), ("main-x", main_
         raise ChannelDataError(f"[{label}] only {n} unique packages after processing; below sanity floor. Refusing.")
     prov["unique_package_count"] = n
 
-print(f"main   : {len(main_catalog):,} unique packages")
-print(f"main-x : {len(main_x_catalog):,} unique packages (token from: {token_origin})")
-print(f"main downloads: {dl_stats['resolved']:,} of {dl_stats['total']:,} resolved "
-      f"({100 * dl_stats['coverage']:.1f}% coverage; not found: {dl_stats['not_found']:,}, errors: {dl_stats['errors']:,})")
+print(f"main downloads: {dl_stats['resolved']:,} of {dl_stats['total']:,} resolved ({100*dl_stats['coverage']:.1f}%; "
+      f"not found: {dl_stats['not_found']:,}, errors: {dl_stats['errors']:,})")
 if dl_coverage_warning:
     print(f"WARNING: coverage {100*dl_stats['coverage']:.1f}% below {100*MIN_DOWNLOAD_COVERAGE_WARN:.0f}% — see Summary")"""))
 
 cells.append(nbf.v4.new_code_cell("""main_names = set(main_catalog)
 main_x_names = set(main_x_catalog)
 
-MAIN_COLUMNS = ["Package", "Latest Version", "What it does", "On main-x?",
+COLUMNS_MAIN = ["Package", "Latest Version", "What it does", "On main-x?",
                 "Downloads (total)", "Downloads (source)", "Downloads (as of)"]
-MAIN_X_COLUMNS = ["Package", "Latest Version", "What it does", "On main?", "License"]
+COLUMNS_MAIN_X = ["Package", "Latest Version", "What it does", "On main?", "License",
+                  "Downloads (total)", "Downloads (source)", "Downloads (as of)"]
 
 
-def build_main_frame(catalog, other_labels):
+def _dl_sort_key(item):
+    name, e = item
+    d = e.get("downloads_total")
+    return (0 if isinstance(d, int) else 1, -(d if isinstance(d, int) else 0), name.lower())
+
+
+def channel_frame(catalog, other_names, other_label, columns, license_col=False):
     rows = []
-    for name in sorted(catalog, key=lambda n: (0, -(catalog[n]["downloads_total"] or 0), n.lower())
-                       if isinstance(catalog[n]["downloads_total"], int) else (1, 0, n.lower())):
-        e = catalog[name]
-        rows.append({
-            "Package": name, "Latest Version": e["version"], "What it does": e["summary"],
-            "On main-x?": "yes" if name in other_labels else "no",
-            "Downloads (total)": e["downloads_total"],
-            "Downloads (source)": e["downloads_source"], "Downloads (as of)": e["downloads_asof"],
-        })
-    return pd.DataFrame(rows, columns=MAIN_COLUMNS)
+    for name, e in sorted(catalog.items(), key=_dl_sort_key):
+        row = {"Package": name, "Latest Version": e["version"], "What it does": e["summary"],
+               f"On {other_label}?": "yes" if name in other_names else "no"}
+        if license_col:
+            row["License"] = e.get("license") or ""
+        row["Downloads (total)"] = e["downloads_total"]
+        row["Downloads (source)"] = e["downloads_source"]
+        row["Downloads (as of)"] = e["downloads_asof"]
+        rows.append(row)
+    df = pd.DataFrame(rows, columns=columns)
+    assert df["Package"].is_unique, "duplicate package names slipped into a channel tab"
+    return df
 
 
-def build_main_x_frame(catalog, other_labels):
-    rows = []
-    for name in sorted(catalog, key=str.lower):
-        e = catalog[name]
-        rows.append({"Package": name, "Latest Version": e["version"], "What it does": e["summary"],
-                     "On main?": "yes" if name in other_labels else "no", "License": e.get("license") or ""})
-    return pd.DataFrame(rows, columns=MAIN_X_COLUMNS)
-
-
-df_main = build_main_frame(main_catalog, main_x_names)
-df_main_x = build_main_x_frame(main_x_catalog, main_names)
-assert df_main["Package"].is_unique and df_main_x["Package"].is_unique
+df_main = channel_frame(main_catalog, main_x_names, "main-x", COLUMNS_MAIN)
+df_main_x = channel_frame(main_x_catalog, main_names, "main", COLUMNS_MAIN_X, license_col=True)
 assert len(df_main) == len(main_names) and len(df_main_x) == len(main_x_names)
 
 both = len(main_names & main_x_names)
 print(f"overlap: {both:,} | main-only: {len(main_names - main_x_names):,} | main-x-only: {len(main_x_names - main_names):,}")
-print("top 5 main by downloads:")
-for _, r in df_main.head(5).iterrows():
-    print(f"  {r['Package']:25s} {r['Downloads (total)']:>12,}")"""))
+print("top 5 main by downloads:", ", ".join(f"{p} ({d:,})" for p, d in zip(df_main.head(5)["Package"], df_main.head(5)["Downloads (total)"])))
+print("top 3 main-x rows (downloads all 0 -> alphabetical):", df_main_x.head(3)["Package"].tolist())"""))
 
 cells.append(nbf.v4.new_code_cell("""def figure(name, value, source, retrieved, last_modified):
     return {"Figure": name, "Value": value, "Source": source,
@@ -498,6 +557,7 @@ cells.append(nbf.v4.new_code_cell("""def figure(name, value, source, retrieved, 
 
 
 dl_source = "anaconda.org package API, https://api.anaconda.org/package/anaconda/<name>"
+repocore_source = "anaconda.org repocore API, https://api.anaconda.org/repocore/channels/main-x[/artifacts] (public; the .org front-end's own API)"
 summary_rows = [
     figure("Unique package count — main", len(main_names),
            main_prov["source_url"], main_prov["retrieved_utc"], main_prov["http_last_modified"]),
@@ -516,13 +576,14 @@ summary_rows = [
            main_prov["source_url"], main_prov["retrieved_utc"], main_prov["http_last_modified"]),
     figure("'Latest version' rule — main-x", main_x_prov["method"],
            main_x_prov["source_url"], main_x_prov["retrieved_utc"], main_x_prov["http_last_modified"]),
-    figure("main-x 'what it does' — none, by design",
-           "main-x publishes no per-package descriptions on any Anaconda surface (repodata has no summary field; "
-           "channeldata.json is an empty stub). Empty means 'Anaconda does not publish one' — no third-party text is used.",
-           main_x_prov["source_url"], main_x_prov["retrieved_utc"], main_x_prov["http_last_modified"]),
-    figure("main 'what it does' — Anaconda's own summaries",
-           f"channeldata.json 'summary' fields; {main_prov['packages_lacking_summary']} of {len(main_names)} main packages have none published",
+    figure("main 'what it does' — Anaconda's own channeldata summaries",
+           f"{len(main_names) - main_prov['packages_lacking_summary']:,} of {len(main_names):,} have one; "
+           f"{main_prov['packages_lacking_summary']} are empty because the channel publishes none",
            main_prov["source_url"], main_prov["retrieved_utc"], main_prov["http_last_modified"]),
+    figure("main-x 'what it does' — anaconda.org repocore summaries",
+           f"{mx_summary_coverage:,} of {len(main_x_names):,} have one ({100*mx_summary_coverage/len(main_x_names):.1f}%), "
+           "exact-name match to catalog, no fuzzy matching; empty = anaconda.org publishes none",
+           repocore_source, repocore_prov["retrieved_utc"], "n/a"),
     figure("Downloads — aggregation rule",
            f"anaconda.org package-level '{DOWNLOAD_FIELD}' field: server-side aggregate across all files, all versions, all platforms "
            "(field chosen by live probe; per-file sums drift slightly from this counter)",
@@ -533,20 +594,29 @@ summary_rows = [
             f"fetch errors this run (retried next run): {dl_stats['errors']:,}"
             + (f"  *** WARNING: coverage below {100*MIN_DOWNLOAD_COVERAGE_WARN:.0f}% — column is partial ***" if dl_coverage_warning else "")),
            dl_source, dl_pass_utc, "n/a"),
-    figure("Downloads — main-x has no columns, by design",
-           "main-x is not exposed on the anaconda.org package API at all (probe: " + MAIN_X_PROBE_DETAIL +
-           "). No download figures exist on any reachable Anaconda surface for it, so the main-x sheet carries none.",
-           "anaconda.org API probes (notebook output)", now_utc(), "n/a"),
+    figure("Downloads — main-x",
+           ("anaconda.org repocore reports download_count = 0 for EVERY main-x package as of the fetch date. "
+            "Telemetry is not populated for this channel yet — do not read zeros as zero usage. "
+            "When .org starts reporting real numbers, re-running this notebook picks them up automatically."
+            if mx_dl_all_zero else
+            "download_count populated on anaconda.org repocore"),
+           repocore_source, repocore_prov["retrieved_utc"], "n/a"),
+    figure("main-x on anaconda.org — channel page exists",
+           f"anaconda.org/channels/main-x browsable; repocore channel object advertises artifact_count = {MX_ARTIFACT_COUNT_ADVERTISED:,} "
+           f"(matches this catalog's {len(main_x_names):,}), privacy = '{mx_channel.get('privacy')}'. "
+           f"Channel description per .org: {str(mx_channel.get('description'))[:200]}",
+           repocore_source, repocore_prov["retrieved_utc"], "n/a"),
     figure("Row sort order",
-           "main: Downloads (total) descending, unknowns last, alphabetical within ties. main-x: alphabetical "
-           "(Anaconda publishes nothing to sort it by). Autofilter on every sheet for ad-hoc filtering.",
+           "Both channel sheets: Downloads (total) desc, unknowns last, alphabetical within ties. main-x is "
+           "all-zero on anaconda.org today, so its effective order is alphabetical. Autofilter on every sheet.",
            "presentation", now_utc(), "n/a"),
     figure("Integrity check — main", f"OK: {main_prov['content_length_check']}; strict JSON parse; "
            f"{main_prov['bytes_received']:,} bytes; {main_prov['channeldata_package_count']:,} packages; floor passed",
            main_prov["source_url"], main_prov["retrieved_utc"], main_prov["http_last_modified"]),
     figure("Integrity check — main-x", f"OK: {main_x_prov['content_length_check']}; strict JSON parse; "
            f"{main_x_prov['bytes_received']:,} bytes; floor passed"
-           + (f"; {main_x_prov['raw_artifact_records']:,} raw artifact records collapsed" if main_x_prov.get("raw_artifact_records") else ""),
+           + (f"; {main_x_prov['raw_artifact_records']:,} raw artifact records collapsed" if main_x_prov.get("raw_artifact_records") else "")
+           + f"; repocore pagination cross-checked ({repocore_prov['items']:,} items == total_count)",
            main_x_prov["source_url"], main_x_prov["retrieved_utc"], main_x_prov["http_last_modified"]),
     figure("main-x token source (token itself never stored)", token_origin,
            "local configuration", now_utc(), "n/a"),
@@ -556,18 +626,34 @@ df_summary = pd.DataFrame(summary_rows)
 df_summary"""))
 
 cells.append(nbf.v4.new_code_cell("""# Everything above must succeed before any file is written; write atomically.
+# Row 1 = channel header line (count + generation date + browse URL); row 2 = column headers; autofilter from row 2.
+from openpyxl.styles import Font
+
+
+def header_line(channel, count):
+    return (f"Anaconda {channel} channel — {count:,} packages — generated {today_utc()} "
+            f"from the official Anaconda repository. Browse online: {BROWSE_URLS[channel]}")
+
+
 tmp = OUTPUT_XLSX.replace(".xlsx", "") + ".tmp.xlsx"
 with pd.ExcelWriter(tmp, engine="openpyxl") as writer:
-    df_main.to_excel(writer, sheet_name="main", index=False)
-    df_main_x.to_excel(writer, sheet_name="main-x", index=False)
-    df_summary.to_excel(writer, sheet_name="Summary", index=False)
+    df_main.to_excel(writer, sheet_name="main", index=False, startrow=1)
+    df_main_x.to_excel(writer, sheet_name="main-x", index=False, startrow=1)
+    df_summary.to_excel(writer, sheet_name="Summary", index=False, startrow=1)
+    header_texts = {
+        "main": header_line("main", len(df_main)),
+        "main-x": header_line("main-x", len(df_main_x)),
+        "Summary": f"Summary — anaconda_channel_catalog — generated {today_utc()}; every figure carries its source and date.",
+    }
     for sheet, df in (("main", df_main), ("main-x", df_main_x), ("Summary", df_summary)):
         ws = writer.book[sheet]
+        cell = ws.cell(row=1, column=1, value=header_texts[sheet])
+        cell.font = Font(bold=True)
         for idx, col in enumerate(df.columns, start=1):
             longest = max((len(str(v)) for v in df[col].head(200)), default=0)
-            ws.column_dimensions[ws.cell(row=1, column=idx).column_letter].width = min(max(len(col) + 2, longest + 2, 10), 60)
-        ws.freeze_panes = "A2"
-        ws.auto_filter.ref = ws.dimensions
+            ws.column_dimensions[ws.cell(row=2, column=idx).column_letter].width = min(max(len(col) + 2, longest + 2, 10), 60)
+        ws.freeze_panes = "A3"
+        ws.auto_filter.ref = f"A2:{ws.cell(row=2, column=len(df.columns)).column_letter}{len(df) + 2}"
 os.replace(tmp, OUTPUT_XLSX)
 print(f"Wrote {OUTPUT_XLSX}: main={len(df_main):,} rows, main-x={len(df_main_x):,} rows, Summary={len(df_summary)} figures")"""))
 
@@ -576,7 +662,8 @@ cells.append(nbf.v4.new_markdown_cell("""## Refreshing the catalog
 Re-run all cells. Figures are point-in-time; the Summary sheet records source + retrieval date for every number.
 On any truncation/validation failure the notebook raises `ChannelDataError` and **no xlsx is written** — a stale
 catalog is never overwritten with partial data. `download_counts_cache.json` makes re-runs cheap; delete to force
-a full re-fetch of download counts."""))
+a full re-fetch. When anaconda.org starts populating `download_count` for main-x, re-running picks the real numbers
+up automatically (they are all zero there as of the generation date)."""))
 
 nb["cells"] = cells
 nb["metadata"]["kernelspec"] = {"display_name": "Python 3", "language": "python", "name": "python3"}
