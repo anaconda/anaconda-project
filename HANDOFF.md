@@ -31,3 +31,17 @@ Concrete numbers (17 Aug .org data): snowflake-snowpark-python 36,845 > snowflak
 ## Why nothing was published against .org
 
 Per the no-proxy rule ("a wrong download count published into a sales conversation is worse than a blank column"), we did **not** fake main-x downloads from PyPI stats (pepy/pypistats measure upstream popularity, not channel downloads). The main-x sheet says "not available" in words, per sheet, with the probe trail above. Repo is private; a live hosted version was floated and is off the table per Lilly.
+
+## Thread status (17-18 Aug 2026) — what's answered vs open
+
+Probe findings were posted to #packaging. Outcomes so far:
+
+- **Lilly (17 Aug):** anaconda.org is the public source of truth; do not build competing/public download surfaces (complied: repo private, snapshot defers to .org). .org sort behavior clarified: best match → alphabet → within each package name by download count; namespace-level sorting is the hard part and is designer-side now (cc @Daphne Nong). Lilly explicitly invited "what's not working on .org" reports — that's this document.
+- **jezdez / Dan Yeaw (18 Aug):** nothing on the search-command roadmap for download sorting; Dan likes "search for unique names at least." jezdez flagged the implementation dependency: needs download counts exposed via the dot-org API — the same gap as the bulk question below.
+- **Albert (17 Aug):** hybrid semantic+keyword search is in Anaconda MCP's lane; ranking is algorithmic, not download-count-ordered. Confirmed when asked directly: his demo had counts available but not driving rank.
+- **Albert's demo tagged `snowflake-sqlalchemy` as main-x** — notable because main-x currently supplies neither of his inputs: no reachable download telemetry, no human-readable descriptions in its metadata (repodata lacks summary/description; channeldata is a stub). If the purpose-description pipeline and download signal both come up empty for main-x at GA, its packages may score structurally lower than main/conda-forge equivalents, rather than on merit. Worth checking the Snowflake pipeline's main-x coverage before GA.
+
+**still open:**
+1. main-x presence/entitlement on the .org API (401/404 wall above) — intentional or gap?
+2. main-x descriptions at the source (we privately backfilled from PyPI, 98.7% — same upstream artifact as the builds).
+3. Bulk/export path for a whole channel (.org browses one package at a time; launch-asset scoping needed the full channel — that was the original trigger for this notebook).
