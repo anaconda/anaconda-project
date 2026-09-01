@@ -82,6 +82,27 @@ html, body {
 @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes toast-out { to { opacity: 0; transform: translateY(-8px); } }
 
+/* ---------- Trifecta win banner (bigger, celebratory, center-screen) ---------- */
+.win-banner {
+  position: fixed; top: 18%; left: 50%; transform: translate(-50%, 0);
+  z-index: 30; pointer-events: none;
+  padding: 16px 32px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--anaconda-gold), var(--anaconda-green));
+  color: #10130F; font-weight: 900; font-size: 22px; text-align: center;
+  box-shadow: 0 10px 40px rgba(242,183,5,0.5);
+  animation: win-in 0.35s cubic-bezier(0.2,1.4,0.4,1), win-out 0.5s ease-in 4.3s forwards;
+  white-space: nowrap;
+}
+@keyframes win-in { from { opacity: 0; transform: translate(-50%, -20px) scale(0.8); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes win-out { to { opacity: 0; transform: translate(-50%, -12px) scale(0.95); } }
+
+/* ---------- Hall of Fame (Trifecta winners this session) ---------- */
+#hall-of-fame {
+  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--panel-border);
+}
+#hall-of-fame .panel-title { margin-bottom: 4px; }
+#hall-of-fame ol { margin: 0; padding: 0 0 0 18px; font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+
 /* ---------- Overlays ---------- */
 .overlay {
   position: fixed; inset: 0; z-index: 10;

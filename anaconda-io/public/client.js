@@ -14,6 +14,7 @@ const playBtn = document.getElementById('play-btn');
 const respawnBtn = document.getElementById('respawn-btn');
 const colorSwatchesEl = document.getElementById('color-swatches');
 const leaderboardList = document.getElementById('leaderboard-list');
+const hallOfFameList = document.getElementById('hall-of-fame-list');
 const statLength = document.getElementById('stat-length');
 const statPlayers = document.getElementById('stat-players');
 const finalLengthEl = document.getElementById('final-length');
@@ -136,6 +137,17 @@ socket.on('brandDiamondSpawned', ({ label }) => {
 socket.on('brandDiamondCollected', ({ name, label }) => {
   spawnToast(`${name} scooped up the ${label} diamond!`, '#3EB049');
 });
+socket.on('trifectaWin', ({ name }) => {
+  spawnBanner(`🏆 ${name} completed the Acquisition Trifecta!`);
+});
+
+function spawnBanner(text) {
+  const el = document.createElement('div');
+  el.className = 'win-banner';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
 
 function spawnToast(text, color) {
   const el = document.createElement('div');
@@ -271,6 +283,14 @@ function drawSnake(s, isMe) {
   ctx.shadowBlur = 4;
   ctx.fillText(s.name, hx, hy - hr - 12);
   ctx.shadowBlur = 0;
+
+  // Crown for snakes that completed the Acquisition Trifecta this life.
+  if (s.hasCrown) {
+    ctx.font = `${Math.max(14, hr)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('👑', hx, hy - hr - 26);
+  }
 }
 
 function drawDiamond(d, tPulse) {
@@ -353,10 +373,26 @@ function updateLeaderboard(state) {
     const li = document.createElement('li');
     const isMe = latestState && latestState.snakes.find(s => s.id === myId && s.name === row.name);
     if (isMe) li.className = 'me';
-    li.innerHTML = `<b>${i + 1}.</b> ${escapeHtml(row.name)} — ${row.length}`;
+    const crown = row.hasCrown ? ' 👑' : '';
+    li.innerHTML = `<b>${i + 1}.</b> ${escapeHtml(row.name)} — ${row.length}${crown}`;
     leaderboardList.appendChild(li);
   });
   statPlayers.textContent = state.playerCount;
+
+  if (hallOfFameList && state.hallOfFame) {
+    hallOfFameList.innerHTML = '';
+    if (state.hallOfFame.length === 0) {
+      const li = document.createElement('li');
+      li.textContent = 'No one yet — be first!';
+      hallOfFameList.appendChild(li);
+    } else {
+      state.hallOfFame.forEach((row) => {
+        const li = document.createElement('li');
+        li.textContent = row.name;
+        hallOfFameList.appendChild(li);
+      });
+    }
+  }
 }
 function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 

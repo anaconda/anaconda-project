@@ -53,11 +53,16 @@ const COLORS = [
 // rendered client-side with each company's real mark + real brand color.
 const BRAND_DIAMONDS = [
   { brand: 'outerbounds', label: 'Outerbounds', color: '#6A9E8B', valueMult: 3.2 },
-  { brand: 'kilo', label: 'Kilo', color: '#617A91', valueMult: 3.2 },
+  { brand: 'kilo', label: 'Kilo', color: '#F8F674', valueMult: 3.2 }, // Kilo's actual brand yellow (CTA button color on kilo.ai)
   { brand: 'enkrypt', label: 'Enkrypt', color: '#FF7F00', valueMult: 3.2 },
 ];
 const BRAND_DIAMOND_CHANCE = 0.09; // chance a new diamond spawn is a brand cameo
 const MAX_BRAND_DIAMONDS_ALIVE = 9; // bumped up so they're actually easy to run into
+const ALL_BRAND_KEYS = BRAND_DIAMONDS.map(b => b.brand);
+const TRIFECTA_LENGTH_BONUS = 200; // reward for completing the Acquisition Trifecta
+
+// Session-lifetime "Hall of Fame" of Trifecta completions (in-memory, resets on server restart).
+const trifectaHallOfFame = [];
 
 function rand(min, max) { return Math.random() * (max - min) + min; }
 function dist2(x1, y1, x2, y2) { const dx = x1 - x2, dy = y1 - y2; return dx * dx + dy * dy; }
@@ -136,6 +141,8 @@ class Snake {
     this.kills = 0;
     this.joinedAt = Date.now();
     this.botTimer = 0;
+    this.collectedBrands = new Set(); // resets each life; tracked toward the Trifecta
+    this.hasCrown = false; // cosmetic: shows a crown once Trifecta is completed this life
   }
 
   get headRadius() { return headRadiusForLength(this.length); }
@@ -274,6 +281,16 @@ function tick() {
         diamonds.delete(d.id);
         if (d.brand) {
           io.emit('brandDiamondCollected', { name: s.name, label: d.label, brand: d.brand });
+          s.collectedBrands.add(d.brand);
+
+          // The Acquisition Trifecta: collect all 3 brand diamonds in one life.
+          if (!s.hasCrown && ALL_BRAND_KEYS.every(b => s.collectedBrands.has(b))) {
+            s.hasCrown = true;
+            s.length += TRIFECTA_LENGTH_BONUS;
+            trifectaHallOfFame.unshift({ name: s.name, at: Date.now() });
+            if (trifectaHallOfFame.length > 20) trifectaHallOfFame.length = 20;
+            io.emit('trifectaWin', { name: s.name });
+          }
         }
       }
     }
@@ -354,6 +371,8 @@ function broadcast() {
     length: Math.round(s.length),
     headRadius: s.headRadius,
     points: s.points, // [{x,y}], head-first
+    hasCrown: s.hasCrown,
+    collectedBrands: [...s.collectedBrands],
   }));
   const diamondPayload = [...diamonds.values()].map(d => ({
     id: d.id, x: d.x, y: d.y, value: Math.round(d.value), big: d.big,
@@ -364,13 +383,14 @@ function broadcast() {
     .filter(s => s.alive)
     .sort((a, b) => b.length - a.length)
     .slice(0, 10)
-    .map(s => ({ name: s.name, length: Math.round(s.length), isBot: s.isBot }));
+    .map(s => ({ name: s.name, length: Math.round(s.length), isBot: s.isBot, hasCrown: s.hasCrown }));
 
   io.emit('state', {
     t: Date.now(),
     worldRadius: WORLD_RADIUS,
     snakes: snakePayload,
     diamonds: diamondPayload,
+    hallOfFame: trifectaHallOfFame.slice(0, 5),
     leaderboard,
     playerCount: [...snakes.values()].filter(s => !s.isBot).length,
   });
