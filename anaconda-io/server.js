@@ -49,11 +49,12 @@ const COLORS = [
   '#4E9F3D', '#D98E04', '#3D7EA6', '#C43E3E', '#5CB85C',
 ];
 
-// Anaconda's acquisitions get a rare, extra-valuable "brand diamond" cameo.
+// Anaconda's acquisitions get a rare, extra-valuable "brand diamond" cameo,
+// rendered client-side with each company's real mark + real brand color.
 const BRAND_DIAMONDS = [
-  { brand: 'outerbounds', label: 'Outerbounds', color: '#6C5CE7', valueMult: 3.2 },
-  { brand: 'kilo', label: 'Kilo', color: '#00C2A8', valueMult: 3.2 },
-  { brand: 'enkrypt', label: 'Enkrypt', color: '#FF6B4A', valueMult: 3.2 },
+  { brand: 'outerbounds', label: 'Outerbounds', color: '#6A9E8B', valueMult: 3.2 },
+  { brand: 'kilo', label: 'Kilo', color: '#617A91', valueMult: 3.2 },
+  { brand: 'enkrypt', label: 'Enkrypt', color: '#FF7F00', valueMult: 3.2 },
 ];
 const BRAND_DIAMOND_CHANCE = 0.035; // chance a new diamond spawn is a brand cameo
 const MAX_BRAND_DIAMONDS_ALIVE = 3;
@@ -182,6 +183,14 @@ class Snake {
     return out;
   }
 
+  // Points far enough from the head that a normal turn can't produce a false
+  // self-collision, used for the classic "don't bite your own tail" rule.
+  selfBodySamples() {
+    const safeGapUnits = this.headRadius * 3.2;
+    const skip = Math.max(6, Math.ceil(safeGapUnits / SEGMENT_SPACING));
+    return this.bodySamples(skip);
+  }
+
   simpleBotAI() {
     this.botTimer -= 1;
     if (this.botTimer > 0) return;
@@ -270,7 +279,20 @@ function tick() {
   const alive = [...snakes.values()].filter(s => s.alive);
   const toKill = new Map(); // id -> killerName|reason
 
+  // Classic rule: biting your own tail kills you too.
   for (const a of alive) {
+    const ar = a.headRadius;
+    const rr = ar + ar * 0.9;
+    for (const p of a.selfBodySamples()) {
+      if (dist2(a.x, a.y, p.x, p.y) <= rr * rr) {
+        toKill.set(a.id, a.name);
+        break;
+      }
+    }
+  }
+
+  for (const a of alive) {
+    if (toKill.has(a.id)) continue;
     const ar = a.headRadius;
     for (const b of alive) {
       if (a === b) continue;
