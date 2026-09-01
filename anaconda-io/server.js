@@ -61,8 +61,142 @@ const MAX_BRAND_DIAMONDS_ALIVE = 9; // bumped up so they're actually easy to run
 const ALL_BRAND_KEYS = BRAND_DIAMONDS.map(b => b.brand);
 const TRIFECTA_LENGTH_BONUS = 200; // reward for completing the Acquisition Trifecta
 
-// Session-lifetime "Hall of Fame" of Trifecta completions (in-memory, resets on server restart).
-const trifectaHallOfFame = [];
+// Session-lifetime "Hall of Fame" of Trifecta / Domination wins (in-memory, resets on server restart).
+const hallOfFame = [];
+
+// ----------------------------- Territory (paper.io-style) -------------------
+const CELL_SIZE = 40; // world units per grid cell
+const GRID_DIM = Math.round((WORLD_RADIUS * 2) / CELL_SIZE); // 160 for our world
+const CELL_COUNT = GRID_DIM * GRID_DIM;
+const HOME_TERRITORY_RADIUS = 90; // seeded disk of owned ground at spawn
+const TRAIL_CAP = 6000; // safety valve so a very long excursion can't grow unbounded
+
+const gridOwnerCode = new Int32Array(CELL_COUNT); // 0 = unclaimed
+const codeToColor = new Map(); // ownerCode -> hex color (persists after death, like real paper.io)
+let nextOwnerCode = 1;
+
+function cellIndex(col, row) { return row * GRID_DIM + col; }
+function worldToCell(x, y) {
+  const col = clamp(Math.floor((x + WORLD_RADIUS) / CELL_SIZE), 0, GRID_DIM - 1);
+  const row = clamp(Math.floor((y + WORLD_RADIUS) / CELL_SIZE), 0, GRID_DIM - 1);
+  return { col, row };
+}
+
+// 3 fixed landmark "Acquisition Zones," one per acquisition, evenly spaced
+// around the arena — control (own the majority of) all 3 at once to win
+// "Full-Stack Domination."
+const ZONE_RADIUS = 320;
+const ZONE_RING = 1900;
+const ZONE_ANGLES = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6];
+const ZONES = BRAND_DIAMONDS.map((b, i) => {
+  const cx = Math.cos(ZONE_ANGLES[i]) * ZONE_RING;
+  const cy = Math.sin(ZONE_ANGLES[i]) * ZONE_RING;
+  return { brand: b.brand, label: b.label, color: b.color, cx, cy, radius: ZONE_RADIUS, ownerCode: 0 };
+});
+// Precompute each zone's covered cell indices once (positions are fixed).
+for (const zone of ZONES) {
+  const cells = [];
+  const { col: minCol, row: minRow } = worldToCell(zone.cx - zone.radius, zone.cy - zone.radius);
+  const { col: maxCol, row: maxRow } = worldToCell(zone.cx + zone.radius, zone.cy + zone.radius);
+  for (let row = minRow; row <= maxRow; row++) {
+    for (let col = minCol; col <= maxCol; col++) {
+      const wx = col * CELL_SIZE - WORLD_RADIUS + CELL_SIZE / 2;
+      const wy = row * CELL_SIZE - WORLD_RADIUS + CELL_SIZE / 2;
+      if (dist2(wx, wy, zone.cx, zone.cy) <= zone.radius * zone.radius) cells.push(cellIndex(col, row));
+    }
+  }
+  zone.cellIndices = cells;
+}
+let currentDominatorId = null; // snake id currently owning all 3 zones, or null
+
+function seedHomeTerritory(snake) {
+  const changed = [];
+  const { col: cCol, row: cRow } = worldToCell(snake.x, snake.y);
+  const cellRadius = Math.ceil(HOME_TERRITORY_RADIUS / CELL_SIZE);
+  for (let dr = -cellRadius; dr <= cellRadius; dr++) {
+    for (let dc = -cellRadius; dc <= cellRadius; dc++) {
+      const col = cCol + dc, row = cRow + dr;
+      if (col < 0 || col >= GRID_DIM || row < 0 || row >= GRID_DIM) continue;
+      if (dc * dc + dr * dr > cellRadius * cellRadius) continue;
+      const idx = cellIndex(col, row);
+      gridOwnerCode[idx] = snake.code;
+      changed.push(idx);
+    }
+  }
+  return changed;
+}
+
+// Flood-fill claim: BFS "outside" from the grid border; anything not reached
+// and not part of the snake's own territory/trail was enclosed by the loop
+// the snake just drew, so it gets claimed (stealing it from anyone else who
+// owned it). This is the standard paper.io capture algorithm.
+function floodClaim(snake) {
+  const blocked = new Uint8Array(CELL_COUNT);
+  for (let i = 0; i < CELL_COUNT; i++) if (gridOwnerCode[i] === snake.code) blocked[i] = 1;
+  for (const idx of snake.trailCells) blocked[idx] = 1;
+
+  const outside = new Uint8Array(CELL_COUNT);
+  const queue = [];
+  function tryPush(idx) { if (!blocked[idx] && !outside[idx]) { outside[idx] = 1; queue.push(idx); } }
+  for (let col = 0; col < GRID_DIM; col++) { tryPush(cellIndex(col, 0)); tryPush(cellIndex(col, GRID_DIM - 1)); }
+  for (let row = 0; row < GRID_DIM; row++) { tryPush(cellIndex(0, row)); tryPush(cellIndex(GRID_DIM - 1, row)); }
+
+  while (queue.length) {
+    const idx = queue.pop();
+    const row = (idx / GRID_DIM) | 0, col = idx % GRID_DIM;
+    if (col > 0) tryPush(idx - 1);
+    if (col < GRID_DIM - 1) tryPush(idx + 1);
+    if (row > 0) tryPush(idx - GRID_DIM);
+    if (row < GRID_DIM - 1) tryPush(idx + GRID_DIM);
+  }
+
+  const changed = [];
+  for (let i = 0; i < CELL_COUNT; i++) {
+    if (blocked[i]) {
+      if (gridOwnerCode[i] !== snake.code) { gridOwnerCode[i] = snake.code; changed.push(i); }
+    } else if (!outside[i]) {
+      gridOwnerCode[i] = snake.code; changed.push(i);
+    }
+  }
+  snake.trailCells.length = 0;
+  return changed;
+}
+
+function emitTerritoryChange(snake, changedIndices) {
+  if (!changedIndices || changedIndices.length === 0) return;
+  io.emit('territoryUpdate', { cells: changedIndices.map(idx => ({ idx, color: snake.color })) });
+}
+
+function recomputeZoneOwnership() {
+  const tallyByCode = new Map();
+  for (const zone of ZONES) {
+    tallyByCode.clear();
+    for (const idx of zone.cellIndices) {
+      const code = gridOwnerCode[idx];
+      if (code === 0) continue;
+      tallyByCode.set(code, (tallyByCode.get(code) || 0) + 1);
+    }
+    let bestCode = 0, bestCount = 0;
+    for (const [code, count] of tallyByCode) if (count > bestCount) { bestCode = code; bestCount = count; }
+    zone.ownerCode = bestCount / zone.cellIndices.length > 0.5 ? bestCode : 0;
+  }
+
+  // Full-Stack Domination: does one *currently alive* snake own all 3 zones?
+  let dominatorSnake = null;
+  if (ZONES.every(z => z.ownerCode !== 0 && z.ownerCode === ZONES[0].ownerCode)) {
+    for (const s of snakes.values()) {
+      if (s.alive && s.code === ZONES[0].ownerCode) { dominatorSnake = s; break; }
+    }
+  }
+  if (dominatorSnake && currentDominatorId !== dominatorSnake.id) {
+    currentDominatorId = dominatorSnake.id;
+    hallOfFame.unshift({ name: dominatorSnake.name, type: 'domination', at: Date.now() });
+    if (hallOfFame.length > 20) hallOfFame.length = 20;
+    io.emit('dominationWin', { name: dominatorSnake.name });
+  } else if (!dominatorSnake) {
+    currentDominatorId = null;
+  }
+}
 
 function rand(min, max) { return Math.random() * (max - min) + min; }
 function dist2(x1, y1, x2, y2) { const dx = x1 - x2, dy = y1 - y2; return dx * dx + dy * dy; }
@@ -143,6 +277,15 @@ class Snake {
     this.botTimer = 0;
     this.collectedBrands = new Set(); // resets each life; tracked toward the Trifecta
     this.hasCrown = false; // cosmetic: shows a crown once Trifecta is completed this life
+
+    // Territory (paper.io-style): each snake gets a persistent numeric owner
+    // code (territory outlives death, like real paper.io ground), a home
+    // patch seeded at spawn, and a live trail while outside owned ground.
+    this.code = nextOwnerCode++;
+    codeToColor.set(this.code, this.color);
+    this.inTerritory = true;
+    this.trailCells = [];
+    emitTerritoryChange(this, seedHomeTerritory(this));
   }
 
   get headRadius() { return headRadiusForLength(this.length); }
@@ -185,6 +328,28 @@ class Snake {
     if (this.x * this.x + this.y * this.y > WORLD_RADIUS * WORLD_RADIUS) {
       this.alive = false;
       this.deathReason = 'boundary';
+      return;
+    }
+
+    this.updateTerritory();
+  }
+
+  // paper.io-style: leave a trail while outside your own ground; re-entering
+  // your territory flood-fills and claims whatever the trail enclosed.
+  updateTerritory() {
+    const { col, row } = worldToCell(this.x, this.y);
+    const idx = cellIndex(col, row);
+    if (gridOwnerCode[idx] === this.code) {
+      if (this.trailCells.length > 0) {
+        emitTerritoryChange(this, floodClaim(this));
+      }
+      this.inTerritory = true;
+    } else {
+      this.inTerritory = false;
+      const last = this.trailCells[this.trailCells.length - 1];
+      if (last !== idx && this.trailCells.length < TRAIL_CAP) {
+        this.trailCells.push(idx);
+      }
     }
   }
 
@@ -287,8 +452,8 @@ function tick() {
           if (!s.hasCrown && ALL_BRAND_KEYS.every(b => s.collectedBrands.has(b))) {
             s.hasCrown = true;
             s.length += TRIFECTA_LENGTH_BONUS;
-            trifectaHallOfFame.unshift({ name: s.name, at: Date.now() });
-            if (trifectaHallOfFame.length > 20) trifectaHallOfFame.length = 20;
+            hallOfFame.unshift({ name: s.name, type: 'trifecta', at: Date.now() });
+            if (hallOfFame.length > 20) hallOfFame.length = 20;
             io.emit('trifectaWin', { name: s.name });
           }
         }
@@ -359,6 +524,8 @@ function tick() {
   }
   maintainBots();
 
+  recomputeZoneOwnership();
+
   broadcast();
 }
 
@@ -390,7 +557,12 @@ function broadcast() {
     worldRadius: WORLD_RADIUS,
     snakes: snakePayload,
     diamonds: diamondPayload,
-    hallOfFame: trifectaHallOfFame.slice(0, 5),
+    hallOfFame: hallOfFame.slice(0, 5),
+    zones: ZONES.map(z => ({
+      brand: z.brand, label: z.label, color: z.color,
+      cx: z.cx, cy: z.cy, radius: z.radius,
+      ownerColor: z.ownerCode ? codeToColor.get(z.ownerCode) || null : null,
+    })),
     leaderboard,
     playerCount: [...snakes.values()].filter(s => !s.isBot).length,
   });
@@ -399,16 +571,31 @@ function broadcast() {
 ensureDiamondCount();
 setInterval(tick, TICK_MS);
 
+function territorySnapshot() {
+  const cells = [];
+  for (let i = 0; i < CELL_COUNT; i++) {
+    const code = gridOwnerCode[i];
+    if (code !== 0) cells.push({ idx: i, color: codeToColor.get(code) || '#3EB049' });
+  }
+  return cells;
+}
+
+function buildWelcomePayload(socket, s) {
+  return {
+    id: socket.id,
+    worldRadius: WORLD_RADIUS,
+    you: { x: s.x, y: s.y, angle: s.angle, color: s.color, name: s.name },
+    territory: { cellSize: CELL_SIZE, gridDim: GRID_DIM, cells: territorySnapshot() },
+    zones: ZONES.map(z => ({ brand: z.brand, label: z.label, color: z.color, cx: z.cx, cy: z.cy, radius: z.radius })),
+  };
+}
+
 // ------------------------------ Networking -----------------------------------
 io.on('connection', (socket) => {
   socket.on('join', ({ name, color }) => {
     if (snakes.has(socket.id)) removeSnake(socket.id);
     const s = createSnake(socket.id, name, color, false);
-    socket.emit('welcome', {
-      id: socket.id,
-      worldRadius: WORLD_RADIUS,
-      you: { x: s.x, y: s.y, angle: s.angle, color: s.color, name: s.name },
-    });
+    socket.emit('welcome', buildWelcomePayload(socket, s));
   });
 
   socket.on('input', ({ angle, boosting }) => {
@@ -424,11 +611,7 @@ io.on('connection', (socket) => {
     const prevColor = existing ? existing.color : color;
     removeSnake(socket.id);
     const s = createSnake(socket.id, name || prevName, color || prevColor, false);
-    socket.emit('welcome', {
-      id: socket.id,
-      worldRadius: WORLD_RADIUS,
-      you: { x: s.x, y: s.y, angle: s.angle, color: s.color, name: s.name },
-    });
+    socket.emit('welcome', buildWelcomePayload(socket, s));
   });
 
   socket.on('disconnect', () => {

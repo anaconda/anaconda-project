@@ -62,6 +62,28 @@ let alive = false;
 let camera = { x: 0, y: 0, zoom: 1 };
 let boosting = false;
 
+// ------------------------- Territory (paper.io-style ground) ------------------
+let territoryMeta = { cellSize: 40, gridDim: 160 };
+let territoryCanvas = document.createElement('canvas');
+let territoryCtx = territoryCanvas.getContext('2d');
+let zones = []; // static positions (cx,cy,radius,brand,label,color) from welcome; ownerColor updated per state
+
+function initTerritory(meta, cells) {
+  territoryMeta = meta;
+  territoryCanvas.width = meta.gridDim;
+  territoryCanvas.height = meta.gridDim;
+  territoryCtx.clearRect(0, 0, meta.gridDim, meta.gridDim);
+  paintTerritoryCells(cells);
+}
+function paintTerritoryCells(cells) {
+  for (const { idx, color } of cells) {
+    const col = idx % territoryMeta.gridDim;
+    const row = (idx / territoryMeta.gridDim) | 0;
+    territoryCtx.fillStyle = color;
+    territoryCtx.fillRect(col, row, 1, 1);
+  }
+}
+
 function showJoin() {
   joinScreen.classList.remove('hidden');
   deathScreen.classList.add('hidden');
@@ -103,7 +125,13 @@ socket.on('welcome', (data) => {
   heading = data.you.angle;
   camera.x = data.you.x;
   camera.y = data.you.y;
+  if (data.territory) initTerritory({ cellSize: data.territory.cellSize, gridDim: data.territory.gridDim }, data.territory.cells);
+  if (data.zones) zones = data.zones.map(z => ({ ...z, ownerColor: null }));
   showGame();
+});
+
+socket.on('territoryUpdate', ({ cells }) => {
+  paintTerritoryCells(cells);
 });
 
 socket.on('died', (data) => {
@@ -115,6 +143,12 @@ socket.on('died', (data) => {
 socket.on('state', (state) => {
   latestState = state;
   worldRadius = state.worldRadius;
+  if (state.zones) {
+    for (const z of state.zones) {
+      const local = zones.find(zz => zz.brand === z.brand);
+      if (local) local.ownerColor = z.ownerColor;
+    }
+  }
 });
 
 // Real acquisition brand marks (Anaconda owns these trademarks), preloaded once.
@@ -139,6 +173,9 @@ socket.on('brandDiamondCollected', ({ name, label }) => {
 });
 socket.on('trifectaWin', ({ name }) => {
   spawnBanner(`🏆 ${name} completed the Acquisition Trifecta!`);
+});
+socket.on('dominationWin', ({ name }) => {
+  spawnBanner(`🌍 ${name} achieved Full-Stack Domination!`);
 });
 
 function spawnBanner(text) {
@@ -388,7 +425,8 @@ function updateLeaderboard(state) {
     } else {
       state.hallOfFame.forEach((row) => {
         const li = document.createElement('li');
-        li.textContent = row.name;
+        const badge = row.type === 'domination' ? '🌍' : '🏆';
+        li.textContent = `${badge} ${row.name}`;
         hallOfFameList.appendChild(li);
       });
     }
@@ -429,6 +467,62 @@ function drawMinimap(state) {
   mctx.restore();
 }
 
+function drawTerritory() {
+  const size = territoryMeta.gridDim * territoryMeta.cellSize * camera.zoom;
+  const dx = (-worldRadius - camera.x) * camera.zoom + canvas.width / 2;
+  const dy = (-worldRadius - camera.y) * camera.zoom + canvas.height / 2;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.globalAlpha = 0.55; // let the dark background show through a bit
+  ctx.drawImage(territoryCanvas, dx, dy, size, size);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawZones(tPulse) {
+  for (const z of zones) {
+    const sx = (z.cx - camera.x) * camera.zoom + canvas.width / 2;
+    const sy = (z.cy - camera.y) * camera.zoom + canvas.height / 2;
+    const sr = z.radius * camera.zoom;
+    if (sx < -sr - 60 || sx > canvas.width + sr + 60 || sy < -sr - 60 || sy > canvas.height + sr + 60) continue;
+
+    const color = z.ownerColor || z.color;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = z.ownerColor ? 0.14 : 0.06;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = Math.max(1.5, 4 * camera.zoom);
+    ctx.strokeStyle = z.ownerColor ? color : 'rgba(255,255,255,0.25)';
+    ctx.setLineDash(z.ownerColor ? [] : [14, 10]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Watermark logo + label at the zone center.
+    const icon = BRAND_ICONS[z.brand];
+    const iconSize = Math.min(sr * 0.9, 140 * camera.zoom);
+    if (icon && icon.complete && icon.naturalWidth > 0) {
+      const iw = icon.naturalWidth, ih = icon.naturalHeight;
+      const scale = iconSize / Math.max(iw, ih);
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+      ctx.drawImage(icon, sx - (iw * scale) / 2, sy - (ih * scale) / 2, iw * scale, ih * scale);
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.font = `800 ${Math.max(12, 15 * camera.zoom)}px Rubik, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = z.ownerColor ? color : 'rgba(255,255,255,0.55)';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 5;
+    ctx.fillText(z.label, sx, sy + sr + 20 * camera.zoom);
+    ctx.restore();
+  }
+}
+
 let t = 0;
 function render() {
   t += 0.05;
@@ -445,6 +539,8 @@ function render() {
     }
 
     drawWorldBackground();
+    drawTerritory();
+    drawZones(t);
     drawBoundary();
 
     for (const d of latestState.diamonds) drawDiamond(d, t + (d.id.length || 0));
