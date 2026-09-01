@@ -1,0 +1,395 @@
+'use strict';
+/**
+ * ANACONDAE — multiplayer slither-style snake game
+ * Authoritative Node.js game server (Express + Socket.io)
+ *
+ * World: a CIRCLE (not a rectangle) of radius WORLD_RADIUS. Snakes that
+ * cross the boundary die. Multiple snakes compete for diamonds; touching
+ * another snake's body with your head kills you (and drops your body as
+ * diamonds), so from the other snake's point of view "if they bite you,
+ * they die" holds symmetrically — the head that makes contact always loses.
+ */
+
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const { Server } = require('socket.io');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: '*' },
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ----------------------------- Tunables ------------------------------------
+const WORLD_RADIUS = 3200;
+const TICK_RATE = 30; // server ticks per second
+const TICK_MS = 1000 / TICK_RATE;
+const BASE_SPEED = 3.4; // units per tick
+const BOOST_MULT = 1.9;
+const BOOST_DRAIN_PER_TICK = 0.12; // length units drained per tick while boosting
+const MAX_TURN_RATE_BASE = 0.11; // radians per tick, scaled down as snake grows
+const START_LENGTH = 60; // starting body "length units"
+const SEGMENT_SPACING = 5.5; // distance between stored trail points
+const MIN_HEAD_RADIUS = 9;
+const MAX_HEAD_RADIUS = 34;
+const RADIUS_GROWTH_K = 0.011; // how quickly thickness grows with length
+const DIAMOND_MIN_VALUE = 6;
+const DIAMOND_MAX_VALUE = 14;
+const DIAMOND_TARGET_DENSITY = 1 / 26000; // diamonds per square unit of world area
+const WORLD_AREA = Math.PI * WORLD_RADIUS * WORLD_RADIUS;
+const DIAMOND_TARGET_COUNT = Math.floor(WORLD_AREA * DIAMOND_TARGET_DENSITY);
+const DEATH_DIAMOND_STRIDE = 3; // drop a diamond every N body points on death
+const BOT_TARGET_COUNT = 5; // keep the world lively even with few humans
+
+const COLORS = [
+  '#3EB049', '#F2B705', '#2FA4A9', '#E0574C', '#8E6BC7',
+  '#4E9F3D', '#D98E04', '#3D7EA6', '#C43E3E', '#5CB85C',
+];
+
+// Anaconda's acquisitions get a rare, extra-valuable "brand diamond" cameo.
+const BRAND_DIAMONDS = [
+  { brand: 'outerbounds', label: 'Outerbounds', color: '#6C5CE7', valueMult: 3.2 },
+  { brand: 'kilo', label: 'Kilo', color: '#00C2A8', valueMult: 3.2 },
+  { brand: 'enkrypt', label: 'Enkrypt', color: '#FF6B4A', valueMult: 3.2 },
+];
+const BRAND_DIAMOND_CHANCE = 0.035; // chance a new diamond spawn is a brand cameo
+const MAX_BRAND_DIAMONDS_ALIVE = 3;
+
+function rand(min, max) { return Math.random() * (max - min) + min; }
+function dist2(x1, y1, x2, y2) { const dx = x1 - x2, dy = y1 - y2; return dx * dx + dy * dy; }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function angleLerp(from, to, maxDelta) {
+  let diff = to - from;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  diff = clamp(diff, -maxDelta, maxDelta);
+  return from + diff;
+}
+
+function headRadiusForLength(length) {
+  return clamp(MIN_HEAD_RADIUS + Math.sqrt(length) * RADIUS_GROWTH_K * 10, MIN_HEAD_RADIUS, MAX_HEAD_RADIUS);
+}
+
+// ----------------------------- Game State -----------------------------------
+/** @type {Map<string, Snake>} */
+const snakes = new Map();
+/** @type {Map<string, Diamond>} */
+const diamonds = new Map();
+let diamondSeq = 0;
+
+function randomPointInWorld(marginFactor = 0.98) {
+  const r = Math.sqrt(Math.random()) * WORLD_RADIUS * marginFactor;
+  const a = Math.random() * Math.PI * 2;
+  return { x: Math.cos(a) * r, y: Math.sin(a) * r };
+}
+
+function spawnDiamond(at, forceBrand) {
+  const id = 'd' + (diamondSeq++);
+  const p = at || randomPointInWorld();
+  const brandsAlive = [...diamonds.values()].filter(d => d.brand).length;
+
+  let brandDef = forceBrand;
+  if (!brandDef && brandsAlive < MAX_BRAND_DIAMONDS_ALIVE && Math.random() < BRAND_DIAMOND_CHANCE) {
+    brandDef = BRAND_DIAMONDS[Math.floor(Math.random() * BRAND_DIAMONDS.length)];
+  }
+
+  if (brandDef) {
+    const value = rand(DIAMOND_MAX_VALUE, DIAMOND_MAX_VALUE * 1.4) * brandDef.valueMult;
+    diamonds.set(id, {
+      id, x: p.x, y: p.y, value,
+      brand: brandDef.brand, label: brandDef.label, color: brandDef.color, big: true,
+    });
+    io.emit('brandDiamondSpawned', { label: brandDef.label, brand: brandDef.brand, x: p.x, y: p.y });
+    return id;
+  }
+
+  const big = Math.random() < 0.08;
+  const value = big ? rand(DIAMOND_MAX_VALUE * 1.6, DIAMOND_MAX_VALUE * 2.4) : rand(DIAMOND_MIN_VALUE, DIAMOND_MAX_VALUE);
+  diamonds.set(id, { id, x: p.x, y: p.y, value, big });
+  return id;
+}
+
+function ensureDiamondCount() {
+  while (diamonds.size < DIAMOND_TARGET_COUNT) spawnDiamond();
+}
+
+class Snake {
+  constructor(id, name, color, isBot) {
+    this.id = id;
+    this.name = (name || 'Anaconda').slice(0, 16);
+    this.color = color || COLORS[Math.floor(Math.random() * COLORS.length)];
+    this.isBot = !!isBot;
+    this.alive = true;
+    this.boosting = false;
+    const spawn = randomPointInWorld(0.55);
+    this.x = spawn.x;
+    this.y = spawn.y;
+    this.angle = rand(0, Math.PI * 2);
+    this.targetAngle = this.angle;
+    this.length = START_LENGTH;
+    this.points = [{ x: this.x, y: this.y }];
+    this.deaths = 0;
+    this.kills = 0;
+    this.joinedAt = Date.now();
+    this.botTimer = 0;
+  }
+
+  get headRadius() { return headRadiusForLength(this.length); }
+
+  desiredPointCount() {
+    return Math.max(6, Math.floor(this.length / SEGMENT_SPACING));
+  }
+
+  turnRate() {
+    // bigger snakes turn a bit slower
+    return MAX_TURN_RATE_BASE * clamp(1.15 - this.length / 4000, 0.45, 1.15);
+  }
+
+  step() {
+    if (!this.alive) return;
+    this.angle = angleLerp(this.angle, this.targetAngle, this.turnRate());
+
+    let speed = BASE_SPEED;
+    if (this.boosting && this.length > START_LENGTH * 0.6) {
+      speed *= BOOST_MULT;
+      this.length = Math.max(START_LENGTH * 0.5, this.length - BOOST_DRAIN_PER_TICK);
+      if (Math.random() < 0.35) spawnDiamond({ x: this.x, y: this.y }); // tiny trail cost, occasionally
+    } else {
+      this.boosting = false;
+    }
+
+    this.x += Math.cos(this.angle) * speed;
+    this.y += Math.sin(this.angle) * speed;
+
+    this.points.unshift({ x: this.x, y: this.y });
+    const desired = this.desiredPointCount();
+    if (this.points.length > desired) this.points.length = desired;
+
+    // world boundary — die if outside the circle
+    if (this.x * this.x + this.y * this.y > WORLD_RADIUS * WORLD_RADIUS) {
+      this.alive = false;
+      this.deathReason = 'boundary';
+    }
+  }
+
+  bodySamples(skipNearHead = 4) {
+    // sample every other point after a safety gap near the head to reduce cost
+    const out = [];
+    for (let i = skipNearHead; i < this.points.length; i += 2) out.push(this.points[i]);
+    return out;
+  }
+
+  simpleBotAI() {
+    this.botTimer -= 1;
+    if (this.botTimer > 0) return;
+    this.botTimer = 20 + Math.floor(Math.random() * 30);
+
+    // steer toward the nearest diamond, but stay inside the world and avoid edges
+    let best = null, bestD = Infinity;
+    for (const d of diamonds.values()) {
+      const dd = dist2(this.x, this.y, d.x, d.y);
+      if (dd < bestD) { bestD = dd; best = d; }
+    }
+    const distFromCenter = Math.hypot(this.x, this.y);
+    if (distFromCenter > WORLD_RADIUS * 0.85) {
+      this.targetAngle = Math.atan2(-this.y, -this.x) + rand(-0.3, 0.3);
+    } else if (best) {
+      this.targetAngle = Math.atan2(best.y - this.y, best.x - this.x) + rand(-0.15, 0.15);
+    } else {
+      this.targetAngle += rand(-0.5, 0.5);
+    }
+    this.boosting = Math.random() < 0.03;
+  }
+
+  toDeathDiamonds() {
+    for (let i = 0; i < this.points.length; i += DEATH_DIAMOND_STRIDE) {
+      const p = this.points[i];
+      spawnDiamond({ x: p.x + rand(-6, 6), y: p.y + rand(-6, 6) });
+    }
+  }
+}
+
+function createSnake(id, name, color, isBot) {
+  const s = new Snake(id, name, color, isBot);
+  snakes.set(id, s);
+  return s;
+}
+
+function removeSnake(id) {
+  snakes.delete(id);
+}
+
+// ------------------------------- Bots ----------------------------------------
+let botSeq = 0;
+function maintainBots() {
+  const humanCount = [...snakes.values()].filter(s => !s.isBot).length;
+  const botCount = [...snakes.values()].filter(s => s.isBot).length;
+  const wanted = Math.max(0, Math.min(BOT_TARGET_COUNT, BOT_TARGET_COUNT - Math.floor(humanCount / 2) + botCount));
+  if (botCount < BOT_TARGET_COUNT) {
+    const id = 'bot_' + (botSeq++);
+    const names = ['Kaa', 'Slytherin', 'Boa', 'Viper', 'Cobra', 'Python', 'Mamba', 'Sidewinder'];
+    createSnake(id, names[Math.floor(Math.random() * names.length)], undefined, true);
+  }
+}
+
+// ---------------------------- Collision / Tick --------------------------------
+function tick() {
+  for (const s of snakes.values()) {
+    if (s.isBot && s.alive) s.simpleBotAI();
+    const wasAlive = s.alive;
+    s.step();
+    if (wasAlive && !s.alive && s.deathReason === 'boundary') {
+      s.deaths += 1;
+      s.toDeathDiamonds();
+      const sock = io.sockets.sockets.get(s.id);
+      if (sock) sock.emit('died', { killer: null });
+    }
+  }
+
+  // Diamond consumption
+  for (const s of snakes.values()) {
+    if (!s.alive) continue;
+    const hr = s.headRadius;
+    for (const d of diamonds.values()) {
+      const rr = hr + (d.brand ? 16 : 7);
+      if (dist2(s.x, s.y, d.x, d.y) <= rr * rr) {
+        s.length += d.value;
+        diamonds.delete(d.id);
+        if (d.brand) {
+          io.emit('brandDiamondCollected', { name: s.name, label: d.label, brand: d.brand });
+        }
+      }
+    }
+  }
+  ensureDiamondCount();
+
+  // Snake-vs-snake collisions (head touches another body => head owner dies)
+  const alive = [...snakes.values()].filter(s => s.alive);
+  const toKill = new Map(); // id -> killerName|reason
+
+  for (const a of alive) {
+    const ar = a.headRadius;
+    for (const b of alive) {
+      if (a === b) continue;
+      // head-to-head: both die if very close
+      if (!toKill.has(a.id) && !toKill.has(b.id)) {
+        const br = b.headRadius;
+        const rr = ar + br;
+        if (dist2(a.x, a.y, b.x, b.y) <= rr * rr) {
+          toKill.set(a.id, b.name);
+          toKill.set(b.id, a.name);
+          continue;
+        }
+      }
+      if (toKill.has(a.id)) continue;
+      // head of a vs body of b
+      const samples = b.bodySamples();
+      const rr = ar + b.headRadius * 0.9;
+      for (const p of samples) {
+        if (dist2(a.x, a.y, p.x, p.y) <= rr * rr) {
+          toKill.set(a.id, b.name);
+          b.kills += 1;
+          break;
+        }
+      }
+    }
+  }
+
+  for (const [id, killer] of toKill.entries()) {
+    const s = snakes.get(id);
+    if (!s || !s.alive) continue;
+    s.alive = false;
+    s.deathReason = killer;
+    s.deaths += 1;
+    s.toDeathDiamonds();
+    const sock = io.sockets.sockets.get(id);
+    if (sock) sock.emit('died', { killer });
+  }
+
+  // remove dead bots (respawn fresh), keep dead humans until they choose respawn
+  for (const s of [...snakes.values()]) {
+    if (!s.alive && s.isBot) removeSnake(s.id);
+  }
+  maintainBots();
+
+  broadcast();
+}
+
+function broadcast() {
+  const snakePayload = [...snakes.values()].map(s => ({
+    id: s.id,
+    name: s.name,
+    color: s.color,
+    alive: s.alive,
+    length: Math.round(s.length),
+    headRadius: s.headRadius,
+    points: s.points, // [{x,y}], head-first
+  }));
+  const diamondPayload = [...diamonds.values()].map(d => ({
+    id: d.id, x: d.x, y: d.y, value: Math.round(d.value), big: d.big,
+    brand: d.brand, label: d.label, color: d.color,
+  }));
+
+  const leaderboard = [...snakes.values()]
+    .filter(s => s.alive)
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 10)
+    .map(s => ({ name: s.name, length: Math.round(s.length), isBot: s.isBot }));
+
+  io.emit('state', {
+    t: Date.now(),
+    worldRadius: WORLD_RADIUS,
+    snakes: snakePayload,
+    diamonds: diamondPayload,
+    leaderboard,
+    playerCount: [...snakes.values()].filter(s => !s.isBot).length,
+  });
+}
+
+ensureDiamondCount();
+setInterval(tick, TICK_MS);
+
+// ------------------------------ Networking -----------------------------------
+io.on('connection', (socket) => {
+  socket.on('join', ({ name, color }) => {
+    if (snakes.has(socket.id)) removeSnake(socket.id);
+    const s = createSnake(socket.id, name, color, false);
+    socket.emit('welcome', {
+      id: socket.id,
+      worldRadius: WORLD_RADIUS,
+      you: { x: s.x, y: s.y, angle: s.angle, color: s.color, name: s.name },
+    });
+  });
+
+  socket.on('input', ({ angle, boosting }) => {
+    const s = snakes.get(socket.id);
+    if (!s || !s.alive) return;
+    if (typeof angle === 'number' && isFinite(angle)) s.targetAngle = angle;
+    s.boosting = !!boosting;
+  });
+
+  socket.on('respawn', ({ name, color }) => {
+    const existing = snakes.get(socket.id);
+    const prevName = existing ? existing.name : name;
+    const prevColor = existing ? existing.color : color;
+    removeSnake(socket.id);
+    const s = createSnake(socket.id, name || prevName, color || prevColor, false);
+    socket.emit('welcome', {
+      id: socket.id,
+      worldRadius: WORLD_RADIUS,
+      you: { x: s.x, y: s.y, angle: s.angle, color: s.color, name: s.name },
+    });
+  });
+
+  socket.on('disconnect', () => {
+    removeSnake(socket.id);
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`ANACONDAE server listening on http://localhost:${PORT}`);
+});

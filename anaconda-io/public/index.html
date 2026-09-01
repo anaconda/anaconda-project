@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>ANACONDAE — Multiplayer Snake Arena</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="leaderboard" class="panel">
+      <div class="panel-title">🐍 Top Anacondas</div>
+      <ol id="leaderboard-list"></ol>
+    </div>
+    <div id="stats" class="panel">
+      <div class="stat"><span class="stat-label">Length</span><span id="stat-length">0</span></div>
+      <div class="stat"><span class="stat-label">Players</span><span id="stat-players">0</span></div>
+    </div>
+    <canvas id="minimap"></canvas>
+  </div>
+
+  <!-- Join screen -->
+  <div id="join-screen" class="overlay">
+    <div class="brand">
+      <div class="logo-diamond"></div>
+      <h1>ANACOND<span class="dot">AE</span></h1>
+      <p class="tagline">Slither through the pit. Devour diamonds. Coil past rivals — never touch their scales.</p>
+    </div>
+    <div class="join-card">
+      <label for="name-input">Your snake name</label>
+      <input id="name-input" maxlength="16" placeholder="e.g. Kaa" autocomplete="off" />
+      <label>Skin color</label>
+      <div id="color-swatches"></div>
+      <button id="play-btn" class="btn-play">PLAY</button>
+      <div class="hint">Mouse / touch to steer &nbsp;•&nbsp; Hold click or SPACE to boost</div>
+    </div>
+  </div>
+
+  <!-- Death screen -->
+  <div id="death-screen" class="overlay hidden">
+    <div class="brand small">
+      <h1>YOU DIED<span class="dot">.</span></h1>
+      <p id="death-reason" class="tagline"></p>
+    </div>
+    <div class="join-card">
+      <div class="stat big"><span class="stat-label">Final length</span><span id="final-length">0</span></div>
+      <button id="respawn-btn" class="btn-play">RESPAWN</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>

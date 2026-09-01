@@ -1,0 +1,15 @@
+{
+  "name": "anacondae",
+  "version": "1.0.0",
+  "description": "Anacondae — multiplayer Anaconda-branded slither-style snake game with a circular world, diamonds and other snakes to compete against.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.8.3"
+  }
+}
