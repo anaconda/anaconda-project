@@ -65,7 +65,7 @@ const TRIFECTA_LENGTH_BONUS = 200; // reward for completing the Acquisition Trif
 const hallOfFame = [];
 
 // ----------------------------- Territory (paper.io-style) -------------------
-const CELL_SIZE = 40; // world units per grid cell
+const CELL_SIZE = 16; // world units per grid cell (small = ground hugs the actual path, not blocky squares)
 const GRID_DIM = Math.round((WORLD_RADIUS * 2) / CELL_SIZE); // 160 for our world
 const CELL_COUNT = GRID_DIM * GRID_DIM;
 const HOME_TERRITORY_RADIUS = 90; // seeded disk of owned ground at spawn
