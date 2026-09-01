@@ -128,6 +128,7 @@ for (const [brand, src] of Object.entries(BRAND_ICON_SRC)) {
   img.src = src;
   BRAND_ICONS[brand] = img;
 }
+window.BRAND_ICONS = BRAND_ICONS; // exposed for debugging/verification
 
 socket.on('brandDiamondSpawned', ({ label }) => {
   spawnToast(`💎 A ${label} diamond appeared in the arena!`, '#F2B705');
@@ -367,11 +368,26 @@ function drawMinimap(state) {
   mctx.translate(w / 2, h / 2);
   const scale = (Math.min(w, h) / 2 - 4) / worldRadius;
   for (const s of state.snakes) {
-    if (!s.alive) continue;
-    const p = s.points[0];
+    if (!s.alive || !s.points || s.points.length < 1) continue;
+    const isMe = s.id === myId;
+
+    // Draw the whole body as a line following its trail, not just the head.
     mctx.beginPath();
-    mctx.arc(p.x * scale, p.y * scale, s.id === myId ? 4 : 2.5, 0, Math.PI * 2);
-    mctx.fillStyle = s.id === myId ? '#F2B705' : s.color;
+    mctx.moveTo(s.points[0].x * scale, s.points[0].y * scale);
+    for (let i = 1; i < s.points.length; i++) {
+      mctx.lineTo(s.points[i].x * scale, s.points[i].y * scale);
+    }
+    mctx.strokeStyle = isMe ? '#F2B705' : s.color;
+    mctx.lineWidth = Math.max(1.2, (isMe ? 2.6 : 1.8) * devicePixelRatio);
+    mctx.lineCap = 'round';
+    mctx.lineJoin = 'round';
+    mctx.stroke();
+
+    // Head marker on top for quick eye-tracking.
+    const head = s.points[0];
+    mctx.beginPath();
+    mctx.arc(head.x * scale, head.y * scale, isMe ? 4 : 2.5, 0, Math.PI * 2);
+    mctx.fillStyle = isMe ? '#F2B705' : s.color;
     mctx.fill();
   }
   mctx.restore();

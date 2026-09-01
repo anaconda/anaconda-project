@@ -56,8 +56,8 @@ const BRAND_DIAMONDS = [
   { brand: 'kilo', label: 'Kilo', color: '#617A91', valueMult: 3.2 },
   { brand: 'enkrypt', label: 'Enkrypt', color: '#FF7F00', valueMult: 3.2 },
 ];
-const BRAND_DIAMOND_CHANCE = 0.035; // chance a new diamond spawn is a brand cameo
-const MAX_BRAND_DIAMONDS_ALIVE = 3;
+const BRAND_DIAMOND_CHANCE = 0.09; // chance a new diamond spawn is a brand cameo
+const MAX_BRAND_DIAMONDS_ALIVE = 9; // bumped up so they're actually easy to run into
 
 function rand(min, max) { return Math.random() * (max - min) + min; }
 function dist2(x1, y1, x2, y2) { const dx = x1 - x2, dy = y1 - y2; return dx * dx + dy * dy; }
@@ -156,8 +156,13 @@ class Snake {
     let speed = BASE_SPEED;
     if (this.boosting && this.length > START_LENGTH * 0.6) {
       speed *= BOOST_MULT;
+      // Pure dash: only drains length, no side-effect diamonds. (A diamond
+      // used to be dropped here as a "boost trail" cost, but since it spawned
+      // right under the snake's own head it got vacuumed up by the very same
+      // tick's diamond-consumption pass, causing net GROWTH from boosting —
+      // effectively free length. Removed; boosting should never be a way to
+      // grow without eating diamonds.)
       this.length = Math.max(START_LENGTH * 0.5, this.length - BOOST_DRAIN_PER_TICK);
-      if (Math.random() < 0.35) spawnDiamond({ x: this.x, y: this.y }); // tiny trail cost, occasionally
     } else {
       this.boosting = false;
     }
