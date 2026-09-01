@@ -54,11 +54,11 @@ resize();
 const socket = io();
 
 let myId = null;
+let myName = '';
 let worldRadius = 3200;
 let latestState = null;
 let alive = false;
 let camera = { x: 0, y: 0, zoom: 1 };
-let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 let boosting = false;
 
 function showJoin() {
@@ -67,7 +67,13 @@ function showJoin() {
   hud.classList.add('hidden');
 }
 function showDeath(reason, length) {
-  deathReasonEl.textContent = reason ? `Bitten by ${reason}` : 'You slithered into the border.';
+  if (!reason) {
+    deathReasonEl.textContent = 'You slithered into the border.';
+  } else if (reason === myName) {
+    deathReasonEl.textContent = 'You bit your own tail!';
+  } else {
+    deathReasonEl.textContent = `Bitten by ${reason}`;
+  }
   finalLengthEl.textContent = length;
   deathScreen.classList.remove('hidden');
   joinScreen.classList.add('hidden');
@@ -90,8 +96,10 @@ respawnBtn.addEventListener('click', () => {
 
 socket.on('welcome', (data) => {
   myId = data.id;
+  myName = data.you.name;
   worldRadius = data.worldRadius;
   alive = true;
+  heading = data.you.angle;
   camera.x = data.you.x;
   camera.y = data.you.y;
   showGame();
@@ -108,8 +116,17 @@ socket.on('state', (state) => {
   worldRadius = state.worldRadius;
 });
 
-function brandColorClass(brand) {
-  return { outerbounds: '#6C5CE7', kilo: '#00C2A8', enkrypt: '#FF6B4A' }[brand] || '#F2B705';
+// Real acquisition brand marks (Anaconda owns these trademarks), preloaded once.
+const BRAND_ICON_SRC = {
+  outerbounds: 'assets/brands/outerbounds-icon-white.svg',
+  kilo: 'assets/brands/kilo-icon-white.svg',
+  enkrypt: 'assets/brands/enkrypt-icon-white.svg',
+};
+const BRAND_ICONS = {};
+for (const [brand, src] of Object.entries(BRAND_ICON_SRC)) {
+  const img = new Image();
+  img.src = src;
+  BRAND_ICONS[brand] = img;
 }
 
 socket.on('brandDiamondSpawned', ({ label }) => {
@@ -128,29 +145,46 @@ function spawnToast(text, color) {
   setTimeout(() => el.remove(), 3200);
 }
 
-// ------------------------------- Input ---------------------------------------
-window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
-window.addEventListener('mousedown', () => { boosting = true; });
-window.addEventListener('mouseup', () => { boosting = false; });
-window.addEventListener('touchmove', (e) => {
-  const t = e.touches[0];
-  if (t) { mouse.x = t.clientX; mouse.y = t.clientY; }
-}, { passive: true });
+// ------------------------------- Input (keyboard-only steering) ---------------
+// Left/Right arrows turn the snake; each key repeat (or held key) keeps
+// steering that way, just like tapping a direction in classic Snake — no
+// mouse involved. Up arrow / Space boosts.
+const TURN_STEP = 0.11; // radians nudged per key event, mirrors server turn rate
+let heading = 0;
+const keysDown = new Set();
+
+function isTypingInField() {
+  const tag = document.activeElement && document.activeElement.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA';
+}
+window.addEventListener('keydown', (e) => {
+  if (isTypingInField() || !alive) return;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
+  if (e.code === 'ArrowLeft') { heading -= TURN_STEP; keysDown.add('left'); }
+  if (e.code === 'ArrowRight') { heading += TURN_STEP; keysDown.add('right'); }
+  if (e.code === 'ArrowUp' || e.code === 'Space') boosting = true;
+}, { passive: false });
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'ArrowLeft') keysDown.delete('left');
+  if (e.code === 'ArrowRight') keysDown.delete('right');
+  if (e.code === 'ArrowUp' || e.code === 'Space') boosting = false;
+});
+// Touch fallback for mobile: tap left/right half of the screen to turn.
 window.addEventListener('touchstart', (e) => {
   const t = e.touches[0];
-  if (t) { mouse.x = t.clientX; mouse.y = t.clientY; }
+  if (!t) return;
+  if (t.clientX < window.innerWidth / 2) heading -= TURN_STEP * 3;
+  else heading += TURN_STEP * 3;
   boosting = true;
 }, { passive: true });
 window.addEventListener('touchend', () => { boosting = false; });
-window.addEventListener('keydown', (e) => { if (e.code === 'Space') boosting = true; });
-window.addEventListener('keyup', (e) => { if (e.code === 'Space') boosting = false; });
 
 function sendInput() {
   if (!alive) return;
-  const dx = mouse.x - canvas.width / 2;
-  const dy = mouse.y - canvas.height / 2;
-  const angle = Math.atan2(dy, dx);
-  socket.emit('input', { angle, boosting });
+  // continuous turning while a key is held down
+  if (keysDown.has('left')) heading -= TURN_STEP * 0.5;
+  if (keysDown.has('right')) heading += TURN_STEP * 0.5;
+  socket.emit('input', { angle: heading, boosting });
 }
 setInterval(sendInput, 1000 / 25);
 
@@ -160,27 +194,18 @@ function zoomForLength(length) {
   return Math.max(0.55, 1.05 - Math.sqrt(length) * 0.012);
 }
 
-function worldPatternFill() {
-  // procedurally-built diamond/hex jungle-mat pattern, cached as an offscreen canvas
-  if (worldPatternFill.cache) return worldPatternFill.cache;
-  const size = 64;
-  const c = document.createElement('canvas');
-  c.width = size; c.height = size;
-  const pctx = c.getContext('2d');
-  pctx.fillStyle = '#141a10';
-  pctx.fillRect(0, 0, size, size);
-  pctx.strokeStyle = 'rgba(62,176,73,0.10)';
-  pctx.lineWidth = 1.5;
-  pctx.beginPath();
-  pctx.moveTo(size / 2, 0); pctx.lineTo(size, size / 2);
-  pctx.lineTo(size / 2, size); pctx.lineTo(0, size / 2);
-  pctx.closePath();
-  pctx.stroke();
-  pctx.fillStyle = 'rgba(242,183,5,0.05)';
-  pctx.beginPath(); pctx.arc(size / 2, size / 2, 4, 0, Math.PI * 2); pctx.fill();
-  const pattern = ctx.createPattern(c, 'repeat');
-  worldPatternFill.cache = pattern;
-  return pattern;
+function drawWorldBackground() {
+  // A plain, calm jungle-dark backdrop with a soft vignette toward the edges.
+  // (A decorative diamond grid used to live here — removed since it was
+  // screen-space only and didn't correspond to anything in the world.)
+  const grad = ctx.createRadialGradient(
+    canvas.width / 2, canvas.height / 2, 0,
+    canvas.width / 2, canvas.height / 2, Math.max(canvas.width, canvas.height) * 0.7
+  );
+  grad.addColorStop(0, '#161d13');
+  grad.addColorStop(1, '#0c0f0a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
 function drawSnake(s, isMe) {
@@ -275,13 +300,26 @@ function drawDiamond(d, tPulse) {
   ctx.restore();
 
   if (d.brand) {
-    ctx.save();
-    ctx.font = `800 ${Math.max(10, size * 0.62)}px Rubik, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#10130F';
-    ctx.fillText(d.label[0], sx, sy + 1);
-    ctx.restore();
+    const icon = BRAND_ICONS[d.brand];
+    if (icon && icon.complete && icon.naturalWidth > 0) {
+      const iw = icon.naturalWidth, ih = icon.naturalHeight;
+      const scale = (size * 1.15) / Math.max(iw, ih);
+      const dw = iw * scale, dh = ih * scale;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 3;
+      ctx.drawImage(icon, sx - dw / 2, sy - dh / 2, dw, dh);
+      ctx.restore();
+    } else {
+      // fallback while the icon is still loading
+      ctx.save();
+      ctx.font = `800 ${Math.max(10, size * 0.62)}px Rubik, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#10130F';
+      ctx.fillText(d.label[0], sx, sy + 1);
+      ctx.restore();
+    }
 
     ctx.save();
     ctx.font = '700 11px Rubik, sans-serif';
@@ -354,11 +392,7 @@ function render() {
       statLength.textContent = me.length;
     }
 
-    ctx.save();
-    ctx.fillStyle = worldPatternFill();
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.restore();
-
+    drawWorldBackground();
     drawBoundary();
 
     for (const d of latestState.diamonds) drawDiamond(d, t + (d.id.length || 0));

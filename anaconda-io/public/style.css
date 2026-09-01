@@ -23,7 +23,7 @@ html, body {
 }
 
 #game {
-  position: fixed; inset: 0; display: block; cursor: crosshair;
+  position: fixed; inset: 0; display: block; cursor: default;
   background: var(--bg-dark);
 }
 
