@@ -498,11 +498,6 @@ function broadcast() {
     snakes: snakePayload,
     diamonds: diamondPayload,
     hallOfFame: hallOfFame.slice(0, 5),
-    zones: ZONES.map(z => ({
-      brand: z.brand, label: z.label, color: z.color,
-      cx: z.cx, cy: z.cy, radius: z.radius,
-      ownerColor: z.ownerCode ? codeToColor.get(z.ownerCode) || null : null,
-    })),
     leaderboard,
     playerCount: [...snakes.values()].filter(s => !s.isBot).length,
   });
@@ -526,7 +521,6 @@ function buildWelcomePayload(socket, s) {
     worldRadius: WORLD_RADIUS,
     you: { x: s.x, y: s.y, angle: s.angle, color: s.color, name: s.name },
     territory: { cellSize: CELL_SIZE, gridDim: GRID_DIM, cells: territorySnapshot() },
-    zones: ZONES.map(z => ({ brand: z.brand, label: z.label, color: z.color, cx: z.cx, cy: z.cy, radius: z.radius })),
   };
 }
 
