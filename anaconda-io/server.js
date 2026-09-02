@@ -82,33 +82,6 @@ function worldToCell(x, y) {
   return { col, row };
 }
 
-// 3 fixed landmark "Acquisition Zones," one per acquisition, evenly spaced
-// around the arena — control (own the majority of) all 3 at once to win
-// "Full-Stack Domination."
-const ZONE_RADIUS = 320;
-const ZONE_RING = 1900;
-const ZONE_ANGLES = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6];
-const ZONES = BRAND_DIAMONDS.map((b, i) => {
-  const cx = Math.cos(ZONE_ANGLES[i]) * ZONE_RING;
-  const cy = Math.sin(ZONE_ANGLES[i]) * ZONE_RING;
-  return { brand: b.brand, label: b.label, color: b.color, cx, cy, radius: ZONE_RADIUS, ownerCode: 0 };
-});
-// Precompute each zone's covered cell indices once (positions are fixed).
-for (const zone of ZONES) {
-  const cells = [];
-  const { col: minCol, row: minRow } = worldToCell(zone.cx - zone.radius, zone.cy - zone.radius);
-  const { col: maxCol, row: maxRow } = worldToCell(zone.cx + zone.radius, zone.cy + zone.radius);
-  for (let row = minRow; row <= maxRow; row++) {
-    for (let col = minCol; col <= maxCol; col++) {
-      const wx = col * CELL_SIZE - WORLD_RADIUS + CELL_SIZE / 2;
-      const wy = row * CELL_SIZE - WORLD_RADIUS + CELL_SIZE / 2;
-      if (dist2(wx, wy, zone.cx, zone.cy) <= zone.radius * zone.radius) cells.push(cellIndex(col, row));
-    }
-  }
-  zone.cellIndices = cells;
-}
-let currentDominatorId = null; // snake id currently owning all 3 zones, or null
-
 function seedHomeTerritory(snake) {
   const changed = [];
   const { col: cCol, row: cRow } = worldToCell(snake.x, snake.y);
@@ -165,37 +138,6 @@ function floodClaim(snake) {
 function emitTerritoryChange(snake, changedIndices) {
   if (!changedIndices || changedIndices.length === 0) return;
   io.emit('territoryUpdate', { cells: changedIndices.map(idx => ({ idx, color: snake.color })) });
-}
-
-function recomputeZoneOwnership() {
-  const tallyByCode = new Map();
-  for (const zone of ZONES) {
-    tallyByCode.clear();
-    for (const idx of zone.cellIndices) {
-      const code = gridOwnerCode[idx];
-      if (code === 0) continue;
-      tallyByCode.set(code, (tallyByCode.get(code) || 0) + 1);
-    }
-    let bestCode = 0, bestCount = 0;
-    for (const [code, count] of tallyByCode) if (count > bestCount) { bestCode = code; bestCount = count; }
-    zone.ownerCode = bestCount / zone.cellIndices.length > 0.5 ? bestCode : 0;
-  }
-
-  // Full-Stack Domination: does one *currently alive* snake own all 3 zones?
-  let dominatorSnake = null;
-  if (ZONES.every(z => z.ownerCode !== 0 && z.ownerCode === ZONES[0].ownerCode)) {
-    for (const s of snakes.values()) {
-      if (s.alive && s.code === ZONES[0].ownerCode) { dominatorSnake = s; break; }
-    }
-  }
-  if (dominatorSnake && currentDominatorId !== dominatorSnake.id) {
-    currentDominatorId = dominatorSnake.id;
-    hallOfFame.unshift({ name: dominatorSnake.name, type: 'domination', at: Date.now() });
-    if (hallOfFame.length > 20) hallOfFame.length = 20;
-    io.emit('dominationWin', { name: dominatorSnake.name });
-  } else if (!dominatorSnake) {
-    currentDominatorId = null;
-  }
 }
 
 function rand(min, max) { return Math.random() * (max - min) + min; }
@@ -523,8 +465,6 @@ function tick() {
     if (!s.alive && s.isBot) removeSnake(s.id);
   }
   maintainBots();
-
-  recomputeZoneOwnership();
 
   broadcast();
 }
