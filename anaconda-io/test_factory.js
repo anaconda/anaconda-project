@@ -28,7 +28,10 @@ F.on('state', (s) => { st = s; me = s.snakes.find(x => x.id === F.id); });
 F.on('banner', (b) => log('BANNER:', b.text, b.sub || ''));
 F.on('capability', (c) => log('CAPABILITY:', c.capability));
 F.on('died', (d) => { log('Founder died:', d.reason, d.killer || ''); phase = 'wait'; setTimeout(() => F.emit('respawn', { name: 'Founder', color: '#08CA4A', clientKey: fkey }), 2700); });
-F.on('shipment', (d) => { if (d.id === F.id) log('SHIPMENT', d.tokens + 'B'); });
+F.on('shipment', (d) => { if (d.id === F.id) log('SHIPMENT', d.tokens.toFixed(1) + 'B'); });
+F.on('building', (d) => log('BUILT:', d.name));
+F.on('buildFail', (d) => log('build fail:', d.why));
+setInterval(() => { if (me && me.alive && me.crown) F.emit('build'); }, 5000);
 
 for (let i = 0; i < 6; i++) eater('Eater' + i);
 
@@ -56,7 +59,7 @@ setInterval(() => {
     if (now - phaseT > 7000) { phase = 'home'; phaseT = now; }
   } else if (phase === 'home') {
     F.emit('input', { angle: Math.atan2(me.home.y - h.y, me.home.x - h.x), boosting: true });
-    if (me.inTerritory || now - phaseT > 25000) { phase = 'wait'; }
+    if ((me.inTerritory && me.floor > 25) || now - phaseT > 40000) { phase = 'wait'; }
   }
 }, 60);
 

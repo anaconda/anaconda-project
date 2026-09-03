@@ -250,7 +250,7 @@ function floodClaim(snake) {
     if (padLock[i] !== 0 && padLock[i] !== snake.code) continue; // someone's Factory pad: untouchable
     if ((blocked[i] || !outside[i]) && gridOwnerCode[i] !== snake.code) { gridOwnerCode[i] = snake.code; changed.push(i); }
   }
-  snake.trailCells.length = 0;
+  snake.trailCells.length = 0; snake.trailPts.length = 0;
   emitCells(changed, snake.color);
   if (changed.length) { snake.captures += 1; snake.floor = ownedCount(snake.code); checkIntegrations(snake); }
 }
@@ -327,7 +327,7 @@ class Snake {
     this.datasets = 0; this.captures = 0; this.floor = 0; this.pipeline = 0; this.prevProducts = [];
     this.spawnedAt = Date.now(); this.followTarget = null; this.followUntil = 0; this.hesitate = 0;
     this.enkryptFreeHit = true; this.retargetUsed = false;
-    this.inTerritory = true; this.trailCells = []; this.orbs = [];
+    this.inTerritory = true; this.trailCells = []; this.trailPts = []; this.orbs = [];
     this.botTimer = 0; this.loopTicks = 0; this.loopDir = 1;
     this.deathReason = null;
     if (!this.player.home) {
@@ -378,6 +378,8 @@ class Snake {
     } else {
       this.inTerritory = false;
       if (this.trailCells[this.trailCells.length - 1] !== idx && this.trailCells.length < 4000) this.trailCells.push(idx);
+      const lp = this.trailPts[this.trailPts.length - 1];
+      if (!lp || dist2(lp.x, lp.y, this.x, this.y) > 12 * 12) { if (this.trailPts.length < 3000) this.trailPts.push({ x: Math.round(this.x), y: Math.round(this.y) }); }
     }
   }
   updateOrbs() {
@@ -421,7 +423,7 @@ class Snake {
     if (!hasCap(this.player, 'outerbounds') || this.retargetUsed || !this.alive) return false;
     this.retargetUsed = true;
     const p = findSafeSpawn();
-    this.x = p.x; this.y = p.y; this.points = [{ x: p.x, y: p.y }]; this.trailCells.length = 0;
+    this.x = p.x; this.y = p.y; this.points = [{ x: p.x, y: p.y }]; this.trailCells.length = 0; this.trailPts.length = 0;
     this.shield = TICK_RATE; this.floor = ownedCount(this.code);
     io.to(this.id).emit('retargeted', {});
     return true;
@@ -629,7 +631,7 @@ function broadcast() {
   const snakePayload = [...snakes.values()].map(s => ({
     id: s.id, name: s.name, color: s.color, alive: s.alive, length: Math.round(s.length), headRadius: s.headRadius,
     points: s.points, shield: s.shield > 0, inTerritory: s.inTerritory,
-    trail: s.trailCells.length ? s.trailCells.map(cellCenter) : [],
+    trail: s.trailPts,
     orbs: s.orbs, home: s.home, floor: s.floor, products: s.products, datasets: s.datasets, nextFootprint: (PRODUCTS[s.player.buildings.length] || {}).footprint || null, nextProduct: (PRODUCTS[s.player.buildings.length] || {}).name || null,
     caps: [...s.player.capabilities], crown: trustedFoundation(s.player),
     tokens: Math.round(s.player.tokensRouted), burned: Math.round(s.player.tokensBurned), retargetUsed: s.retargetUsed, projects: s.player.projects, age: Date.now() - s.spawnedAt,
