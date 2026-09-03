@@ -97,14 +97,14 @@ html, body {
 /* ---------- Overlays ---------- */
 .overlay {
   position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 28px; text-align: center; padding: 20px;
+  justify-content: center; gap: 22px; text-align: center; padding: 20px;
   background:
     radial-gradient(circle at 50% 25%, rgba(8,202,74,0.16), transparent 55%),
     var(--ana-ink);
 }
-.logo-mark { width: 84px; height: 84px; margin-bottom: 8px; filter: drop-shadow(0 0 28px rgba(8,202,74,0.45)); }
+.logo-mark { width: 64px; height: 64px; margin-bottom: 4px; filter: drop-shadow(0 0 28px rgba(8,202,74,0.45)); }
 .brand h1 {
-  font-size: clamp(38px, 8vw, 68px); font-weight: 900; margin: 6px 0; letter-spacing: -0.02em; color: #fff;
+  font-size: clamp(32px, 6vw, 52px); font-weight: 900; margin: 4px 0; letter-spacing: -0.02em; color: #fff;
 }
 .brand.small h1 { font-size: clamp(30px, 6vw, 46px); }
 .brand h1 .accent { color: var(--ana-green); }
@@ -135,3 +135,25 @@ html, body {
 .btn-play:hover { background: #22e05f; }
 .btn-play:active { transform: translateY(2px); }
 .hint { font-size: 11px; color: var(--text-dim); text-align: center; margin-top: 6px; }
+
+/* ---------- Rules / win conditions on join screen ---------- */
+.join-row { display: flex; gap: 22px; align-items: stretch; justify-content: center; flex-wrap: wrap; max-width: 1100px; }
+.rules-card {
+  display: flex; gap: 22px; flex: 1 1 560px; max-width: 700px; text-align: left;
+  background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 18px; padding: 22px 24px;
+  box-shadow: 0 14px 48px rgba(0,0,0,0.6);
+}
+.rules-col { flex: 1; min-width: 0; }
+.rules-title { font-weight: 800; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ana-green); margin-bottom: 10px; }
+.rules-card ul, .rules-card ol { margin: 0; padding: 0; list-style: none; font-size: 13px; line-height: 1.5; color: var(--text); }
+.rules-card li { margin-bottom: 8px; }
+.rules-card li b { color: #fff; }
+.win-steps li { display: flex; gap: 8px; align-items: flex-start; }
+.win-steps li > span:last-child { flex: 1; }
+.chip { white-space: nowrap; }
+.step { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--ana-green); color: var(--ana-ink); font-weight: 900; font-size: 11px; display: inline-flex; align-items: center; justify-content: center; margin-top: 1px; }
+.chip { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 800; color: var(--ana-ink); background: var(--ana-mint); vertical-align: 1px; }
+.chip.green { background: var(--ana-green); }
+.rules-foot { margin-top: 8px; font-size: 11px; color: var(--text-dim); }
+.join-card { flex: 0 0 320px; align-self: flex-start; }
+@media (max-width: 760px) { .rules-card { flex-direction: column; } .overlay { justify-content: flex-start; overflow-y: auto; padding-top: 32px; } }
