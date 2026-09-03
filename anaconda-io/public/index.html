@@ -3,90 +3,84 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Anaconda AI Factory</title>
+<title>Anacondae — Anaconda AI Factory</title>
 <link rel="icon" href="assets/brands/anaconda-mark.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&family=Inter:ital,wght@0,400;0,500;0,600;1,400&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <canvas id="game"></canvas>
   <div id="flash"></div>
 
-  <!-- HUD: two numbers first; the rest reveals when relevant -->
   <div id="hud" class="hidden">
-    <div id="stats" class="panel">
-      <div class="stat primary"><span class="stat-label">In production</span><span id="stat-projects">0</span></div>
-      <div class="stat"><span class="stat-label">Length</span><span id="stat-length">0</span></div>
-      <div class="stat reveal"><span class="stat-label">Tokens routed</span><span id="stat-tokens">0B</span></div>
-      <div class="stat reveal"><span class="stat-label">Floor</span><span id="stat-floor">0</span></div>
+    <div id="stats">
+      <div class="stat"><span class="eyebrow">In production</span><span id="stat-projects" class="num green">0</span></div>
+      <div class="stat"><span class="eyebrow">Length</span><span id="stat-length" class="num">0</span></div>
+      <div class="stat reveal" id="stat-floor-wrap"><span class="eyebrow">Floor</span><span id="stat-floor" class="num">0</span></div>
     </div>
-    <div id="funding" class="panel reveal">
-      <div id="funding-label">Next: <b id="funding-deal">—</b></div>
-      <div id="funding-bar"><div id="funding-fill"></div><div id="funding-clock"></div></div>
+
+    <div id="funding" class="reveal">
+      <div class="funding-row"><span id="funding-label" class="eyebrow">NEXT · OUTERBOUNDS</span><span id="funding-pct" class="mono">0%</span></div>
+      <div id="funding-bar"><div id="funding-fill"></div></div>
       <div id="acq-chips"></div>
     </div>
-    <div id="leaderboard" class="panel reveal">
-      <div id="hall-of-fame"><div class="panel-title">Trillion-Token Scale</div><ol id="hall-of-fame-list"></ol></div>
-      <div class="panel-title">In production</div>
+
+    <div id="leaderboard" class="card reveal">
+      <div class="eyebrow">In production</div>
       <ol id="leaderboard-list"></ol>
+      <div id="hall-of-fame" class="hidden"><div class="eyebrow">Trillion-Token Scale</div><ol id="hall-of-fame-list"></ol></div>
     </div>
-    <div id="feed" class="reveal"></div>
+
+    <canvas id="minimap" class="reveal"></canvas>
+    <div id="feed"></div>
     <div id="toasts"></div>
     <div id="hint"></div>
-    <div id="bill" class="panel hidden"></div>
-    <canvas id="minimap" class="reveal"></canvas>
+    <div id="build-hint" class="hidden"></div>
+    <div id="footer"><img src="assets/brands/anaconda-mark.png" alt="" /><span>ANACONDA</span></div>
+    <button id="mute" title="Sound">SOUND ON</button>
   </div>
+  <div id="hero"></div>
 
-  <!-- Start: no name gate -->
+  <!-- C1 start -->
   <div id="join-screen" class="overlay">
-    <div class="brand">
+    <div class="start-panel">
       <img src="assets/brands/anaconda-mark.png" class="logo-mark" alt="Anaconda" />
-      <h1>ANACONDA <span class="accent">AI FACTORY</span></h1>
-      <p class="tagline">You run an AI team. Eat components, claim floor, adopt Anaconda — and get your projects into production. <b>88% never make it.</b></p>
+      <h1 class="wordmark">ANACOND<span class="accent">AE</span></h1>
+      <p class="tagline">Your snake is your stack. Grow it, claim your floor,<br/>and reach trillion-token scale.</p>
+      <button id="play-btn" class="btn-primary">PLAY</button>
+      <div class="controls">◀ ▶ steer &nbsp;·&nbsp; Space boost &nbsp;·&nbsp; Enter to play</div>
+      <details class="how">
+        <summary>How it works</summary>
+        <ol>
+          <li><b>Eat components to grow.</b> Some are poisoned — safe inside your floor, they bite outside.</li>
+          <li><b>Leave your floor and loop back to claim land.</b> Inside you're safe. Outside you're exposed.</li>
+          <li><b>Anaconda capabilities land as everyone plays.</b> Adopt each one and your factory gets stronger.</li>
+        </ol>
+      </details>
     </div>
-    <button id="play-btn" class="btn-play big-play">PLAY</button>
-    <div class="hint">◀ ▶ steer · ▲ boost · Enter to play</div>
-    <details class="rules-details">
-      <summary>How it works</summary>
-      <div class="rules-card">
-        <div class="rules-col">
-          <div class="rules-title">Play</div>
-          <ul>
-            <li>Eat ◆ ▤ ⬡ ◎ components to grow. Some are poisoned — a hit sheds a quarter of your length.</li>
-            <li>Leave your floor, loop back onto it: everything inside is yours, including rivals' floor and their buildings.</li>
-            <li>On your floor you're protected and boost is free. Off it you're exposed: your tail, the border, other snakes, and anyone cutting your trail are lethal.</li>
-          </ul>
-        </div>
-        <div class="rules-col">
-          <div class="rules-title">Adopt</div>
-          <ul>
-            <li>As the server plays, Anaconda acquires <b>Enkrypt AI</b>, <b>Kilo</b> and <b>Outerbounds</b>. Enclose a landmark to adopt the capability — for good.</li>
-            <li><b>Security & Guardrails</b>: see poison. <b>AI Workspaces</b>: ×2 growth, half-price boost, agents. <b>AI Orchestration</b>: R to retarget, protected trail.</li>
-            <li>All three: your floor builds the September products and ships projects on its own. Route 1T tokens for the Hall of Fame.</li>
-          </ul>
-        </div>
-      </div>
-    </details>
   </div>
 
-  <!-- Death = conversion moment -->
+  <!-- C2 death -->
   <div id="death-screen" class="overlay hidden">
-    <div class="brand small">
-      <h1 id="death-title">Collision</h1>
-      <p id="death-line" class="tagline"></p>
-    </div>
     <div class="death-card">
-      <div class="death-headline">You put <b id="d-projects">0</b> AI projects into production.</div>
-      <div class="death-sub">Routed <b id="d-tokens">0B</b> tokens · <span id="d-caps">adopted nothing yet</span> · <span id="d-time">0:00</span></div>
-      <div id="d-pitch" class="death-pitch"></div>
-      <canvas id="share-card" width="600" height="315"></canvas>
-      <div id="name-row">
-        <input id="name-input" maxlength="18" placeholder="claim your spot on the board" autocomplete="off" />
-        <button id="name-btn" class="btn-small">Save</button>
+      <div class="eyebrow red" id="death-title">Collision</div>
+      <div class="death-quote" id="death-line"></div>
+      <h2 class="death-headline">You put <span id="d-projects">0</span> AI projects into production.</h2>
+      <div class="death-sub mono"><span id="d-rank"></span>Routed <span id="d-tokens">0B</span> tokens · <span id="d-caps">adopted nothing yet</span> · <span id="d-time">0:00</span></div>
+      <div id="d-built" class="death-sub mono hidden"></div>
+      <p id="d-pitch" class="death-pitch"></p>
+      <div class="death-form">
+        <label class="eyebrow">Your name</label>
+        <input id="name-input" maxlength="18" autocomplete="off" />
+        <label class="eyebrow">Skin</label>
+        <div id="skins"></div>
       </div>
+      <canvas id="share-card" width="1200" height="630" class="hidden"></canvas>
       <div class="death-actions">
-        <button id="respawn-btn" class="btn-play" disabled>PLAY AGAIN</button>
-        <a id="cta-btn" class="btn-cta" href="https://www.anaconda.com/platform" target="_blank" rel="noopener">See how Anaconda Platform does this for real →</a>
-        <button id="share-btn" class="btn-small">Download share card</button>
+        <button id="respawn-btn" class="btn-primary" disabled>Play again</button>
+        <a id="cta-btn" class="btn-ghost" href="https://www.anaconda.com/platform" target="_blank" rel="noopener">See how Anaconda Platform does this for real →</a>
+        <button id="share-btn" class="btn-ghost">Share</button>
       </div>
     </div>
   </div>

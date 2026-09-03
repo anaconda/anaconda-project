@@ -55,7 +55,7 @@ const PROJECT_TOKENS = 25;       // B tokens routed per project
 const GRID_DIM = Math.round((WORLD_RADIUS * 2) / CELL_SIZE);
 const CELL_COUNT = GRID_DIM * GRID_DIM;
 
-const COLORS = ['#08CA4A', '#068F35', '#5EE08A', '#F8F674', '#FF7F00', '#6A9E8B', '#3D7EA6', '#8E6BC7', '#E0574C', '#C9CDD5'];
+const COLORS = ['#08CA4A', '#9CF215', '#C1FF60', '#068C35', '#6D5BF6', '#8A7CF8', '#F0EFFE']; // B10 skins; yellow is reserved as the accent
 
 // ------------------------------- Content --------------------------------------
 const COMPONENT_TYPES = {
@@ -64,18 +64,46 @@ const COMPONENT_TYPES = {
   model:   { grow: 2, weight: 0.10 },
   mcp:     { grow: 1, weight: 0.18 },
 };
-const POISON_LABEL = { package: 'typosquatted package', dataset: 'poisoned dataset', model: 'tampered model', mcp: 'rogue MCP server' };
+const THREATS = {
+  package: [
+    ['Typosquat', 'typosquatted package · requets, not requests'],
+    ['Known CVE', 'known CVE in urllib3 1.26.4 · CVSS 9.1'],
+    ['Malicious install script', 'malicious setup.py · ran on install'],
+    ['Dependency confusion', 'dependency confusion · public package shadowed your internal one'],
+    ['Leaked secret', 'hard-coded credential shipped in the package'],
+    ['Hijacked maintainer', 'maintainer account hijacked · new release is malware'],
+  ],
+  model: [
+    ['Unsafe serialization', 'pickle payload in model weights · executed on load'],
+    ['Backdoored weights', 'trojaned model · hidden trigger phrase'],
+    ['Wrong provenance', 'no provenance · weights don’t match the model card'],
+    ['Licence trap', 'restricted licence · not cleared for commercial use'],
+  ],
+  dataset: [
+    ['Prompt injection', 'prompt injection in training rows'],
+    ['Data poisoning', 'poisoned labels · 3% flipped'],
+    ['PII leak', 'unredacted PII in the dataset'],
+    ['Schema drift', 'schema drift · pipeline silently broke'],
+  ],
+  mcp: [
+    ['Rogue server', 'rogue MCP server · exfiltrating context'],
+    ['Tool poisoning', 'tool description carries hidden instructions'],
+    ['Over-permissioned', 'MCP granted write access it never needed'],
+    ['Unsafe tool call', 'agent called a destructive tool · guardrail absent'],
+  ],
+};
+const pickThreat = (type) => { const l = THREATS[type]; return l[Math.floor(Math.random() * l.length)]; };
 
 // Acquisitions in funding order.
 const ACQUISITIONS = [
-  { key: 'enkrypt',     name: 'Enkrypt AI',  color: '#FF7F00', capability: 'AI Security & Guardrails', does: 'Poisoned components are now visible to you. First bad hit per life costs nothing.' },
-  { key: 'kilo',        name: 'Kilo',        color: '#F8F674', capability: 'AI Workspaces',            does: 'Components grow you ×2, boost costs half, two agents collect for you.' },
-  { key: 'outerbounds', name: 'Outerbounds', color: '#6A9E8B', capability: 'AI Orchestration',         does: 'Press R to retarget anywhere and keep your land. Your trail is protected too.' },
+  { key: 'outerbounds', name: 'Outerbounds', color: '#08CA4A', capability: 'AI Orchestration',         does: 'You adopted AI Orchestration — run your factory wherever you need it, and take your governance with you. R retargets once per life; loops now close on any of your land.' },
+  { key: 'kilo',        name: 'Kilo',        color: '#FFBA06', capability: 'AI Workspaces',            does: 'You adopted AI Workspaces — components arrive pre-configured, boost costs half, your agents collect for you.' },
+  { key: 'enkrypt',     name: 'Enkrypt AI',  color: '#6D5BF6', capability: 'AI Security & Guardrails', does: 'You adopted AI Security & Guardrails — the whole ecosystem is red-teamed for you now.' },
 ];
-const CAPABILITY_CLOCK_MS = 100000; // clock fallback: a deal lands at min(bar full, 100s since last)
+const CAPABILITY_CLOCK_MS = 110000; // clock fallback: a deal lands at min(bar full, 100s since last)
 const EMBARGO = process.env.EMBARGO === '1'; // pre-launch builds show only Anaconda CLI
 const GUEST = () => 'builder-' + Math.floor(1000 + Math.random() * 9000);
-const BOT_NAMES = ['priya_ml', 'data_team_3', 'ops-nightly', 'jules.dev', 'mlops_sam', 'quant-anna', 'devrel_tom', 'infra_kai', 'nadia.ai', 'platform-eng'];
+const BOT_NAMES = ['priya_ml', 'data_team_3', 'ops-nightly', 'copilot-fork', 'sre-batch', 'jules.dev', 'mlops_sam', 'quant-anna', 'infra_kai', 'platform-eng'];
 // Landmark sites: 120° apart at 55% radius.
 const SITE_ANGLES = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6];
 ACQUISITIONS.forEach((a, i) => {
@@ -98,7 +126,7 @@ const DEATH_COPY = {
   tail:   { title: 'Innovation bottleneck', line: 'Our LLM stack is held together with duct tape.' },
   border: { title: 'Out of bounds',          line: 'We need cloud, on-prem and sovereign flexibility.' },
   snake:  { title: 'Collision',              line: 'Every team is assembling its own AI stack.' },
-  cut:    { title: 'Trail cut',              line: 'We left the perimeter and something got through.' },
+  cut:    { title: 'Collision',              line: 'Every team is assembling its own AI stack.' },
 };
 const SETBACK_COPY = {
   package: 'We’ve had open-source packages slip in that weren’t vetted.',
@@ -155,7 +183,7 @@ function getOrCreatePlayer(clientKey, name, color, isBot) {
   if (clientKey && players.has(clientKey)) { const p = players.get(clientKey); if (name) p.name = name; if (color) p.color = color; codeToColor.set(p.code, p.color); return p; }
   const p = {
     clientKey: clientKey || ('anon_' + Math.random().toString(36).slice(2)), name, color, isBot: !!isBot,
-    code: nextOwnerCode++, capabilities: new Set(), tokensRouted: 0, tokensBurned: 0, shipped: 0, trillion: false, projects: 0, firstSeen: Date.now(),
+    code: nextOwnerCode++, capabilities: new Set(), tokensRouted: 0, tokensBurned: 0, shipped: 0, trillion: false, projects: 0, firstSeen: Date.now(), home: null, padCells: [], buildings: [],
   };
   codeToColor.set(p.code, p.color);
   players.set(p.clientKey, p);
@@ -175,7 +203,8 @@ function spawnComponent(at, opts = {}) {
   const p = at || randomPointInWorld();
   const type = opts.type || pickType();
   const poisoned = opts.curated || opts.clean ? false : Math.random() < POISON_RATE;
-  components.set(id, { id, x: p.x, y: p.y, type, poisoned, curated: !!opts.curated });
+  const threat = poisoned ? pickThreat(type) : null;
+  components.set(id, { id, x: p.x, y: p.y, type, poisoned, curated: !!opts.curated, threat: threat ? threat[0] : null, threatLine: threat ? threat[1] : null });
   return id;
 }
 function ensureComponents() { if (components.size < COMPONENT_TARGET) spawnComponent(); }
@@ -187,20 +216,20 @@ function clearPoisonNear(x, y, r) {
 // ------------------------------- Territory ------------------------------------
 function ownedCount(code) { let n = 0; for (let i = 0; i < CELL_COUNT; i++) if (gridOwnerCode[i] === code) n++; return n; }
 function emitCells(changed, color) { if (changed.length) io.emit('territoryUpdate', { cells: changed.map(idx => ({ idx, color })) }); }
-function clearLand(code) {
+const padLock = new Int32Array(CELL_COUNT); // pad cells are permanent and unclaimable
+function clearLand(code, keepPad) {
   const changed = [];
-  for (let i = 0; i < CELL_COUNT; i++) if (gridOwnerCode[i] === code) { gridOwnerCode[i] = 0; changed.push(i); }
+  for (let i = 0; i < CELL_COUNT; i++) if (gridOwnerCode[i] === code && !(keepPad && padLock[i] === code)) { gridOwnerCode[i] = 0; changed.push(i); }
   emitCells(changed, null);
 }
+function padCellsAround(x, y) {
+  const { col: c0, row: r0 } = worldToCell(x, y), h = (HOME_PLOT - 1) / 2, out = [];
+  for (let dr = -h; dr <= h; dr++) for (let dc = -h; dc <= h; dc++) { const col = c0 + dc, row = r0 + dr; if (col >= 0 && col < GRID_DIM && row >= 0 && row < GRID_DIM) out.push(cellIndex(col, row)); }
+  return out;
+}
 function seedHomePlot(snake) {
-  const { col: c0, row: r0 } = worldToCell(snake.x, snake.y);
-  const h = (HOME_PLOT - 1) / 2, changed = [];
-  for (let dr = -h; dr <= h; dr++) for (let dc = -h; dc <= h; dc++) {
-    const col = c0 + dc, row = r0 + dr;
-    if (col < 0 || col >= GRID_DIM || row < 0 || row >= GRID_DIM) continue;
-    const idx = cellIndex(col, row);
-    if (gridOwnerCode[idx] !== snake.code) { gridOwnerCode[idx] = snake.code; changed.push(idx); }
-  }
+  const changed = [];
+  for (const idx of snake.player.padCells) if (gridOwnerCode[idx] !== snake.code) { gridOwnerCode[idx] = snake.code; changed.push(idx); }
   emitCells(changed, snake.color);
 }
 function floodClaim(snake) {
@@ -218,6 +247,7 @@ function floodClaim(snake) {
   }
   const changed = [];
   for (let i = 0; i < CELL_COUNT; i++) {
+    if (padLock[i] !== 0 && padLock[i] !== snake.code) continue; // someone's Factory pad: untouchable
     if ((blocked[i] || !outside[i]) && gridOwnerCode[i] !== snake.code) { gridOwnerCode[i] = snake.code; changed.push(i); }
   }
   snake.trailCells.length = 0;
@@ -277,12 +307,6 @@ function curatedSpawns() {
 }
 
 // ------------------------------- Products / shipping --------------------------
-function standingProducts(snake) {
-  if (!trustedFoundation(snake.player)) return [];
-  const out = [];
-  for (const p of PRODUCTS) { if (snake.floor >= p.footprint) out.push(p.key); else break; }
-  return out;
-}
 const has = (list, k) => list.includes(k);
 
 // ------------------------------- Snake ----------------------------------------
@@ -291,7 +315,8 @@ class Snake {
     this.id = id; this.name = (name || GUEST()).slice(0, 18);
     this.color = color || COLORS[Math.floor(Math.random() * COLORS.length)];
     this.isBot = !!isBot; this.alive = true; this.boosting = false;
-    let spawn = findSafeSpawn();
+    const prior = clientKey && players.get(clientKey);
+    let spawn = prior && prior.home ? { x: prior.home.x, y: prior.home.y } : findSafeSpawn();
     if (this.isBot) { const h = nearestFreshHuman(); if (h) { for (let i = 0; i < 12; i++) { const a = rand(0, Math.PI * 2), r = rand(500, 900), c = { x: h.x + Math.cos(a) * r, y: h.y + Math.sin(a) * r }; if (c.x * c.x + c.y * c.y < (WORLD_RADIUS * 0.85) ** 2) { spawn = c; break; } } this.followTarget = h.id; this.followUntil = Date.now() + 60000; } }
     this.x = spawn.x; this.y = spawn.y;
     this.player = getOrCreatePlayer(clientKey, this.name, this.color, this.isBot);
@@ -299,21 +324,27 @@ class Snake {
     this.angle = rand(0, Math.PI * 2); this.targetAngle = this.angle;
     this.length = BASE_LENGTH; this.points = [{ x: this.x, y: this.y }];
     this.grace = SPAWN_GRACE_TICKS; this.shield = SPAWN_GRACE_TICKS;
-    this.datasets = 0; this.captures = 0; this.floor = 0; this.products = []; this.pipeline = 0; this.prevProducts = [];
+    this.datasets = 0; this.captures = 0; this.floor = 0; this.pipeline = 0; this.prevProducts = [];
     this.spawnedAt = Date.now(); this.followTarget = null; this.followUntil = 0; this.hesitate = 0;
     this.enkryptFreeHit = true; this.retargetUsed = false;
     this.inTerritory = true; this.trailCells = []; this.orbs = [];
     this.botTimer = 0; this.loopTicks = 0; this.loopDir = 1;
     this.deathReason = null;
+    if (!this.player.home) {
+      this.player.home = { x: this.x, y: this.y };
+      this.player.padCells = padCellsAround(this.x, this.y);
+      for (const idx of this.player.padCells) if (padLock[idx] === 0) padLock[idx] = this.code;
+    }
+    this.home = this.player.home;
     clearPoisonNear(this.x, this.y, SPAWN_POISON_CLEAR);
     if (!this.isBot) spawnKit(this);
     seedHomePlot(this);
     this.floor = ownedCount(this.code);
-    this.home = { x: this.x, y: this.y };
   }
   get headRadius() { return headRadius(this.length); }
+  get products() { return this.player.buildings; }
   desiredPoints() { return Math.max(4, Math.floor(this.length)); }
-  isProtected() { return this.inTerritory || (hasCap(this.player, 'outerbounds') && this.trailCells.length > 0); }
+  isProtected() { return this.inTerritory || (hasCap(this.player, 'enkrypt') && this.trailCells.length > 0); }
 
   step() {
     if (!this.alive) return;
@@ -340,7 +371,9 @@ class Snake {
   updateTerritory() {
     const { col, row } = worldToCell(this.x, this.y), idx = cellIndex(col, row);
     if (gridOwnerCode[idx] === this.code) {
-      if (this.trailCells.length > 0) floodClaim(this);
+      const canClose = hasCap(this.player, 'outerbounds') || padLock[idx] === this.code;
+      if (this.trailCells.length > 0 && canClose) floodClaim(this);
+      else if (this.trailCells.length > 0) { const last = this.trailCells[this.trailCells.length - 1]; if (last !== idx) this.trailCells.push(idx); }
       this.inTerritory = true;
     } else {
       this.inTerritory = false;
@@ -356,7 +389,7 @@ class Snake {
     }
   }
   grow(amount) { this.length = Math.min(MAX_LENGTH, this.length + amount); }
-  setback(type) {
+  setback(type, c) {
     const lose = Math.max(SETBACK_MIN, Math.floor(this.length * SETBACK_FRACTION));
     const actual = Math.min(lose, Math.max(0, this.length - SETBACK_MIN));
     this.length -= actual;
@@ -364,24 +397,24 @@ class Snake {
       const p = this.points[Math.min(this.points.length - 1, this.points.length - 1 - i)] || { x: this.x, y: this.y };
       spawnComponent({ x: p.x + rand(-40, 40), y: p.y + rand(-40, 40) }, { clean: true, type: 'package' });
     }
-    io.to(this.id).emit('setback', { type, label: POISON_LABEL[type], lost: actual, line: SETBACK_COPY[type] });
+    io.to(this.id).emit('setback', { type, threat: c.threat, label: c.threatLine, lost: actual, line: SETBACK_COPY[type] });
   }
   die(reason, killer) {
     if (!this.alive) return;
     this.alive = false; this.deathReason = reason;
     if (!this.isBot) { analytics.deaths += 1; analytics.runSeconds.push(Math.round((Date.now() - this.spawnedAt) / 1000)); if (this.player.capabilities.size) analytics.adoptedAny = (analytics.adoptedAny || 0) + 1; }
     for (let i = 0; i < this.points.length; i += 3) { const p = this.points[i]; spawnComponent({ x: p.x + rand(-8, 8), y: p.y + rand(-8, 8) }, { clean: true }); }
-    clearLand(this.code); // land and buildings are lost; acquisitions and tokens stay on the player
+    clearLand(this.code, true); // land is lost; the pad, its buildings, acquisitions and tokens stay
     const p = this.player, caps = [...p.capabilities];
     const lines = {
       kilo: 'With Kilo your boosts cost half. Imagine that on your real token bill.',
-      enkrypt: 'With Guardrails you saw the poison coming. Most teams never do.',
-      outerbounds: 'With Orchestration you moved your factory without losing it. Build once, run anywhere.',
+      enkrypt: 'You could see the poison. Most teams can’t.',
+      outerbounds: 'You moved your whole factory and lost nothing. That’s orchestration.',
     };
-    const pitch = caps.length ? lines[caps[caps.length - 1]] : '88% of AI projects never reach production. Anaconda is how the other 12% get there.';
+    const pitch = caps.length ? lines[caps[caps.length - 1]] : 'You built fast. 88% of AI projects still never reach production.';
     io.to(this.id).emit('died', {
       reason, killer: killer || null, copy: DEATH_COPY[reason], respawnMs: RESPAWN_MS,
-      summary: { projects: p.projects, tokens: Math.round(p.tokensRouted), caps: caps.map(k => (ACQUISITIONS.find(a => a.key === k) || {}).capability), products: this.products.slice(), seconds: Math.round((Date.now() - this.spawnedAt) / 1000), pitch, guest: /^builder-\d+$/.test(this.name) },
+      summary: { projects: p.projects, tokens: Math.round(p.tokensRouted), caps: caps.map(k => (ACQUISITIONS.find(a => a.key === k) || {}).capability), products: this.player.buildings.slice(), seconds: Math.round((Date.now() - this.spawnedAt) / 1000), pitch, guest: /^builder-\d+$/.test(this.name) },
     });
   }
   retarget() {
@@ -389,7 +422,7 @@ class Snake {
     this.retargetUsed = true;
     const p = findSafeSpawn();
     this.x = p.x; this.y = p.y; this.points = [{ x: p.x, y: p.y }]; this.trailCells.length = 0;
-    this.shield = TICK_RATE; seedHomePlot(this); this.floor = ownedCount(this.code);
+    this.shield = TICK_RATE; this.floor = ownedCount(this.code);
     io.to(this.id).emit('retargeted', {});
     return true;
   }
@@ -452,7 +485,7 @@ function nearestFreshHuman() {
   return best;
 }
 function createSnake(id, name, color, isBot, clientKey) { const s = new Snake(id, name, color, isBot, clientKey); snakes.set(id, s); return s; }
-function removeSnake(id) { const s = snakes.get(id); if (!s) return; if (s.alive) clearLand(s.code); if (s.isBot) players.delete(s.player.clientKey); snakes.delete(id); }
+function removeSnake(id) { const s = snakes.get(id); if (!s) return; if (s.alive) clearLand(s.code, !s.isBot); if (s.isBot) { clearLand(s.code, false); for (const i of s.player.padCells) if (padLock[i] === s.code) padLock[i] = 0; players.delete(s.player.clientKey); } snakes.delete(id); }
 
 let botSeq = 0;
 function maintainBots() {
@@ -465,22 +498,20 @@ function maintainBots() {
 // ------------------------------- Pickups --------------------------------------
 function collect(s, c, viaOrb) {
   components.delete(c.id);
-  const inLand = s.inTerritory;
   let poisoned = c.poisoned;
-  if (poisoned && inLand && has(s.products, 'pkgintel')) { poisoned = false; io.to(s.id).emit('blocked', { label: POISON_LABEL[c.type] }); }
+  if (poisoned && s.inTerritory) { poisoned = false; io.to(s.id).emit('vetted', { threat: c.threat }); } // your floor is main: secure by default
   if (poisoned) {
     if (s.grace > 0 || s.length < BASE_LENGTH + 3) return;
-    if (hasCap(s.player, 'enkrypt') && s.enkryptFreeHit) { s.enkryptFreeHit = false; io.to(s.id).emit('blocked', { label: POISON_LABEL[c.type], guard: true }); return; }
-    s.setback(c.type); return;
+    if (hasCap(s.player, 'enkrypt') && s.enkryptFreeHit) { s.enkryptFreeHit = false; io.to(s.id).emit('blocked', { threat: c.threat, label: c.threatLine }); return; }
+    s.setback(c.type, c); return;
   }
+  s.player.tokensRouted += 1;
   let grow = COMPONENT_TYPES[c.type].grow;
   if (hasCap(s.player, 'kilo')) grow *= 2;
   if (viaOrb && has(s.products, 'desktop')) grow *= 2;
   s.grow(grow);
   if (c.type === 'dataset') s.datasets = Math.min(8, s.datasets + 1);
   addFunding(s.player, 1);
-  s.pipeline += 1 + 0.5 * s.products.length;
-  while (s.pipeline >= PROJECT_COMPONENTS) { s.pipeline -= PROJECT_COMPONENTS; shipProject(s, 1); }
   io.to(s.id).emit('ate', { t: c.type, grow });
 }
 function pickups() {
@@ -536,17 +567,19 @@ function collisions() {
       if (kills.has(a.id)) break;
     }
   }
-  for (const [id, k] of kills) { const s = snakes.get(id); if (s) s.die(k.reason, k.killer); }
+  for (const [id, k] of kills) { const s = snakes.get(id); if (s) { s.die(k.reason, k.killer); if (k.killer) for (const o of alive) if (o.name === k.killer && !o.isBot) io.to(o.id).emit('gotcha', { victim: s.name }); } }
 }
 
 // ------------------------------- Shipping / score -----------------------------
 // Score = AI projects in production. Eating components feeds the pipeline; standing
 // buildings ship on their own every 5s. Each project routes tokens.
-function shipProject(s, n) {
+function shipProject(s, order, prodKey) {
+  const p = PRODUCTS.find(pp => pp.key === prodKey);
+  const floorScale = Math.min(1, s.floor / (p ? p.footprint : 40)); // shipping rate scales with current floor
   const mult = (1 + 0.25 * s.datasets) * (has(s.products, 'platform') ? 2 : 1);
-  const tokens = PROJECT_TOKENS * n * mult;
-  s.player.projects += n; s.player.tokensRouted += tokens; s.player.shipped += n;
-  io.emit('shipment', { id: s.id, from: s.home, tokens, projects: n, color: s.color });
+  const tokens = 10 * order * mult * floorScale;
+  s.player.projects += 1; s.player.tokensRouted += tokens; s.player.shipped += 1;
+  io.emit('shipment', { id: s.id, from: s.home, tokens, order, key: prodKey, color: p ? p.color : s.color });
   if (!s.player.trillion && s.player.tokensRouted >= TRILLION) {
     s.player.trillion = true;
     hallOfFame.unshift({ name: s.name, at: Date.now() }); if (hallOfFame.length > 20) hallOfFame.length = 20;
@@ -554,12 +587,20 @@ function shipProject(s, n) {
   }
 }
 function shipping() {
-  for (const s of snakes.values()) if (s.alive && s.products.length) shipProject(s, s.products.length);
+  for (const s of snakes.values()) if (s.alive) s.products.forEach((k, i) => shipProject(s, i + 1, k));
 }
-function announceBuildings(s) {
-  for (const k of s.products) if (!s.prevProducts.includes(k)) { const p = PRODUCTS.find(pp => pp.key === k); io.to(s.id).emit('building', { key: k, name: p.name, does: p.does, color: p.color }); pushFeed(`${s.name} built ${p.name}`); }
-  s.prevProducts = s.products.slice();
+// B to build: needs Trusted Foundation and floor >= next footprint (checked at build time only).
+function tryBuild(s) {
+  if (!s.alive) return;
+  if (!trustedFoundation(s.player)) { io.to(s.id).emit('buildFail', { why: 'Adopt all three capabilities first.' }); return; }
+  const next = PRODUCTS[s.player.buildings.length];
+  if (!next) { io.to(s.id).emit('buildFail', { why: 'Your Factory is complete.' }); return; }
+  if (s.floor < next.footprint) { io.to(s.id).emit('buildFail', { why: `${next.name} needs ${next.footprint} floor — you have ${s.floor}.` }); return; }
+  s.player.buildings.push(next.key);
+  io.to(s.id).emit('building', { key: next.key, name: next.name, does: next.does, color: next.color });
+  pushFeed(`${s.name} built ${next.name}`);
 }
+
 function tokenBill() {
   const rows = [...players.values()].filter(p => !p.isBot && p.tokensRouted > 0)
     .map(p => ({ name: p.name, shipped: p.shipped, burned: Math.round(p.tokensBurned), routed: Math.round(p.tokensRouted), eff: p.tokensRouted / Math.max(1, p.tokensBurned) }))
@@ -573,7 +614,7 @@ function gameTick() {
   for (const s of snakes.values()) { if (s.isBot && s.alive) s.botAI(); s.step(); }
   pickups();
   collisions();
-  for (const s of snakes.values()) if (s.alive) { s.floor = ownedCount(s.code); s.products = standingProducts(s); announceBuildings(s); }
+  for (const s of snakes.values()) if (s.alive) s.floor = ownedCount(s.code);
   fundingClock();
   if (tick % 10 === 0) densityAroundHumans();
   ensureComponents();
@@ -589,11 +630,11 @@ function broadcast() {
     id: s.id, name: s.name, color: s.color, alive: s.alive, length: Math.round(s.length), headRadius: s.headRadius,
     points: s.points, shield: s.shield > 0, inTerritory: s.inTerritory,
     trail: s.trailCells.length ? s.trailCells.map(cellCenter) : [],
-    orbs: s.orbs, home: s.home, floor: s.floor, products: s.products, datasets: s.datasets,
+    orbs: s.orbs, home: s.home, floor: s.floor, products: s.products, datasets: s.datasets, nextFootprint: (PRODUCTS[s.player.buildings.length] || {}).footprint || null, nextProduct: (PRODUCTS[s.player.buildings.length] || {}).name || null,
     caps: [...s.player.capabilities], crown: trustedFoundation(s.player),
     tokens: Math.round(s.player.tokensRouted), burned: Math.round(s.player.tokensBurned), retargetUsed: s.retargetUsed, projects: s.player.projects, age: Date.now() - s.spawnedAt,
   }));
-  const compPayload = [...components.values()].map(c => ({ id: c.id, x: c.x, y: c.y, t: c.type, p: c.poisoned, k: c.curated }));
+  const compPayload = [...components.values()].map(c => ({ id: c.id, x: c.x, y: c.y, t: c.type, p: c.poisoned, k: c.curated, th: c.threat }));
   const leaderboard = [...snakes.values()].filter(s => s.alive)
     .sort((a, b) => (b.player.projects - a.player.projects) || ((b.player.tokensRouted / Math.max(1, b.player.tokensBurned)) - (a.player.tokensRouted / Math.max(1, a.player.tokensBurned))) || (b.length - a.length))
     .slice(0, 8).map(s => ({ name: s.name, projects: s.player.projects, tokens: Math.round(s.player.tokensRouted), crown: trustedFoundation(s.player), caps: s.player.capabilities.size }));
@@ -617,6 +658,7 @@ function welcome(socket, s) {
     id: socket.id, worldRadius: WORLD_RADIUS, you: { x: s.x, y: s.y, angle: s.angle, color: s.color, name: s.name },
     territory: { cellSize: CELL_SIZE, gridDim: GRID_DIM, cells: territorySnapshot() },
     products: PRODUCTS.map(p => ({ key: p.key, name: p.name, footprint: p.footprint, color: p.color })),
+    colors: COLORS,
     acquisitions: ACQUISITIONS.map(a => ({ key: a.key, name: a.name, color: a.color, capability: a.capability, does: a.does, site: a.site })),
     embargo: EMBARGO, cta: process.env.CTA_URL || 'https://www.anaconda.com/platform',
     feed,
@@ -646,6 +688,8 @@ io.on('connection', (socket) => {
     s.boosting = !!boosting;
   });
   socket.on('retarget', () => { const s = snakes.get(socket.id); if (s) s.retarget(); });
+  socket.on('build', () => { const s = snakes.get(socket.id); if (s) tryBuild(s); });
+  socket.on('setSkin', ({ color: c } = {}) => { const s = snakes.get(socket.id); if (s && COLORS.includes(c)) { s.color = c; s.player.color = c; codeToColor.set(s.code, c); } });
   socket.on('setName', ({ name } = {}) => { const s = snakes.get(socket.id); const n = String(name || '').trim().slice(0, 18); if (!n) return; if (s) { s.name = n; s.player.name = n; } });
   socket.on('analytics', ({ event } = {}) => { if (typeof event === 'string' && event.length < 40) analytics[event] = (analytics[event] || 0) + 1; });
   socket.on('disconnect', () => removeSnake(socket.id));
