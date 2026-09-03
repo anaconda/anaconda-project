@@ -263,6 +263,10 @@ function drawSnake(s, isMe) {
 
   // head
   const head = pts[0], hx = W(head.x), hy = H(head.y);
+  if (s.shield) {
+    ctx.save(); ctx.beginPath(); ctx.arc(hx, hy, r * 2.2 + Math.sin(t * 3) * 2, 0, Math.PI * 2);
+    ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.strokeStyle = hexAlpha(ANA.mint, 0.8); ctx.stroke(); ctx.restore();
+  }
   const ang = pts.length > 1 ? Math.atan2(head.y - pts[1].y, head.x - pts[1].x) : 0;
   ctx.beginPath(); ctx.arc(hx, hy, r * 1.08, 0, Math.PI * 2); ctx.fillStyle = s.color; ctx.fill();
   ctx.lineWidth = Math.max(1.5, r * 0.14); ctx.strokeStyle = isMe ? '#fff' : 'rgba(0,0,0,0.5)'; ctx.stroke();

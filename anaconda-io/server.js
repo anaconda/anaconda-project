@@ -211,6 +211,29 @@ function randomPointInWorld(marginFactor = 0.98) {
   return { x: Math.cos(a) * r, y: Math.sin(a) * r };
 }
 
+const SPAWN_SAFE_DIST = 260;
+const SPAWN_SHIELD_TICKS = TICK_RATE * 2; // 2s of invulnerability after spawning
+function isSpawnSafe(x, y) {
+  const d2 = SPAWN_SAFE_DIST * SPAWN_SAFE_DIST;
+  for (const s of snakes.values()) {
+    if (!s.alive) continue;
+    for (let i = 0; i < s.points.length; i += 2) if (dist2(x, y, s.points[i].x, s.points[i].y) < d2) return false;
+    for (let i = 0; i < s.trailCells.length; i += 3) { const c = cellCenter(s.trailCells[i]); if (dist2(x, y, c.x, c.y) < d2) return false; }
+  }
+  return true;
+}
+function findSafeSpawn(preferred, jitter) {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const spread = jitter * (1 + attempt * 0.35);
+    const c = preferred
+      ? { x: preferred.x + rand(-spread, spread), y: preferred.y + rand(-spread, spread) }
+      : randomPointInWorld(0.55);
+    if (c.x * c.x + c.y * c.y > (WORLD_RADIUS * 0.9) ** 2) continue;
+    if (isSpawnSafe(c.x, c.y)) return c;
+  }
+  return preferred || randomPointInWorld(0.55);
+}
+
 function spawnDiamond(at, forceBrand) {
   const id = 'd' + (diamondSeq++);
   const p = at || randomPointInWorld();
@@ -263,9 +286,8 @@ class Snake {
     this.boosting = false;
     // Returning players respawn near their AI Factory; new players get a fresh home.
     const existing = clientKey && players.get(clientKey);
-    const spawn = existing
-      ? { x: existing.home.x + rand(-120, 120), y: existing.home.y + rand(-120, 120) }
-      : randomPointInWorld(0.55);
+    const spawn = findSafeSpawn(existing ? existing.home : null, 120);
+    this.shield = SPAWN_SHIELD_TICKS;
     this.x = spawn.x;
     this.y = spawn.y;
     this.player = getOrCreatePlayer(clientKey, this.name, this.color, spawn);
@@ -302,6 +324,7 @@ class Snake {
 
   step() {
     if (!this.alive) return;
+    if (this.shield > 0) this.shield -= 1;
     this.angle = angleLerp(this.angle, this.targetAngle, this.turnRate());
 
     let speed = BASE_SPEED;
@@ -515,10 +538,11 @@ function tick() {
   // owner is outside their own ground, so this is the "vulnerable when out"
   // mechanic.
   for (const a of alive) {
+    if (a.shield > 0) continue;
     const { col, row } = worldToCell(a.x, a.y);
     const headIdx = cellIndex(col, row);
     for (const b of alive) {
-      if (a === b || b.trailCells.length === 0) continue;
+      if (a === b || b.shield > 0 || b.trailCells.length === 0) continue;
       // skip the last few trail cells of b (b's own head is right there; that's body-vs-head, handled below)
       const n = b.trailCells.length;
       for (let i = 0; i < n - 3; i++) {
@@ -530,6 +554,7 @@ function tick() {
 
   // Classic rule: biting your own tail kills you too.
   for (const a of alive) {
+    if (a.shield > 0) continue;
     const ar = a.headRadius;
     const rr = ar + ar * 0.9;
     for (const p of a.selfBodySamples()) {
@@ -541,10 +566,10 @@ function tick() {
   }
 
   for (const a of alive) {
-    if (toKill.has(a.id)) continue;
+    if (toKill.has(a.id) || a.shield > 0) continue;
     const ar = a.headRadius;
     for (const b of alive) {
-      if (a === b) continue;
+      if (a === b || b.shield > 0) continue;
       // head-to-head: both die if very close
       if (!toKill.has(a.id) && !toKill.has(b.id)) {
         const br = b.headRadius;
@@ -599,6 +624,7 @@ function broadcast() {
     headRadius: s.headRadius,
     points: s.points, // [{x,y}], head-first
     hasCrown: s.player.crown,
+    shield: s.shield > 0,
     collectedBrands: [...s.player.collectedBrands],
     unlockedProducts: [...s.player.unlockedProducts],
     factoryLevel: factoryLevel(s.player),
