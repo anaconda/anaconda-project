@@ -106,8 +106,8 @@ function paintTerritoryCells(cells) {
 function showDeath(reason, length) {
   deathReasonEl.textContent = !reason ? 'You slithered into the border.'
     : reason === myName ? 'You bit your own tail!'
-    : reason.startsWith('trail:') ? `You crossed ${reason.slice(6)}'s claim trail.`
-    : `You ran into ${reason}.`;
+    : reason.startsWith('fortress:') ? `You bit ${reason.slice(9)} inside their own territory — they're protected there.`
+    : `Bitten by ${reason} while outside your territory.`;
   finalLengthEl.textContent = length;
   deathScreen.classList.remove('hidden'); joinScreen.classList.add('hidden'); hud.classList.add('hidden');
 }
@@ -376,6 +376,9 @@ function drawFactory(s) {
   ctx.beginPath(); ctx.ellipse(cx, cy + 10 * z, padR, padR * 0.55, 0, 0, Math.PI * 2);
   ctx.fillStyle = hexAlpha(s.color, 0.28); ctx.fill();
   ctx.lineWidth = 2; ctx.strokeStyle = hexAlpha(s.color, 0.8); ctx.stroke();
+  // fortress boundary: this ground can't be taken
+  ctx.beginPath(); ctx.arc(cx, cy, 110 * z, 0, Math.PI * 2);
+  ctx.setLineDash([4 * z, 6 * z]); ctx.lineWidth = 1.5; ctx.strokeStyle = hexAlpha(s.color, 0.5); ctx.stroke();
   ctx.restore();
 
   // layout: core center, others on a ring

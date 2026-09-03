@@ -81,7 +81,7 @@ const hallOfFame = [];
 // on a PlayerRecord keyed by a client-generated key, NOT on the per-life Snake,
 // so dying never takes it away.
 const players = new Map();
-function getOrCreatePlayer(clientKey, name, color, spawn) {
+function getOrCreatePlayer(clientKey, name, color, spawn, isBot) {
   if (clientKey && players.has(clientKey)) {
     const p = players.get(clientKey);
     if (name) p.name = name;
@@ -96,8 +96,11 @@ function getOrCreatePlayer(clientKey, name, color, spawn) {
     unlockedProducts: new Set(),
     home: { x: spawn.x, y: spawn.y },
     created: Date.now(),
+    code: nextOwnerCode++,
   };
+  codeToColor.set(p.code, p.color);
   players.set(p.clientKey, p);
+  if (!isBot) lockFortress(p);
   return p;
 }
 function factoryLevel(p) { return 1 + p.collectedBrands.size + p.unlockedProducts.size; } // 1..7
@@ -113,6 +116,8 @@ const TRAIL_CAP = 6000; // safety valve so a very long excursion can't grow unbo
 const gridOwnerCode = new Int32Array(CELL_COUNT); // 0 = unclaimed
 const codeToColor = new Map(); // ownerCode -> hex color (persists after death, like real paper.io)
 let nextOwnerCode = 1;
+const FORTRESS_RADIUS = 110; // ground around a Factory that can never be taken
+const cellLock = new Int32Array(CELL_COUNT); // 0 = free; else owner code that permanently holds it
 
 function cellIndex(col, row) { return row * GRID_DIM + col; }
 function cellCenter(idx) {
@@ -125,6 +130,20 @@ function worldToCell(x, y) {
   return { col, row };
 }
 
+function lockFortress(player) {
+  const { col: cCol, row: cRow } = worldToCell(player.home.x, player.home.y);
+  const cr = Math.ceil(FORTRESS_RADIUS / CELL_SIZE);
+  const changed = [];
+  for (let dr = -cr; dr <= cr; dr++) for (let dc = -cr; dc <= cr; dc++) {
+    const col = cCol + dc, row = cRow + dr;
+    if (col < 0 || col >= GRID_DIM || row < 0 || row >= GRID_DIM || dc * dc + dr * dr > cr * cr) continue;
+    const idx = cellIndex(col, row);
+    if (cellLock[idx] !== 0) continue; // first fortress wins overlapping ground
+    cellLock[idx] = player.code; gridOwnerCode[idx] = player.code; changed.push(idx);
+  }
+  if (changed.length) io.emit('territoryUpdate', { cells: changed.map(idx => ({ idx, color: player.color })) });
+}
+
 function seedHomeTerritory(snake) {
   const changed = [];
   const { col: cCol, row: cRow } = worldToCell(snake.x, snake.y);
@@ -135,6 +154,8 @@ function seedHomeTerritory(snake) {
       if (col < 0 || col >= GRID_DIM || row < 0 || row >= GRID_DIM) continue;
       if (dc * dc + dr * dr > cellRadius * cellRadius) continue;
       const idx = cellIndex(col, row);
+      if (cellLock[idx] !== 0 && cellLock[idx] !== snake.code) continue;
+      if (gridOwnerCode[idx] === snake.code) continue;
       gridOwnerCode[idx] = snake.code;
       changed.push(idx);
     }
@@ -168,10 +189,11 @@ function floodClaim(snake) {
 
   const changed = [];
   for (let i = 0; i < CELL_COUNT; i++) {
+    if (cellLock[i] !== 0 && cellLock[i] !== snake.code) continue; // someone's fortress: untouchable
     if (blocked[i]) {
       if (gridOwnerCode[i] !== snake.code) { gridOwnerCode[i] = snake.code; changed.push(i); }
     } else if (!outside[i]) {
-      gridOwnerCode[i] = snake.code; changed.push(i);
+      if (gridOwnerCode[i] !== snake.code) { gridOwnerCode[i] = snake.code; changed.push(i); }
     }
   }
   snake.trailCells.length = 0;
@@ -290,7 +312,7 @@ class Snake {
     this.shield = SPAWN_SHIELD_TICKS;
     this.x = spawn.x;
     this.y = spawn.y;
-    this.player = getOrCreatePlayer(clientKey, this.name, this.color, spawn);
+    this.player = getOrCreatePlayer(clientKey, this.name, this.color, spawn, this.isBot);
     this.angle = rand(0, Math.PI * 2);
     this.targetAngle = this.angle;
     this.length = START_LENGTH;
@@ -304,7 +326,7 @@ class Snake {
     // Territory (paper.io-style): each snake gets a persistent numeric owner
     // code (territory outlives death, like real paper.io ground), a home
     // patch seeded at spawn, and a live trail while outside owned ground.
-    this.code = nextOwnerCode++;
+    this.code = this.player.code;
     codeToColor.set(this.code, this.color);
     this.inTerritory = true;
     this.trailCells = [];
@@ -532,26 +554,6 @@ function tick() {
   const alive = [...snakes.values()].filter(s => s.alive);
   const toKill = new Map(); // id -> killerName|reason
 
-  // paper.io rule: crossing another snake's live claim-trail (they're outside
-  // their territory, mid-claim) kills YOU — the trail is their exposed line.
-  // Conversely, if they cross yours, they die. Trails are only live while the
-  // owner is outside their own ground, so this is the "vulnerable when out"
-  // mechanic.
-  for (const a of alive) {
-    if (a.shield > 0) continue;
-    const { col, row } = worldToCell(a.x, a.y);
-    const headIdx = cellIndex(col, row);
-    for (const b of alive) {
-      if (a === b || b.shield > 0 || b.trailCells.length === 0) continue;
-      // skip the last few trail cells of b (b's own head is right there; that's body-vs-head, handled below)
-      const n = b.trailCells.length;
-      for (let i = 0; i < n - 3; i++) {
-        if (b.trailCells[i] === headIdx) { toKill.set(a.id, 'trail:' + b.name); b.kills += 1; break; }
-      }
-      if (toKill.has(a.id)) break;
-    }
-  }
-
   // Classic rule: biting your own tail kills you too.
   for (const a of alive) {
     if (a.shield > 0) continue;
@@ -565,32 +567,32 @@ function tick() {
     }
   }
 
+  // Territory-aware biting (head of a touches body of b):
+  //  - b outside its own land  -> b is exposed: b dies, a gets the kill.
+  //  - b inside its own land   -> b is protected: the biter (a) dies.
+  //  - head-to-head            -> whoever is on home ground survives; both die if neither/both.
   for (const a of alive) {
     if (toKill.has(a.id) || a.shield > 0) continue;
     const ar = a.headRadius;
     for (const b of alive) {
-      if (a === b || b.shield > 0) continue;
-      // head-to-head: both die if very close
-      if (!toKill.has(a.id) && !toKill.has(b.id)) {
-        const br = b.headRadius;
-        const rr = ar + br;
-        if (dist2(a.x, a.y, b.x, b.y) <= rr * rr) {
-          toKill.set(a.id, b.name);
-          toKill.set(b.id, a.name);
-          continue;
-        }
+      if (a === b || b.shield > 0 || toKill.has(b.id)) continue;
+      const br = b.headRadius;
+      const hh = ar + br;
+      if (dist2(a.x, a.y, b.x, b.y) <= hh * hh) {
+        if (a.inTerritory && !b.inTerritory) { toKill.set(b.id, a.name); a.kills += 1; }
+        else if (b.inTerritory && !a.inTerritory) { toKill.set(a.id, b.name); b.kills += 1; }
+        else { toKill.set(a.id, b.name); toKill.set(b.id, a.name); }
+        continue;
       }
-      if (toKill.has(a.id)) continue;
-      // head of a vs body of b
-      const samples = b.bodySamples();
-      const rr = ar + b.headRadius * 0.9;
-      for (const p of samples) {
+      const rr = ar + br * 0.9;
+      for (const p of b.bodySamples()) {
         if (dist2(a.x, a.y, p.x, p.y) <= rr * rr) {
-          toKill.set(a.id, b.name);
-          b.kills += 1;
+          if (b.inTerritory) { toKill.set(a.id, 'fortress:' + b.name); b.kills += 1; }
+          else { toKill.set(b.id, a.name); a.kills += 1; }
           break;
         }
       }
+      if (toKill.has(a.id)) break;
     }
   }
 
