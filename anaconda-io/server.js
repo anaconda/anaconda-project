@@ -96,7 +96,7 @@ const pickThreat = (type) => { const l = THREATS[type]; return l[Math.floor(Math
 
 // Acquisitions in funding order.
 const ACQUISITIONS = [
-  { key: 'outerbounds', name: 'Outerbounds', color: '#08CA4A', capability: 'AI Orchestration',         does: 'You adopted AI Orchestration — run your factory wherever you need it, and take your governance with you. R retargets once per life; loops now close on any of your land.' },
+  { key: 'outerbounds', name: 'Outerbounds', color: '#08CA4A', capability: 'AI Orchestration',         does: 'You adopted AI Orchestration — run your factory wherever you need it, and take your governance with you. Press R once per life to retarget and keep your land.' },
   { key: 'kilo',        name: 'Kilo',        color: '#FFBA06', capability: 'AI Workspaces',            does: 'You adopted AI Workspaces — components arrive pre-configured, boost costs half, your agents collect for you.' },
   { key: 'enkrypt',     name: 'Enkrypt AI',  color: '#6D5BF6', capability: 'AI Security & Guardrails', does: 'You adopted AI Security & Guardrails — the whole ecosystem is red-teamed for you now.' },
 ];
@@ -375,7 +375,7 @@ class Snake {
     const { col, row } = worldToCell(this.x, this.y), idx = cellIndex(col, row);
     if (gridOwnerCode[idx] === this.code) {
       this.outTicks = 0;
-      const canClose = hasCap(this.player, 'outerbounds') || padLock[idx] === this.code;
+      const canClose = true; // loops close on any of your own land
       if (this.trailCells.length > 0 && canClose) floodClaim(this);
       else if (this.trailCells.length > 0) { const last = this.trailCells[this.trailCells.length - 1]; if (last !== idx) this.trailCells.push(idx); }
       this.inTerritory = true;

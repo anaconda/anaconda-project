@@ -35,15 +35,24 @@ function noise(dur, gain = 0.06, hp = 800) { if (muted) return; const a = ac(); 
 const NOTE = { C4: 261.6, E4: 329.6, G4: 392, C5: 523.3, D5: 587.3, E5: 659.3, G5: 784, A5: 880, C6: 1046.5 };
 // ------------------------------- Music (generative pad + arpeggio) -------------
 const music = (() => {
-  let started = false, master = null, timer = null, step = 0;
-  const CHORDS = [[261.6, 329.6, 392, 493.9], [220, 261.6, 329.6, 392], [174.6, 220, 261.6, 329.6], [196, 246.9, 293.7, 349.2]]; // Cmaj7 Am7 Fmaj7 G
-  function pad(freqs, dur) { const a = ac(); if (!a) return; for (const f of freqs) for (const det of [-3, 3]) { const o = a.createOscillator(), g = a.createGain(); o.type = 'triangle'; o.frequency.value = f / 2; o.detune.value = det; g.gain.setValueAtTime(0.0001, a.currentTime); g.gain.exponentialRampToValueAtTime(0.028, a.currentTime + 1.2); g.gain.setValueAtTime(0.028, a.currentTime + dur - 1.4); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur); o.connect(g).connect(master); o.start(); o.stop(a.currentTime + dur + 0.05); } }
-  function pluck(f, when) { const a = ac(); if (!a) return; const o = a.createOscillator(), g = a.createGain(), lp = a.createBiquadFilter(); o.type = 'sine'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = 2200; g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(0.05, when + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, when + 0.7); o.connect(lp).connect(g).connect(master); o.start(when); o.stop(when + 0.75); }
-  function bar() { const a = ac(); if (!a) return; const chord = CHORDS[step % CHORDS.length]; pad(chord, 6.2); const beat = 6 / 11; for (let i = 0; i < 11; i++) { if (Math.random() < 0.55) pluck(chord[(i * 2 + step) % chord.length] * (Math.random() < 0.3 ? 2 : 1), a.currentTime + i * beat + 0.05); } step++; }
+  // Upbeat, bright: 118 BPM, I–IV–V–vi in C, pentatonic 16th arpeggio, soft bass pulse and a hi-hat tick. Quiet.
+  let started = false, master = null, timer = null, bar = 0;
+  const BPM = 118, BEAT = 60 / BPM;
+  const CHORDS = [[261.6, 329.6, 392], [349.2, 440, 523.3], [392, 493.9, 587.3], [440, 523.3, 659.3]];
+  const PENTA = [523.3, 587.3, 659.3, 784, 880, 1046.5];
+  function osc(type, f, when, dur, gain, filt) { const a = ac(); const o = a.createOscillator(), g = a.createGain(), lp = a.createBiquadFilter(); o.type = type; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = filt || 3000; g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(gain, when + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, when + dur); o.connect(lp).connect(g).connect(master); o.start(when); o.stop(when + dur + 0.02); }
+  function hat(when) { const a = ac(); const buf = a.createBuffer(1, a.sampleRate * 0.03, a.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length); const src = a.createBufferSource(); src.buffer = buf; const hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000; const g = a.createGain(); g.gain.value = 0.02; src.connect(hp).connect(g).connect(master); src.start(when); }
+  function playBar() {
+    const a = ac(); if (!a) return; const t0 = a.currentTime + 0.05, chord = CHORDS[bar % 4];
+    for (const f of chord) osc('triangle', f / 2, t0, BEAT * 4, 0.02, 1600); // pad
+    for (let b = 0; b < 4; b++) { osc('sine', chord[0] / 4, t0 + b * BEAT, 0.28, 0.07, 400); hat(t0 + b * BEAT + BEAT / 2); } // bass pulse + offbeat hat
+    for (let i = 0; i < 16; i++) { if (i % 2 === 0 || Math.random() < 0.35) { const n = PENTA[(i * 3 + bar) % PENTA.length]; osc('square', n, t0 + i * BEAT / 4, 0.16, 0.014, 2400); } }
+    bar++;
+  }
   return {
-    start() { const a = ac(); if (!a || started) return; started = true; master = a.createGain(); master.gain.value = muted ? 0 : 0.6; master.connect(a.destination); bar(); timer = setInterval(bar, 6000); },
-    duck(ms) { if (!master) return; const a = ac(); master.gain.cancelScheduledValues(a.currentTime); master.gain.setValueAtTime(muted ? 0 : 0.15, a.currentTime); master.gain.linearRampToValueAtTime(muted ? 0 : 0.6, a.currentTime + ms / 1000); },
-    setMuted(m) { if (master) master.gain.value = m ? 0 : 0.6; },
+    start() { const a = ac(); if (!a || started) return; started = true; master = a.createGain(); master.gain.value = muted ? 0 : 0.7; master.connect(a.destination); playBar(); timer = setInterval(playBar, BEAT * 4 * 1000); },
+    duck(ms) { if (!master) return; const a = ac(); master.gain.cancelScheduledValues(a.currentTime); master.gain.setValueAtTime(muted ? 0 : 0.15, a.currentTime); master.gain.linearRampToValueAtTime(muted ? 0 : 0.7, a.currentTime + ms / 1000); },
+    setMuted(m) { if (master) master.gain.value = m ? 0 : 0.7; },
   };
 })();
 
