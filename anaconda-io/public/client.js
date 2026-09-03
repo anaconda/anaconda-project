@@ -28,11 +28,25 @@ function shade(hex, f) { const n = parseInt(hex.slice(1), 16); let r = (n >> 16)
 // ------------------------------- Sound (E5, synthesized) -----------------------
 let AC = null, muted = localStorage.getItem('anacondae.mute') === '1', combo = 0, lastEat = 0, boostNode = null, ambient = null;
 el.mute.textContent = muted ? 'SOUND OFF' : 'SOUND ON';
-el.mute.onclick = () => { muted = !muted; localStorage.setItem('anacondae.mute', muted ? '1' : '0'); el.mute.textContent = muted ? 'SOUND OFF' : 'SOUND ON'; if (muted) { sfx.boost(false); if (ambient) { ambient.g.gain.value = 0; } } else if (ambient) ambient.g.gain.value = 0.012; };
+el.mute.onclick = () => { muted = !muted; localStorage.setItem('anacondae.mute', muted ? '1' : '0'); el.mute.textContent = muted ? 'SOUND OFF' : 'SOUND ON'; music.setMuted(muted); if (muted) sfx.boost(false); };
 function ac() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } } if (AC.state === 'suspended') AC.resume(); return AC; }
 function tone(f, dur, type = 'triangle', gain = 0.06, to) { if (muted) return; const a = ac(); if (!a) return; const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.setValueAtTime(f, a.currentTime); if (to) o.frequency.exponentialRampToValueAtTime(to, a.currentTime + dur); g.gain.setValueAtTime(gain, a.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur); o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + dur); }
 function noise(dur, gain = 0.06, hp = 800) { if (muted) return; const a = ac(); if (!a) return; const buf = a.createBuffer(1, a.sampleRate * dur, a.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; const src = a.createBufferSource(); src.buffer = buf; const f = a.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp; const g = a.createGain(); g.gain.setValueAtTime(gain, a.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur); src.connect(f).connect(g).connect(a.destination); src.start(); }
 const NOTE = { C4: 261.6, E4: 329.6, G4: 392, C5: 523.3, D5: 587.3, E5: 659.3, G5: 784, A5: 880, C6: 1046.5 };
+// ------------------------------- Music (generative pad + arpeggio) -------------
+const music = (() => {
+  let started = false, master = null, timer = null, step = 0;
+  const CHORDS = [[261.6, 329.6, 392, 493.9], [220, 261.6, 329.6, 392], [174.6, 220, 261.6, 329.6], [196, 246.9, 293.7, 349.2]]; // Cmaj7 Am7 Fmaj7 G
+  function pad(freqs, dur) { const a = ac(); if (!a) return; for (const f of freqs) for (const det of [-3, 3]) { const o = a.createOscillator(), g = a.createGain(); o.type = 'triangle'; o.frequency.value = f / 2; o.detune.value = det; g.gain.setValueAtTime(0.0001, a.currentTime); g.gain.exponentialRampToValueAtTime(0.028, a.currentTime + 1.2); g.gain.setValueAtTime(0.028, a.currentTime + dur - 1.4); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur); o.connect(g).connect(master); o.start(); o.stop(a.currentTime + dur + 0.05); } }
+  function pluck(f, when) { const a = ac(); if (!a) return; const o = a.createOscillator(), g = a.createGain(), lp = a.createBiquadFilter(); o.type = 'sine'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = 2200; g.gain.setValueAtTime(0.0001, when); g.gain.exponentialRampToValueAtTime(0.05, when + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, when + 0.7); o.connect(lp).connect(g).connect(master); o.start(when); o.stop(when + 0.75); }
+  function bar() { const a = ac(); if (!a) return; const chord = CHORDS[step % CHORDS.length]; pad(chord, 6.2); const beat = 6 / 11; for (let i = 0; i < 11; i++) { if (Math.random() < 0.55) pluck(chord[(i * 2 + step) % chord.length] * (Math.random() < 0.3 ? 2 : 1), a.currentTime + i * beat + 0.05); } step++; }
+  return {
+    start() { const a = ac(); if (!a || started) return; started = true; master = a.createGain(); master.gain.value = muted ? 0 : 0.6; master.connect(a.destination); bar(); timer = setInterval(bar, 6000); },
+    duck(ms) { if (!master) return; const a = ac(); master.gain.cancelScheduledValues(a.currentTime); master.gain.setValueAtTime(muted ? 0 : 0.15, a.currentTime); master.gain.linearRampToValueAtTime(muted ? 0 : 0.6, a.currentTime + ms / 1000); },
+    setMuted(m) { if (master) master.gain.value = m ? 0 : 0.6; },
+  };
+})();
+
 const sfx = {
   eat() { const n = performance.now(); combo = n - lastEat < 1200 ? Math.min(combo + 1, 12) : 0; lastEat = n; tone(880 * Math.pow(2, combo / 12), 0.06, 'triangle', 0.05); },
   claim(big) { tone(big ? NOTE.C4 : NOTE.C5, 0.18, 'sine', 0.07); setTimeout(() => tone(big ? NOTE.G4 : NOTE.G5, 0.25, 'sine', 0.08), 110); },
@@ -72,9 +86,12 @@ function paintCells(cells) {
 
 // ------------------------------- Screens --------------------------------------
 const joinPayload = () => ({ name: savedName || undefined, color: skin, clientKey });
-el.play.onclick = () => { ac(); sfx.ambient(); socket.emit('join', joinPayload()); track('play'); };
+const startName = $('start-name'); startName.value = savedName;
+function takeStartName() { const n = startName.value.trim().slice(0, 18); if (n) { savedName = n; localStorage.setItem('anacondae.name', n); } }
+el.play.onclick = () => { ac(); takeStartName(); music.start(); socket.emit('join', joinPayload()); track('play'); };
 el.respawn.onclick = () => { if (!el.respawn.disabled) { commitName(); socket.emit('respawn', joinPayload()); track('play_again'); } };
 addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; if (!el.join.classList.contains('hidden')) el.play.click(); else if (!el.death.classList.contains('hidden')) el.respawn.click(); });
+addEventListener('keydown', (e) => { if (document.activeElement === startName && !['Enter', 'Tab'].includes(e.key)) e.stopPropagation(); }, true);
 function commitName() { const n = el.name.value.trim().slice(0, 18); if (n && n !== savedName) { savedName = n; localStorage.setItem('anacondae.name', n); socket.emit('setName', { name: n }); myName = n; } }
 el.cta.onclick = () => track('cta_click');
 el.share.onclick = () => { renderShareCard(lastDeath); const a = document.createElement('a'); a.download = 'anaconda-ai-factory.png'; a.href = $('share-card').toDataURL('image/png'); a.click(); track('share'); };
@@ -108,7 +125,7 @@ socket.on('landmark', ({ key }) => { landmarkAppear[key] = performance.now(); })
 socket.on('shipment', (d) => { crates.push({ x: d.from.x, y: d.from.y, color: d.color, t0: performance.now(), tokens: d.tokens, ang: Math.atan2(d.from.y, d.from.x) }); if (d.id === myId) sfx.ship(d.order); });
 socket.on('tokenBill', () => sfx.bong());
 socket.on('died', (d) => {
-  alive = false; sfx.death(); sfx.boost(false); slowmoUntil = performance.now() + 600; lastDeath = d; const me = mine(); if (me) spawnShards(Math.min(40, me.length), me.color);
+  alive = false; sfx.death(); sfx.boost(false); music.duck(2500); slowmoUntil = performance.now() + 600; lastDeath = d; const me = mine(); if (me) spawnShards(Math.min(40, me.length), me.color);
   setTimeout(() => {
     const S = d.summary || {};
     $('death-title').textContent = d.copy ? d.copy.title : 'Shed'; $('death-line').textContent = (d.copy ? `“${d.copy.line}”` : '') + (d.killer ? ` — ${d.killer}` : '');
@@ -145,7 +162,7 @@ function renderShareCard(d) {
 
 // ------------------------------- Input ----------------------------------------
 const TURN = 0.12; let heading = 0; const keys = new Set();
-addEventListener('keydown', (e) => { if (document.activeElement === el.name || !alive) return; if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault(); if (e.code === 'ArrowLeft') { heading -= TURN; keys.add('l'); } if (e.code === 'ArrowRight') { heading += TURN; keys.add('r'); } if (e.code === 'ArrowUp' || e.code === 'Space') { boosting = true; sfx.boost(true); } if (e.code === 'KeyR') socket.emit('retarget'); if (e.code === 'KeyB') socket.emit('build'); }, { passive: false });
+addEventListener('keydown', (e) => { if (document.activeElement === el.name || document.activeElement === startName || !alive) return; if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault(); if (e.code === 'ArrowLeft') { heading -= TURN; keys.add('l'); } if (e.code === 'ArrowRight') { heading += TURN; keys.add('r'); } if (e.code === 'ArrowUp' || e.code === 'Space') { boosting = true; sfx.boost(true); } if (e.code === 'KeyR') socket.emit('retarget'); if (e.code === 'KeyB') socket.emit('build'); }, { passive: false });
 addEventListener('keyup', (e) => { if (e.code === 'ArrowLeft') keys.delete('l'); if (e.code === 'ArrowRight') keys.delete('r'); if (e.code === 'ArrowUp' || e.code === 'Space') { boosting = false; sfx.boost(false); } });
 addEventListener('touchstart', (e) => { const t = e.touches[0]; if (!t) return; heading += (t.clientX < innerWidth / 2 ? -1 : 1) * TURN * 3; boosting = true; }, { passive: true });
 addEventListener('touchend', () => { boosting = false; });
@@ -190,13 +207,22 @@ function drawPad(s) {
   const glow = s.crown || s.products.includes('platform'); if (glow) { ctx.shadowColor = C.green500; ctx.shadowBlur = 22; ctx.strokeStyle = rgba(C.green500, .6 + .3 * Math.sin(t * 2)); ctx.lineWidth = 2; ctx.strokeRect(x, y, size, size); }
   ctx.restore();
   const cx = W(s.home.x), cy = H(s.home.y), platform = s.products.includes('platform');
-  if (ready(ICONS.anaconda)) { const r = (platform ? 40 : 24) * z; ctx.save(); ctx.translate(cx, cy); if (platform) ctx.rotate(t * .07); ctx.drawImage(ICONS.anaconda, -r / 2, -r / 2, r, r); ctx.restore(); }
-  drawBuildings(s, cx, cy, z);
+  // The workshop: the Factory exists from second one. Dark body (Lilac 900), lit windows and sawtooth roof in the owner's colour.
+  const ww = 64 * z, wh = 34 * z, wy = cy + 30 * z;
+  ctx.save(); ctx.fillStyle = rgba(C.lilac900, .92); ctx.fillRect(cx - ww / 2, wy - wh, ww, wh);
+  ctx.shadowColor = s.color; ctx.shadowBlur = 14; ctx.fillStyle = s.color;
+  for (let k = 0; k < 3; k++) { const x0 = cx - ww / 2 + k * ww / 3; ctx.beginPath(); ctx.moveTo(x0, wy - wh); ctx.lineTo(x0 + ww / 3 * .7, wy - wh - 12 * z); ctx.lineTo(x0 + ww / 3, wy - wh); ctx.closePath(); ctx.fill(); }
+  for (let i = 0; i < 3; i++) ctx.fillRect(cx - ww / 2 + (8 + i * 18) * z, wy - wh + 10 * z, 10 * z, 8 * z);
+  ctx.fillRect(cx - 6 * z, wy - 12 * z, 12 * z, 12 * z);
+  ctx.restore();
+  if (ready(ICONS.anaconda)) { const r = (platform ? 40 : 24) * z; ctx.save(); ctx.translate(cx + ww / 2 + 16 * z, wy - wh - 2 * z); if (platform) ctx.rotate(t * .07); ctx.beginPath(); ctx.arc(0, 0, r * .62, 0, Math.PI * 2); ctx.fillStyle = C.lilac900; ctx.fill(); ctx.drawImage(ICONS.anaconda, -r / 2, -r / 2, r, r); ctx.restore(); }
+  ctx.save(); ctx.textAlign = 'center'; ctx.font = `600 ${Math.max(10, 11 * z)}px ${FONT.head}`; ctx.fillStyle = 'rgba(240,239,254,.75)'; ctx.fillText(`${s.name} · AI FACTORY`, cx, wy + 16 * z); ctx.restore();
+  drawBuildings(s, cx, cy - 10 * z, z);
 }
 function cutout(x, y, w, h) { ctx.fillStyle = rgba(C.lilac900, .85); ctx.fillRect(x, y, w, h); }
 function drawBuildings(s, cx, cy, z) {
   const list = s.products || []; if (!list.length) return;
-  const slots = [[-70, -40], [70, -40], [-70, 55], [70, 55]]; // around the mark; Platform is the pad itself
+  const slots = [[-72, 30], [72, 30], [-72, -30], [72, -30]]; // flanking the workshop; Platform is the pad itself
   list.forEach((k, i) => {
     if (k === 'platform') return; const p = PRODUCTS.find(pp => pp.key === k) || { color: C.green300, name: k };
     const rise = buildAppear[k] ? Math.min(1, (performance.now() - buildAppear[k]) / 600) : 1, ease = 1 - Math.pow(1 - rise, 3);
