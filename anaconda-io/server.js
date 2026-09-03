@@ -61,8 +61,47 @@ const MAX_BRAND_DIAMONDS_ALIVE = 9; // bumped up so they're actually easy to run
 const ALL_BRAND_KEYS = BRAND_DIAMONDS.map(b => b.brand);
 const TRIFECTA_LENGTH_BONUS = 200; // reward for completing the Acquisition Trifecta
 
-// Session-lifetime "Hall of Fame" of Trifecta / Domination wins (in-memory, resets on server restart).
+// Post-Crown tier: this September's product launches. Only meaningful (grow
+// your AI Factory) once you hold the Crown; otherwise just a regular pickup.
+const PRODUCT_DIAMONDS = [
+  { product: 'ana-cli', label: 'Ana CLI GA', short: 'ana', color: '#08CA4A', valueMult: 4 },
+  { product: 'main-x', label: 'Main-X GA', short: 'MX', color: '#068F35', valueMult: 4 },
+  { product: 'anaconda-mcp', label: 'Anaconda MCP GA', short: 'MCP', color: '#E6FAED', valueMult: 4 },
+];
+const ALL_PRODUCT_KEYS = PRODUCT_DIAMONDS.map(p => p.product);
+const PRODUCT_DIAMOND_CHANCE = 0.06;
+const MAX_PRODUCT_DIAMONDS_ALIVE = 6;
+const PRODUCT_LENGTH_BONUS = 120;
+
+// Session-lifetime "Hall of Fame" (in-memory, resets on server restart).
 const hallOfFame = [];
+
+// ----------------------------- Persistent players ----------------------------
+// Progress (acquisitions, Crown, product launches, AI Factory location) lives
+// on a PlayerRecord keyed by a client-generated key, NOT on the per-life Snake,
+// so dying never takes it away.
+const players = new Map();
+function getOrCreatePlayer(clientKey, name, color, spawn) {
+  if (clientKey && players.has(clientKey)) {
+    const p = players.get(clientKey);
+    if (name) p.name = name;
+    if (color) p.color = color;
+    return p;
+  }
+  const p = {
+    clientKey: clientKey || ('anon_' + Math.random().toString(36).slice(2)),
+    name, color,
+    collectedBrands: new Set(),
+    crown: false,
+    unlockedProducts: new Set(),
+    home: { x: spawn.x, y: spawn.y },
+    created: Date.now(),
+  };
+  players.set(p.clientKey, p);
+  return p;
+}
+function factoryLevel(p) { return 1 + p.collectedBrands.size + p.unlockedProducts.size; } // 1..7
+function anyoneCrowned() { for (const p of players.values()) if (p.crown) return true; return false; }
 
 // ----------------------------- Territory (paper.io-style) -------------------
 const CELL_SIZE = 16; // world units per grid cell (small = ground hugs the actual path, not blocky squares)
@@ -76,6 +115,10 @@ const codeToColor = new Map(); // ownerCode -> hex color (persists after death, 
 let nextOwnerCode = 1;
 
 function cellIndex(col, row) { return row * GRID_DIM + col; }
+function cellCenter(idx) {
+  const col = idx % GRID_DIM, row = (idx / GRID_DIM) | 0;
+  return { x: col * CELL_SIZE - WORLD_RADIUS + CELL_SIZE / 2, y: row * CELL_SIZE - WORLD_RADIUS + CELL_SIZE / 2 };
+}
 function worldToCell(x, y) {
   const col = clamp(Math.floor((x + WORLD_RADIUS) / CELL_SIZE), 0, GRID_DIM - 1);
   const row = clamp(Math.floor((y + WORLD_RADIUS) / CELL_SIZE), 0, GRID_DIM - 1);
@@ -188,6 +231,18 @@ function spawnDiamond(at, forceBrand) {
     return id;
   }
 
+  // Product-launch diamonds only start appearing once someone in the arena holds a Crown.
+  if (!at && anyoneCrowned()) {
+    const productsAlive = [...diamonds.values()].filter(d => d.product).length;
+    if (productsAlive < MAX_PRODUCT_DIAMONDS_ALIVE && Math.random() < PRODUCT_DIAMOND_CHANCE) {
+      const def = PRODUCT_DIAMONDS[Math.floor(Math.random() * PRODUCT_DIAMONDS.length)];
+      const value = rand(DIAMOND_MAX_VALUE, DIAMOND_MAX_VALUE * 1.4) * def.valueMult;
+      diamonds.set(id, { id, x: p.x, y: p.y, value, product: def.product, label: def.label, short: def.short, color: def.color, big: true });
+      io.emit('productDiamondSpawned', { label: def.label, product: def.product });
+      return id;
+    }
+  }
+
   const big = Math.random() < 0.08;
   const value = big ? rand(DIAMOND_MAX_VALUE * 1.6, DIAMOND_MAX_VALUE * 2.4) : rand(DIAMOND_MIN_VALUE, DIAMOND_MAX_VALUE);
   diamonds.set(id, { id, x: p.x, y: p.y, value, big });
@@ -199,16 +254,21 @@ function ensureDiamondCount() {
 }
 
 class Snake {
-  constructor(id, name, color, isBot) {
+  constructor(id, name, color, isBot, clientKey) {
     this.id = id;
     this.name = (name || 'Anaconda').slice(0, 16);
     this.color = color || COLORS[Math.floor(Math.random() * COLORS.length)];
     this.isBot = !!isBot;
     this.alive = true;
     this.boosting = false;
-    const spawn = randomPointInWorld(0.55);
+    // Returning players respawn near their AI Factory; new players get a fresh home.
+    const existing = clientKey && players.get(clientKey);
+    const spawn = existing
+      ? { x: existing.home.x + rand(-120, 120), y: existing.home.y + rand(-120, 120) }
+      : randomPointInWorld(0.55);
     this.x = spawn.x;
     this.y = spawn.y;
+    this.player = getOrCreatePlayer(clientKey, this.name, this.color, spawn);
     this.angle = rand(0, Math.PI * 2);
     this.targetAngle = this.angle;
     this.length = START_LENGTH;
@@ -217,9 +277,8 @@ class Snake {
     this.kills = 0;
     this.joinedAt = Date.now();
     this.botTimer = 0;
-    this.collectedBrands = new Set(); // resets each life; tracked toward the Trifecta
-    this.hasCrown = false; // cosmetic: shows a crown once Trifecta is completed this life
-
+    this.loopTicks = 0;
+    this.loopDir = 1;
     // Territory (paper.io-style): each snake gets a persistent numeric owner
     // code (territory outlives death, like real paper.io ground), a home
     // patch seeded at spawn, and a live trail while outside owned ground.
@@ -311,9 +370,31 @@ class Snake {
   }
 
   simpleBotAI() {
+    const distFromCenter0 = Math.hypot(this.x, this.y);
+
+    // Land-grab mode: bots periodically carve a wide loop and return home, so
+    // territory actually gets claimed/contested even in a bot-heavy arena.
+    if (this.loopTicks > 0 && distFromCenter0 < WORLD_RADIUS * 0.85) {
+      this.loopTicks -= 1;
+      this.targetAngle += this.loopDir * 0.045;
+      if (this.loopTicks === 0) {
+        // head home to close the loop
+        this.targetAngle = Math.atan2(this.player.home.y - this.y, this.player.home.x - this.x);
+        this.botTimer = 90;
+      }
+      return;
+    }
+
     this.botTimer -= 1;
     if (this.botTimer > 0) return;
     this.botTimer = 20 + Math.floor(Math.random() * 30);
+
+    if (this.inTerritory && Math.random() < 0.12) {
+      this.loopTicks = 90 + Math.floor(Math.random() * 90);
+      this.loopDir = Math.random() < 0.5 ? -1 : 1;
+      this.targetAngle = rand(0, Math.PI * 2);
+      return;
+    }
 
     // steer toward the nearest diamond, but stay inside the world and avoid edges
     let best = null, bestD = Infinity;
@@ -340,13 +421,16 @@ class Snake {
   }
 }
 
-function createSnake(id, name, color, isBot) {
-  const s = new Snake(id, name, color, isBot);
+function createSnake(id, name, color, isBot, clientKey) {
+  const s = new Snake(id, name, color, isBot, clientKey);
   snakes.set(id, s);
   return s;
 }
 
 function removeSnake(id) {
+  const s = snakes.get(id);
+  // Bots get throwaway player records; drop them unless they built something worth keeping.
+  if (s && s.isBot && s.player && s.player.collectedBrands.size === 0) players.delete(s.player.clientKey);
   snakes.delete(id);
 }
 
@@ -382,21 +466,38 @@ function tick() {
     if (!s.alive) continue;
     const hr = s.headRadius;
     for (const d of diamonds.values()) {
-      const rr = hr + (d.brand ? 16 : 7);
+      const rr = hr + ((d.brand || d.product) ? 16 : 7);
       if (dist2(s.x, s.y, d.x, d.y) <= rr * rr) {
         s.length += d.value;
         diamonds.delete(d.id);
-        if (d.brand) {
-          io.emit('brandDiamondCollected', { name: s.name, label: d.label, brand: d.brand });
-          s.collectedBrands.add(d.brand);
+        const p = s.player;
 
-          // The Acquisition Trifecta: collect all 3 brand diamonds in one life.
-          if (!s.hasCrown && ALL_BRAND_KEYS.every(b => s.collectedBrands.has(b))) {
-            s.hasCrown = true;
+        if (d.brand) {
+          const isNew = !p.collectedBrands.has(d.brand);
+          p.collectedBrands.add(d.brand);
+          io.emit('brandDiamondCollected', { name: s.name, label: d.label, brand: d.brand, newBuilding: isNew });
+          // The Acquisition Trifecta (cumulative across lives) -> permanent Crown.
+          if (!p.crown && ALL_BRAND_KEYS.every(b => p.collectedBrands.has(b))) {
+            p.crown = true;
             s.length += TRIFECTA_LENGTH_BONUS;
             hallOfFame.unshift({ name: s.name, type: 'trifecta', at: Date.now() });
             if (hallOfFame.length > 20) hallOfFame.length = 20;
             io.emit('trifectaWin', { name: s.name });
+          }
+        } else if (d.product) {
+          if (p.crown) {
+            const isNew = !p.unlockedProducts.has(d.product);
+            p.unlockedProducts.add(d.product);
+            if (isNew) s.length += PRODUCT_LENGTH_BONUS;
+            io.emit('productDiamondCollected', { name: s.name, label: d.label, product: d.product, newBuilding: isNew });
+            if (isNew && ALL_PRODUCT_KEYS.every(k => p.unlockedProducts.has(k))) {
+              hallOfFame.unshift({ name: s.name, type: 'fullstack', at: Date.now() });
+              if (hallOfFame.length > 20) hallOfFame.length = 20;
+              io.emit('fullStackWin', { name: s.name });
+            }
+          } else {
+            const sock = io.sockets.sockets.get(s.id);
+            if (sock) sock.emit('productLocked', { label: d.label });
           }
         }
       }
@@ -407,6 +508,25 @@ function tick() {
   // Snake-vs-snake collisions (head touches another body => head owner dies)
   const alive = [...snakes.values()].filter(s => s.alive);
   const toKill = new Map(); // id -> killerName|reason
+
+  // paper.io rule: crossing another snake's live claim-trail (they're outside
+  // their territory, mid-claim) kills YOU — the trail is their exposed line.
+  // Conversely, if they cross yours, they die. Trails are only live while the
+  // owner is outside their own ground, so this is the "vulnerable when out"
+  // mechanic.
+  for (const a of alive) {
+    const { col, row } = worldToCell(a.x, a.y);
+    const headIdx = cellIndex(col, row);
+    for (const b of alive) {
+      if (a === b || b.trailCells.length === 0) continue;
+      // skip the last few trail cells of b (b's own head is right there; that's body-vs-head, handled below)
+      const n = b.trailCells.length;
+      for (let i = 0; i < n - 3; i++) {
+        if (b.trailCells[i] === headIdx) { toKill.set(a.id, b.name); b.kills += 1; break; }
+      }
+      if (toKill.has(a.id)) break;
+    }
+  }
 
   // Classic rule: biting your own tail kills you too.
   for (const a of alive) {
@@ -478,19 +598,23 @@ function broadcast() {
     length: Math.round(s.length),
     headRadius: s.headRadius,
     points: s.points, // [{x,y}], head-first
-    hasCrown: s.hasCrown,
-    collectedBrands: [...s.collectedBrands],
+    hasCrown: s.player.crown,
+    collectedBrands: [...s.player.collectedBrands],
+    unlockedProducts: [...s.player.unlockedProducts],
+    factoryLevel: factoryLevel(s.player),
+    home: s.player.home,
+    trail: s.trailCells.length ? s.trailCells.map(cellCenter) : [],
   }));
   const diamondPayload = [...diamonds.values()].map(d => ({
     id: d.id, x: d.x, y: d.y, value: Math.round(d.value), big: d.big,
-    brand: d.brand, label: d.label, color: d.color,
+    brand: d.brand, product: d.product, short: d.short, label: d.label, color: d.color,
   }));
 
   const leaderboard = [...snakes.values()]
     .filter(s => s.alive)
     .sort((a, b) => b.length - a.length)
     .slice(0, 10)
-    .map(s => ({ name: s.name, length: Math.round(s.length), isBot: s.isBot, hasCrown: s.hasCrown }));
+    .map(s => ({ name: s.name, length: Math.round(s.length), isBot: s.isBot, hasCrown: s.player.crown, factoryLevel: factoryLevel(s.player) }));
 
   io.emit('state', {
     t: Date.now(),
@@ -498,6 +622,10 @@ function broadcast() {
     snakes: snakePayload,
     diamonds: diamondPayload,
     hallOfFame: hallOfFame.slice(0, 5),
+    factories: [...players.values()].filter(p => !p.clientKey.startsWith('anon_') || p.collectedBrands.size > 0).map(p => ({
+      name: p.name, color: p.color, home: p.home, hasCrown: p.crown,
+      collectedBrands: [...p.collectedBrands], unlockedProducts: [...p.unlockedProducts], factoryLevel: factoryLevel(p),
+    })),
     leaderboard,
     playerCount: [...snakes.values()].filter(s => !s.isBot).length,
   });
@@ -526,9 +654,9 @@ function buildWelcomePayload(socket, s) {
 
 // ------------------------------ Networking -----------------------------------
 io.on('connection', (socket) => {
-  socket.on('join', ({ name, color }) => {
+  socket.on('join', ({ name, color, clientKey }) => {
     if (snakes.has(socket.id)) removeSnake(socket.id);
-    const s = createSnake(socket.id, name, color, false);
+    const s = createSnake(socket.id, name, color, false, clientKey);
     socket.emit('welcome', buildWelcomePayload(socket, s));
   });
 
@@ -539,12 +667,12 @@ io.on('connection', (socket) => {
     s.boosting = !!boosting;
   });
 
-  socket.on('respawn', ({ name, color }) => {
+  socket.on('respawn', ({ name, color, clientKey }) => {
     const existing = snakes.get(socket.id);
     const prevName = existing ? existing.name : name;
     const prevColor = existing ? existing.color : color;
     removeSnake(socket.id);
-    const s = createSnake(socket.id, name || prevName, color || prevColor, false);
+    const s = createSnake(socket.id, name || prevName, color || prevColor, false, clientKey);
     socket.emit('welcome', buildWelcomePayload(socket, s));
   });
 

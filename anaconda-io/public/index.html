@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>ANACONDAE — Multiplayer Snake Arena</title>
+<title>ANACONDAE — Build the AI Factory</title>
+<link rel="icon" href="assets/brands/anaconda-mark.png" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,17 +12,25 @@
 
   <!-- HUD -->
   <div id="hud" class="hidden">
-    <div id="leaderboard" class="panel">
-      <div class="panel-title">🐍 Top Anacondae</div>
-      <ol id="leaderboard-list"></ol>
-      <div id="hall-of-fame">
-        <div class="panel-title">🏆 Trifecta Hall of Fame</div>
-        <ol id="hall-of-fame-list"></ol>
-      </div>
-    </div>
     <div id="stats" class="panel">
       <div class="stat"><span class="stat-label">Length</span><span id="stat-length">0</span></div>
+      <div class="stat"><span class="stat-label">Land</span><span id="stat-land">0</span></div>
       <div class="stat"><span class="stat-label">Players</span><span id="stat-players">0</span></div>
+    </div>
+
+    <div id="factory-panel" class="panel">
+      <div class="panel-title"><img src="assets/brands/anaconda-mark.png" class="mini-mark" alt="" /> Your AI Factory</div>
+      <div id="factory-slots"></div>
+      <div id="factory-hint" class="hint-inline">Collect the 3 acquisition diamonds to earn the Crown.</div>
+    </div>
+
+    <div id="leaderboard" class="panel">
+      <div class="panel-title">Top Anacondae</div>
+      <ol id="leaderboard-list"></ol>
+      <div id="hall-of-fame">
+        <div class="panel-title">Hall of Fame</div>
+        <ol id="hall-of-fame-list"></ol>
+      </div>
     </div>
     <canvas id="minimap"></canvas>
   </div>
@@ -29,25 +38,26 @@
   <!-- Join screen -->
   <div id="join-screen" class="overlay">
     <div class="brand">
-      <div class="logo-diamond"></div>
-      <h1>ANACOND<span class="dot">AE</span></h1>
-      <p class="tagline">Slither through the pit. Devour diamonds. Coil past rivals — never touch their scales.</p>
+      <img src="assets/brands/anaconda-mark.png" class="logo-mark" alt="Anaconda" />
+      <h1>ANACOND<span class="accent">AE</span></h1>
+      <p class="tagline">Claim land. Devour diamonds. Acquire Outerbounds, Kilo and Enkrypt to earn the Crown — then ship Ana CLI, Main-X and Anaconda MCP to grow your AI Factory.</p>
     </div>
     <div class="join-card">
       <label for="name-input">Your snake name</label>
       <input id="name-input" maxlength="16" placeholder="e.g. Kaa" autocomplete="off" />
-      <label>Skin color</label>
+      <label>Skin</label>
       <div id="color-swatches"></div>
       <button id="play-btn" class="btn-play">PLAY</button>
-      <div class="hint">◀ ▶ Arrow keys to steer &nbsp;•&nbsp; ▲ or SPACE to boost</div>
+      <div class="hint">◀ ▶ steer &nbsp;•&nbsp; ▲ / SPACE boost &nbsp;•&nbsp; loop back home to claim land</div>
     </div>
   </div>
 
   <!-- Death screen -->
   <div id="death-screen" class="overlay hidden">
     <div class="brand small">
-      <h1>YOU DIED<span class="dot">.</span></h1>
+      <h1>SHED<span class="accent">.</span></h1>
       <p id="death-reason" class="tagline"></p>
+      <p class="tagline dim">Your Factory, Crown and acquisitions are safe. Respawn at home.</p>
     </div>
     <div class="join-card">
       <div class="stat big"><span class="stat-label">Final length</span><span id="final-length">0</span></div>
