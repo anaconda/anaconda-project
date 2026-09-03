@@ -235,7 +235,19 @@ function randomPointInWorld(marginFactor = 0.98) {
 
 const SPAWN_SAFE_DIST = 260;
 const SPAWN_SHIELD_TICKS = TICK_RATE * 2; // 2s of invulnerability after spawning
-function isSpawnSafe(x, y) {
+function onForeignLand(x, y, ownCode, radius) {
+  const { col: c0, row: r0 } = worldToCell(x, y);
+  const cr = Math.ceil(radius / CELL_SIZE);
+  for (let dr = -cr; dr <= cr; dr++) for (let dc = -cr; dc <= cr; dc++) {
+    const col = c0 + dc, row = r0 + dr;
+    if (col < 0 || col >= GRID_DIM || row < 0 || row >= GRID_DIM) continue;
+    const code = gridOwnerCode[cellIndex(col, row)];
+    if (code !== 0 && code !== ownCode) return true;
+  }
+  return false;
+}
+function isSpawnSafe(x, y, ownCode) {
+  if (onForeignLand(x, y, ownCode, HOME_TERRITORY_RADIUS + CELL_SIZE)) return false;
   const d2 = SPAWN_SAFE_DIST * SPAWN_SAFE_DIST;
   for (const s of snakes.values()) {
     if (!s.alive) continue;
@@ -244,14 +256,14 @@ function isSpawnSafe(x, y) {
   }
   return true;
 }
-function findSafeSpawn(preferred, jitter) {
+function findSafeSpawn(preferred, jitter, ownCode) {
   for (let attempt = 0; attempt < 40; attempt++) {
     const spread = jitter * (1 + attempt * 0.35);
     const c = preferred
       ? { x: preferred.x + rand(-spread, spread), y: preferred.y + rand(-spread, spread) }
       : randomPointInWorld(0.55);
     if (c.x * c.x + c.y * c.y > (WORLD_RADIUS * 0.9) ** 2) continue;
-    if (isSpawnSafe(c.x, c.y)) return c;
+    if (isSpawnSafe(c.x, c.y, ownCode)) return c;
   }
   return preferred || randomPointInWorld(0.55);
 }
@@ -308,7 +320,7 @@ class Snake {
     this.boosting = false;
     // Returning players respawn near their AI Factory; new players get a fresh home.
     const existing = clientKey && players.get(clientKey);
-    const spawn = findSafeSpawn(existing ? existing.home : null, 120);
+    const spawn = findSafeSpawn(existing ? existing.home : null, 120, existing ? existing.code : 0);
     this.shield = SPAWN_SHIELD_TICKS;
     this.x = spawn.x;
     this.y = spawn.y;
@@ -350,7 +362,7 @@ class Snake {
     this.angle = angleLerp(this.angle, this.targetAngle, this.turnRate());
 
     let speed = BASE_SPEED;
-    if (this.boosting && this.length > START_LENGTH * 0.6) {
+    if (this.boosting && (this.inTerritory || this.length > START_LENGTH * 0.6)) {
       speed *= BOOST_MULT;
       // Pure dash: only drains length, no side-effect diamonds. (A diamond
       // used to be dropped here as a "boost trail" cost, but since it spawned
@@ -358,7 +370,7 @@ class Snake {
       // tick's diamond-consumption pass, causing net GROWTH from boosting —
       // effectively free length. Removed; boosting should never be a way to
       // grow without eating diamonds.)
-      this.length = Math.max(START_LENGTH * 0.5, this.length - BOOST_DRAIN_PER_TICK);
+      if (!this.inTerritory) this.length = Math.max(START_LENGTH * 0.5, this.length - BOOST_DRAIN_PER_TICK);
     } else {
       this.boosting = false;
     }
