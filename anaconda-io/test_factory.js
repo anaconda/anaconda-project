@@ -1,47 +1,68 @@
-// E2E: hunt brand diamonds -> Crown; die; respawn with same clientKey -> Crown/Factory persist;
-// then hunt product diamonds -> Factory grows.
+// E2E: funding -> landmarks -> integration -> Trusted Foundation -> products -> shipping.
 const { io } = require('socket.io-client');
-const sock = io('http://localhost:3001');
-const clientKey = 'test_' + Date.now();
-let me = null, diamonds = [], factories = [], log = [];
-const say = (m) => { log.push(m); console.log(m); };
+const URL = 'http://localhost:3001';
+const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
-sock.on('connect', () => sock.emit('join', { name: 'Founder', color: '#08CA4A', clientKey }));
-sock.on('welcome', () => say('joined'));
-sock.on('state', (s) => { me = s.snakes.find(x => x.id === sock.id); diamonds = s.diamonds; factories = s.factories; });
-sock.on('trifectaWin', (d) => say('CROWN: ' + JSON.stringify(d)));
-sock.on('productDiamondCollected', (d) => say('PRODUCT: ' + JSON.stringify(d)));
-sock.on('fullStackWin', (d) => say('FULL STACK: ' + JSON.stringify(d)));
-sock.on('died', (d) => {
-  say('died -> ' + JSON.stringify(d) + ' | crown before respawn=' + (me && me.hasCrown) + ' brands=' + JSON.stringify(me && me.collectedBrands));
-  setTimeout(() => sock.emit('respawn', { name: 'Founder', color: '#08CA4A', clientKey }), 300);
-});
+function eater(name) {
+  const s = io(URL); let me = null, comps = [];
+  s.on('connect', () => s.emit('join', { name, color: '#3D7EA6', clientKey: name + Date.now() }));
+  s.on('state', (st) => { me = st.snakes.find(x => x.id === s.id); comps = st.components; });
+  s.on('died', () => setTimeout(() => s.emit('respawn', { name, color: '#3D7EA6', clientKey: name + Date.now() }), 2700));
+  let target = null, lastPick = 0;
+  setInterval(() => {
+    if (!me || !me.alive) return; const h = me.points[0];
+    if (!target || !comps.find(c => c.id === target.id) || Date.now() - lastPick > 700) {
+      let bd = Infinity; target = null;
+      for (const c of comps) { if (c.p) continue; const d = (c.x - h.x) ** 2 + (c.y - h.y) ** 2; if (d < bd) { bd = d; target = c; } }
+      lastPick = Date.now();
+    }
+    if (target) s.emit('input', { angle: Math.atan2(target.y - h.y, target.x - h.x), boosting: Math.hypot(h.x, h.y) < 1800 && me.inTerritory === false && me.length > 40 });
+  }, 60);
+  return s;
+}
 
-let killedOnce = false; let lastTarget=null, lastRetarget=0, spawnAt=Date.now();
-sock.on('welcome', ()=>{ spawnAt=Date.now(); });
+const F = io(URL); const fkey = 'founder_' + Date.now();
+let me = null, st = null, phase = 'wait', phaseT = 0, targetAcq = null;
+F.on('connect', () => F.emit('join', { name: 'Founder', color: '#08CA4A', clientKey: fkey }));
+F.on('state', (s) => { st = s; me = s.snakes.find(x => x.id === F.id); });
+F.on('banner', (b) => log('BANNER:', b.text, b.sub || ''));
+F.on('capability', (c) => log('CAPABILITY:', c.capability));
+F.on('died', (d) => { log('Founder died:', d.reason, d.killer || ''); phase = 'wait'; setTimeout(() => F.emit('respawn', { name: 'Founder', color: '#08CA4A', clientKey: fkey }), 2700); });
+F.on('shipment', (d) => { if (d.id === F.id) log('SHIPMENT', d.tokens + 'B'); });
+
+for (let i = 0; i < 6; i++) eater('Eater' + i);
+
+// Founder strategy: go to a funded, un-integrated landmark; circle it at ~140 radius (trail), then head to own floor to close.
 setInterval(() => {
-  if (!me || !me.alive) return;
-  const head = me.points[0];
-  const wantBrands = ['outerbounds', 'kilo', 'enkrypt'].filter(b => !me.collectedBrands.includes(b));
-  const wantProds = ['ana-cli', 'main-x', 'anaconda-mcp'].filter(p => !me.unlockedProducts.includes(p));
-  let targets = diamonds.filter(d => (d.brand && wantBrands.includes(d.brand)) || (me.hasCrown && d.product && wantProds.includes(d.product)));
-  // once crowned and not yet killed, suicide into the border to prove persistence
-  if (me.hasCrown && !killedOnce) { killedOnce = true; sock.emit('input', { angle: Math.atan2(head.y, head.x), boosting: true }); return; }
-  if (killedOnce && me.alive && me.length < 40) return;
-  if (Date.now() - spawnAt < 1500) { sock.emit('input', { angle: 0, boosting: false }); return; }
-  if (targets.length === 0) targets = diamonds;
+  if (!me || !me.alive || !st) return;
+  const h = me.points[0];
   const now = Date.now();
-  if (!lastTarget || !diamonds.find(d => d.id === lastTarget.id) || now - lastRetarget > 800) {
-    let best = null, bd = Infinity;
-    for (const d of targets) { const dd = (d.x - head.x) ** 2 + (d.y - head.y) ** 2; if (dd < bd) { bd = dd; best = d; } }
-    lastTarget = best; lastRetarget = now;
+  if (phase === 'wait') {
+    // grow a bit at home first, and wait for a landmark I don't hold
+    targetAcq = st.acquisitions.find(a => a.funded && !me.caps.includes(a.key));
+    if (targetAcq) { phase = 'approach'; phaseT = now; }
+    else { // gentle circle on home to eat nearby without leaving much
+      F.emit('input', { angle: Math.atan2(me.home.y - h.y, me.home.x - h.x) + Math.PI / 2 + (120 - Math.hypot(h.x - me.home.x, h.y - me.home.y)) * 0.01, boosting: false });
+    }
+    return;
   }
-  if (lastTarget) sock.emit('input', { angle: Math.atan2(lastTarget.y - head.y, lastTarget.x - head.x), boosting: false });
+  const site = targetAcq.site, d = Math.hypot(h.x - site.x, h.y - site.y);
+  if (phase === 'approach') {
+    F.emit('input', { angle: Math.atan2(site.y - h.y, site.x - h.x), boosting: d > 500 });
+    if (d < 150) { phase = 'circle'; phaseT = now; }
+  } else if (phase === 'circle') {
+    const ang = Math.atan2(h.y - site.y, h.x - site.x);
+    F.emit('input', { angle: ang + Math.PI / 2 + (140 - d) * 0.01, boosting: false });
+    if (now - phaseT > 7000) { phase = 'home'; phaseT = now; }
+  } else if (phase === 'home') {
+    F.emit('input', { angle: Math.atan2(me.home.y - h.y, me.home.x - h.x), boosting: true });
+    if (me.inTerritory || now - phaseT > 25000) { phase = 'wait'; }
+  }
 }, 60);
 
-setTimeout(() => {
-  const mine = factories.find(f => f.name === 'Founder');
-  say('FINAL me: crown=' + (me && me.hasCrown) + ' brands=' + JSON.stringify(me && me.collectedBrands) + ' products=' + JSON.stringify(me && me.unlockedProducts) + ' level=' + (me && me.factoryLevel));
-  say('FINAL factory record: ' + JSON.stringify(mine));
-  process.exit(0);
-}, 110000);
+setInterval(() => {
+  if (!me || !st) return;
+  log(`funding ${st.funding.dealName || 'done'} ${st.funding.units.toFixed(1)}/${st.funding.target} | founder caps=${JSON.stringify(me.caps)} floor=${me.floor} len=${me.length} products=${JSON.stringify(me.products)} tokens=${me.tokens} crown=${me.crown}`);
+}, 20000);
+
+setTimeout(() => { log('END'); process.exit(0); }, 235000);

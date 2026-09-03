@@ -58,7 +58,7 @@ html, body {
 .slot img { width: 60%; height: 60%; object-fit: contain; }
 .hint-inline { margin-top: 8px; font-size: 11px; color: var(--text-dim); line-height: 1.4; }
 
-#leaderboard { top: 16px; right: 16px; width: 220px; }
+#leaderboard { top: 16px; right: 16px; width: 230px; }
 #leaderboard ol { margin: 0; padding: 0 0 0 18px; font-size: 13px; line-height: 1.7; }
 #leaderboard li.me { color: var(--ana-green); font-weight: 700; }
 #hall-of-fame { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--panel-border); }
@@ -157,3 +157,65 @@ html, body {
 .rules-foot { margin-top: 8px; font-size: 11px; color: var(--text-dim); }
 .join-card { flex: 0 0 320px; align-self: flex-start; }
 @media (max-width: 760px) { .rules-card { flex-direction: column; } .overlay { justify-content: flex-start; overflow-y: auto; padding-top: 32px; } }
+
+/* ---------- AI Factory HUD (§8) ---------- */
+.stat.primary span:last-child { color: var(--ana-green); font-size: 26px; }
+#funding { top: 16px; left: 50%; transform: translateX(-50%); width: 360px; padding: 10px 14px; text-align: center; }
+#funding-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); }
+#funding-label b { color: #fff; }
+#funding-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); margin: 6px 0 8px; overflow: hidden; }
+#funding-fill { height: 100%; width: 0%; background: var(--ana-green); transition: width 0.3s; }
+#acq-chips { display: flex; gap: 6px; justify-content: center; }
+.acq { padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; color: var(--ana-ink); opacity: 0.28; filter: grayscale(0.6); }
+.acq.funded { opacity: 0.6; filter: none; }
+.acq.held { opacity: 1; filter: none; box-shadow: 0 0 0 2px #fff inset; }
+#leaderboard ol li small { color: var(--text-dim); }
+#feed { position: absolute; left: 16px; bottom: 16px; width: 340px; font-size: 12px; color: var(--text-dim); display: flex; flex-direction: column-reverse; gap: 3px; }
+#feed div { background: rgba(12,12,12,0.6); padding: 3px 8px; border-radius: 6px; border-left: 2px solid var(--ana-green); }
+#toasts { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; }
+#toasts .toast { animation: toast-in 0.25s ease-out, toast-out 0.4s ease-in 3.4s forwards; }
+#toasts .toast.bad { background: #E0574C; color: #fff; }
+#toasts .toast.guard { background: #FF7F00; }
+#hint { position: absolute; left: 50%; top: 58%; transform: translateX(-50%); font-size: 13px; color: var(--text-dim); background: rgba(12,12,12,0.6); padding: 6px 12px; border-radius: 8px; white-space: nowrap; }
+#hint:empty { display: none; }
+#bill { top: 90px; right: 16px; width: 300px; font-size: 12px; }
+#bill table { width: 100%; border-collapse: collapse; }
+#bill td, #bill th { padding: 2px 4px; text-align: right; }
+#bill td:first-child, #bill th:first-child { text-align: left; }
+#bill th { color: var(--text-dim); font-weight: 600; font-size: 10px; text-transform: uppercase; }
+.win-banner small { display: block; font-size: 13px; font-weight: 600; opacity: 0.85; margin-top: 4px; }
+.win-banner { animation: win-in 0.35s cubic-bezier(0.2,1.4,0.4,1), win-out 0.5s ease-in 6.5s forwards; }
+.btn-play:disabled { opacity: 0.5; cursor: default; }
+
+/* ---------- Handoff 2: fun + external ---------- */
+#flash { position: fixed; inset: 0; pointer-events: none; z-index: 4; background: #E0574C; opacity: 0; }
+#flash.on { opacity: 0.35; transition: none; }
+#flash.off { opacity: 0; transition: opacity 0.25s; }
+#game.shake { animation: shake 0.3s linear; }
+@keyframes shake { 0%,100% { transform: translate(0,0);} 20% { transform: translate(4px,-3px);} 40% { transform: translate(-4px,2px);} 60% { transform: translate(3px,3px);} 80% { transform: translate(-2px,-4px);} }
+.reveal { opacity: 0; transition: opacity 0.8s; pointer-events: none; }
+.reveal.shown { opacity: 1; }
+#stats .stat.reveal { display: none; } #stats .stat.reveal.shown { display: flex; }
+#funding-bar { position: relative; }
+#funding-clock { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: rgba(255,255,255,0.18); }
+.big-play { width: min(360px, 90vw); font-size: 22px; padding: 18px 0; margin: 4px 0 0; }
+.rules-details { max-width: 820px; color: var(--text-dim); }
+.rules-details summary { cursor: pointer; font-size: 13px; padding: 6px 12px; list-style: none; }
+.rules-details summary::-webkit-details-marker { display: none; }
+.rules-details[open] summary { color: var(--ana-green); }
+.rules-details .rules-card { margin-top: 10px; }
+.death-card { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 18px; padding: 22px 26px; width: min(640px, 94vw); display: flex; flex-direction: column; gap: 10px; align-items: center; box-shadow: 0 14px 48px rgba(0,0,0,0.6); }
+.death-headline { font-size: 22px; font-weight: 800; color: #fff; }
+.death-headline b { color: var(--ana-green); font-size: 30px; }
+.death-sub { font-size: 13px; color: var(--text-dim); }
+.death-sub b { color: #fff; }
+.death-pitch { font-style: italic; color: var(--ana-mint); font-size: 14px; max-width: 520px; }
+#share-card { width: min(600px, 90vw); height: auto; border-radius: 10px; border: 1px solid var(--panel-border); }
+#name-row { display: flex; gap: 8px; width: 100%; max-width: 420px; }
+#name-row input { flex: 1; }
+.btn-small { background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid var(--ana-gray-dark); border-radius: 10px; padding: 8px 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.btn-small:hover { border-color: var(--ana-green); }
+.death-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; margin-top: 4px; }
+.death-actions .btn-play { margin: 0; padding: 12px 28px; }
+.btn-cta { color: var(--ana-ink); background: var(--ana-mint); border-radius: 12px; padding: 12px 18px; font-weight: 800; text-decoration: none; font-size: 14px; }
+.btn-cta:hover { background: #fff; }

@@ -3,92 +3,91 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>ANACONDAE — Build the AI Factory</title>
+<title>Anaconda AI Factory</title>
 <link rel="icon" href="assets/brands/anaconda-mark.png" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <canvas id="game"></canvas>
+  <div id="flash"></div>
 
-  <!-- HUD -->
+  <!-- HUD: two numbers first; the rest reveals when relevant -->
   <div id="hud" class="hidden">
     <div id="stats" class="panel">
+      <div class="stat primary"><span class="stat-label">In production</span><span id="stat-projects">0</span></div>
       <div class="stat"><span class="stat-label">Length</span><span id="stat-length">0</span></div>
-      <div class="stat"><span class="stat-label">Land</span><span id="stat-land">0</span></div>
-      <div class="stat"><span class="stat-label">Players</span><span id="stat-players">0</span></div>
+      <div class="stat reveal"><span class="stat-label">Tokens routed</span><span id="stat-tokens">0B</span></div>
+      <div class="stat reveal"><span class="stat-label">Floor</span><span id="stat-floor">0</span></div>
     </div>
-
-    <div id="factory-panel" class="panel">
-      <div class="panel-title"><img src="assets/brands/anaconda-mark.png" class="mini-mark" alt="" /> Your AI Factory</div>
-      <div id="factory-slots"></div>
-      <div id="factory-hint" class="hint-inline">Collect the 3 acquisition diamonds to earn the Crown.</div>
+    <div id="funding" class="panel reveal">
+      <div id="funding-label">Next: <b id="funding-deal">—</b></div>
+      <div id="funding-bar"><div id="funding-fill"></div><div id="funding-clock"></div></div>
+      <div id="acq-chips"></div>
     </div>
-
-    <div id="leaderboard" class="panel">
-      <div class="panel-title">Top Anacondae</div>
+    <div id="leaderboard" class="panel reveal">
+      <div id="hall-of-fame"><div class="panel-title">Trillion-Token Scale</div><ol id="hall-of-fame-list"></ol></div>
+      <div class="panel-title">In production</div>
       <ol id="leaderboard-list"></ol>
-      <div id="hall-of-fame">
-        <div class="panel-title">Hall of Fame</div>
-        <ol id="hall-of-fame-list"></ol>
-      </div>
     </div>
-    <canvas id="minimap"></canvas>
+    <div id="feed" class="reveal"></div>
+    <div id="toasts"></div>
+    <div id="hint"></div>
+    <div id="bill" class="panel hidden"></div>
+    <canvas id="minimap" class="reveal"></canvas>
   </div>
 
-  <!-- Join screen -->
+  <!-- Start: no name gate -->
   <div id="join-screen" class="overlay">
     <div class="brand">
       <img src="assets/brands/anaconda-mark.png" class="logo-mark" alt="Anaconda" />
-      <h1>ANACOND<span class="accent">AE</span></h1>
-      <p class="tagline">Build the biggest AI Factory in the pit.</p>
+      <h1>ANACONDA <span class="accent">AI FACTORY</span></h1>
+      <p class="tagline">You run an AI team. Eat components, claim floor, adopt Anaconda — and get your projects into production. <b>88% never make it.</b></p>
     </div>
-
-    <div class="join-row">
+    <button id="play-btn" class="btn-play big-play">PLAY</button>
+    <div class="hint">◀ ▶ steer · ▲ boost · Enter to play</div>
+    <details class="rules-details">
+      <summary>How it works</summary>
       <div class="rules-card">
         <div class="rules-col">
-          <div class="rules-title">How to play</div>
+          <div class="rules-title">Play</div>
           <ul>
-            <li><b>◀ ▶</b> steer &nbsp;·&nbsp; <b>▲ / Space</b> boost — free on your own land, burns length outside it</li>
-            <li>Eat <span class="chip green">◆ diamonds</span> to grow.</li>
-            <li>You start with a patch of <b>land</b>. Leave it, draw a loop, and return home to <b>claim</b> everything inside — even land others own.</li>
-            <li><b>Inside your land you're protected.</b> Bite anyone while they're <b>outside</b> theirs and they die. Bite someone inside their own land and <em>you</em> die.</li>
-            <li>Your own tail and the red border are always lethal.</li>
-            <li>Your <b>Factory pad</b> can never be claimed by others.</li>
+            <li>Eat ◆ ▤ ⬡ ◎ components to grow. Some are poisoned — a hit sheds a quarter of your length.</li>
+            <li>Leave your floor, loop back onto it: everything inside is yours, including rivals' floor and their buildings.</li>
+            <li>On your floor you're protected and boost is free. Off it you're exposed: your tail, the border, other snakes, and anyone cutting your trail are lethal.</li>
           </ul>
         </div>
         <div class="rules-col">
-          <div class="rules-title">How to win</div>
-          <ol class="win-steps">
-            <li><span class="step">1</span><span> Your <b>AI Factory</b> starts as an Anaconda workshop on your land.</span></li>
-            <li><span class="step">2</span><span> Collect the three <b>acquisition diamonds</b> — <span class="chip" style="background:#6A9E8B">Outerbounds</span> <span class="chip" style="background:#F8F674">Kilo</span> <span class="chip" style="background:#FF7F00">Enkrypt</span> — each adds a building.</span></li>
-            <li><span class="step">3</span><span> All three → the <b>👑 Crown</b>. It's permanent: dying never takes it, your buildings or your land away.</span></li>
-            <li><span class="step">4</span><span> Crowned players unlock the <b>launch diamonds</b> — <span class="chip green">Ana CLI GA</span> <span class="chip green">Main-X GA</span> <span class="chip green">Anaconda MCP GA</span>. Ship all three for the complete <b>🏭 full-stack Factory</b> and the Hall of Fame.</span></li>
-          </ol>
-          <div class="rules-foot">Rivals can earn their own Crown too — the leaderboard tracks length, land and Factory level.</div>
+          <div class="rules-title">Adopt</div>
+          <ul>
+            <li>As the server plays, Anaconda acquires <b>Enkrypt AI</b>, <b>Kilo</b> and <b>Outerbounds</b>. Enclose a landmark to adopt the capability — for good.</li>
+            <li><b>Security & Guardrails</b>: see poison. <b>AI Workspaces</b>: ×2 growth, half-price boost, agents. <b>AI Orchestration</b>: R to retarget, protected trail.</li>
+            <li>All three: your floor builds the September products and ships projects on its own. Route 1T tokens for the Hall of Fame.</li>
+          </ul>
         </div>
       </div>
-
-    <div class="join-card">
-      <label for="name-input">Your snake name</label>
-      <input id="name-input" maxlength="16" placeholder="e.g. Kaa" autocomplete="off" />
-      <label>Skin</label>
-      <div id="color-swatches"></div>
-      <button id="play-btn" class="btn-play">PLAY</button>
-      <div class="hint">Press Enter to play</div>
-    </div>
-    </div>
+    </details>
   </div>
 
-  <!-- Death screen -->
+  <!-- Death = conversion moment -->
   <div id="death-screen" class="overlay hidden">
     <div class="brand small">
-      <h1>SHED<span class="accent">.</span></h1>
-      <p id="death-reason" class="tagline"></p>
-      <p class="tagline dim">Your Factory, Crown and acquisitions are safe. Respawn at home.</p>
+      <h1 id="death-title">Collision</h1>
+      <p id="death-line" class="tagline"></p>
     </div>
-    <div class="join-card">
-      <div class="stat big"><span class="stat-label">Final length</span><span id="final-length">0</span></div>
-      <button id="respawn-btn" class="btn-play">RESPAWN</button>
+    <div class="death-card">
+      <div class="death-headline">You put <b id="d-projects">0</b> AI projects into production.</div>
+      <div class="death-sub">Routed <b id="d-tokens">0B</b> tokens · <span id="d-caps">adopted nothing yet</span> · <span id="d-time">0:00</span></div>
+      <div id="d-pitch" class="death-pitch"></div>
+      <canvas id="share-card" width="600" height="315"></canvas>
+      <div id="name-row">
+        <input id="name-input" maxlength="18" placeholder="claim your spot on the board" autocomplete="off" />
+        <button id="name-btn" class="btn-small">Save</button>
+      </div>
+      <div class="death-actions">
+        <button id="respawn-btn" class="btn-play" disabled>PLAY AGAIN</button>
+        <a id="cta-btn" class="btn-cta" href="https://www.anaconda.com/platform" target="_blank" rel="noopener">See how Anaconda Platform does this for real →</a>
+        <button id="share-btn" class="btn-small">Download share card</button>
+      </div>
     </div>
   </div>
 
