@@ -6,7 +6,7 @@ const FONT = { head: "'Space Grotesk', sans-serif", eyebrow: "'Space Mono', mono
 const EASE = 'cubic-bezier(.2,.8,.2,1)';
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $ = (id) => document.getElementById(id);
-const canvas = $('game'), ctx = canvas.getContext('2d'), minimap = $('minimap'), mctx = minimap.getContext('2d');
+const canvas = $('game'), ctx = canvas.getContext('2d'); window.__ctx = ctx; const minimap = $('minimap'), mctx = minimap.getContext('2d');
 const el = { flash: $('flash'), join: $('join-screen'), death: $('death-screen'), hud: $('hud'), play: $('play-btn'), respawn: $('respawn-btn'), name: $('name-input'), skins: $('skins'), share: $('share-btn'), cta: $('cta-btn'), mute: $('mute'),
   projects: $('stat-projects'), length: $('stat-length'), floor: $('stat-floor'), floorWrap: $('stat-floor-wrap'), fundLabel: $('funding-label'), fundPct: $('funding-pct'), fundFill: $('funding-fill'), chips: $('acq-chips'), funding: $('funding'),
   lb: $('leaderboard'), lbList: $('leaderboard-list'), hof: $('hall-of-fame'), hofList: $('hall-of-fame-list'), feed: $('feed'), toasts: $('toasts'), hint: $('hint'), buildHint: $('build-hint'), hero: $('hero') };
@@ -102,12 +102,32 @@ socket.on('welcome', (d) => {
   everJoined = true; myId = d.id; myName = d.you.name; worldRadius = d.worldRadius; alive = true; heading = d.you.angle; camera.x = d.you.x; camera.y = d.you.y;
   spawnAt = Date.now(); ateOnce = false; leftFloor = false; captured = false; lastFloor = 0; PRODUCTS = d.products; ACQ = d.acquisitions; if (d.colors) SKINS = d.colors; if (d.cta) el.cta.href = d.cta;
   initTerritory({ cellSize: d.territory.cellSize, gridDim: d.territory.gridDim }, d.territory.cells);
+  comps.clear(); for (const c of d.components || []) comps.set(c.id, c);
   el.feed.innerHTML = ''; el.join.classList.add('hidden'); el.death.classList.add('hidden'); el.hud.classList.remove('hidden');
   setTimeout(() => show('lb'), 30000);
 });
 function show(k) { if (reveal[k]) return; reveal[k] = true; ({ floor: el.floorWrap, funding: el.funding, lb: el.lb }[k]).classList.add('shown'); if (k === 'lb') minimap.classList.add('shown'); }
 socket.on('territoryUpdate', ({ cells }) => paintCells(cells));
-socket.on('state', (s) => { state = s; worldRadius = s.worldRadius; });
+const comps = new Map();
+function unflat(a) { const out = new Array(a.length / 2); for (let i = 0; i < out.length; i++) out[i] = { x: a[i * 2], y: a[i * 2 + 1] }; return out; }
+let metaState = null; const snakeMeta = new Map();
+socket.on('meta', (m) => { metaState = m; worldRadius = m.worldRadius; snakeMeta.clear(); for (const sn of m.snakes) snakeMeta.set(sn.id, sn); if (state) mergeState(state); });
+function mergeState(s) {
+  for (const sn of s.snakes) { const m = snakeMeta.get(sn.id); if (m) Object.assign(sn, m); else Object.assign(sn, { name: '', color: C.lilac400, home: null, products: [], caps: [], crown: false, tokens: 0, projects: 0, datasets: 0 }); }
+  if (metaState) { s.leaderboard = metaState.leaderboard; s.hallOfFame = metaState.hallOfFame; s.funding = metaState.funding; s.acquisitions = metaState.acquisitions; s.playerCount = metaState.playerCount; }
+  else { s.leaderboard = []; s.hallOfFame = []; s.funding = { units: 0, target: 90, clockPct: 0 }; s.acquisitions = []; }
+}
+socket.on('state', (s) => {
+  for (const id of s.compRemove || []) { const c = comps.get(id); if (c) { removedComps.push(c); comps.delete(id); } }
+  for (const c of s.compAdd || []) comps.set(c.id, c);
+  for (const sn of s.snakes) {
+    const raw = unflat(sn.pts), out = [];
+    for (let i = 0; i < raw.length; i++) { out.push(raw[i]); if (i >= 5 && i < raw.length - 1) out.push({ x: (raw[i].x + raw[i + 1].x) / 2, y: (raw[i].y + raw[i + 1].y) / 2 }); }
+    sn.points = out; sn.trail = unflat(sn.trail || []);
+  }
+  mergeState(s); s.components = comps; state = s;
+});
+const removedComps = [];
 socket.on('connect', () => { if (everJoined) socket.emit('respawn', joinPayload()); });
 socket.on('disconnect', () => { alive = false; });
 socket.on('ate', () => { ateOnce = true; sfx.eat(); headSquash = 1; ripple = 1; });
@@ -170,8 +190,8 @@ setInterval(() => { if (!alive) return; if (keys.has('l')) heading -= TURN * .5;
 
 // ------------------------------- Drawing --------------------------------------
 const W = (x) => (x - camera.x) * camera.zoom + canvas.width / 2, H = (y) => (y - camera.y) * camera.zoom + canvas.height / 2;
-const onScreen = (x, y) => Math.abs(x - camera.x) < 1700 && Math.abs(y - camera.y) < 1700;
-let t = 0;
+const onScreen = (x, y) => { const sx = W(x), sy = H(y); return sx > -80 && sx < canvas.width + 80 && sy > -80 && sy < canvas.height + 80; };
+let t = 0; const gridPatterns = new Map();
 
 function drawArena() {
   ctx.fillStyle = C.outside; ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -179,9 +199,10 @@ function drawArena() {
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R); g.addColorStop(0, C.groundHi); g.addColorStop(1, C.groundLo);
   ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
   // dot grid (world-space, 50px)
-  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip(); ctx.fillStyle = 'rgba(240,239,254,.09)';
-  const step = 50 * camera.zoom, ox = W(Math.floor((camera.x - canvas.width / camera.zoom) / 50) * 50), oy = H(Math.floor((camera.y - canvas.height / camera.zoom) / 50) * 50);
-  for (let x = ox; x < canvas.width; x += step) for (let y = oy; y < canvas.height; y += step) ctx.fillRect(x, y, 2, 2);
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
+  const step = Math.max(8, Math.round(50 * camera.zoom)); let pat = gridPatterns.get(step);
+  if (!pat) { const pc = document.createElement('canvas'); pc.width = pc.height = step; const g = pc.getContext('2d'); g.fillStyle = 'rgba(240,239,254,.09)'; g.fillRect(0, 0, 2, 2); pat = ctx.createPattern(pc, 'repeat'); gridPatterns.set(step, pat); }
+  ctx.translate(W(0) % step, H(0) % step); ctx.fillStyle = pat; ctx.fillRect(-step, -step, canvas.width + step * 2, canvas.height + step * 2);
   ctx.restore();
 }
 function drawFloor(me) {
@@ -219,7 +240,8 @@ function drawPad(s) {
   ctx.save(); ctx.textAlign = 'center'; ctx.font = `600 ${Math.max(10, 11 * z)}px ${FONT.head}`; ctx.fillStyle = 'rgba(240,239,254,.75)'; ctx.fillText(`${s.name} · AI FACTORY`, cx, wy + 16 * z); ctx.restore();
   drawBuildings(s, cx, cy - 10 * z, z);
 }
-function cutout(x, y, w, h) { ctx.fillStyle = rgba(C.lilac900, .85); ctx.fillRect(x, y, w, h); }
+let ctx2 = null;
+function cutout(x, y, w, h) { const g = ctx2 || ctx; g.fillStyle = rgba(C.lilac900, .85); g.fillRect(x, y, w, h); }
 function drawBuildings(s, cx, cy, z) {
   const list = s.products || []; if (!list.length) return;
   const slots = [[-72, 30], [72, 30], [-72, -30], [72, -30]]; // flanking the workshop; Platform is the pad itself
@@ -238,16 +260,40 @@ function drawBuildings(s, cx, cy, z) {
 function chip(x, y, text, z) { ctx.save(); ctx.shadowBlur = 0; ctx.font = `400 ${9 * z}px ${FONT.num}`; const w = ctx.measureText(text).width + 12 * z; ctx.fillStyle = 'rgba(12,12,12,.4)'; ctx.fillRect(x - w / 2, y - 7 * z, w, 14 * z); ctx.strokeStyle = 'rgba(240,239,254,.14)'; ctx.lineWidth = 1; ctx.strokeRect(x - w / 2, y - 7 * z, w, 14 * z); ctx.fillStyle = C.lilac50; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y); ctx.restore(); }
 
 const GLYPH = ['cloud', 'sparkle', 'cylinder', 'bracket', 'chip'];
-function glyph(kind, x, y, s) { ctx.save(); ctx.translate(x, y); ctx.globalAlpha = .55; ctx.strokeStyle = C.lilac900; ctx.fillStyle = C.lilac900; ctx.lineWidth = 1.2; if (kind === 'cloud') { ctx.beginPath(); ctx.arc(-s * .3, 0, s * .35, 0, Math.PI * 2); ctx.arc(s * .2, -s * .15, s * .4, 0, Math.PI * 2); ctx.arc(s * .35, s * .2, s * .3, 0, Math.PI * 2); ctx.fill(); } else if (kind === 'sparkle') { ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * .25, -s * .25); ctx.lineTo(s, 0); ctx.lineTo(s * .25, s * .25); ctx.lineTo(0, s); ctx.lineTo(-s * .25, s * .25); ctx.lineTo(-s, 0); ctx.lineTo(-s * .25, -s * .25); ctx.fill(); } else if (kind === 'cylinder') { ctx.fillRect(-s * .6, -s * .5, s * 1.2, s); ctx.beginPath(); ctx.ellipse(0, -s * .5, s * .6, s * .25, 0, 0, Math.PI * 2); ctx.fill(); } else if (kind === 'bracket') { ctx.beginPath(); ctx.moveTo(-s * .2, -s); ctx.lineTo(-s * .7, -s); ctx.lineTo(-s * .7, s); ctx.lineTo(-s * .2, s); ctx.moveTo(s * .2, -s); ctx.lineTo(s * .7, -s); ctx.lineTo(s * .7, s); ctx.lineTo(s * .2, s); ctx.stroke(); } else { ctx.fillRect(-s * .6, -s * .6, s * 1.2, s * 1.2); for (let i = -1; i <= 1; i++) { ctx.fillRect(-s - .5, i * s * .45 - .6, s * .4, 1.2); ctx.fillRect(s * .6, i * s * .45 - .6, s * .4, 1.2); } } ctx.restore(); }
+function glyph(kind, x, y, s) { const ctx = ctx2 || window.__ctx; ctx.save(); ctx.translate(x, y); ctx.globalAlpha = .55; ctx.strokeStyle = C.lilac900; ctx.fillStyle = C.lilac900; ctx.lineWidth = 1.2; if (kind === 'cloud') { ctx.beginPath(); ctx.arc(-s * .3, 0, s * .35, 0, Math.PI * 2); ctx.arc(s * .2, -s * .15, s * .4, 0, Math.PI * 2); ctx.arc(s * .35, s * .2, s * .3, 0, Math.PI * 2); ctx.fill(); } else if (kind === 'sparkle') { ctx.beginPath(); ctx.moveTo(0, -s); ctx.lineTo(s * .25, -s * .25); ctx.lineTo(s, 0); ctx.lineTo(s * .25, s * .25); ctx.lineTo(0, s); ctx.lineTo(-s * .25, s * .25); ctx.lineTo(-s, 0); ctx.lineTo(-s * .25, -s * .25); ctx.fill(); } else if (kind === 'cylinder') { ctx.fillRect(-s * .6, -s * .5, s * 1.2, s); ctx.beginPath(); ctx.ellipse(0, -s * .5, s * .6, s * .25, 0, 0, Math.PI * 2); ctx.fill(); } else if (kind === 'bracket') { ctx.beginPath(); ctx.moveTo(-s * .2, -s); ctx.lineTo(-s * .7, -s); ctx.lineTo(-s * .7, s); ctx.lineTo(-s * .2, s); ctx.moveTo(s * .2, -s); ctx.lineTo(s * .7, -s); ctx.lineTo(s * .7, s); ctx.lineTo(s * .2, s); ctx.stroke(); } else { ctx.fillRect(-s * .6, -s * .6, s * 1.2, s * 1.2); for (let i = -1; i <= 1; i++) { ctx.fillRect(-s - .5, i * s * .45 - .6, s * .4, 1.2); ctx.fillRect(s * .6, i * s * .45 - .6, s * .4, 1.2); } } ctx.restore(); }
 function compStyle(c) { return c.t === 'package' ? { col: C.green300, s: 20 } : c.t === 'dataset' ? { col: C.green200, s: 22 } : c.t === 'model' ? { col: C.lilac400, s: 28 } : { col: C.lilac50, s: 23 }; }
 function drawCompShape(c, s) {
-  if (c.t === 'package') { ctx.save(); ctx.rotate(Math.PI / 4); ctx.fillRect(-s / 2, -s / 2, s, s); ctx.restore(); }
-  else if (c.t === 'dataset') { const w = s * .76, h = s; ctx.fillRect(-w / 2, -h / 2, w, h); for (let i = -1; i <= 1; i++) cutout(-w / 2 + w * .15, i * h * .25 - .75, w * .7, 1.5); }
-  else if (c.t === 'model') { ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; ctx.lineTo(Math.cos(a) * s / 2, Math.sin(a) * s / 2); } ctx.closePath(); ctx.fill(); }
-  else { ctx.beginPath(); ctx.arc(0, 0, s / 2, 0, Math.PI * 2); ctx.arc(0, 0, s / 2 - 4.6 * .55, 0, Math.PI * 2, true); ctx.fill('evenodd'); ctx.beginPath(); ctx.arc(0, 0, 2.3, 0, Math.PI * 2); ctx.fill(); }
+  const g = ctx2 || ctx;
+  if (c.t === 'package') { g.save(); g.rotate(Math.PI / 4); g.fillRect(-s / 2, -s / 2, s, s); g.restore(); }
+  else if (c.t === 'dataset') { const w = s * .76, h = s; g.fillRect(-w / 2, -h / 2, w, h); for (let i = -1; i <= 1; i++) cutout(-w / 2 + w * .15, i * h * .25 - .75, w * .7, 1.5); }
+  else if (c.t === 'model') { g.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; g.lineTo(Math.cos(a) * s / 2, Math.sin(a) * s / 2); } g.closePath(); g.fill(); }
+  else { g.beginPath(); g.arc(0, 0, s / 2, 0, Math.PI * 2); g.arc(0, 0, s / 2 - 4.6 * .55, 0, Math.PI * 2, true); g.fill('evenodd'); g.beginPath(); g.arc(0, 0, 2.3, 0, Math.PI * 2); g.fill(); }
 }
 function poisonVisible(c, me) { if (!c.p || !me) return false; if (me.caps.includes('enkrypt')) return true; const g = meta.gridDim, col = Math.floor((c.x + worldRadius) / meta.cellSize), row = Math.floor((c.y + worldRadius) / meta.cellSize); return cellColors[row * g + col] === me.color; }
+const spriteCache = new Map();
+function compSprite(c, poison, zb) {
+  const seed = parseInt(c.id.slice(1), 10) || 0, key = `${c.t}|${poison ? 1 : 0}|${c.k ? 1 : 0}|${seed % 5}|${zb}`;
+  let sp = spriteCache.get(key); if (sp) return sp;
+  const z = zb / 10, st = compStyle(c), s = st.s * z, pad = 24, size = Math.ceil(s + pad * 2);
+  const oc = document.createElement('canvas'); oc.width = oc.height = size; const o = oc.getContext('2d'); o.translate(size / 2, size / 2);
+  const saved = ctx; // reuse shape helpers by temporarily pointing them at the offscreen ctx
+  ctxRef.c = o;
+  if (poison) { o.strokeStyle = C.red; o.lineWidth = 2.2; o.shadowColor = C.red; o.shadowBlur = 18; if (c.t === 'package') { o.rotate(Math.PI / 4); o.strokeRect(-s / 2, -s / 2, s, s); } else if (c.t === 'dataset') o.strokeRect(-s * .38, -s / 2, s * .76, s); else if (c.t === 'model') { o.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; o.lineTo(Math.cos(a) * s / 2, Math.sin(a) * s / 2); } o.closePath(); o.stroke(); } else { o.beginPath(); o.arc(0, 0, s / 2, 0, Math.PI * 2); o.stroke(); } }
+  else { o.fillStyle = st.col; o.shadowColor = c.k ? C.green500 : st.col; o.shadowBlur = 12; drawCompShapeOn(o, c, s); o.shadowBlur = 0; glyphOn(o, GLYPH[seed % 5], s * .32, -s * .32, 3 * z); }
+  ctxRef.c = saved;
+  sp = { canvas: oc, half: size / 2 }; spriteCache.set(key, sp); return sp;
+}
+const ctxRef = { c: null };
+function drawCompShapeOn(o, c, s) { const keep = ctx2; ctx2 = o; drawCompShape(c, s); ctx2 = keep; }
+function glyphOn(o, kind, x, y, s) { const keep = ctx2; ctx2 = o; glyph(kind, x, y, s); ctx2 = keep; }
 function drawComponent(c, me) {
+  if (!onScreen(c.x, c.y)) return;
+  const zb = Math.max(5, Math.min(11, Math.round(camera.zoom * 10))), z = zb / 10;
+  const seed = parseInt(c.id.slice(1), 10) || 0, bob = REDUCED ? 0 : Math.sin(t * 4.4 + seed) * 2 * z;
+  const sp = compSprite(c, poisonVisible(c, me), zb);
+  ctx.drawImage(sp.canvas, W(c.x) - sp.half, H(c.y) + bob - sp.half);
+}
+function drawComponentLegacy(c, me) {
   if (!onScreen(c.x, c.y)) return; const z = camera.zoom, st = compStyle(c), s = st.s * z;
   const seed = parseInt(c.id.slice(1), 10) || 0, bob = REDUCED ? 0 : Math.sin(t * 2.2 * 2 + seed) * 2 * z;
   ctx.save(); ctx.translate(W(c.x), H(c.y) + bob);
@@ -307,8 +353,9 @@ function drawFx() {
 }
 
 // ------------------------------- HUD ------------------------------------------
-let chipSig = '', bumpFloor = 0;
+let chipSig = '', bumpFloor = 0, lastHudDom = 0;
 function updateHud(me) {
+  const doDom = performance.now() - lastHudDom > 250; if (doDom) lastHudDom = performance.now();
   if (me) {
     el.projects.textContent = me.projects; el.length.textContent = me.length;
     if (me.floor !== +el.floor.textContent) { el.floor.textContent = me.floor; el.floor.classList.remove('bump'); void el.floor.offsetWidth; el.floor.classList.add('bump'); }
@@ -322,11 +369,13 @@ function updateHud(me) {
   const next = ACQ.find(a => a.key === f.deal); el.fundFill.style.background = next ? next.color : C.green500; el.fundFill.style.width = f.dealName ? Math.min(100, Math.max(f.units / f.target, f.clockPct) * 100) + '%' : '100%';
   const sig = state.acquisitions.map(a => `${a.key}:${me && me.caps.includes(a.key) ? 1 : 0}`).join('|');
   if (sig !== chipSig) { chipSig = sig; el.chips.innerHTML = state.acquisitions.map(a => `<div class="acq ${me && me.caps.includes(a.key) ? 'held' : ''}" style="--c:${a.color}"><span class="n"><i></i>${esc(a.capability)}</span><span class="b">${esc(a.name)}</span></div>`).join(''); }
+  if (!doDom) return;
   el.lbList.innerHTML = state.leaderboard.map(r => `<li class="${r.name === myName ? 'me' : ''}"><i style="background:${state.snakes.find(s => s.name === r.name)?.color || C.lilac400}"></i>${esc(r.name)}${r.crown ? ' <span class="pips">◆◆◆</span>' : ''}<span class="v">${r.projects}</span></li>`).join('');
   el.hof.classList.toggle('hidden', !state.hallOfFame.length); el.hofList.innerHTML = state.hallOfFame.map(h => `<li>${esc(h.name)}</li>`).join('');
 }
+let lastMini = 0;
 function drawMinimap() {
-  if (!minimap.clientWidth || !minimap.classList.contains('shown')) return;
+  if (!minimap.clientWidth || !minimap.classList.contains('shown')) return; if (performance.now() - lastMini < 100) return; lastMini = performance.now();
   const w = minimap.width = minimap.clientWidth * devicePixelRatio, h = minimap.height = minimap.clientHeight * devicePixelRatio; mctx.clearRect(0, 0, w, h); mctx.save(); mctx.translate(w / 2, h / 2); const sc = (Math.min(w, h) / 2 - 4) / worldRadius;
   mctx.save(); mctx.beginPath(); mctx.arc(0, 0, worldRadius * sc, 0, Math.PI * 2); mctx.clip(); mctx.globalAlpha = .5; mctx.imageSmoothingEnabled = false; mctx.drawImage(fillC, -worldRadius * sc, -worldRadius * sc, worldRadius * 2 * sc, worldRadius * 2 * sc); mctx.restore();
   mctx.beginPath(); mctx.arc(0, 0, worldRadius * sc, 0, Math.PI * 2); mctx.lineWidth = 3; mctx.strokeStyle = rgba(C.red, .45); mctx.stroke();
@@ -343,11 +392,10 @@ function render(now) {
   if (state) {
     const me = mine();
     if (me && me.alive) { camera.x += (me.points[0].x - camera.x) * .16; camera.y += (me.points[0].y - camera.y) * .16; const tz = (1.05 - (1.05 - .62) * Math.min(1, me.length / 420)) * (boosting ? .95 : 1); camera.zoom += (tz - camera.zoom) * .04; }
-    const cur = new Map(); for (const c of state.components) cur.set(c.id, c);
-    for (const [id, c] of prevComps) if (!cur.has(id) && me && onScreen(c.x, c.y) && Math.hypot(c.x - me.points[0].x, c.y - me.points[0].y) < 90) { const st = compStyle(c); pops.push({ x: c.x, y: c.y, t: c.t, col: st.col, s: st.s, t0: now }); }
-    prevComps = cur;
+    for (const c of removedComps) if (me && Math.hypot(c.x - me.points[0].x, c.y - me.points[0].y) < 90) { const st = compStyle(c); pops.push({ x: c.x, y: c.y, t: c.t, col: st.col, s: st.s, t0: now }); }
+    removedComps.length = 0;
     drawArena(); drawFloor(me); for (const s of state.snakes) if (s.alive) drawPad(s); drawLandmarks();
-    for (const c of state.components) drawComponent(c, me);
+    for (const c of comps.values()) drawComponent(c, me);
     for (const s of state.snakes) if (s.alive) drawSnake(s, s.id === myId);
     drawFx(); drawBorderAndVignette(); updateHud(me); drawMinimap();
   } else drawArena();

@@ -13,7 +13,7 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, { cors: { origin: '*' }, perMessageDeflate: { threshold: 512 } });
 app.use(express.static(path.join(__dirname, 'public')));
 const analytics = { sessions: 0, deaths: 0, runSeconds: [] };
 app.get('/__analytics', (req, res) => {
@@ -171,6 +171,8 @@ const gridOwnerCode = new Int32Array(CELL_COUNT);
 const codeToColor = new Map();
 let nextOwnerCode = 1;
 let compSeq = 0;
+const compAdded = new Map(), compRemoved = new Set();
+const compWire = (c) => ({ id: c.id, x: Math.round(c.x), y: Math.round(c.y), t: c.type, p: c.poisoned, k: c.curated, th: c.threat });
 let tick = 0;
 const hallOfFame = [];         // { name, at }
 const feed = [];               // last event lines
@@ -204,13 +206,14 @@ function spawnComponent(at, opts = {}) {
   const type = opts.type || pickType();
   const poisoned = opts.curated || opts.clean ? false : Math.random() < POISON_RATE;
   const threat = poisoned ? pickThreat(type) : null;
-  components.set(id, { id, x: p.x, y: p.y, type, poisoned, curated: !!opts.curated, threat: threat ? threat[0] : null, threatLine: threat ? threat[1] : null });
+  const comp = { id, x: p.x, y: p.y, type, poisoned, curated: !!opts.curated, threat: threat ? threat[0] : null, threatLine: threat ? threat[1] : null };
+  components.set(id, comp); compAdded.set(id, comp);
   return id;
 }
 function ensureComponents() { if (components.size < COMPONENT_TARGET) spawnComponent(); }
 function clearPoisonNear(x, y, r) {
   const r2 = r * r;
-  for (const c of components.values()) if (c.poisoned && dist2(x, y, c.x, c.y) < r2) c.poisoned = false;
+  for (const c of components.values()) if (c.poisoned && dist2(x, y, c.x, c.y) < r2) { c.poisoned = false; compAdded.set(c.id, c); }
 }
 
 // ------------------------------- Territory ------------------------------------
@@ -371,6 +374,7 @@ class Snake {
   updateTerritory() {
     const { col, row } = worldToCell(this.x, this.y), idx = cellIndex(col, row);
     if (gridOwnerCode[idx] === this.code) {
+      this.outTicks = 0;
       const canClose = hasCap(this.player, 'outerbounds') || padLock[idx] === this.code;
       if (this.trailCells.length > 0 && canClose) floodClaim(this);
       else if (this.trailCells.length > 0) { const last = this.trailCells[this.trailCells.length - 1]; if (last !== idx) this.trailCells.push(idx); }
@@ -379,7 +383,8 @@ class Snake {
       this.inTerritory = false;
       if (this.trailCells[this.trailCells.length - 1] !== idx && this.trailCells.length < 4000) this.trailCells.push(idx);
       const lp = this.trailPts[this.trailPts.length - 1];
-      if (!lp || dist2(lp.x, lp.y, this.x, this.y) > 12 * 12) { if (this.trailPts.length < 3000) this.trailPts.push({ x: Math.round(this.x), y: Math.round(this.y) }); }
+      if (!lp || dist2(lp.x, lp.y, this.x, this.y) > 24 * 24) { if (this.trailPts.length < 1200) this.trailPts.push({ x: Math.round(this.x), y: Math.round(this.y) }); }
+      this.outTicks = (this.outTicks || 0) + 1;
     }
   }
   updateOrbs() {
@@ -387,7 +392,7 @@ class Snake {
     this.orbs.length = n;
     for (let i = 0; i < n; i++) {
       const a = tick * 0.09 + (i / n) * Math.PI * 2;
-      this.orbs[i] = { x: this.x + Math.cos(a) * 58, y: this.y + Math.sin(a) * 58 };
+      this.orbs[i] = { x: Math.round(this.x + Math.cos(a) * 58), y: Math.round(this.y + Math.sin(a) * 58) };
     }
   }
   grow(amount) { this.length = Math.min(MAX_LENGTH, this.length + amount); }
@@ -439,6 +444,7 @@ class Snake {
       if (this.loopTicks === 0) { this.targetAngle = Math.atan2(this.home.y - this.y, this.home.x - this.x); this.botTimer = 60; }
       return;
     }
+    if (!this.inTerritory && (this.outTicks || 0) > TICK_RATE * 25) { this.targetAngle = Math.atan2(this.home.y - this.y, this.home.x - this.x) + rand(-0.15, 0.15); this.boosting = false; return; }
     if (--this.botTimer > 0) return;
     this.botTimer = 15 + Math.floor(Math.random() * 20);
     if (this.inTerritory && Math.random() < 0.15) { this.loopTicks = 60 + Math.floor(Math.random() * 60); this.loopDir = Math.random() < 0.5 ? -1 : 1; this.targetAngle = rand(0, Math.PI * 2); return; }
@@ -499,7 +505,7 @@ function maintainBots() {
 
 // ------------------------------- Pickups --------------------------------------
 function collect(s, c, viaOrb) {
-  components.delete(c.id);
+  components.delete(c.id); compRemoved.add(c.id); compAdded.delete(c.id);
   let poisoned = c.poisoned;
   if (poisoned && s.inTerritory) { poisoned = false; io.to(s.id).emit('vetted', { threat: c.threat }); } // your floor is main: secure by default
   if (poisoned) {
@@ -569,6 +575,8 @@ function collisions() {
       if (kills.has(a.id)) break;
     }
   }
+  // Fresh humans (first 15s) can't be killed by bots — nobody dies before they've learned to steer.
+  for (const [id, k] of [...kills]) { const v = snakes.get(id); if (!v || v.isBot || !k.killer) continue; const killer = alive.find(o => o.name === k.killer); if (killer && killer.isBot && Date.now() - v.spawnedAt < 15000) kills.delete(id); }
   for (const [id, k] of kills) { const s = snakes.get(id); if (s) { s.die(k.reason, k.killer); if (k.killer) for (const o of alive) if (o.name === k.killer && !o.isBot) io.to(o.id).emit('gotcha', { victim: s.name }); } }
 }
 
@@ -627,23 +635,32 @@ function gameTick() {
   broadcast();
 }
 
+function flat(pts) { const a = new Array(pts.length * 2); for (let i = 0; i < pts.length; i++) { a[i * 2] = Math.round(pts[i].x); a[i * 2 + 1] = Math.round(pts[i].y); } return a; }
+// Body stream: first 6 points at full resolution, then every 2nd (client re-inserts midpoints).
+function flatTrail(pts) { const a = []; const n = pts.length; const start = Math.max(0, n - 60); const older = []; for (let i = 0; i < start; i += 3) older.push(pts[i]); const keep = older.slice(-240).concat(pts.slice(start)); for (const p of keep) a.push(p.x, p.y); return a; }
+function flatBody(pts) { const a = []; for (let i = 0; i < pts.length; i += i < 6 ? 1 : 2) a.push(Math.round(pts[i].x), Math.round(pts[i].y)); return a; }
 function broadcast() {
-  const snakePayload = [...snakes.values()].map(s => ({
-    id: s.id, name: s.name, color: s.color, alive: s.alive, length: Math.round(s.length), headRadius: s.headRadius,
-    points: s.points, shield: s.shield > 0, inTerritory: s.inTerritory,
-    trail: s.trailPts,
-    orbs: s.orbs, home: s.home, floor: s.floor, products: s.products, datasets: s.datasets, nextFootprint: (PRODUCTS[s.player.buildings.length] || {}).footprint || null, nextProduct: (PRODUCTS[s.player.buildings.length] || {}).name || null,
-    caps: [...s.player.capabilities], crown: trustedFoundation(s.player),
-    tokens: Math.round(s.player.tokensRouted), burned: Math.round(s.player.tokensBurned), retargetUsed: s.retargetUsed, projects: s.player.projects, age: Date.now() - s.spawnedAt,
+  const dyn = [...snakes.values()].map(s => ({
+    id: s.id, alive: s.alive, length: Math.round(s.length), headRadius: +s.headRadius.toFixed(1),
+    pts: flatBody(s.points), shield: s.shield > 0, inTerritory: s.inTerritory, trail: flatTrail(s.trailPts), orbs: s.orbs, floor: s.floor,
   }));
-  const compPayload = [...components.values()].map(c => ({ id: c.id, x: c.x, y: c.y, t: c.type, p: c.poisoned, k: c.curated, th: c.threat }));
+  const added = [...compAdded.values()].filter(c => components.has(c.id)).map(compWire), removed = [...compRemoved]; compAdded.clear(); compRemoved.clear();
+  io.emit('state', { t: Date.now(), snakes: dyn, compAdd: added, compRemove: removed });
+  if (tick % 10 === 0) broadcastMeta();
+}
+function broadcastMeta() {
+  const metaSnakes = [...snakes.values()].map(s => ({
+    id: s.id, name: s.name, color: s.color, home: s.home, products: s.products, datasets: s.datasets,
+    nextFootprint: (PRODUCTS[s.player.buildings.length] || {}).footprint || null, nextProduct: (PRODUCTS[s.player.buildings.length] || {}).name || null,
+    caps: [...s.player.capabilities], crown: trustedFoundation(s.player), tokens: Math.round(s.player.tokensRouted), burned: Math.round(s.player.tokensBurned),
+    retargetUsed: s.retargetUsed, projects: s.player.projects, age: Date.now() - s.spawnedAt,
+  }));
   const leaderboard = [...snakes.values()].filter(s => s.alive)
     .sort((a, b) => (b.player.projects - a.player.projects) || ((b.player.tokensRouted / Math.max(1, b.player.tokensBurned)) - (a.player.tokensRouted / Math.max(1, a.player.tokensBurned))) || (b.length - a.length))
-    .slice(0, 8).map(s => ({ name: s.name, projects: s.player.projects, tokens: Math.round(s.player.tokensRouted), crown: trustedFoundation(s.player), caps: s.player.capabilities.size }));
+    .slice(0, 8).map(s => ({ name: s.name, projects: s.player.projects, tokens: Math.round(s.player.tokensRouted), crown: trustedFoundation(s.player), color: s.color }));
   const deal = currentDeal();
-  io.emit('state', {
-    t: Date.now(), worldRadius: WORLD_RADIUS, snakes: snakePayload, components: compPayload, leaderboard,
-    hallOfFame: hallOfFame.slice(0, 5),
+  io.emit('meta', {
+    worldRadius: WORLD_RADIUS, snakes: metaSnakes, leaderboard, hallOfFame: hallOfFame.slice(0, 5),
     funding: { deal: deal ? deal.key : null, dealName: deal ? deal.name : null, capability: deal ? deal.capability : null, units: funding.units, target: FUNDING_TARGET, clockPct: deal ? Math.min(1, (Date.now() - funding.lastLandAt) / CAPABILITY_CLOCK_MS) : 1 },
     acquisitions: ACQUISITIONS.map(a => { const h = a.funded ? padHolder(a) : null; return { key: a.key, name: a.name, color: a.color, capability: a.capability, funded: a.funded, site: a.site, holder: h ? h.name : null, holderColor: h ? h.color : null, firstIntegrator: a.firstIntegrator }; }),
     playerCount: [...snakes.values()].filter(s => !s.isBot).length,
@@ -664,6 +681,7 @@ function welcome(socket, s) {
     acquisitions: ACQUISITIONS.map(a => ({ key: a.key, name: a.name, color: a.color, capability: a.capability, does: a.does, site: a.site })),
     embargo: EMBARGO, cta: process.env.CTA_URL || 'https://www.anaconda.com/platform',
     feed,
+    components: [...components.values()].map(compWire),
   };
 }
 
@@ -676,13 +694,13 @@ io.on('connection', (socket) => {
     if (snakes.has(socket.id)) removeSnake(socket.id);
     analytics.sessions += 1;
     const s = createSnake(socket.id, name, color, false, clientKey);
-    socket.emit('welcome', welcome(socket, s));
+    socket.emit('welcome', welcome(socket, s)); broadcastMeta();
   });
   socket.on('respawn', ({ name, color, clientKey } = {}) => {
     const prev = snakes.get(socket.id);
     removeSnake(socket.id);
     const s = createSnake(socket.id, name || (prev && prev.name), color || (prev && prev.color), false, clientKey);
-    socket.emit('welcome', welcome(socket, s));
+    socket.emit('welcome', welcome(socket, s)); broadcastMeta();
   });
   socket.on('input', ({ angle, boosting } = {}) => {
     const s = snakes.get(socket.id); if (!s || !s.alive) return;
