@@ -267,7 +267,7 @@ function drawCompShape(c, s) {
   if (c.t === 'package') { g.save(); g.rotate(Math.PI / 4); g.fillRect(-s / 2, -s / 2, s, s); g.restore(); }
   else if (c.t === 'dataset') { const w = s * .76, h = s; g.fillRect(-w / 2, -h / 2, w, h); for (let i = -1; i <= 1; i++) cutout(-w / 2 + w * .15, i * h * .25 - .75, w * .7, 1.5); }
   else if (c.t === 'model') { g.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; g.lineTo(Math.cos(a) * s / 2, Math.sin(a) * s / 2); } g.closePath(); g.fill(); }
-  else { g.beginPath(); g.arc(0, 0, s / 2, 0, Math.PI * 2); g.arc(0, 0, s / 2 - 4.6 * .55, 0, Math.PI * 2, true); g.fill('evenodd'); g.beginPath(); g.arc(0, 0, 2.3, 0, Math.PI * 2); g.fill(); }
+  else { const R = Math.max(0.1, s / 2), r = Math.max(0, R - 4.6 * .55); g.beginPath(); g.arc(0, 0, R, 0, Math.PI * 2); g.arc(0, 0, r, 0, Math.PI * 2, true); g.fill('evenodd'); g.beginPath(); g.arc(0, 0, Math.min(2.3, R), 0, Math.PI * 2); g.fill(); }
 }
 function poisonVisible(c, me) { if (!c.p || !me) return false; if (me.caps.includes('enkrypt')) return true; const g = meta.gridDim, col = Math.floor((c.x + worldRadius) / meta.cellSize), row = Math.floor((c.y + worldRadius) / meta.cellSize); return cellColors[row * g + col] === me.color; }
 const spriteCache = new Map();
@@ -387,6 +387,10 @@ function drawMinimap() {
 // ------------------------------- Loop -----------------------------------------
 let lastFrame = performance.now();
 function render(now) {
+  try { renderFrame(now); } catch (e) { if (!render.logged) { render.logged = true; console.error('frame error', e); socket.emit('analytics', { event: 'client_error' }); } }
+  requestAnimationFrame(render);
+}
+function renderFrame(now) {
   const dt = Math.min(.05, (now - lastFrame) / 1000) * (now < slowmoUntil ? .4 : 1); lastFrame = now; t += dt;
   headSquash = Math.max(0, headSquash - dt * 8); ripple = Math.max(0, ripple - dt * 5);
   if (state) {
@@ -399,6 +403,5 @@ function render(now) {
     for (const s of state.snakes) if (s.alive) drawSnake(s, s.id === myId);
     drawFx(); drawBorderAndVignette(); updateHud(me); drawMinimap();
   } else drawArena();
-  requestAnimationFrame(render);
 }
 requestAnimationFrame(render);

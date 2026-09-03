@@ -525,7 +525,7 @@ function collect(s, c, viaOrb) {
 function pickups() {
   for (const s of snakes.values()) {
     if (!s.alive) continue;
-    const r = s.headRadius + 8 * (has(s.products, 'mcp') ? 1.6 : 1), r2 = r * r;
+    const r = (s.headRadius + 16) * (has(s.products, 'mcp') ? 1.6 : 1), r2 = r * r;
     for (const c of components.values()) {
       if (dist2(s.x, s.y, c.x, c.y) <= r2) { collect(s, c, false); continue; }
       for (const o of s.orbs) if (dist2(o.x, o.y, c.x, c.y) <= 14 * 14) { if (!c.poisoned) collect(s, c, true); break; }
