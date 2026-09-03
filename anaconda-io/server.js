@@ -522,7 +522,7 @@ function tick() {
       // skip the last few trail cells of b (b's own head is right there; that's body-vs-head, handled below)
       const n = b.trailCells.length;
       for (let i = 0; i < n - 3; i++) {
-        if (b.trailCells[i] === headIdx) { toKill.set(a.id, b.name); b.kills += 1; break; }
+        if (b.trailCells[i] === headIdx) { toKill.set(a.id, 'trail:' + b.name); b.kills += 1; break; }
       }
       if (toKill.has(a.id)) break;
     }

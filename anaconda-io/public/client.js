@@ -104,7 +104,10 @@ function paintTerritoryCells(cells) {
 
 // ------------------------------- Screens --------------------------------------
 function showDeath(reason, length) {
-  deathReasonEl.textContent = !reason ? 'You slithered into the border.' : reason === myName ? 'You bit your own tail!' : `Bitten by ${reason}`;
+  deathReasonEl.textContent = !reason ? 'You slithered into the border.'
+    : reason === myName ? 'You bit your own tail!'
+    : reason.startsWith('trail:') ? `You crossed ${reason.slice(6)}'s claim trail.`
+    : `You ran into ${reason}.`;
   finalLengthEl.textContent = length;
   deathScreen.classList.remove('hidden'); joinScreen.classList.add('hidden'); hud.classList.add('hidden');
 }
@@ -116,16 +119,25 @@ function joinPayload() {
   return { name, color: selectedColor, clientKey };
 }
 playBtn.addEventListener('click', () => socket.emit('join', joinPayload()));
+nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') playBtn.click(); });
+window.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !deathScreen.classList.contains('hidden')) respawnBtn.click(); });
 respawnBtn.addEventListener('click', () => socket.emit('respawn', joinPayload()));
 
 // ------------------------------- Socket ---------------------------------------
 socket.on('welcome', (d) => {
+  everJoined = true;
+  nameInput.blur();
   myId = d.id; myName = d.you.name; worldRadius = d.worldRadius; alive = true;
   heading = d.you.angle; camera.x = d.you.x; camera.y = d.you.y;
   if (d.territory) initTerritory({ cellSize: d.territory.cellSize, gridDim: d.territory.gridDim }, d.territory.cells);
   showGame();
 });
 socket.on('territoryUpdate', ({ cells }) => paintTerritoryCells(cells));
+let everJoined = false;
+socket.on('connect', () => {
+  if (everJoined) { toast('Reconnected — respawning at your Factory', ANA.green); socket.emit('respawn', joinPayload()); }
+});
+socket.on('disconnect', () => { alive = false; toast('Connection lost — reconnecting…', ANA.gray); });
 socket.on('state', (s) => { latestState = s; worldRadius = s.worldRadius; });
 socket.on('died', (d) => {
   alive = false;
