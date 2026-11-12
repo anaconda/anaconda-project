@@ -1,0 +1,15 @@
+{
+  "name": "icebreakers",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared ice breaker question and answer board for team meetings",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "test": "node --test"
+  }
+}

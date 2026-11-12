@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ice Breakers</title>
+    <meta
+      name="description"
+      content="A shared board of ice breaker questions the team can answer and add to."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">❄</span>
+          <div>
+            <h1>Ice Breakers</h1>
+            <p class="tagline">Answer a question, or add one you want the team to answer.</p>
+          </div>
+        </div>
+        <label class="identity">
+          <span class="identity-label">You are</span>
+          <input
+            id="me"
+            name="me"
+            type="text"
+            maxlength="60"
+            autocomplete="nickname"
+            placeholder="Your name"
+            spellcheck="false"
+          />
+        </label>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section class="composer card" aria-labelledby="composer-title">
+        <form id="new-question" novalidate>
+          <h2 id="composer-title" class="card-title">Add a question for the team</h2>
+          <label class="sr-only" for="new-question-text">Your question</label>
+          <textarea
+            id="new-question-text"
+            name="question"
+            rows="2"
+            maxlength="200"
+            placeholder="e.g. What&#39;s the best meal you&#39;ve ever cooked?"
+            required
+          ></textarea>
+          <div class="composer-footer">
+            <p class="hint" id="composer-hint" aria-live="polite">Questions are visible to everyone on the board.</p>
+            <button class="btn btn-primary" type="submit">Add question</button>
+          </div>
+          <p class="form-error" id="new-question-error" role="alert" hidden></p>
+        </form>
+      </section>
+
+      <section class="toolbar" aria-label="Filter questions">
+        <div class="search">
+          <label class="sr-only" for="search">Search questions</label>
+          <input
+            id="search"
+            type="search"
+            placeholder="Search questions"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <div class="chips" role="group" aria-label="Show">
+          <button class="chip is-active" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-filter="unanswered" aria-pressed="false">Unanswered</button>
+          <button class="chip" type="button" data-filter="mine" aria-pressed="false">My answers</button>
+        </div>
+        <button class="btn btn-ghost" type="button" id="random">Surprise me</button>
+      </section>
+
+      <p class="stats" id="stats" aria-live="polite"></p>
+
+      <section id="list" class="list" aria-label="Questions"></section>
+    </main>
+
+    <footer class="site-footer wrap">
+      <p>
+        Questions from Todd Caponi&rsquo;s
+        <a
+          href="https://toddcaponi.com/sales-meetings-the-purpose-and-my-top-30-ice-breaker-questions/"
+          rel="noreferrer"
+          >Top 30 Ice-Breaker Questions</a
+        >. Answers are stored on this server only.
+      </p>
+    </footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
