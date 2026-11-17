@@ -104,16 +104,15 @@ button:focus-visible,[tabindex]:focus-visible,a:focus-visible{
 /* ---------- layout ---------- */
 .stage{
   flex:1;display:grid;gap:clamp(10px,1.6vw,20px);
-  grid-template-columns:minmax(150px,200px) minmax(0,1fr) minmax(0,300px);
+  grid-template-columns:minmax(150px,200px) minmax(0,1fr);
   align-items:start;
 }
 @media (max-width:1080px){
   .stage{grid-template-columns:minmax(0,1fr)}
   .side-left{order:1}
   .center{order:2}
-  .side-right{order:3}
 }
-.side-left,.center,.side-right{min-width:0;display:flex;flex-direction:column;gap:10px}
+.side-left,.center{min-width:0;display:flex;flex-direction:column;gap:10px}
 .card{
   background:var(--panel);border:1px solid var(--hair);border-radius:var(--r-panel);
   box-shadow:var(--shadow-sm);padding:12px 14px;
@@ -359,20 +358,8 @@ button:focus-visible,[tabindex]:focus-visible,a:focus-visible{
 }
 @keyframes wrongShakeM{0%,100%{translate:0 0}25%{translate:-6px 0}50%{translate:6px 0}75%{translate:-3px 0}}
 
-/* ---------- fact log / notebook ---------- */
-.drawer-toggle{display:flex;align-items:center;gap:6px}
-.cells{display:flex;flex-direction:column;gap:7px;max-height:min(46vh,420px);overflow:auto;padding-right:4px}
-.cell{font-family:var(--font-mono);font-size:11.5px;line-height:1.5;border-left:3px solid var(--hair);padding:3px 0 3px 9px}
-.cell .in{color:var(--muted)}
-.cell .out{color:var(--ink)}
-.cell .ok{color:#1f7a35}
-.cell .no{color:#a71d2a}
 [data-theme="dark"] .cell .ok{color:#68e08c}
 [data-theme="dark"] .cell .no{color:#ff8894}
-.cell.player{border-left-color:var(--anaconda-green)}
-.cell.ai{border-left-color:var(--slate)}
-.empty{font-size:12px;color:var(--muted);font-family:var(--font-mono)}
-.side-right.collapsed .cells,.side-right.collapsed .copybtn{display:none}
 
 /* ---------- modal ---------- */
 .modal{
@@ -547,18 +534,6 @@ html[data-rm="1"] .shake{animation:none!important}
       </div>
     </div>
 
-    <!-- right column -->
-    <aside class="side-right" id="drawer">
-      <div class="card">
-        <div class="modal-head" style="margin-bottom:10px">
-          <div id="drawerLogo"></div>
-          <h3 style="margin:0;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)">Fact log</h3>
-          <button class="icon-btn close-x" id="btnToggleDrawer" style="min-width:36px;min-height:36px;padding:0" title="Collapse log" aria-expanded="true">–</button>
-        </div>
-        <div class="cells" id="cells"><div class="empty">No moves yet.</div></div>
-        <button class="icon-btn copybtn" id="btnCopy" style="margin-top:10px;width:100%;justify-content:center;font-size:12px">Copy as code</button>
-      </div>
-    </aside>
   </div>
 </div>
 
@@ -597,6 +572,29 @@ html[data-rm="1"] .shake{animation:none!important}
       <li>Fact cards only appear on <b>your</b> captures. The Community engine resolves its own captures automatically and shares a fact as a toast.</li>
     </ul>
     <p class="mono" style="font-size:11px">Keyboard: arrows move the cursor · Enter/Space select · Esc cancel · U undo · R new game · S sound</p>
+  </div>
+</div>
+
+<!-- opening rules popup (shown on every new game) -->
+<div class="modal" id="intro">
+  <div class="modal-box" style="text-align:center">
+    <div class="modal-head" style="justify-content:center;margin-bottom:6px">
+      <div id="introLogo"></div>
+    </div>
+    <h2 style="font-size:20px;margin-bottom:10px">Anaconda Checkers</h2>
+    <p style="font-size:14px;color:var(--ink);line-height:1.55;margin:0 auto 14px;max-width:42ch">
+      Every capture triggers an <b>Anaconda fact question</b>.
+    </p>
+    <div style="background:rgba(12,203,74,.10);border:1px solid rgba(12,203,74,.35);border-radius:10px;padding:11px 13px;margin-bottom:12px;text-align:left">
+      <p style="margin:0;font-size:13.5px;color:var(--ink);line-height:1.5">
+        <b style="color:#1f7a35">Right answer</b> — the capture counts and scores.<br>
+        <b style="color:#a71d2a">Wrong answer or timeout</b> — <b>you lose your turn</b> and the move is undone.
+      </p>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 16px">
+      Questions change every game. Good luck.
+    </p>
+    <button class="icon-btn" id="btnIntroClose" style="width:100%;justify-content:center;background:var(--anaconda-green);color:#fff;border-color:transparent;font-weight:600">Got it</button>
   </div>
 </div>
 
@@ -651,7 +649,7 @@ mountLogo("headerLogo");
 mountLogo("onboardLogo", 40);
 mountLogo("fcLogo", 14);
 mountLogo("rulesLogo");
-mountLogo("drawerLogo");
+mountLogo("introLogo");
 (function setFavicon(){
   const link = document.createElement("link");
   link.rel = "icon";
@@ -1020,8 +1018,6 @@ const el = {
   statCombo: document.getElementById("statCombo"),
   status: document.getElementById("status"),
   live: document.getElementById("live"),
-  cells: document.getElementById("cells"),
-  drawer: document.getElementById("drawer"),
   scrim: document.getElementById("scrim"),
   factcard: document.getElementById("factcard"),
   fcStmt: document.getElementById("fcStmt"),
@@ -1032,6 +1028,7 @@ const el = {
   btnTrue: document.getElementById("btnTrue"),
   btnFalse: document.getElementById("btnFalse"),
   rules: document.getElementById("rules"),
+  intro: document.getElementById("intro"),
   finale: document.getElementById("finale"),
   finaleStamp: document.getElementById("finaleStamp"),
   finaleResult: document.getElementById("finaleResult"),
@@ -1646,7 +1643,6 @@ function finishWager(correct, timedOut){
     el.factcard.appendChild(stamp);
     audio.chime();
     announce("Fact correct. Capture confirmed at " + lastTo + ".");
-    pushLog("capture " + firstFrom + "→" + lastTo, "fact correct", true);
   } else {
     UI.streak = 0;
     el.factcard.classList.add("wrong");
@@ -1655,7 +1651,6 @@ function finishWager(correct, timedOut){
       "Actually: " + (fact.explain || (fact.answer ? "that statement is true." : "that statement is false."));
     audio.fail();
     announce("Fact check failed" + (timedOut ? " (timeout)" : "") + ". Turn passes.");
-    pushLog("capture " + firstFrom + "→" + lastTo, "fact missed", false);
   }
   el.btnTrue.disabled = true; el.btnFalse.disabled = true;
   seenAcross.add(fact.id);
@@ -1676,29 +1671,6 @@ function finishWager(correct, timedOut){
 /* ============================================================
    8. TURN FLOW
    ============================================================ */
-function pushLog(moveText, outcome, ok){
-  const n = UI.moves.length + 1;
-  UI.moves.push({ n, moveText, outcome, ok });
-  renderLog();
-}
-
-function renderLog(){
-  if (!UI.moves.length){
-    el.cells.innerHTML = '<div class="empty">No moves yet.</div>';
-    return;
-  }
-  el.cells.innerHTML = "";
-  for (const m of UI.moves){
-    const d = document.createElement("div");
-    d.className = "cell " + (m.moveText.startsWith("ai") ? "ai" : "player");
-    d.innerHTML = '<div class="in">In [' + m.n + ']: <span class="mt"></span></div>' +
-                  '<div class="out">Out[' + m.n + ']: <span class="' + (m.ok ? "ok" : "no") + '"></span></div>';
-    d.querySelector(".mt").textContent = m.moveText.replace("ai ", "");
-    d.querySelector(".out span").textContent = m.outcome;
-    el.cells.appendChild(d);
-  }
-  el.cells.scrollTop = el.cells.scrollHeight;
-}
 
 function snapshot(){
   return {
@@ -1750,7 +1722,6 @@ async function humanMove(chain){
       UI.factsAsked = snap.factsAsked;
       UI.factsCorrect = snap.factsCorrect;
       UI.moves = snap.moves.slice();
-      renderLog();
       UI.phase = "idle";
       CLASH_ACTIVE = false;
       syncPieces();
@@ -1823,7 +1794,6 @@ async function startAiTurn(){
     if (G.board[land]) G.board[land].battleXp = (G.board[land].battleXp || 0) + 1;
     if (res.promoted) await promotionFx(land);
     audio.shatter();
-    pushLog("ai " + sqName(chain[0].from) + "→" + sqName(land), "auto-resolved", true);
     // AI shares a true fact
     const tf = FACTS.filter(f => f.answer)[(Math.random() * 15) | 0] || FACTS[0];
     toast("Anaconda fact", tf.statement);
@@ -1831,7 +1801,6 @@ async function startAiTurn(){
     const res = applyMove(G, { chain });
     G = res.state;
     audio.step();
-    pushLog("ai " + sqName(chain[0].from) + "→" + sqName(chain[0].to), "move", true);
   }
   UI.phase = "idle";
   renderAll();
@@ -1926,6 +1895,10 @@ document.addEventListener("keydown", e => {
     else if (k === "Escape") { e.preventDefault(); }
     return;
   }
+  if (el.intro.classList.contains("on")){
+    if (k === "Escape" || k === "Enter" || k === " "){ e.preventDefault(); closeIntro(); }
+    return;
+  }
   if (el.rules.classList.contains("on")){
     if (k === "Escape") closeRules();
     return;
@@ -1975,6 +1948,16 @@ function togglePattern(){
   syncPieces();
 }
 function openRules(){ el.rules.classList.add("on"); document.getElementById("btnCloseRules").focus(); }
+function openIntro(){
+  el.intro.classList.add("on");
+  document.getElementById("btnIntroClose").focus();
+}
+function closeIntro(){
+  el.intro.classList.remove("on");
+  // never leave the board locked behind the popup
+  if (UI.phase !== "over") UI.phase = "idle";
+  renderAll();
+}
 function closeRules(){ el.rules.classList.remove("on"); }
 
 function doUndo(){
@@ -1986,7 +1969,6 @@ function doUndo(){
   UI.factsCorrect = snap.factsCorrect;
   UI.streak = snap.streak;
   UI.moves = snap.moves.slice();
-  renderLog();
   el.finale.classList.remove("on", "show-result");
   UI.phase = "idle";
   UI.selected = null;
@@ -2011,10 +1993,10 @@ function newGame(){
   el.factcard.classList.remove("on");
   piecesEl.forEach(n => n.remove());
   piecesEl.clear();
-  renderLog();
   refreshLegal();
   renderAll();
   el.status.textContent = "";
+  openIntro();
 }
 
 function shareResult(){
@@ -2043,28 +2025,19 @@ function legacyCopy(text){
   } catch (e) { return false; }
 }
 
-function copyLog(){
-  const text = UI.moves.map(m => `In [${m.n}]: ${m.moveText}\nOut[${m.n}]: ${m.outcome}`).join("\n\n");
-  copyText(text || "No moves yet.").then(ok => toast("Notebook", ok ? "Move log copied." : "Copy failed."));
-}
-
 document.getElementById("btnSound").addEventListener("click", toggleSound);
 document.getElementById("btnTheme").addEventListener("click", toggleTheme);
 document.getElementById("btnPattern").addEventListener("click", togglePattern);
 document.getElementById("btnRules").addEventListener("click", openRules);
 document.getElementById("btnCloseRules").addEventListener("click", closeRules);
+document.getElementById("btnIntroClose").addEventListener("click", closeIntro);
+el.intro.addEventListener("click", e => { if (e.target === el.intro) closeIntro(); });
 document.getElementById("btnUndo").addEventListener("click", doUndo);
 document.getElementById("btnNew").addEventListener("click", newGame);
 document.getElementById("btnAgain").addEventListener("click", newGame);
 document.getElementById("btnShare").addEventListener("click", shareResult);
-document.getElementById("btnCopy").addEventListener("click", copyLog);
 document.getElementById("btnTrue").addEventListener("click", () => submitAnswer(true));
 document.getElementById("btnFalse").addEventListener("click", () => submitAnswer(false));
-document.getElementById("btnToggleDrawer").addEventListener("click", () => {
-  const col = el.drawer.classList.toggle("collapsed");
-  document.getElementById("btnToggleDrawer").setAttribute("aria-expanded", String(!col));
-  document.getElementById("btnToggleDrawer").textContent = col ? "+" : "–";
-});
 el.rules.addEventListener("click", e => { if (e.target === el.rules) closeRules(); });
 
 /* focus trap for the fact card */
@@ -2101,6 +2074,8 @@ function runOnboarding(){
     setTimeout(() => { el.onboard.style.display = "none"; }, 450);
     document.removeEventListener("keydown", onKey);
     el.onboard.removeEventListener("click", finish);
+    // first visit: the terminal intro hands off to the rules popup
+    setTimeout(openIntro, 480);
   };
   const onKey = e => { if (e.key === "Escape" || e.key === "Enter" || e.key === " ") finish(); };
   document.addEventListener("keydown", onKey);
@@ -2122,7 +2097,6 @@ function boot(){
   buildBoardDom();
   G = createState();
   refreshLegal();
-  renderLog();
   renderAll();
   el.statStreak.textContent = prefs.bestStreak;
 
@@ -2136,7 +2110,7 @@ function boot(){
   if (qs.get("nofact") === "1") window.__NOFACT__ = true;
 
   if (!prefs.onboarded) runOnboarding();
-  else { el.onboard.style.display = "none"; }
+  else { el.onboard.style.display = "none"; openIntro(); }
 }
 
 boot();
