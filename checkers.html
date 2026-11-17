@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkers — 2 Players</title>
+<style>
+  :root{
+    --bg:#151a21;
+    --panel:#1e252e;
+    --light:#e8d7b9;
+    --dark:#7a4b2a;
+    --accent:#4fc3f7;
+    --red:#d84343;
+    --black:#22262b;
+    --ring:rgba(79,195,247,.55);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:28px;
+    flex-wrap:wrap;
+    padding:24px;
+    background:radial-gradient(circle at 50% 0%,#263040,#11151b 70%);
+    color:#e7edf4;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-user-select:none; user-select:none;
+  }
+  h1{
+    font-size:clamp(18px,2.4vw,26px);
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    margin:0 0 4px;
+    font-weight:600;
+  }
+  .sub{color:#8b98a8;font-size:13px;margin-bottom:14px}
+  .layout{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+
+  #boardWrap{
+    position:relative;
+    padding:14px;
+    border-radius:18px;
+    background:linear-gradient(160deg,#5c3a22,#3a2415);
+    box-shadow:0 24px 60px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+  #board{
+    display:grid;
+    grid-template-columns:repeat(8,1fr);
+    grid-template-rows:repeat(8,1fr);
+    width:min(76vw,560px);
+    height:min(76vw,560px);
+    border-radius:6px;
+    overflow:hidden;
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.5);
+  }
+  .sq{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .sq.light{background:var(--light)}
+  .sq.dark{background:var(--dark)}
+  .sq.sel{box-shadow:inset 0 0 0 4px var(--accent)}
+  .sq.last{background-image:linear-gradient(rgba(79,195,247,.18),rgba(79,195,247,.18))}
+  .sq.target{cursor:pointer}
+  .dot{
+    width:26%;height:26%;border-radius:50%;
+    background:radial-gradient(circle,rgba(79,195,247,.95),rgba(79,195,247,.55));
+    box-shadow:0 0 14px var(--ring);
+    pointer-events:none;
+  }
+  .sq.jump-target::after{
+    content:"";position:absolute;inset:8%;border-radius:50%;
+    border:4px dashed rgba(79,195,247,.8);
+    pointer-events:none;
+  }
+  .piece{
+    width:76%;height:76%;border-radius:50%;
+    position:relative;
+    cursor:grab;
+    transition:transform .12s ease, box-shadow .12s ease;
+    box-shadow:
+      0 6px 10px rgba(0,0,0,.45),
+      inset 0 -6px 10px rgba(0,0,0,.4),
+      inset 0 5px 8px rgba(255,255,255,.28);
+  }
+  .piece.red{background:radial-gradient(circle at 34% 28%,#f07070,#c22e2e 62%,#8e1c1c)}
+  .piece.black{background:radial-gradient(circle at 34% 28%,#6b747e,#2c323a 62%,#14181c)}
+  .piece::before{
+    content:"";position:absolute;inset:16%;border-radius:50%;
+    border:2px solid rgba(255,255,255,.16);
+  }
+  .piece.king::after{
+    content:"♛";
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:min(4vw,30px);
+    color:#f6d776;
+    text-shadow:0 1px 3px rgba(0,0,0,.8);
+  }
+  .piece.movable{cursor:pointer}
+  .piece.movable:hover{transform:translateY(-2px) scale(1.03)}
+  .piece.selected{box-shadow:0 0 0 4px var(--accent),0 6px 12px rgba(0,0,0,.5)}
+  .piece.captured{
+    animation:poof .3s ease forwards;
+  }
+  @keyframes poof{
+    to{transform:scale(.1) rotate(35deg);opacity:0}
+  }
+
+  .panel{
+    width:260px;
+    background:var(--panel);
+    border-radius:16px;
+    padding:18px;
+    box-shadow:0 20px 45px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.05);
+  }
+  .turn{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 14px;border-radius:12px;
+    background:#151a21;
+    margin-bottom:14px;
+    font-weight:600;
+    border:1px solid rgba(255,255,255,.05);
+  }
+  .swatch{width:20px;height:20px;border-radius:50%;flex:none;
+    box-shadow:inset 0 -3px 5px rgba(0,0,0,.45), inset 0 3px 4px rgba(255,255,255,.25)}
+  .swatch.red{background:radial-gradient(circle at 34% 28%,#f07070,#c22e2e 62%,#8e1c1c)}
+  .swatch.black{background:radial-gradient(circle at 34% 28%,#6b747e,#2c323a 62%,#14181c)}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .stat{background:#151a21;border-radius:10px;padding:10px;text-align:center}
+  .stat .n{font-size:22px;font-weight:700}
+  .stat .l{font-size:11px;color:#8b98a8;text-transform:uppercase;letter-spacing:.06em}
+  .hint{font-size:12px;color:#8b98a8;line-height:1.5;margin-bottom:14px;min-height:34px}
+  .hint b{color:#cfe6f5}
+  button{
+    width:100%;
+    padding:11px 14px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.1);
+    background:#2a333e;
+    color:#e7edf4;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:background .15s;
+  }
+  button:hover{background:#354150}
+  button.primary{background:#2073a8;border-color:#3d9ad0}
+  button.primary:hover{background:#2887c2}
+  .btnRow{display:grid;gap:8px;margin-top:8px}
+
+  .banner{
+    position:absolute;inset:0;
+    display:none;
+    align-items:center;justify-content:center;
+    background:rgba(10,14,18,.82);
+    border-radius:18px;
+    backdrop-filter:blur(3px);
+    z-index:5;
+  }
+  .banner.show{display:flex}
+  .banner .inner{
+    text-align:center;padding:28px 34px;border-radius:16px;
+    background:var(--panel);
+    box-shadow:0 20px 50px rgba(0,0,0,.6);
+  }
+  .banner h2{margin:0 0 6px;font-size:24px}
+  .banner p{margin:0 0 18px;color:#8b98a8;font-size:14px}
+  .banner button{width:auto;padding:11px 26px}
+</style>
+</head>
+<body>
+<div class="layout">
+  <div>
+    <h1>Checkers</h1>
+    <div class="sub">Local 2-player · captures are mandatory</div>
+    <div id="boardWrap">
+      <div id="board"></div>
+      <div class="banner" id="banner">
+        <div class="inner">
+          <h2 id="bannerTitle">Red wins</h2>
+          <p id="bannerText"></p>
+          <button class="primary" id="bannerBtn">Play again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="panel">
+    <div class="turn"><span class="swatch red" id="turnSwatch"></span><span id="turnText">Red to move</span></div>
+    <div class="stats">
+      <div class="stat"><div class="n" id="redCount">12</div><div class="l">Red</div></div>
+      <div class="stat"><div class="n" id="blackCount">12</div><div class="l">Black</div></div>
+    </div>
+    <div class="hint" id="hint">Click a piece, then a highlighted square to move.</div>
+    <div class="btnRow">
+      <button id="undoBtn">Undo move</button>
+      <button id="newBtn">New game</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+(() => {
+  const RED = 'r', BLACK = 'b';
+  const boardEl = document.getElementById('board');
+  const banner = document.getElementById('banner');
+  const bannerTitle = document.getElementById('bannerTitle');
+  const bannerText = document.getElementById('bannerText');
+  const turnText = document.getElementById('turnText');
+  const turnSwatch = document.getElementById('turnSwatch');
+  const hintEl = document.getElementById('hint');
+  const redCountEl = document.getElementById('redCount');
+  const blackCountEl = document.getElementById('blackCount');
+
+  // 8x8, row 0 is black's back row (top). Only dark squares are used.
+  let board, turn, selected, legal, history, gameOver, chainFrom;
+
+  const isDark = (r, c) => (r + c) % 2 === 1;
+  const inside = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8;
+  const colorOf = p => p ? p[0] : null;
+  const isKing = p => p && p[1] === 'K';
+
+  function newGame() {
+    board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        if (!isDark(r, c)) continue;
+        if (r < 3) board[r][c] = BLACK;
+        else if (r > 4) board[r][c] = RED;
+      }
+    }
+    turn = RED;           // red moves up the board
+    selected = null;
+    legal = [];
+    history = [];
+    gameOver = false;
+    chainFrom = null;
+    banner.classList.remove('show');
+    render();
+  }
+
+  function dirsFor(piece) {
+    if (isKing(piece)) return [[-1,-1],[-1,1],[1,-1],[1,1]];
+    return piece[0] === RED ? [[-1,-1],[-1,1]] : [[1,-1],[1,1]];
+  }
+
+  // All moves for a single piece. Returns {to, capture} entries.
+  function movesFor(r, c) {
+    const p = board[r][c];
+    if (!p) return [];
+    const out = [];
+    for (const [dr, dc] of dirsFor(p)) {
+      const r1 = r + dr, c1 = c + dc;
+      if (inside(r1, c1) && !board[r1][c1]) {
+        out.push({ r, c, toR: r1, toC: c1, capR: null, capC: null });
+      }
+      const r2 = r + 2 * dr, c2 = c + 2 * dc;
+      const mr = r + dr, mc = c + dc;
+      if (inside(r2, c2) && !board[r2][c2] && board[mr][mc] && colorOf(board[mr][mc]) !== colorOf(p)) {
+        out.push({ r, c, toR: r2, toC: c2, capR: mr, capC: mc });
+      }
+    }
+    return out;
+  }
+
+  function allMoves(color) {
+    const moves = [];
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (p && colorOf(p) === color) moves.push(...movesFor(r, c));
+    }
+    return moves;
+  }
+
+  // Mandatory capture rule.
+  function legalMoves(color) {
+    const all = allMoves(color);
+    const caps = all.filter(m => m.capR !== null);
+    return caps.length ? caps : all;
+  }
+
+  function countPieces(color) {
+    let n = 0;
+    for (const row of board) for (const p of row) if (p && colorOf(p) === color) n++;
+    return n;
+  }
+
+  function applyMove(m) {
+    const piece = board[m.r][m.c];
+    let placed = piece;
+    // promotion
+    if (piece === RED && m.toR === 0) placed = 'rK';
+    if (piece === BLACK && m.toR === 7) placed = 'bK';
+
+    board[m.r][m.c] = null;
+    if (m.capR !== null) board[m.capR][m.capC] = null;
+    board[m.toR][m.toC] = placed;
+
+    return { ...m, pieceBefore: piece, pieceAfter: placed };
+  }
+
+  function doMove(m) {
+    history.push({ board: board.map(row => row.slice()), turn, chainFrom });
+
+    const done = applyMove(m);
+    const becameKing = done.pieceBefore !== done.pieceAfter;
+
+    // Chain captures: if this was a jump and the same piece can jump again.
+    let more = [];
+    if (m.capR !== null && !becameKing) {
+      more = movesFor(m.toR, m.toC).filter(x => x.capR !== null);
+    }
+
+    render();
+    if (more.length) {
+      chainFrom = { r: m.toR, c: m.toC };
+      selected = { r: m.toR, c: m.toC };
+      legal = more;
+      hint(`Multi-jump! ${mark(turn)} keeps capturing.`, true);
+      render();
+      return;
+    }
+
+    chainFrom = null;
+    endTurn();
+  }
+
+  function endTurn() {
+    const other = turn === RED ? BLACK : RED;
+    turn = other;
+    selected = null;
+    legal = [];
+
+    const oppPieces = countPieces(turn);
+    const myPieces = countPieces(turn === RED ? BLACK : RED);
+
+    if (oppPieces === 0) return finish(turn === RED ? BLACK : RED);
+    const moves = legalMoves(turn);
+    if (moves.length === 0) return finish(turn === RED ? BLACK : RED);
+
+    render();
+  }
+
+  function finish(winner) {
+    gameOver = true;
+    render();
+    bannerTitle.textContent = `${mark(winner)} wins!`;
+    bannerText.textContent = 'All opponent pieces are captured or blocked.';
+    banner.classList.add('show');
+    hintEl.innerHTML = `<b>${mark(winner)}</b> wins. Start a new game to play again.`;
+  }
+
+  function mark(color) { return color === RED ? 'Red' : 'Black'; }
+
+  function hint(html, isAlert) {
+    hintEl.innerHTML = html;
+    hintEl.style.color = isAlert ? '#ffb74d' : '';
+  }
+
+  function render() {
+    const targets = new Map();
+    for (const m of legal) targets.set(m.toR * 8 + m.toC, m);
+    const last = history.length ? history[history.length - 1] : null;
+
+    boardEl.innerHTML = '';
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const sq = document.createElement('div');
+        sq.className = 'sq ' + (isDark(r, c) ? 'dark' : 'light');
+        sq.dataset.r = r; sq.dataset.c = c;
+        sq.style.position = 'relative';
+
+        if (selected && selected.r === r && selected.c === c) sq.classList.add('sel');
+
+        const t = targets.get(r * 8 + c);
+        if (t) {
+          sq.classList.add('target');
+          const dot = document.createElement('div');
+          dot.className = 'dot';
+          sq.appendChild(dot);
+          if (t.capR !== null) sq.classList.add('jump-target');
+        }
+
+        const p = board[r][c];
+        if (p) {
+          const el = document.createElement('div');
+          el.className = 'piece ' + (p[0] === RED ? 'red' : 'black') + (isKing(p) ? ' king' : '');
+          const canSelect = !gameOver && colorOf(p) === turn && legalMoves(turn).some(m => m.r === r && m.c === c);
+          if (canSelect) el.classList.add('movable');
+          if (selected && selected.r === r && selected.c === c) el.classList.add('selected');
+          el.addEventListener('click', ev => { ev.stopPropagation(); onPieceClick(r, c); });
+          sq.appendChild(el);
+        }
+
+        sq.addEventListener('click', () => onSquareClick(r, c, !!t));
+        boardEl.appendChild(sq);
+      }
+    }
+
+    redCountEl.textContent = countPieces(RED);
+    blackCountEl.textContent = countPieces(BLACK);
+    turnSwatch.className = 'swatch ' + (turn === RED ? 'red' : 'black');
+    turnText.textContent = gameOver ? 'Game over' : `${mark(turn)} to move`;
+
+    if (!gameOver) {
+      const forced = legalMoves(turn).some(m => m.capR !== null);
+      if (chainFrom) {
+        // hint already set
+      } else if (forced && !selected) {
+        hint('<b>Capture available</b> — jumps are mandatory this turn.');
+      } else if (!selected) {
+        hint('Click a piece, then a highlighted square.');
+      }
+    }
+  }
+
+  function onPieceClick(r, c) {
+    if (gameOver) return;
+    const p = board[r][c];
+    if (!p || colorOf(p) !== turn) return;
+
+    const moves = legalMoves(turn).filter(m => m.r === r && m.c === c);
+    if (!moves.length) {
+      hint(`That piece has no legal move${legalMoves(turn).some(m => m.capR !== null) ? ' — a capture is mandatory' : '.'}`, true);
+      return;
+    }
+    selected = { r, c };
+    legal = moves;
+    render();
+  }
+
+  function onSquareClick(r, c, isTarget) {
+    if (gameOver || !isTarget) return;
+    const m = legal.find(x => x.toR === r && x.toC === c);
+    if (m) doMove(m);
+  }
+
+  function undo() {
+    if (!history.length) { hint('Nothing to undo.', true); return; }
+    const h = history.pop();
+    board = h.board;
+    turn = h.turn;
+    chainFrom = h.chainFrom;
+    selected = null;
+    legal = [];
+    gameOver = false;
+    banner.classList.remove('show');
+    hintEl.style.color = '';
+    render();
+    hint('Move undone.');
+  }
+
+  document.getElementById('undoBtn').addEventListener('click', undo);
+  document.getElementById('newBtn').addEventListener('click', newGame);
+  document.getElementById('bannerBtn').addEventListener('click', newGame);
+
+  newGame();
+})();
+</script>
+</body>
+</html>
