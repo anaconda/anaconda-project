@@ -587,13 +587,13 @@ html[data-rm="1"] .shake{animation:none!important}
     <p>Standard 8×8 American checkers against the Community engine.</p>
     <ul>
       <li><b>Move</b> one diagonal step forward onto a dark square. The green side starts at the bottom.</li>
-      <li><b>Captures are mandatory.</b> If a jump exists, you must take it — non-capture moves are blocked.</li>
+      <li><b>Captures are optional.</b> You may move any piece with a legal move. Jumping is a choice, not a requirement — clicking a jump square plays the whole chain as a single turn.</li>
       <li><b>Multi-jumps</b> chain in a single turn while further captures remain.</li>
       <li><b>Kings</b> are promoted on the far row and move and capture both directions, one step at a time. No flying kings.</li>
       <li><b>Win</b> by capturing every enemy piece or leaving them with no legal move. A draw is called after 40 moves without a capture or promotion.</li>
       <li><b>The clash.</b> Every jump is a mid-air fight. Before it resolves, an Anaconda fact card appears and you have 10 seconds to answer True or False.</li>
       <li><b>Right answer</b> — the capture counts and your piece gains battle experience.</li>
-      <li><b>Wrong answer or timeout</b> — the clash is lost, the move is undone, and your turn passes. Mandatory capture is waived for that one turn so you are never stuck.</li>
+      <li><b>Wrong answer or timeout</b> — the clash is lost, the move is undone, and your turn passes.</li>
       <li>Fact cards only appear on <b>your</b> captures. The Community engine resolves its own captures automatically and shares a fact as a toast.</li>
     </ul>
     <p class="mono" style="font-size:11px">Keyboard: arrows move the cursor · Enter/Space select · Esc cancel · U undo · R new game · S sound</p>
@@ -790,8 +790,9 @@ function capturesFor(board, color){
 /* legalMoves(state, color) -> { captures:[chain], quiet:[step] } */
 function legalMoves(state, color){
   const board = state.board;
+  // Captures are optional: always expose both capture chains and quiet moves
+  // so the player may choose any legal move.
   const caps = capturesFor(board, color);
-  if (caps.length) return { captures: caps, quiet: [] };
   const quiet = [];
   for (let i = 0; i < 64; i++){
     const p = board[i];
@@ -804,7 +805,7 @@ function legalMoves(state, color){
       if (!board[to]) quiet.push({ from: i, to, jump: null });
     }
   }
-  return { captures: [], quiet };
+  return { captures: caps, quiet };
 }
 
 /* applyMove(state, move) where move = { chain:[{from,to,jump}] } */
@@ -892,11 +893,9 @@ function evaluate(board, aiColor){
 function allMoves(state){
   const lm = legalMoves(state, state.turn);
   const out = [];
-  if (lm.captures.length){
-    for (const chain of lm.captures) out.push({ chain, capture: true });
-  } else {
-    for (const s of lm.quiet) out.push({ chain: [s], capture: false });
-  }
+  // Captures are optional for both sides now, so consider every legal move.
+  for (const chain of lm.captures) out.push({ chain, capture: true });
+  for (const s of lm.quiet) out.push({ chain: [s], capture: false });
   return out;
 }
 
@@ -1142,28 +1141,11 @@ let CLASH_ACTIVE = false;
 
 function refreshLegal(){
   UI.legal = legalMoves(G, G.turn);
-  // A player whose last capture attempt was cancelled may be left with only
-  // forced captures. Widen their options for exactly one turn so play can continue.
-  if (G.turn === COLOR.PLAYER && G.captureWaived.player){
-    UI.legal = { captures: [], quiet: quietMovesIgnoreCapture(G.board, COLOR.PLAYER) };
-  }
+  // Captures are optional, so there is no forced move to waive: a player can
+  // always pick any piece with a legal move. The old one-turn waiver path is
+  // intentionally gone.
 }
 
-function quietMovesIgnoreCapture(board, color){
-  const out = [];
-  for (let i = 0; i < 64; i++){
-    const p = board[i];
-    if (!p || p.color !== color) continue;
-    const r = rowOf(i), c = colOf(i);
-    for (const [dr, dc] of dirsFor(p)){
-      const nr = r + dr, nc = c + dc;
-      if (nr < 0 || nr > 7 || nc < 0 || nc > 7) continue;
-      const to = idx(nr, nc);
-      if (!board[to]) out.push({ from: i, to, jump: null });
-    }
-  }
-  return out;
-}
 
 function renderInteractions(){
   // clear transient classes
@@ -1176,32 +1158,28 @@ function renderInteractions(){
 
   const caps = UI.legal.captures, quiet = UI.legal.quiet;
   const canMove = new Set();
-  if (caps.length){
-    caps.forEach(chain => {
-      canMove.add(chain[0].from);
-      if (UI.selected === chain[0].from){
-        chain.forEach(st => {
-          const sq = squares[st.to];
-          sq.classList.add("dest", "cap");
-        });
-      }
-    });
-    // mark only pieces that can start a capture
-    for (const [id, node] of piecesEl){
-      const sqi = Number(node.dataset.sq);
-      if (canMove.has(sqi)) node.classList.add("movable");
-    }
-  } else {
+
+  // Every piece with any legal move is selectable — captures are optional.
+  quiet.forEach(mv => canMove.add(mv.from));
+  caps.forEach(chain => canMove.add(chain[0].from));
+
+  // When a piece is selected, show its quiet destinations and its capture
+  // destinations at the same time.
+  if (UI.selected != null){
     quiet.forEach(mv => {
-      canMove.add(mv.from);
-      if (UI.selected === mv.from){
-        squares[mv.to].classList.add("dest");
+      if (mv.from === UI.selected) squares[mv.to].classList.add("dest");
+    });
+    caps.forEach(chain => {
+      if (chain[0].from === UI.selected){
+        // highlight the first hop; the whole chain plays as one turn
+        squares[chain[0].to].classList.add("dest", "cap");
       }
     });
-    for (const [id, node] of piecesEl){
-      const sqi = Number(node.dataset.sq);
-      if (canMove.has(sqi)) node.classList.add("movable");
-    }
+  }
+
+  for (const [id, node] of piecesEl){
+    const sqi = Number(node.dataset.sq);
+    if (canMove.has(sqi)) node.classList.add("movable");
   }
   if (UI.selected != null) squares[UI.selected].classList.add("sel");
 
@@ -1767,7 +1745,6 @@ async function humanMove(chain){
     if (anyLost){
       // restore everything exactly as it was, then pass the turn
       G = JSON.parse(JSON.stringify(snap.state));
-      G.captureWaived.player = true;
       G.turn = COLOR.AI;
       UI.streak = snap.streak;
       UI.factsAsked = snap.factsAsked;
@@ -1779,7 +1756,7 @@ async function humanMove(chain){
       syncPieces();
       refreshLegal();
       renderAll();
-      // the waived turn is consumed by the AI; the player must not be left stuck
+      // the lost wager hands the turn to the AI
       startAiTurn();
       return;
     }
@@ -1896,43 +1873,26 @@ async function endGame(over){
 function selectSquare(i){
   if (UI.phase !== "idle" || G.turn !== COLOR.PLAYER) return;
   const p = G.board[i];
-  let caps = UI.legal.captures, quiet = UI.legal.quiet;
+  const caps = UI.legal.captures, quiet = UI.legal.quiet;
 
-  // If a capture was waived last turn, legal moves were widened so the player
-  // is never soft-locked. Recompute mandatory captures now that they may move.
-  if (caps.length && quiet.length === 0 && G.captureWaived.player){
-    const mandatory = capturesFor(G.board, COLOR.PLAYER);
-    if (!mandatory.length){
-      // no captures remain after all -> nothing is mandatory
-      caps = [];
-    }
-  }
-
-  // if a jump chain target selected
+  // if a destination was clicked
   if (UI.selected != null){
-    if (caps.length){
-      // chain moves land on the final square, not the first hop
-      const chain = caps.find(ch => ch[0].from === UI.selected && ch[ch.length - 1].to === i);
-      if (chain){ audio.click(); humanMove(chain); return; }
-      // clicking an intermediate hop square selects nothing but shows why
-      const partial = caps.some(ch => ch[0].from === UI.selected && ch.slice(0, -1).some(s => s.to === i));
-      if (partial){
-        el.status.textContent = "Multi-jump: finish the chain — land on the highlighted end square.";
-        return;
-      }
-    } else {
-      const mv = quiet.find(q => q.from === UI.selected && q.to === i);
-      if (mv){ audio.click(); humanMove([mv]); return; }
-    }
+    // full chain: clicking the first hop square plays the whole jump sequence
+    const chain = caps.find(ch => ch[0].from === UI.selected && ch[0].to === i);
+    if (chain){ audio.click(); humanMove(chain); return; }
+
+    const mv = quiet.find(q => q.from === UI.selected && q.to === i);
+    if (mv){ audio.click(); humanMove([mv]); return; }
+
     if (i === UI.selected){ UI.selected = null; renderInteractions(); return; }
   }
-  // select own piece
+  // select own piece — any piece with a legal move may be chosen
   if (p && p.color === COLOR.PLAYER){
     const canCap = caps.some(ch => ch[0].from === i);
     const canQuiet = quiet.some(q => q.from === i);
-    if (caps.length && !canCap){
+    if (!canCap && !canQuiet){
       UI.selected = null;
-      el.status.textContent = "Captures are mandatory — choose a piece that can jump.";
+      el.status.textContent = "That piece has no legal move.";
       renderInteractions();
       return;
     }
