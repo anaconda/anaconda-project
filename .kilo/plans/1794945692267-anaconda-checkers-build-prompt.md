@@ -77,6 +77,9 @@ Do **not** reference it as `src="./logo.png"` or a URL — the page must be a si
 - Provide `alt="Anaconda"`; if the image fails to load at runtime, fall back to the text wordmark `Anaconda` in Poppins 600 green via `onerror` — this is a resilience net, not a design path.
 
 **Legal note to include as an HTML comment at the top of the file:** the logo is the trademark of Anaconda Inc., used here for an internal/demo game; replace or obtain permission before public distribution.
+
+### 1c. State, persistence, responsiveness
+
 - All state in memory. Persist ONLY lightweight prefs in `localStorage` under a namespaced key (`ac.checkers.v1.*`): sound on/off, facts-seen IDs, best streak. Everything must degrade gracefully if `localStorage` throws (private mode) — wrap in try/catch and fall back to in-memory.
 - Must be responsive: playable at 360px wide through 1920px. Board must never overflow viewport height on desktop (use `min(90vh, 90vw)` style sizing).
 - Must be keyboard accessible and respect `prefers-reduced-motion`.
