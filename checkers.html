@@ -583,18 +583,18 @@ html[data-rm="1"] .shake{animation:none!important}
     </div>
     <h2 style="font-size:20px;margin-bottom:10px">Anaconda Checkers</h2>
     <p style="font-size:14px;color:var(--ink);line-height:1.55;margin:0 auto 14px;max-width:42ch">
-      Every capture triggers an <b>Anaconda fact question</b>.
+      Every move triggers an <b>Anaconda fact question</b>.
     </p>
     <div style="background:rgba(12,203,74,.10);border:1px solid rgba(12,203,74,.35);border-radius:10px;padding:11px 13px;margin-bottom:12px;text-align:left">
       <p style="margin:0;font-size:13.5px;color:var(--ink);line-height:1.5">
-        <b style="color:#1f7a35">Right answer</b> — the capture counts and scores.<br>
-        <b style="color:#a71d2a">Wrong answer or timeout</b> — <b>you lose your turn</b> and the move is undone.
+        <b style="color:#1f7a35">Right answer</b> — your move plays.<br>
+        <b style="color:#a71d2a">Wrong answer or timeout</b> — <b>you lose your turn</b>: the checker stays put and the AI moves.
       </p>
     </div>
     <p style="font-size:12px;color:var(--muted);margin:0 0 16px">
-      Questions change every game. Good luck.
+      Questions change every game. Do you think you have what it takes?
     </p>
-    <button class="icon-btn" id="btnIntroClose" style="width:100%;justify-content:center;background:var(--anaconda-green);color:#fff;border-color:transparent;font-weight:600">Got it</button>
+    <button class="icon-btn" id="btnIntroClose" style="width:100%;justify-content:center;background:var(--anaconda-green);color:#fff;border-color:transparent;font-weight:600">Bring it on</button>
   </div>
 </div>
 
@@ -1258,7 +1258,49 @@ const FACTS = [
   { id:"f25", statement:"Anaconda Distribution contains fewer than 10 packages.", answer:false, hint:"", explain:"It ships 600+ packages." },
   { id:"f26", statement:"Anaconda requires Windows to run.", answer:false, hint:"", explain:"It runs on macOS, Linux, and Windows." },
   { id:"f27", statement:"Anaconda Navigator is a package-free text editor.", answer:false, hint:"", explain:"Navigator is a GUI for managing environments and packages." },
-  { id:"f28", statement:"Anaconda Platform can only be deployed as a managed cloud service.", answer:false, hint:"", explain:"It also deploys self-hosted in cloud or on-prem." }
+  { id:"f28", statement:"Anaconda Platform can only be deployed as a managed cloud service.", answer:false, hint:"", explain:"It also deploys self-hosted in cloud or on-prem." },
+  { id:"f29", statement:"conda can create isolated environments for separate projects.", answer:true, hint:"", explain:"Each project gets its own environment, so dependencies never collide." },
+  { id:"f30", statement:"conda resolves dependencies automatically when you install a package.", answer:true, hint:"", explain:"conda works out a compatible set of packages and versions." },
+  { id:"f31", statement:"Anaconda Distribution is free for individuals to start with.", answer:true, hint:"", explain:"Free to start; larger organizations need a paid license." },
+  { id:"f32", statement:"Miniconda is a lighter installer than Anaconda Distribution.", answer:true, hint:"", explain:"Miniconda ships only conda, Python, and their dependencies." },
+  { id:"f33", statement:"Anaconda Navigator can launch JupyterLab for you.", answer:true, hint:"", explain:"Navigator manages environments, packages, and projects." },
+  { id:"f34", statement:"You can install packages from Anaconda.org.", answer:true, hint:"", explain:"Anaconda.org hosts packages, environments, and models." },
+  { id:"f35", statement:"Kilo is free to get started.", answer:true, hint:"", explain:"Free tier; team plans are available." },
+  { id:"f36", statement:"Kilo lets you choose which AI model to use.", answer:true, hint:"", explain:"500+ models with no vendor lock-in." },
+  { id:"f37", statement:"Enkrypt AI maps compliance to standards like NIST and OWASP.", answer:true, hint:"", explain:"Enkrypt maps to NIST, EU AI Act, OWASP, and HIPAA." },
+  { id:"f38", statement:"Anaconda Platform can be self-hosted.", answer:true, hint:"", explain:"Managed cloud, self-hosted cloud, or on-prem." },
+  { id:"f39", statement:"Anaconda Notebooks include a free tier.", answer:true, hint:"", explain:"Free tier with cloud storage included." },
+  { id:"f40", statement:"Metaflow was created at Netflix.", answer:true, hint:"", explain:"Outerbounds brought Metaflow, created at Netflix, to Anaconda." },
+  { id:"f41", statement:"Peter Wang founded Anaconda by himself.", answer:false, hint:"", explain:"He co-founded it with Travis Oliphant." },
+  { id:"f42", statement:"conda is included in both Anaconda Distribution and Miniconda.", answer:true, hint:"", explain:"Both installers include conda." },
+  { id:"f43", statement:"Anaconda helps teams avoid dependency conflicts.", answer:true, hint:"", explain:"Anaconda helps teams avoid dependency conflicts." },
+  { id:"f44", statement:"Jupyter Notebook is a browser-based notebook environment.", answer:true, hint:"", explain:"Notebooks combine code, output, and text in the browser." },
+  { id:"f45", statement:"conda only manages Python packages.", answer:false, hint:"", explain:"conda is a general package and environment manager." },
+  { id:"f46", statement:"Anaconda Distribution comes with pre-installed data science packages.", answer:true, hint:"", explain:"Hundreds ship in the base environment." },
+  { id:"f47", statement:"Anaconda made three acquisitions in a single week in 2026.", answer:false, hint:"", explain:"They were spread across six months." },
+  { id:"f48", statement:"conda removes packages from an environment.", answer:true, hint:"", explain:"conda uninstalls packages cleanly from an environment." },
+  { id:"f49", statement:"Anaconda was founded before conda existed.", answer:false, hint:"", explain:"conda is the core of Anaconda, not a later add-on." },
+  { id:"f50", statement:"Anaconda Distribution ships with Python 3.", answer:true, hint:"", explain:"Modern Python 3 ships in the base environment." },
+  { id:"f51", statement:"conda requires you to install dependencies one by one by hand.", answer:false, hint:"", explain:"conda resolves and installs dependencies automatically." },
+  { id:"f52", statement:"Kilo runs inside VS Code, JetBrains IDEs, and the CLI.", answer:true, hint:"", explain:"That is exactly where Kilo plugs in." },
+  { id:"f53", statement:"Miniconda ships with Anaconda Navigator pre-installed.", answer:false, hint:"", explain:"Navigator comes with Anaconda Distribution, not Miniconda." },
+  { id:"f54", statement:"Enkrypt AI is a package installer for Python.", answer:false, hint:"", explain:"Enkrypt AI provides AI security and guardrails." },
+  { id:"f55", statement:"Anaconda Notebooks require a laptop install.", answer:false, hint:"", explain:"They run in the cloud, in the browser." },
+  { id:"f56", statement:"conda environments share packages globally by default.", answer:false, hint:"", explain:"Environments are isolated from each other." },
+  { id:"f57", statement:"Anaconda Platform only supports a single cloud vendor.", answer:false, hint:"", explain:"It works across the clouds and infrastructure you already use." },
+  { id:"f58", statement:"Kilo has a free tier.", answer:true, hint:"", explain:"Kilo is free to get started." },
+  { id:"f59", statement:"Anaconda Distribution is a Python and data science distribution.", answer:true, hint:"", explain:"It bundles Python and data science tooling." },
+  { id:"f60", statement:"JupyterLab and Jupyter Notebook are the same product.", answer:false, hint:"", explain:"They are separate interfaces, both included in the Distribution." },
+  { id:"f61", statement:"Anaconda was founded by a single person.", answer:false, hint:"", explain:"Peter Wang and Travis Oliphant co-founded it." },
+  { id:"f62", statement:"conda runs on macOS, Linux, and Windows.", answer:true, hint:"", explain:"All three platforms are supported." },
+  { id:"f63", statement:"Anaconda.org is a social network for data scientists.", answer:false, hint:"", explain:"It hosts packages, environments, and models." },
+  { id:"f64", statement:"Kilo supports 500+ AI models.", answer:true, hint:"", explain:"More than 500 models are available." },
+  { id:"f65", statement:"Anaconda Platform has no orchestration features.", answer:false, hint:"", explain:"Orchestration and observability are included." },
+  { id:"f66", statement:"Outerbounds created Metaflow originally.", answer:false, hint:"", explain:"Metaflow was created at Netflix; Outerbounds built on it." },
+  { id:"f67", statement:"Anaconda Distribution contains no Jupyter tools.", answer:false, hint:"", explain:"Jupyter Notebook and JupyterLab both ship with it." },
+  { id:"f68", statement:"conda cannot create more than one environment per machine.", answer:false, hint:"", explain:"You can create as many isolated environments as you need." },
+  { id:"f69", statement:"You can download the free tier without a credit card.", answer:true, hint:"", explain:"You can start free without one." },
+  { id:"f70", statement:"Anaconda Navigator is a desktop GUI.", answer:true, hint:"", explain:"Navigator is a graphical desktop app." },
 ];
 const seenAcross = new Set(store.get("seenFacts", []) || []);
 
@@ -1749,7 +1791,26 @@ async function humanMove(chain){
     if (over) return endGame(over);
     startAiTurn();
   } else {
-    // quiet move
+    // quiet move — also gated by a fact question
+    UI.phase = "wager";
+    const fact = pickFact();
+    UI.currentFact = fact;
+    UI.pendingClash = { chain };
+    const wagerOutcome = await openWager(fact);
+    if (!wagerOutcome.won){
+      // wrong answer: the piece does not move, the turn is lost
+      G = JSON.parse(JSON.stringify(snap.state));
+      G.turn = COLOR.AI;
+      UI.streak = snap.streak;
+      UI.factsAsked = snap.factsAsked;
+      UI.factsCorrect = snap.factsCorrect;
+      UI.phase = "idle";
+      syncPieces();
+      refreshLegal();
+      renderAll();
+      startAiTurn();
+      return;
+    }
     const res = applyMove(G, { chain });
     G = res.state;
     audio.step();
@@ -1794,9 +1855,6 @@ async function startAiTurn(){
     if (G.board[land]) G.board[land].battleXp = (G.board[land].battleXp || 0) + 1;
     if (res.promoted) await promotionFx(land);
     audio.shatter();
-    // AI shares a true fact
-    const tf = FACTS.filter(f => f.answer)[(Math.random() * 15) | 0] || FACTS[0];
-    toast("Anaconda fact", tf.statement);
   } else {
     const res = applyMove(G, { chain });
     G = res.state;
